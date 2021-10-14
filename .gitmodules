@@ -1,8 +1,8 @@
 [submodule "ext/glfw"]
-	path = libraries/glfw
+	path = ext/glfw
 	url = https://github.com/glfw/glfw.git
 [submodule "ext/glm"]
-	path = libraries/glm
+	path = ext/glm
 	url = https://github.com/g-truc/glm.git
 [submodule "ext/thatlib"]
 	path = ext/thatlib
