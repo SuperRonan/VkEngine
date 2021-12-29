@@ -1,0 +1,52 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y=16) in;
+
+uniform layout(set = 0, binding = 0, r8ui) restrict readonly uimage2D prev;
+
+uniform layout(set = 0, binding = 1, r8ui) restrict writeonly uimage2D next;
+
+uint readPrev(in ivec2 coord, in ivec2 dims)
+{
+	// Repeat mode
+	// Assume coord can only be 1 pixel out of bounds
+	//ivec2 offset = ivec2(0);
+	for(int i=0; i<2; ++i)
+	{
+		if(coord[i] == dims[i])
+			coord[i] = 0;
+		else if(coord[i] == -1)
+			coord[i] = dims[i] - 1;
+	}
+	return imageLoad(prev, coord).x;
+}
+
+void main()
+{
+	const ivec2 gID = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+
+	const ivec2 dims = imageSize(prev);
+
+	const int x = gID.x;
+	const int y = gID.y;
+
+	if(all(lessThan(gID, dims)))
+	{
+		ivec2 center_coord = ivec2(x, y);
+		uint center = imageLoad(prev, center_coord).x;
+		const ivec2 offsets[8] = ivec2[](ivec2(-1, -1), ivec2(-1, 0), ivec2(-1, 1), ivec2(0, -1), ivec2(0, 1), ivec2(1, -1), ivec2(1, 0), ivec2(1, 1));
+		uint count = 0;
+		for(int i=0; i<8; ++i)
+		{
+			ivec2 coord = center_coord + offsets[i];
+			uint value = readPrev(coord, dims);
+			if(value != 0)
+				++count;
+		}
+
+		bool alive = (count == 3) || ((center != 0) && (count == 2));
+		uint res = alive ? 0xFF : 0;
+		imageStore(next, center_coord, uvec4(res));
+	}
+
+}

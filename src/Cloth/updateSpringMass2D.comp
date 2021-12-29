@@ -1,0 +1,74 @@
+#version 460
+
+layout(local_size_x = 16, local_size_y=16) in;
+
+struct Vertex
+{
+	vec3 position;
+	vec3 speed;
+	vec3 normal;
+	float mass;
+};
+
+layout(set = 0, binding = 0, std430) uniform restrict readonly buffer prev_uniform
+{
+	const Vertex vertices[];
+} prev;
+
+layout(set = 0, binding = 1, std430) uniform restrict writeonly buffer next_uniform
+{
+	Vertex vertices[];
+} next;
+
+layout(push_constant, std430) uniform push_constants
+{
+	ivec2 dims;
+	vec3 gravity;
+	float dt;
+	float spring_k;
+	float spring_length;
+} pc;
+
+int getIndex(in ivec2 c)
+{
+	return c.x + c.y * pc.dims.x;
+}
+
+bool coordIsCorrect(in ivec2 c)
+{
+	return all(lessThan(center_coord, pc.dims)) && all(greaterThanEqual(center_coord, ivec2(0)));
+}
+
+void main()
+{
+	const ivec2 center_coord = gl_GlobalInvocationID.xy;
+
+	if(all(lessThan(center_coord, pc.dims)))
+	{
+		Vertex vert = prev.vertices[getIndex(center_coord)];
+		
+		const ivec2 offsets[] = ivec2[](ivec2(1, 0), ivec2(1, 0), ivec2(0, -1), ivec2(0, 1));
+		
+		vec3 sum_forces = gravity; 
+
+		for(int i=0; i<offsets.lenght; ++i)
+		{
+			const ivec2 neighboor_coord = center_coord + offsets[i];
+			if(coordIsCorrect(neighboor_coord))
+			{
+				const Vertex neighboor_vertex = prev.vertices[getIndex(neighboor_coord)];
+
+				const vec3 dp = neighboor_vertex.position - vert.position;
+				const vec3 spring_f = dp * (1.0f - pc.spring_length / lenght(dp)) * pc.spring_k;
+				sum_forces += spring_f;
+			}
+		}
+
+		const vec3 acceleration = sum_forces / vert.mass;
+
+		vert.speed += acceleration * dt;
+		vert.position += vert.speed * dt;
+
+		next.vertices[getIndex(center_coord)] = vert;
+	}
+}

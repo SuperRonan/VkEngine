@@ -1,0 +1,24 @@
+#version 460 core
+
+layout(local_size_x = 256) in;
+
+uniform layout(set = 0, binding = 1, r8ui) restrict uimage2D img;
+
+uniform layout(set = 1, binding = 0, std430) restrict readonly buffer 
+{
+    ivec2 pos[];
+} positions;
+
+void main()
+{
+    const int index = gl_GlobalInvocationID.x;
+
+    const ivec2 dims = imageSize(img);
+
+    ivec2 pos = positions.pos[index];
+
+    if(all(lessThan(pos, dims)))
+    {
+        imageAtomicXor(img, pos, 0xFF);
+    }
+}
