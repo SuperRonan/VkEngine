@@ -53,6 +53,24 @@ namespace vkl
 		case VK_SHADER_STAGE_COMPUTE_BIT:
 			kind = shaderc_compute_shader;
 			break;
+		case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
+			kind = shaderc_raygen_shader;
+			break;
+		case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
+			kind = shaderc_intersection_shader;
+			break;
+		case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
+			kind = shaderc_anyhit_shader;
+			break;
+		case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
+			kind = shaderc_closesthit_shader;
+			break;
+		case VK_SHADER_STAGE_MISS_BIT_KHR:
+			kind = shaderc_miss_shader;
+			break;
+		case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
+			kind = shaderc_callable_shader;
+			break;
 		}
 		return kind;
 		
@@ -86,16 +104,17 @@ namespace vkl
 
 	Shader::Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage) :
 		VkObject(app),
-		_stage(stage)
+		_stage(stage),
+		_reflection(std::zeroInit(_reflection))
 	{
-		spvReflectDestroyShaderModule(&_reflection);
 		compile(readFileToString(path), path.string());
 		reflect();
 	}
 
 	Shader::Shader(VkApplication * app, std::string const& code, VkShaderStageFlagBits stage):
 		VkObject(app),
-		_stage(stage)
+		_stage(stage),
+		_reflection(std::zeroInit(_reflection))
 	{
 		spvReflectDestroyShaderModule(&_reflection);
 		compile(code);
@@ -121,12 +140,11 @@ namespace vkl
 
 	VkPipelineShaderStageCreateInfo Shader::getPipelineShaderStageCreateInfo()const
 	{
-		std::string name = entryName();
 		return VkPipelineShaderStageCreateInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = stage(),
+			.stage = _stage,
 			.module = module(),
-			.pName = name.c_str(),
+			.pName = _reflection.entry_point_name,
 		};
 	}
 }

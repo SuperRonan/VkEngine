@@ -3,9 +3,18 @@
 #include <algorithm>
 #include <stdint.h>
 #include <memory>
+#include <numeric>
 
 namespace std
 {
+	template <class T>
+	constexpr T& zeroInit(T& t)
+	{
+		std::memset(&t, 0, sizeof(T));
+		return t;
+	}
+
+
 	template <class It, class Rate>
 	It find_best(It begin, const It& end, Rate const& rate)
 	{
@@ -33,9 +42,14 @@ namespace std
 		std::copy(tmp.data(), tmp.data() + sizeof(Object), (int8_t*)&b); // b = tmp
 	}
 
-	template <class It1, class It2, class It3>
-	constexpr decltype(auto) inner(It1 begin1, It2 begin2, It3 const& end1)
+	template <class It1, class It2, class It3, class T>
+	constexpr decltype(auto) inner(It1 begin1, It2 begin2, It3 const& end1, T const& acc)
 	{
-		
+		while (begin1 != end1)
+		{
+			acc += *begin1 * *begin2;
+			++begin2;
+		}
+		return acc;
 	}
 }

@@ -14,6 +14,18 @@ namespace vkl
 
 	public:
 
+		constexpr static VkBorderColor defaultBorderColor()
+		{
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		}
+
+		constexpr static VkSamplerMipmapMode mipMapModeFromFilter(VkFilter filter)
+		{
+			if (filter == VK_FILTER_NEAREST)	return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			else //if (filter == VK_FILTER_LINEAR)
+				return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		}
+
 		constexpr Sampler()noexcept = default;
 
 		constexpr Sampler(VkApplication* app, VkSampler handle) :
@@ -22,6 +34,8 @@ namespace vkl
 		{}
 
 		Sampler(VkApplication* app, VkSamplerCreateInfo const& ci);
+
+		Sampler(VkApplication* app, VkFilter filter, VkSamplerAddressMode address_mode, VkBool32 anisotropy, VkBool32 unormalize_coords, VkBorderColor border = defaultBorderColor());
 
 		Sampler(Sampler const&) = delete;
 
@@ -61,6 +75,10 @@ namespace vkl
 		{
 			return sampler();
 		}
+
+		static Sampler Nearest(VkApplication * app = nullptr);
+
+		static Sampler Bilinear(VkApplication* app = nullptr);
 
 	};
 }

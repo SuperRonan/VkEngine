@@ -638,9 +638,9 @@ namespace vkl
 
 				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_layout, 0, 1, &_update_descriptor_sets[grid_id], 0, nullptr);
 
-				VkExtent3D dispatch_extent = grid.image()->extent();
-
-				vkCmdDispatch(cmd, dispatch_extent.width, dispatch_extent.height, dispatch_extent.depth);
+				const VkExtent3D dispatch_extent = grid.image()->extent();
+				const VkExtent3D group_layout = { .width = 16, .height = 16, .depth = 1 };
+				vkCmdDispatch(cmd, (dispatch_extent.width + group_layout.width - 1) / group_layout.width, (dispatch_extent.height + group_layout.height - 1) / group_layout.height, (dispatch_extent.depth + group_layout.depth - 1) / group_layout.depth);
 
 				grid.recordTransitionLayout(cmd, 
 					VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 

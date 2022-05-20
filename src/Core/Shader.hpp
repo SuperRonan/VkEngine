@@ -5,6 +5,7 @@
 #include <shaderc/shaderc.hpp>
 #include <filesystem>
 #include <SPIRV-Reflect/spirv_reflect.h>
+#include "DescriptorSetLayout.hpp"
 
 namespace vkl
 {
@@ -27,6 +28,7 @@ namespace vkl
 		Shader(VkApplication * app, std::string const& code, VkShaderStageFlagBits stage);
 
 		Shader(Shader const&) = delete;
+		
 		constexpr Shader(Shader&& other) noexcept :
 			VkObject(std::move(other)),
 			_stage(other._stage),
@@ -83,5 +85,6 @@ namespace vkl
 		std::string entryName()const;
 
 		VkPipelineShaderStageCreateInfo getPipelineShaderStageCreateInfo()const;
+
 	};
 }
