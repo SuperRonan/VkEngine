@@ -39,7 +39,8 @@ namespace vkl
 
 		Sampler _grid_sampler;
 
-		PipelineLayout _update_layout, _render_layout;
+		PipelineLayout _render_layout;
+		ComputeProgram _update_program;
 		Pipeline _update_pipeline, _render_pipeline;
 
 		std::vector<Buffer> _mouse_update_buffers;
@@ -351,30 +352,12 @@ namespace vkl
 			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/update.comp";
 
 			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
-			ComputeProgram update_program(std::move(update_shader));
-			
-
-			//VkPipelineShaderStageCreateInfo stage{
-			//	.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			//	.stage = update_shader.stage(),
-			//	.module = update_shader.module(),
-			//	.pName = "main",
-			//};
-
-			//VkPipelineLayoutCreateInfo layout_ci{
-			//	.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			//	.setLayoutCount = 1,
-			//	.pSetLayouts = &_update_uniform_layout,
-			//	.pushConstantRangeCount = 0,
-			//	.pPushConstantRanges = nullptr,
-			//};
-
-			//_update_layout = PipelineLayout(this, layout_ci);
+			_update_program = ComputeProgram(std::move(update_shader));
 
 			VkComputePipelineCreateInfo ci{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-				.stage = update_program.shader()->getPipelineShaderStageCreateInfo(),
-				.layout = update_program.pipelineLayout(),
+				.stage = _update_program.shader()->getPipelineShaderStageCreateInfo(),
+				.layout = _update_program.pipelineLayout(),
 			};
 
 			_update_pipeline = Pipeline(this, ci);
@@ -638,7 +621,7 @@ namespace vkl
 				
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_pipeline);
 
-				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_layout, 0, 1, &_update_descriptor_sets[grid_id], 0, nullptr);
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_program.pipelineLayout(), 0, 1, &_update_descriptor_sets[grid_id], 0, nullptr);
 
 				const VkExtent3D dispatch_extent = grid.image()->extent();
 				const VkExtent3D group_layout = { .width = 16, .height = 16, .depth = 1 };
