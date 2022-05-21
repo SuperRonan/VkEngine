@@ -9,6 +9,7 @@
 #include <Core/Sampler.hpp>
 #include <Core/Pipeline.hpp>
 #include <Core/PipelineLayout.hpp>
+#include <Core/Program.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -350,29 +351,30 @@ namespace vkl
 			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/update.comp";
 
 			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
-			VkShaderModule update_shader_module = update_shader.module();
+			ComputeProgram update_program(std::move(update_shader));
+			
 
-			VkPipelineShaderStageCreateInfo stage{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.stage = update_shader.stage(),
-				.module = update_shader_module,
-				.pName = "main",
-			};
+			//VkPipelineShaderStageCreateInfo stage{
+			//	.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			//	.stage = update_shader.stage(),
+			//	.module = update_shader.module(),
+			//	.pName = "main",
+			//};
 
-			VkPipelineLayoutCreateInfo layout_ci{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-				.setLayoutCount = 1,
-				.pSetLayouts = &_update_uniform_layout,
-				.pushConstantRangeCount = 0,
-				.pPushConstantRanges = nullptr,
-			};
+			//VkPipelineLayoutCreateInfo layout_ci{
+			//	.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+			//	.setLayoutCount = 1,
+			//	.pSetLayouts = &_update_uniform_layout,
+			//	.pushConstantRangeCount = 0,
+			//	.pPushConstantRanges = nullptr,
+			//};
 
-			_update_layout = PipelineLayout(this, layout_ci);
+			//_update_layout = PipelineLayout(this, layout_ci);
 
 			VkComputePipelineCreateInfo ci{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-				.stage = stage,
-				.layout = _update_layout,
+				.stage = update_program.shader()->getPipelineShaderStageCreateInfo(),
+				.layout = update_program.pipelineLayout(),
 			};
 
 			_update_pipeline = Pipeline(this, ci);

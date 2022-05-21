@@ -12,7 +12,7 @@ namespace vkl
 		{
 			const Shader& shader = *_shaders[sh];
 			assert(shader.reflection());
-			const auto refl = shader.reflection();
+			const auto & refl = shader.reflection();
 			for (size_t s = 0; s < refl.descriptor_set_count; ++s)
 			{
 				const auto& set = refl.descriptor_sets[s];
@@ -47,31 +47,89 @@ namespace vkl
 		for (auto& [s, sb] : all_bindings)
 		{
 			assert(s < _set_layouts.size());
-			std::shared_ptr<DescriptorSetLayout> & set_layout = _set_layouts[s];
+			DescriptorSetLayout & set_layout = _set_layouts[s];
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 			bindings.reserve(sb.size());
 			for (const auto& [bdi, bd] : sb)
 			{
 				bindings.push_back(bd);
 			}
-			set_layout = std::make_shared<DescriptorSetLayout>(_app, bindings);
+			set_layout = DescriptorSetLayout(_app, bindings);
 		}
 		return true;
 	}
 
-	void Program::createLayout()
+	bool Program::buildPushConstantRanges()
 	{
-		std::vector<std::vector<DescriptorSetLayout>> descriptors_per_shader(_shaders.size());
-		for (size_t s = 0; s < _shaders.size(); ++s)
+		_push_constants.resize(0);
+		std::map<uint32_t, VkPushConstantRange> res;
+		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
-			descriptors_per_shader[s] = _shaders[s]->descriptorLayouts();
+			const auto& refl = _shaders[sh]->reflection();
+			for (uint32_t pc = 0; pc < refl.push_constant_block_count; ++pc)
+			{
+				const auto& p = refl.push_constant_blocks[pc];
+				const uint32_t o = p.absolute_offset;
+				VkPushConstantRange pcr{
+					.stageFlags = (VkShaderStageFlags)_shaders[sh]->stage(),
+					.offset = o,
+					.size = p.size,
+				};
+				if (res.contains(o))
+				{
+					res[o].stageFlags |= pcr.stageFlags;
+					// TODO check that both match
+				}
+				else
+				{
+					res[o] = pcr;
+				}
+			}
 		}
 
-		VkPipelineLayoutCreateInfo ci = {
+		// TODO Check integrity of the push constants
+
+		_push_constants.resize(res.size());
+		std::transform(res.cbegin(), res.cend(), _push_constants.begin(), [](auto const& pc) {return pc.second; });
+
+		return true;
+	}
+
+
+	void Program::createLayout()
+	{
+		const bool set_layouts_ok = buildSetLayouts();
+		assert(set_layouts_ok);
+		const bool push_constants_ok = buildPushConstantRanges();
+		assert(push_constants_ok);
+
+		const std::vector<VkDescriptorSetLayout> set_layouts(_set_layouts.cbegin(), _set_layouts.cend());
+
+		const VkPipelineLayoutCreateInfo ci = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			
+			.setLayoutCount = (uint32_t)set_layouts.size(),
+			.pSetLayouts = set_layouts.data(),
+			.pushConstantRangeCount = (uint32_t)_push_constants.size(),
+			.pPushConstantRanges = _push_constants.data(),
 		};
+
+		_layout = PipelineLayout(_app, ci);
+	}
+
+	ComputeProgram::ComputeProgram(Shader&& shader) :
+		Program(shader.application())
+	{
+		_shaders = { std::make_shared<Shader>(std::move(shader)) };
+		createLayout();
+		extractLocalSize();
+	}
+
+	void ComputeProgram::extractLocalSize()
+	{
+		const auto& refl = _shaders.front()->reflection();
+		const auto& lcl = refl.entry_points[0].local_size;
+		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
 	}
 }
