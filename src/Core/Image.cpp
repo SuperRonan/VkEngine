@@ -71,9 +71,6 @@ namespace vkl
 		};
 
 		VK_CHECK(vmaCreateImage(_app->allocator(), &image_ci, &alloc_ci, &_image, &_alloc, nullptr), "Failed to create an image.");
-		//VK_CHECK(vkCreateImage(_app->device(), &image_ci, nullptr, &_image), "Failed to create an image.");
-
-		_own = true;
 	}
 
 	Image::~Image()
@@ -87,7 +84,7 @@ namespace vkl
 	void Image::destroyImage()
 	{
 		assert(_image != VK_NULL_HANDLE);
-		if (_own)
+		if (ownership())
 		{
 			vmaDestroyImage(_app->allocator(), _image, _alloc);
 		}

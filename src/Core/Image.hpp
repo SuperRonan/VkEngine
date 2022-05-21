@@ -80,8 +80,6 @@ namespace vkl
 		VmaAllocation _alloc = nullptr;
 		VkImage _image = VK_NULL_HANDLE;
 
-		bool _own = false;
-
 	public:
 
 		constexpr Image(VkApplication * app = nullptr) noexcept:
@@ -104,12 +102,10 @@ namespace vkl
 			_mem_usage(other._mem_usage),
 			_elem_size(other._elem_size),
 			_alloc(other._alloc),
-			_image(other._image),
-			_own(other._own)
+			_image(other._image)
 		{
 			other._alloc = nullptr;
 			other._image = VK_NULL_HANDLE;
-			other._own = false;
 		}
 
 		constexpr Image& operator=(Image const&) noexcept = delete;
@@ -140,7 +136,6 @@ namespace vkl
 			_mem_usage = assos.mem_usage;
 			_elem_size = assos.elem_size;
 			_alloc = nullptr;
-			_own = false;
 		}
 
 		void destroyImage();
@@ -212,7 +207,7 @@ namespace vkl
 
 		constexpr bool ownership()const
 		{
-			return _own;
+			return !!_alloc;
 		}
 
 		constexpr uint32_t elemSize()const
