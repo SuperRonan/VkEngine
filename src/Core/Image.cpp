@@ -92,4 +92,13 @@ namespace vkl
 		_image = VK_NULL_HANDLE;
 		_alloc = nullptr;
 	}
+
+	StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data)
+	{
+		assert(_type == VK_IMAGE_TYPE_2D);
+		size_t size = _extent.width * _extent.height * _elem_size;
+		StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
+		std::memcpy(sb->data, data, size);
+		return sb;
+	}
 }

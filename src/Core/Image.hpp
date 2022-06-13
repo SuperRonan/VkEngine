@@ -91,9 +91,11 @@ namespace vkl
 		constexpr Image(Image const&) noexcept = delete;
 
 		constexpr Image(Image&& other) noexcept :
+			VkObject(std::move(other)),
 			_type(other._type),
 			_format(other._format),
 			_extent(other._extent),
+			_mips(other._mips),
 			_samples(other._samples),
 			_tiling(other._tiling),
 			_usage(other._usage),
@@ -214,5 +216,7 @@ namespace vkl
 		{
 			return _elem_size;
 		}
+
+		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data);
 	};
 }

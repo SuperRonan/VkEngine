@@ -44,7 +44,7 @@ namespace vkl
 
 	protected:
 
-		VkImage _image;
+		std::shared_ptr<Image> _image;
 		VkImageViewType _type;
 		VkFormat _format;
 		VkComponentMapping _components;
@@ -59,29 +59,16 @@ namespace vkl
 			VkObject(app)
 		{}
 
-		ImageView(Image const& image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+		ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+		ImageView(Image && image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 
 		ImageView(ImageView const&) = delete;
 
-		constexpr ImageView(ImageView&& other) noexcept:
-			VkObject(std::move(other)),
-			_image(other._image),
-			_type(other._type),
-			_format(other._format),
-			_components(other._components),
-			_range(other._range),
-			_view(other._view)
-		{
-			other._view = VK_NULL_HANDLE;
-		}
+		ImageView(ImageView&& other) noexcept;
 
 		ImageView& operator=(ImageView const&) = delete;
 
-		constexpr ImageView& operator=(ImageView&& other)
-		{
-			std::copySwap(*this, other);
-			return *this;
-		}
+		ImageView& operator=(ImageView&& other);
 
 		~ImageView();
 
@@ -128,5 +115,12 @@ namespace vkl
 		{
 			return _range;
 		}
+
+		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data);
+		
+		void recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout);
+		
+		void recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage);
+		
 	};
 }

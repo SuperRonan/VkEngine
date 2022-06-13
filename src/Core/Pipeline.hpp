@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VkApplication.hpp"
+#include "Program.hpp"
 
 namespace vkl
 {
@@ -10,6 +11,7 @@ namespace vkl
 
 		VkPipeline _handle = VK_NULL_HANDLE;
 		VkPipelineBindPoint _binding;
+		std::shared_ptr<Program> _program;
 
 	public:
 

@@ -1,6 +1,6 @@
 #include <Core/VkApplication.hpp>
 #include <Core/VkWindow.hpp>
-#include <Core/ImageAndView.hpp>
+#include <Core/ImageView.hpp>
 #include <Core/Shader.hpp>
 #include <Core/Camera2D.hpp>
 #include <Core/MouseHandler.hpp>
@@ -31,7 +31,7 @@ namespace vkl
 
 		VkExtent2D _world_size;
 		 // size: In flight
-		std::vector<ImageAndView> _grids;
+		std::vector<ImageView> _grids;
 	
 		VkDescriptorSetLayout _update_uniform_layout, _render_uniform_layout;
 		VkDescriptorPool _update_descriptor_pool, _render_descriptor_pool;
@@ -261,12 +261,12 @@ namespace vkl
 					int prev_id = i - 1; if (prev_id < 0)	prev_id = _grids.size() - 1;
 					int next_id = i;
 					VkDescriptorImageInfo prev{
-						.imageView = *_grids[prev_id].view(),
+						.imageView = _grids[prev_id],
 						.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 					};
 
 					VkDescriptorImageInfo next{
-						.imageView = *_grids[next_id].view(),
+						.imageView = _grids[next_id],
 						.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 					};
 
@@ -312,7 +312,7 @@ namespace vkl
 				for (size_t i = 0; i < n; ++i)
 				{
 					VkDescriptorImageInfo grid{
-						.imageView = *_grids[i].view(),
+						.imageView = _grids[i],
 						.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					};
 
@@ -482,20 +482,14 @@ namespace vkl
 		{
 			_grids.resize(_main_window->framesInFlight());
 
-			ImageAndView::CreateInfo grid_ci{
-				{
-					.type = VK_IMAGE_TYPE_2D,
-					.format = VK_FORMAT_R8_UINT,
-					.extent = VkExtent3D{_world_size.width, _world_size.height, 1},
-					.use_mips = false,
-					.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					.elem_size = 1,
-				},
-				VK_IMAGE_ASPECT_COLOR_BIT,
+			Image::CreateInfo grid_image_ci{
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R8_UINT,
+				.extent = VkExtent3D{_world_size.width, _world_size.height, 1},
+				.use_mips = false,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.elem_size = 1,
 			};
-
-			grid_ci.type = VK_IMAGE_TYPE_2D;
-
 			VkCommandBuffer copy_command = beginSingleTimeCommand(_pools.graphics);
 			
 			std::vector<uint8_t> data(_world_size.width * _world_size.height);
@@ -517,7 +511,7 @@ namespace vkl
 			for (size_t i = 0; i < _grids.size(); ++i)
 			{
 				auto& grid = _grids[i];
-				grid = ImageAndView(this, grid_ci);
+				grid = ImageView(Image(this, grid_image_ci), VK_IMAGE_ASPECT_COLOR_BIT);
 
 				grid.recordTransitionLayout(copy_command,
 					VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -558,7 +552,7 @@ namespace vkl
 
 		void recordCommandBufferRenderOnly(VkCommandBuffer cmd, size_t grid_id, VkFramebuffer framebuffer, glm::mat4 matrix)
 		{
-			ImageAndView& grid = _grids[grid_id];
+			ImageView& grid = _grids[grid_id];
 			vkResetCommandBuffer(cmd, 0);
 
 			VkCommandBufferBeginInfo begin{
@@ -604,7 +598,7 @@ namespace vkl
 
 		void recordCommandBufferUpdateAndRender(VkCommandBuffer cmd, size_t grid_id, VkFramebuffer framebuffer, glm::mat4 matrix)
 		{
-			ImageAndView& grid = _grids[grid_id];
+			ImageView& grid = _grids[grid_id];
 			
 			vkResetCommandBuffer(cmd, 0);
 
