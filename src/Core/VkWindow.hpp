@@ -5,6 +5,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "ImageView.hpp"
 
 namespace vkl
 {
@@ -33,10 +34,10 @@ namespace vkl
 
 		VkSurfaceKHR _surface;
 		VkSwapchainKHR _swapchain;
-		std::vector<VkImage> _swapchain_images;
+		std::vector<std::shared_ptr<Image>> _swapchain_images;
 		VkFormat _swapchain_image_format;
 		VkExtent2D _swapchain_extent;
-		std::vector<VkImageView> _swapchain_views;
+		std::vector<std::shared_ptr<ImageView>> _swapchain_views;
 
 		std::set<uint32_t> _queues_families_indices;
 
@@ -118,9 +119,9 @@ namespace vkl
 
 		bool framebufferResized();
 
-		VkImage image(uint32_t index);
+		std::shared_ptr<Image> image(uint32_t index);
 
-		VkImageView view(uint32_t index);
+		std::shared_ptr<ImageView> view(uint32_t index);
 
 		VkFormat format()const;
 

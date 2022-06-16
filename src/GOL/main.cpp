@@ -10,6 +10,7 @@
 #include <Core/Pipeline.hpp>
 #include <Core/PipelineLayout.hpp>
 #include <Core/Program.hpp>
+#include <Core/Framebuffer.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -27,7 +28,7 @@ namespace vkl
 		VkRenderPass _render_pass;
 
 		// size: swapchain
-		std::vector<VkFramebuffer> _framebuffers;
+		std::vector<Framebuffer> _framebuffers;
 
 		VkExtent2D _world_size;
 		 // size: In flight
@@ -98,20 +99,11 @@ namespace vkl
 		void createFrameBuffers()
 		{
 			_framebuffers.resize(_main_window->swapchainSize());
-
-			VkFramebufferCreateInfo framebuffer_ci{
-				.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				.renderPass = _render_pass,
-				.attachmentCount = 1,
-				.width = _main_window->extent().width,
-				.height = _main_window->extent().height,
-				.layers = 1,
-			};
 			for (uint32_t i = 0; i < _main_window->swapchainSize(); ++i)
 			{
-				VkImageView attachement = _main_window->view(i);
-				framebuffer_ci.pAttachments = &attachement;
-				VK_CHECK(vkCreateFramebuffer(_device, &framebuffer_ci, nullptr, &_framebuffers[i]), "Failed to create a frame buffer.");
+				std::shared_ptr<ImageView> const& attachement = _main_window->view(i);
+				std::vector<std::shared_ptr<ImageView>> tmp = { attachement };
+				_framebuffers[i] = Framebuffer(std::move(tmp), _render_pass);
 			}
 		}
 

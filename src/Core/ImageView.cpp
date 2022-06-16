@@ -44,7 +44,7 @@ namespace vkl
 
 	ImageView::ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect) :
 		VkObject(*image),
-		_image(std::move(image)),
+		_image(image),
 		_type(getViewTypeFromImageType(image->type())),
 		_format(image->format()),
 		_components(defaultComponentMapping()),

@@ -142,7 +142,21 @@ namespace vkl
 		uint32_t image_count;
 		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, nullptr);
 		_swapchain_images.resize(image_count);
-		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, _swapchain_images.data());
+		std::vector<VkImage> tmp_images(image_count);
+		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, tmp_images.data());
+		for (uint32_t i = 0; i < image_count; ++i)
+		{
+			Image::AssociateInfo ai{
+				.image = tmp_images[i],
+				.type = VK_IMAGE_TYPE_2D,
+				.format = format(),
+				.extent = VkExtent3D{.width = extent.width, .height = extent.height, .depth = 1},
+				.queues = {},
+				.elem_size = 3, // TODO
+			};
+			_swapchain_images[i] = std::make_shared<Image>(_app);
+			_swapchain_images[i]->associateImage(ai);
+		}
 	}
 
 	void VkWindow::createSwapchainViews()
@@ -150,7 +164,8 @@ namespace vkl
 		_swapchain_views.resize(_swapchain_images.size());
 		for (size_t i = 0; i < _swapchain_views.size(); ++i)
 		{
-			_swapchain_views[i] = createImageView(_app->device(), _swapchain_images[i], _swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+			_swapchain_views[i] = std::make_shared<ImageView>(_swapchain_images[i]);
+			//_swapchain_views[i] = createImageView(_app->device(), *_swapchain_images[i], _swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 		}
 	}
 
@@ -215,10 +230,10 @@ namespace vkl
 
 	void VkWindow::cleanupSwapchain()
 	{
-		for (size_t i = 0; i < _swapchain_views.size(); ++i)
-		{
-			vkDestroyImageView(_app->device(), _swapchain_views[i], nullptr);
-		}
+		_swapchain_views.clear();
+		_swapchain_views.shrink_to_fit();
+		_swapchain_images.clear();
+		_swapchain_images.shrink_to_fit();
 		vkDestroySwapchainKHR(_app->device(), _swapchain, nullptr);
 	}
 
@@ -265,12 +280,12 @@ namespace vkl
 		return _framebuffer_resized;
 	}
 
-	VkImage VkWindow::image(uint32_t index)
+	std::shared_ptr<Image> VkWindow::image(uint32_t index)
 	{
 		return _swapchain_images[index];
 	}
 
-	VkImageView VkWindow::view(uint32_t index)
+	std::shared_ptr<ImageView> VkWindow::view(uint32_t index)
 	{
 		return _swapchain_views[index];
 	}
