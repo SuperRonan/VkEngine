@@ -34,14 +34,13 @@ namespace vkl
 		 // size: In flight
 		std::vector<ImageView> _grids;
 	
-		VkDescriptorSetLayout _update_uniform_layout, _render_uniform_layout;
 		VkDescriptorPool _update_descriptor_pool, _render_descriptor_pool;
 		std::vector<VkDescriptorSet> _update_descriptor_sets, _render_descriptor_sets;
 
 		Sampler _grid_sampler;
 
-		PipelineLayout _render_layout;
-		ComputeProgram _update_program;
+		std::shared_ptr<ComputeProgram> _update_program;
+		std::shared_ptr<GraphicsProgram> _render_program;
 		Pipeline _update_pipeline, _render_pipeline;
 
 		std::vector<Buffer> _mouse_update_buffers;
@@ -107,66 +106,6 @@ namespace vkl
 			}
 		}
 
-		void createDescriptorLayout()
-		{
-			{
-				VkDescriptorSetLayoutBinding prev{
-					.binding = 0,
-					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-					.pImmutableSamplers = nullptr,
-				};
-
-				VkDescriptorSetLayoutBinding next{
-					.binding = 1,
-					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-					.pImmutableSamplers = nullptr,
-				};
-
-				std::array<VkDescriptorSetLayoutBinding, 2> bindings = { prev, next };
-
-				VkDescriptorSetLayoutCreateInfo ci{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-					.bindingCount = bindings.size(),
-					.pBindings = bindings.data(),
-				};
-
-				VK_CHECK(vkCreateDescriptorSetLayout(_device, &ci, nullptr, &_update_uniform_layout), "Failed to create a descriptor set layout.");
-			}
-
-			{
-				VkDescriptorSetLayoutBinding grid{
-					.binding = 0,
-					.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-					.pImmutableSamplers = nullptr,
-				};
-
-				VkDescriptorSetLayoutBinding sampler{
-					.binding = 1,
-					.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-					.pImmutableSamplers = nullptr,
-				};
-
-				// TODO transform uniform buffer
-
-				std::array<VkDescriptorSetLayoutBinding, 2> bindings = { grid, sampler };
-				VkDescriptorSetLayoutCreateInfo ci{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-					.bindingCount = bindings.size(),
-					.pBindings = bindings.data(),
-				};
-
-				VK_CHECK(vkCreateDescriptorSetLayout(_device, &ci, nullptr, &_render_uniform_layout), "Failed to create a descriptor set layout.");
-			}
-		}
-
 		void createDescriptorPool()
 		{
 			uint32_t n = _main_window->framesInFlight();
@@ -174,7 +113,7 @@ namespace vkl
 			{
 				VkDescriptorPoolSize pool_size{
 					.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-					.descriptorCount = n,
+					.descriptorCount = 1,
 				};
 
 				// The compute shaders takes two storage imaged (prev and next), so the same pool_size can be used.
@@ -192,12 +131,12 @@ namespace vkl
 			{
 				VkDescriptorPoolSize grid_size{
 					.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-					.descriptorCount = n,
+					.descriptorCount = 1,
 				};
 
 				VkDescriptorPoolSize sampler_size{
 					.type = VK_DESCRIPTOR_TYPE_SAMPLER,
-					.descriptorCount = n,
+					.descriptorCount = 1,
 				};
 
 				// TODO transform uniform buffer
@@ -238,7 +177,7 @@ namespace vkl
 		void createDescriptorSets()
 		{
 			{
-				std::vector<VkDescriptorSetLayout> layouts(_main_window->framesInFlight(), _update_uniform_layout);
+				std::vector<VkDescriptorSetLayout> layouts(_main_window->framesInFlight(), _update_pipeline.program()->setLayouts().front());
 				uint32_t n = layouts.size();
 				VkDescriptorSetAllocateInfo alloc{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -292,11 +231,11 @@ namespace vkl
 			}
 			{
 				uint32_t n = _main_window->framesInFlight();
-				std::vector<VkDescriptorSetLayout> layouts(n, _render_uniform_layout);
+				std::vector<VkDescriptorSetLayout> layouts(n, _render_pipeline.program()->setLayouts().front());
 				VkDescriptorSetAllocateInfo alloc{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 					.descriptorPool = _render_descriptor_pool,
-					.descriptorSetCount = n,
+					.descriptorSetCount = n, // layouts.size(),
 					.pSetLayouts = layouts.data(),
 				};
 				_render_descriptor_sets.resize(n);
@@ -344,15 +283,8 @@ namespace vkl
 			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/update.comp";
 
 			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
-			_update_program = ComputeProgram(std::move(update_shader));
-
-			VkComputePipelineCreateInfo ci{
-				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-				.stage = _update_program.shader()->getPipelineShaderStageCreateInfo(),
-				.layout = _update_program.pipelineLayout(),
-			};
-
-			_update_pipeline = Pipeline(this, ci);
+			_update_program = std::make_shared<ComputeProgram>(std::move(update_shader));
+			_update_pipeline = Pipeline(this, _update_program);
 		}
 
 		void createGraphicsPipeline()
@@ -360,114 +292,36 @@ namespace vkl
 			std::filesystem::path vert_shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/render.vert";
 			std::filesystem::path frag_shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/render.frag";
 
-			Shader vert(this, vert_shader_path, VK_SHADER_STAGE_VERTEX_BIT);
-			Shader frag(this, frag_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT);
+			std::shared_ptr<Shader> vert = std::make_shared<Shader>(Shader(this, vert_shader_path, VK_SHADER_STAGE_VERTEX_BIT));
+			std::shared_ptr<Shader> frag = std::make_shared<Shader>(Shader(this, frag_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT));
 
-			std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages = { vert.getPipelineShaderStageCreateInfo(), frag.getPipelineShaderStageCreateInfo() };
+			_render_program = std::make_shared<GraphicsProgram>(
+				GraphicsProgram::CreateInfo{
+					._vertex = vert,
+					._fragment = frag,
+				}
+			);
 
-			VkPipelineVertexInputStateCreateInfo vertex_input{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-				.vertexBindingDescriptionCount = 0,
-				.vertexAttributeDescriptionCount = 0,
-			};
-
-			VkPipelineInputAssemblyStateCreateInfo input_assembly{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-				.primitiveRestartEnable = VK_FALSE,
-			};
-
-			VkViewport viewport{
-				.x = 0.0f,
-				.y = 0.0f,
-				.width = (float)_main_window->extent().width,
-				.height = (float)_main_window->extent().height,
-				.minDepth = 0.0f,
-				.maxDepth = 1.0f,
-			};
-
-			VkRect2D scissor{
-				.offset = {0, 0},
-				.extent = _main_window->extent(),
-			};
-
-			VkPipelineViewportStateCreateInfo viewport_ci{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-				.viewportCount = 1,
-				.pViewports = &viewport,
-				.scissorCount = 1,
-				.pScissors = &scissor,
-			};
-
-			VkPipelineRasterizationStateCreateInfo rasterization{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-				.depthClampEnable = VK_FALSE,
-				.rasterizerDiscardEnable = VK_FALSE,
-				.polygonMode = VK_POLYGON_MODE_FILL,
-				.cullMode = VK_CULL_MODE_NONE,
-				.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-				.depthBiasEnable = VK_FALSE,
-				.lineWidth = 1.0f,
-			};
-
-			VkPipelineMultisampleStateCreateInfo multisampling{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-				.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-				.sampleShadingEnable = VK_FALSE,
-				.pSampleMask = nullptr,
-				.alphaToCoverageEnable = VK_FALSE,
-				.alphaToOneEnable = VK_FALSE,
-			};
-
-			VkPipelineColorBlendAttachmentState color_blend_attachement{
-				.blendEnable = VK_FALSE,
-				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			};
-
-			VkPipelineColorBlendStateCreateInfo color_blend_ci{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-				.logicOpEnable = VK_FALSE,
-				.attachmentCount = 1,
-				.pAttachments = &color_blend_attachement,
-				.blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
-			};
-
+		 
 			VkPushConstantRange push_constant{
 				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 				.offset = 0,
 				.size = sizeof(glm::mat4),
 			};
 
-			VkPipelineLayoutCreateInfo layout{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-				.setLayoutCount = 1,
-				.pSetLayouts = &_render_uniform_layout,
-				.pushConstantRangeCount = 1,
-				.pPushConstantRanges = &push_constant,
+			Pipeline::GraphicsCreateInfo ci = {
+				._vertex_input = Pipeline::VertexInputWithoutVertices(),
+				._input_assembly = Pipeline::InputAssemblyTriangleDefault(),
+				._rasterization = Pipeline::RasterizationDefault(),
+				._multisampling = Pipeline::MultisampleOneSample(),
+				._render_pass = _render_pass,
+				._program = _render_program,
 			};
 
-			_render_layout = PipelineLayout(this, layout);
-
-			VkGraphicsPipelineCreateInfo graphics_pipeline{
-				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-				.stageCount = shader_stages.size(),
-				.pStages = shader_stages.data(),
-				.pVertexInputState = &vertex_input,
-				.pInputAssemblyState = &input_assembly,
-				.pViewportState = &viewport_ci,
-				.pRasterizationState = &rasterization,
-				.pMultisampleState = &multisampling,
-				.pDepthStencilState = nullptr,
-				.pColorBlendState = &color_blend_ci,
-				.pDynamicState = nullptr,
-				.layout = _render_layout,
-				.renderPass = _render_pass,
-				.subpass = 0,
-				.basePipelineHandle = VK_NULL_HANDLE,
-				.basePipelineIndex = 0,
-			};
-
-			_render_pipeline = Pipeline(this, graphics_pipeline);
+			ci.setViewport({ Pipeline::Viewport(_main_window->extent()) }, {Pipeline::Scissor(_main_window->extent())});
+			ci.setColorBlending({ Pipeline::BlenAttachementNoBlending() });
+			ci.assemble();
+			_render_pipeline = Pipeline(this, ci);
 		}
 
 		void createGrids()
@@ -572,9 +426,9 @@ namespace vkl
 				{
 					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_pipeline);
 
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_layout, 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_program->pipelineLayout(), 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
 
-					vkCmdPushConstants(cmd, _render_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
+					vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
 
 					vkCmdDraw(cmd, 4, 1, 0, 0);
 				}
@@ -607,7 +461,7 @@ namespace vkl
 				
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_pipeline);
 
-				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_program.pipelineLayout(), 0, 1, &_update_descriptor_sets[grid_id], 0, nullptr);
+				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_program->pipelineLayout(), 0, 1, &_update_descriptor_sets[grid_id], 0, nullptr);
 
 				const VkExtent3D dispatch_extent = grid.image()->extent();
 				const VkExtent3D group_layout = { .width = 16, .height = 16, .depth = 1 };
@@ -633,9 +487,9 @@ namespace vkl
 				{
 					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_pipeline);
 
-					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_layout, 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
+					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_program->pipelineLayout(), 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
 
-					vkCmdPushConstants(cmd, _render_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
+					vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
 
 					vkCmdDraw(cmd, 4, 1, 0, 0);
 				}
@@ -690,14 +544,13 @@ namespace vkl
 			createSampler();
 
 			createRenderPass();
-
 			createFrameBuffers();
 
-			createDescriptorLayout();
-			createDescriptorPool();
-			createDescriptorSets();
 			createComputePipeline();
 			createGraphicsPipeline();
+
+			createDescriptorPool();
+			createDescriptorSets();
 
 			createCommandBuffers();
 

@@ -118,6 +118,25 @@ namespace vkl
 		_layout = PipelineLayout(_app, ci);
 	}
 
+	VkApplication* GraphicsProgram::CreateInfo::getApplication()const
+	{
+		if (!!_vertex)	return _vertex->application();
+		if (!!_geometry)	return _geometry->application();
+		else //if (!!_fragment)	
+			return _fragment->application();
+	}
+
+	GraphicsProgram::GraphicsProgram(CreateInfo&& ci) :
+		Program(ci.getApplication()),
+		_ci(std::move(ci))
+	{
+		if (_ci._vertex)	_shaders.push_back(_ci._vertex);
+		if (_ci._geometry)	_shaders.push_back(_ci._geometry);
+		if (_ci._fragment)	_shaders.push_back(_ci._fragment);
+		createLayout();
+	}
+
+
 	ComputeProgram::ComputeProgram(Shader&& shader) :
 		Program(shader.application())
 	{

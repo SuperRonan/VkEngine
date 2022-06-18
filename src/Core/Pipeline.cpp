@@ -10,16 +10,32 @@ namespace vkl
 		}
 	}
 
-	Pipeline::Pipeline(VkApplication* app, VkGraphicsPipelineCreateInfo const& ci) :
-		VkObject(app)
+	Pipeline::Pipeline(VkApplication* app, GraphicsCreateInfo & ci) :
+		VkObject(app),
+		_program(ci._program)
 	{
+		createPipeline(ci._pipeline_ci);
+	}
+
+	Pipeline::Pipeline(VkApplication* app, std::shared_ptr<ComputeProgram> compute_program) :
+		VkObject(app),
+		_program(compute_program)
+	{
+		VkComputePipelineCreateInfo ci{
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.stage = compute_program->shader()->getPipelineShaderStageCreateInfo(),
+				.layout = compute_program->pipelineLayout(),
+		};
 		createPipeline(ci);
 	}
 
-	Pipeline::Pipeline(VkApplication* app, VkComputePipelineCreateInfo const& ci) :
-		VkObject(app)
+	Pipeline& Pipeline::operator=(Pipeline&& other) noexcept
 	{
-		createPipeline(ci);
+		VkObject::operator=(std::move(other));
+		std::swap(_handle, other._handle);
+		std::swap(_binding, other._binding);
+		std::swap(_program, other._program);
+		return *this;
 	}
 	
 	void Pipeline::destroyPipeline()

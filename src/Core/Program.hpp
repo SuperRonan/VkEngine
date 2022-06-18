@@ -70,13 +70,49 @@ namespace vkl
 			return _layout;
 		}
 
+		constexpr const auto& setLayouts() const
+		{
+			return _set_layouts;
+		}
+
+		constexpr auto& setLayouts() 
+		{
+			return _set_layouts;
+		}
+
+		constexpr const auto& pushConstantRanges()const
+		{
+			return _push_constants;
+		}
+
+		constexpr auto& pushConstantRanges()
+		{
+			return _push_constants;
+		}
+
+
+
 	};
 
 	class GraphicsProgram : public Program 
 	{
+	public:
+
+		struct CreateInfo 
+		{
+			// TODO all stages
+			std::shared_ptr<Shader> _vertex = nullptr, _geometry = nullptr, _fragment = nullptr;
+
+			VkApplication* getApplication()const;
+		};
+
 	protected:
 
+		CreateInfo _ci;
+
 	public:
+
+		GraphicsProgram(CreateInfo&& ci);
 
 	};
 
@@ -126,5 +162,10 @@ namespace vkl
 		{
 			return _shaders.front();
 		}
+	};
+
+	class RayTracingProgram : public Program
+	{
+
 	};
 }
