@@ -12,7 +12,7 @@ namespace vkl
 		 
 		PipelineLayout _layout;
 		std::vector<std::shared_ptr<Shader>> _shaders;
-		std::vector<DescriptorSetLayout> _set_layouts;
+		std::vector<std::shared_ptr<DescriptorSetLayout>> _set_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
 		constexpr Program(VkApplication * app = nullptr) : 

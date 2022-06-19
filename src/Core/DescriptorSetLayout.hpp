@@ -4,7 +4,7 @@
 
 namespace vkl
 {
-	class DescriptorSetLayout : VkObject
+	class DescriptorSetLayout : public VkObject
 	{
 	protected:
 

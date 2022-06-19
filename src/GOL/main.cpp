@@ -11,6 +11,7 @@
 #include <Core/PipelineLayout.hpp>
 #include <Core/Program.hpp>
 #include <Core/Framebuffer.hpp>
+#include <Core/DescriptorPool.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -34,7 +35,7 @@ namespace vkl
 		 // size: In flight
 		std::vector<ImageView> _grids;
 	
-		VkDescriptorPool _update_descriptor_pool, _render_descriptor_pool;
+		DescriptorPool _update_descriptor_pool, _render_descriptor_pool;
 		std::vector<VkDescriptorSet> _update_descriptor_sets, _render_descriptor_sets;
 
 		Sampler _grid_sampler;
@@ -110,47 +111,9 @@ namespace vkl
 		{
 			uint32_t n = _main_window->framesInFlight();
 
-			{
-				VkDescriptorPoolSize pool_size{
-					.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-					.descriptorCount = 1,
-				};
-
-				// The compute shaders takes two storage imaged (prev and next), so the same pool_size can be used.
-				std::array<VkDescriptorPoolSize, 2> pool_sizes{ pool_size, pool_size };
-
-				VkDescriptorPoolCreateInfo ci{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-					.maxSets = n,
-					.poolSizeCount = pool_sizes.size(),
-					.pPoolSizes = pool_sizes.data(),
-				};
-
-				VK_CHECK(vkCreateDescriptorPool(_device, &ci, nullptr, &_update_descriptor_pool), "Failed to create a descriptor pool.");
-			}
-			{
-				VkDescriptorPoolSize grid_size{
-					.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-					.descriptorCount = 1,
-				};
-
-				VkDescriptorPoolSize sampler_size{
-					.type = VK_DESCRIPTOR_TYPE_SAMPLER,
-					.descriptorCount = 1,
-				};
-
-				// TODO transform uniform buffer
-
-				std::array<VkDescriptorPoolSize, 2> sizes = { grid_size, sampler_size };
-
-				VkDescriptorPoolCreateInfo ci{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-					.maxSets = n,
-					.poolSizeCount = sizes.size(),
-					.pPoolSizes = sizes.data(),
-				};
-				VK_CHECK(vkCreateDescriptorPool(_device, &ci, nullptr, &_render_descriptor_pool), "Failed to create a descriptor pool.");
- 			}
+			
+			_update_descriptor_pool = DescriptorPool(_update_program->setLayouts()[0], n);
+			_render_descriptor_pool = DescriptorPool(_render_program->setLayouts()[0], n);
 		}
 
 		void createSampler()
@@ -177,7 +140,7 @@ namespace vkl
 		void createDescriptorSets()
 		{
 			{
-				std::vector<VkDescriptorSetLayout> layouts(_main_window->framesInFlight(), _update_pipeline.program()->setLayouts().front());
+				std::vector<VkDescriptorSetLayout> layouts(_main_window->framesInFlight(), *_update_pipeline.program()->setLayouts().front());
 				uint32_t n = layouts.size();
 				VkDescriptorSetAllocateInfo alloc{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -231,7 +194,7 @@ namespace vkl
 			}
 			{
 				uint32_t n = _main_window->framesInFlight();
-				std::vector<VkDescriptorSetLayout> layouts(n, _render_pipeline.program()->setLayouts().front());
+				std::vector<VkDescriptorSetLayout> layouts(n, *_render_pipeline.program()->setLayouts().front());
 				VkDescriptorSetAllocateInfo alloc{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 					.descriptorPool = _render_descriptor_pool,
@@ -301,13 +264,6 @@ namespace vkl
 					._fragment = frag,
 				}
 			);
-
-		 
-			VkPushConstantRange push_constant{
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-				.offset = 0,
-				.size = sizeof(glm::mat4),
-			};
 
 			Pipeline::GraphicsCreateInfo ci = {
 				._vertex_input = Pipeline::VertexInputWithoutVertices(),

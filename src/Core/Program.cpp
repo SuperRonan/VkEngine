@@ -47,14 +47,14 @@ namespace vkl
 		for (auto& [s, sb] : all_bindings)
 		{
 			assert(s < _set_layouts.size());
-			DescriptorSetLayout & set_layout = _set_layouts[s];
+			std::shared_ptr<DescriptorSetLayout> & set_layout = _set_layouts[s];
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 			bindings.reserve(sb.size());
 			for (const auto& [bdi, bd] : sb)
 			{
 				bindings.push_back(bd);
 			}
-			set_layout = DescriptorSetLayout(_app, bindings);
+			set_layout = std::make_shared<DescriptorSetLayout>(_app, bindings);
 		}
 		return true;
 	}
@@ -103,7 +103,8 @@ namespace vkl
 		const bool push_constants_ok = buildPushConstantRanges();
 		assert(push_constants_ok);
 
-		const std::vector<VkDescriptorSetLayout> set_layouts(_set_layouts.cbegin(), _set_layouts.cend());
+		std::vector<VkDescriptorSetLayout> set_layouts(_set_layouts.size());
+		for (size_t i = 0; i < set_layouts.size(); ++i)	set_layouts[i] = *_set_layouts[i];
 
 		const VkPipelineLayoutCreateInfo ci = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
