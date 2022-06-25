@@ -1,3 +1,5 @@
+#pragma once
+
 #include "DescriptorSetLayout.hpp"
 
 namespace vkl

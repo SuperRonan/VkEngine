@@ -12,6 +12,7 @@
 #include <Core/Program.hpp>
 #include <Core/Framebuffer.hpp>
 #include <Core/DescriptorPool.hpp>
+#include <Core/RenderPass.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -26,7 +27,7 @@ namespace vkl
 
 		VkWindow* _main_window;
 
-		VkRenderPass _render_pass;
+		RenderPass _render_pass;
 
 		// size: swapchain
 		std::vector<Framebuffer> _framebuffers;
@@ -93,7 +94,14 @@ namespace vkl
 				.dependencyCount = 1,
 				.pDependencies = &render_dependency,
 			};
-			VK_CHECK(vkCreateRenderPass(_device, &render_pass_ci, nullptr, &_render_pass), "Failed to create a render pass.");
+
+			_render_pass = RenderPass(
+				this,
+				{ window_color_attach },
+				{ {window_color_ref} },
+				{ render_subpass },
+				{ render_dependency }
+			);
 		}
 
 		void createFrameBuffers()
