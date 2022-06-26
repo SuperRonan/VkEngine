@@ -13,6 +13,7 @@
 #include <Core/Framebuffer.hpp>
 #include <Core/DescriptorPool.hpp>
 #include <Core/RenderPass.hpp>
+#include <Core/Semaphore.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -49,7 +50,7 @@ namespace vkl
 
 		std::vector<VkCommandBuffer> _commands;
 
-		std::vector<VkSemaphore> _render_finished_semaphores;
+		std::vector<Semaphore> _render_finished_semaphores;
 
 		void createRenderPass()
 		{
@@ -474,10 +475,7 @@ namespace vkl
 
 			for (size_t i = 0; i < _render_finished_semaphores.size(); ++i)
 			{
-				VkSemaphoreCreateInfo ci{
-					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-				};
-				vkCreateSemaphore(_device, &ci, nullptr, _render_finished_semaphores.data() + i);
+				_render_finished_semaphores[i] = Semaphore(this);
 			}
 		}
 
@@ -565,6 +563,7 @@ namespace vkl
 				VkWindow::AquireResult aquired = _main_window->aquireNextImage();
 				VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+				VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 				VkSubmitInfo submission{
 					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 					.waitSemaphoreCount = 1,
@@ -573,10 +572,10 @@ namespace vkl
 					.commandBufferCount = 1,
 					.pCommandBuffers = _commands.data() + aquired.in_flight_index,
 					.signalSemaphoreCount = 1,
-					.pSignalSemaphores = _render_finished_semaphores.data() + aquired.in_flight_index,
+					.pSignalSemaphores = &render_finished_semaphore,
 				};
 				vkQueueSubmit(_queues.graphics, 1, &submission, aquired.fence);
-				_main_window->present(1, _render_finished_semaphores.data() + aquired.in_flight_index);
+				_main_window->present(1, &render_finished_semaphore);
 			}
 
 			while (!_main_window->shouldClose())
@@ -621,6 +620,7 @@ namespace vkl
 					{
 						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
 					}
+					VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 					VkSubmitInfo submission{
 						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 						.waitSemaphoreCount = 1,
@@ -629,10 +629,10 @@ namespace vkl
 						.commandBufferCount = 1,
 						.pCommandBuffers = _commands.data() + aquired.in_flight_index,
 						.signalSemaphoreCount = 1,
-						.pSignalSemaphores = _render_finished_semaphores.data() + aquired.in_flight_index,
+						.pSignalSemaphores = &render_finished_semaphore,
 					};
 					vkQueueSubmit(_queues.graphics, 1, &submission, aquired.fence);
-					_main_window->present(1, _render_finished_semaphores.data() + aquired.in_flight_index);
+					_main_window->present(1, &render_finished_semaphore);
 					
 					if (!paused)
 					{
