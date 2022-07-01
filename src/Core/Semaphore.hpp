@@ -23,7 +23,7 @@ namespace vkl
 
 		Semaphore(Semaphore const&) = delete;
 
-		Semaphore(Semaphore&& other) noexcept :
+		constexpr Semaphore(Semaphore&& other) noexcept :
 			VkObject(std::move(other)),
 			_handle(other._handle)
 		{
@@ -32,7 +32,7 @@ namespace vkl
 
 		Semaphore& operator=(Semaphore const&) = delete;
 
-		Semaphore& operator=(Semaphore&& other) noexcept
+		constexpr Semaphore& operator=(Semaphore&& other) noexcept
 		{
 			VkObject::operator=(std::move(other));
 			std::swap(_handle, other._handle);

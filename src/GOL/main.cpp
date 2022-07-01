@@ -563,18 +563,20 @@ namespace vkl
 				VkWindow::AquireResult aquired = _main_window->aquireNextImage();
 				VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+				VkSemaphore wait_semaphore = *aquired.semaphore;
 				VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 				VkSubmitInfo submission{
 					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 					.waitSemaphoreCount = 1,
-					.pWaitSemaphores = &aquired.semaphore,
+					.pWaitSemaphores = &wait_semaphore,
 					.pWaitDstStageMask = &wait_stage,
 					.commandBufferCount = 1,
 					.pCommandBuffers = _commands.data() + aquired.in_flight_index,
 					.signalSemaphoreCount = 1,
 					.pSignalSemaphores = &render_finished_semaphore,
 				};
-				vkQueueSubmit(_queues.graphics, 1, &submission, aquired.fence);
+				VkFence submission_fence = *aquired.fence;
+				vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
 				_main_window->present(1, &render_finished_semaphore);
 			}
 
@@ -621,17 +623,19 @@ namespace vkl
 						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
 					}
 					VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
+					VkSemaphore wait_semaphore = *aquired.semaphore;
 					VkSubmitInfo submission{
 						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 						.waitSemaphoreCount = 1,
-						.pWaitSemaphores = &aquired.semaphore,
+						.pWaitSemaphores = &wait_semaphore,
 						.pWaitDstStageMask = &wait_stage,
 						.commandBufferCount = 1,
 						.pCommandBuffers = _commands.data() + aquired.in_flight_index,
 						.signalSemaphoreCount = 1,
 						.pSignalSemaphores = &render_finished_semaphore,
 					};
-					vkQueueSubmit(_queues.graphics, 1, &submission, aquired.fence);
+					VkFence submission_fence = *aquired.fence;
+					vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
 					_main_window->present(1, &render_finished_semaphore);
 					
 					if (!paused)

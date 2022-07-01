@@ -171,23 +171,14 @@ namespace vkl
 
 	void VkWindow::createSynchObjects()
 	{
-		VkSemaphoreCreateInfo semaphore_ci{
-			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		};
-
-		VkFenceCreateInfo fence_ci{
-			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-			.flags = VK_FENCE_CREATE_SIGNALED_BIT,
-		};
-
 		_image_available.resize(_max_frames_in_flight);
 		_in_flight_fence.resize(_max_frames_in_flight);
 		for (size_t i = 0; i < _max_frames_in_flight; ++i)
 		{
-			VK_CHECK(vkCreateSemaphore(_app->device(), &semaphore_ci, nullptr, _image_available.data() + i), "Failed to create a semaphore.");
-			VK_CHECK(vkCreateFence(_app->device(), &fence_ci, nullptr, _in_flight_fence.data() + i), "Failed to create a fence");
+			_image_available[i] = std::make_shared<Semaphore>(_app);
+			_in_flight_fence[i] = std::make_shared<Fence>(_app, true);
 		}
-		_image_in_flight_fence.resize(_swapchain_images.size(), VK_NULL_HANDLE);
+		_image_in_flight_fence.resize(_swapchain_images.size(), nullptr);
 
 	}
 
@@ -239,12 +230,6 @@ namespace vkl
 
 	void VkWindow::cleanup()
 	{
-		for (size_t i = 0; i < _max_frames_in_flight; ++i)
-		{
-			vkDestroySemaphore(_app->device(), _image_available[i], nullptr);
-			vkDestroyFence(_app->device(), _in_flight_fence[i], nullptr);
-		}
-
 		cleanupSwapchain();
 
 		vkDestroySurfaceKHR(_app->instance(), _surface, nullptr);
@@ -315,19 +300,19 @@ namespace vkl
 		semaphore(VK_NULL_HANDLE)
 	{}
 
-	VkWindow::AquireResult::AquireResult(uint32_t swap_index, uint32_t in_flight_index, VkSemaphore semaphore, VkFence fence) :
+	VkWindow::AquireResult::AquireResult(uint32_t swap_index, uint32_t in_flight_index, std::shared_ptr<Semaphore> semaphore, std::shared_ptr<Fence> fence) :
 		success(VK_TRUE),
 		swap_index(swap_index),
 		in_flight_index(in_flight_index),
-		semaphore(semaphore),
-		fence(fence)
+		semaphore(std::move(semaphore)),
+		fence(std::move(fence))
 	{}
 
 	VkWindow::AquireResult VkWindow::aquireNextImage()
 	{
-		vkWaitForFences(_app->device(), 1, &_in_flight_fence[_current_frame], VK_TRUE, UINT64_MAX);
+		_in_flight_fence[_current_frame]->wait();
 		uint32_t image_index;
-		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), _swapchain, UINT64_MAX, _image_available[_current_frame], VK_NULL_HANDLE, &image_index);
+		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), _swapchain, UINT64_MAX, *_image_available[_current_frame], VK_NULL_HANDLE, &image_index);
 		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			reCreateSwapchain();
@@ -339,12 +324,12 @@ namespace vkl
 		}
 		_current_frame_info.index = image_index;
 
-		if (_image_in_flight_fence[image_index] != VK_NULL_HANDLE)
+		if (_image_in_flight_fence[image_index])
 		{
-			vkWaitForFences(_app->device(), 1, &_image_in_flight_fence[image_index], VK_TRUE, UINT64_MAX);
+			_image_in_flight_fence[image_index]->wait();
 		}
 		_image_in_flight_fence[image_index] = _in_flight_fence[_current_frame];
-		vkResetFences(_app->device(), 1, &_image_in_flight_fence[image_index]);
+		_image_in_flight_fence[image_index]->reset();
 		return AquireResult(image_index, _current_frame, _image_available[_current_frame], _image_in_flight_fence[image_index]);
 	}
 
