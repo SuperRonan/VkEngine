@@ -171,5 +171,10 @@ namespace vkl
 		{
 			_app = app;
 		}
+
+		constexpr VkDevice device()const
+		{
+			return _app->device();
+		}
 	};
 }

@@ -652,7 +652,7 @@ namespace vkl
 
 }
 
-void main()
+int main()
 {
 	try
 	{
@@ -662,5 +662,8 @@ void main()
 	catch (std::exception const& e)
 	{
 		std::cerr << e.what() << std::endl;
+		return -1;
 	}
+
+	return 0;
 }
