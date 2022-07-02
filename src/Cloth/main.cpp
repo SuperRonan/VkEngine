@@ -131,8 +131,7 @@ namespace vkl
 
 		std::shared_ptr<SpringMass2D> _cloth;
 
-		PipelineLayout _update_pipline_layout;
-		Pipeline _update_pipeline;
+		std::shared_ptr<Pipeline> _update_pipeline;
 
 		void createDescriptorLayout()
 		{
@@ -146,35 +145,15 @@ namespace vkl
 
 		void createUpdatePipeline()
 		{
-			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/Cloth/updateSpringMass2D.comp";
+			//std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/Cloth/updateSpringMass2D.comp";
+			//std::shared_ptr<Shader> update_shader = std::make_shared<Shader>(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
+			//std::shared_ptr<ComputeProgram> update_program = std::make_shared<ComputeProgram>(update_shader);
+			//_update_pipeline = std::make_shared<Pipeline>(update_program);
+		}
 
-			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
-			VkShaderModule update_shader_module = update_shader.module();
+		void createRenderPipeline()
+		{
 
-			VkPipelineShaderStageCreateInfo stage{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.stage = update_shader.stage(),
-				.module = update_shader_module,
-				.pName = "main",
-			};
-
-			//VkPipelineLayoutCreateInfo layout_ci{
-			//	.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			//	.setLayoutCount = 1,
-			//	.pSetLayouts = &_update_pipeline_layout,
-			//	.pushConstantRangeCount = 0,
-			//	.pPushConstantRanges = nullptr,
-			//};
-
-			//_update_pipline_layout = PipelineLayout(this, layout_ci);
-
-			//VkComputePipelineCreateInfo ci{
-			//	.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			//	.stage = stage,
-			//	.layout = _update_layout,
-			//};
-
-			//_update_pipeline = Pipeline(this, ci);
 		}
 
 	public:

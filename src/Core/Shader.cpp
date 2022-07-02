@@ -3,6 +3,9 @@
 #include <fstream>
 #include <exception>
 #include <cassert>
+#include <sstream>
+#include <string_view>
+#include <iostream>
 
 namespace vkl
 {
@@ -22,6 +25,46 @@ namespace vkl
 		file.close();
 		return res;
 
+	}
+
+	std::string Shader::preprocess(std::filesystem::path const& path)
+	{
+		const std::string content = readFileToString(path);
+		std::stringstream oss;
+
+		const std::filesystem::path folder = path.parent_path();
+
+		size_t copied_so_far = 0;
+		while (true)
+		{
+			const size_t include_begin = content.find("#include", copied_so_far);
+
+			if (std::string::npos != include_begin)
+			{
+
+				const size_t line_end = content.find("\n", include_begin);
+				const std::string_view line(content.data() + include_begin, line_end - include_begin);
+
+				const size_t path_begin = line.find("\"") + 1;
+				const size_t path_end = line.rfind("\"");
+				const std::string_view include_path_relative(line.data() + path_begin, path_end - path_begin);
+
+				const std::filesystem::path path_to_include = folder.string() + std::string("/") + std::string(include_path_relative);
+
+				const std::string included_code = preprocess(path_to_include);
+
+				oss << std::string_view(content.data() + copied_so_far, include_begin - copied_so_far);
+				oss << included_code;
+				copied_so_far = line_end;
+
+			}
+			else
+				break;
+		}
+
+		oss << std::string_view(content.data() + copied_so_far, content.size() - copied_so_far);
+
+		return oss.str();
 	}
 
 	shaderc_shader_kind getShaderKind(VkShaderStageFlagBits stage)
@@ -107,17 +150,7 @@ namespace vkl
 		_stage(stage),
 		_reflection(std::zeroInit(_reflection))
 	{
-		compile(readFileToString(path), path.string());
-		reflect();
-	}
-
-	Shader::Shader(VkApplication * app, std::string const& code, VkShaderStageFlagBits stage):
-		VkObject(app),
-		_stage(stage),
-		_reflection(std::zeroInit(_reflection))
-	{
-		spvReflectDestroyShaderModule(&_reflection);
-		compile(code);
+		compile(preprocess(path), path.string());
 		reflect();
 	}
 	

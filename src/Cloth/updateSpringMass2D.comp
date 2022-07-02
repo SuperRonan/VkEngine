@@ -36,7 +36,7 @@ int getIndex(in ivec2 c)
 
 bool coordIsCorrect(in ivec2 c)
 {
-	return all(lessThan(center_coord, pc.dims)) && all(greaterThanEqual(center_coord, ivec2(0)));
+	return all(lessThan(c, pc.dims)) && all(greaterThanEqual(c, ivec2(0)));
 }
 
 void main()

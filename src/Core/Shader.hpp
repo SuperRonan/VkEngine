@@ -25,8 +25,6 @@ namespace vkl
 
 		Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage);
 
-		Shader(VkApplication * app, std::string const& code, VkShaderStageFlagBits stage);
-
 		Shader(Shader const&) = delete;
 		
 		constexpr Shader(Shader&& other) noexcept :
@@ -52,6 +50,8 @@ namespace vkl
 			std::swap(_reflection, other._reflection);
 			return *this;
 		}
+
+		std::string preprocess(std::filesystem::path const& path);
 		
 		void compile(std::string const& code, std::string const& filename="");
 

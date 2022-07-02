@@ -463,26 +463,6 @@ namespace vkl
 		glfwTerminate();
 	}
 
-	VkInstance VkApplication::instance()const
-	{
-		return _instance;
-	}
-
-	VkPhysicalDevice VkApplication::physicalDevice()const
-	{
-		return _physical_device;
-	}
-
-	VkDevice VkApplication::device()const
-	{
-		return _device;
-	}
-
-	VmaAllocator VkApplication::allocator()const
-	{
-		return _allocator;
-	}
-
 	VkApplication::QueueFamilyIndices const& VkApplication::getQueueFamilyIndices()const
 	{
 		return _queue_family_indices;

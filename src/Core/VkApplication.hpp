@@ -117,13 +117,25 @@ namespace vkl
 
 		virtual void run();
 
-		VkInstance instance()const;
+		constexpr VkInstance instance()const
+		{
+			return _instance;
+		}
 
-		VkPhysicalDevice physicalDevice()const;
+		constexpr VkPhysicalDevice physicalDevice()const
+		{
+			return _physical_device;
+		}
 
-		VkDevice device()const;
+		constexpr VkDevice device()const
+		{
+			return _device;
+		}
 
-		VmaAllocator allocator()const;
+		constexpr VmaAllocator allocator()const
+		{
+			return _allocator;
+		}
 
 		QueueFamilyIndices const& getQueueFamilyIndices()const;
 
