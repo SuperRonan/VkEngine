@@ -102,6 +102,16 @@ namespace vkl
 			return input_assembly;
 		}
 
+		constexpr static VkPipelineInputAssemblyStateCreateInfo InputAssemblyPointDefault()
+		{
+			VkPipelineInputAssemblyStateCreateInfo input_assembly{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+				.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+				.primitiveRestartEnable = VK_FALSE,
+			};
+			return input_assembly;
+		}
+
 		constexpr static VkViewport Viewport(VkExtent2D const& extent)
 		{
 			VkViewport viewport{

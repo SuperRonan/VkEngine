@@ -61,7 +61,7 @@ namespace vkl
 
 		virtual std::vector<const char* > getDeviceExtensions()const; 
 
-		std::vector<const char*> getRequiredExtensions();
+		std::vector<const char*> getInstanceExtensions();
 
 		bool _enable_valid_layers = false;
 

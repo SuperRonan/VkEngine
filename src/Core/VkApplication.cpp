@@ -39,7 +39,7 @@ namespace vkl
 		};
 	}
 
-	std::vector<const char*> VkApplication::getRequiredExtensions()
+	std::vector<const char*> VkApplication::getInstanceExtensions()
 	{
 		uint32_t glfw_ext_count = 0;
 		const char** glfw_exts = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
@@ -123,7 +123,7 @@ namespace vkl
 			.apiVersion = VK_API_VERSION_1_2,
 		};
 
-		auto extensions = getRequiredExtensions();
+		auto extensions = getInstanceExtensions();
 		VkInstanceCreateInfo create_info{
 			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 			.pApplicationInfo = &app_info,
@@ -356,6 +356,7 @@ namespace vkl
 		}
 
 		VkPhysicalDeviceFeatures device_features{
+			.geometryShader = VK_TRUE,
 			.samplerAnisotropy = VK_TRUE,
 		};
 

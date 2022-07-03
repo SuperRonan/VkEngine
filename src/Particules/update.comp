@@ -1,0 +1,54 @@
+#version 460
+
+#include "./common.glsl"
+
+layout(local_size_x = 32) in;
+
+layout(set = 0, binding = 0, std430) buffer readonly restrict b_previous_state
+{
+	Particule particules[];
+} prev;
+
+layout(set = 0, binding = 1, std430) buffer writeonly restrict b_next_state
+{
+	Particule particules[];
+} next;
+
+layout(push_constant) uniform constants
+{
+	uint number_of_particules;	
+	float dt;
+} _pc;
+
+void main()
+{
+	const uint gid = gl_GlobalInvocationID.x;
+
+	if(gid < _pc.number_of_particules)
+	{
+		const Particule p = prev.particules[gid];
+		vec2 f = 0..xx;
+
+		for(uint i = 0; i < _pc.number_of_particules; ++i)
+		{
+			if(i != gid)
+			{
+				const Particule o = prev.particules[i];
+				
+				const vec2 d = o.position - p.position;
+				const vec2 normd = normalize(d);
+				const float dist2 = dot(d, d);
+				const float dist = distance(o.position, p.position);
+
+				f += normd / dist;
+			}
+		}
+
+		Particule np = p;
+		const vec2 acc = f * 0.001;
+		np.velocity += acc * _pc.dt;
+		np.position += np.velocity * _pc.dt;
+		next.particules[gid] = np;
+	}
+}
+

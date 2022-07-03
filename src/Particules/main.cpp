@@ -22,11 +22,11 @@
 namespace vkl
 {
 
-	class VkGameOfLife : VkApplication
+	class ParticuleSim : VkApplication
 	{
 	protected:
 
-		VkWindow* _main_window;
+		std::shared_ptr<VkWindow> _main_window;
 
 		RenderPass _render_pass;
 
@@ -47,6 +47,61 @@ namespace vkl
 		std::vector<VkCommandBuffer> _commands;
 
 		std::vector<Semaphore> _render_finished_semaphores;
+
+		struct Particule
+		{
+			glm::vec2 position;
+			glm::vec2 velocity;
+			unsigned int type;
+			int pad;
+		};
+
+		void createStateBuffers()
+		{
+			_number_of_particules = 128;
+			std::vector<Particule> particules(_number_of_particules);
+
+			const size_t seed = 0;
+			std::mt19937_64 rng(seed);
+			std::uniform_real_distribution<float> distrib(-1, 1);
+
+			for (size_t i = 0; i < _number_of_particules; ++i)
+			{
+				const float x = distrib(rng);
+				const float y = distrib(rng);
+				particules[i].position = glm::vec2(x, y);
+				particules[i].velocity = glm::vec2(0, 0);
+				particules[i].type = 0;
+			}
+
+			const VkDeviceSize buffer_size = particules.size() * sizeof(Particule);
+
+			VkCommandBuffer copy_command = beginSingleTimeCommand(_pools.graphics);
+
+			_state_buffers.resize(2);
+			std::vector<StagingPool::StagingBuffer*> staging_buffers(_state_buffers.size());
+			for (size_t i = 0; i < _state_buffers.size(); ++i)
+			{
+				_state_buffers[i] = Buffer(this);
+				_state_buffers[i].createBuffer(buffer_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+				staging_buffers[i] = _state_buffers[i].copyToStaging(particules.data(), buffer_size);
+				_state_buffers[i].recordCopyStagingToBuffer(copy_command, staging_buffers[i]);
+			}
+
+			endSingleTimeCommandAndWait(copy_command, _queues.graphics, _pools.graphics);
+
+			for (auto* sb : staging_buffers)
+			{
+				_staging_pool.releaseStagingBuffer(sb);
+			}
+		}
+
+		virtual std::vector<const char* > getDeviceExtensions()const override
+		{
+			std::vector<const char* > res = VkApplication::getDeviceExtensions();
+			
+			return res;
+		}
 
 		void createRenderPass()
 		{
@@ -139,38 +194,44 @@ namespace vkl
 					int prev_id = i - 1; if (prev_id < 0)	prev_id = _state_buffers.size() - 1;
 					int next_id = i;
 
+					VkDescriptorBufferInfo prev{
+						.buffer = _state_buffers[prev_id],
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+					};
 
-					//VkDescriptorImageInfo next{
-					//	.imageView = _grids[next_id],
-					//	.imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-					//};
+					VkDescriptorBufferInfo next{
+						.buffer = _state_buffers[next_id],
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+					};
 
-					//std::array<VkWriteDescriptorSet, 2> descriptor_writes{
-					//	VkWriteDescriptorSet{
-					//		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					//		.dstSet = _update_descriptor_sets[i],
-					//		.dstBinding = 0,
-					//		.dstArrayElement = 0,
-					//		.descriptorCount = 1,
-					//		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-					//		.pImageInfo = &prev,
-					//		.pBufferInfo = nullptr,
-					//		.pTexelBufferView = nullptr,
-					//	},
-					//	VkWriteDescriptorSet{
-					//		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					//		.dstSet = _update_descriptor_sets[i],
-					//		.dstBinding = 1,
-					//		.dstArrayElement = 0,
-					//		.descriptorCount = 1,
-					//		.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-					//		.pImageInfo = &next,
-					//		.pBufferInfo = nullptr,
-					//		.pTexelBufferView = nullptr,
-					//	},
-					//};
+					std::array<VkWriteDescriptorSet, 2> descriptor_writes{
+						VkWriteDescriptorSet{
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.dstSet = _update_descriptor_sets[i],
+							.dstBinding = 0,
+							.dstArrayElement = 0,
+							.descriptorCount = 1,
+							.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+							.pImageInfo = nullptr,
+							.pBufferInfo = &prev,
+							.pTexelBufferView = nullptr,
+						},
+						VkWriteDescriptorSet{
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.dstSet = _update_descriptor_sets[i],
+							.dstBinding = 1,
+							.dstArrayElement = 0,
+							.descriptorCount = 1,
+							.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+							.pImageInfo = nullptr,
+							.pBufferInfo = &next,
+							.pTexelBufferView = nullptr,
+						},
+					};
 
-					//vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
+					vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 				}
 			}
 			{
@@ -186,37 +247,26 @@ namespace vkl
 				VK_CHECK(vkAllocateDescriptorSets(_device, &alloc, _render_descriptor_sets.data()), "Failed to allocate descriptor sets.");
 				for (size_t i = 0; i < n; ++i)
 				{
-					//VkDescriptorImageInfo grid{
-					//	.imageView = _grids[i],
-					//	.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					//};
+					VkDescriptorBufferInfo state{
+						.buffer = _state_buffers[i],
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+					};
 
-					//VkDescriptorImageInfo sampler{
-					//	.sampler = _grid_sampler.handle(),
-					//};
+					std::array<VkWriteDescriptorSet, 1> descriptor_writes{
+						VkWriteDescriptorSet{
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.dstSet = _render_descriptor_sets[i],
+							.dstBinding = 0,
+							.dstArrayElement = 0,
+							.descriptorCount = 1,
+							.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+							.pImageInfo = nullptr,
+							.pBufferInfo = &state,
+						},
+					};
 
-					//std::array<VkWriteDescriptorSet, 2> descriptor_writes{
-					//	VkWriteDescriptorSet{
-					//		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					//		.dstSet = _render_descriptor_sets[i],
-					//		.dstBinding = 0,
-					//		.dstArrayElement = 0,
-					//		.descriptorCount = 1,
-					//		.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-					//		.pImageInfo = &grid,
-					//	},
-					//	VkWriteDescriptorSet{
-					//		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					//		.dstSet = _render_descriptor_sets[i],
-					//		.dstBinding = 1,
-					//		.dstArrayElement = 0,
-					//		.descriptorCount = 1,
-					//		.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-					//		.pImageInfo = &sampler,
-					//	},
-					//};
-
-					//vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
+					vkUpdateDescriptorSets(_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
 
 				}
 			}
@@ -224,7 +274,7 @@ namespace vkl
 
 		void createComputePipeline()
 		{
-			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/update.comp";
+			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/update.comp";
 
 			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
 			_update_program = std::make_shared<ComputeProgram>(std::move(update_shader));
@@ -233,22 +283,25 @@ namespace vkl
 
 		void createGraphicsPipeline()
 		{
-			std::filesystem::path vert_shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/render.vert";
-			std::filesystem::path frag_shader_path = std::string(ENGINE_SRC_PATH) + "/src/GOL/render.frag";
+			std::filesystem::path vert_shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/render.vert";
+			std::filesystem::path geom_shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/render.geom";
+			std::filesystem::path frag_shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/render.frag";
 
 			std::shared_ptr<Shader> vert = std::make_shared<Shader>(Shader(this, vert_shader_path, VK_SHADER_STAGE_VERTEX_BIT));
+			std::shared_ptr<Shader> geom = std::make_shared<Shader>(Shader(this, geom_shader_path, VK_SHADER_STAGE_GEOMETRY_BIT));
 			std::shared_ptr<Shader> frag = std::make_shared<Shader>(Shader(this, frag_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT));
 
 			_render_program = std::make_shared<GraphicsProgram>(
 				GraphicsProgram::CreateInfo{
 					._vertex = vert,
+					._geometry = geom,
 					._fragment = frag,
 				}
 			);
 
 			Pipeline::GraphicsCreateInfo ci = {
 				._vertex_input = Pipeline::VertexInputWithoutVertices(),
-				._input_assembly = Pipeline::InputAssemblyTriangleDefault(),
+				._input_assembly = Pipeline::InputAssemblyPointDefault(),
 				._rasterization = Pipeline::RasterizationDefault(),
 				._multisampling = Pipeline::MultisampleOneSample(),
 				._render_pass = _render_pass,
@@ -304,9 +357,9 @@ namespace vkl
 
 					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_program->pipelineLayout(), 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
 
-					vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
+					//vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_GEOMETRY_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
 
-					vkCmdDraw(cmd, 4, 1, 0, 0);
+					vkCmdDraw(cmd, _number_of_particules, 1, 0, 0);
 				}
 
 				vkCmdEndRenderPass(cmd);
@@ -314,7 +367,7 @@ namespace vkl
 			vkEndCommandBuffer(cmd);
 		}
 
-		void recordCommandBufferUpdateAndRender(VkCommandBuffer cmd, size_t grid_id, VkFramebuffer framebuffer, glm::mat4 matrix)
+		void recordCommandBufferUpdateAndRender(VkCommandBuffer cmd, size_t grid_id, VkFramebuffer framebuffer, glm::mat4 matrix, float dt)
 		{
 			vkResetCommandBuffer(cmd, 0);
 
@@ -328,9 +381,18 @@ namespace vkl
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_pipeline);
 
 				vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, _update_program->pipelineLayout(), 0, 1, &_update_descriptor_sets[grid_id], 0, nullptr);
+				struct pc
+				{
+					uint32_t n;
+					float dt;
+				};
+				pc _pc;
+				_pc.n = _number_of_particules;
+				_pc.dt = dt;
+				vkCmdPushConstants(cmd, _update_program->pipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &_pc);
 
 				const VkExtent3D dispatch_extent = {.width = (uint32_t)_number_of_particules, .height = 1, .depth = 1};
-				const VkExtent3D group_layout = { .width = 16, .height = 16, .depth = 1 };
+				const VkExtent3D group_layout = { .width = 32, .height = 1, .depth = 1};
 				vkCmdDispatch(cmd, (dispatch_extent.width + group_layout.width - 1) / group_layout.width, (dispatch_extent.height + group_layout.height - 1) / group_layout.height, (dispatch_extent.depth + group_layout.depth - 1) / group_layout.depth);
 
 				VkClearValue clear_color{ .color = {0, 0, 0, 1} };
@@ -344,15 +406,25 @@ namespace vkl
 					.pClearValues = &clear_color,
 				};
 
+				VkBufferMemoryBarrier barrier{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+					.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+					.buffer = _state_buffers[grid_id],
+					.size = VK_WHOLE_SIZE,
+				};
+
+				vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+
 				vkCmdBeginRenderPass(cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
 				{
 					vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_pipeline);
 
 					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_program->pipelineLayout(), 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
 
-					vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
+					//vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
 
-					vkCmdDraw(cmd, 4, 1, 0, 0);
+					vkCmdDraw(cmd, _number_of_particules, 1, 0, 0);
 				}
 
 				vkCmdEndRenderPass(cmd);
@@ -374,7 +446,7 @@ namespace vkl
 
 	public:
 
-		VkGameOfLife(bool validation = false) :
+		ParticuleSim(bool validation = false) :
 			VkApplication("Particules", validation)
 		{
 			VkWindow::CreateInfo window_ci{
@@ -383,17 +455,19 @@ namespace vkl
 				.in_flight_size = 2,
 				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Particules",
-				.w = 2048,
+				.w = 1024,
 				.h = 1024,
 				.resizeable = GLFW_FALSE,
 			};
-			_main_window = new VkWindow(window_ci);
+			_main_window = std::make_shared<VkWindow>(window_ci);
 
 			createRenderPass();
 			createFrameBuffers();
 
 			createComputePipeline();
 			createGraphicsPipeline();
+
+			createStateBuffers();
 
 			createDescriptorPool();
 			createDescriptorSets();
@@ -403,10 +477,8 @@ namespace vkl
 			createSemaphores();
 		}
 
-		virtual ~VkGameOfLife()
-		{
-			delete _main_window;
-		}
+		virtual ~ParticuleSim()
+		{}
 
 		void processInput(bool& pause)
 		{
@@ -504,7 +576,7 @@ namespace vkl
 					}
 					else
 					{
-						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid, dt);
 					}
 					VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 					VkSemaphore wait_semaphore = *aquired.semaphore;
@@ -540,7 +612,7 @@ int main()
 {
 	try
 	{
-		vkl::VkGameOfLife app(true);
+		vkl::ParticuleSim app(true);
 		app.run();
 	}
 	catch (std::exception const& e)
