@@ -60,6 +60,7 @@ namespace vkl
 					res = *it;
 				}
 			}
+			++it;
 		}
 
 		if (res == nullptr) // Did not find any: allocate a new one (Maybe re allocate a too small one if available)

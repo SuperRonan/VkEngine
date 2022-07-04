@@ -56,9 +56,61 @@ namespace vkl
 			int pad;
 		};
 
+#define N_TYPES_OF_PARTICULES 2
+
+		struct ParticuleCommonProperties
+		{
+			glm::vec4 color;
+		};
+
+		struct ForceDescription
+		{
+			glm::vec4 intensity_inv_linear_pad;
+		};
+
+		void createCommonRuleBuffer()
+		{
+			struct CommonRuleBuffer
+			{
+				ParticuleCommonProperties particules_properties[N_TYPES_OF_PARTICULES];
+				ForceDescription force_descriptions[N_TYPES_OF_PARTICULES * N_TYPES_OF_PARTICULES];
+			};
+
+			CommonRuleBuffer common_buffer;
+
+			common_buffer.particules_properties[0] = ParticuleCommonProperties{
+				.color = glm::vec4(1, 0, 0, 1),
+			};
+			common_buffer.particules_properties[1] = ParticuleCommonProperties{
+				.color = glm::vec4(0, 0, 1, 1),
+			};
+
+			common_buffer.force_descriptions[0] = ForceDescription{
+				.intensity_inv_linear_pad = glm::vec4(-0.5, 0, 0, 0),
+			};
+			common_buffer.force_descriptions[1] = ForceDescription{
+				.intensity_inv_linear_pad = glm::vec4(0.5, 0, 0, 0),
+			};
+			common_buffer.force_descriptions[2] = ForceDescription{
+				.intensity_inv_linear_pad = glm::vec4(0.5, 0, 0, 0),
+			};
+			common_buffer.force_descriptions[3] = ForceDescription{
+				.intensity_inv_linear_pad = glm::vec4(-0.5, 0, 0, 0),
+			};
+
+			_rule_buffer = Buffer(this);
+			_rule_buffer.createBuffer(sizeof(CommonRuleBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			VkCommandBuffer cmd = beginSingleTimeCommand(_pools.graphics);
+			auto* sb = _rule_buffer.copyToStaging(&common_buffer, sizeof(common_buffer));
+			_rule_buffer.recordCopyStagingToBuffer(cmd, sb);
+			endSingleTimeCommandAndWait(cmd, _queues.graphics, _pools.graphics);
+			_staging_pool.releaseStagingBuffer(sb);
+		}
+
 		void createStateBuffers()
 		{
-			_number_of_particules = 128;
+			createCommonRuleBuffer();
+			_number_of_particules = 128*4;
 			std::vector<Particule> particules(_number_of_particules);
 
 			const size_t seed = 0;
@@ -71,7 +123,7 @@ namespace vkl
 				const float y = distrib(rng);
 				particules[i].position = glm::vec2(x, y);
 				particules[i].velocity = glm::vec2(0, 0);
-				particules[i].type = 0;
+				particules[i].type = rng() % N_TYPES_OF_PARTICULES;
 			}
 
 			const VkDeviceSize buffer_size = particules.size() * sizeof(Particule);
@@ -206,7 +258,13 @@ namespace vkl
 						.range = VK_WHOLE_SIZE,
 					};
 
-					std::array<VkWriteDescriptorSet, 2> descriptor_writes{
+					VkDescriptorBufferInfo rules{
+						.buffer = _rule_buffer,
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+					};
+
+					std::array<VkWriteDescriptorSet, 3> descriptor_writes{
 						VkWriteDescriptorSet{
 							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 							.dstSet = _update_descriptor_sets[i],
@@ -227,6 +285,17 @@ namespace vkl
 							.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 							.pImageInfo = nullptr,
 							.pBufferInfo = &next,
+							.pTexelBufferView = nullptr,
+						},
+						VkWriteDescriptorSet{
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.dstSet = _update_descriptor_sets[i],
+							.dstBinding = 2,
+							.dstArrayElement = 0,
+							.descriptorCount = 1,
+							.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+							.pImageInfo = nullptr,
+							.pBufferInfo = &rules,
 							.pTexelBufferView = nullptr,
 						},
 					};
@@ -253,7 +322,13 @@ namespace vkl
 						.range = VK_WHOLE_SIZE,
 					};
 
-					std::array<VkWriteDescriptorSet, 1> descriptor_writes{
+					VkDescriptorBufferInfo rules{
+						.buffer = _rule_buffer,
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+					};
+
+					std::array<VkWriteDescriptorSet, 2> descriptor_writes{
 						VkWriteDescriptorSet{
 							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 							.dstSet = _render_descriptor_sets[i],
@@ -263,6 +338,17 @@ namespace vkl
 							.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 							.pImageInfo = nullptr,
 							.pBufferInfo = &state,
+						},
+						VkWriteDescriptorSet{
+							.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+							.dstSet = _render_descriptor_sets[i],
+							.dstBinding = 1,
+							.dstArrayElement = 0,
+							.descriptorCount = 1,
+							.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+							.pImageInfo = nullptr,
+							.pBufferInfo = &rules,
+							.pTexelBufferView = nullptr,
 						},
 					};
 

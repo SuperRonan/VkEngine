@@ -60,7 +60,7 @@ namespace vkl
 		VkBufferCopy copy{
 			.srcOffset = 0,
 			.dstOffset = 0,
-			.size = _size,
+			.size = std::min(_size, sb->size),
 		};
 
 		vkCmdCopyBuffer(cmd, sb->buffer, _buffer, 1, &copy);
