@@ -5,6 +5,31 @@
 #include <memory>
 #include <numeric>
 #include <vector>
+#include <glm/glm.hpp>
+
+template <class Stream, class Float, glm::length_t N>
+Stream& operator<<(Stream& stream, glm::vec<N, Float> const& vec)
+{
+	stream << "[";
+	for (int i = 0; i < N; ++i)
+	{
+		stream << vec[i] << ", ";
+	}
+	stream << "]";
+	return stream;
+}
+
+template <class Stream, class Float, glm::length_t N, glm::length_t M>
+Stream& operator<<(Stream& stream, glm::mat<N, M, Float> const& mat)
+{
+	stream << "[";
+	for (int i = 0; i < N; ++i)
+	{	
+		stream << mat[i] << ", ";
+	}
+	stream << "]";
+	return stream;
+}
 
 namespace std
 {

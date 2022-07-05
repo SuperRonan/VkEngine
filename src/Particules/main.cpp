@@ -443,7 +443,7 @@ namespace vkl
 
 					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_program->pipelineLayout(), 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
 
-					//vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_GEOMETRY_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
+					vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_GEOMETRY_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
 
 					vkCmdDraw(cmd, _number_of_particules, 1, 0, 0);
 				}
@@ -508,7 +508,7 @@ namespace vkl
 
 					vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _render_program->pipelineLayout(), 0, 1, _render_descriptor_sets.data() + grid_id, 0, nullptr);
 
-					//vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
+					vkCmdPushConstants(cmd, _render_program->pipelineLayout(), VK_SHADER_STAGE_GEOMETRY_BIT, 0, sizeof(matrix), glm::value_ptr(matrix));
 
 					vkCmdDraw(cmd, _number_of_particules, 1, 0, 0);
 				}
@@ -590,21 +590,20 @@ namespace vkl
 			bool paused = true;
 
 			vkl::Camera2D camera;
-			camera.move({ 0.5, 0.5 });
 			vkl::MouseHandler mouse_handler(_main_window->handle(), vkl::MouseHandler::Mode::Position);
 
 			double t = glfwGetTime(), dt;
 
 			size_t current_grid_id = 0;
 
-			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, 1.0 });
-			const glm::vec2 move_scale(1.0 / float(_main_window->extent().width), 1.0 / float(_main_window->extent().height));
-			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
+			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent().width) / float(_main_window->extent().height)});
+			const glm::vec2 move_scale(2.0 / float(_main_window->extent().width), 2.0 / float(_main_window->extent().height));
+			glm::mat3 mat_world_to_cam = glm::inverse(screen_coords_matrix * camera.matrix());
 
 			{
 				VkWindow::AquireResult aquired = _main_window->aquireNextImage();
 				VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+				recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_world_to_cam);
 				VkSemaphore wait_semaphore = *aquired.semaphore;
 				VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 				VkSubmitInfo submission{
@@ -645,12 +644,14 @@ namespace vkl
 				}
 				if (mouse_handler.getScroll() != 0)
 				{
-					glm::vec2 screen_mouse_pos = mouse_handler.currentPosition<float>() * move_scale - glm::vec2(0.5, 0.5);
+					//glm::vec3 screen_mouse_pos_tmp = glm::inverse(screen_coords_matrix * camera.matrix()) * glm::vec3(mouse_handler.currentPosition<float>() - glm::vec2(0.5, 0.5), 1.0);
+					//glm::vec2 screen_mouse_pos = glm::vec2(screen_mouse_pos_tmp.x, screen_mouse_pos_tmp.y) / screen_mouse_pos_tmp.z;
+					glm::vec2 screen_mouse_pos = (mouse_handler.currentPosition<float>() - glm::vec2(_main_window->extent().width, _main_window->extent().height) * 0.5f) * move_scale;
 					camera.zoom(screen_mouse_pos, mouse_handler.getScroll());
 					should_render = true;
 				}
 
-				mat_uv_to_grid = screen_coords_matrix * camera.matrix();
+				mat_world_to_cam = glm::inverse(screen_coords_matrix * camera.matrix());
 
 				if (!paused || should_render)
 				{
@@ -658,11 +659,11 @@ namespace vkl
 					VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 					if (paused)
 					{
-						recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+						recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_world_to_cam);
 					}
 					else
 					{
-						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid, dt);
+						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_world_to_cam, dt);
 					}
 					VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 					VkSemaphore wait_semaphore = *aquired.semaphore;

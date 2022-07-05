@@ -14,9 +14,15 @@ layout(set = 0, binding = 0, std430) buffer readonly restrict b_state
 	Particule particules[];
 } state;
 
+layout(push_constant) uniform PushConstants
+{
+    mat4 matrix;
+} _pc;
+
 void main()
 {
     const Particule p = state.particules[id[0]];
+    const float radius = 0.02;
 
     for(int i=0; i<2; ++i)
     {
@@ -27,7 +33,7 @@ void main()
             
             v_type = p.type;
             v_uv = vec2(dx, dy);
-            gl_Position = vec4(p.position + vec2(dx, dy) * 0.02, 0, 1);
+            gl_Position = _pc.matrix * vec4(p.position + vec2(dx, dy) * radius, 1, 1);
             EmitVertex();
         }
     }
