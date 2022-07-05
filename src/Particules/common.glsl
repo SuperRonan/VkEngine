@@ -14,7 +14,7 @@ struct ParticuleCommonProperties
 
 struct ForceDescription
 {
-    vec4 intensity_inv_linear_pad;
+    vec4 intensity_inv_linear_inv_linear2_contant_linear;
 };
 
 #ifndef N_TYPES_OF_PARTICULES
@@ -35,4 +35,16 @@ uint forceIndex(uint p, uint q)
 uint forceIndex(const in Particule p, const in Particule q)
 {
     return forceIndex(p.type, q.type);
+}
+
+vec2 computeForce(const in Particule p, const in Particule q, const in ForceDescription force)
+{
+    const vec2 pq = q.position - p.position;
+    const float dist2 = dot(pq, pq);
+    const float dist = sqrt(dist2);
+    const vec2 pq_norm = pq / dist;
+    const vec4 inv_dist_inv_dist2_constant_linear = vec4(1.0 / dist, 1.0 / dist2, 1.0, dist);
+    const float intensity = dot(force.intensity_inv_linear_inv_linear2_contant_linear, inv_dist_inv_dist2_constant_linear);
+    const vec2 res = pq_norm * intensity;
+    return res;
 }

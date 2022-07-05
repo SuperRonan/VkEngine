@@ -41,13 +41,7 @@ void main()
 				const Particule o = prev.particules[i];
 				const uint force_id = forceIndex(p, o);
 				const ForceDescription force = ubo.rules.force_descriptions[force_id];
-				
-				const vec2 d = o.position - p.position;
-				const vec2 normd = normalize(d);
-				const float dist2 = dot(d, d);
-				const float dist = distance(o.position, p.position);
-
-				f += normd / dist * force.intensity_inv_linear_pad.x;
+				f += computeForce(p, o, force);
 			}
 		}
 

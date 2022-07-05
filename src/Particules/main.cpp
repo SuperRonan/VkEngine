@@ -65,7 +65,7 @@ namespace vkl
 
 		struct ForceDescription
 		{
-			glm::vec4 intensity_inv_linear_pad;
+			glm::vec4 intensity_inv_linear_inv_linear2_contant_linear;
 		};
 
 		void createCommonRuleBuffer()
@@ -85,17 +85,21 @@ namespace vkl
 				.color = glm::vec4(0, 0, 1, 1),
 			};
 
+			const float f1 = 0, f2 = 0.5, f3 = 0.0, f4 = 0.0;
+			const float d = 1.0, s = -1.0;
+
+
 			common_buffer.force_descriptions[0] = ForceDescription{
-				.intensity_inv_linear_pad = glm::vec4(-0.5, 0, 0, 0),
+				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * s,
 			};
 			common_buffer.force_descriptions[1] = ForceDescription{
-				.intensity_inv_linear_pad = glm::vec4(0.5, 0, 0, 0),
+				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * d,
 			};
 			common_buffer.force_descriptions[2] = ForceDescription{
-				.intensity_inv_linear_pad = glm::vec4(0.5, 0, 0, 0),
+				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * d,
 			};
 			common_buffer.force_descriptions[3] = ForceDescription{
-				.intensity_inv_linear_pad = glm::vec4(-0.5, 0, 0, 0),
+				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * s,
 			};
 
 			_rule_buffer = Buffer(this);
@@ -115,7 +119,8 @@ namespace vkl
 
 			const size_t seed = 0;
 			std::mt19937_64 rng(seed);
-			std::uniform_real_distribution<float> distrib(-1, 1);
+			const float radius = 1.0;
+			std::uniform_real_distribution<float> distrib(-radius, radius);
 
 			for (size_t i = 0; i < _number_of_particules; ++i)
 			{
@@ -478,7 +483,7 @@ namespace vkl
 				vkCmdPushConstants(cmd, _update_program->pipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &_pc);
 
 				const VkExtent3D dispatch_extent = {.width = (uint32_t)_number_of_particules, .height = 1, .depth = 1};
-				const VkExtent3D group_layout = { .width = 32, .height = 1, .depth = 1};
+				const VkExtent3D group_layout = _update_program->localSize();
 				vkCmdDispatch(cmd, (dispatch_extent.width + group_layout.width - 1) / group_layout.width, (dispatch_extent.height + group_layout.height - 1) / group_layout.height, (dispatch_extent.depth + group_layout.depth - 1) / group_layout.depth);
 
 				VkClearValue clear_color{ .color = {0, 0, 0, 1} };
