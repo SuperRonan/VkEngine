@@ -22,7 +22,7 @@ layout(push_constant) uniform PushConstants
 void main()
 {
     const Particule p = state.particules[id[0]];
-    const float radius = 0.02;
+    const float radius = p.radius;
 
     for(int i=0; i<2; ++i)
     {

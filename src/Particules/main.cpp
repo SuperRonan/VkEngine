@@ -53,10 +53,10 @@ namespace vkl
 			glm::vec2 position;
 			glm::vec2 velocity;
 			unsigned int type;
-			int pad;
+			float radius;
 		};
 
-#define N_TYPES_OF_PARTICULES 2
+#define N_TYPES_OF_PARTICULES 6
 
 		struct ParticuleCommonProperties
 		{
@@ -66,6 +66,7 @@ namespace vkl
 		struct ForceDescription
 		{
 			glm::vec4 intensity_inv_linear_inv_linear2_contant_linear;
+			glm::vec4 intensity_gauss_mu_sigma;
 		};
 
 		void createCommonRuleBuffer()
@@ -76,31 +77,35 @@ namespace vkl
 				ForceDescription force_descriptions[N_TYPES_OF_PARTICULES * N_TYPES_OF_PARTICULES];
 			};
 
+			const std::uniform_real_distribution<float> u01(0, 1);
+			const std::uniform_real_distribution<float> um11(-1, 1);
+			const size_t seed = 123456789;
+			std::mt19937_64 rng(seed);
+
 			CommonRuleBuffer common_buffer;
 
-			common_buffer.particules_properties[0] = ParticuleCommonProperties{
-				.color = glm::vec4(1, 0, 0, 1),
-			};
-			common_buffer.particules_properties[1] = ParticuleCommonProperties{
-				.color = glm::vec4(0, 0, 1, 1),
-			};
+			for (size_t type = 0; type < N_TYPES_OF_PARTICULES; ++type)
+			{
+				common_buffer.particules_properties[type] = ParticuleCommonProperties{
+					.color = glm::vec4(u01(rng), u01(rng), u01(rng), 1),
+				};
 
-			const float f1 = 0, f2 = 0.5, f3 = 0.0, f4 = 0.0;
-			const float d = 1.0, s = -1.0;
+				for (size_t other = 0; other < N_TYPES_OF_PARTICULES; ++other)
+				{
+					
+					const float f1 = 0, f2 = 0, f3 = 0.0, f4 = 0;
 
-
-			common_buffer.force_descriptions[0] = ForceDescription{
-				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * s,
-			};
-			common_buffer.force_descriptions[1] = ForceDescription{
-				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * d,
-			};
-			common_buffer.force_descriptions[2] = ForceDescription{
-				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * d,
-			};
-			common_buffer.force_descriptions[3] = ForceDescription{
-				.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4) * s,
-			};
+					const float g = (type == other ? u01(rng) : um11(rng)) * 2;
+					const float mu = (u01(rng) + 1) * 0.1;
+					const float sigma = (u01(rng) + 1) * 0.00 + 0.05;
+					
+					common_buffer.force_descriptions[type * N_TYPES_OF_PARTICULES + other] = ForceDescription{
+						.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4),
+						.intensity_gauss_mu_sigma = glm::vec4(g, mu, sigma, 0),
+					};
+					
+				}
+			}
 
 			_rule_buffer = Buffer(this);
 			_rule_buffer.createBuffer(sizeof(CommonRuleBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -114,12 +119,12 @@ namespace vkl
 		void createStateBuffers()
 		{
 			createCommonRuleBuffer();
-			_number_of_particules = 128*4;
+			_number_of_particules = 128*8;
 			std::vector<Particule> particules(_number_of_particules);
 
 			const size_t seed = 0;
 			std::mt19937_64 rng(seed);
-			const float radius = 1.0;
+			const float radius = 2.0;
 			std::uniform_real_distribution<float> distrib(-radius, radius);
 
 			for (size_t i = 0; i < _number_of_particules; ++i)
@@ -129,6 +134,7 @@ namespace vkl
 				particules[i].position = glm::vec2(x, y);
 				particules[i].velocity = glm::vec2(0, 0);
 				particules[i].type = rng() % N_TYPES_OF_PARTICULES;
+				particules[i].radius = (distrib(rng) * 0.00 + 0.02);
 			}
 
 			const VkDeviceSize buffer_size = particules.size() * sizeof(Particule);
@@ -544,10 +550,10 @@ namespace vkl
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.in_flight_size = 2,
-				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
+				.target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 				.name = "Particules",
-				.w = 1024,
-				.h = 1024,
+				.w = 1920,
+				.h = 1080,
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
@@ -601,7 +607,7 @@ namespace vkl
 
 			size_t current_grid_id = 0;
 
-			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent().width) / float(_main_window->extent().height)});
+			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent().height) / float(_main_window->extent().width)});
 			const glm::vec2 move_scale(2.0 / float(_main_window->extent().width), 2.0 / float(_main_window->extent().height));
 			glm::mat3 mat_world_to_cam = glm::inverse(screen_coords_matrix * camera.matrix());
 

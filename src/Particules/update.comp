@@ -44,9 +44,13 @@ void main()
 				f += computeForce(p, o, force);
 			}
 		}
+		const float friction = -2e2;
+		f += friction * p.velocity;
+		const float mass = sqr(p.radius);
 
 		Particule np = p;
-		const vec2 acc = f * 0.001;
+		const float force_scale = 1e-6;
+		const vec2 acc = (f * force_scale) / mass;
 		np.velocity += acc * _pc.dt;
 		np.position += np.velocity * _pc.dt;
 		next.particules[gid] = np;
