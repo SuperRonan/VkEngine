@@ -56,7 +56,7 @@ namespace vkl
 			float radius;
 		};
 
-#define N_TYPES_OF_PARTICULES 6
+#define N_TYPES_OF_PARTICULES 4
 
 		struct ParticuleCommonProperties
 		{
@@ -79,7 +79,7 @@ namespace vkl
 
 			const std::uniform_real_distribution<float> u01(0, 1);
 			const std::uniform_real_distribution<float> um11(-1, 1);
-			const size_t seed = 123456789;
+			const size_t seed = 0x124698;
 			std::mt19937_64 rng(seed);
 
 			CommonRuleBuffer common_buffer;
@@ -119,13 +119,13 @@ namespace vkl
 		void createStateBuffers()
 		{
 			createCommonRuleBuffer();
-			_number_of_particules = 128*8;
+			_number_of_particules = 128*12;
 			std::vector<Particule> particules(_number_of_particules);
 
 			const size_t seed = 0;
 			std::mt19937_64 rng(seed);
 			const float radius = 2.0;
-			std::uniform_real_distribution<float> distrib(-radius, radius);
+			std::uniform_real_distribution<float> distrib(0, 2.0*radius);
 
 			for (size_t i = 0; i < _number_of_particules; ++i)
 			{
@@ -552,8 +552,8 @@ namespace vkl
 				.in_flight_size = 2,
 				.target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 				.name = "Particules",
-				.w = 1920,
-				.h = 1080,
+				.w = 1400,
+				.h = 1400,
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);

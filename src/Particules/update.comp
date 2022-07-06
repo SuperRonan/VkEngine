@@ -28,6 +28,7 @@ layout(push_constant) uniform constants
 void main()
 {
 	const uint gid = gl_GlobalInvocationID.x;
+	const vec2 world_size = vec2(4, 4);
 
 	if(gid < _pc.number_of_particules)
 	{
@@ -41,18 +42,19 @@ void main()
 				const Particule o = prev.particules[i];
 				const uint force_id = forceIndex(p, o);
 				const ForceDescription force = ubo.rules.force_descriptions[force_id];
-				f += computeForce(p, o, force);
+				f += computeForce(p, o, force, world_size);
 			}
 		}
-		const float friction = -2e2;
+		const float friction = -8e2;
 		f += friction * p.velocity;
 		const float mass = sqr(p.radius);
 
 		Particule np = p;
 		const float force_scale = 1e-6;
 		const vec2 acc = (f * force_scale) / mass;
-		np.velocity += acc * _pc.dt;
+		np.velocity += clamp(acc * _pc.dt, -world_size*0.5, world_size*0.5);
 		np.position += np.velocity * _pc.dt;
+		np.position = modulatePosition(world_size * 0.5, world_size, np.position);
 		next.particules[gid] = np;
 	}
 }
