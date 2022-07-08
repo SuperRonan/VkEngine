@@ -56,7 +56,7 @@ namespace vkl
 			float radius;
 		};
 
-#define N_TYPES_OF_PARTICULES 4
+#define N_TYPES_OF_PARTICULES 9
 
 		struct ParticuleCommonProperties
 		{
@@ -79,7 +79,7 @@ namespace vkl
 
 			const std::uniform_real_distribution<float> u01(0, 1);
 			const std::uniform_real_distribution<float> um11(-1, 1);
-			const size_t seed = 0x124698;
+			const size_t seed = 0x1282357458;
 			std::mt19937_64 rng(seed);
 
 			CommonRuleBuffer common_buffer;
@@ -119,12 +119,12 @@ namespace vkl
 		void createStateBuffers()
 		{
 			createCommonRuleBuffer();
-			_number_of_particules = 128*12;
+			_number_of_particules = 128*32;
 			std::vector<Particule> particules(_number_of_particules);
 
 			const size_t seed = 0;
 			std::mt19937_64 rng(seed);
-			const float radius = 2.0;
+			const float radius = 3.0;
 			std::uniform_real_distribution<float> distrib(0, 2.0*radius);
 
 			for (size_t i = 0; i < _number_of_particules; ++i)
@@ -373,7 +373,7 @@ namespace vkl
 		{
 			std::filesystem::path shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/update.comp";
 
-			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT);
+			Shader update_shader(this, shader_path, VK_SHADER_STAGE_COMPUTE_BIT, { std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_OF_PARTICULES) });
 			_update_program = std::make_shared<ComputeProgram>(std::move(update_shader));
 			_update_pipeline = Pipeline(this, _update_program);
 		}
@@ -384,9 +384,9 @@ namespace vkl
 			std::filesystem::path geom_shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/render.geom";
 			std::filesystem::path frag_shader_path = std::string(ENGINE_SRC_PATH) + "/src/Particules/render.frag";
 
-			std::shared_ptr<Shader> vert = std::make_shared<Shader>(Shader(this, vert_shader_path, VK_SHADER_STAGE_VERTEX_BIT));
-			std::shared_ptr<Shader> geom = std::make_shared<Shader>(Shader(this, geom_shader_path, VK_SHADER_STAGE_GEOMETRY_BIT));
-			std::shared_ptr<Shader> frag = std::make_shared<Shader>(Shader(this, frag_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT));
+			std::shared_ptr<Shader> vert = std::make_shared<Shader>(Shader(this, vert_shader_path, VK_SHADER_STAGE_VERTEX_BIT, { std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_OF_PARTICULES) }));
+			std::shared_ptr<Shader> geom = std::make_shared<Shader>(Shader(this, geom_shader_path, VK_SHADER_STAGE_GEOMETRY_BIT, { std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_OF_PARTICULES) }));
+			std::shared_ptr<Shader> frag = std::make_shared<Shader>(Shader(this, frag_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT, { std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_OF_PARTICULES) }));
 
 			_render_program = std::make_shared<GraphicsProgram>(
 				GraphicsProgram::CreateInfo{

@@ -1,4 +1,8 @@
 
+#ifndef N_TYPES_OF_PARTICULES
+#error "Forgot to define N_TYPES_OF_PARTICULES"
+#endif
+
 struct Particule
 {
     vec2 position;
@@ -17,10 +21,6 @@ struct ForceDescription
     vec4 intensity_inv_linear_inv_linear2_contant_linear;
     vec4 intensity_gauss_mu_sigma;
 };
-
-#ifndef N_TYPES_OF_PARTICULES
-#define N_TYPES_OF_PARTICULES 4
-#endif
 
 float sqr(float x)
 {

@@ -23,7 +23,7 @@ namespace vkl
 
 	public:
 
-		Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage);
+		Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage, std::vector<std::string> const& definitions = {});
 
 		Shader(Shader const&) = delete;
 		
@@ -51,7 +51,7 @@ namespace vkl
 			return *this;
 		}
 
-		std::string preprocess(std::filesystem::path const& path);
+		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions);
 		
 		void compile(std::string const& code, std::string const& filename="");
 

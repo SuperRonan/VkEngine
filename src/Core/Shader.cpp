@@ -27,14 +27,29 @@ namespace vkl
 
 	}
 
-	std::string Shader::preprocess(std::filesystem::path const& path)
+	std::string Shader::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions)
 	{
 		const std::string content = readFileToString(path);
 		std::stringstream oss;
 
 		const std::filesystem::path folder = path.parent_path();
-
+		
 		size_t copied_so_far = 0;
+
+		if (!definitions.empty())
+		{
+			const size_t version_begin = content.find("#version", copied_so_far);
+			assert(version_begin < content.size());
+			const size_t version_end = content.find("\n", version_begin);
+
+			oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);
+			copied_so_far = version_end;
+			for (const std::string& def : definitions)
+			{
+				oss << "#define " << def << "\n";
+			}
+		}
+
 		while (true)
 		{
 			const size_t include_begin = content.find("#include", copied_so_far);
@@ -51,7 +66,7 @@ namespace vkl
 
 				const std::filesystem::path path_to_include = folder.string() + std::string("/") + std::string(include_path_relative);
 
-				const std::string included_code = preprocess(path_to_include);
+				const std::string included_code = preprocess(path_to_include, {});
 
 				oss << std::string_view(content.data() + copied_so_far, include_begin - copied_so_far);
 				oss << included_code;
@@ -145,12 +160,12 @@ namespace vkl
 		spvReflectCreateShaderModule(_spv_code.size() * sizeof(uint32_t), _spv_code.data(), &_reflection);
 	}
 
-	Shader::Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage) :
+	Shader::Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage, std::vector<std::string> const& definitions) :
 		VkObject(app),
 		_stage(stage),
 		_reflection(std::zeroInit(_reflection))
 	{
-		compile(preprocess(path), path.string());
+		compile(preprocess(path, definitions), path.string());
 		reflect();
 	}
 	
