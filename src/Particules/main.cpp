@@ -14,6 +14,7 @@
 #include <Core/DescriptorPool.hpp>
 #include <Core/RenderPass.hpp>
 #include <Core/Semaphore.hpp>
+#include <Core/CommandBuffer.hpp>
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -48,7 +49,7 @@ namespace vkl
 		std::shared_ptr<GraphicsProgram> _render_program;
 		Pipeline _update_pipeline, _render_pipeline;
 
-		std::vector<VkCommandBuffer> _commands;
+		std::vector<CommandBuffer> _commands;
 
 		std::vector<Semaphore> _render_finished_semaphores;
 
@@ -91,8 +92,8 @@ namespace vkl
 				.QueueFamily = _queue_family_indices.graphics_family.value(),
 				.Queue = _queues.graphics,
 				.DescriptorPool = *_imgui_descriptor_pool,
-				.MinImageCount = _main_window->swapchainSize(),
-				.ImageCount = _main_window->swapchainSize(),
+				.MinImageCount = (uint32_t)_main_window->swapchainSize(),
+				.ImageCount = (uint32_t)_main_window->swapchainSize(),
 				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
 			};
 
@@ -161,10 +162,12 @@ namespace vkl
 
 			_rule_buffer = Buffer(this);
 			_rule_buffer.createBuffer(sizeof(CommonRuleBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-			VkCommandBuffer cmd = beginSingleTimeCommand(_pools.graphics);
+			CommandBuffer cmd(_pools.graphics);
+			cmd.begin();
 			auto* sb = _rule_buffer.copyToStaging(&common_buffer, sizeof(common_buffer));
 			_rule_buffer.recordCopyStagingToBuffer(cmd, sb);
-			endSingleTimeCommandAndWait(cmd, _queues.graphics, _pools.graphics);
+			cmd.end();
+			cmd.submitAndWait(_queues.graphics);
 			_staging_pool.releaseStagingBuffer(sb);
 		}
 
@@ -191,7 +194,8 @@ namespace vkl
 
 			const VkDeviceSize buffer_size = particules.size() * sizeof(Particule);
 
-			VkCommandBuffer copy_command = beginSingleTimeCommand(_pools.graphics);
+			CommandBuffer copy_command(_pools.graphics);
+			copy_command.begin();
 
 			_state_buffers.resize(2);
 			std::vector<StagingPool::StagingBuffer*> staging_buffers(_state_buffers.size());
@@ -203,7 +207,8 @@ namespace vkl
 				_state_buffers[i].recordCopyStagingToBuffer(copy_command, staging_buffers[i]);
 			}
 
-			endSingleTimeCommandAndWait(copy_command, _queues.graphics, _pools.graphics);
+			copy_command.end();
+			copy_command.submitAndWait(_queues.graphics);
 
 			for (auto* sb : staging_buffers)
 			{
@@ -475,14 +480,10 @@ namespace vkl
 			size_t n = _main_window->framesInFlight();
 			_commands.resize(n);
 
-			VkCommandBufferAllocateInfo alloc{
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				.commandPool = _pools.graphics,
-				.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				.commandBufferCount = (uint32_t)_commands.size(),
-			};
-
-			VK_CHECK(vkAllocateCommandBuffers(_device, &alloc, _commands.data()), "Failed to allocate command buffers");
+			for (size_t i = 0; i < n; ++i)
+			{
+				_commands[i] = CommandBuffer(_pools.graphics);
+			}
 		}
 
 		void recordCommandBufferRenderOnly(VkCommandBuffer cmd, size_t grid_id, VkFramebuffer framebuffer, glm::mat4 matrix)
@@ -617,7 +618,7 @@ namespace vkl
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
 
-			//initImgui();
+			//BinitImgui();
 
 			createRenderPass();
 			createFrameBuffers();
@@ -678,13 +679,14 @@ namespace vkl
 				recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_world_to_cam);
 				VkSemaphore wait_semaphore = *aquired.semaphore;
 				VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
+				VkCommandBuffer cb = _commands[aquired.in_flight_index];
 				VkSubmitInfo submission{
 					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 					.waitSemaphoreCount = 1,
 					.pWaitSemaphores = &wait_semaphore,
 					.pWaitDstStageMask = &wait_stage,
 					.commandBufferCount = 1,
-					.pCommandBuffers = _commands.data() + aquired.in_flight_index,
+					.pCommandBuffers = &cb,
 					.signalSemaphoreCount = 1,
 					.pSignalSemaphores = &render_finished_semaphore,
 				};
@@ -739,13 +741,14 @@ namespace vkl
 					}
 					VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
 					VkSemaphore wait_semaphore = *aquired.semaphore;
+					VkCommandBuffer cb = _commands[aquired.in_flight_index];
 					VkSubmitInfo submission{
 						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 						.waitSemaphoreCount = 1,
 						.pWaitSemaphores = &wait_semaphore,
 						.pWaitDstStageMask = &wait_stage,
 						.commandBufferCount = 1,
-						.pCommandBuffers = _commands.data() + aquired.in_flight_index,
+						.pCommandBuffers = &cb,
 						.signalSemaphoreCount = 1,
 						.pSignalSemaphores = &render_finished_semaphore,
 					};

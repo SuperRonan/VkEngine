@@ -1,4 +1,5 @@
 #include "VkApplication.hpp"
+#include "CommandBuffer.hpp"
 
 #include <exception>
 #include <set>
@@ -396,18 +397,10 @@ namespace vkl
 
 	void VkApplication::createCommandPools()
 	{
-		uint32_t queues[] = { _queue_family_indices.graphics_family.value(), _queue_family_indices.transfer_family.value(), _queue_family_indices.compute_family.value() };
-		VkCommandPool* pools[] = { &_pools.graphics, &_pools.transfer, &_pools.compute};
-		for (int i = 0; i < 3; ++i)
-		{
-			VkCommandPoolCreateInfo command_pool_ci{
-				.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-				.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-				.queueFamilyIndex = queues[i],
-			};
-
-			VK_CHECK(vkCreateCommandPool(_device, &command_pool_ci, nullptr, pools[i]), "Failed to create a command pool.");
-		}
+		const VkCommandPoolCreateFlags flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		_pools.graphics = std::make_shared<CommandPool>(this, _queue_family_indices.graphics_family.value(), flags);
+		_pools.transfer = std::make_shared<CommandPool>(this, _queue_family_indices.transfer_family.value(), flags);
+		_pools.compute = std::make_shared<CommandPool>(this, _queue_family_indices.compute_family.value(), flags);
 	}
 
 	void VkApplication::createAllocator()
@@ -447,12 +440,10 @@ namespace vkl
 
 	void VkApplication::cleanup()
 	{
-		VkCommandPool pools[] = { _pools.graphics, _pools.transfer, _pools.compute };
-		for (VkCommandPool pool : pools)
-		{
-			vkDestroyCommandPool(_device, pool, nullptr);
-		}
-		
+		_pools.graphics = nullptr;
+		_pools.transfer = nullptr;
+		_pools.compute = nullptr;
+
 		_staging_pool.~StagingPool();
 		vmaDestroyAllocator(_allocator);
 
@@ -486,43 +477,6 @@ namespace vkl
 	StagingPool& VkApplication::stagingPool()
 	{
 		return _staging_pool;
-	}
-	
-
-	VkCommandBuffer VkApplication::beginSingleTimeCommand(VkCommandPool pool)
-	{
-		VkCommandBufferAllocateInfo alloc{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.commandPool = pool,
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1,
-		};
-		VkCommandBuffer res;
-		vkAllocateCommandBuffers(_device, &alloc, &res);
-
-		VkCommandBufferBeginInfo begin{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		};
-
-		vkBeginCommandBuffer(res, &begin);
-
-		return res;
-	}
-
-	void VkApplication::endSingleTimeCommandAndWait(VkCommandBuffer command_buffer, VkQueue submit_queue, VkCommandPool pool)
-	{
-		vkEndCommandBuffer(command_buffer);
-
-		VkSubmitInfo submission{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &command_buffer,
-		};
-		vkQueueSubmit(submit_queue, 1, &submission, VK_NULL_HANDLE);
-		vkQueueWaitIdle(submit_queue);
-
-		vkFreeCommandBuffers(_device, pool, 1, &command_buffer);
 	}
 
 	VkApplication::~VkApplication()

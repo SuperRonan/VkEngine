@@ -11,7 +11,7 @@ namespace vkl
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const Shader& shader = *_shaders[sh];
-			assert(shader.reflection());
+			//assert(shader.reflection());
 			const auto & refl = shader.reflection();
 			for (size_t s = 0; s < refl.descriptor_set_count; ++s)
 			{

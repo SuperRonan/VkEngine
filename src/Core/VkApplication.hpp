@@ -8,9 +8,12 @@
 #include <algorithm>
 #include <optional>
 #include <Utils/stl_extension.hpp>
+#include <memory>
 
 namespace vkl
 {
+	class CommandPool;
+
 	class VkApplication
 	{
 	public:
@@ -32,7 +35,7 @@ namespace vkl
 
 		struct Pools
 		{
-			VkCommandPool graphics, transfer, compute;
+			std::shared_ptr<CommandPool> graphics, transfer, compute;
 		};
 
 	protected:
@@ -146,10 +149,6 @@ namespace vkl
 		Pools const& pools()const;
 
 		StagingPool& stagingPool();
-
-		VkCommandBuffer beginSingleTimeCommand(VkCommandPool pool);
-
-		void endSingleTimeCommandAndWait(VkCommandBuffer command_buffer, VkQueue submit_queue, VkCommandPool pool);
 	};
 
 	class VkObject

@@ -99,7 +99,7 @@ namespace vkl
 			auto staging = _buffers[0].copyToStaging(vertices.data(), buffer_size);
 			auto index_staging = _index_buffer.copyToStaging(indices.data(), indices.size() * sizeof(uint32_t));
 
-			VkCommandBuffer cmd = _app->beginSingleTimeCommand(_app->pools().graphics);
+			CommandBuffer cmd(this, _app = _app->beginSingleTimeCommand(_app->pools().graphics);
 			{
 				_buffers[0].recordCopyStagingToBuffer(cmd, staging);
 				_index_buffer.recordCopyStagingToBuffer(cmd, staging);

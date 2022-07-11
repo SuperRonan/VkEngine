@@ -14,6 +14,7 @@
 #include <Core/DescriptorPool.hpp>
 #include <Core/RenderPass.hpp>
 #include <Core/Semaphore.hpp>
+#include <Core/CommandBuffer.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -301,8 +302,8 @@ namespace vkl
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.elem_size = 1,
 			};
-			VkCommandBuffer copy_command = beginSingleTimeCommand(_pools.graphics);
-			
+			CommandBuffer copy_command(_pools.graphics);
+			copy_command.begin();
 			std::vector<uint8_t> data(_world_size.width * _world_size.height);
 			std::fill(data.begin(), data.end(), 0);
 			{
@@ -336,8 +337,8 @@ namespace vkl
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 			}
-
-			endSingleTimeCommandAndWait(copy_command, _queues.graphics, _pools.graphics);
+			copy_command.end();
+			copy_command.submitAndWait(_queues.graphics);
 
 			for (auto sb : staging_buffers)
 			{
@@ -350,15 +351,10 @@ namespace vkl
 		{
 			size_t n = _main_window->framesInFlight();
 			_commands.resize(n);
-
-			VkCommandBufferAllocateInfo alloc{
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				.commandPool = _pools.graphics,
-				.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				.commandBufferCount = (uint32_t)_commands.size(),
-			};
-
-			VK_CHECK(vkAllocateCommandBuffers(_device, &alloc, _commands.data()), "Failed to allocate command buffers");
+			for (size_t i = 0; i < n; ++i)
+			{
+				_commands[i] = CommandBuffer(_pools.graphics);
+			}
 		}
 
 		void recordCommandBufferRenderOnly(VkCommandBuffer cmd, size_t grid_id, VkFramebuffer framebuffer, glm::mat4 matrix)
