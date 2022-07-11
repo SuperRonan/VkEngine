@@ -56,7 +56,7 @@ namespace vkl
 			float radius;
 		};
 
-#define N_TYPES_OF_PARTICULES 9
+#define N_TYPES_OF_PARTICULES 4
 
 		struct ParticuleCommonProperties
 		{
@@ -79,7 +79,7 @@ namespace vkl
 
 			const std::uniform_real_distribution<float> u01(0, 1);
 			const std::uniform_real_distribution<float> um11(-1, 1);
-			const size_t seed = 0x1282357458;
+			const size_t seed = 0x1257914347458;
 			std::mt19937_64 rng(seed);
 
 			CommonRuleBuffer common_buffer;
@@ -95,7 +95,7 @@ namespace vkl
 					
 					const float f1 = 0, f2 = 0, f3 = 0.0, f4 = 0;
 
-					const float g = (type == other ? u01(rng) : um11(rng)) * 2;
+					const float g = (type == other ? (u01(rng) + 0.5) : ((u01(rng) + 0.5) * (rng() % 2 ? 1.0 : -1.0))) * 2;
 					const float mu = (u01(rng) + 1) * 0.1;
 					const float sigma = (u01(rng) + 1) * 0.00 + 0.05;
 					
@@ -124,7 +124,7 @@ namespace vkl
 
 			const size_t seed = 0;
 			std::mt19937_64 rng(seed);
-			const float radius = 3.0;
+			const float radius = 4.0;
 			std::uniform_real_distribution<float> distrib(0, 2.0*radius);
 
 			for (size_t i = 0; i < _number_of_particules; ++i)
@@ -159,12 +159,19 @@ namespace vkl
 			}
 		}
 
-		virtual std::vector<const char* > getDeviceExtensions()const override
+		virtual std::vector<const char* > getDeviceExtensions()override
 		{
 			std::vector<const char* > res = VkApplication::getDeviceExtensions();
-			
+			res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
 			return res;
 		}
+
+		virtual void requestFeatures(VkPhysicalDeviceFeatures& features) override
+		{
+			VkApplication::requestFeatures(features);
+		}
+
+
 
 		void createRenderPass()
 		{

@@ -25,18 +25,24 @@ namespace vkl
 		}
 	}
 
-	std::vector<const char*> VkApplication::getValidLayers()const
+	std::vector<const char*> VkApplication::getValidLayers()
 	{
 		return {
 			"VK_LAYER_KHRONOS_validation"
 		};
 	}
 
-	std::vector<const char* > VkApplication::getDeviceExtensions()const
+	std::vector<const char* > VkApplication::getDeviceExtensions()
 	{
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		};
+	}
+
+	void VkApplication::requestFeatures(VkPhysicalDeviceFeatures& features)
+	{
+		features.geometryShader = VK_TRUE;
+		features.samplerAnisotropy = VK_TRUE;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
@@ -355,10 +361,8 @@ namespace vkl
 			queue_create_infos.push_back(queue_create_info);
 		}
 
-		VkPhysicalDeviceFeatures device_features{
-			.geometryShader = VK_TRUE,
-			.samplerAnisotropy = VK_TRUE,
-		};
+		VkPhysicalDeviceFeatures device_features = {};
+		requestFeatures(device_features);
 
 		const auto device_extensions = getDeviceExtensions();
 

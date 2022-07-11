@@ -73,7 +73,7 @@ vec2 computeForce(const in Particule p, const in Particule q, const in ForceDesc
     const float intensity = dot(force.intensity_inv_linear_inv_linear2_contant_linear, inv_dist_inv_dist2_constant_linear) + g * force.intensity_gauss_mu_sigma.x;
     
     const float repultion_radius = (p.radius + q.radius);
-    const vec2 repultion = (dist < repultion_radius ? (-1.0 / sqr(tan(dist2 / repultion_radius * 0.5 * 3.1415))) : 0) * pq_norm * 0.01;
+    const vec2 repultion = (dist < repultion_radius ? (-1.0 / sqr(tan(dist2 / repultion_radius * 0.5 * 3.1415))) : 0) * pq_norm * 0.05;
 
     const vec2 res = pq_norm * intensity + repultion;
     return res;

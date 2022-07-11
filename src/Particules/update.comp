@@ -28,7 +28,7 @@ layout(push_constant) uniform constants
 void main()
 {
 	const uint gid = gl_GlobalInvocationID.x;
-	const vec2 world_size = vec2(6, 6);
+	const vec2 world_size = vec2(8, 8);
 
 	if(gid < _pc.number_of_particules)
 	{

@@ -57,13 +57,15 @@ namespace vkl
 
 		StagingPool _staging_pool;
 
-		virtual std::vector<const char*> getValidLayers()const;
+		virtual std::vector<const char*> getValidLayers();
 
-		virtual std::vector<const char* > getDeviceExtensions()const; 
+		virtual std::vector<const char* > getDeviceExtensions(); 
 
 		std::vector<const char*> getInstanceExtensions();
 
 		bool _enable_valid_layers = false;
+
+		virtual void requestFeatures(VkPhysicalDeviceFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
 
