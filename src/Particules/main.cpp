@@ -15,6 +15,10 @@
 #include <Core/RenderPass.hpp>
 #include <Core/Semaphore.hpp>
 
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
+
 #include <iostream>
 #include <chrono>
 #include <random>
@@ -47,6 +51,54 @@ namespace vkl
 		std::vector<VkCommandBuffer> _commands;
 
 		std::vector<Semaphore> _render_finished_semaphores;
+
+		std::shared_ptr<DescriptorPool> _imgui_descriptor_pool;
+
+		void initImgui()
+		{
+			const uint32_t N = 1024;
+			std::vector<VkDescriptorPoolSize> sizes = {
+				{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	N },
+				{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				N },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,				N },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,		N },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,		N },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			N },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			N },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	N },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	N },
+				{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
+			};
+			_imgui_descriptor_pool = std::make_shared<DescriptorPool>(DescriptorPool(this, VK_NULL_HANDLE));
+			VkDescriptorPoolCreateInfo ci{
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+				.maxSets = N,
+				.poolSizeCount = (uint32_t)sizes.size(),
+				.pPoolSizes = sizes.data(),
+			};
+			_imgui_descriptor_pool->create(ci);
+			
+			ImGui::CreateContext();
+			ImGui_ImplGlfw_InitForVulkan(*_main_window, false);
+
+			ImGui_ImplVulkan_InitInfo ii{
+				.Instance = _instance,
+				.PhysicalDevice = _physical_device,
+				.Device = _device,
+				.QueueFamily = _queue_family_indices.graphics_family.value(),
+				.Queue = _queues.graphics,
+				.DescriptorPool = *_imgui_descriptor_pool,
+				.MinImageCount = _main_window->swapchainSize(),
+				.ImageCount = _main_window->swapchainSize(),
+				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+			};
+
+			//ImGui_ImplVulkan_Init(&init_info, )
+
+		}
 
 		struct Particule
 		{
@@ -564,6 +616,8 @@ namespace vkl
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
+
+			//initImgui();
 
 			createRenderPass();
 			createFrameBuffers();

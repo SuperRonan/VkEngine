@@ -16,3 +16,6 @@
 [submodule "ext/DualSenseWindows"]
 	path = ext/DualSenseWindows
 	url = https://github.com/SuperRonan/DualSense-Windows.git
+[submodule "ext/imgui"]
+	path = ext/imgui
+	url = https://github.com/ocornut/imgui.git

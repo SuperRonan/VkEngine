@@ -133,6 +133,11 @@ namespace vkl
 
 		VkExtent2D extent()const;
 
+		constexpr operator GLFWwindow* ()const
+		{
+			return _window;
+		}
+
 		constexpr GLFWwindow* handle()const
 		{
 			return _window;

@@ -72,8 +72,26 @@ ADD_SUBDIRECTORY(ext/VMA)
 INCLUDE_DIRECTORIES(ext/VMA/include)
 SET(VMA_LIBS VulkanMemoryAllocator)
 
+# ImGui
+SET(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/imgui/")
+FILE(GLOB IMGUI_SOURCES 
+"${IMGUI_DIR}imgui.h"
+"${IMGUI_DIR}imgui.cpp"
+
+"${IMGUI_DIR}imgui_demo.cpp"
+"${IMGUI_DIR}imgui_draw.cpp"
+"${IMGUI_DIR}imgui_widgets.cpp"
+"${IMGUI_DIR}imgui_tables.cpp"
+
+"${IMGUI_DIR}backends/imgui_impl_vulkan.cpp"
+"${IMGUI_DIR}backends/imgui_impl_glfw.cpp"
+)
+ADD_LIBRARY(imgui STATIC ${IMGUI_SOURCES})
+INCLUDE_DIRECTORIES(${IMGUI_DIR})
+SET(IMGUI_LIBS imgui)
+
 # VkEngine
-SET(ALL_EXT_LIBS ${GLFW_LIBS} ${GLM_LIBS} ${VULKAN_LIBS} ${VMA_LIBS})
+SET(ALL_EXT_LIBS ${GLFW_LIBS} ${GLM_LIBS} ${VULKAN_LIBS} ${VMA_LIBS} ${IMGUI_LIBS})
 
 ADD_DEFINITIONS(-DNOMINMAX)
 
