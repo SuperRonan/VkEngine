@@ -7,7 +7,12 @@ namespace vkl
 	bool Program::buildSetLayouts()
 	{
 		// all_bindings[set][binding]
-		std::map<uint32_t, std::map<uint32_t, VkDescriptorSetLayoutBinding>> all_bindings;
+		struct NamedBinding
+		{
+			std::string name;
+			VkDescriptorSetLayoutBinding binding;
+		};
+		std::map<uint32_t, std::map<uint32_t, NamedBinding>> all_bindings;
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const Shader& shader = *_shaders[sh];
@@ -16,10 +21,11 @@ namespace vkl
 			for (size_t s = 0; s < refl.descriptor_set_count; ++s)
 			{
 				const auto& set = refl.descriptor_sets[s];
-				std::map<uint32_t, VkDescriptorSetLayoutBinding> & set_bindings = all_bindings[set.set];
+				std::map<uint32_t, NamedBinding> & set_bindings = all_bindings[set.set];
 				for (size_t b = 0; b < set.binding_count; ++b)
 				{
 					const auto& binding = *set.bindings[b];
+					binding.type_description->decoration_flags
 					VkDescriptorSetLayoutBinding vkb = {
 						.binding = binding.binding,
 						.descriptorType = (VkDescriptorType) binding.descriptor_type,
@@ -28,16 +34,17 @@ namespace vkl
 					};
 					if (set_bindings.contains(binding.binding))
 					{
-						VkDescriptorSetLayoutBinding& already = set_bindings[binding.binding];
-						already.stageFlags |= shader.stage();
-						const bool same_count = (already.descriptorCount == vkb.descriptorCount);
-						const bool same_type = (already.descriptorType == vkb.descriptorType);
+						NamedBinding& already = set_bindings[binding.binding];
+						already.binding.stageFlags |= shader.stage();
+						const bool same_count = (already.binding.descriptorCount == vkb.descriptorCount);
+						const bool same_type = (already.binding.descriptorType == vkb.descriptorType);
 						assert(same_count && same_type);
 						if (!(same_count && same_type))	return false;
 					}
 					else
 					{
-						set_bindings[binding.binding] = vkb;
+						set_bindings[binding.binding].binding = vkb;
+						set_bindings[binding.binding].name = binding.name;
 					}
 				}
 			}
@@ -49,12 +56,15 @@ namespace vkl
 			assert(s < _set_layouts.size());
 			std::shared_ptr<DescriptorSetLayout> & set_layout = _set_layouts[s];
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
+			std::vector<std::string> names;
 			bindings.reserve(sb.size());
+			names.reserve(sb.size());
 			for (const auto& [bdi, bd] : sb)
 			{
-				bindings.push_back(bd);
+				bindings.push_back(bd.binding);
+				names.push_back(bd.name);
 			}
-			set_layout = std::make_shared<DescriptorSetLayout>(_app, bindings);
+			set_layout = std::make_shared<DescriptorSetLayout>(_app, bindings, names);
 		}
 		return true;
 	}

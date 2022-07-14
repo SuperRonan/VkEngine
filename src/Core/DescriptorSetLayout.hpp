@@ -10,6 +10,7 @@ namespace vkl
 
 		VkDescriptorSetLayout _handle = VK_NULL_HANDLE;
 		std::vector<VkDescriptorSetLayoutBinding> _bindings;
+		std::vector<std::string> _names;
 
 		void create(VkDescriptorSetLayoutCreateInfo const& ci);
 
@@ -23,7 +24,7 @@ namespace vkl
 
 		DescriptorSetLayout(VkApplication* app, VkDescriptorSetLayoutCreateInfo const& ci);
 
-		DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings);
+		DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<std::string> const& names);
 
 		constexpr DescriptorSetLayout(DescriptorSetLayout const&) = delete;
 
@@ -62,9 +63,14 @@ namespace vkl
 			return handle();
 		}
 		
-		constexpr std::vector<VkDescriptorSetLayoutBinding> const& bindings()
+		constexpr std::vector<VkDescriptorSetLayoutBinding> const& bindings()const
 		{
 			return _bindings;
+		}
+
+		constexpr auto& names()const
+		{
+			return _names;
 		}
 	};
 }
