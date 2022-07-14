@@ -333,7 +333,8 @@ namespace vkl
 
 		VK_LOG << "Found " << physical_device_count << " physical device(s)\n";
 
-		_physical_device = *std::find_best(physical_devices.cbegin(), physical_devices.cend(), [this](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+		//_physical_device = *std::find_best(physical_devices.cbegin(), physical_devices.cend(), [this](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+		_physical_device = physical_devices[0];
 
 		VkPhysicalDeviceProperties props;
 		vkGetPhysicalDeviceProperties(_physical_device, &props);
@@ -349,7 +350,15 @@ namespace vkl
 		QueueFamilyIndices& indices = _queue_family_indices;
 
 		std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-		std::set<uint32_t> unique_queue_families = { indices.graphics_family.value(), indices.present_family.value(), indices.transfer_family.value(), indices.compute_family.value() };
+		std::set<uint32_t> unique_queue_families;
+		const auto addQueueIFP = [&](std::optional<uint32_t> const& i)
+		{
+			if (i.has_value())	unique_queue_families.insert(unique_queue_families.end(), i.value());
+		};
+		addQueueIFP(indices.graphics_family);
+		addQueueIFP(indices.transfer_family);
+		addQueueIFP(indices.present_family);
+		addQueueIFP(indices.compute_family);
 
 		float priority = 1;
 		for (uint32_t unique_queue_family : unique_queue_families)
@@ -389,18 +398,18 @@ namespace vkl
 
 		VK_CHECK(vkCreateDevice(_physical_device, &device_create_info, nullptr, &_device), "Failed to create the logical device!");
 
-		vkGetDeviceQueue(_device, indices.graphics_family.value(), 0, &_queues.graphics);
-		vkGetDeviceQueue(_device, indices.present_family.value(), 0, &_queues.present);
-		vkGetDeviceQueue(_device, indices.transfer_family.value(), 0, &_queues.transfer);
-		vkGetDeviceQueue(_device, indices.compute_family.value(), 0, &_queues.compute);
+		if(indices.graphics_family.has_value()) vkGetDeviceQueue(_device, indices.graphics_family.value(), 0, &_queues.graphics);
+		if(indices.present_family.has_value()) vkGetDeviceQueue(_device, indices.present_family.value(), 0, &_queues.present);
+		if(indices.transfer_family.has_value()) vkGetDeviceQueue(_device, indices.transfer_family.value(), 0, &_queues.transfer);
+		if(indices.compute_family.has_value()) vkGetDeviceQueue(_device, indices.compute_family.value(), 0, &_queues.compute);
 	}
 
 	void VkApplication::createCommandPools()
 	{
 		const VkCommandPoolCreateFlags flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		_pools.graphics = std::make_shared<CommandPool>(this, _queue_family_indices.graphics_family.value(), flags);
-		_pools.transfer = std::make_shared<CommandPool>(this, _queue_family_indices.transfer_family.value(), flags);
-		_pools.compute = std::make_shared<CommandPool>(this, _queue_family_indices.compute_family.value(), flags);
+		if (_queue_family_indices.graphics_family.has_value()) _pools.graphics = std::make_shared<CommandPool>(this, _queue_family_indices.graphics_family.value(), flags);
+		if (_queue_family_indices.transfer_family.has_value()) _pools.transfer = std::make_shared<CommandPool>(this, _queue_family_indices.transfer_family.value(), flags);
+		if (_queue_family_indices.compute_family.has_value()) _pools.compute = std::make_shared<CommandPool>(this, _queue_family_indices.compute_family.value(), flags);
 	}
 
 	void VkApplication::createAllocator()

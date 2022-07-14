@@ -55,6 +55,43 @@ namespace vkl
 
 		std::shared_ptr<DescriptorPool> _imgui_descriptor_pool;
 
+		virtual bool isDeviceSuitable(VkPhysicalDevice const& device) override
+		{
+			bool res = false;
+
+			VkBool32 present_support = false;
+			QueueFamilyIndices indices = findQueueFamilies(device);
+
+			res = indices.graphics_family.has_value();
+
+			if (res)
+			{
+				//vkGetPhysicalDeviceSurfaceSupportKHR(device, indices.present_family.value(), _surface, &present_support);
+				res = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, indices.present_family.value());
+			}
+
+			if (res)
+			{
+				res = checkDeviceExtensionSupport(device);
+			}
+
+			//if (res)
+			//{
+			//	SwapChainSupportDetails swapchain_support_detail = querySwapChainSupport(device);
+			//	bool swapchain_adequate = !swapchain_support_detail.formats.empty() && !swapchain_support_detail.present_modes.empty();
+			//	res = swapchain_adequate;
+			//}
+
+			if (res)
+			{
+				VkPhysicalDeviceFeatures features;
+				vkGetPhysicalDeviceFeatures(device, &features);
+				res = features.samplerAnisotropy;
+			}
+
+			return res;
+		}
+
 		void initImgui()
 		{
 			const uint32_t N = 1024;
