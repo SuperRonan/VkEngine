@@ -43,7 +43,14 @@ namespace vkl
 
 		constexpr Buffer& operator=(Buffer&& other) noexcept
 		{
-			std::copySwap(*this, other);
+			VkObject::operator=(std::move(other));
+			std::swap(_size, other._size);
+			std::swap(_usage, other._usage);
+			std::swap(_sharing_mode, other._sharing_mode);
+			std::swap(_queues, other._queues);
+			std::swap(_mem_usage, other._mem_usage);
+			std::swap(_buffer, other._buffer);
+			std::swap(_alloc, other._alloc);
 			return *this;
 		}
 

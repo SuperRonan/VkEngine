@@ -174,7 +174,7 @@ namespace vkl
 		void createStateBuffers()
 		{
 			createCommonRuleBuffer();
-			_number_of_particules = 128*32;
+			_number_of_particules = 128*4;
 			std::vector<Particule> particules(_number_of_particules);
 
 			const size_t seed = 0;
@@ -612,8 +612,8 @@ namespace vkl
 				.in_flight_size = 2,
 				.target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR,
 				.name = "Particules",
-				.w = 1400,
-				.h = 1400,
+				.w = 1024,
+				.h = 1024,
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);

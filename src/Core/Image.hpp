@@ -114,7 +114,20 @@ namespace vkl
 
 		constexpr Image& operator=(Image&& other)noexcept
 		{
-			std::copySwap(*this, other);
+			VkObject::operator=(std::move(other));
+			std::swap(_type, other._type);
+			std::swap(_format, other._format);
+			std::swap(_extent, other._extent);
+			std::swap(_mips, other._mips);
+			std::swap(_samples, other._samples);
+			std::swap(_tiling, other._tiling);
+			std::swap(_usage, other._usage);
+			std::swap(_queues, other._queues);
+			std::swap(_sharing_mode, other._sharing_mode);
+			std::swap(_mem_usage, other._mem_usage);
+			std::swap(_elem_size, other._elem_size);
+			std::swap(_alloc, other._alloc);
+			std::swap(_image, other._image);
 			return *this;
 		}
 

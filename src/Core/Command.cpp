@@ -19,7 +19,7 @@ namespace vkl
 
 		// Resolve named bindings
 		{
-			_pipeline->program()
+			_pipeline->program();
 			for (size_t i = 0; i < N; ++i)
 			{
 				ResourceBinding& binding = _bindings[i];
