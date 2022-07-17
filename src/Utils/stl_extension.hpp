@@ -78,4 +78,10 @@ namespace std
 		}
 		return acc;
 	}
+
+	template<class Int>
+	Int moduloCeil(Int a, Int b)
+	{
+		return (a + b - 1) % b;
+	}
 }

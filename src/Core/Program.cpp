@@ -25,26 +25,28 @@ namespace vkl
 				for (size_t b = 0; b < set.binding_count; ++b)
 				{
 					const auto& binding = *set.bindings[b];
-					binding.type_description->decoration_flags
-					VkDescriptorSetLayoutBinding vkb = {
-						.binding = binding.binding,
-						.descriptorType = (VkDescriptorType) binding.descriptor_type,
-						.descriptorCount = binding.count,
-						.stageFlags = (VkShaderStageFlags) shader.stage(),
-					};
-					if (set_bindings.contains(binding.binding))
+					if (binding.accessed)
 					{
-						NamedBinding& already = set_bindings[binding.binding];
-						already.binding.stageFlags |= shader.stage();
-						const bool same_count = (already.binding.descriptorCount == vkb.descriptorCount);
-						const bool same_type = (already.binding.descriptorType == vkb.descriptorType);
-						assert(same_count && same_type);
-						if (!(same_count && same_type))	return false;
-					}
-					else
-					{
-						set_bindings[binding.binding].binding = vkb;
-						set_bindings[binding.binding].name = binding.name;
+						VkDescriptorSetLayoutBinding vkb = {
+							.binding = binding.binding,
+							.descriptorType = (VkDescriptorType)binding.descriptor_type,
+							.descriptorCount = binding.count,
+							.stageFlags = (VkShaderStageFlags)shader.stage(),
+						};
+						if (set_bindings.contains(binding.binding))
+						{
+							NamedBinding& already = set_bindings[binding.binding];
+							already.binding.stageFlags |= shader.stage();
+							const bool same_count = (already.binding.descriptorCount == vkb.descriptorCount);
+							const bool same_type = (already.binding.descriptorType == vkb.descriptorType);
+							assert(same_count && same_type);
+							if (!(same_count && same_type))	return false;
+						}
+						else
+						{
+							set_bindings[binding.binding].binding = vkb;
+							set_bindings[binding.binding].name = binding.name;
+						}
 					}
 				}
 			}

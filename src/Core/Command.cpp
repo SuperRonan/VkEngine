@@ -4,8 +4,6 @@
 
 namespace vkl
 {
-	
-
 	void ShaderCommand::createDescriptorSets()
 	{
 		std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _pipeline->program()->setLayouts();
@@ -41,7 +39,7 @@ namespace vkl
 
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
-			ResourceBinding & b = _bindings[i];
+			ResourceBinding& b = _bindings[i];
 			VkWriteDescriptorSet write{
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.pNext = nullptr,
@@ -58,7 +56,7 @@ namespace vkl
 					.buffer = *b.buffers().front(),
 					.offset = 0,
 					.range = VK_WHOLE_SIZE,
-				});
+					});
 				VkDescriptorBufferInfo& info = buffers.back();
 				write.pBufferInfo = &info;
 			}
@@ -72,11 +70,11 @@ namespace vkl
 				if (!b.images().empty())
 				{
 					info.imageView = *b.images().front();
-					if (b.type() == ResourceBinding::Type::SAMPLED_IMAGE || b.type() == ResourceBinding::Type::TEXTURE)
+					if (b.type() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || b.type() == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
 					{
 						info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 					}
-					else if (b.type() == ResourceBinding::Type::IMAGE)
+					else if (b.type() == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 					{
 						// TODO VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL if readonly
 						info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -92,5 +90,45 @@ namespace vkl
 
 			writes.push_back(write);
 		}
+
+		vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
+	}
+
+	void ShaderCommand::recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context)
+	{
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			const ResourceState next{
+				._access = _bindings[i].access(),
+				._layout = _bindings[i].layout(),
+			};
+			const ResourceState prev{
+
+			};
+		}
+	}
+
+	void ShaderCommand::recordBindings(CommandBuffer & cmd, ExecutionContext& context)
+	{
+		vkCmdBindPipeline(cmd, _pipeline->binding(), *_pipeline);
+
+		std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
+		for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
+		vkCmdBindDescriptorSets(cmd, _pipeline->binding(), _pipeline->program()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
+
+		// TODO push constants
+	}
+
+	void ComputeCommand::recordCommandBuffer(CommandBuffer & cmd, ExecutionContext& context)
+	{
+		recordInputSynchronization(cmd, context);
+		recordBindings(cmd, context);
+
+		const VkExtent3D workgroups{
+			.width = std::moduloCeil(_target_dispatch_threads.width, _program->localSize().width),
+			.height = std::moduloCeil(_target_dispatch_threads.height, _program->localSize().height),
+			.depth = std::moduloCeil(_target_dispatch_threads.depth, _program->localSize().depth),
+		};
+		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
 	}
 }

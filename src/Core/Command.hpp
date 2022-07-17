@@ -7,23 +7,78 @@
 #include "Buffer.hpp"
 #include "ImageView.hpp"
 #include "Sampler.hpp"
+#include "RenderPass.hpp"
 
 #include <memory>
 #include <vector>
+#include <hash_map>
 
 namespace vkl
 {
+	struct ResourceState
+	{
+		VkAccessFlags _access = VK_ACCESS_NONE;
+		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+	};
+
+	constexpr bool accessIsWrite(VkAccessFlags access)
+	{
+		return access & (
+			VK_ACCESS_HOST_WRITE_BIT |
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+			VK_ACCESS_SHADER_WRITE_BIT |
+			VK_ACCESS_TRANSFER_WRITE_BIT |
+			VK_ACCESS_MEMORY_WRITE_BIT
+		);
+	}
+
+	constexpr bool accessIsRead(VkAccessFlags access)
+	{
+		return access & (
+			VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
+			VK_ACCESS_INDEX_READ_BIT |
+			VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+			VK_ACCESS_UNIFORM_READ_BIT |
+			VK_ACCESS_INPUT_ATTACHMENT_READ_BIT |
+			VK_ACCESS_SHADER_READ_BIT |
+			VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+			VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+			VK_ACCESS_TRANSFER_READ_BIT |
+			VK_ACCESS_HOST_READ_BIT |
+			VK_ACCESS_MEMORY_READ_BIT
+			);
+	}
+
+	constexpr bool layoutTransitionRequired(ResourceState prev, ResourceState next)
+	{
+		return (prev._layout != next._layout);
+	}
+
+	constexpr bool stateTransitionRequiresSynchronization(ResourceState prev, ResourceState next, bool is_image)
+	{
+		const bool res =
+			(prev._access != next._access || (accessIsWrite(prev._access) && accessIsRead(next._access)))
+			|| (is_image && layoutTransitionRequired(prev, next));
+		return res;
+	}
+
 	class ExecutionContext
 	{
 	protected:
 
-		std::vector<std::shared_ptr<CommandBuffer>> _command_buffers;
+		size_t _frame_event_counter = 0;
+
+		std::vector<std::shared_ptr<CommandBuffer>> _command_buffers_to_submit;
+
+		std::hash_map<Buffer*, ResourceState> _buffer_states;
+		std::hash_map<ImageView*, ResourceState> _image_states;
 
 	public:
 
 		void reset();
 
-		void pushCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
+		
 
 	};
 
@@ -31,16 +86,6 @@ namespace vkl
 	{
 	public:
 		
-		enum class Type { 
-			UNKNOWN = VK_DESCRIPTOR_TYPE_MAX_ENUM, 
-			UBO = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-			SSBO = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 
-			IMAGE = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 
-			TEXTURE = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 
-			SAMPLER = VK_DESCRIPTOR_TYPE_SAMPLER, 
-			SAMPLED_IMAGE = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		};
-
 	protected:
 		std::vector<std::shared_ptr<Buffer>> _buffers = {};
 		std::vector<std::shared_ptr<ImageView>> _images = {};
@@ -48,7 +93,9 @@ namespace vkl
 		uint32_t _binding = uint32_t(-1);
 		uint32_t _set = 0;
 		std::string _name = "";
-		Type _type = Type::UNKNOWN;
+		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+		VkAccessFlags _access = VK_ACCESS_NONE;
+		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	public:
 
@@ -62,19 +109,25 @@ namespace vkl
 			return _name;
 		}
 
-		constexpr Type type()const
+		constexpr auto type()const
 		{
 			return _type;
 		}
 
 		constexpr bool isBuffer()const
 		{
-			return _type == Type::UBO || _type == Type::SSBO;
+			return 
+				_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || 
+				_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		}
 
 		constexpr bool isImage()const
 		{
-			return _type == Type::IMAGE || _type == Type::TEXTURE || _type == Type::SAMPLER || _type == Type::SAMPLED_IMAGE;
+			return 
+				_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || 
+				_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
+				_type == VK_DESCRIPTOR_TYPE_SAMPLER || 
+				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 
 		constexpr auto& buffers()
@@ -97,15 +150,36 @@ namespace vkl
 			return (VkDescriptorType) _type;
 		}
 
-		constexpr uint32_t set()const
+		constexpr auto set()const
 		{
 			return _set;
 		}
 		
-		constexpr uint32_t binding()const
+		constexpr auto binding()const
 		{
 			return _binding;
 		}
+
+		constexpr auto access()const
+		{
+			return _access;
+		}
+
+		constexpr auto layout()const
+		{
+			return _layout;
+		}
+	};
+
+	class ResourceToWait
+	{
+	protected:
+		std::shared_ptr<ImageView> _image;
+		std::shared_ptr<Buffer> _buffer;
+		VkAccessFlags _access;
+		VkImageLayout _layout;
+
+	public:
 	};
 
 	class Command : public VkObject
@@ -129,8 +203,9 @@ namespace vkl
 		std::shared_ptr<Pipeline> _pipeline;
 		std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
 		std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
-		std::shared_ptr<CommandBuffer> _cmd;
+		
 		std::vector<ResourceBinding> _bindings;
+		
 
 	public:
 
@@ -138,9 +213,40 @@ namespace vkl
 
 		virtual void createDescriptorSets();
 
+		virtual void recordBindings(CommandBuffer & cmd, ExecutionContext & context);
+
+		virtual void recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context);
+
+		virtual void recordCommandBuffer(CommandBuffer & cmd, ExecutionContext & context) = 0;
+
 		virtual void init() override = 0;
 
 		virtual void execute(ExecutionContext & context) override = 0;
 
+	};
+
+	class ComputeCommand : public ShaderCommand
+	{
+	protected:
+
+		std::shared_ptr<ComputeProgram> _program;
+		VkExtent3D _target_dispatch_threads;
+
+	public:
+
+		virtual void recordCommandBuffer(CommandBuffer & cmd, ExecutionContext & context) override;
+
+		virtual void init() override;
+
+		virtual void execute(ExecutionContext& context) override;
+	};
+
+	class GraphicsCommand : public ShaderCommand
+	{
+	protected:
+
+		std::shared_ptr<RenderPass> _render_pass;
+
+	public:
 	};
 }
