@@ -20,9 +20,9 @@ namespace vkl
 		create(ci);
 	}
 	
-	DescriptorSetLayout::DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<std::string> const& names) :
+	DescriptorSetLayout::DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<BindingMeta> const& metas) :
 		VkObject(app),
-		_names(names)
+		_metas(metas)
 	{
 		VkDescriptorSetLayoutCreateInfo ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,

@@ -11,13 +11,13 @@
 
 #include <memory>
 #include <vector>
-#include <hash_map>
+#include <unordered_map>
 
 namespace vkl
 {
 	struct ResourceState
 	{
-		VkAccessFlags _access = VK_ACCESS_NONE;
+		VkAccessFlags _access = VK_ACCESS_NONE_KHR;
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	};
 
@@ -71,8 +71,8 @@ namespace vkl
 
 		std::vector<std::shared_ptr<CommandBuffer>> _command_buffers_to_submit;
 
-		std::hash_map<Buffer*, ResourceState> _buffer_states;
-		std::hash_map<ImageView*, ResourceState> _image_states;
+		std::unordered_map<Buffer*, ResourceState> _buffer_states;
+		std::unordered_map<ImageView*, ResourceState> _image_states;
 
 	public:
 
@@ -94,7 +94,7 @@ namespace vkl
 		uint32_t _set = 0;
 		std::string _name = "";
 		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-		VkAccessFlags _access = VK_ACCESS_NONE;
+		VkAccessFlags _access = VK_ACCESS_NONE_KHR;
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	public:

@@ -6,11 +6,20 @@ namespace vkl
 {
 	class DescriptorSetLayout : public VkObject
 	{
+	public:
+
+		struct BindingMeta
+		{
+			std::string name = "";
+			VkAccessFlags access = VK_ACCESS_NONE_KHR;
+			VkImageLayout layout = VK_IMAGE_LAYOUT_MAX_ENUM;
+		};
+
 	protected:
 
 		VkDescriptorSetLayout _handle = VK_NULL_HANDLE;
 		std::vector<VkDescriptorSetLayoutBinding> _bindings;
-		std::vector<std::string> _names;
+		std::vector<BindingMeta> _metas;
 
 		void create(VkDescriptorSetLayoutCreateInfo const& ci);
 
@@ -24,16 +33,17 @@ namespace vkl
 
 		DescriptorSetLayout(VkApplication* app, VkDescriptorSetLayoutCreateInfo const& ci);
 
-		DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<std::string> const& names);
+		DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<BindingMeta> const& metas);
 
 		constexpr DescriptorSetLayout(DescriptorSetLayout const&) = delete;
 
-		constexpr DescriptorSetLayout(DescriptorSetLayout&& other) :
-			VkObject(std::move(other))
+		constexpr DescriptorSetLayout(DescriptorSetLayout&& other) noexcept:
+			VkObject(std::move(other)), 
+			_handle(other._handle),
+			_bindings(std::move(other._bindings)),
+			_metas(std::move(other._metas))
 		{
-			_handle = other._handle;
 			other._handle = VK_NULL_HANDLE;
-			_bindings = std::move(other._bindings);
 		}
 
 		constexpr DescriptorSetLayout& operator=(DescriptorSetLayout const&) = delete;
@@ -43,6 +53,7 @@ namespace vkl
 			VkObject::operator=(std::move(other));
 			std::swap(_handle, other._handle);
 			std::swap(_bindings, other._bindings);
+			std::swap(_metas, other._metas);
 			return *this;
 		}
 
@@ -68,9 +79,9 @@ namespace vkl
 			return _bindings;
 		}
 
-		constexpr auto& names()const
+		constexpr auto& metas()const
 		{
-			return _names;
+			return _metas;
 		}
 	};
 }

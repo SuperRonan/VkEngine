@@ -19,3 +19,6 @@
 [submodule "ext/imgui"]
 	path = ext/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "ext/SPIRV-Cross"]
+	path = ext/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git

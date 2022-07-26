@@ -156,14 +156,26 @@ namespace vkl
 
 	void Shader::reflect()
 	{
-		spvReflectDestroyShaderModule(&_reflection);
-		spvReflectCreateShaderModule(_spv_code.size() * sizeof(uint32_t), _spv_code.data(), &_reflection);
+		assert(!_reflector);
+		_reflector = new spirv_cross::Compiler(_spv_code);
+		_reflector->compile();
+		_entry_point = _reflector->get_entry_points_and_stages().front();
+	}
+
+	Shader::Shader(Shader&& other) noexcept :
+		VkObject(std::move(other)),
+		_stage(other._stage),
+		_module(other._module),
+		_spv_code(other._spv_code),
+		_reflector(std::move(other._reflector)),
+		_entry_point(std::move(other._entry_point))
+	{
+		other._module = VK_NULL_HANDLE;
 	}
 
 	Shader::Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage, std::vector<std::string> const& definitions) :
 		VkObject(app),
-		_stage(stage),
-		_reflection(std::zeroInit(_reflection))
+		_stage(stage)
 	{
 		compile(preprocess(path, definitions), path.string());
 		reflect();
@@ -171,19 +183,32 @@ namespace vkl
 	
 	Shader::~Shader()
 	{
-		//This function sets the module to null
-		spvReflectDestroyShaderModule(&_reflection);
-
 		if (_module)
 		{
 			vkDestroyShaderModule(_app->device(), _module, nullptr);
 			_module = VK_NULL_HANDLE;
 		}
+		if (_reflector)
+		{
+			delete _reflector;
+			_reflector = nullptr;
+		}
+	}
+
+	Shader& Shader::operator=(Shader&& other) noexcept
+	{
+		VkObject::operator=(std::move(other));
+		std::swap(_stage, other._stage);
+		std::swap(_module, other._module);
+		std::swap(_spv_code, other._spv_code);
+		std::swap(_reflector, other._reflector);
+		std::swap(_entry_point, other._entry_point);
+		return *this;
 	}
 
 	std::string Shader::entryName()const
 	{
-		return std::string(_reflection.entry_point_name);
+		return _entry_point.name;
 	}
 
 	VkPipelineShaderStageCreateInfo Shader::getPipelineShaderStageCreateInfo()const
@@ -192,7 +217,7 @@ namespace vkl
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			.stage = _stage,
 			.module = module(),
-			.pName = _reflection.entry_point_name,
+			.pName = _entry_point.name.c_str(),
 		};
 	}
 }
