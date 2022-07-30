@@ -44,9 +44,7 @@ namespace vkl
 
 	public:
 		    
-		bool buildSetLayouts();
-
-		bool buildPushConstantRanges();
+		bool reflect();
 
 		void createLayout();
 

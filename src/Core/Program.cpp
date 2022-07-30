@@ -4,7 +4,7 @@
 
 namespace vkl
 {
-	bool Program::buildSetLayouts()
+	bool Program::reflect()
 	{
 		// all_bindings[set][binding]
 		struct BindingWithMeta
@@ -13,6 +13,10 @@ namespace vkl
 			DescriptorSetLayout::BindingMeta meta;
 		};
 		std::map<uint32_t, std::map<uint32_t, BindingWithMeta>> all_bindings;
+
+		_push_constants.resize(0);
+		std::map<uint32_t, VkPushConstantRange> push_constants;
+
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const Shader& shader = *_shaders[sh];
@@ -28,7 +32,24 @@ namespace vkl
 					const bool accessed = true; // TODO
 					if (is_push_constant)
 					{
-						// TODO
+						const auto& base_type = reflector.get_type(b->id);
+						const uint32_t o = reflector.type_struct_member_offset(base_type, 0);
+						const uint32_t size = reflector.get_declared_struct_size(base_type);
+						VkPushConstantRange pcr{
+							.stageFlags = (VkShaderStageFlags)_shaders[sh]->stage(),
+							.offset = o,
+							.size = size,
+						};
+						if (push_constants.contains(o))
+						{
+							VkPushConstantRange& _pcr = push_constants[o];
+							_pcr.stageFlags |= pcr.stageFlags;
+
+						}
+						else
+						{
+							push_constants[o] = pcr;
+						}
 					}
 					else
 					{
@@ -148,13 +169,18 @@ namespace vkl
 			}
 			set_layout = std::make_shared<DescriptorSetLayout>(_app, bindings, metas);
 		}
+
+
+		_push_constants.resize(push_constants.size());
+		std::transform(push_constants.cbegin(), push_constants.cend(), _push_constants.begin(), [](auto const& pc) {return pc.second; });
+
 		return true;
 	}
 
 	bool Program::buildPushConstantRanges()
 	{
-		_push_constants.resize(0);
-		std::map<uint32_t, VkPushConstantRange> res;
+		
+		
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const auto& reflector = _shaders[sh]->reflector();
@@ -182,8 +208,7 @@ namespace vkl
 
 		// TODO Check integrity of the push constants
 
-		_push_constants.resize(res.size());
-		std::transform(res.cbegin(), res.cend(), _push_constants.begin(), [](auto const& pc) {return pc.second; });
+		
 
 		return true;
 	}
@@ -191,10 +216,8 @@ namespace vkl
 
 	void Program::createLayout()
 	{
-		const bool set_layouts_ok = buildSetLayouts();
-		assert(set_layouts_ok);
-		const bool push_constants_ok = buildPushConstantRanges();
-		assert(push_constants_ok);
+		const bool reflection_ok = reflect();
+		assert(reflection_ok);
 
 		std::vector<VkDescriptorSetLayout> set_layouts(_set_layouts.size());
 		for (size_t i = 0; i < set_layouts.size(); ++i)	set_layouts[i] = *_set_layouts[i];
@@ -241,8 +264,8 @@ namespace vkl
 
 	void ComputeProgram::extractLocalSize()
 	{
-		const auto& refl = _shaders.front()->reflection();
-		const auto& lcl = refl.entry_points[0].local_size;
+		const auto& refl = _shaders.front()->reflector();
+		const auto& lcl = refl.get_entry_point(_shaders.front()->entryName(), spv::ExecutionModelGLCompute).workgroup_size;
 		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
 	}
 }
