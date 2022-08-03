@@ -14,54 +14,30 @@ namespace vkl
 		};
 		std::map<uint32_t, std::map<uint32_t, BindingWithMeta>> all_bindings;
 
-		_push_constants.resize(0);
-		std::map<uint32_t, VkPushConstantRange> push_constants;
-
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const Shader& shader = *_shaders[sh];
-			//assert(shader.reflection());
-			const auto& reflector = shader.reflector();
-			const auto & all_resources  = reflector.get_shader_resources();
-
-			const auto addBindings_impl = [&](const spirv_cross::Resource* begin, const spirv_cross::Resource* end, VkDescriptorType type)
+			const auto& refl = shader.reflection();
+			for (size_t s = 0; s < refl.descriptor_set_count; ++s)
 			{
-				for (const spirv_cross::Resource* b = begin; b != end; ++b)
+				const auto& set = refl.descriptor_sets[s];
+				std::map<uint32_t, BindingWithMeta>& set_bindings = all_bindings[set.set];
+				for (size_t b = 0; b < set.binding_count; ++b)
 				{
-					const bool is_push_constant = reflector.get_storage_class(b->id) == spv::StorageClassPushConstant;
-					const bool accessed = true; // TODO
-					if (is_push_constant)
+					const auto& binding = *set.bindings[b];
+					if (binding.accessed)
 					{
-						const auto& base_type = reflector.get_type(b->id);
-						const uint32_t o = reflector.type_struct_member_offset(base_type, 0);
-						const uint32_t size = reflector.get_declared_struct_size(base_type);
-						VkPushConstantRange pcr{
-							.stageFlags = (VkShaderStageFlags)_shaders[sh]->stage(),
-							.offset = o,
-							.size = size,
+						VkDescriptorSetLayoutBinding vkb = {
+							.binding = binding.binding,
+							.descriptorType = (VkDescriptorType)binding.descriptor_type,
+							.descriptorCount = binding.count,
+							.stageFlags = (VkShaderStageFlags)shader.stage(),
 						};
-						if (push_constants.contains(o))
+						DescriptorSetLayout::BindingMeta meta;
+						meta.name = binding.name;
+						meta.access = [&]()
 						{
-							VkPushConstantRange& _pcr = push_constants[o];
-							_pcr.stageFlags |= pcr.stageFlags;
-
-						}
-						else
-						{
-							push_constants[o] = pcr;
-						}
-					}
-					else
-					{
-						const uint32_t set = reflector.get_decoration(b->id, spv::DecorationDescriptorSet);
-						const uint32_t binding = reflector.get_decoration(b->id, spv::DecorationBinding);
-						const uint32_t count = 1; // TODO
-						const std::string name = reflector.get_name(b->id);
-
-						std::map<uint32_t, BindingWithMeta>& set_bindings = all_bindings[set];
-
-						const VkAccessFlags access = [&]()
-						{
+							VkDescriptorType type = vkb.descriptorType;
 							VkAccessFlags res = VK_ACCESS_NONE_KHR;
 							if ( // Must be read only
 								type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
@@ -71,86 +47,48 @@ namespace vkl
 								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
 								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
 								type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT
-							) {
+								) {
 								res |= VK_ACCESS_SHADER_READ_BIT;
 							}
 							else
 							{
-								const bool readonly = reflector.get_decoration(b->id, spv::DecorationNonWritable);
-								const bool writeonly = reflector.get_decoration(b->id, spv::DecorationNonReadable);
-								if (readonly == writeonly) // Kind of an adge case
-								{
-									res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-								}
-								else if (readonly)
-								{
-									res |= VK_ACCESS_SHADER_READ_BIT;
-								}
-								else if (writeonly)
-								{
-									res |= VK_ACCESS_SHADER_WRITE_BIT;
-								}
+								//const uint32_t decoration = binding.type_description->decoration_flags;
+								//const bool readonly = decoration & SPV_REFLECT_DECORATION_NON_WRITABLE;
+								//const bool writeonly = decoration & SPV_REFLECT_DECORATION_NONE;
+								//if (readonly == writeonly) // Kind of an adge case
+								//{
+								//	res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+								//}
+								//else if (readonly)
+								//{
+								//	res |= VK_ACCESS_SHADER_READ_BIT;
+								//}
+								//else if (writeonly)
+								//{
+								//	res |= VK_ACCESS_SHADER_WRITE_BIT;
+								//}
+								// TODO add writeonly to spirv reflect
+								res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 							}
 							return res;
 						}();
-
-						const VkImageLayout layout = [&]()
+						if (set_bindings.contains(binding.binding))
 						{
-							VkImageLayout res = VK_IMAGE_LAYOUT_MAX_ENUM;
-							if ( // Is image
-								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
-								type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
-							) {
-								if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-									res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-								else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-								{
-									if (access == VK_ACCESS_SHADER_READ_BIT)
-										res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-									else
-										res = VK_IMAGE_LAYOUT_GENERAL;
-								}
-							}
-							return res;
-						}();
-
-						if (set_bindings.contains(binding))
-						{
-							BindingWithMeta& bwm = set_bindings[binding];
-							bwm.binding.stageFlags |= (VkShaderStageFlags)shader.stage();
-							bwm.meta.access |= access;
-							if (bwm.meta.layout != layout)
-							{
-								bwm.meta.layout = VK_IMAGE_LAYOUT_GENERAL;
-							}
+							BindingWithMeta& already = set_bindings[binding.binding];
+							already.binding.stageFlags |= shader.stage();
+							const bool same_count = (already.binding.descriptorCount == vkb.descriptorCount);
+							const bool same_type = (already.binding.descriptorType == vkb.descriptorType);
+							assert(same_count && same_type);
+							if (!(same_count && same_type))	return false;
 						}
 						else
 						{
-							const VkDescriptorSetLayoutBinding dslb{
-								.binding = binding,
-								.descriptorType = type,
-								.descriptorCount = count,
-								.stageFlags = (VkShaderStageFlags)shader.stage(),
-							};
-							BindingWithMeta bwm;
-							bwm.binding = dslb;
-							bwm.meta.name = name;
-							bwm.meta.access = access;
-
-							bwm.meta.layout = layout;
-							set_bindings[binding] = bwm;
+							set_bindings[binding.binding].binding = vkb;
+							set_bindings[binding.binding].meta = meta;
 						}
 					}
 				}
-			};
-
-			const auto addBindings = [&](const spirv_cross::SmallVector<spirv_cross::Resource>& resources, VkDescriptorType type)
-			{
-				addBindings_impl(resources.data(), resources.data() + resources.size(), type);
-			};
-			
-			addBindings(all_resources.uniform_buffers, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+			}
 		}
 
 		_set_layouts.resize(all_bindings.size());
@@ -171,44 +109,41 @@ namespace vkl
 		}
 
 
-		_push_constants.resize(push_constants.size());
-		std::transform(push_constants.cbegin(), push_constants.cend(), _push_constants.begin(), [](auto const& pc) {return pc.second; });
-
-		return true;
-	}
-
-	bool Program::buildPushConstantRanges()
-	{
 		
-		
-		for (size_t sh = 0; sh < _shaders.size(); ++sh)
+
+		// Push constants
 		{
-			const auto& reflector = _shaders[sh]->reflector();
-			
-			for (uint32_t pc = 0; pc < refl.push_constant_block_count; ++pc)
+			_push_constants.resize(0);
+			std::map<uint32_t, VkPushConstantRange> push_constants;
+
+			for (size_t sh = 0; sh < _shaders.size(); ++sh)
 			{
-				const auto& p = refl.push_constant_blocks[pc];
-				const uint32_t o = p.absolute_offset;
-				VkPushConstantRange pcr{
-					.stageFlags = (VkShaderStageFlags)_shaders[sh]->stage(),
-					.offset = o,
-					.size = p.size,
-				};
-				if (res.contains(o))
+				const auto& refl = _shaders[sh]->reflection();
+
+				for (uint32_t pc = 0; pc < refl.push_constant_block_count; ++pc)
 				{
-					res[o].stageFlags |= pcr.stageFlags;
-					// TODO check that both match
-				}
-				else
-				{
-					res[o] = pcr;
+					const auto& p = refl.push_constant_blocks[pc];
+					const uint32_t o = p.absolute_offset;
+					VkPushConstantRange pcr{
+						.stageFlags = (VkShaderStageFlags)_shaders[sh]->stage(),
+						.offset = o,
+						.size = p.size,
+					};
+					if (push_constants.contains(o))
+					{
+						push_constants[o].stageFlags |= pcr.stageFlags;
+						// TODO check that both match
+					}
+					else
+					{
+						push_constants[o] = pcr;
+					}
 				}
 			}
+			_push_constants.resize(push_constants.size());
+			std::transform(push_constants.cbegin(), push_constants.cend(), _push_constants.begin(), [](auto const& pc) {return pc.second; });
+			// TODO Check integrity of the push constants
 		}
-
-		// TODO Check integrity of the push constants
-
-		
 
 		return true;
 	}
@@ -264,8 +199,8 @@ namespace vkl
 
 	void ComputeProgram::extractLocalSize()
 	{
-		const auto& refl = _shaders.front()->reflector();
-		const auto& lcl = refl.get_entry_point(_shaders.front()->entryName(), spv::ExecutionModelGLCompute).workgroup_size;
+		const auto& refl = _shaders.front()->reflection();
+		const auto& lcl = refl.entry_points[0].local_size;
 		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
 	}
 }

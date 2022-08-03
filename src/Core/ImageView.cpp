@@ -128,13 +128,7 @@ namespace vkl
 			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.image = *_image,
-			.subresourceRange = VkImageSubresourceRange{
-				.aspectMask = _range.aspectMask,
-				.baseMipLevel = 0,
-				.levelCount = _image->mips(),
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
+			.subresourceRange = _range,
 		};
 
 		vkCmdPipelineBarrier(command,

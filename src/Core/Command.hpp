@@ -78,6 +78,9 @@ namespace vkl
 
 		void reset();
 
+		ResourceState& getBufferState(Buffer* b);
+
+		ResourceState& getImageState(ImageView* i);
 		
 
 	};
@@ -94,8 +97,7 @@ namespace vkl
 		uint32_t _set = 0;
 		std::string _name = "";
 		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-		VkAccessFlags _access = VK_ACCESS_NONE_KHR;
-		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		ResourceState _state;
 
 	public:
 
@@ -160,14 +162,9 @@ namespace vkl
 			return _binding;
 		}
 
-		constexpr auto access()const
+		constexpr auto state()const
 		{
-			return _access;
-		}
-
-		constexpr auto layout()const
-		{
-			return _layout;
+			return _state;
 		}
 	};
 

@@ -33,7 +33,7 @@ namespace vkl
 		std::stringstream oss;
 
 		const std::filesystem::path folder = path.parent_path();
-		
+
 		size_t copied_so_far = 0;
 
 		if (!definitions.empty())
@@ -85,7 +85,7 @@ namespace vkl
 	shaderc_shader_kind getShaderKind(VkShaderStageFlagBits stage)
 	{
 		shaderc_shader_kind kind;
-		switch(stage)
+		switch (stage)
 		{
 		case VK_SHADER_STAGE_VERTEX_BIT:
 			kind = shaderc_vertex_shader;
@@ -131,7 +131,7 @@ namespace vkl
 			break;
 		}
 		return kind;
-		
+
 	}
 
 	void Shader::compile(std::string const& code, std::string const& filename)
@@ -139,7 +139,7 @@ namespace vkl
 		shaderc::Compiler compiler;
 		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str());
 		size_t errors = res.GetNumErrors();
-		
+
 		if (errors)
 		{
 			std::cerr << res.GetErrorMessage() << std::endl;
@@ -151,64 +151,39 @@ namespace vkl
 			.codeSize = _spv_code.size() * sizeof(uint32_t),
 			.pCode = _spv_code.data(),
 		};
-		VK_CHECK(vkCreateShaderModule(_app->device(), &module_ci, nullptr, &_module), "Failed to create a shader module.");	
+		VK_CHECK(vkCreateShaderModule(_app->device(), &module_ci, nullptr, &_module), "Failed to create a shader module.");
 	}
 
 	void Shader::reflect()
 	{
-		assert(!_reflector);
-		_reflector = new spirv_cross::Compiler(_spv_code);
-		_reflector->compile();
-		_entry_point = _reflector->get_entry_points_and_stages().front();
-	}
-
-	Shader::Shader(Shader&& other) noexcept :
-		VkObject(std::move(other)),
-		_stage(other._stage),
-		_module(other._module),
-		_spv_code(other._spv_code),
-		_reflector(std::move(other._reflector)),
-		_entry_point(std::move(other._entry_point))
-	{
-		other._module = VK_NULL_HANDLE;
+		spvReflectDestroyShaderModule(&_reflection);
+		spvReflectCreateShaderModule(_spv_code.size() * sizeof(uint32_t), _spv_code.data(), &_reflection);
 	}
 
 	Shader::Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage, std::vector<std::string> const& definitions) :
 		VkObject(app),
-		_stage(stage)
+		_stage(stage),
+		_reflection(std::zeroInit(_reflection))
 	{
 		compile(preprocess(path, definitions), path.string());
 		reflect();
 	}
-	
+
 	Shader::~Shader()
 	{
+		//This function sets the module to null
+		spvReflectDestroyShaderModule(&_reflection);
+
 		if (_module)
 		{
 			vkDestroyShaderModule(_app->device(), _module, nullptr);
 			_module = VK_NULL_HANDLE;
 		}
-		if (_reflector)
-		{
-			delete _reflector;
-			_reflector = nullptr;
-		}
-	}
-
-	Shader& Shader::operator=(Shader&& other) noexcept
-	{
-		VkObject::operator=(std::move(other));
-		std::swap(_stage, other._stage);
-		std::swap(_module, other._module);
-		std::swap(_spv_code, other._spv_code);
-		std::swap(_reflector, other._reflector);
-		std::swap(_entry_point, other._entry_point);
-		return *this;
 	}
 
 	std::string Shader::entryName()const
 	{
-		return _entry_point.name;
+		return std::string(_reflection.entry_point_name);
 	}
 
 	VkPipelineShaderStageCreateInfo Shader::getPipelineShaderStageCreateInfo()const
@@ -217,7 +192,7 @@ namespace vkl
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			.stage = _stage,
 			.module = module(),
-			.pName = _entry_point.name.c_str(),
+			.pName = _reflection.entry_point_name,
 		};
 	}
 }

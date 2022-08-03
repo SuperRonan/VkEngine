@@ -4,6 +4,26 @@
 
 namespace vkl
 {
+	ResourceState& ExecutionContext::getBufferState(Buffer* b)
+	{
+		if (!_buffer_states.contains(b))
+		{
+			ResourceState not_yet_used{};
+			_buffer_states[b] = not_yet_used;
+		}
+		return _buffer_states[b];
+	}
+
+	ResourceState& ExecutionContext::getImageState(ImageView* i)
+	{
+		if (!_image_states.contains(i))
+		{
+			ResourceState not_yet_used{};
+			_image_states[i] = not_yet_used;
+		}
+		return _image_states[i];
+	}
+
 	void ShaderCommand::createDescriptorSets()
 	{
 		std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _pipeline->program()->setLayouts();
@@ -70,15 +90,7 @@ namespace vkl
 				if (!b.images().empty())
 				{
 					info.imageView = *b.images().front();
-					if (b.type() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || b.type() == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-					{
-						info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					}
-					else if (b.type() == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-					{
-						// TODO VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL if readonly
-						info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-					}
+					info.imageLayout = b.state()._layout;
 					images.push_back(info);
 					write.pImageInfo = &images.back();
 				}
@@ -96,15 +108,70 @@ namespace vkl
 
 	void ShaderCommand::recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context)
 	{
+		std::vector<VkImageMemoryBarrier> image_barriers;
+		std::vector<VkBufferMemoryBarrier> buffer_barriers;
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
-			const ResourceState next{
-				._access = _bindings[i].access(),
-				._layout = _bindings[i].layout(),
-			};
-			const ResourceState prev{
-
-			};
+			auto& b = _bindings[i];
+			const ResourceState next = b.state();
+			const ResourceState prev = [&]() {
+				if (b.isImage())
+				{
+					return context.getImageState(b.images()[0].get());
+				}
+				else if(b.isBuffer())
+				{
+					return context.getBufferState(b.buffers()[0].get());
+				}
+				else
+				{
+					assert(false);
+					// ???
+					return ResourceState{};
+				}
+			}();
+			if (stateTransitionRequiresSynchronization(prev, next, b.isImage()))
+			{
+				if (b.isImage())
+				{
+					VkImageMemoryBarrier barrier = {
+						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = prev._access,
+						.dstAccessMask = next._access,
+						.oldLayout = prev._layout,
+						.newLayout = next._layout,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.image = *b.images()[0]->image(),
+						.subresourceRange = b.images()[0]->range(),
+					};
+					image_barriers.push_back(barrier);
+				}
+				else if(b.isBuffer())
+				{
+					VkBufferMemoryBarrier barrier = {
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = prev._access,
+						.dstAccessMask = next._access,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = *b.buffers()[0],
+						.offset = 0,
+						.size = VK_WHOLE_SIZE,
+					};
+					buffer_barriers.push_back(barrier);
+				}
+			}
+		}
+		if (!image_barriers.empty() || !buffer_barriers.empty())
+		{
+			vkCmdPipelineBarrier(cmd,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
+				0, nullptr,
+				(uint32_t)buffer_barriers.size(), buffer_barriers.data(),
+				(uint32_t)image_barriers.size(), image_barriers.data());
 		}
 	}
 

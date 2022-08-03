@@ -94,6 +94,7 @@ ADD_LIBRARY(imgui STATIC ${IMGUI_SOURCES})
 INCLUDE_DIRECTORIES(${IMGUI_DIR})
 SET(IMGUI_LIBS imgui)
 
+# SPIRV-Cross
 ADD_SUBDIRECTORY(ext/SPIRV-Cross)
 INCLUDE_DIRECTORIES(ext/SPIRV-Cross)
 SET(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
@@ -111,7 +112,7 @@ FILE(GLOB VK_ENGINE_SOURCE src/Core/* src/Utils/* ext/SPIRV-Reflect/spirv_reflec
 
 # SOURCE_GROUP(Core REGULAR_EXPRESSION src/Core/.*)
 # SOURCE_GROUP(Utils REGULAR_EXPRESSION src/Utils/.*)
-# SOURCE_GROUP("SPIRV-Reflect" REGULAR_EXPRESSION ext/SPIRV-Reflect/spirv_reflect.*)
+SOURCE_GROUP("SPIRV-Reflect" REGULAR_EXPRESSION ext/SPIRV-Reflect/spirv_reflect.*)
 
 ADD_LIBRARY(VkEngine STATIC ${VK_ENGINE_SOURCE})
 SET_TARGET_PROPERTIES(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
