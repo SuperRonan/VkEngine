@@ -4,7 +4,7 @@
 
 namespace vkl
 {
-	ResourceState& ExecutionContext::getBufferState(Buffer* b)
+	ResourceState& ExecutionContext::getBufferState(VkBuffer b)
 	{
 		if (!_buffer_states.contains(b))
 		{
@@ -14,7 +14,7 @@ namespace vkl
 		return _buffer_states[b];
 	}
 
-	ResourceState& ExecutionContext::getImageState(ImageView* i)
+	ResourceState& ExecutionContext::getImageState(VkImageView i)
 	{
 		if (!_image_states.contains(i))
 		{
@@ -106,22 +106,22 @@ namespace vkl
 		vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
 	}
 
-	void ShaderCommand::recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context)
+	void DeviceCommand::recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context)
 	{
 		std::vector<VkImageMemoryBarrier> image_barriers;
 		std::vector<VkBufferMemoryBarrier> buffer_barriers;
-		for (size_t i = 0; i < _bindings.size(); ++i)
+		for (size_t i = 0; i < _resources.size(); ++i)
 		{
-			auto& b = _bindings[i];
-			const ResourceState next = b.state();
+			auto& r = _resources[i];
+			const ResourceState next = r._state;
 			const ResourceState prev = [&]() {
-				if (b.isImage())
+				if (r.isImage())
 				{
-					return context.getImageState(b.images()[0].get());
+					return context.getImageState(*r._images[0].get());
 				}
-				else if(b.isBuffer())
+				else if(r.isBuffer())
 				{
-					return context.getBufferState(b.buffers()[0].get());
+					return context.getBufferState(*r._buffers[0].get());
 				}
 				else
 				{
@@ -130,9 +130,9 @@ namespace vkl
 					return ResourceState{};
 				}
 			}();
-			if (stateTransitionRequiresSynchronization(prev, next, b.isImage()))
+			if (stateTransitionRequiresSynchronization(prev, next, r.isImage()))
 			{
-				if (b.isImage())
+				if (r.isImage())
 				{
 					VkImageMemoryBarrier barrier = {
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -143,12 +143,12 @@ namespace vkl
 						.newLayout = next._layout,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = *b.images()[0]->image(),
-						.subresourceRange = b.images()[0]->range(),
+						.image = *r._images[0]->image(),
+						.subresourceRange = r._images[0]->range(),
 					};
 					image_barriers.push_back(barrier);
 				}
-				else if(b.isBuffer())
+				else if(r.isBuffer())
 				{
 					VkBufferMemoryBarrier barrier = {
 						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -157,7 +157,7 @@ namespace vkl
 						.dstAccessMask = next._access,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = *b.buffers()[0],
+						.buffer = *r._buffers[0],
 						.offset = 0,
 						.size = VK_WHOLE_SIZE,
 					};
@@ -197,5 +197,46 @@ namespace vkl
 			.depth = std::moduloCeil(_target_dispatch_threads.depth, _program->localSize().depth),
 		};
 		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
+	}
+
+	void ComputeCommand::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
+		recordCommandBuffer(*cmd, context);
+	}
+
+	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context)
+	{
+		recordInputSynchronization(cmd, context);
+		recordBindings(cmd, context);
+
+		VkExtent2D render_area = {
+			.width = _framebuffer->extent().width,
+			.height = _framebuffer->extent().height,
+		};
+
+		std::vector<VkClearValue> clear_values(_framebuffer->size());
+		for (size_t i = 0; i < clear_values.size(); ++i)
+		{
+			clear_values[i] = VkClearValue{
+				.color = VkClearColorValue{.int32{0, 0, 0, 0}},
+			};
+		}
+
+		VkRenderPassBeginInfo begin = {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = *_render_pass,
+			.framebuffer = *_framebuffer,
+			.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
+			.clearValueCount = (uint32_t)clear_values.size(),
+			.pClearValues = clear_values.data(),
+		};
+	}
+
+	void GraphicsCommand::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
+		recordCommandBuffer(*cmd, context);
 	}
 }

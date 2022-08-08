@@ -73,5 +73,15 @@ namespace vkl
 		{
 			return textures().size();
 		}
+
+		constexpr size_t layers()const
+		{
+			return _textures.size();
+		}
+
+		constexpr VkExtent3D extent()const
+		{
+			return _textures[0]->image()->extent();
+		}
 	};
 }

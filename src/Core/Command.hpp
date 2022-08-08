@@ -8,6 +8,7 @@
 #include "ImageView.hpp"
 #include "Sampler.hpp"
 #include "RenderPass.hpp"
+#include "Framebuffer.hpp"
 
 #include <memory>
 #include <vector>
@@ -71,18 +72,38 @@ namespace vkl
 
 		std::vector<std::shared_ptr<CommandBuffer>> _command_buffers_to_submit;
 
-		std::unordered_map<Buffer*, ResourceState> _buffer_states;
-		std::unordered_map<ImageView*, ResourceState> _image_states;
+		std::unordered_map<VkBuffer, ResourceState> _buffer_states;
+		std::unordered_map<VkImageView, ResourceState> _image_states;
 
 	public:
 
 		void reset();
 
-		ResourceState& getBufferState(Buffer* b);
+		ResourceState& getBufferState(VkBuffer b);
 
-		ResourceState& getImageState(ImageView* i);
+		ResourceState& getImageState(VkImageView i);
+
+		std::shared_ptr<CommandBuffer> getCurrentCommandBuffer();
 		
 
+	};
+
+	struct Resource
+	{
+		std::vector<std::shared_ptr<Buffer>> _buffers = {};
+		std::vector<std::shared_ptr<ImageView>> _images = {};
+		ResourceState _state;
+		VkDescriptorType _type;
+
+		constexpr bool isImage() const
+		{
+			return !_images.empty();
+		}
+
+		constexpr bool isBuffer() const
+		{
+			return !_buffers.empty();
+		}
 	};
 
 	class ResourceBinding
@@ -90,14 +111,12 @@ namespace vkl
 	public:
 		
 	protected:
-		std::vector<std::shared_ptr<Buffer>> _buffers = {};
-		std::vector<std::shared_ptr<ImageView>> _images = {};
+		Resource _resource;
 		std::vector<std::shared_ptr<Sampler>> _samplers = {};
 		uint32_t _binding = uint32_t(-1);
 		uint32_t _set = 0;
 		std::string _name = "";
 		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-		ResourceState _state;
 
 	public:
 
@@ -128,18 +147,24 @@ namespace vkl
 			return 
 				_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || 
 				_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || 
+				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		}
+
+		constexpr bool isSampler()
+		{
+			return 
 				_type == VK_DESCRIPTOR_TYPE_SAMPLER || 
 				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 
 		constexpr auto& buffers()
 		{
-			return _buffers;
+			return _resource._buffers;
 		}
 
 		constexpr auto& images()
 		{
-			return _images;
+			return _resource._images;
 		}
 
 		constexpr auto& samplers()
@@ -164,19 +189,8 @@ namespace vkl
 
 		constexpr auto state()const
 		{
-			return _state;
+			return _resource._state;
 		}
-	};
-
-	class ResourceToWait
-	{
-	protected:
-		std::shared_ptr<ImageView> _image;
-		std::shared_ptr<Buffer> _buffer;
-		VkAccessFlags _access;
-		VkImageLayout _layout;
-
-	public:
 	};
 
 	class Command : public VkObject
@@ -193,7 +207,19 @@ namespace vkl
 
 	};
 
-	class ShaderCommand : public Command
+	class DeviceCommand : public Command
+	{
+	protected:
+		
+		std::vector<Resource> _resources;
+
+	public:
+
+		virtual void recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context);
+
+	};
+
+	class ShaderCommand : public DeviceCommand
 	{
 	protected:
 
@@ -211,8 +237,6 @@ namespace vkl
 		virtual void createDescriptorSets();
 
 		virtual void recordBindings(CommandBuffer & cmd, ExecutionContext & context);
-
-		virtual void recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context);
 
 		virtual void recordCommandBuffer(CommandBuffer & cmd, ExecutionContext & context) = 0;
 
@@ -243,7 +267,15 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<RenderPass> _render_pass;
+		std::shared_ptr<Framebuffer> _framebuffer;
+		
+		// Here ?
+		std::shared_ptr<Buffer> _mesh_buffer;
 
 	public:
+
+		virtual void recordCommandBuffer(CommandBuffer & cmd, ExecutionContext & context) override;
+
+		virtual void execute(ExecutionContext& context) override;
 	};
 }
