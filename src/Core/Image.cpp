@@ -3,38 +3,20 @@
 namespace vkl
 {
 	Image::Image(VkApplication* app, CreateInfo const& ci, VkImageLayout layout) : 
-		VkObject(app),
+		VkObject(app, ci.name),
 		_type(ci.type),
 		_format(ci.format),
 		_extent(ci.extent),
-		_mips(ci.use_mips ? Image::howManyMips(ci.type, ci.extent) : 1),
+		_mips(ci.mips == uint32_t(-1) ? Image::howManyMips(ci.type, ci.extent) : ci.mips),
 		_samples(ci.samples),
 		_tiling(ci.tiling),
 		_usage(ci.usage),
 		_sharing_mode(ci.queues.size() <= 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT),
 		_queues(ci.queues),
-		_mem_usage(ci.mem_usage),
-		_elem_size(ci.elem_size)
+		_mem_usage(ci.mem_usage)
 	{
-		createImage(layout);
-	}
-
-	void Image::createImage(CreateInfo const& ci, VkImageLayout layout)
-	{
-		assert(_image == VK_NULL_HANDLE);
-		_type = ci.type;
-		_format = ci.format;
-		_extent = ci.extent;
-		_mips = ci.use_mips ? Image::howManyMips(ci.type, ci.extent) : 1;
-		_samples = ci.samples;
-		_tiling = ci.tiling;
-		_usage = ci.usage;
-		_sharing_mode = (ci.queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-		_queues = ci.queues;
-		_mem_usage = ci.mem_usage;
-		_elem_size = ci.elem_size;
-
-		createImage(layout);
+		if(ci.create_on_construct)
+			createImage(layout);
 	}
 
 	void Image::createImage(VkImageLayout layout)
@@ -71,6 +53,18 @@ namespace vkl
 		};
 
 		VK_CHECK(vmaCreateImage(_app->allocator(), &image_ci, &alloc_ci, &_image, &_alloc, nullptr), "Failed to create an image.");
+		
+		if (!name().empty())
+		{
+			VkDebugMarkerObjectNameInfoEXT object_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+				.object = (uint64_t) _image,
+				.pObjectName = _name.data(),
+			};
+			_app->nameObject(object_name);
+		}
 	}
 
 	Image::~Image()
@@ -93,10 +87,10 @@ namespace vkl
 		_alloc = nullptr;
 	}
 
-	StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data)
+	StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
 	{
 		assert(_type == VK_IMAGE_TYPE_2D);
-		size_t size = _extent.width * _extent.height * _elem_size;
+		size_t size = _extent.width * _extent.height * elem_size;
 		StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
 		std::memcpy(sb->data, data, size);
 		return sb;

@@ -298,9 +298,8 @@ namespace vkl
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8_UINT,
 				.extent = VkExtent3D{_world_size.width, _world_size.height, 1},
-				.use_mips = false,
+				.mips = 1,
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-				.elem_size = 1,
 			};
 			CommandBuffer copy_command(_pools.graphics);
 			copy_command.begin();
@@ -329,7 +328,7 @@ namespace vkl
 					VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-				staging_buffers[i] = grid.copyToStaging2D(_staging_pool, data.data());
+				staging_buffers[i] = grid.copyToStaging2D(_staging_pool, data.data(), 1);
 
 				grid.recordSendStagingToDevice2D(copy_command, staging_buffers[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 

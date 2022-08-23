@@ -152,7 +152,6 @@ namespace vkl
 				.format = format(),
 				.extent = VkExtent3D{.width = extent.width, .height = extent.height, .depth = 1},
 				.queues = {},
-				.elem_size = 3, // TODO
 			};
 			_swapchain_images[i] = std::make_shared<Image>(_app);
 			_swapchain_images[i]->associateImage(ai);

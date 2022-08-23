@@ -60,6 +60,8 @@ namespace vkl
 
 		StagingPool _staging_pool;
 
+		PFN_vkDebugMarkerSetObjectNameEXT* _vkDebugMarkerSetObjectNameEXT;
+
 		virtual std::vector<const char*> getValidLayers();
 
 		virtual std::vector<const char* > getDeviceExtensions(); 
@@ -106,6 +108,7 @@ namespace vkl
 
 		virtual void cleanup();
 
+
 	public:
 
 		VkApplication(std::string const& name, bool enable_validation_layers=false);
@@ -149,6 +152,8 @@ namespace vkl
 		Pools const& pools()const;
 
 		StagingPool& stagingPool();
+
+		void nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name);
 	};
 
 	class VkObject
@@ -156,14 +161,21 @@ namespace vkl
 	protected:
 
 		VkApplication* _app = nullptr;
+		std::string _name = {};
 
 	public:
 
 		constexpr VkObject() noexcept = default;
 
-		constexpr VkObject(VkApplication* app) noexcept:
+		constexpr VkObject(VkApplication* app) noexcept :
 			_app(app)
 		{}
+
+		constexpr VkObject(VkApplication* app, std::string const& name) noexcept :
+			_app(app),
+			_name(name)
+		{}
+
 		constexpr VkObject(VkObject const& ) noexcept = default;
 		constexpr VkObject(VkObject&&) noexcept = default;
 
@@ -188,6 +200,21 @@ namespace vkl
 		constexpr VkDevice device()const
 		{
 			return _app->device();
+		}
+
+		constexpr std::string const& name()const
+		{
+			return _name;
+		}
+
+		constexpr void setName(std::string const& new_name)
+		{
+			_name = new_name;
+		}
+		
+		constexpr void setName(std::string && new_name)
+		{
+			_name = std::move(new_name);
 		}
 	};
 }

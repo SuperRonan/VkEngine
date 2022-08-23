@@ -4,6 +4,11 @@
 
 namespace vkl
 {
+	bool Mesh::DeviceData::loaded()const
+	{
+		return !!mesh_buffer;
+	}
+
 	Mesh::Mesh(VkApplication* app):
 		VkObject(app)
 	{}
@@ -55,7 +60,7 @@ namespace vkl
 
 	Mesh& Mesh::operator=(Mesh&& other) noexcept
 	{
-		if (_device.loaded)
+		if (_device.loaded())
 		{
 			cleanDeviceBuffer();
 		}
@@ -67,7 +72,7 @@ namespace vkl
 
 	Mesh::~Mesh() 
 	{
-		if (_device.loaded)
+		if (_device.loaded())
 		{
 			cleanDeviceBuffer();
 		}
@@ -81,7 +86,7 @@ namespace vkl
 		std::copy(other._host.vertices.begin(), other._host.vertices.end(), _host.vertices.begin() + offset);
 		size_t n_indices = _host.indices.size();
 		_host.indices.resize(n_indices + other._host.indices.size());
-		std::iota(_host.indices.begin() + n_indices, _host.indices.end(), offset);
+		std::iota(_host.indices.begin() + n_indices, _host.indices.end(), (uint)offset);
 	}
 
 	Mesh& Mesh::operator+=(Mesh const& other) noexcept
@@ -179,34 +184,22 @@ namespace vkl
 		}
 	}
 
-	void Mesh::createDeviceBuffer(uint32_t n_queues, uint32_t * queues)
+	void Mesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
 	{
 		assert(_host.loaded);
-		assert(!_device.loaded);
+		assert(!_device.loaded());
 
 		_device.vertices_size = _host.vertices.size() * sizeof(Vertex), _device.indices_size = _host.indices.size() * sizeof(uint);
 		_device.mesh_size = _device.vertices_size + _device.indices_size;
 
-		VkBufferCreateInfo mesh_buffer_ci{
-			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			.size = _device.mesh_size,
-			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			.sharingMode = (n_queues == 0) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
-			.queueFamilyIndexCount = n_queues,
-			.pQueueFamilyIndices = queues,
-		};
 
-		VmaAllocationCreateInfo alloc{
-			.usage = VMA_MEMORY_USAGE_GPU_ONLY,
-		};
-
-		vmaCreateBuffer(_app->allocator(), &mesh_buffer_ci, &alloc, &_device.mesh_buffer, &_device.allocation, nullptr);
-		_device.loaded = true;
+		_device.mesh_buffer = std::make_shared<Buffer>(_app);
+		_device.mesh_buffer->createBuffer(_device.mesh_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY, queues);
 	}
 
 	void Mesh::copyToDevice()
 	{
-		assert(_device.loaded);
+		assert(_device.loaded());
 		assert(_host.loaded);
 		StagingPool& sp = _app->stagingPool();
 		StagingPool::StagingBuffer* sb = sp.getStagingBuffer(_device.mesh_size);
@@ -217,21 +210,21 @@ namespace vkl
 
 	void Mesh::cleanDeviceBuffer()
 	{
-		assert(_device.loaded);
-		vmaDestroyBuffer(_app->allocator(), _device.mesh_buffer, _device.allocation);
+		assert(_device.loaded());
 		_device = DeviceData();
 	}
 
 	void Mesh::recordBind(VkCommandBuffer command_buffer, uint32_t first_binding)const
 	{
-		assert(_device.loaded);
-		vkCmdBindVertexBuffers(command_buffer, first_binding, 1, &_device.mesh_buffer, 0);
-		vkCmdBindIndexBuffer(command_buffer, _device.mesh_buffer, _device.vertices_size, VK_INDEX_TYPE_UINT32);
+		assert(_device.loaded());
+		VkBuffer vb = *_device.mesh_buffer;
+		vkCmdBindVertexBuffers(command_buffer, first_binding, 1, &vb, 0);
+		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer, _device.vertices_size, VK_INDEX_TYPE_UINT32);
 	}
 
 	uint32_t Mesh::deviceIndexSize()const
 	{
-		assert(_device.loaded);
+		assert(_device.loaded());
 		return _device.indices_size;
 	}
 

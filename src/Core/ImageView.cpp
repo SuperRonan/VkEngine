@@ -90,10 +90,10 @@ namespace vkl
 		return *this;
 	}
 
-	StagingPool::StagingBuffer* ImageView::copyToStaging2D(StagingPool& pool, void* data)
+	StagingPool::StagingBuffer* ImageView::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
 	{
 		assert(_type == VK_IMAGE_TYPE_2D);
-		size_t size = _image->extent().width * _image->extent().height * _image->elemSize();
+		size_t size = _image->extent().width * _image->extent().height * elem_size;
 		StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
 		std::memcpy(sb->data, data, size);
 		return sb;

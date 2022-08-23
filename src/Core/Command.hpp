@@ -9,6 +9,7 @@
 #include "Sampler.hpp"
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
+#include "Mesh.hpp"
 
 #include <memory>
 #include <vector>
@@ -20,6 +21,7 @@ namespace vkl
 	{
 		VkAccessFlags _access = VK_ACCESS_NONE_KHR;
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkPipelineStageFlags _stage = VK_PIPELINE_STAGE_NONE_KHR;
 	};
 
 	constexpr bool accessIsWrite(VkAccessFlags access)
@@ -51,6 +53,11 @@ namespace vkl
 			);
 	}
 
+	constexpr bool accessIsReadAndWrite(VkAccessFlags access)
+	{
+		return accessIsRead(access) && accessIsWrite(access);
+	}
+
 	constexpr bool layoutTransitionRequired(ResourceState prev, ResourceState next)
 	{
 		return (prev._layout != next._layout);
@@ -59,7 +66,7 @@ namespace vkl
 	constexpr bool stateTransitionRequiresSynchronization(ResourceState prev, ResourceState next, bool is_image)
 	{
 		const bool res =
-			(prev._access != next._access || (accessIsWrite(prev._access) && accessIsRead(next._access)))
+			(prev._access != next._access || (accessIsReadAndWrite(prev._access) && accessIsReadAndWrite(next._access)))
 			|| (is_image && layoutTransitionRequired(prev, next));
 		return res;
 	}
@@ -92,8 +99,8 @@ namespace vkl
 	{
 		std::vector<std::shared_ptr<Buffer>> _buffers = {};
 		std::vector<std::shared_ptr<ImageView>> _images = {};
-		ResourceState _state;
-		VkDescriptorType _type;
+		ResourceState _state = {};
+		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
 
 		constexpr bool isImage() const
 		{
@@ -187,9 +194,24 @@ namespace vkl
 			return _binding;
 		}
 
-		constexpr auto state()const
+		constexpr const auto & state()const
 		{
 			return _resource._state;
+		}
+		constexpr auto& state()
+		{
+			return _resource._state;
+		}
+
+
+		constexpr const auto& resource()const
+		{
+			return _resource;
+		}
+
+		constexpr auto& resource()
+		{
+			return _resource;
 		}
 	};
 
@@ -228,13 +250,19 @@ namespace vkl
 		std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
 		
 		std::vector<ResourceBinding> _bindings;
+
+		std::vector<uint8_t> _push_constants_data;
 		
 
 	public:
 
 		virtual ~ShaderCommand() = 0;
 
-		virtual void createDescriptorSets();
+		virtual void extractBindingsFromReflection();
+
+		virtual void writeDescriptorSets();
+
+		virtual void declareDescriptorSetsResources();
 
 		virtual void recordBindings(CommandBuffer & cmd, ExecutionContext & context);
 
@@ -251,7 +279,8 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<ComputeProgram> _program;
-		VkExtent3D _target_dispatch_threads;
+		VkExtent3D _dispatch_size;
+		bool _dispatch_threads = false;
 
 	public:
 
@@ -274,8 +303,55 @@ namespace vkl
 
 	public:
 
+		virtual void init() override;
+
+		virtual void declareGraphicsResources();
+
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) = 0;
+
 		virtual void recordCommandBuffer(CommandBuffer & cmd, ExecutionContext & context) override;
 
 		virtual void execute(ExecutionContext& context) override;
+	};
+
+	class DrawMeshCommand : public GraphicsCommand
+	{
+	protected:
+
+		std::vector<std::shared_ptr<Mesh>> _meshes;
+
+	public:
+
+		virtual void init() override;
+
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) override;
+	};
+
+	class FragCommand : public GraphicsCommand
+	{
+	protected:
+
+	public:
+
+		virtual void init() override;
+
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) override;
+
+	};
+
+	class BlitImage : public DeviceCommand
+	{
+	protected:
+
+		std::shared_ptr<ImageView> _src, _dst;
+		std::vector<VkImageBlit> _regions;
+		VkFilter _filter = VK_FILTER_NEAREST;
+
+	public:
+
+		virtual void init() override;
+
+		virtual void execute(ExecutionContext& context) override;
+
 	};
 }

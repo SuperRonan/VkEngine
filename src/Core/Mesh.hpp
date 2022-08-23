@@ -4,7 +4,7 @@
 #include "Geometry.hpp"
 #include <vector>
 #include "Vertex.hpp"
-#include <vk_mem_alloc.h>
+#include "Buffer.hpp"
 
 
 namespace vkl
@@ -29,11 +29,11 @@ namespace vkl
 
 		struct DeviceData
 		{
-			bool loaded = false;
-			VmaAllocation allocation = nullptr;
-			VkBuffer mesh_buffer = VK_NULL_HANDLE;
+			std::shared_ptr<Buffer> mesh_buffer = nullptr;
 			// In bytes
 			VkDeviceSize vertices_size = 0, indices_size = 0, mesh_size = 0;
+
+			bool loaded()const;
 		} _device;
 
 	public:
@@ -59,7 +59,7 @@ namespace vkl
 
 		void computeTangents();
 
-		void createDeviceBuffer(uint32_t n_queues=0, uint32_t * queues = nullptr);
+		void createDeviceBuffer(std::vector<uint32_t> const& queues);
 
 		void copyToDevice();
 
@@ -69,6 +69,10 @@ namespace vkl
 
 		uint32_t deviceIndexSize()const;
 
+		constexpr auto indicesSize()const
+		{
+			return _device.indices_size;
+		}
 
 		static Mesh Cube(VkApplication * app, Vector3 center=Vector3(0), bool face_normal=true, bool same_face=true);
 	};

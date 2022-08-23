@@ -12,32 +12,36 @@ namespace vkl
 
 		struct CreateInfo
 		{
-			VkImageType type;
-			VkFormat format;
-			VkExtent3D extent;
-			bool use_mips = true;
+			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
+			VkFormat format = VK_FORMAT_MAX_ENUM;
+			VkExtent3D extent = makeZeroExtent3D();
+			uint32_t mips = 1;
 			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
 			VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-			VkImageUsageFlags usage;
-			std::vector<uint32_t> queues;
+			VkImageUsageFlags usage = 0;
+			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-			uint32_t elem_size;
+			bool create_on_construct = false;
+			std::string name = "";
 		};
 
 		struct AssociateInfo
 		{
-			VkImage image;
-			VkImageType type;
-			VkFormat format;
-			VkExtent3D extent;
+			VkImage image = VK_NULL_HANDLE;
+			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
+			VkFormat format = VK_FORMAT_MAX_ENUM;
+			VkExtent3D extent = makeZeroExtent3D();
 			uint32_t mips = 1;
 			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
 			VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-			VkImageUsageFlags usage;
-			std::vector<uint32_t> queues;
+			VkImageUsageFlags usage = 0;
+			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-			uint32_t elem_size;
+			std::string name = "";
 		};
+
+		using CI = CreateInfo;
+		using AI = AssociateInfo;
 
 		static constexpr uint32_t howManyMips(uint32_t dims, VkExtent3D const& extent)
 		{
@@ -63,19 +67,17 @@ namespace vkl
 
 	protected:
 
-		VkImageType _type;
-		VkFormat _format;
-		VkExtent3D _extent;
-		uint32_t _mips;
-		VkSampleCountFlagBits _samples;
-		VkImageTiling _tiling;
-		VkImageUsageFlags _usage;
-		std::vector<uint32_t> _queues;
-		VkSharingMode _sharing_mode;
+		VkImageType _type = VK_IMAGE_TYPE_MAX_ENUM;
+		VkFormat _format = VK_FORMAT_MAX_ENUM;
+		VkExtent3D _extent = makeZeroExtent3D();
+		uint32_t _mips = 1;
+		VkSampleCountFlagBits _samples = VK_SAMPLE_COUNT_1_BIT;
+		VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
+		VkImageUsageFlags _usage = 0;
+		std::vector<uint32_t> _queues = {};
+		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
 
-		VmaMemoryUsage _mem_usage;
-
-		uint32_t _elem_size;
+		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
 
 		VmaAllocation _alloc = nullptr;
 		VkImage _image = VK_NULL_HANDLE;
@@ -102,7 +104,6 @@ namespace vkl
 			_queues(std::move(other._queues)),
 			_sharing_mode(other._sharing_mode),
 			_mem_usage(other._mem_usage),
-			_elem_size(other._elem_size),
 			_alloc(other._alloc),
 			_image(other._image)
 		{
@@ -125,15 +126,12 @@ namespace vkl
 			std::swap(_queues, other._queues);
 			std::swap(_sharing_mode, other._sharing_mode);
 			std::swap(_mem_usage, other._mem_usage);
-			std::swap(_elem_size, other._elem_size);
 			std::swap(_alloc, other._alloc);
 			std::swap(_image, other._image);
 			return *this;
 		}
 
 		~Image();
-		
-		void createImage(CreateInfo const& ci, VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED);
 
 		void createImage(VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED);
 
@@ -149,7 +147,8 @@ namespace vkl
 			_queues = assos.queues;
 			_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 			_mem_usage = assos.mem_usage;
-			_elem_size = assos.elem_size;
+			if(!assos.name.empty())
+				_name = assos.name;
 			_alloc = nullptr;
 		}
 
@@ -225,11 +224,6 @@ namespace vkl
 			return !!_alloc;
 		}
 
-		constexpr uint32_t elemSize()const
-		{
-			return _elem_size;
-		}
-
-		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data);
+		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 	};
 }

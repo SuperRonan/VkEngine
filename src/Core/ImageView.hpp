@@ -3,6 +3,7 @@
 #include "VkApplication.hpp"
 #include "Image.hpp"
 #include <array>
+#include <optional>
 
 namespace vkl
 {
@@ -10,37 +11,18 @@ namespace vkl
 	{
 	public:
 
-		struct DirectCreateInfo
+		struct CreateInfo
 		{
-
+			std::shared_ptr<Image> image = nullptr;
+			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+			VkFormat format = VK_FORMAT_MAX_ENUM;
+			VkComponentMapping components = defaultComponentMapping();
+			std::optional<VkImageSubresourceRange> range = {};
+			bool create_on_construct = false;
 		};
 
-		static constexpr VkComponentMapping defaultComponentMapping()
-		{
-			VkComponentMapping res(VK_COMPONENT_SWIZZLE_IDENTITY);
-			return res;
-		}
+		using CI = CreateInfo;
 
-		static constexpr VkImageViewType getViewTypeFromImageType(VkImageType type)
-		{
-			VkImageViewType res;
-			switch (type)
-			{
-			case(VK_IMAGE_TYPE_1D):
-				res = VK_IMAGE_VIEW_TYPE_1D;
-				break;
-			case(VK_IMAGE_TYPE_2D):
-				res = VK_IMAGE_VIEW_TYPE_2D;
-				break;
-			case(VK_IMAGE_TYPE_3D):
-				res = VK_IMAGE_VIEW_TYPE_3D;
-				break;
-			default:
-				throw std::logic_error("Unknow image type.");
-				break;
-			}
-			return res;
-		}
 
 	protected:
 
@@ -116,7 +98,7 @@ namespace vkl
 			return _range;
 		}
 
-		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data);
+		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 		
 		void recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout);
 		

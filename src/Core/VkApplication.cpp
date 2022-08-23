@@ -37,6 +37,7 @@ namespace vkl
 	{
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 		};
 	}
 
@@ -157,6 +158,8 @@ namespace vkl
 		}
 
 		VK_CHECK(vkCreateInstance(&create_info, nullptr, &_instance), "Failed to create the Vulkan Instance");
+
+		_vkDebugMarkerSetObjectNameEXT = (PFN_vkDebugMarkerSetObjectNameEXT*)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
 	}
 
 	void VkApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info)const
@@ -422,6 +425,11 @@ namespace vkl
 		};
 		vmaCreateAllocator(&alloc_ci, &_allocator);
 		_staging_pool.setAllocator(_allocator);
+	}
+
+	void VkApplication::nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name)
+	{
+		VK_CHECK((*_vkDebugMarkerSetObjectNameEXT)(_device, &object_to_name), "Failed to name an object!");
 	}
 
 	void VkApplication::initGLFW()

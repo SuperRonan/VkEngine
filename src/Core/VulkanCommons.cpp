@@ -1,6 +1,6 @@
 #include "VulkanCommons.hpp"
 
-VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t mips)
+VkImageView vkl::createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t mips)
 {
 	VkImageViewCreateInfo view_ci{
 		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,

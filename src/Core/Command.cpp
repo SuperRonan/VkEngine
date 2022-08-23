@@ -24,7 +24,7 @@ namespace vkl
 		return _image_states[i];
 	}
 
-	void ShaderCommand::createDescriptorSets()
+	void ShaderCommand::writeDescriptorSets()
 	{
 		std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _pipeline->program()->setLayouts();
 		_desc_pools.resize(set_layouts.size());
@@ -106,6 +106,25 @@ namespace vkl
 		vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
 	}
 
+	void ShaderCommand::declareDescriptorSetsResources()
+	{
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			const ResourceBinding& b = _bindings[i];
+			_resources.push_back(b.resource());
+		}
+	}
+
+	void ShaderCommand::extractBindingsFromReflection()
+	{
+		const auto& program = *_pipeline->program();
+		const auto& shaders = program.shaders();
+		for (size_t s = 0; s < shaders.size(); ++s)
+		{
+			
+		}
+	}
+
 	void DeviceCommand::recordInputSynchronization(CommandBuffer & cmd, ExecutionContext & context)
 	{
 		std::vector<VkImageMemoryBarrier> image_barriers;
@@ -183,7 +202,12 @@ namespace vkl
 		for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
 		vkCmdBindDescriptorSets(cmd, _pipeline->binding(), _pipeline->program()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
 
-		// TODO push constants
+		VkPipelineStageFlags pc_stages = 0;
+		for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
+		{
+			pc_stages |= pc_range.stageFlags;
+		}
+		vkCmdPushConstants(cmd, _pipeline->program()->pipelineLayout(), pc_stages, 0, (uint32_t)_push_constants_data.size(), _push_constants_data.data());
 	}
 
 	void ComputeCommand::recordCommandBuffer(CommandBuffer & cmd, ExecutionContext& context)
@@ -191,11 +215,11 @@ namespace vkl
 		recordInputSynchronization(cmd, context);
 		recordBindings(cmd, context);
 
-		const VkExtent3D workgroups{
-			.width = std::moduloCeil(_target_dispatch_threads.width, _program->localSize().width),
-			.height = std::moduloCeil(_target_dispatch_threads.height, _program->localSize().height),
-			.depth = std::moduloCeil(_target_dispatch_threads.depth, _program->localSize().depth),
-		};
+		const VkExtent3D workgroups = _dispatch_threads ? VkExtent3D{
+			.width = std::moduloCeil(_dispatch_size.width, _program->localSize().width),
+			.height = std::moduloCeil(_dispatch_size.height, _program->localSize().height),
+			.depth = std::moduloCeil(_dispatch_size.depth, _program->localSize().depth),
+		} : _dispatch_size;
 		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
 	}
 
@@ -232,11 +256,65 @@ namespace vkl
 			.clearValueCount = (uint32_t)clear_values.size(),
 			.pClearValues = clear_values.data(),
 		};
+
+		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
+		{
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *_pipeline);
+			recordBindings(cmd, context);
+			recordDraw(cmd, context);
+		}
+		vkCmdEndRenderPass(cmd);
 	}
 
 	void GraphicsCommand::execute(ExecutionContext& context)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
 		recordCommandBuffer(*cmd, context);
+	}
+
+	void DrawMeshCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)
+	{
+		for (auto& mesh : _meshes)
+		{
+			mesh->recordBind(cmd);
+			vkCmdDrawIndexed(cmd, (uint32_t)mesh->indicesSize(), 1, 0, 0, 0);
+		}
+	}
+
+	void FragCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)
+	{
+		vkCmdDrawIndexed(cmd, 4, 1, 0, 0, 0);
+	}
+
+	void BlitImage::init()
+	{
+		_resources.push_back(Resource{
+			._images = {_src},
+			._state = ResourceState{
+				._access = VK_ACCESS_TRANSFER_READ_BIT,
+				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT
+			},
+		});
+		_resources.push_back(Resource{
+			._images = {_dst},
+			._state = ResourceState{
+				._access = VK_ACCESS_TRANSFER_WRITE_BIT,
+				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+			},
+		});
+	}
+
+	void BlitImage::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
+		recordInputSynchronization(*cmd, context);
+
+		vkCmdBlitImage(*cmd, 
+			*_src->image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
+			*_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+			(uint32_t)_regions.size(), _regions.data(), _filter
+		);
 	}
 }
