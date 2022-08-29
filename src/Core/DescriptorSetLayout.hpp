@@ -79,7 +79,7 @@ namespace vkl
 			return _bindings;
 		}
 
-		constexpr auto& metas()const
+		constexpr const auto& metas()const
 		{
 			return _metas;
 		}

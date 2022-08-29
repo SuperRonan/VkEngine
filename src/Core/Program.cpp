@@ -14,6 +14,8 @@ namespace vkl
 		};
 		std::map<uint32_t, std::map<uint32_t, BindingWithMeta>> all_bindings;
 
+		const bool keep_unused_bindings = false;
+
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const Shader& shader = *_shaders[sh];
@@ -25,7 +27,7 @@ namespace vkl
 				for (size_t b = 0; b < set.binding_count; ++b)
 				{
 					const auto& binding = *set.bindings[b];
-					if (binding.accessed)
+					if (keep_unused_bindings || binding.accessed)
 					{
 						VkDescriptorSetLayoutBinding vkb = {
 							.binding = binding.binding,
@@ -37,7 +39,7 @@ namespace vkl
 						meta.name = binding.name;
 						meta.access = [&]()
 						{
-							VkDescriptorType type = vkb.descriptorType;
+							const VkDescriptorType type = vkb.descriptorType;
 							VkAccessFlags res = VK_ACCESS_NONE_KHR;
 							if ( // Must be read only
 								type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
@@ -52,23 +54,42 @@ namespace vkl
 							}
 							else
 							{
-								//const uint32_t decoration = binding.type_description->decoration_flags;
-								//const bool readonly = decoration & SPV_REFLECT_DECORATION_NON_WRITABLE;
-								//const bool writeonly = decoration & SPV_REFLECT_DECORATION_NONE;
-								//if (readonly == writeonly) // Kind of an adge case
-								//{
-								//	res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-								//}
-								//else if (readonly)
-								//{
-								//	res |= VK_ACCESS_SHADER_READ_BIT;
-								//}
-								//else if (writeonly)
-								//{
-								//	res |= VK_ACCESS_SHADER_WRITE_BIT;
-								//}
-								// TODO add writeonly to spirv reflect
-								res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+								const uint32_t decoration = binding.type_description->decoration_flags;
+								const bool readonly = decoration & SPV_REFLECT_DECORATION_NON_WRITABLE;
+								const bool writeonly = false; // decoration& SPV_REFLECT_DECORATION_NONE; // TODO add writeonly to spirv reflect
+								if (readonly == writeonly) // Kind of an adge case
+								{
+									res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+								}
+								else if (readonly)
+								{
+									res |= VK_ACCESS_SHADER_READ_BIT;
+								}
+								else if (writeonly)
+								{
+									res |= VK_ACCESS_SHADER_WRITE_BIT;
+								}
+							}
+							return res;
+						}();
+						meta.layout = [&]()
+						{
+							VkImageLayout res = VK_IMAGE_LAYOUT_MAX_ENUM;
+							VkDescriptorType type = vkb.descriptorType;
+							if ( // Is image
+								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+								type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+							) {
+								if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
+									res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+								else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+								{
+									if (meta.access == VK_ACCESS_SHADER_READ_BIT)
+										res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+									else
+										res = VK_IMAGE_LAYOUT_GENERAL;
+								}
 							}
 							return res;
 						}();
