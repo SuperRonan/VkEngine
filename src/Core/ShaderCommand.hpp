@@ -166,11 +166,9 @@ namespace vkl
 
 		virtual ~ShaderCommand() = 0;
 
-		virtual void extractBindingsFromReflection();
-
 		virtual void writeDescriptorSets();
 
-		virtual void processBindingsList();
+		virtual void resolveBindings();
 
 		virtual void declareDescriptorSetsResources();
 

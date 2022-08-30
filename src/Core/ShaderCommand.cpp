@@ -25,53 +25,55 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& b = _bindings[i];
-			VkWriteDescriptorSet write{
-				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = nullptr,
-				.dstSet = *_desc_sets[b.set()],
-				.dstBinding = b.binding(),
-				.dstArrayElement = 0, // TODO
-				.descriptorCount = 1,
-				.descriptorType = b.vkType(),
-			};
-			if (b.isBuffer())
+			if (b.isResolved())
 			{
-				assert(b.buffers().size() == 1);
-				buffers.emplace_back(VkDescriptorBufferInfo{
-					.buffer = *b.buffers().front(),
-					.offset = 0,
-					.range = VK_WHOLE_SIZE,
-					});
-				VkDescriptorBufferInfo& info = buffers.back();
-				write.pBufferInfo = &info;
-			}
-			else if (b.isImage())
-			{
-				VkDescriptorImageInfo info;
-				if (!b.samplers().empty())
+				VkWriteDescriptorSet write{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = *_desc_sets[b.set()],
+					.dstBinding = b.binding(),
+					.dstArrayElement = 0, // TODO
+					.descriptorCount = 1,
+					.descriptorType = b.vkType(),
+				};
+				if (b.isBuffer())
 				{
-					info.sampler = *b.samplers().front();
+					assert(b.buffers().size() == 1);
+					buffers.emplace_back(VkDescriptorBufferInfo{
+						.buffer = *b.buffers().front(),
+						.offset = 0,
+						.range = VK_WHOLE_SIZE,
+						});
+					VkDescriptorBufferInfo& info = buffers.back();
+					write.pBufferInfo = &info;
 				}
-				if (!b.images().empty())
+				else if (b.isImage() || b.isSampler())
 				{
-					info.imageView = *b.images().front();
-					info.imageLayout = b.state()._layout;
+					VkDescriptorImageInfo info;
+					if (!b.samplers().empty())
+					{
+						info.sampler = *b.samplers().front();
+					}
+					if (!b.images().empty())
+					{
+						info.imageView = *b.images().front();
+						info.imageLayout = b.state()._layout;
+					}
+					images.push_back(info);
+					write.pImageInfo = &images.back();
 				}
-				images.push_back(info);
-				write.pImageInfo = &images.back();
+				else
+				{
+					assert(false);
+				}
+				writes.push_back(write);
 			}
-			else
-			{
-				assert(false);
-			}
-
-			writes.push_back(write);
 		}
 
 		vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
 	}
 
-	void ShaderCommand::processBindingsList()
+	void ShaderCommand::resolveBindings()
 	{
 		// Attribute the program exposed bindings to the provided resources
 		const auto& program = *_pipeline->program();
@@ -139,21 +141,6 @@ namespace vkl
 		{
 			const ResourceBinding& b = _bindings[i];
 			_resources.push_back(b.resource());
-		}
-	}
-
-	void ShaderCommand::extractBindingsFromReflection()
-	{
-		const auto& program = *_pipeline->program();
-		const auto& sets = program.setLayouts();
-		for (size_t s = 0; s < sets.size(); ++s)
-		{
-			const auto& set = *sets[s];
-			for (size_t b = 0; b < set.bindings().size(); ++b)
-			{
-				const auto& binding = set.bindings()[b];
-
-			}
 		}
 	}
 
