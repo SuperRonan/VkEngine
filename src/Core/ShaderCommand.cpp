@@ -73,75 +73,63 @@ namespace vkl
 
 	void ShaderCommand::processBindingsList()
 	{
-		// Resolve named bindings
+		// Attribute the program exposed bindings to the provided resources
 		const auto& program = *_pipeline->program();
 		const auto& sets = program.setLayouts();
-		for (size_t i = 0; i < _bindings.size(); ++i)
+		for (size_t s = 0; s < sets.size(); ++s)
 		{
-			ResourceBinding& binding = _bindings[i];
-			const VkDescriptorSetLayoutBinding* vkb = nullptr;
-			const DescriptorSetLayout::BindingMeta* bmeta = nullptr;
-
-			const std::string name = (binding.name().empty() ? binding.resource().name() : binding.name());
-			
-			const auto findBindingInSet = [&](size_t s)
+			const auto& set = *sets[s];
+			const auto& bindings = set.bindings();
+			for (size_t b = 0; b < bindings.size(); ++b)
 			{
-				const auto& set = *sets[s];
-				for (size_t b = 0; b < set.bindings().size(); ++b)
-				{
-					const bool binding_found = [&] {
-						if (binding.resolved())
-						{
-							return binding.binding() == set.bindings()[b].binding;
-						}
-						else
-						{
-							return name == set.metas()[b].name;
-						}
-					}();
+				const VkDescriptorSetLayoutBinding& vkb = bindings[b];
+				const uint32_t set_id = (uint32_t)s;
+				const uint32_t binding_id = vkb.binding;
+				const DescriptorSetLayout::BindingMeta& meta = set.metas()[b];
+				const std::string& shader_binding_name = meta.name;
 
-					if (binding_found)
+				ResourceBinding* corresponding_resource = [&] {
+					for (size_t i = 0; i < _bindings.size(); ++i)
 					{
-						vkb = set.bindings().data() + b;
-						bmeta = set.metas().data() + b;
-						return true;
+						ResourceBinding& resource_binding = _bindings[i];
+						if (!resource_binding.isResolved())
+						{
+							if (resource_binding.resolveWithName())
+							{
+								const std::string name = (resource_binding.name().empty() ? resource_binding.resource().name() : resource_binding.name());
+								if (name == shader_binding_name)
+								{
+									return &resource_binding;
+								}
+							}
+							else
+							{
+								if (set_id == resource_binding.set() && binding_id == resource_binding.binding())
+								{
+									return &resource_binding;
+								}
+							}
+						}
 					}
-				}
-				return false;
-			};
+					return (ResourceBinding *)nullptr;
+				}();
 
-			uint32_t found_set;
-			if (binding.resolved())
-			{
-				found_set = binding.set();
-				findBindingInSet((size_t)binding.set());
-			}
-			else
-			{
-				assert(!name.empty());
-				for (size_t s = 0; s < sets.size(); ++s)
+				if (corresponding_resource)
 				{
-					const bool found = findBindingInSet(s);
-					if (found)
-					{
-						found_set = s;
-						break;
-					}
+					corresponding_resource->resolve(set_id, binding_id);
+					corresponding_resource->setType(vkb.descriptorType);
+					corresponding_resource->setState(ResourceState{
+						._access = meta.access,
+						._layout = meta.layout,
+						._stage = vkb.stageFlags,
+					});
+				}
+				else
+				{
+					std::cerr << "Could not resolve Binding " << shader_binding_name << ", (set = " << set_id << ", binding = " << binding_id << ")\n";
+					assert(false);
 				}
 			}
-
-			assert(vkb);
-
-			binding.setType(vkb->descriptorType);
-			if(!binding.resolved())
-				binding.setBinding(found_set, vkb->binding);
-			if (binding.name().empty())
-				binding.setName(bmeta->name.empty() ? binding.resource().name() : bmeta->name);
-			binding.setState(ResourceState{
-				._access = bmeta->access,
-				._layout = bmeta->layout,
-				._stage = vkb->stageFlags,
-			});
 		}
 	}
 

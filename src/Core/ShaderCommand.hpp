@@ -2,6 +2,7 @@
 
 #include "DeviceCommand.hpp"
 #include <utility>
+#include <cassert>
 
 namespace vkl
 {
@@ -14,20 +15,33 @@ namespace vkl
 		std::vector<std::shared_ptr<Sampler>> _samplers = {};
 		uint32_t _binding = uint32_t(-1);
 		uint32_t _set = 0;
+
+		uint32_t _resolved_set = 0, _resolved_binding = uint32_t(-1);
 		std::string _name = "";
 		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
 
 	public:
 
-		constexpr bool resolved()const
+		constexpr void resolve(uint32_t s, uint32_t b)
 		{
-			return _binding != uint32_t(-1);
+			_resolved_set = s;
+			_resolved_binding = b;
+		}
+
+		constexpr bool isResolved()const
+		{
+			return _resolved_binding != uint32_t(-1);
 		}
 
 		constexpr void setBinding(uint32_t s, uint32_t b)
 		{
 			_set = s;
 			_binding = b;
+		}
+
+		constexpr bool resolveWithName()const
+		{
+			return _binding == uint32_t(-1);
 		}
 
 		constexpr const std::string& name()const
@@ -127,6 +141,12 @@ namespace vkl
 		{
 			return _resource;
 		}
+
+		constexpr void release()
+		{
+			_resolved_binding = uint32_t(-1);
+		}
+
 	};
 
 	class ShaderCommand : public DeviceCommand
