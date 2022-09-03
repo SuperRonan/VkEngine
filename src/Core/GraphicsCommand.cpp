@@ -45,7 +45,7 @@ namespace vkl
 		recordCommandBuffer(*cmd, context);
 	}
 
-	void DrawMeshCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)
+	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)
 	{
 		for (auto& mesh : _meshes)
 		{

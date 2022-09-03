@@ -11,9 +11,6 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass;
 		std::shared_ptr<Framebuffer> _framebuffer;
 
-		// Here ?
-		std::shared_ptr<Buffer> _mesh_buffer;
-
 	public:
 
 		virtual void init() override;
@@ -27,17 +24,27 @@ namespace vkl
 		virtual void execute(ExecutionContext& context) override;
 	};
 
-	class DrawMeshCommand : public GraphicsCommand
+	// Uses the "classic" vertex pipeline
+	class VertexCommand : public GraphicsCommand
 	{
 	protected:
 
 		std::vector<std::shared_ptr<Mesh>> _meshes;
+		std::shared_ptr<ImageView> _depth_stencil;
 
 	public:
 
 		virtual void init() override;
 
+		virtual void declareGraphicsResources() override;
+
 		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) override;
+	};
+
+	// Uses the mesh pipeline
+	class MeshCommand : public GraphicsCommand
+	{
+		// TODO
 	};
 
 	class FragCommand : public GraphicsCommand
