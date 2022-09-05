@@ -36,7 +36,7 @@ namespace vkl
 	Mesh::Mesh(Mesh const& other):
 		VkObject(other)
 	{
-		assert(!other._device.loaded);
+		assert(!other._device.loaded());
 		_host = other._host;
 		// Can't copy the device part
 	}
@@ -52,8 +52,8 @@ namespace vkl
 
 	Mesh& Mesh::operator=(Mesh const& other)
 	{
-		assert(!other._device.loaded);
-		assert(_device.loaded);
+		assert(!other._device.loaded());
+		assert(_device.loaded());
 		_host = other._host;
 		return *this;
 	}

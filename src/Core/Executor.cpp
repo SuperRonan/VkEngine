@@ -2,34 +2,26 @@
 
 namespace vkl
 {
-	ResourceState& ExecutionContext::getBufferState(VkBuffer b)
+	void Executor::declare(std::shared_ptr<Command> cmd)
 	{
-		if (!_buffer_states.contains(b))
-		{
-			ResourceState not_yet_used{};
-			_buffer_states[b] = not_yet_used;
-		}
-		return _buffer_states[b];
+		_commands.push_back(cmd);
 	}
 
-	ResourceState& ExecutionContext::getImageState(VkImageView i)
+	void Executor::preprocessCommands()
 	{
-		if (!_image_states.contains(i))
+		for (std::shared_ptr<Command>& cmd : _commands)
 		{
-			ResourceState not_yet_used{};
-			_image_states[i] = not_yet_used;
+			cmd->init();
 		}
-		return _image_states[i];
 	}
 
-	const std::string& Resource::name()const
+	void Executor::init()
 	{
-		// front?
-		if (isImage())
-			return _images.front()->name();
-		else if (isBuffer())
-			return _buffers.front()->name();
-		else
-			return {};
+		preprocessCommands(); 
+	}
+
+	void Executor::execute(std::shared_ptr<Command> cmd)
+	{
+		cmd->execute(_context);
 	}
 }

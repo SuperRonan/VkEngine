@@ -13,6 +13,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
+			std::string name = "";
 			std::shared_ptr<Image> image = nullptr;
 			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
@@ -26,10 +27,10 @@ namespace vkl
 
 	protected:
 
-		std::shared_ptr<Image> _image;
-		VkImageViewType _type;
-		VkFormat _format;
-		VkComponentMapping _components;
+		std::shared_ptr<Image> _image = nullptr;
+		VkImageViewType _type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+		VkFormat _format = VK_FORMAT_MAX_ENUM;
+		VkComponentMapping _components = defaultComponentMapping();
 		VkImageSubresourceRange _range;
 
 		VkImageView _view = VK_NULL_HANDLE;
@@ -43,6 +44,8 @@ namespace vkl
 
 		ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 		ImageView(Image && image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+
+		ImageView(VkApplication* app, CreateInfo const& ci);
 
 		ImageView(ImageView const&) = delete;
 

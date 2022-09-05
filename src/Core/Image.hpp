@@ -16,6 +16,7 @@ namespace vkl
 			VkFormat format = VK_FORMAT_MAX_ENUM;
 			VkExtent3D extent = makeZeroExtent3D();
 			uint32_t mips = 1;
+			uint32_t layers = 1;
 			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
 			VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 			VkImageUsageFlags usage = 0;
@@ -71,6 +72,7 @@ namespace vkl
 		VkFormat _format = VK_FORMAT_MAX_ENUM;
 		VkExtent3D _extent = makeZeroExtent3D();
 		uint32_t _mips = 1;
+		uint32_t _layers = 1;
 		VkSampleCountFlagBits _samples = VK_SAMPLE_COUNT_1_BIT;
 		VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
 		VkImageUsageFlags _usage = 0;
@@ -98,6 +100,7 @@ namespace vkl
 			_format(other._format),
 			_extent(other._extent),
 			_mips(other._mips),
+			_layers(other._layers),
 			_samples(other._samples),
 			_tiling(other._tiling),
 			_usage(other._usage),
@@ -120,6 +123,7 @@ namespace vkl
 			std::swap(_format, other._format);
 			std::swap(_extent, other._extent);
 			std::swap(_mips, other._mips);
+			std::swap(_layers, other._layers);
 			std::swap(_samples, other._samples);
 			std::swap(_tiling, other._tiling);
 			std::swap(_usage, other._usage);
@@ -142,6 +146,7 @@ namespace vkl
 			_format = assos.format;
 			_extent = assos.extent;
 			_mips = assos.mips;
+			_layers = 1; // TODO Check if the swapchain can support multi layered images (VR)
 			_samples = assos.samples;
 			_usage = assos.usage;
 			_queues = assos.queues;
@@ -194,6 +199,11 @@ namespace vkl
 			return _mips;
 		}
 
+		constexpr uint32_t layers()const
+		{
+			return _layers;
+		}
+
 		constexpr VkSampleCountFlagBits sampleCount()const
 		{
 			return _samples;
@@ -222,6 +232,17 @@ namespace vkl
 		constexpr bool ownership()const
 		{
 			return !!_alloc;
+		}
+
+		constexpr VkImageSubresourceRange defaultSubresourceRange()const
+		{
+			return VkImageSubresourceRange{
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // TODO determine the aspect from the format
+				.baseMipLevel = 0,
+				.levelCount = _mips,
+				.baseArrayLayer = 0,
+				.layerCount = _layers,
+			};
 		}
 
 		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);

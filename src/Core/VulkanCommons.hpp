@@ -67,4 +67,23 @@ namespace vkl
 			.depth = 0,
 		};
 	}
+
+	constexpr VkImageViewType getDefaultViewTypeFromImageType(VkImageType type)
+	{
+		switch (type)
+		{
+		case VK_IMAGE_TYPE_1D:
+			return VK_IMAGE_VIEW_TYPE_1D;
+			break;
+		case VK_IMAGE_TYPE_2D:
+			return VK_IMAGE_VIEW_TYPE_2D;
+			break;
+		case VK_IMAGE_TYPE_3D:
+			return VK_IMAGE_VIEW_TYPE_3D;
+			break;
+		default:
+			return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+			break;
+		}
+	}
 }

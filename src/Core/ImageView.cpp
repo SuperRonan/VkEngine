@@ -30,6 +30,21 @@ namespace vkl
 		}
 	}
 
+	ImageView::ImageView(VkApplication* app, CreateInfo const& ci) :
+		VkObject(app, ci.name),
+		_image(ci.image),
+		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
+		_format(ci.format == VK_FORMAT_MAX_ENUM ? _image->format() : ci.format),
+		_components(ci.components),
+		_range(ci.range.has_value() ? ci.range.value() : _image->defaultSubresourceRange())
+	{
+		if (ci.create_on_construct)
+		{
+			createView();
+		}
+	}
+
+
 	ImageView::ImageView(ImageView&& other) noexcept :
 		VkObject(std::move(other)),
 		_image(std::move(other._image)),
