@@ -1,24 +1,45 @@
 #pragma once
 
 #include "VkApplication.hpp"
+#include <set>
+#include <Utils/stl_extension.hpp>
 
 namespace vkl
 {
 	class Buffer : public VkObject
 	{
+	public:
+
+		struct CreateInfo
+		{
+			std::string name = "";
+			VkDeviceSize size = 0;
+			VkBufferUsageFlags usage = 0;
+			std::vector<uint32_t> queues = {};
+			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
+			VmaAllocator allocator = nullptr;
+			bool create_on_construct = false;
+		};
+		using CI = CreateInfo;
+
 	protected:
 
 		size_t _size = 0;
-		VkBufferUsageFlags _usage;
-		VkSharingMode _sharing_mode;
-		std::vector<uint32_t> _queues;
-		VmaMemoryUsage _mem_usage;
+		VkBufferUsageFlags _usage = 0;
+		std::vector<uint32_t> _queues = {};
+		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
+		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
 		VkBuffer _buffer = VK_NULL_HANDLE;
+		VmaAllocator _allocator = nullptr;
 		VmaAllocation _alloc = nullptr;
+
+		void* _data = nullptr;
 
 	public:
 
+		Buffer(VkApplication* app, CreateInfo const& ci);
 
+		void create();
 
 		constexpr Buffer(VkApplication * app=nullptr) noexcept:
 			VkObject(app)
@@ -33,7 +54,9 @@ namespace vkl
 			_queues(other._queues),
 			_mem_usage(other._mem_usage),
 			_buffer(other._buffer),
-			_alloc(other._alloc)
+			_allocator(other._allocator),
+			_alloc(other._alloc),
+			_data(other._data)
 		{
 			other._buffer = VK_NULL_HANDLE;
 			other._alloc = nullptr;
@@ -50,14 +73,15 @@ namespace vkl
 			std::swap(_queues, other._queues);
 			std::swap(_mem_usage, other._mem_usage);
 			std::swap(_buffer, other._buffer);
+			std::swap(_allocator, other._allocator);
 			std::swap(_alloc, other._alloc);
+			std::swap(_data, other._data);
 			return *this;
 		}
 
 		~Buffer();
 
-		void createBuffer(size_t size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage=VMA_MEMORY_USAGE_GPU_ONLY, std::vector<uint32_t> const& queues = {});
-
+		
 		void destroyBuffer();
 
 		constexpr VkBuffer buffer()const
@@ -90,8 +114,27 @@ namespace vkl
 			return _alloc;
 		}
 
-		StagingPool::StagingBuffer * copyToStaging(void* data, size_t size = 0);
+		constexpr auto allocator()const
+		{
+			return _allocator;
+		}
 
-		void recordCopyStagingToBuffer(VkCommandBuffer cmd, StagingPool::StagingBuffer * sb);
+		void map();
+
+		void unMap();
+
+		constexpr void* data()
+		{
+			return _data;
+		}
+
+		constexpr const void* data() const
+		{
+			return _data;
+		}
+
+		//StagingPool::StagingBuffer * copyToStaging(void* data, size_t size = 0);
+
+		//void recordCopyStagingToBuffer(VkCommandBuffer cmd, StagingPool::StagingBuffer * sb);
 	};
 }

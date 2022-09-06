@@ -42,7 +42,7 @@ namespace std
 
 
 	template <class It, class Rate>
-	It find_best(It begin, const It& end, Rate const& rate)
+	It findBest(It begin, const It& end, Rate const& rate)
 	{
 		auto res = begin;
 		auto best_rate = rate(*res);
@@ -83,5 +83,19 @@ namespace std
 	Int moduloCeil(Int a, Int b)
 	{
 		return (a + b - 1) % b;
+	}
+
+	template <class T>
+	std::vector<T> filterRedundantValues(std::vector<T> const& vec)
+	{
+		std::vector<T> res;
+		for (auto const& elem : vec)
+		{
+			if (!std::find(res.cbegin(), res.cend(), elem))
+			{
+				res.push_back(elem);
+			}
+		}
+		return res:
 	}
 }

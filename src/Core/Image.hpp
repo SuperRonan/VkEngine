@@ -12,6 +12,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
+			std::string name = "";
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
 			VkExtent3D extent = makeZeroExtent3D();
@@ -23,11 +24,11 @@ namespace vkl
 			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
 			bool create_on_construct = false;
-			std::string name = "";
 		};
 
 		struct AssociateInfo
 		{
+			std::string name = "";
 			VkImage image = VK_NULL_HANDLE;
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
@@ -38,7 +39,6 @@ namespace vkl
 			VkImageUsageFlags usage = 0;
 			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-			std::string name = "";
 		};
 
 		using CI = CreateInfo;

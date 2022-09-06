@@ -3,6 +3,7 @@
 #include "vk_mem_alloc.h"
 #include <mutex>
 #include <vector>
+#include "Buffer.hpp"
 
 namespace vkl
 {
@@ -10,25 +11,17 @@ namespace vkl
 	{
 	public:
 		
-		struct StagingBuffer
-		{
-			VkBuffer buffer = VK_NULL_HANDLE;
-			VmaAllocation allocation = nullptr;
-			void* data = nullptr;
-			size_t size = 0;
-		};
+		using StagingBuffer = std::shared_ptr<Buffer>;
 
 	protected:
 
 		VmaAllocator _allocator = nullptr;
 
-		std::vector<StagingBuffer*> _free_buffers, _used_buffers;
+		std::vector<StagingBuffer> _free_buffers, _used_buffers;
 		
 		std::mutex _mutex;
 
 		void allocStagingBuffer(StagingBuffer & staging_buffer);
-
-		void freeStagingBuffer(StagingBuffer & staging_buffer);
 
 	public:
 
@@ -44,9 +37,9 @@ namespace vkl
 
 		void setAllocator(VmaAllocator alloc);
 
-		StagingBuffer * getStagingBuffer(size_t size);
+		StagingBuffer getStagingBuffer(size_t size);
 
-		void releaseStagingBuffer(StagingBuffer * staging_buffer);
+		void releaseStagingBuffer(StagingBuffer staging_buffer);
 
 	};
 }

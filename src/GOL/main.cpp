@@ -55,18 +55,8 @@ namespace vkl
 			_grid_sampler = Sampler(this, ci);
 		}
 
-		void createGrids()
+		void fillGrid(std::shared_ptr<ImageView> grid)
 		{
-			_grids.resize(_main_window->framesInFlight());
-
-			Image::CreateInfo grid_image_ci{
-				.type = VK_IMAGE_TYPE_2D,
-				.format = VK_FORMAT_R8_UINT,
-				.extent = VkExtent3D{_world_size.width, _world_size.height, 1},
-				.mips = 1,
-				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-				.create_on_construct = true,
-			};
 			CommandBuffer copy_command(_pools.graphics);
 			copy_command.begin();
 			std::vector<uint8_t> data(_world_size.width * _world_size.height);
@@ -83,43 +73,26 @@ namespace vkl
 				}
 			}
 			
-			std::vector<StagingPool::StagingBuffer*> staging_buffers(_grids.size());
+			StagingPool::StagingBuffer staging_buffer;
 
-			for (size_t i = 0; i < _grids.size(); ++i)
-			{
-				auto& grid = _grids[i];
-				grid = ImageView(Image(this, grid_image_ci), VK_IMAGE_ASPECT_COLOR_BIT);
+			grid->recordTransitionLayout(copy_command,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-				grid.recordTransitionLayout(copy_command,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+			//staging_buffer = grid->copyToStaging2D(_staging_pool, data.data(), 1);
 
-				staging_buffers[i] = grid.copyToStaging2D(_staging_pool, data.data(), 1);
+			//grid->recordSendStagingToDevice2D(copy_command, staging_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-				grid.recordSendStagingToDevice2D(copy_command, staging_buffers[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-				grid.recordTransitionLayout(copy_command, 
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-			}
+			grid->recordTransitionLayout(copy_command, 
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+			
 			copy_command.end();
 			copy_command.submitAndWait(_queues.graphics);
 
-			for (auto sb : staging_buffers)
-			{
-				_staging_pool.releaseStagingBuffer(sb);
-			}
+			
+			_staging_pool.releaseStagingBuffer(staging_buffer);
 
-		}
-
-		void createSemaphores()
-		{
-			_render_finished_semaphores.resize(_grids.size());
-
-			for (size_t i = 0; i < _render_finished_semaphores.size(); ++i)
-			{
-				_render_finished_semaphores[i] = Semaphore(this);
-			}
 		}
 
 
@@ -144,10 +117,6 @@ namespace vkl
 
 			//_world_size = _main_window->extent();
 			_world_size = VkExtent2D(_main_window->extent().width / 2, _main_window->extent().height / 2);
-
-			createGrids();
-			createSampler();
-			createSemaphores();
 
 		}
 
@@ -180,15 +149,15 @@ namespace vkl
 			bool paused = true;
 
 			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(this, Image::CI{
+				.name = "grid_storage_image",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8_UINT,
 				.extent = VkExtent3D{.width = _world_size.width, .height = _world_size.height, .depth = 1},
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.create_on_construct = true,
-				.name = "grid_storage_image",
 			});
 
-			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(ImageView::CI {
+			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(this, ImageView::CI {
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{
@@ -198,9 +167,10 @@ namespace vkl
 					.baseArrayLayer = 0,
 					.layerCount = 1,
 				},
+				.create_on_construct = true,
 			});
 
-			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(ImageView::CI{
+			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(this, ImageView::CI{
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{
@@ -210,7 +180,8 @@ namespace vkl
 					.baseArrayLayer = 1,
 					.layerCount = 1,
 				},
-				});
+				.create_on_construct = true,
+			});
 
 			vkl::Camera2D camera;
 			camera.move({ 0.5, 0.5 });
@@ -224,26 +195,26 @@ namespace vkl
 			const glm::vec2 move_scale(1.0 / float(_main_window->extent().width), 1.0 / float(_main_window->extent().height));
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
-			{
-				VkWindow::AquireResult aquired = _main_window->aquireNextImage();
-				VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
-				VkSemaphore wait_semaphore = *aquired.semaphore;
-				VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
-				VkSubmitInfo submission{
-					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					.waitSemaphoreCount = 1,
-					.pWaitSemaphores = &wait_semaphore,
-					.pWaitDstStageMask = &wait_stage,
-					.commandBufferCount = 1,
-					.pCommandBuffers = _commands.data() + aquired.in_flight_index,
-					.signalSemaphoreCount = 1,
-					.pSignalSemaphores = &render_finished_semaphore,
-				};
-				VkFence submission_fence = *aquired.fence;
-				vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
-				_main_window->present(1, &render_finished_semaphore);
-			}
+			//{
+			//	VkWindow::AquireResult aquired = _main_window->aquireNextImage();
+			//	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+			//	VkSemaphore wait_semaphore = *aquired.semaphore;
+			//	VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
+			//	VkSubmitInfo submission{
+			//		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			//		.waitSemaphoreCount = 1,
+			//		.pWaitSemaphores = &wait_semaphore,
+			//		.pWaitDstStageMask = &wait_stage,
+			//		.commandBufferCount = 1,
+			//		.pCommandBuffers = _commands.data() + aquired.in_flight_index,
+			//		.signalSemaphoreCount = 1,
+			//		.pSignalSemaphores = &render_finished_semaphore,
+			//	};
+			//	VkFence submission_fence = *aquired.fence;
+			//	vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
+			//	_main_window->present(1, &render_finished_semaphore);
+			//}
 
 			while (!_main_window->shouldClose())
 			{
@@ -277,35 +248,35 @@ namespace vkl
 
 				if(!paused || should_render)
 				{
-					VkWindow::AquireResult aquired = _main_window->aquireNextImage();
-					VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-					if (paused)
-					{
-						recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
-					}
-					else 
-					{
-						recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
-					}
-					VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
-					VkSemaphore wait_semaphore = *aquired.semaphore;
-					VkSubmitInfo submission{
-						.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-						.waitSemaphoreCount = 1,
-						.pWaitSemaphores = &wait_semaphore,
-						.pWaitDstStageMask = &wait_stage,
-						.commandBufferCount = 1,
-						.pCommandBuffers = _commands.data() + aquired.in_flight_index,
-						.signalSemaphoreCount = 1,
-						.pSignalSemaphores = &render_finished_semaphore,
-					};
-					VkFence submission_fence = *aquired.fence;
-					vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
-					_main_window->present(1, &render_finished_semaphore);
+					//VkWindow::AquireResult aquired = _main_window->aquireNextImage();
+					//VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+					//if (paused)
+					//{
+					//	recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+					//}
+					//else 
+					//{
+					//	recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
+					//}
+					//VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
+					//VkSemaphore wait_semaphore = *aquired.semaphore;
+					//VkSubmitInfo submission{
+					//	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+					//	.waitSemaphoreCount = 1,
+					//	.pWaitSemaphores = &wait_semaphore,
+					//	.pWaitDstStageMask = &wait_stage,
+					//	.commandBufferCount = 1,
+					//	.pCommandBuffers = _commands.data() + aquired.in_flight_index,
+					//	.signalSemaphoreCount = 1,
+					//	.pSignalSemaphores = &render_finished_semaphore,
+					//};
+					//VkFence submission_fence = *aquired.fence;
+					//vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
+					//_main_window->present(1, &render_finished_semaphore);
 					
 					if (!paused)
 					{
-						current_grid_id = (current_grid_id + 1) % _grids.size();
+
 					}
 				}
 				
