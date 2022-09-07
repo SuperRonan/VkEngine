@@ -91,7 +91,7 @@ namespace vkl
 		{
 			int width, height;
 			glfwGetFramebufferSize(_window, &width, &height);
-			VkExtent2D actual_extent = { width, height };
+			VkExtent2D actual_extent = { (uint32_t)width, (uint32_t)height };
 			actual_extent.width = std::clamp(actual_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
 			actual_extent.height = std::clamp(actual_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 			return actual_extent;
