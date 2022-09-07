@@ -12,6 +12,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
+			VkApplication* app = nullptr;
 			std::string name = "";
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
@@ -23,11 +24,13 @@ namespace vkl
 			VkImageUsageFlags usage = 0;
 			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
+			VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			bool create_on_construct = false;
 		};
 
 		struct AssociateInfo
 		{
+			VkApplication* app = nullptr;
 			std::string name = "";
 			VkImage image = VK_NULL_HANDLE;
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
@@ -78,6 +81,7 @@ namespace vkl
 		VkImageUsageFlags _usage = 0;
 		std::vector<uint32_t> _queues = {};
 		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
+		VkImageLayout _initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
 
@@ -90,7 +94,7 @@ namespace vkl
 			VkObject(app)
 		{}
 
-		Image(VkApplication* app, CreateInfo const& ci, VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED);
+		Image(CreateInfo const& ci);
 
 		constexpr Image(Image const&) noexcept = delete;
 
@@ -108,7 +112,8 @@ namespace vkl
 			_sharing_mode(other._sharing_mode),
 			_mem_usage(other._mem_usage),
 			_alloc(other._alloc),
-			_image(other._image)
+			_image(other._image),
+			_initial_layout(other._initial_layout)
 		{
 			other._alloc = nullptr;
 			other._image = VK_NULL_HANDLE;
@@ -132,12 +137,13 @@ namespace vkl
 			std::swap(_mem_usage, other._mem_usage);
 			std::swap(_alloc, other._alloc);
 			std::swap(_image, other._image);
+			std::swap(_initial_layout, other._initial_layout);
 			return *this;
 		}
 
 		~Image();
 
-		void createImage(VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED);
+		void create();
 
 		constexpr void associateImage(AssociateInfo const& assos)
 		{
@@ -152,6 +158,7 @@ namespace vkl
 			_queues = assos.queues;
 			_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 			_mem_usage = assos.mem_usage;
+			_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?
 			if(!assos.name.empty())
 				_name = assos.name;
 			_alloc = nullptr;
@@ -234,6 +241,11 @@ namespace vkl
 			return !!_alloc;
 		}
 
+		constexpr VkImageLayout initialLayout()const
+		{
+			return _initial_layout;
+		}
+
 		constexpr VkImageSubresourceRange defaultSubresourceRange()const
 		{
 			return VkImageSubresourceRange{
@@ -245,6 +257,6 @@ namespace vkl
 			};
 		}
 
-		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
+		//StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 	};
 }

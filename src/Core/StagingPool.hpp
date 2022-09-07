@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class StagingPool
+	class StagingPool : public VkObject
 	{
 	public:
 		
@@ -25,7 +25,7 @@ namespace vkl
 
 	public:
 
-		StagingPool(VmaAllocator alloc=nullptr);
+		StagingPool(VkApplication * app, VmaAllocator alloc=nullptr);
 
 		StagingPool(StagingPool const&) = delete;
 		StagingPool(StagingPool&&) = delete;

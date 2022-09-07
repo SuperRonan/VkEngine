@@ -4,7 +4,8 @@
 
 namespace vkl
 {
-	StagingPool::StagingPool(VmaAllocator allocator):
+	StagingPool::StagingPool(VkApplication * app, VmaAllocator allocator):
+		VkObject(app),
 		_allocator(allocator)
 	{}
 
@@ -63,7 +64,8 @@ namespace vkl
 
 		if (res == nullptr) // Did not find any: allocate a new one (Maybe re allocate a too small one if available)
 		{
-			res = std::make_shared<Buffer>(nullptr, Buffer::CI{
+			res = std::make_shared<Buffer>(Buffer::CI{
+				.app = _app,
 				.size = size,
 				.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_CPU_TO_GPU,

@@ -91,11 +91,11 @@ namespace std
 		std::vector<T> res;
 		for (auto const& elem : vec)
 		{
-			if (!std::find(res.cbegin(), res.cend(), elem))
+			if (std::find(res.cbegin(), res.cend(), elem) == res.cend())
 			{
 				res.push_back(elem);
 			}
 		}
-		return res:
+		return res;
 	}
 }

@@ -12,6 +12,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
+			VkApplication* app = nullptr;
 			std::string name = "";
 			VkDeviceSize size = 0;
 			VkBufferUsageFlags usage = 0;
@@ -37,7 +38,7 @@ namespace vkl
 
 	public:
 
-		Buffer(VkApplication* app, CreateInfo const& ci);
+		Buffer(CreateInfo const& ci);
 
 		void create();
 

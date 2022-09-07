@@ -3,14 +3,14 @@
 
 namespace vkl
 {
-	Buffer::Buffer(VkApplication* app, CreateInfo const& ci) :
-		VkObject(app, ci.name),
+	Buffer::Buffer(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
 		_size(ci.size),
 		_usage(ci.usage),
 		_queues(std::filterRedundantValues(ci.queues)),
 		_sharing_mode(_queues.size() > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE),
 		_mem_usage(ci.mem_usage),
-		_allocator(ci.allocator ? ci.allocator : app->allocator())
+		_allocator(ci.allocator ? ci.allocator : _app->allocator())
 	{
 		if (ci.create_on_construct)
 		{

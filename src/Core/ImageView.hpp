@@ -13,6 +13,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
+			VkApplication* app = nullptr;
 			std::string name = "";
 			std::shared_ptr<Image> image = nullptr;
 			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
@@ -45,7 +46,7 @@ namespace vkl
 		ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 		ImageView(Image && image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 
-		ImageView(VkApplication* app, CreateInfo const& ci);
+		ImageView(CreateInfo const& ci);
 
 		ImageView(ImageView const&) = delete;
 
@@ -101,9 +102,9 @@ namespace vkl
 			return _range;
 		}
 
-		StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
+		// StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 		
-		void recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout);
+		// void recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout);
 		
 		void recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage);
 		

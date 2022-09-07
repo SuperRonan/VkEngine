@@ -2,8 +2,8 @@
 
 namespace vkl
 {
-	Image::Image(VkApplication* app, CreateInfo const& ci, VkImageLayout layout) : 
-		VkObject(app, ci.name),
+	Image::Image(CreateInfo const& ci) : 
+		VkObject(ci.app, ci.name),
 		_type(ci.type),
 		_format(ci.format),
 		_extent(ci.extent),
@@ -14,13 +14,14 @@ namespace vkl
 		_usage(ci.usage),
 		_sharing_mode(ci.queues.size() <= 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT),
 		_queues(ci.queues),
+		_initial_layout(ci.initial_layout),
 		_mem_usage(ci.mem_usage)
 	{
 		if(ci.create_on_construct)
-			createImage(layout);
+			create();
 	}
 
-	void Image::createImage(VkImageLayout layout)
+	void Image::create()
 	{
 		assert(_image == VK_NULL_HANDLE);
 		uint32_t n_queues = 0;
@@ -46,7 +47,7 @@ namespace vkl
 			.sharingMode = _sharing_mode,
 			.queueFamilyIndexCount = n_queues,
 			.pQueueFamilyIndices = p_queues,
-			.initialLayout = layout,
+			.initialLayout = _initial_layout,
 		};
 
 		VmaAllocationCreateInfo alloc_ci{
@@ -88,12 +89,12 @@ namespace vkl
 		_alloc = nullptr;
 	}
 
-	StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
-	{
-		assert(_type == VK_IMAGE_TYPE_2D);
-		size_t size = _extent.width * _extent.height * elem_size;
-		StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
-		std::memcpy(sb->data, data, size);
-		return sb;
-	}
+	//StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
+	//{
+	//	assert(_type == VK_IMAGE_TYPE_2D);
+	//	size_t size = _extent.width * _extent.height * elem_size;
+	//	StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
+	//	std::memcpy(sb->data, data, size);
+	//	return sb;
+	//}
 }

@@ -61,7 +61,7 @@ namespace vkl
 
 		void createDeviceBuffer(std::vector<uint32_t> const& queues);
 
-		void copyToDevice();
+		// void copyToDevice();
 
 		void cleanDeviceBuffer();
 

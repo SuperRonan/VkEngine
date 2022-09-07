@@ -192,21 +192,28 @@ namespace vkl
 		_device.vertices_size = _host.vertices.size() * sizeof(Vertex), _device.indices_size = _host.indices.size() * sizeof(uint);
 		_device.mesh_size = _device.vertices_size + _device.indices_size;
 
-
-		_device.mesh_buffer = std::make_shared<Buffer>(_app);
-		_device.mesh_buffer->createBuffer(_device.mesh_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY, queues);
+		
+		_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
+			.app = _app,
+			.name = name() + ".mesh_buffer",
+			.size = _device.mesh_size,
+			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			.queues = queues,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			.create_on_construct = true,
+		});
 	}
 
-	void Mesh::copyToDevice()
-	{
-		assert(_device.loaded());
-		assert(_host.loaded);
-		StagingPool& sp = _app->stagingPool();
-		StagingPool::StagingBuffer* sb = sp.getStagingBuffer(_device.mesh_size);
-			std::memcpy(sb->data, _host.vertices.data(), _device.vertices_size);
-			std::memcpy((char *)sb->data + _device.vertices_size, _host.indices.data(), _device.indices_size);
-		sp.releaseStagingBuffer(sb);
-	}
+	//void Mesh::copyToDevice()
+	//{
+	//	assert(_device.loaded());
+	//	assert(_host.loaded);
+	//	StagingPool& sp = _app->stagingPool();
+	//	StagingPool::StagingBuffer* sb = sp.getStagingBuffer(_device.mesh_size);
+	//		std::memcpy(sb->data, _host.vertices.data(), _device.vertices_size);
+	//		std::memcpy((char *)sb->data + _device.vertices_size, _host.indices.data(), _device.indices_size);
+	//	sp.releaseStagingBuffer(sb);
+	//}
 
 	void Mesh::cleanDeviceBuffer()
 	{

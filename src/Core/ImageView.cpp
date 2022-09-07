@@ -30,8 +30,8 @@ namespace vkl
 		}
 	}
 
-	ImageView::ImageView(VkApplication* app, CreateInfo const& ci) :
-		VkObject(app, ci.name),
+	ImageView::ImageView(CreateInfo const& ci) :
+		VkObject((ci.app ? ci.app : ci.image->application()), ci.name),
 		_image(ci.image),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format == VK_FORMAT_MAX_ENUM ? _image->format() : ci.format),
@@ -105,32 +105,32 @@ namespace vkl
 		return *this;
 	}
 
-	StagingPool::StagingBuffer* ImageView::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
-	{
-		assert(_type == VK_IMAGE_TYPE_2D);
-		size_t size = _image->extent().width * _image->extent().height * elem_size;
-		StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
-		std::memcpy(sb->data, data, size);
-		return sb;
-	}
+	//StagingPool::StagingBuffer* ImageView::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
+	//{
+	//	assert(_type == VK_IMAGE_TYPE_2D);
+	//	size_t size = _image->extent().width * _image->extent().height * elem_size;
+	//	StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
+	//	std::memcpy(sb->data, data, size);
+	//	return sb;
+	//}
 
-	void ImageView::recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout)
-	{
-		VkBufferImageCopy copy{
-			.bufferOffset = 0,
-			.bufferRowLength = 0,
-			.bufferImageHeight = 0,
-			.imageSubresource = VkImageSubresourceLayers{
-				.aspectMask = _range.aspectMask,
-				.mipLevel = 0,
-				.baseArrayLayer = 0,
-				.layerCount = 1,
-			},
-			.imageOffset = {0, 0, 0},
-			.imageExtent = _image->extent(),
-		};
-		vkCmdCopyBufferToImage(command_buffer, sb->buffer, *_image, layout, 1, &copy);
-	}
+	//void ImageView::recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout)
+	//{
+	//	VkBufferImageCopy copy{
+	//		.bufferOffset = 0,
+	//		.bufferRowLength = 0,
+	//		.bufferImageHeight = 0,
+	//		.imageSubresource = VkImageSubresourceLayers{
+	//			.aspectMask = _range.aspectMask,
+	//			.mipLevel = 0,
+	//			.baseArrayLayer = 0,
+	//			.layerCount = 1,
+	//		},
+	//		.imageOffset = {0, 0, 0},
+	//		.imageExtent = _image->extent(),
+	//	};
+	//	vkCmdCopyBufferToImage(command_buffer, sb->buffer, *_image, layout, 1, &copy);
+	//}
 
 	void ImageView::recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage)
 	{

@@ -1,5 +1,6 @@
 #include "VkApplication.hpp"
 #include "CommandBuffer.hpp"
+#include "StagingPool.hpp"
 
 #include <exception>
 #include <set>
@@ -426,7 +427,7 @@ namespace vkl
 			.vulkanApiVersion = VK_API_VERSION_1_2,
 		};
 		vmaCreateAllocator(&alloc_ci, &_allocator);
-		_staging_pool.setAllocator(_allocator);
+		_staging_pool = std::make_unique<StagingPool>(this, _allocator);
 	}
 
 	void VkApplication::nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name)
@@ -463,7 +464,7 @@ namespace vkl
 		_pools.transfer = nullptr;
 		_pools.compute = nullptr;
 
-		_staging_pool.~StagingPool();
+		_staging_pool = nullptr;
 		vmaDestroyAllocator(_allocator);
 
 		vkDestroyDevice(_device, nullptr);
@@ -495,7 +496,7 @@ namespace vkl
 
 	StagingPool& VkApplication::stagingPool()
 	{
-		return _staging_pool;
+		return *_staging_pool;
 	}
 
 	VkApplication::~VkApplication()

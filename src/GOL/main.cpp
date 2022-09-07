@@ -73,7 +73,6 @@ namespace vkl
 				}
 			}
 			
-			StagingPool::StagingBuffer staging_buffer;
 
 			grid->recordTransitionLayout(copy_command,
 				VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -90,8 +89,6 @@ namespace vkl
 			copy_command.end();
 			copy_command.submitAndWait(_queues.graphics);
 
-			
-			_staging_pool.releaseStagingBuffer(staging_buffer);
 
 		}
 
@@ -148,7 +145,8 @@ namespace vkl
 		{
 			bool paused = true;
 
-			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(this, Image::CI{
+			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(Image::CI{
+				.app = this,
 				.name = "grid_storage_image",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8_UINT,
@@ -157,7 +155,7 @@ namespace vkl
 				.create_on_construct = true,
 			});
 
-			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(this, ImageView::CI {
+			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(ImageView::CI {
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{
@@ -170,7 +168,7 @@ namespace vkl
 				.create_on_construct = true,
 			});
 
-			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(this, ImageView::CI{
+			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(ImageView::CI{
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{

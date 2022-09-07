@@ -1,7 +1,6 @@
 #pragma once
 
 #include "VulkanCommons.hpp"
-#include "StagingPool.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -12,6 +11,7 @@
 
 namespace vkl
 {
+	class StagingPool;
 	class CommandPool;
 
 	class VkApplication
@@ -58,7 +58,7 @@ namespace vkl
 
 		Pools _pools;
 
-		StagingPool _staging_pool;
+		std::unique_ptr<StagingPool> _staging_pool;
 
 		PFN_vkDebugMarkerSetObjectNameEXT* _vkDebugMarkerSetObjectNameEXT;
 
