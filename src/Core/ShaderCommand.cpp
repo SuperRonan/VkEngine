@@ -57,7 +57,7 @@ namespace vkl
 					if (!b.images().empty())
 					{
 						info.imageView = *b.images().front();
-						info.imageLayout = b.state()._layout;
+						info.imageLayout = b.resource()._beging_state._layout;
 					}
 					images.push_back(info);
 					write.pImageInfo = &images.back();
@@ -120,11 +120,11 @@ namespace vkl
 				{
 					corresponding_resource->resolve(set_id, binding_id);
 					corresponding_resource->setType(vkb.descriptorType);
-					corresponding_resource->setState(ResourceState{
+					corresponding_resource->resource()._beging_state = ResourceState{
 						._access = meta.access,
 						._layout = meta.layout,
 						._stage = vkb.stageFlags,
-					});
+					};
 				}
 				else
 				{

@@ -9,7 +9,7 @@ namespace vkl
 		for (size_t i = 0; i < _resources.size(); ++i)
 		{
 			auto& r = _resources[i];
-			const ResourceState next = r._state;
+			const ResourceState next = r._beging_state;
 			const ResourceState prev = [&]() {
 				if (r.isImage())
 				{

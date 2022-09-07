@@ -151,11 +151,12 @@ namespace vkl
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8_UINT,
 				.extent = VkExtent3D{.width = _world_size.width, .height = _world_size.height, .depth = 1},
+				.layers = 2,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.create_on_construct = true,
 			});
 
-			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(ImageView::CI {
+			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(ImageView::CI{
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{

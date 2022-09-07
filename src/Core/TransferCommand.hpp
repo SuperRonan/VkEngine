@@ -19,4 +19,34 @@ namespace vkl
 		virtual void execute(ExecutionContext& context) override;
 
 	};
+
+	class CopyImage : public DeviceCommand
+	{
+	protected:
+
+		std::shared_ptr<ImageView> _src, _dst;
+		std::vector<VkImageCopy> _regions;
+
+
+	public:
+
+		virtual void init() override;
+
+		virtual void execute(ExecutionContext& context) override;
+	};
+
+	class CopyBufferToImage : public DeviceCommand
+	{
+	protected:
+
+		std::shared_ptr<Buffer> _src;
+		std::shared_ptr<ImageView> _dst;
+
+	public:
+
+		virtual void init() override;
+
+		virtual void execute(ExecutionContext& context) override;
+		
+	};
 }

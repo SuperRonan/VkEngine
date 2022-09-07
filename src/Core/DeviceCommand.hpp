@@ -14,6 +14,8 @@ namespace vkl
 
 		virtual void recordInputSynchronization(CommandBuffer& cmd, ExecutionContext& context);
 
+		virtual void declareResourcesEndState(ExecutionContext& context);
+
 	};
 }
 

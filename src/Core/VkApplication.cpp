@@ -163,6 +163,7 @@ namespace vkl
 		VK_CHECK(vkCreateInstance(&create_info, nullptr, &_instance), "Failed to create the Vulkan Instance");
 
 		_vkDebugMarkerSetObjectNameEXT = (PFN_vkDebugMarkerSetObjectNameEXT*)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
+		//std::cout << _vkDebugMarkerSetObjectNameEXT << std::endl;
 	}
 
 	void VkApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info)const
@@ -432,7 +433,8 @@ namespace vkl
 
 	void VkApplication::nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name)
 	{
-		VK_CHECK((*_vkDebugMarkerSetObjectNameEXT)(_device, &object_to_name), "Failed to name an object!");
+		std::cout << "nameObject: not yet implemented (" << object_to_name.pObjectName << ")\n";
+		//VK_CHECK((*_vkDebugMarkerSetObjectNameEXT)(_device, &object_to_name), "Failed to name an object!");
 	}
 
 	void VkApplication::initGLFW()

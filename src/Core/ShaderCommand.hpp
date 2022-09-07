@@ -117,21 +117,6 @@ namespace vkl
 			return _binding;
 		}
 
-		constexpr const auto& state()const
-		{
-			return _resource._state;
-		}
-
-		constexpr void setState(ResourceState const& state)
-		{
-			_resource._state = state;
-		}
-
-		constexpr auto& state()
-		{
-			return _resource._state;
-		}
-
 		constexpr const auto& resource()const
 		{
 			return _resource;

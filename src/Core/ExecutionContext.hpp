@@ -100,7 +100,10 @@ namespace vkl
 	{
 		std::vector<std::shared_ptr<Buffer>> _buffers = {};
 		std::vector<std::shared_ptr<ImageView>> _images = {};
-		ResourceState _state = {};
+		ResourceState _beging_state = {};
+		std::optional<ResourceState> _end_state = {}; // None means the same as begin state
+		VkImageUsageFlags _image_usage = 0;
+		VkBufferUsageFlags _buffer_usage = 0;
 
 		constexpr bool isImage() const
 		{

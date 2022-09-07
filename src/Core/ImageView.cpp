@@ -60,7 +60,7 @@ namespace vkl
 	ImageView::ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect) :
 		VkObject(*image),
 		_image(image),
-		_type(getViewTypeFromImageType(image->type())),
+		_type(getDefaultViewTypeFromImageType(image->type())),
 		_format(image->format()),
 		_components(defaultComponentMapping()),
 		_range(VkImageSubresourceRange{
@@ -77,7 +77,7 @@ namespace vkl
 	ImageView::ImageView(Image && image, VkImageAspectFlags aspect) :
 		VkObject(image),
 		_image(std::make_shared<Image>(std::move(image))),
-		_type(getViewTypeFromImageType(image.type())),
+		_type(getDefaultViewTypeFromImageType(image.type())),
 		_format(image.format()),
 		_components(defaultComponentMapping()),
 		_range(VkImageSubresourceRange{
