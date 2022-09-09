@@ -49,8 +49,8 @@ IF(AUTO_LOCATE_VULKAN)
 
 	MESSAGE(STATUS "Attempting to locate Vulkan SDK using manual path......")
 	SET(VULKAN_SDK "C:/VulkanSDK")
-	#SET(VULKAN_VERSION "1.3.216.0")
-	SET(VULKAN_VERSION "1.2.189.0")
+	SET(VULKAN_VERSION "1.3.216.0")
+	#SET(VULKAN_VERSION "1.2.189.0")
 	SET(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
 	MESSAGE(STATUS "Using manual specified path: ${VULKAN_PATH}")
 
@@ -65,7 +65,8 @@ ENDIF()
 
 ADD_DEFINITIONS(-DVK_USE_PLATFORM_WIN32_KHR)
 
-SET(VULKAN_LIBS "vulkan-1;shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;spirv-cross-core;spirv-cross-glsl;OGLCompiler;HLSL;OSDependent")
+#SET(VULKAN_LIBS "vulkan-1;shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;spirv-cross-core;spirv-cross-glsl;OGLCompiler;HLSL;OSDependent")
+SET(VULKAN_LIBS "vulkan-1;shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OGLCompiler;HLSL;OSDependent")
 SET(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
 SET(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
 INCLUDE_DIRECTORIES(${VULKAN_INCLUDES})
@@ -95,9 +96,9 @@ INCLUDE_DIRECTORIES(${IMGUI_DIR})
 SET(IMGUI_LIBS imgui)
 
 # SPIRV-Cross
-ADD_SUBDIRECTORY(ext/SPIRV-Cross)
-INCLUDE_DIRECTORIES(ext/SPIRV-Cross)
-SET(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
+# ADD_SUBDIRECTORY(ext/SPIRV-Cross)
+# INCLUDE_DIRECTORIES(ext/SPIRV-Cross)
+# SET(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
 
 # VkEngine
 SET(ALL_EXT_LIBS ${GLFW_LIBS} ${GLM_LIBS} ${VULKAN_LIBS} ${VMA_LIBS} ${IMGUI_LIBS} ${SPV_CROSS_LIBS})
