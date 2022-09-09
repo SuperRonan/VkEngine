@@ -10,7 +10,12 @@ namespace vkl
 
 	public:
 
-		virtual ~Command() = 0;
+		template <typename StringLike>
+		constexpr Command(VkApplication* app, StringLike&& name = "") :
+			VkObject(app, std::forward<StringLike>(name))
+		{}
+
+		virtual ~Command() = default;
 
 		virtual void init() = 0;
 

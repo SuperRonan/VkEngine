@@ -93,7 +93,9 @@ namespace vkl
 			return _current_command_buffer;
 		}
 
+		void setBufferState(VkBuffer b, ResourceState const& s);
 
+		void setImageState(VkImageView v, ResourceState const& s);
 	};
 
 	struct Resource
@@ -104,6 +106,9 @@ namespace vkl
 		std::optional<ResourceState> _end_state = {}; // None means the same as begin state
 		VkImageUsageFlags _image_usage = 0;
 		VkBufferUsageFlags _buffer_usage = 0;
+
+		// Can't have a constructor and still an aggregate initialization :'(
+		//Resource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
 
 		constexpr bool isImage() const
 		{
@@ -117,4 +122,6 @@ namespace vkl
 
 		const std::string& name()const;
 	};
+
+	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
 }

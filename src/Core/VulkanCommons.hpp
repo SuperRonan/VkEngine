@@ -82,6 +82,15 @@ namespace vkl
 		};
 	}
 
+	constexpr VkExtent3D extend(VkExtent2D const& e2, uint32_t d = 1)
+	{
+		return VkExtent3D{
+			.width = e2.width,
+			.height = e2.height,
+			.depth = d,
+		};
+	}
+
 	constexpr VkImageViewType getDefaultViewTypeFromImageType(VkImageType type)
 	{
 		switch (type)

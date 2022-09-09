@@ -18,6 +18,11 @@ namespace vkl
 
 	public:
 
+		template <typename StringLike = std::string>
+		constexpr Executor(VkApplication* app = nullptr, StringLike&& name = {}):
+			VkObject(app, std::forward<StringLike>(name))
+		{}
+
 		void declare(std::shared_ptr<Command> cmd);
 
 		void init();

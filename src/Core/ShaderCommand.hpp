@@ -6,6 +6,18 @@
 
 namespace vkl
 {
+	struct ShaderBindingDescriptor
+	{
+		std::shared_ptr<Buffer> buffer = nullptr;
+		std::shared_ptr<ImageView> view = nullptr;
+		std::shared_ptr<Sampler> sampler = nullptr;
+		std::string name = {};
+		uint32_t set = uint32_t(0);
+		uint32_t binding = uint32_t(-1);
+	};
+	
+	using Binding = ShaderBindingDescriptor;
+
 	class ResourceBinding
 	{
 	public:
@@ -21,6 +33,8 @@ namespace vkl
 		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
 
 	public:
+
+		ResourceBinding(ShaderBindingDescriptor const& desc);
 
 		constexpr void resolve(uint32_t s, uint32_t b)
 		{
@@ -149,7 +163,15 @@ namespace vkl
 
 	public:
 
-		virtual ~ShaderCommand() = 0;
+		template <typename StringLike = std::string>
+		ShaderCommand(VkApplication* app, StringLike&& name, std::vector<ShaderBindingDescriptor> const& bindings) :
+			DeviceCommand(app, std::forward<StringLike>(name)),
+			_bindings(bindings.cbegin(), bindings.cend())
+		{
+
+		}
+
+		virtual ~ShaderCommand() override = default;
 
 		virtual void writeDescriptorSets();
 

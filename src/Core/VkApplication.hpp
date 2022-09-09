@@ -8,6 +8,7 @@
 #include <optional>
 #include <Utils/stl_extension.hpp>
 #include <memory>
+#include <type_traits>
 
 namespace vkl
 {
@@ -171,9 +172,10 @@ namespace vkl
 			_app(app)
 		{}
 
-		constexpr VkObject(VkApplication* app, std::string const& name) noexcept :
+		template <typename StringLike = std::string>
+		constexpr VkObject(VkApplication* app, StringLike && name) noexcept :
 			_app(app),
-			_name(name)
+			_name(std::forward<StringLike>(name))
 		{}
 
 		constexpr VkObject(VkObject const& ) noexcept = default;
@@ -207,14 +209,10 @@ namespace vkl
 			return _name;
 		}
 
-		constexpr void setName(std::string const& new_name)
+		template <typename StringLike = std::string>
+		constexpr void setName(StringLike && new_name)
 		{
-			_name = new_name;
-		}
-		
-		constexpr void setName(std::string && new_name)
-		{
-			_name = std::move(new_name);
+			_name = std::forward<StringLike>(new_name);
 		}
 	};
 }

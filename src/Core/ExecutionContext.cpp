@@ -3,6 +3,11 @@
 
 namespace vkl
 {
+	//Resource::Resource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> view):
+	//	_buffers({buffer}),
+	//	_images({view})
+	//{}
+
     ResourceState& ExecutionContext::getBufferState(VkBuffer b)
 	{
 		if (!_buffer_states.contains(b))
@@ -23,14 +28,30 @@ namespace vkl
 		return _image_states[i];
 	}
 
+	void ExecutionContext::setBufferState(VkBuffer b, ResourceState const& s)
+	{
+		_buffer_states[b] = s;
+	}
+
+	void ExecutionContext::setImageState(VkImageView v, ResourceState const& s)
+	{
+		_image_states[v] = s;
+	}
+
 	const std::string& Resource::name()const
 	{
 		// front?
 		if (isImage())
 			return _images.front()->name();
-		else if (isBuffer())
+		else// if (isBuffer())
 			return _buffers.front()->name();
-		else
-			return {};
+	}
+
+	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image)
+	{
+		return Resource{
+			._buffers = {buffer},
+			._images = {image},
+		};
 	}
 }

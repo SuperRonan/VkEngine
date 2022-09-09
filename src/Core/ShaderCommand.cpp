@@ -2,6 +2,14 @@
 
 namespace vkl
 {
+	ResourceBinding::ResourceBinding(ShaderBindingDescriptor const& desc):
+		_resource(MakeResource(desc.buffer, desc.view)),
+		_samplers({ desc.sampler }),
+		_binding(desc.binding),
+		_set(desc.set),
+		_name(desc.name)
+	{}
+
 	void ShaderCommand::writeDescriptorSets()
 	{
 		std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _pipeline->program()->setLayouts();

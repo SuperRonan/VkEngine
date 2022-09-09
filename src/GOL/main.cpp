@@ -145,6 +145,8 @@ namespace vkl
 		{
 			bool paused = true;
 
+			Executor exec(this);
+
 			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(Image::CI{
 				.app = this,
 				.name = "grid_storage_image",
@@ -181,6 +183,17 @@ namespace vkl
 				},
 				.create_on_construct = true,
 			});
+
+			std::shared_ptr<ComputeCommand> update_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "UpdateGrid",
+				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/update.comp"),
+				.dispatch_size = extend(_world_size),
+				.dispatch_threads = true,
+			});
+			exec.declare(update_grid);
+
+			exec.init();
 
 			vkl::Camera2D camera;
 			camera.move({ 0.5, 0.5 });

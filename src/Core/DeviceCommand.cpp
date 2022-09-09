@@ -70,4 +70,24 @@ namespace vkl
 				(uint32_t)image_barriers.size(), image_barriers.data());
 		}
 	}
+
+	void DeviceCommand::declareResourcesEndState(ExecutionContext& context)
+	{
+		for (const auto& r : _resources)
+		{
+			ResourceState const& s = r._end_state.value_or(r._beging_state);
+			if (r.isBuffer())
+			{
+				context.setBufferState(*r._buffers.front(), s);
+			}
+			else if (r.isImage())
+			{
+				context.setImageState(*r._images.front(), s);
+			}
+			else
+			{
+				assert(false);
+			}
+		}
+	}
 }
