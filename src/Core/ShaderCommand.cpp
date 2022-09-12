@@ -40,8 +40,8 @@ namespace vkl
 				VkWriteDescriptorSet write{
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
-					.dstSet = *_desc_sets[b.set()],
-					.dstBinding = b.binding(),
+					.dstSet = *_desc_sets[b.resolvedSet()],
+					.dstBinding = b.resolvedBinding(),
 					.dstArrayElement = 0, // TODO
 					.descriptorCount = 1,
 					.descriptorType = b.vkType(),

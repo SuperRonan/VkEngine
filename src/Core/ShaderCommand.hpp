@@ -131,6 +131,16 @@ namespace vkl
 			return _binding;
 		}
 
+		constexpr auto resolvedBinding()const
+		{
+			return _resolved_binding;
+		}
+		
+		constexpr auto resolvedSet()const
+		{
+			return _resolved_set;
+		}
+
 		constexpr const auto& resource()const
 		{
 			return _resource;
