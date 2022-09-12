@@ -155,6 +155,7 @@ namespace vkl
 				.extent = VkExtent3D{.width = _world_size.width, .height = _world_size.height, .depth = 1},
 				.layers = 2,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
 
@@ -190,8 +191,50 @@ namespace vkl
 				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/update.comp"),
 				.dispatch_size = extend(_world_size),
 				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.view = prev_grid_view,
+						.name = "prev",
+					},
+					Binding{
+						.view = current_grid_view,
+						.name = "next",
+					},
+				},
 			});
 			exec.declare(update_grid);
+
+			std::shared_ptr<Image> final_image = std::make_shared<Image>(Image::CI{
+				.app = this,
+				.name = "final image",
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.extent = extend(_main_window->extent()),
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<ImageView> final_view = std::make_shared<ImageView>(ImageView::CI{
+				.name = "final view",
+				.image = final_image,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<BlitImage> blit_to_final = std::make_shared<BlitImage>(BlitImage::CI{
+				.app = this,
+				.src = current_grid_view, 
+				.dst = final_view,
+			});
+			exec.declare(blit_to_final);
+
+			std::vector<std::shared_ptr<ImageView>> swapchain_images = _main_window->views();
+
+			std::shared_ptr<PrepareForPresetation> prepare_present = std::make_shared<PrepareForPresetation>(PrepareForPresetation::CI{
+				.app = this,
+				.images = swapchain_images,
+			});
+			exec.declare(prepare_present);
 
 			exec.init();
 

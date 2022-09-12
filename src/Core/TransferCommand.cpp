@@ -2,11 +2,19 @@
 
 namespace vkl
 {
+	BlitImage::BlitImage(CreateInfo const& ci):
+		DeviceCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_regions(ci.regions),
+		_filter(ci.filter)
+	{}
+
 	void BlitImage::init()
 	{
 		_resources.push_back(Resource{
 			._images = {_src},
-			._beging_state = ResourceState{
+			._begin_state = ResourceState{
 				._access = VK_ACCESS_TRANSFER_READ_BIT,
 				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT
@@ -14,7 +22,7 @@ namespace vkl
 		});
 		_resources.push_back(Resource{
 			._images = {_dst},
-			._beging_state = ResourceState{
+			._begin_state = ResourceState{
 				._access = VK_ACCESS_TRANSFER_WRITE_BIT,
 				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -39,7 +47,7 @@ namespace vkl
 
 	void BlitImage::execute(ExecutionContext& context)
 	{
-		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 		recordInputSynchronization(*cmd, context);
 
 		vkCmdBlitImage(*cmd,
@@ -51,11 +59,18 @@ namespace vkl
 		declareResourcesEndState(context);
 	}
 
+	CopyImage::CopyImage(CreateInfo const& ci):
+		DeviceCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_regions(ci.regions)
+	{}
+
 	void CopyImage::init()
 	{
 		_resources.push_back(Resource{
 			._images = {_src},
-			._beging_state = ResourceState{
+			._begin_state = ResourceState{
 				._access = VK_ACCESS_TRANSFER_READ_BIT,
 				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT
@@ -63,7 +78,7 @@ namespace vkl
 		});
 		_resources.push_back(Resource{
 			._images = {_dst},
-			._beging_state = ResourceState{
+			._begin_state = ResourceState{
 				._access = VK_ACCESS_TRANSFER_WRITE_BIT,
 				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -91,7 +106,7 @@ namespace vkl
 
 	void CopyImage::execute(ExecutionContext& context)
 	{
-		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 		recordInputSynchronization(*cmd, context);
 
 		vkCmdCopyImage(
@@ -102,5 +117,59 @@ namespace vkl
 		);
 
 		declareResourcesEndState(context);
+	}
+
+	PrepareForPresetation::PrepareForPresetation(CreateInfo const& ci):
+		DeviceCommand(ci.app, ci.name),
+		_images(ci.images)
+	{}
+
+	void PrepareForPresetation::init()
+	{
+
+	}
+
+	void PrepareForPresetation::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+
+		std::shared_ptr<ImageView> view = _images[_present_index];
+
+		const ResourceState prev_state = context.getImageState(*view);
+
+		const ResourceState wanted_state{
+			._access = VK_ACCESS_MEMORY_READ_BIT,
+			._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			._stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		};
+
+		if (stateTransitionRequiresSynchronization(prev_state, wanted_state, true))
+		{
+			VkImageMemoryBarrier barrier {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = prev_state._access,
+				.dstAccessMask = wanted_state._access,
+				.oldLayout = prev_state._layout,
+				.newLayout = wanted_state._layout,
+				.srcQueueFamilyIndex = 0,
+				.dstQueueFamilyIndex = 0,
+				.image = *view->image(),
+				.subresourceRange = view->range(),
+			};
+
+			vkCmdPipelineBarrier(*cmd, prev_state._stage, wanted_state._stage, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+
+		}
+		const ResourceState end_state{
+			._access = VK_ACCESS_MEMORY_READ_BIT,
+			._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		};
+		context.setImageState(*view, end_state);
 	}
 }

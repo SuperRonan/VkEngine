@@ -125,6 +125,11 @@ namespace vkl
 
 		std::shared_ptr<ImageView> view(uint32_t index);
 
+		constexpr std::vector<std::shared_ptr<ImageView>> const& views() const
+		{
+			return _swapchain_views;
+		}
+
 		VkFormat format()const;
 
 		size_t swapchainSize()const;

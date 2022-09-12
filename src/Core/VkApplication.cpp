@@ -433,7 +433,7 @@ namespace vkl
 
 	void VkApplication::nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name)
 	{
-		std::cout << "nameObject: not yet implemented (" << object_to_name.pObjectName << ")\n";
+		std::cout << "nameObject: not yet implemented (" << std::hex << object_to_name.object << std::dec << " -> " << object_to_name.pObjectName << ")\n";
 		//VK_CHECK((*_vkDebugMarkerSetObjectNameEXT)(_device, &object_to_name), "Failed to name an object!");
 	}
 

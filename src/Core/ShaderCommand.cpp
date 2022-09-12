@@ -4,11 +4,13 @@ namespace vkl
 {
 	ResourceBinding::ResourceBinding(ShaderBindingDescriptor const& desc):
 		_resource(MakeResource(desc.buffer, desc.view)),
-		_samplers({ desc.sampler }),
 		_binding(desc.binding),
 		_set(desc.set),
 		_name(desc.name)
-	{}
+	{
+		if (!!desc.sampler)
+			_samplers.push_back(desc.sampler);
+	}
 
 	void ShaderCommand::writeDescriptorSets()
 	{
@@ -65,7 +67,7 @@ namespace vkl
 					if (!b.images().empty())
 					{
 						info.imageView = *b.images().front();
-						info.imageLayout = b.resource()._beging_state._layout;
+						info.imageLayout = b.resource()._begin_state._layout;
 					}
 					images.push_back(info);
 					write.pImageInfo = &images.back();
@@ -128,7 +130,7 @@ namespace vkl
 				{
 					corresponding_resource->resolve(set_id, binding_id);
 					corresponding_resource->setType(vkb.descriptorType);
-					corresponding_resource->resource()._beging_state = ResourceState{
+					corresponding_resource->resource()._begin_state = ResourceState{
 						._access = meta.access,
 						._layout = meta.layout,
 						._stage = vkb.stageFlags,

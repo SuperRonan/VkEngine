@@ -147,10 +147,13 @@ namespace vkl
 		for (uint32_t i = 0; i < image_count; ++i)
 		{
 			Image::AssociateInfo ai{
+				.app = _app,
+				.name = std::string("swapchain image #") + std::to_string(i),
 				.image = tmp_images[i],
 				.type = VK_IMAGE_TYPE_2D,
 				.format = format(),
 				.extent = VkExtent3D{.width = extent.width, .height = extent.height, .depth = 1},
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 				.queues = {},
 			};
 			_swapchain_images[i] = std::make_shared<Image>(_app);
@@ -163,7 +166,13 @@ namespace vkl
 		_swapchain_views.resize(_swapchain_images.size());
 		for (size_t i = 0; i < _swapchain_views.size(); ++i)
 		{
-			_swapchain_views[i] = std::make_shared<ImageView>(_swapchain_images[i]);
+			ImageView::CI ci{
+				.name = std::string("swapchain image #") + std::to_string(i),
+				.image = _swapchain_images[i],
+				.create_on_construct = true,
+			};
+			_swapchain_views[i] = std::make_shared<ImageView>(ci);
+			//_swapchain_views[i]->createView();
 			//_swapchain_views[i] = createImageView(_app->device(), *_swapchain_images[i], _swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 		}
 	}

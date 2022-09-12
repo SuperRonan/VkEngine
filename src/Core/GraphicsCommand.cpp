@@ -41,7 +41,7 @@ namespace vkl
 
 	void GraphicsCommand::execute(ExecutionContext& context)
 	{
-		std::shared_ptr<CommandBuffer> cmd = context.getCurrentCommandBuffer();
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 		recordCommandBuffer(*cmd, context);
 	}
 

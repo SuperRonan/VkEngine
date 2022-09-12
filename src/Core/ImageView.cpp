@@ -12,7 +12,7 @@ namespace vkl
 			.components = _components,
 			.subresourceRange = _range,
 		};
-
+		std::cout << "Creating image view " << name() << "\n";
 		VK_CHECK(vkCreateImageView(_app->device(), &ci, nullptr, &_view), "Failed to create an image view.");
 	}
 

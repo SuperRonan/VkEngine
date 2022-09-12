@@ -3,6 +3,7 @@
 #include "VkApplication.hpp"
 #include <cassert>
 #include <array>
+#include <format>
 
 namespace vkl
 {
@@ -145,24 +146,7 @@ namespace vkl
 
 		void create();
 
-		constexpr void associateImage(AssociateInfo const& assos)
-		{
-			_image = assos.image;
-			_type = assos.type;
-			_format = assos.format;
-			_extent = assos.extent;
-			_mips = assos.mips;
-			_layers = 1; // TODO Check if the swapchain can support multi layered images (VR)
-			_samples = assos.samples;
-			_usage = assos.usage;
-			_queues = assos.queues;
-			_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-			_mem_usage = assos.mem_usage;
-			_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?
-			if(!assos.name.empty())
-				_name = assos.name;
-			_alloc = nullptr;
-		}
+		void associateImage(AssociateInfo const& assos);
 
 		void destroyImage();
 

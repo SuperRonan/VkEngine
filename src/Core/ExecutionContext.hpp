@@ -71,38 +71,48 @@ namespace vkl
 		return res;
 	}
 
+	struct ResourceStateTracker
+	{
+		std::unordered_map<VkBuffer, ResourceState> _buffer_states;
+		std::unordered_map<VkImageView, ResourceState> _image_states;
+
+	};
+
 	class ExecutionContext
 	{
 	protected:
 
-		std::shared_ptr<CommandBuffer> _current_command_buffer = nullptr;
+		std::shared_ptr<CommandBuffer> _command_buffer = nullptr;
 
-		std::unordered_map<VkBuffer, ResourceState> _buffer_states;
-		std::unordered_map<VkImageView, ResourceState> _image_states;
+		ResourceStateTracker * _reosurce_states;
+
 
 	public:
 
-		void reset();
+		ExecutionContext(ResourceStateTracker * rst, std::shared_ptr<CommandBuffer> cmd);
 
 		ResourceState& getBufferState(VkBuffer b);
 
 		ResourceState& getImageState(VkImageView i);
 
-		constexpr std::shared_ptr<CommandBuffer>& getCurrentCommandBuffer()
+		constexpr std::shared_ptr<CommandBuffer>& getCommandBuffer()
 		{
-			return _current_command_buffer;
+			return _command_buffer;
 		}
 
 		void setBufferState(VkBuffer b, ResourceState const& s);
 
 		void setImageState(VkImageView v, ResourceState const& s);
+
+		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
+
 	};
 
 	struct Resource
 	{
 		std::vector<std::shared_ptr<Buffer>> _buffers = {};
 		std::vector<std::shared_ptr<ImageView>> _images = {};
-		ResourceState _beging_state = {};
+		ResourceState _begin_state = {};
 		std::optional<ResourceState> _end_state = {}; // None means the same as begin state
 		VkImageUsageFlags _image_usage = 0;
 		VkBufferUsageFlags _buffer_usage = 0;

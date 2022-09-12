@@ -23,7 +23,7 @@ namespace vkl
 	public:
 
 	protected:
-		Resource _resource;
+		Resource _resource = {};
 		std::vector<std::shared_ptr<Sampler>> _samplers = {};
 		uint32_t _binding = uint32_t(-1);
 		uint32_t _set = 0;

@@ -9,7 +9,7 @@ namespace vkl
 		for (size_t i = 0; i < _resources.size(); ++i)
 		{
 			auto& r = _resources[i];
-			const ResourceState next = r._beging_state;
+			const ResourceState next = r._begin_state;
 			const ResourceState prev = [&]() {
 				if (r.isImage())
 				{
@@ -75,7 +75,7 @@ namespace vkl
 	{
 		for (const auto& r : _resources)
 		{
-			ResourceState const& s = r._end_state.value_or(r._beging_state);
+			ResourceState const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
 				context.setBufferState(*r._buffers.front(), s);
