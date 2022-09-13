@@ -3,6 +3,7 @@
 #include "ExecutionContext.hpp"
 #include "Command.hpp"
 #include "VkWindow.hpp"
+#include <queue>
 
 namespace vkl
 {
@@ -10,7 +11,7 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<CommandBuffer>> _command_buffers_to_submit;
+		std::shared_ptr<CommandBuffer> _command_buffer_to_submit;
 		
 		ResourceStateTracker _resources_state;
 
@@ -29,7 +30,7 @@ namespace vkl
 
 		void prepareSubmission();
 
-		std::vector<InBetween> _previous_in_betweens;
+		std::queue<InBetween> _previous_in_betweens;
 		InBetween _in_between;
 
 	public:
@@ -54,7 +55,7 @@ namespace vkl
 
 		void submit();
 
-		void wait();
+		void waitForCurrentCompletion(uint64_t timeout = UINT64_MAX);
 
 	};
 }
