@@ -179,15 +179,11 @@ namespace vkl
 
 	void VkWindow::createSynchObjects()
 	{
-		_image_available.resize(_max_frames_in_flight);
-		_in_flight_fence.resize(_max_frames_in_flight);
-		for (size_t i = 0; i < _max_frames_in_flight; ++i)
-		{
-			_image_available[i] = std::make_shared<Semaphore>(_app);
-			_in_flight_fence[i] = std::make_shared<Fence>(_app, true);
-		}
 		_image_in_flight_fence.resize(_swapchain_images.size(), nullptr);
-
+		for (size_t i = 0; i < _swapchain_images.size(); ++i)
+		{
+			_image_in_flight_fence[i] = std::make_shared<Fence>(_app, true);
+		}
 	}
 
 	void VkWindow:: init(CreateInfo const& ci)
@@ -195,7 +191,7 @@ namespace vkl
 		_queues_families_indices = ci.queue_families_indices;
 		_width = ci.w;
 		_height = ci.h;
-		_max_frames_in_flight = ci.in_flight_size;
+
 		_target_present_mode = ci.target_present_mode;
 
 		initGLFW(ci.name, ci.resizeable);
@@ -293,11 +289,6 @@ namespace vkl
 		return _swapchain_images.size();
 	}
 
-	size_t VkWindow::framesInFlight()const
-	{
-		return _max_frames_in_flight;
-	}
-
 	VkExtent2D VkWindow::extent()const
 	{
 		return _swapchain_extent;
@@ -308,19 +299,19 @@ namespace vkl
 		semaphore(VK_NULL_HANDLE)
 	{}
 
-	VkWindow::AquireResult::AquireResult(uint32_t swap_index, uint32_t in_flight_index, std::shared_ptr<Semaphore> semaphore, std::shared_ptr<Fence> fence) :
+	VkWindow::AquireResult::AquireResult(uint32_t swap_index, std::shared_ptr<Semaphore> semaphore, std::shared_ptr<Fence> fence) :
 		success(VK_TRUE),
 		swap_index(swap_index),
-		in_flight_index(in_flight_index),
 		semaphore(std::move(semaphore)),
 		fence(std::move(fence))
 	{}
 
-	VkWindow::AquireResult VkWindow::aquireNextImage()
+	VkWindow::AquireResult VkWindow::aquireNextImage(std::shared_ptr<Semaphore> semaphore_to_signal, std::shared_ptr<Fence> _fence_to_signal)
 	{
-		_in_flight_fence[_current_frame]->wait();
 		uint32_t image_index;
-		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), _swapchain, UINT64_MAX, *_image_available[_current_frame], VK_NULL_HANDLE, &image_index);
+		VkSemaphore sem_to_signal = !!semaphore_to_signal ? (VkSemaphore) * semaphore_to_signal : VK_NULL_HANDLE;
+		VkFence fence_to_signal = !!_fence_to_signal ? (VkFence) * _fence_to_signal : VK_NULL_HANDLE;
+		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), _swapchain, UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
 		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			reCreateSwapchain();
@@ -332,13 +323,13 @@ namespace vkl
 		}
 		_current_frame_info.index = image_index;
 
-		if (_image_in_flight_fence[image_index])
+		/*if (_image_in_flight_fence[image_index])
 		{
 			_image_in_flight_fence[image_index]->wait();
 		}
 		_image_in_flight_fence[image_index] = _in_flight_fence[_current_frame];
-		_image_in_flight_fence[image_index]->reset();
-		return AquireResult(image_index, _current_frame, _image_available[_current_frame], _image_in_flight_fence[image_index]);
+		_image_in_flight_fence[image_index]->reset();*/
+		return AquireResult(image_index, semaphore_to_signal, _fence_to_signal);
 	}
 
 	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores)
@@ -361,6 +352,6 @@ namespace vkl
 		{
 			throw std::runtime_error("Failed to present a swapchain image.");
 		}
-		_current_frame = (_current_frame + 1) % _max_frames_in_flight;
+		_current_frame = (_current_frame + 1);
 	}
 }

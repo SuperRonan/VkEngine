@@ -45,11 +45,6 @@ namespace vkl
 
 		bool _framebuffer_resized = false;
 
-
-		size_t _max_frames_in_flight;
-		// Of size _MAX_FRAMES_IN_FLIGHT 
-		std::vector<std::shared_ptr<Semaphore>> _image_available;
-		std::vector<std::shared_ptr<Fence>> _in_flight_fence;
 		size_t _current_frame = 0;
 		// Of size swapchain (One per swap image)
 		std::vector<std::shared_ptr<Fence>> _image_in_flight_fence;
@@ -134,8 +129,6 @@ namespace vkl
 
 		size_t swapchainSize()const;
 
-		size_t framesInFlight()const;
-
 		VkExtent2D extent()const;
 
 		constexpr operator GLFWwindow* ()const
@@ -152,16 +145,16 @@ namespace vkl
 		{
 			VkBool32 success;
 			uint32_t swap_index;
-			uint32_t in_flight_index;
+			//uint32_t in_flight_index;
 			std::shared_ptr<Semaphore> semaphore;
 			std::shared_ptr<Fence> fence;
 
 			AquireResult();
 
-			AquireResult(uint32_t swap_index, uint32_t in_flight_index, std::shared_ptr<Semaphore> semaphore, std::shared_ptr<Fence> fence);
+			AquireResult(uint32_t swap_index, std::shared_ptr<Semaphore> semaphore, std::shared_ptr<Fence> fence);
 		};
 
-		AquireResult aquireNextImage();
+		AquireResult aquireNextImage(std::shared_ptr<Semaphore> semaphore_to_signal, std::shared_ptr<Fence> fence_to_signal);
 
 		void present(uint32_t num_semaphores, VkSemaphore* semaphores);
 

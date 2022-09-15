@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class Executor : public VkObject
+	class LinearExecutor : public VkObject
 	{
 	protected:
 
@@ -36,7 +36,7 @@ namespace vkl
 	public:
 
 		template <typename StringLike = std::string>
-		Executor(VkApplication* app = nullptr, StringLike&& name = {}):
+		LinearExecutor(VkApplication* app = nullptr, StringLike&& name = {}):
 			VkObject(app, std::forward<StringLike>(name)),
 			_context(&_resources_state, nullptr)
 		{}

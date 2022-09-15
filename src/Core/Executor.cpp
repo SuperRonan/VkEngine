@@ -2,12 +2,12 @@
 
 namespace vkl
 {
-	void Executor::declare(std::shared_ptr<Command> cmd)
+	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
 	{
 		_commands.push_back(cmd);
 	}
 
-	void Executor::preprocessCommands()
+	void LinearExecutor::preprocessCommands()
 	{
 		for (std::shared_ptr<Command>& cmd : _commands)
 		{
@@ -16,17 +16,17 @@ namespace vkl
 		}
 	}
 
-	void Executor::init()
+	void LinearExecutor::init()
 	{
 		preprocessCommands(); 
 	}
 
-	void Executor::execute(std::shared_ptr<Command> cmd)
+	void LinearExecutor::execute(std::shared_ptr<Command> cmd)
 	{
 		cmd->execute(_context);
 	}
 
-	void Executor::beginCommandBuffer()
+	void LinearExecutor::beginCommandBuffer()
 	{
 		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
 		cb = std::make_shared<CommandBuffer>(_app->pools().graphics);
@@ -34,7 +34,7 @@ namespace vkl
 		_context.setCommandBuffer(cb);
 	}
 
-	void Executor::endCommandBufferAndSubmit()
+	void LinearExecutor::endCommandBufferAndSubmit()
 	{
 		std::shared_ptr<CommandBuffer> cb = _command_buffer_to_submit;
 		_context.setCommandBuffer(nullptr);
@@ -44,7 +44,7 @@ namespace vkl
 		submit();
 	}
 
-	void Executor::prepareSubmission()
+	void LinearExecutor::prepareSubmission()
 	{
 		// Removed finished in betweens
 		while(!_previous_in_betweens.empty())
@@ -74,18 +74,14 @@ namespace vkl
 		}
 	}
 
-	void Executor::submit()
+	void LinearExecutor::submit()
 	{
+		VkSemaphore sem_to_wait = *_in_between.semaphore;
+		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
 		prepareSubmission();
 
-		std::vector<VkCommandBuffer> cbs = { *_command_buffer_to_submit };
-		std::vector<VkPipelineStageFlags> wait_stages(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, cbs.size());
-		
-		VkSubmitInfo submission{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.commandBufferCount = (uint32_t)cbs.size(),
-			.pCommandBuffers = cbs.data(),
-		};
+		VkCommandBuffer cb = *_command_buffer_to_submit;
 
 		_in_between = InBetween{
 			.fence = std::make_shared<Fence>(_app),
@@ -93,10 +89,23 @@ namespace vkl
 			.prev_cb = _command_buffer_to_submit,
 		};
 
+		VkSemaphore sem_to_signal = *_in_between.semaphore;
+		
+		VkSubmitInfo submission{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &sem_to_wait,
+			.pWaitDstStageMask = &wait_stage,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &cb,
+			.signalSemaphoreCount = 1,
+			.pSignalSemaphores = &sem_to_signal,
+		};
+
 		vkQueueSubmit(_app->queues().graphics, 1, &submission, *_in_between.fence);
 	}
 
-	void Executor::waitForCurrentCompletion(uint64_t timeout)
+	void LinearExecutor::waitForCurrentCompletion(uint64_t timeout)
 	{
 		if (!!_in_between.fence)
 		{

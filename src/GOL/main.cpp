@@ -145,7 +145,7 @@ namespace vkl
 		{
 			bool paused = true;
 
-			Executor exec(this);
+			LinearExecutor exec(this);
 
 			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(Image::CI{
 				.app = this,
