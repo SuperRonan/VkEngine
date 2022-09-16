@@ -61,7 +61,7 @@ namespace vkl
 
 		std::unique_ptr<StagingPool> _staging_pool;
 
-		PFN_vkDebugMarkerSetObjectNameEXT* _vkDebugMarkerSetObjectNameEXT;
+		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
 
 		virtual std::vector<const char*> getValidLayers();
 
@@ -154,7 +154,7 @@ namespace vkl
 
 		StagingPool& stagingPool();
 
-		void nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name);
+		void nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
 	};
 
 	class VkObject

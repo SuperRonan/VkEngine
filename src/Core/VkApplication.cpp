@@ -38,7 +38,6 @@ namespace vkl
 	{
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 		};
 	}
 
@@ -58,8 +57,7 @@ namespace vkl
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 
-		extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-
+		
 		return extensions;
 	}
 
@@ -162,8 +160,8 @@ namespace vkl
 
 		VK_CHECK(vkCreateInstance(&create_info, nullptr, &_instance), "Failed to create the Vulkan Instance");
 
-		_vkDebugMarkerSetObjectNameEXT = (PFN_vkDebugMarkerSetObjectNameEXT*)vkGetInstanceProcAddr(_instance, "vkDebugMarkerSetObjectNameEXT");
-		//std::cout << _vkDebugMarkerSetObjectNameEXT << std::endl;
+		_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT");
+
 	}
 
 	void VkApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info)const
@@ -431,10 +429,10 @@ namespace vkl
 		_staging_pool = std::make_unique<StagingPool>(this, _allocator);
 	}
 
-	void VkApplication::nameObject(VkDebugMarkerObjectNameInfoEXT const& object_to_name)
+	void VkApplication::nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name)
 	{
-		std::cout << "nameObject: not yet implemented (" << std::hex << object_to_name.object << std::dec << " -> " << object_to_name.pObjectName << ")\n";
-		//VK_CHECK((*_vkDebugMarkerSetObjectNameEXT)(_device, &object_to_name), "Failed to name an object!");
+		//std::cout << "nameObject: not yet implemented (" << std::hex << object_to_name.object << std::dec << " -> " << object_to_name.pObjectName << ")\n";
+		VK_CHECK(_vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
 	}
 
 	void VkApplication::initGLFW()

@@ -58,11 +58,11 @@ namespace vkl
 		
 		if (!name().empty())
 		{
-			VkDebugMarkerObjectNameInfoEXT object_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
+			VkDebugUtilsObjectNameInfoEXT object_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 				.pNext = nullptr,
-				.objectType = VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-				.object = (uint64_t) _image,
+				.objectType = VK_OBJECT_TYPE_IMAGE,
+				.objectHandle = (uint64_t) _image,
 				.pObjectName = _name.data(),
 			};
 			_app->nameObject(object_name);
