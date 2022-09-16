@@ -66,6 +66,14 @@ namespace vkl
 		}
 		if (!image_barriers.empty() || !buffer_barriers.empty())
 		{
+			if (src_stage == 0)
+			{
+				src_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+			}
+			if (dst_stage & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
+			{
+				int _ = 0;
+			}
 			vkCmdPipelineBarrier(cmd,
 				src_stage, dst_stage, 0,
 				0, nullptr,

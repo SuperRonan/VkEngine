@@ -133,7 +133,7 @@ namespace vkl
 					corresponding_resource->resource()._begin_state = ResourceState{
 						._access = meta.access,
 						._layout = meta.layout,
-						._stage = vkb.stageFlags,
+						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
 					};
 					if (true)
 					{
