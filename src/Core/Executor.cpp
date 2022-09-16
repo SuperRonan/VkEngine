@@ -11,7 +11,7 @@ namespace vkl
 	{
 		for (std::shared_ptr<Command>& cmd : _commands)
 		{
-			std::cout << "Initializing " << cmd->name() << "\n";
+			std::cout << "Initializing command " << cmd->name() << "\n";
 			cmd->init();
 		}
 	}

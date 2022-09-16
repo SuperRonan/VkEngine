@@ -108,6 +108,10 @@ namespace vkl
 							set_bindings[binding.binding].meta = meta;
 						}
 					}
+					else
+					{
+						int _ = 0;
+					}
 				}
 			}
 		}

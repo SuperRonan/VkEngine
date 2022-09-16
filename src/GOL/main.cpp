@@ -36,23 +36,7 @@ namespace vkl
 
 		void createSampler()
 		{
-			VkSamplerCreateInfo ci{
-				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-				.magFilter = VK_FILTER_NEAREST,
-				//.magFilter = VK_FILTER_LINEAR,
-				.minFilter = VK_FILTER_NEAREST,
-				//.minFilter = VK_FILTER_LINEAR,
-				.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-				.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-				.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-				.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				.anisotropyEnable = VK_TRUE,
-				.maxAnisotropy = 16,
-				.maxLod = 1,
-				.unnormalizedCoordinates = VK_FALSE,
-			};
-
-			_grid_sampler = Sampler(this, ci);
+			
 		}
 
 		void fillGrid(std::shared_ptr<ImageView> grid)
@@ -237,12 +221,45 @@ namespace vkl
 				.create_on_construct = true,
 			});
 
-			std::shared_ptr<BlitImage> blit_to_final = std::make_shared<BlitImage>(BlitImage::CI{
+			VkSamplerCreateInfo ci{
+				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+				.magFilter = VK_FILTER_NEAREST,
+				//.magFilter = VK_FILTER_LINEAR,
+				.minFilter = VK_FILTER_NEAREST,
+				//.minFilter = VK_FILTER_LINEAR,
+				.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+				.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+				.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+				.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+				.anisotropyEnable = VK_TRUE,
+				.maxAnisotropy = 16,
+				.maxLod = 1,
+				.unnormalizedCoordinates = VK_FALSE,
+			};
+
+			_grid_sampler = Sampler(this, ci);
+
+			std::shared_ptr<Sampler> grid_sampler = std::make_shared<Sampler>(std::move(_grid_sampler));
+
+			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
-				.src = current_grid_view, 
-				.dst = final_view,
+				.name = "RenderToFinal",
+				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/render.comp"),
+				.dispatch_size = extend(_main_window->extent()),
+				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.view = current_grid_view,
+						.sampler = grid_sampler,
+						.name = "grid",
+					},
+					Binding{
+						.view = final_view,
+						.name = "target",
+					}
+				},
 			});
-			exec.declare(blit_to_final);
+			exec.declare(render_to_final);
 
 			exec.init();
 
@@ -265,7 +282,7 @@ namespace vkl
 
 			exec.execute(init_grid);
 
-			exec.execute(blit_to_final);
+			exec.execute(render_to_final);
 
 			exec.preparePresentation(final_view);
 

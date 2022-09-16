@@ -154,7 +154,10 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			const ResourceBinding& b = _bindings[i];
-			_resources.push_back(b.resource());
+			if (b.isResolved())
+			{
+				_resources.push_back(b.resource());
+			}
 		}
 	}
 
@@ -166,11 +169,14 @@ namespace vkl
 		for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
 		vkCmdBindDescriptorSets(cmd, _pipeline->binding(), _pipeline->program()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
 
-		VkPipelineStageFlags pc_stages = 0;
-		for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
+		if (!_push_constants_data.empty())
 		{
-			pc_stages |= pc_range.stageFlags;
+			VkPipelineStageFlags pc_stages = 0;
+			for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
+			{
+				pc_stages |= pc_range.stageFlags;
+			}
+			vkCmdPushConstants(cmd, _pipeline->program()->pipelineLayout(), pc_stages, 0, (uint32_t)_push_constants_data.size(), _push_constants_data.data());
 		}
-		vkCmdPushConstants(cmd, _pipeline->program()->pipelineLayout(), pc_stages, 0, (uint32_t)_push_constants_data.size(), _push_constants_data.data());
 	}
 }

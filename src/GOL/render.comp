@@ -1,0 +1,18 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0) uniform sampler2D grid;
+
+layout(set = 0, binding = 1, rgba8) uniform restrict writeonly image2D target;
+
+void main()
+{
+	const uvec3 gid = gl_GlobalInvocationID;
+    const vec2 uv = vec2(gid.xy) / vec2(imageSize(target));
+
+
+    const vec4 value = vec4(uv, 0, 1);
+
+	imageStore(target, ivec2(gid.xy), value);
+}
