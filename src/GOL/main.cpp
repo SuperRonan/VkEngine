@@ -34,49 +34,6 @@ namespace vkl
 
 		std::vector<Semaphore> _render_finished_semaphores;
 
-		void createSampler()
-		{
-			
-		}
-
-		void fillGrid(std::shared_ptr<ImageView> grid)
-		{
-			CommandBuffer copy_command(_pools.graphics);
-			copy_command.begin();
-			std::vector<uint8_t> data(_world_size.width * _world_size.height);
-			std::fill(data.begin(), data.end(), 0);
-			{
-				size_t n_activated = 0.33 * data.size();
-				std::mt19937_64 rng;
-				for (size_t i = 0; i < n_activated; ++i)
-				{
-					size_t x = rng() % (_world_size.width / 2) + _world_size.width / 4;
-					size_t y = rng() % (_world_size.height / 2) + _world_size.height / 4;
-					size_t index = y * _world_size.width + x;
-					data[index] = ~data[index];
-				}
-			}
-			
-
-			grid->recordTransitionLayout(copy_command,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-			//staging_buffer = grid->copyToStaging2D(_staging_pool, data.data(), 1);
-
-			//grid->recordSendStagingToDevice2D(copy_command, staging_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-			grid->recordTransitionLayout(copy_command, 
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-			
-			copy_command.end();
-			copy_command.submitAndWait(_queues.graphics);
-
-
-		}
-
-
 	public:
 
 		VkGameOfLife(bool validation=false) :
@@ -204,6 +161,14 @@ namespace vkl
 			});
 			exec.declare(update_grid);
 
+			std::shared_ptr<CopyImage> copy_back_to_prev = std::make_shared<CopyImage>(CopyImage::CI{
+				.app = this,
+				.name = "CopyBackToPrev",
+				.src = current_grid_view,
+				.dst = prev_grid_view,
+			});
+			exec.declare(copy_back_to_prev);
+
 			std::shared_ptr<Image> final_image = std::make_shared<Image>(Image::CI{
 				.app = this,
 				.name = "final image",
@@ -277,21 +242,12 @@ namespace vkl
 
 
 			exec.beginFrame();
-
 			exec.beginCommandBuffer();
-
 			exec.execute(init_grid);
-
 			exec.execute(render_to_final);
-
 			exec.preparePresentation(final_view);
-
 			exec.endCommandBufferAndSubmit();
-			exec.waitForCurrentCompletion();
-
 			exec.present();
-
-			exec.waitForCurrentCompletion();
 
 			while (!_main_window->shouldClose())
 			{
@@ -325,12 +281,19 @@ namespace vkl
 
 				if(!paused || should_render)
 				{
-
 					
+					exec.beginFrame();
+					exec.beginCommandBuffer();
+
 					if (!paused)
 					{
-
+						exec.execute(copy_back_to_prev);
+						exec.execute(update_grid);
 					}
+					exec.execute(render_to_final);
+					exec.preparePresentation(final_view);
+					exec.endCommandBufferAndSubmit();
+					exec.present();
 				}
 				
 			}
@@ -347,7 +310,11 @@ int main()
 {
 	try
 	{
-		vkl::VkGameOfLife app(true);
+		bool vl = true;
+#ifdef NDEBUG
+		//vl = false;
+#endif
+		vkl::VkGameOfLife app(vl);
 		app.run();
 	}
 	catch (std::exception const& e)
