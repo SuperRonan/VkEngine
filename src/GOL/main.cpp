@@ -287,9 +287,11 @@ namespace vkl
 			exec.preparePresentation(final_view);
 
 			exec.endCommandBufferAndSubmit();
+			exec.waitForCurrentCompletion();
 
 			exec.present();
 
+			exec.waitForCurrentCompletion();
 
 			while (!_main_window->shouldClose())
 			{

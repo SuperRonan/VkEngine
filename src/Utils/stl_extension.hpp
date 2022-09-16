@@ -80,9 +80,9 @@ namespace std
 	}
 
 	template<class Int>
-	Int moduloCeil(Int a, Int b)
+	Int divCeil(Int a, Int b)
 	{
-		return (a + b - 1) % b;
+		return (a + b - 1) / b;
 	}
 
 	template <class T>

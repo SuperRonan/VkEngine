@@ -56,9 +56,9 @@ namespace vkl
 		constexpr VkExtent3D getWorkgroupsDispatchSize()const
 		{
 			const VkExtent3D res = _dispatch_threads ? VkExtent3D{
-				.width = std::moduloCeil(_dispatch_size.width, _program->localSize().width),
-				.height = std::moduloCeil(_dispatch_size.height, _program->localSize().height),
-				.depth = std::moduloCeil(_dispatch_size.depth, _program->localSize().depth),
+				.width = std::divCeil(_dispatch_size.width, _program->localSize().width),
+				.height = std::divCeil(_dispatch_size.height, _program->localSize().height),
+				.depth = std::divCeil(_dispatch_size.depth, _program->localSize().depth),
 			} : _dispatch_size;
 			return res;
 		}
