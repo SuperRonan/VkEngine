@@ -6,6 +6,7 @@ namespace vkl
 	{
 		std::vector<VkImageMemoryBarrier> image_barriers;
 		std::vector<VkBufferMemoryBarrier> buffer_barriers;
+		VkPipelineStageFlags src_stage = 0, dst_stage = 0;
 		for (size_t i = 0; i < _resources.size(); ++i)
 		{
 			auto& r = _resources[i];
@@ -59,12 +60,14 @@ namespace vkl
 					};
 					buffer_barriers.push_back(barrier);
 				}
+				src_stage |= prev._stage;
+				dst_stage |= next._stage;
 			}
 		}
 		if (!image_barriers.empty() || !buffer_barriers.empty())
 		{
 			vkCmdPipelineBarrier(cmd,
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0,
+				src_stage, dst_stage, 0,
 				0, nullptr,
 				(uint32_t)buffer_barriers.size(), buffer_barriers.data(),
 				(uint32_t)image_barriers.size(), image_barriers.data());

@@ -185,6 +185,22 @@ namespace vkl
 				.create_on_construct = true,
 			});
 
+			std::shared_ptr<ComputeCommand> init_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "InitGrid",
+				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/init_grid.comp"),
+				.dispatch_size = extend(_world_size),
+				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.view = current_grid_view,
+						.set = 0,
+						.binding = 0,
+					},
+				},
+			});
+			exec.declare(init_grid);
+
 			std::shared_ptr<ComputeCommand> update_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "UpdateGrid",
@@ -228,14 +244,6 @@ namespace vkl
 			});
 			exec.declare(blit_to_final);
 
-			std::vector<std::shared_ptr<ImageView>> swapchain_images = _main_window->views();
-
-			std::shared_ptr<PrepareForPresetation> prepare_present = std::make_shared<PrepareForPresetation>(PrepareForPresetation::CI{
-				.app = this,
-				.images = swapchain_images,
-			});
-			exec.declare(prepare_present);
-
 			exec.init();
 
 			vkl::Camera2D camera;
@@ -250,6 +258,20 @@ namespace vkl
 			const glm::vec2 move_scale(1.0 / float(_main_window->extent().width), 1.0 / float(_main_window->extent().height));
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
+
+			exec.beginFrame();
+
+			exec.beginCommandBuffer();
+
+			exec.execute(init_grid);
+
+			exec.execute(blit_to_final);
+
+			exec.preparePresentation(final_view);
+
+			exec.endCommandBufferAndSubmit();
+
+			exec.present();
 
 
 			while (!_main_window->shouldClose())
@@ -293,6 +315,8 @@ namespace vkl
 				}
 				
 			}
+
+			exec.waitForCurrentCompletion();
 
 			vkDeviceWaitIdle(_device);
 		}

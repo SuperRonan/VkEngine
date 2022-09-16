@@ -19,6 +19,7 @@ namespace vkl
 
 	Pipeline::Pipeline(VkApplication* app, std::shared_ptr<ComputeProgram> compute_program) :
 		VkObject(app),
+		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
 		_program(compute_program)
 	{
 		VkComputePipelineCreateInfo ci{

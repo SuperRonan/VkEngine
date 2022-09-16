@@ -1,0 +1,39 @@
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0, r8ui) uniform restrict writeonly uimage2D grid;
+
+uint hash(uint x)
+{
+	x = ((x >> 16) ^ x) * 0x45d9f3b;
+	x = ((x >> 16) ^ x) * 0x45d9f3b;
+	x = (x >> 16) ^ x;
+	return x;
+}
+
+float randFloat01(inout uint rng)
+{
+	const uint mask = 0x0000ffff;
+	const uint tmp = hash(rng) & mask;
+	const float res = float(tmp) / float(mask);
+	++rng;
+	return res;
+}
+
+void main()
+{
+	const uvec3 gid = gl_GlobalInvocationID;
+
+	const float p = 0.33;
+
+	const uint seed = hash(hash(gid.x) ^ gid.y);
+
+	uint rng = seed;
+
+	const float xi = randFloat01(rng);
+
+	const uint value = (xi < p) ? 1 : 0;
+
+	imageStore(grid, ivec2(gid.xy), value.xxxx);
+}

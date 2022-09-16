@@ -35,7 +35,7 @@ namespace vkl
 			.semaphore = std::make_shared<Semaphore>(_app),
 			.prev_cb = nullptr,
 		};
-		_window->aquireNextImage(_in_between.semaphore, _in_between.fence);
+		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fence);
 	}
 
 	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present)
@@ -47,6 +47,43 @@ namespace vkl
 		_blit_to_present->setRegions();
 
 		execute(_blit_to_present);
+
+		const ResourceState current_state = _context.getImageState(*blit_target);
+		const ResourceState desired_state = {
+			._access = VK_ACCESS_MEMORY_READ_BIT,
+			._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			._stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // Not sure about this one
+		};
+
+		if (stateTransitionRequiresSynchronization(current_state, desired_state, true))
+		{
+			VkImageMemoryBarrier barrier = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.pNext = nullptr,
+				.srcAccessMask = current_state._access,
+				.dstAccessMask = desired_state._access,
+				.oldLayout = current_state._layout,
+				.newLayout = desired_state._layout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = *blit_target->image(),
+				.subresourceRange = blit_target->range(),
+			};
+
+			vkCmdPipelineBarrier(*_command_buffer_to_submit,
+				current_state._stage, desired_state._stage, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
+			const ResourceState final_state = {
+				._access = VK_ACCESS_MEMORY_READ_BIT,
+				._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // Not sure about this one
+			};
+			_context.setImageState(*blit_target, final_state);
+		}
 	}
 
 	void LinearExecutor::present()

@@ -187,8 +187,8 @@ namespace vkl
 	protected:
 
 		VkPipeline _handle = VK_NULL_HANDLE;
-		VkPipelineBindPoint _binding;
-		std::shared_ptr<Program> _program;
+		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+		std::shared_ptr<Program> _program = nullptr;
 
 	public:
 
