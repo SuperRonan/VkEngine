@@ -24,7 +24,7 @@ namespace vkl
 	{
 	protected:
 
-		VkWindow* _main_window;
+		std::shared_ptr<VkWindow> _main_window;
 
 		VkExtent2D _world_size;
 
@@ -108,7 +108,7 @@ namespace vkl
 				.h = 1024,
 				.resizeable = GLFW_FALSE,
 			};
-			_main_window = new VkWindow(window_ci);
+			_main_window = std::make_shared<VkWindow>(window_ci);
 			//createRenderPass();
 			//createFrameBuffers();
 
@@ -119,7 +119,7 @@ namespace vkl
 
 		virtual ~VkGameOfLife()
 		{
-			delete _main_window;
+			
 		}
 
 		void processInput(bool& pause)

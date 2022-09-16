@@ -4,6 +4,7 @@
 #include "Command.hpp"
 #include "VkWindow.hpp"
 #include <queue>
+#include "TransferCommand.hpp"
 
 namespace vkl
 {
@@ -11,13 +12,18 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<CommandBuffer> _command_buffer_to_submit;
+		std::shared_ptr<VkWindow> _window = nullptr;
+
+		VkWindow::AquireResult _aquired;
+
+		std::shared_ptr<CommandBuffer> _command_buffer_to_submit = nullptr;
 		
-		ResourceStateTracker _resources_state;
+		ResourceStateTracker _resources_state = {};
 
 		ExecutionContext _context;
-		
-		std::vector<std::shared_ptr<Command>> _commands;
+
+		std::shared_ptr<BlitImage> blit_to_final;
+		std::vector<std::shared_ptr<Command>> _commands = {};
 
 		void preprocessCommands();
 
@@ -28,7 +34,7 @@ namespace vkl
 			std::shared_ptr<CommandBuffer> prev_cb = nullptr;
 		};
 
-		void prepareSubmission();
+		void stackInBetween();
 
 		std::queue<InBetween> _previous_in_betweens;
 		InBetween _in_between;
@@ -36,8 +42,9 @@ namespace vkl
 	public:
 
 		template <typename StringLike = std::string>
-		LinearExecutor(VkApplication* app = nullptr, StringLike&& name = {}):
-			VkObject(app, std::forward<StringLike>(name)),
+		LinearExecutor(std::shared_ptr<VkWindow> window , StringLike&& name = {}):
+			VkObject(window->application(), std::forward<StringLike>(name)),
+			_window(window),
 			_context(&_resources_state, nullptr)
 		{}
 
@@ -45,11 +52,15 @@ namespace vkl
 
 		void init();
 
+		void beginFrame();
+
 		void beginCommandBuffer();
+
+		void preparePresentation(std::shared_ptr<ImageView> img_to_present);
 
 		void endCommandBufferAndSubmit();
 
-		void present(VkWindow * window, uint32_t present_index);
+		void present();
 
 		void execute(std::shared_ptr<Command> cmd);
 
