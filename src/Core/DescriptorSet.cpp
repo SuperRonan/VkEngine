@@ -62,7 +62,10 @@ namespace vkl
     void DescriptorSet::destroy()
     {
         assert(_handle);
-        vkFreeDescriptorSets(_app->device(), *_pool, 1, &_handle);
+        if (_pool->flags() & VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
+        {
+            vkFreeDescriptorSets(_app->device(), *_pool, 1, &_handle);
+        }
         _handle = VK_NULL_HANDLE;
     }
     

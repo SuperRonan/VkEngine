@@ -18,6 +18,12 @@ namespace vkl
 
 	void LinearExecutor::init()
 	{
+		_blit_to_present = std::make_shared<BlitImage>(BlitImage::CI{
+			.app = _app,
+			.name = name() + std::string(".BlitToPresent"),
+		});
+		declare(_blit_to_present);
+
 		preprocessCommands(); 
 	}
 
@@ -35,10 +41,12 @@ namespace vkl
 	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present)
 	{
 		assert(!!_command_buffer_to_submit);
-		
 		std::shared_ptr<ImageView> blit_target = _window->view(_aquired.swap_index);
 
-		//vkCmdBlitImage(_command_buffer_to_submit, *img_to_present->image(), )
+		_blit_to_present->setImages(img_to_present, blit_target);
+		_blit_to_present->setRegions();
+
+		execute(_blit_to_present);
 	}
 
 	void LinearExecutor::present()

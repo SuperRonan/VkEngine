@@ -27,6 +27,10 @@ namespace vkl
 
 		BlitImage(CreateInfo const& ci);
 
+		void setImages(std::shared_ptr<ImageView> src, std::shared_ptr<ImageView> dst);
+
+		void setRegions(std::vector<VkImageBlit> const& regions = {});
+
 		virtual void init() override;
 
 		virtual void execute(ExecutionContext& context) override;

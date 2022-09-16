@@ -145,7 +145,7 @@ namespace vkl
 		{
 			bool paused = true;
 
-			LinearExecutor exec(this);
+			LinearExecutor exec(_main_window);
 
 			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(Image::CI{
 				.app = this,
@@ -250,26 +250,7 @@ namespace vkl
 			const glm::vec2 move_scale(1.0 / float(_main_window->extent().width), 1.0 / float(_main_window->extent().height));
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
-			//{
-			//	VkWindow::AquireResult aquired = _main_window->aquireNextImage();
-			//	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-			//	VkSemaphore wait_semaphore = *aquired.semaphore;
-			//	VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
-			//	VkSubmitInfo submission{
-			//		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			//		.waitSemaphoreCount = 1,
-			//		.pWaitSemaphores = &wait_semaphore,
-			//		.pWaitDstStageMask = &wait_stage,
-			//		.commandBufferCount = 1,
-			//		.pCommandBuffers = _commands.data() + aquired.in_flight_index,
-			//		.signalSemaphoreCount = 1,
-			//		.pSignalSemaphores = &render_finished_semaphore,
-			//	};
-			//	VkFence submission_fence = *aquired.fence;
-			//	vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
-			//	_main_window->present(1, &render_finished_semaphore);
-			//}
 
 			while (!_main_window->shouldClose())
 			{
@@ -303,31 +284,7 @@ namespace vkl
 
 				if(!paused || should_render)
 				{
-					//VkWindow::AquireResult aquired = _main_window->aquireNextImage();
-					//VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-					//if (paused)
-					//{
-					//	recordCommandBufferRenderOnly(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
-					//}
-					//else 
-					//{
-					//	recordCommandBufferUpdateAndRender(_commands[aquired.in_flight_index], current_grid_id, _framebuffers[aquired.swap_index], mat_uv_to_grid);
-					//}
-					//VkSemaphore render_finished_semaphore = _render_finished_semaphores[aquired.in_flight_index];
-					//VkSemaphore wait_semaphore = *aquired.semaphore;
-					//VkSubmitInfo submission{
-					//	.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					//	.waitSemaphoreCount = 1,
-					//	.pWaitSemaphores = &wait_semaphore,
-					//	.pWaitDstStageMask = &wait_stage,
-					//	.commandBufferCount = 1,
-					//	.pCommandBuffers = _commands.data() + aquired.in_flight_index,
-					//	.signalSemaphoreCount = 1,
-					//	.pSignalSemaphores = &render_finished_semaphore,
-					//};
-					//VkFence submission_fence = *aquired.fence;
-					//vkQueueSubmit(_queues.graphics, 1, &submission, submission_fence);
-					//_main_window->present(1, &render_finished_semaphore);
+
 					
 					if (!paused)
 					{

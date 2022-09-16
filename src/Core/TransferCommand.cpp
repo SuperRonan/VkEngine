@@ -4,14 +4,19 @@ namespace vkl
 {
 	BlitImage::BlitImage(CreateInfo const& ci):
 		DeviceCommand(ci.app, ci.name),
-		_src(ci.src),
-		_dst(ci.dst),
-		_regions(ci.regions),
 		_filter(ci.filter)
-	{}
-
-	void BlitImage::init()
 	{
+		setImages(ci.src, ci.dst);
+		setRegions(ci.regions);
+	}
+
+	void BlitImage::setImages(std::shared_ptr<ImageView> src, std::shared_ptr<ImageView> dst)
+	{
+		_src = src;
+		_dst = dst;
+
+		_resources.resize(0);
+
 		_resources.push_back(Resource{
 			._images = {_src},
 			._begin_state = ResourceState{
@@ -28,8 +33,12 @@ namespace vkl
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
 			},
 		});
+	}
 
-		if (_regions.empty())
+	void BlitImage::setRegions(std::vector<VkImageBlit> const& regions)
+	{
+		_regions = regions;
+		if (_regions.empty() && !!_src && !!_dst)
 		{
 			_regions.resize(1);
 			VkImageBlit& region = _regions.front();
@@ -43,6 +52,11 @@ namespace vkl
 				.dstOffsets = {makeZeroOffset3D(), convert(_dst->image()->extent())},
 			};
 		}
+	}
+
+	void BlitImage::init()
+	{
+		
 	}
 
 	void BlitImage::execute(ExecutionContext& context)

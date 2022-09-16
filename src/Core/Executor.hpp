@@ -22,7 +22,7 @@ namespace vkl
 
 		ExecutionContext _context;
 
-		std::shared_ptr<BlitImage> blit_to_final;
+		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::vector<std::shared_ptr<Command>> _commands = {};
 
 		void preprocessCommands();

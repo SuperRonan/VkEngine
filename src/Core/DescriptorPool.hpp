@@ -11,6 +11,7 @@ namespace vkl
 		std::shared_ptr<DescriptorSetLayout> _layout = nullptr;
 		std::vector<VkDescriptorPoolSize> _pool_sizes = {};
 		uint32_t _max_sets = 0;
+		VkDescriptorPoolCreateFlags _flags = 0;
 		VkDescriptorPool _handle = VK_NULL_HANDLE;
 
 	public:
@@ -56,5 +57,9 @@ namespace vkl
 			return _layout;
 		}
 
+		constexpr VkDescriptorPoolCreateFlags flags()const
+		{
+			return _flags;
+		}
 	};
 }

@@ -7,6 +7,7 @@ namespace vkl
 		_layout(std::move(other._layout)),
 		_pool_sizes(std::move(other._pool_sizes)),
 		_max_sets(other._max_sets),
+		_flags(0),
 		_handle(std::move(other._handle))
 	{
 		other._handle = VK_NULL_HANDLE;
@@ -40,7 +41,7 @@ namespace vkl
 		VkDescriptorPoolCreateInfo ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			.pNext = nullptr,
-			.flags = 0,
+			.flags = _flags,
 			.maxSets = _max_sets,
 			.poolSizeCount = (uint32_t)_pool_sizes.size(),
 			.pPoolSizes = _pool_sizes.data(),
