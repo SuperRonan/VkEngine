@@ -302,7 +302,7 @@ namespace vkl
 				
 			}
 
-			exec.waitForCurrentCompletion();
+			exec.waitForAllCompletion();
 
 			vkDeviceWaitIdle(_device);
 		}

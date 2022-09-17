@@ -35,6 +35,7 @@ namespace vkl
 			.fence = std::make_shared<Fence>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Fence"),
 			.semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore"),
 			.prev_cb = nullptr,
+			.next_cb = nullptr,
 		};
 		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fence);
 	}
@@ -155,6 +156,8 @@ namespace vkl
 		VkSemaphore sem_to_wait = *_in_between.semaphore;
 		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
+		_in_between.next_cb = _command_buffer_to_submit;
+
 		stackInBetween();
 
 		VkCommandBuffer cb = *_command_buffer_to_submit;
@@ -163,6 +166,7 @@ namespace vkl
 			.fence = std::make_shared<Fence>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Fence"),
 			.semaphore = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore"),
 			.prev_cb = _command_buffer_to_submit,
+			.next_cb = nullptr,
 		};
 
 		VkSemaphore sem_to_signal = *_in_between.semaphore;
@@ -181,6 +185,17 @@ namespace vkl
 		vkQueueSubmit(_app->queues().graphics, 1, &submission, *_in_between.fence);
 
 		_command_buffer_to_submit = nullptr;
+	}
+
+	void LinearExecutor::waitForAllCompletion(uint64_t timeout)
+	{
+		while (!_previous_in_betweens.empty())
+		{
+			InBetween& inb = _previous_in_betweens.front();
+			inb.fence->wait(timeout);
+			_previous_in_betweens.pop();
+		}
+		waitForCurrentCompletion(timeout);
 	}
 
 	void LinearExecutor::waitForCurrentCompletion(uint64_t timeout)

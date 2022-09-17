@@ -34,6 +34,7 @@ namespace vkl
 			std::shared_ptr<Fence> fence = nullptr;
 			std::shared_ptr<Semaphore> semaphore = nullptr;
 			std::shared_ptr<CommandBuffer> prev_cb = nullptr;
+			std::shared_ptr<CommandBuffer> next_cb = nullptr;
 		};
 
 		void stackInBetween();
@@ -67,6 +68,8 @@ namespace vkl
 		void execute(std::shared_ptr<Command> cmd);
 
 		void submit();
+
+		void waitForAllCompletion(uint64_t timeout = UINT64_MAX);
 
 		void waitForCurrentCompletion(uint64_t timeout = UINT64_MAX);
 
