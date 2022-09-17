@@ -24,6 +24,17 @@ namespace vkl
 			.flags = flags,
 		};
 		VK_CHECK(vkCreateFence(_app->device(), &ci, nullptr, &_handle), "Failed to create a fence.");
+		if (!name().empty())
+		{
+			VkDebugUtilsObjectNameInfoEXT fence_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_OBJECT_TYPE_FENCE,
+				.objectHandle = (uint64_t)_handle,
+				.pObjectName = name().data(),
+			};
+			_app->nameObject(fence_name);
+		}
 	}
 
 	void Fence::destroy()

@@ -21,6 +21,13 @@ namespace vkl
 
 		Semaphore(VkApplication* app);
 
+		template <typename StringLike = std::string>
+		Semaphore(VkApplication* app, StringLike&& name) :
+			VkObject(app, std::forward<StringLike>(name))
+		{
+			create();
+		}
+
 		Semaphore(Semaphore const&) = delete;
 
 		constexpr Semaphore(Semaphore&& other) noexcept :

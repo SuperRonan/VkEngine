@@ -21,6 +21,13 @@ namespace vkl
 
 		Fence(VkApplication* app, bool signaled = false);
 
+		template <typename StringLike = std::string>
+		Fence(VkApplication* app, StringLike&& name, bool signaled = false):
+			VkObject(app, std::forward<StringLike>(name))
+		{
+			create(signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0);
+		}
+
 		Fence(Fence const&) = delete;
 
 		constexpr Fence(Fence&& other) noexcept :

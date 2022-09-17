@@ -33,14 +33,18 @@ namespace vkl
 		_pool(std::move(pool)),
 		_level(level)
 	{
-		VkCommandBufferAllocateInfo alloc{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext = nullptr,
-			.commandPool = *_pool,
-			.level = _level,
-			.commandBufferCount = 1,
-		};
-		allocate(alloc);
+		allocate();
+	}
+
+	CommandBuffer::CommandBuffer(CreateInfo const& ci):
+		VkObject(!ci.app ? ci.pool->application() : ci.app, ci.name),
+		_pool(ci.pool),
+		_level(ci.level)
+	{
+		if (ci.allocate_on_construct)
+		{
+			allocate();
+		}
 	}
 	
 	CommandBuffer::~CommandBuffer()
@@ -58,12 +62,32 @@ namespace vkl
 		_handle = VK_NULL_HANDLE;
 	}
 
-	void CommandBuffer::allocate(VkCommandBufferAllocateInfo const& alloc)
+	void CommandBuffer::allocate()
 	{
 		assert(!_handle);
+		
+		VkCommandBufferAllocateInfo alloc{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.commandPool = *_pool,
+			.level = _level,
+			.commandBufferCount = 1,
+		};
 
 		assert(alloc.level == _level);
 		VK_CHECK(vkAllocateCommandBuffers(_app->device(), &alloc, &_handle), "Failed to allocate a Command Buffer.");
+		
+		if (!name().empty())
+		{
+			VkDebugUtilsObjectNameInfoEXT cb_name{
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
+				.objectHandle = (uint64_t)_handle,
+				.pObjectName = name().c_str(),
+			};
+			_app->nameObject(cb_name);
+		}
 	}
 
 	void CommandBuffer::begin(VkCommandBufferUsageFlags usage)

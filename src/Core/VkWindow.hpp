@@ -20,7 +20,6 @@ namespace vkl
 		{	
 			VkApplication* app;
 			std::set<uint32_t> queue_families_indices;
-			uint32_t in_flight_size;
 
 			VkPresentModeKHR target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 

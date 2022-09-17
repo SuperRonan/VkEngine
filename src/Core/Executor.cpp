@@ -29,10 +29,11 @@ namespace vkl
 
 	void LinearExecutor::beginFrame()
 	{
+		++_frame_index;
 		stackInBetween();
 		_in_between = InBetween{
-			.fence = std::make_shared<Fence>(_app),
-			.semaphore = std::make_shared<Semaphore>(_app),
+			.fence = std::make_shared<Fence>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Fence"),
+			.semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore"),
 			.prev_cb = nullptr,
 		};
 		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fence);
@@ -101,7 +102,10 @@ namespace vkl
 	{
 		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
 		assert(!cb);
-		cb = std::make_shared<CommandBuffer>(_app->pools().graphics);
+		cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
+			.name = name() + " Frame # " + std::to_string(_frame_index) + " CommandBuffer",
+			.pool = _app->pools().graphics 
+		});
 		cb->begin();
 		_context.setCommandBuffer(cb);
 	}
@@ -156,8 +160,8 @@ namespace vkl
 		VkCommandBuffer cb = *_command_buffer_to_submit;
 
 		_in_between = InBetween{
-			.fence = std::make_shared<Fence>(_app),
-			.semaphore = std::make_shared<Semaphore>(_app),
+			.fence = std::make_shared<Fence>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Fence"),
+			.semaphore = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore"),
 			.prev_cb = _command_buffer_to_submit,
 		};
 

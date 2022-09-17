@@ -137,6 +137,18 @@ namespace vkl
 
 		VK_CHECK(vkCreateSwapchainKHR(_app->device(), &swap_ci, nullptr, &_swapchain), "Failed to create a swapchain.");
 
+		if (!name().empty())
+		{
+			VkDebugUtilsObjectNameInfoEXT object_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+				.objectHandle = (uint64_t)_swapchain,
+				.pObjectName = name().data(),
+			};
+			_app->nameObject(object_name);
+		}
+
 		_swapchain_image_format = surface_format.format;
 		_swapchain_extent = extent;
 		uint32_t image_count;
@@ -148,7 +160,7 @@ namespace vkl
 		{
 			Image::AssociateInfo ai{
 				.app = _app,
-				.name = std::string("swapchain image #") + std::to_string(i),
+				.name = name() + std::string(" swapchain image #") + std::to_string(i),
 				.image = tmp_images[i],
 				.type = VK_IMAGE_TYPE_2D,
 				.format = format(),
@@ -167,7 +179,7 @@ namespace vkl
 		for (size_t i = 0; i < _swapchain_views.size(); ++i)
 		{
 			ImageView::CI ci{
-				.name = std::string("swapchain image #") + std::to_string(i),
+				.name = name() + std::string(" swapchain view #") + std::to_string(i),
 				.image = _swapchain_images[i],
 				.create_on_construct = true,
 			};

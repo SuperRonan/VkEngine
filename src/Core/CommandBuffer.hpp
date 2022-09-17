@@ -16,6 +16,16 @@ namespace vkl
 
 	public:
 
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<CommandPool> pool = nullptr;
+			VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			bool allocate_on_construct = true;
+		};
+		using CI = CreateInfo;
+
 		constexpr CommandBuffer(VkApplication * app = nullptr) noexcept:
 			VkObject(app)
 		{}
@@ -23,6 +33,8 @@ namespace vkl
 		CommandBuffer(VkApplication* app, VkCommandBuffer handle, std::shared_ptr<CommandPool> pool, VkCommandBufferLevel level);
 
 		CommandBuffer(std::shared_ptr<CommandPool> pool, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+		CommandBuffer(CreateInfo const& ci);
 
 		CommandBuffer(CommandBuffer const&) = delete;
 		CommandBuffer& operator=(CommandBuffer const&) = delete;
@@ -33,7 +45,7 @@ namespace vkl
 
 		~CommandBuffer();
 
-		void allocate(VkCommandBufferAllocateInfo const& alloc);
+		void allocate();
 
 		void destroy();
 

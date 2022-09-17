@@ -432,7 +432,10 @@ namespace vkl
 	void VkApplication::nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name)
 	{
 		//std::cout << "nameObject: not yet implemented (" << std::hex << object_to_name.object << std::dec << " -> " << object_to_name.pObjectName << ")\n";
-		VK_CHECK(_vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
+		if (_enable_valid_layers)
+		{
+			VK_CHECK(_vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
+		}
 	}
 
 	void VkApplication::initGLFW()

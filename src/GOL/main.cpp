@@ -42,7 +42,6 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.in_flight_size = 2,
 				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Game of Life",
 				.w = 2048,

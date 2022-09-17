@@ -12,6 +12,8 @@ namespace vkl
 	{
 	protected:
 
+		size_t _frame_index = size_t(-1);
+
 		std::shared_ptr<VkWindow> _window = nullptr;
 
 		VkWindow::AquireResult _aquired;
