@@ -125,7 +125,7 @@ namespace vkl
 		// Removed finished in betweens
 		while(!_previous_in_betweens.empty())
 		{
-			InBetween& inb = _previous_in_betweens.back();
+			InBetween& inb = _previous_in_betweens.front();
 			assert(!!inb.fence);
 			const VkResult res = vkGetFenceStatus(inb.fence->device(), *inb.fence);
 			if (res == VK_SUCCESS)
