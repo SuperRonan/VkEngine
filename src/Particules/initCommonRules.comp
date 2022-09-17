@@ -1,0 +1,59 @@
+#version 460 core
+
+#include "common.glsl"
+#include "../Shaders/random.glsl"
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0) buffer writeonly restrict CommonRulesBuffer
+{
+    CommonRuleBuffer rules;
+} common_rules;
+
+layout(push_constant) PushConstants
+{
+    uint seed;
+} _pc;
+
+void main()
+{
+    const uvec2 gid = gl_GlobalInvocationID.xy;
+
+    if(all(lessThan(gid, uvec2(N_TYPES_OF_PARTICULES))))
+    {
+        const bool same_type = gid.x == gid.y;
+        const uint seed = (_pc.seed) ^ hash(gid);
+        uint rng = hash(seed);
+
+        float g = randFloat(rng, 0.5, 1.5);
+        if(!same_type)
+        {
+            if((randUint(rng) & 1) == 0)
+            {
+                g = -g; 
+            }
+        }
+        float mu = randFloat(rng, 1, 1.1);
+        float sigma = randFloat(rng, 0.05, 0.06);
+
+        ForceDescription fd;
+        fd.intensity_inv_linear_inv_linear2_contant_linear = vec4(0, 0, 0, 0);
+        fd.intensity_gauss_mu_sigma = vec4(g, mu, sigma, 0);
+
+        common_rules.rules.force_descriptions[forceIndex(gid.x, gid.y)] = fd;
+
+        if(same_type)
+        [
+            ParticuleCommonProperties cmp;
+            cmp.color = vec4(
+                randFloat(rng),
+                randFloat(rng),
+                randFloat(rng),
+                1.0
+            );
+            common_rules.rules.particules_properties[gid.x] = cmp;
+        ]
+        
+
+    }
+}

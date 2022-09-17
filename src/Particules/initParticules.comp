@@ -1,0 +1,26 @@
+#version 460 core
+
+#include "common.glsl"
+#include "../Shaders/random.glsl"
+
+layout(local_size_x = 128) in;
+
+layout(set = 0, binding = 0, std430) buffer writeonly restrict Particulesbuffer
+{
+	Particule particules[];
+} prev;
+
+layout(push_constant) PushConstants
+{
+    uint number_of_particules;
+    uint seed;
+} _pc;
+
+void main()
+{
+    const uint gid = gl_GlobalInvocationID.x;
+    if(gid < _pc.number_of_particules)
+    {
+        
+    }
+}

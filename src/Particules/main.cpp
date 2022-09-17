@@ -146,67 +146,6 @@ namespace vkl
 			float radius;
 		};
 
-#define N_TYPES_OF_PARTICULES 4
-
-		struct ParticuleCommonProperties
-		{
-			glm::vec4 color;
-		};
-
-		struct ForceDescription
-		{
-			glm::vec4 intensity_inv_linear_inv_linear2_contant_linear;
-			glm::vec4 intensity_gauss_mu_sigma;
-		};
-
-		void createCommonRuleBuffer()
-		{
-			struct CommonRuleBuffer
-			{
-				ParticuleCommonProperties particules_properties[N_TYPES_OF_PARTICULES];
-				ForceDescription force_descriptions[N_TYPES_OF_PARTICULES * N_TYPES_OF_PARTICULES];
-			};
-
-			const std::uniform_real_distribution<float> u01(0, 1);
-			const std::uniform_real_distribution<float> um11(-1, 1);
-			const size_t seed = 0x1257914347458;
-			std::mt19937_64 rng(seed);
-
-			CommonRuleBuffer common_buffer;
-
-			for (size_t type = 0; type < N_TYPES_OF_PARTICULES; ++type)
-			{
-				common_buffer.particules_properties[type] = ParticuleCommonProperties{
-					.color = glm::vec4(u01(rng), u01(rng), u01(rng), 1),
-				};
-
-				for (size_t other = 0; other < N_TYPES_OF_PARTICULES; ++other)
-				{
-					
-					const float f1 = 0, f2 = 0, f3 = 0.0, f4 = 0;
-
-					const float g = (type == other ? (u01(rng) + 0.5) : ((u01(rng) + 0.5) * (rng() % 2 ? 1.0 : -1.0))) * 2;
-					const float mu = (u01(rng) + 1) * 0.1;
-					const float sigma = (u01(rng) + 1) * 0.00 + 0.05;
-					
-					common_buffer.force_descriptions[type * N_TYPES_OF_PARTICULES + other] = ForceDescription{
-						.intensity_inv_linear_inv_linear2_contant_linear = glm::vec4(f1, f2, f3, f4),
-						.intensity_gauss_mu_sigma = glm::vec4(g, mu, sigma, 0),
-					};
-					
-				}
-			}
-
-			_rule_buffer = Buffer(this);
-			_rule_buffer.createBuffer(sizeof(CommonRuleBuffer), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-			CommandBuffer cmd(_pools.graphics);
-			cmd.begin();
-			auto* sb = _rule_buffer.copyToStaging(&common_buffer, sizeof(common_buffer));
-			_rule_buffer.recordCopyStagingToBuffer(cmd, sb);
-			cmd.end();
-			cmd.submitAndWait(_queues.graphics);
-			_staging_pool.releaseStagingBuffer(sb);
-		}
 
 		void createStateBuffers()
 		{
