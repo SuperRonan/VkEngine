@@ -8,6 +8,7 @@
 #include "ImageView.hpp"
 #include "Semaphore.hpp"
 #include "Fence.hpp"
+#include <chrono>
 
 namespace vkl
 {
@@ -56,6 +57,9 @@ namespace vkl
 		};
 
 		FrameInfo _current_frame_info;
+
+		std::chrono::time_point<std::chrono::system_clock> _present_time_point = std::chrono::system_clock::now();
+		size_t _present_frame = 0;
 
 		static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
 

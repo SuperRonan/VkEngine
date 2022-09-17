@@ -198,7 +198,7 @@ namespace vkl
 		}
 	}
 
-	void VkWindow:: init(CreateInfo const& ci)
+	void VkWindow::init(CreateInfo const& ci)
 	{
 		_queues_families_indices = ci.queue_families_indices;
 		_width = ci.w;
@@ -255,8 +255,8 @@ namespace vkl
 		_window = nullptr;
 	}
 
-	VkWindow::VkWindow(CreateInfo const& ci):
-		VkObject(ci.app)
+	VkWindow::VkWindow(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name)
 	{
 		init(ci);
 	}
@@ -364,6 +364,23 @@ namespace vkl
 		{
 			throw std::runtime_error("Failed to present a swapchain image.");
 		}
+
+		{
+			const decltype(_present_time_point) now = std::chrono::system_clock::now();
+			const auto dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - _present_time_point);
+			if (dt_ms > std::chrono::milliseconds(1000))
+			{
+				const int fps = (1000 * (_current_frame - _present_frame)) / float(dt_ms.count());
+
+				std::string name_to_set = name() + " [" + std::to_string(fps) + " fps]";
+				glfwSetWindowTitle(_window, name_to_set.c_str());
+				
+				_present_time_point = now;
+				_present_frame = _current_frame;
+
+			}
+		}
+
 		_current_frame = (_current_frame + 1);
 	}
 }
