@@ -171,7 +171,7 @@ namespace vkl
 
 		if (!_push_constants_data.empty())
 		{
-			VkPipelineStageFlags pc_stages = 0;
+			VkShaderStageFlags pc_stages = 0;
 			for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
 			{
 				pc_stages |= pc_range.stageFlags;

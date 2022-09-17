@@ -193,6 +193,13 @@ namespace vkl
 
 		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context) = 0;
 
+		template<typename T>
+		void setPushConstantsData(T const& t)
+		{
+			_push_constants_data.resize(sizeof(T));
+			std::memcpy(_push_constants_data.data(), (void*)(&t), sizeof(T));
+		}
+
 		virtual void init() override = 0;
 
 		virtual void execute(ExecutionContext& context) override = 0;

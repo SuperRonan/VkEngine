@@ -240,10 +240,13 @@ namespace vkl
 			const glm::vec2 move_scale(1.0 / float(_main_window->extent().width), 1.0 / float(_main_window->extent().height));
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
+			glm::mat4 mat_for_render = mat_uv_to_grid;
+
 
 			exec.beginFrame();
 			exec.beginCommandBuffer();
 			exec.execute(init_grid);
+			render_to_final->setPushConstantsData(mat_for_render);
 			exec.execute(render_to_final);
 			exec.preparePresentation(final_view);
 			exec.endCommandBufferAndSubmit();
@@ -290,6 +293,8 @@ namespace vkl
 						exec.execute(copy_back_to_prev);
 						exec.execute(update_grid);
 					}
+					mat_for_render = mat_uv_to_grid;
+					render_to_final->setPushConstantsData(mat_for_render);
 					exec.execute(render_to_final);
 					exec.preparePresentation(final_view);
 					exec.endCommandBufferAndSubmit();

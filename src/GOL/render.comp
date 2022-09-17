@@ -6,10 +6,19 @@ layout(set = 0, binding = 0) uniform usampler2D grid;
 
 layout(set = 0, binding = 1, rgba8) uniform restrict writeonly image2D target;
 
+layout(push_constant) uniform PushConstants
+{
+    mat4 matrix;
+} _pc;
+
 void main()
 {
 	const uvec3 gid = gl_GlobalInvocationID;
-    const vec2 uv = vec2(gid.xy) / vec2(imageSize(target));
+    vec2 uv = vec2(gid.xy) / vec2(imageSize(target));
+
+    uv = (uv - 0.5);
+
+    uv = (mat3(_pc.matrix) * vec3(uv, 1)).xy;
 
     const uint bit = textureLod(grid, uv, 0).x;
     const vec4 value = float(bit).xxxx;
