@@ -78,12 +78,12 @@ namespace vkl
 		
 	};
 
-	class PrepareForPresetation : public DeviceCommand
+	class CopyBuffer : public DeviceCommand
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageView>> _images = {};
-		uint32_t _present_index = 0;
+		std::shared_ptr<Buffer> _src;
+		std::shared_ptr<Buffer> _dst;
 
 	public:
 
@@ -91,21 +91,17 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<std::shared_ptr<ImageView>> images = {};
+			std::shared_ptr<Buffer> src = nullptr;
+			std::shared_ptr<Buffer> dst = nullptr;
+			// TODO copy range
 		};
 
 		using CI = CreateInfo;
 
-		PrepareForPresetation(CreateInfo const& ci);
+		CopyBuffer(CreateInfo const& ci);
 
 		virtual void init() override;
 
 		virtual void execute(ExecutionContext& context) override;
-
-		constexpr void setIndex(uint32_t i)
-		{
-			_present_index = i;
-		}
-
 	};
 }

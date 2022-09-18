@@ -200,6 +200,8 @@ namespace vkl
 
 		virtual void run() override
 		{
+			
+
 			bool paused = true;
 
 			vkl::Camera2D camera;
