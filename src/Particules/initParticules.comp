@@ -8,12 +8,13 @@ layout(local_size_x = 128) in;
 layout(set = 0, binding = 0, std430) buffer writeonly restrict Particulesbuffer
 {
 	Particule particules[];
-} prev;
+} particules;
 
 layout(push_constant) PushConstants
 {
     uint number_of_particules;
     uint seed;
+    vec2 world_size;
 } _pc;
 
 void main()
@@ -21,6 +22,18 @@ void main()
     const uint gid = gl_GlobalInvocationID.x;
     if(gid < _pc.number_of_particules)
     {
-        
+        const uint seed = _pc.seed ^ hash(gid);
+        uint rng = hash(seed);
+
+        Particule p;
+        p.velocity = vec2(0);
+        p.radius = 0.02; 
+
+        p.position.x = randFloat(rng, 0, _pc.world_size.x);
+        p.position.y = randFloat(rng, 0, _pc.world_size.y);
+
+        p.type = randUint(rng) % N_TYPES_OF_PARTICULES;
+
+        particules.particules[gid] = p;
     }
 }
