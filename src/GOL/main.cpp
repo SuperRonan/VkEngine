@@ -42,7 +42,7 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
+				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Game of Life",
 				.w = 2048,
 				.h = 1024,
@@ -53,7 +53,7 @@ namespace vkl
 			//createFrameBuffers();
 
 			//_world_size = _main_window->extent();
-			_world_size = VkExtent2D(_main_window->extent().width / 2, _main_window->extent().height / 2);
+			_world_size = VkExtent2D(_main_window->extent().width * 16, _main_window->extent().height * 16);
 
 		}
 
@@ -87,12 +87,15 @@ namespace vkl
 
 			LinearExecutor exec(_main_window);
 
+			const VkExtent2D grid_size = _world_size;
+			const VkExtent2D grid_packed_size = {.width = std::divCeil(grid_size.width, 8u), .height = grid_size.height};
+
 			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(Image::CI{
 				.app = this,
 				.name = "grid_storage_image",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8_UINT,
-				.extent = VkExtent3D{.width = _world_size.width, .height = _world_size.height, .depth = 1},
+				.extent = extend(grid_packed_size),
 				.layers = 2,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -129,7 +132,7 @@ namespace vkl
 				.app = this,
 				.name = "InitGrid",
 				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/init_grid.comp"),
-				.dispatch_size = extend(_world_size),
+				.dispatch_size = extend(grid_packed_size),
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -145,7 +148,7 @@ namespace vkl
 				.app = this,
 				.name = "UpdateGrid",
 				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/update.comp"),
-				.dispatch_size = extend(_world_size),
+				.dispatch_size = extend(grid_packed_size),
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -185,26 +188,6 @@ namespace vkl
 				.create_on_construct = true,
 			});
 
-			VkSamplerCreateInfo ci{
-				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-				.magFilter = VK_FILTER_NEAREST,
-				//.magFilter = VK_FILTER_LINEAR,
-				.minFilter = VK_FILTER_NEAREST,
-				//.minFilter = VK_FILTER_LINEAR,
-				.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-				.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-				.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-				.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				.anisotropyEnable = VK_TRUE,
-				.maxAnisotropy = 16,
-				.maxLod = 1,
-				.unnormalizedCoordinates = VK_FALSE,
-			};
-
-			_grid_sampler = Sampler(this, ci);
-
-			std::shared_ptr<Sampler> grid_sampler = std::make_shared<Sampler>(std::move(_grid_sampler));
-
 			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "RenderToFinal",
@@ -214,7 +197,6 @@ namespace vkl
 				.bindings = {
 					Binding{
 						.view = current_grid_view,
-						.sampler = grid_sampler,
 						.name = "grid",
 					},
 					Binding{
@@ -244,6 +226,7 @@ namespace vkl
 
 			exec.beginFrame();
 			exec.beginCommandBuffer();
+			init_grid->setPushConstantsData(std::hash<uint32_t>{}(uint32_t(12)));
 			exec.execute(init_grid);
 			render_to_final->setPushConstantsData(mat_for_render);
 			exec.execute(render_to_final);
