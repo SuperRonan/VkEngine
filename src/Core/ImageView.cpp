@@ -12,8 +12,19 @@ namespace vkl
 			.components = _components,
 			.subresourceRange = _range,
 		};
-		std::cout << "Creating image view " << name() << "\n";
 		VK_CHECK(vkCreateImageView(_app->device(), &ci, nullptr, &_view), "Failed to create an image view.");
+
+		if (!name().empty())
+		{
+			VkDebugUtilsObjectNameInfoEXT view_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+				.objectHandle = (uint64_t)_view,
+				.pObjectName = name().c_str(),
+			};
+			_app->nameObject(view_name);
+		}
 	}
 
 	void ImageView::destroyView()

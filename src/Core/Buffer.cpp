@@ -43,6 +43,18 @@ namespace vkl
 		};
 
 		VK_CHECK(vmaCreateBuffer(_allocator, &ci, &alloc, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
+
+		if (!name().empty())
+		{
+			VkDebugUtilsObjectNameInfoEXT buffer_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_OBJECT_TYPE_BUFFER,
+				.objectHandle = (uint64_t)_buffer,
+				.pObjectName = name().c_str(),
+			};
+			_app->nameObject(buffer_name);
+		}
 	}
 
 	void Buffer::destroyBuffer()
