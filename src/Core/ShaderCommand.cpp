@@ -165,10 +165,12 @@ namespace vkl
 	{
 		vkCmdBindPipeline(cmd, _pipeline->binding(), *_pipeline);
 
-		std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
-		for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
-		vkCmdBindDescriptorSets(cmd, _pipeline->binding(), _pipeline->program()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
-
+		if (!_desc_sets.empty())
+		{
+			std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
+			for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
+			vkCmdBindDescriptorSets(cmd, _pipeline->binding(), _pipeline->program()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
+		}
 		if (!_push_constants_data.empty())
 		{
 			VkShaderStageFlags pc_stages = 0;

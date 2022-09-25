@@ -3,7 +3,7 @@
 
 namespace vkl
 {
-	Framebuffer::Framebuffer(std::vector<std::shared_ptr<ImageView>>&& textures, VkRenderPass render_pass) :
+	Framebuffer::Framebuffer(std::vector<std::shared_ptr<ImageView>>&& textures, std::shared_ptr<VkRenderPass> render_pass) :
 		VkObject(textures.front()->application()),
 		_textures(std::move(textures)),
 		_render_pass(render_pass)
@@ -15,7 +15,7 @@ namespace vkl
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.renderPass = _render_pass,
+			.renderPass = *_render_pass,
 			.attachmentCount = (uint32_t)views.size(),
 			.pAttachments = views.data(),
 			.width = _textures.front()->image()->extent().width,
@@ -24,6 +24,16 @@ namespace vkl
 		};
 
 		VK_CHECK(vkCreateFramebuffer(_app->device(), &ci, nullptr, &_handle), "Failed to create a Framebuffer.");
+	}
+
+	Framebuffer::Framebuffer(Framebuffer&& other) noexcept :
+		VkObject(std::move(other)),
+		_textures(std::move(other._textures)),
+		_render_pass(std::move(other._render_pass)),
+		_handle(other._handle)
+	{
+		other._render_pass = nullptr;
+		other._handle = VK_NULL_HANDLE;
 	}
 
 	Framebuffer& Framebuffer::operator=(Framebuffer&& other) noexcept

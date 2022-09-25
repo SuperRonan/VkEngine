@@ -26,6 +26,8 @@ namespace vkl
 			std::vector<VkPipelineShaderStageCreateInfo> _shaders;
 
 			std::shared_ptr<GraphicsProgram> _program;
+
+			std::string name = {};
 			
 			constexpr void setViewport(std::vector<VkViewport>&& viewports, std::vector<VkRect2D>&& scissors)
 			{
@@ -173,7 +175,7 @@ namespace vkl
 			return depth_stencil;
 		}
 
-		constexpr static VkPipelineColorBlendAttachmentState BlenAttachementNoBlending()
+		constexpr static VkPipelineColorBlendAttachmentState BlendAttachementNoBlending()
 		{
 			VkPipelineColorBlendAttachmentState color_blend_attachement{
 				.blendEnable = VK_FALSE,
@@ -210,9 +212,9 @@ namespace vkl
 			other._handle = VK_NULL_HANDLE;
 		}
 
-		Pipeline(VkApplication* app, GraphicsCreateInfo & ci);
+		Pipeline(GraphicsCreateInfo & ci);
 
-		Pipeline(VkApplication* app, std::shared_ptr<ComputeProgram> compute_program);
+		Pipeline(std::shared_ptr<ComputeProgram> compute_program, std::string const& name = {});
 
 		Pipeline& operator=(Pipeline const&) = delete;
 

@@ -12,7 +12,7 @@ namespace vkl
 	protected:
 
 		std::vector<std::shared_ptr<ImageView>> _textures;
-		VkRenderPass _render_pass = VK_NULL_HANDLE;
+		std::shared_ptr<VkRenderPass> _render_pass = nullptr;
 		VkFramebuffer _handle = VK_NULL_HANDLE;
 
 	public:
@@ -21,19 +21,11 @@ namespace vkl
 			VkObject(app)
 		{}
 
-		Framebuffer(std::vector<std::shared_ptr<ImageView>>&& textures, VkRenderPass render_pass);
+		Framebuffer(std::vector<std::shared_ptr<ImageView>>&& textures, std::shared_ptr<VkRenderPass> render_pass);
 
 		Framebuffer(Framebuffer const&) = delete;
 
-		constexpr Framebuffer(Framebuffer&& other) noexcept :
-			VkObject(std::move(other)),
-			_textures(std::move(other._textures)),
-			_render_pass(other._render_pass),
-			_handle(other._handle)
-		{
-			other._render_pass = VK_NULL_HANDLE;
-			other._handle = VK_NULL_HANDLE;
-		}
+		Framebuffer(Framebuffer&& other) noexcept;
 
 
 		~Framebuffer();
@@ -57,6 +49,16 @@ namespace vkl
 		constexpr auto framebuffer()const
 		{
 			return handle();
+		}
+
+		constexpr auto& renderPass()
+		{
+			return _render_pass;
+		}
+
+		constexpr const auto& renderPass()const
+		{
+			return _render_pass;
 		}
 
 		constexpr const auto& textures()const

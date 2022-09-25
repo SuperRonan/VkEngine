@@ -10,15 +10,15 @@ namespace vkl
 		}
 	}
 
-	Pipeline::Pipeline(VkApplication* app, GraphicsCreateInfo & ci) :
-		VkObject(app),
+	Pipeline::Pipeline(GraphicsCreateInfo & ci) :
+		VkObject(ci._program->application(), ci.name),
 		_program(ci._program)
 	{
 		createPipeline(ci._pipeline_ci);
 	}
 
-	Pipeline::Pipeline(VkApplication* app, std::shared_ptr<ComputeProgram> compute_program) :
-		VkObject(app),
+	Pipeline::Pipeline(std::shared_ptr<ComputeProgram> compute_program, std::string const& name) :
+		VkObject(compute_program->application(), name),
 		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
 		_program(compute_program)
 	{

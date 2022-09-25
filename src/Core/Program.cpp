@@ -203,7 +203,7 @@ namespace vkl
 			return _fragment->application();
 	}
 
-	GraphicsProgram::GraphicsProgram(CreateInfo&& ci) :
+	GraphicsProgram::GraphicsProgram(CreateInfo const& ci) :
 		Program(ci.getApplication()),
 		_ci(std::move(ci))
 	{

@@ -91,6 +91,31 @@ namespace vkl
 		};
 	}
 
+	constexpr VkOffset3D extend(VkOffset2D const& o2, int z = 0)
+	{
+		return VkOffset3D{
+			.x = o2.x,
+			.y = o2.y,
+			.z = z,
+		};
+	}
+	
+	constexpr VkExtent2D extract(VkExtent3D e3)
+	{
+		return VkExtent2D{
+			.width = e3.width,
+			.height = e3.height,
+		};
+	}
+
+	constexpr VkOffset2D extract(VkOffset2D o2)
+	{
+		return VkOffset2D{
+			.x = o2.x,
+			.y = o2.y,
+		};
+	}
+
 	constexpr VkImageViewType getDefaultViewTypeFromImageType(VkImageType type)
 	{
 		switch (type)

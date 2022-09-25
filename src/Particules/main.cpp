@@ -200,7 +200,15 @@ namespace vkl
 
 		virtual void run() override
 		{
+			uint32_t particule_size = sizeof(Particule);
+			uint32_t num_particules = 1024;
+			glm::vec2 world_size(2.0f, 2.0f);
 			
+
+			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
+				.app = this,
+				.name = "CurrentParticulesBuffer",
+			});
 
 			bool paused = true;
 

@@ -110,7 +110,7 @@ namespace vkl
 
 	public:
 
-		GraphicsProgram(CreateInfo&& ci);
+		GraphicsProgram(CreateInfo const& ci);
 
 	};
 
