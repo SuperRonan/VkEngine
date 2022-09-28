@@ -32,12 +32,13 @@ namespace vkl
 		++_frame_index;
 		stackInBetween();
 		_in_between = InBetween{
-			.fence = std::make_shared<Fence>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Fence"),
-			.semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore"),
 			.prev_cb = nullptr,
 			.next_cb = nullptr,
+			.fences = {std::make_shared<Fence>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Fence")},
+			.semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore"),
 		};
-		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fence);
+		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fences[0]);
+		int _ = 0;
 	}
 
 	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present)
@@ -127,24 +128,31 @@ namespace vkl
 		while(!_previous_in_betweens.empty())
 		{
 			InBetween& inb = _previous_in_betweens.front();
-			assert(!!inb.fence);
-			const VkResult res = vkGetFenceStatus(inb.fence->device(), *inb.fence);
-			if (res == VK_SUCCESS)
+			assert(!inb.fences.empty());
+			bool all_success = true;
+			for (auto& fence : inb.fences)
+			{
+				const VkResult res = vkGetFenceStatus(fence->device(), *fence);
+				if (res == VK_NOT_READY)
+				{
+					all_success = false;
+					break;
+				}
+				// TODO check device lost
+			}
+			if(all_success)
 			{
 				// We can remove the inb
+				inb = {};
 				_previous_in_betweens.pop();
 			}
-			else if(res == VK_NOT_READY)
+			else
 			{
 				break;
 			}
-			else // == VK_ERROR_DEVICE_LOST
-			{
-				assert(false);
-			}
 		}
 		// Stack the in between
-		if (!!_in_between.fence)
+		if (!_in_between.fences.empty())
 		{
 			_previous_in_betweens.push(_in_between);
 			_in_between = InBetween{};
@@ -155,18 +163,20 @@ namespace vkl
 	{
 		VkSemaphore sem_to_wait = *_in_between.semaphore;
 		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		std::shared_ptr<Fence> submit_fence = std::make_shared<Fence>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Fence");
 
 		_in_between.next_cb = _command_buffer_to_submit;
+		_in_between.fences.push_back(submit_fence);
 
 		stackInBetween();
 
 		VkCommandBuffer cb = *_command_buffer_to_submit;
 
 		_in_between = InBetween{
-			.fence = std::make_shared<Fence>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Fence"),
-			.semaphore = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore"),
 			.prev_cb = _command_buffer_to_submit,
 			.next_cb = nullptr,
+			.fences = {submit_fence},
+			.semaphore = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore"),
 		};
 
 		VkSemaphore sem_to_signal = *_in_between.semaphore;
@@ -182,7 +192,7 @@ namespace vkl
 			.pSignalSemaphores = &sem_to_signal,
 		};
 
-		vkQueueSubmit(_app->queues().graphics, 1, &submission, *_in_between.fence);
+		vkQueueSubmit(_app->queues().graphics, 1, &submission, *_in_between.fences[0]);
 
 		_command_buffer_to_submit = nullptr;
 	}
@@ -192,7 +202,10 @@ namespace vkl
 		while (!_previous_in_betweens.empty())
 		{
 			InBetween& inb = _previous_in_betweens.front();
-			inb.fence->wait(timeout);
+			for (auto& fence : inb.fences)
+			{
+				fence->wait(timeout);
+			}
 			_previous_in_betweens.pop();
 		}
 		waitForCurrentCompletion(timeout);
@@ -200,9 +213,9 @@ namespace vkl
 
 	void LinearExecutor::waitForCurrentCompletion(uint64_t timeout)
 	{
-		if (!!_in_between.fence)
+		if (!_in_between.fences.empty())
 		{
-			_in_between.fence->wait(timeout);
+			_in_between.fences.back()->wait(timeout);
 		}
 	}
 }

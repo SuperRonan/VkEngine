@@ -44,8 +44,8 @@ namespace vkl
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Game of Life",
-				.w = 2048,
-				.h = 1024,
+				.w = 1024,
+				.h = 512,
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
