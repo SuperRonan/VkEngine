@@ -3,7 +3,7 @@
 
 namespace vkl
 {
-	Framebuffer::Framebuffer(std::vector<std::shared_ptr<ImageView>>&& textures, std::shared_ptr<VkRenderPass> render_pass) :
+	Framebuffer::Framebuffer(std::vector<std::shared_ptr<ImageView>> const& textures, std::shared_ptr<RenderPass> render_pass) :
 		VkObject(textures.front()->application()),
 		_textures(std::move(textures)),
 		_render_pass(render_pass)
@@ -57,6 +57,6 @@ namespace vkl
 	{
 		vkDestroyFramebuffer(_app->device(), _handle, nullptr);
 		_handle = VK_NULL_HANDLE;
-		_render_pass = VK_NULL_HANDLE;
+		_render_pass = nullptr;
 	}
 }

@@ -2,6 +2,7 @@
 
 #include "VkApplication.hpp"
 #include "ImageView.hpp"
+#include "RenderPass.hpp"
 #include <memory>
 #include <vector>
 
@@ -12,7 +13,7 @@ namespace vkl
 	protected:
 
 		std::vector<std::shared_ptr<ImageView>> _textures;
-		std::shared_ptr<VkRenderPass> _render_pass = nullptr;
+		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		VkFramebuffer _handle = VK_NULL_HANDLE;
 
 	public:
@@ -20,8 +21,8 @@ namespace vkl
 		constexpr Framebuffer(VkApplication * app = nullptr):
 			VkObject(app)
 		{}
-
-		Framebuffer(std::vector<std::shared_ptr<ImageView>>&& textures, std::shared_ptr<VkRenderPass> render_pass);
+		// TODO universal ref
+		Framebuffer(std::vector<std::shared_ptr<ImageView>> const& textures, std::shared_ptr<RenderPass> render_pass);
 
 		Framebuffer(Framebuffer const&) = delete;
 

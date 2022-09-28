@@ -8,7 +8,7 @@ namespace vkl
 		_dispatch_size(ci.dispatch_size),
 		_dispatch_threads(ci.dispatch_threads)
 	{
-		_pipeline = std::make_shared<Pipeline>(_app, _program);
+		_pipeline = std::make_shared<Pipeline>(_program);
 	}
 
 	void ComputeCommand::init()
