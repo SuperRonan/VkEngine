@@ -31,10 +31,10 @@ namespace vkl
 
 		struct InBetween
 		{
-			std::shared_ptr<Fence> fence = nullptr;
-			std::shared_ptr<Semaphore> semaphore = nullptr;
 			std::shared_ptr<CommandBuffer> prev_cb = nullptr;
 			std::shared_ptr<CommandBuffer> next_cb = nullptr;
+			std::vector<std::shared_ptr<Fence>> fences = {};
+			std::shared_ptr<Semaphore> semaphore = nullptr;
 		};
 
 		void stackInBetween();

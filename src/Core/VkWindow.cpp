@@ -191,11 +191,11 @@ namespace vkl
 
 	void VkWindow::createSynchObjects()
 	{
-		_image_in_flight_fence.resize(_swapchain_images.size(), nullptr);
-		for (size_t i = 0; i < _swapchain_images.size(); ++i)
-		{
-			_image_in_flight_fence[i] = std::make_shared<Fence>(_app, true);
-		}
+		//_image_in_flight_fence.resize(_swapchain_images.size(), nullptr);
+		//for (size_t i = 0; i < _swapchain_images.size(); ++i)
+		//{
+		//	_image_in_flight_fence[i] = std::make_shared<Fence>(_app, true);
+		//}
 	}
 
 	void VkWindow::init(CreateInfo const& ci)
@@ -307,15 +307,15 @@ namespace vkl
 	}
 
 	VkWindow::AquireResult::AquireResult() :
-		success(VK_FALSE),
-		semaphore(VK_NULL_HANDLE)
+		success(VK_FALSE)
+		//semaphore(VK_NULL_HANDLE)
 	{}
 
-	VkWindow::AquireResult::AquireResult(uint32_t swap_index, std::shared_ptr<Semaphore> semaphore, std::shared_ptr<Fence> fence) :
+	VkWindow::AquireResult::AquireResult(uint32_t swap_index) :
 		success(VK_TRUE),
-		swap_index(swap_index),
-		semaphore(std::move(semaphore)),
-		fence(std::move(fence))
+		swap_index(swap_index)
+		//semaphore(std::move(semaphore)),
+		//fence(std::move(fence))
 	{}
 
 	VkWindow::AquireResult VkWindow::aquireNextImage(std::shared_ptr<Semaphore> semaphore_to_signal, std::shared_ptr<Fence> _fence_to_signal)
@@ -341,7 +341,7 @@ namespace vkl
 		}
 		_image_in_flight_fence[image_index] = _in_flight_fence[_current_frame];
 		_image_in_flight_fence[image_index]->reset();*/
-		return AquireResult(image_index, semaphore_to_signal, _fence_to_signal);
+		return AquireResult(image_index);
 	}
 
 	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores)
