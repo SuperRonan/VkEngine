@@ -61,15 +61,41 @@ namespace vkl
 		_framebuffer = std::make_shared<Framebuffer>(_attachements, _render_pass);
 	}
 
+	void GraphicsCommand::declareGraphicsResources()
+	{
+		for (size_t i = 0; i < _framebuffer->size(); ++i)
+		{
+			std::shared_ptr<ImageView> view = _framebuffer->textures()[i];
+			_resources.push_back(Resource{
+				._images = {view},
+				._begin_state = ResourceState{
+					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
+					._layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				},
+				._end_state = ResourceState{
+					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
+					._layout = VK_IMAGE_LAYOUT_GENERAL,
+					._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			});
+		}
+		// TODO depth buffer
+	}
+
+	void GraphicsCommand::init()
+	{
+		createProgramIFN();
+		createGraphicsResources();
+	}
+
 	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context)
 	{
 		recordInputSynchronization(cmd, context);
 		recordBindings(cmd, context);
 
-		VkExtent2D render_area = {
-			.width = _framebuffer->extent().width,
-			.height = _framebuffer->extent().height,
-		};
+		VkExtent2D render_area = extract(_framebuffer->extent());
 
 		std::vector<VkClearValue> clear_values(_framebuffer->size());
 		for (size_t i = 0; i < clear_values.size(); ++i)
@@ -105,27 +131,44 @@ namespace vkl
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :
-		GraphicsCommand(ci.app, ci.name, ci.bindings, ci.color_attachements)
+		GraphicsCommand(ci.app, ci.name, ci.bindings, ci.color_attachements),
+		_shaders(ShaderPaths{
+			.vertex_path = ci.vertex_shader_path, 
+			.geometry_path = ci.geometry_shader_path, 
+			.fragment_path = ci.fragment_shader_path, 
+			.definitions = ci.definitions 
+		}),
+		_draw_count(ci.draw_count),
+		_meshes(ci.meshes)
+	{
+		
+	}
+
+	void VertexCommand::createProgramIFN()
 	{
 		std::shared_ptr<Shader> vert = nullptr, geom = nullptr, frag = nullptr;
-		if (!ci.vertex_shader_path.empty())
+		if (!_shaders.vertex_path.empty())
 		{
-			vert = std::make_shared<Shader>(ci.app, ci.vertex_shader_path, VK_SHADER_STAGE_VERTEX_BIT, ci.definitions);
+			vert = std::make_shared<Shader>(application(), _shaders.vertex_path, VK_SHADER_STAGE_VERTEX_BIT, _shaders.definitions);
 		}
-		if (!ci.geometry_shader_path.empty())
+		if (!_shaders.geometry_path.empty())
 		{
-			geom = std::make_shared<Shader>(ci.app, ci.geometry_shader_path, VK_SHADER_STAGE_GEOMETRY_BIT, ci.definitions);
+			geom = std::make_shared<Shader>(application(), _shaders.geometry_path, VK_SHADER_STAGE_GEOMETRY_BIT, _shaders.definitions);
 		}
-		if (!ci.fragment_shader_path.empty())
+		if (!_shaders.fragment_path.empty())
 		{
-			frag = std::make_shared<Shader>(ci.app, ci.fragment_shader_path, VK_SHADER_STAGE_FRAGMENT_BIT, ci.definitions);
+			frag = std::make_shared<Shader>(application(), _shaders.fragment_path, VK_SHADER_STAGE_FRAGMENT_BIT, _shaders.definitions);
 		}
-		std::shared_ptr<GraphicsProgram> prog = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfo{
+		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfo{
 			._vertex = vert,
-			._geometry = geom, 
+			._geometry = geom,
 			._fragment = frag,
 		});
+	}
 
+	void VertexCommand::init()
+	{
+		init();
 		createGraphicsResources();
 
 		Pipeline::GraphicsCreateInfo gci;
@@ -134,9 +177,9 @@ namespace vkl
 		gci._input_assembly = Pipeline::InputAssemblyPointDefault();
 		gci._rasterization = Pipeline::RasterizationDefault();
 		gci._multisampling = Pipeline::MultisampleOneSample();
-		gci._program = prog;
+		gci._program = _program;
 		gci._render_pass = *_render_pass;
-		
+
 		VkViewport viewport = Pipeline::Viewport(extract(_framebuffer->extent()));
 		VkRect2D scissor = Pipeline::Scissor(extract(_framebuffer->extent()));
 
@@ -150,11 +193,17 @@ namespace vkl
 
 	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)
 	{
-		for (auto& mesh : _meshes)
+		if (_draw_count.has_value())
 		{
-			mesh->recordBind(cmd);
-			
-			vkCmdDrawIndexed(cmd, (uint32_t)mesh->indicesSize(), 1, 0, 0, 0);
+			vkCmdDraw(cmd, _draw_count.value(), 1, 0, 0);
+		}
+		else
+		{
+			for (auto& mesh : _meshes)
+			{
+				mesh->recordBind(cmd);
+				vkCmdDrawIndexed(cmd, (uint32_t)mesh->indicesSize(), 1, 0, 0, 0);
+			}
 		}
 	}
 
