@@ -200,14 +200,57 @@ namespace vkl
 
 		virtual void run() override
 		{
-			uint32_t particule_size = sizeof(Particule);
-			uint32_t num_particules = 1024;
-			glm::vec2 world_size(2.0f, 2.0f);
+			const uint32_t particule_size = sizeof(Particule);
+			const uint32_t num_particules = 1024;
+			const glm::vec2 world_size(2.0f, 2.0f);
+			const uint32_t N_TYPES_PARTICULES = 4;
+			const uint32_t force_rule_size = 256;// TODO better
+			const uint32_t particule_props_size = 256;
+			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
 			
 
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "CurrentParticulesBuffer",
+				.size = particule_size * num_particules,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<Buffer> previous_particules = std::make_shared<Buffer>(Buffer::CI{
+				.app = this,
+				.name = "CurrentParticulesBuffer",
+				.size = particule_size * num_particules,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+				});
+
+			std::shared_ptr<Buffer> particule_rules_buffer = std::make_shared<Buffer>(Buffer::CI{
+				.app = this,
+				.name = "ParticulesRulesBuffer",
+				.size = rule_buffer_size,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<Image> render_target_img = std::make_shared<Image>(Image::CI{
+				.app = this,
+				.name = "RenderTargetImg",
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.extent = extend(_main_window->extent()),
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<ImageView> render_target_view = std::make_shared<ImageView>(ImageView::CI{
+				.name = "RenderTargetView",
+				.image = render_target_img,
+				.create_on_construct = true,
 			});
 
 			bool paused = true;
