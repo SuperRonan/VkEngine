@@ -14,7 +14,7 @@ uint hash(uvec2 v)
 	return hash(v.x ^ hash(v.y));
 }
 
-float randUint(inout uint rng)
+uint randUint(inout uint rng)
 {
 	uint res = hash(rng);
 	++rng;

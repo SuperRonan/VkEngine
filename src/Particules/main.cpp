@@ -1,20 +1,17 @@
+
 #include <Core/VkApplication.hpp>
-#include <Core/VkWindow.hpp>
-#include <Core/ImageView.hpp>
-#include <Core/Shader.hpp>
 #include <Core/Camera2D.hpp>
 #include <Core/MouseHandler.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include <Core/VkWindow.hpp>
+#include <Core/ImageView.hpp>
 #include <Core/Buffer.hpp>
-#include <Core/Sampler.hpp>
-#include <Core/Pipeline.hpp>
-#include <Core/PipelineLayout.hpp>
-#include <Core/Program.hpp>
-#include <Core/Framebuffer.hpp>
-#include <Core/DescriptorPool.hpp>
-#include <Core/RenderPass.hpp>
-#include <Core/Semaphore.hpp>
-#include <Core/CommandBuffer.hpp>
+#include <Core/ComputeCommand.hpp>
+#include <Core/GraphicsCommand.hpp>
+#include <Core/TransferCommand.hpp>
+#include <Core/Executor.hpp>
+
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -169,8 +166,8 @@ namespace vkl
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Particules",
-				.w = 1024,
-				.h = 1024,
+				.w = 2000,
+				.h = 1400,
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
@@ -201,19 +198,22 @@ namespace vkl
 		virtual void run() override
 		{
 			const uint32_t particule_size = sizeof(Particule);
-			const uint32_t num_particules = 1024;
-			const glm::vec2 world_size(2.0f, 2.0f);
-			const uint32_t N_TYPES_PARTICULES = 4;
+			const uint32_t num_particules = 1024*4;
+			const glm::vec2 world_size(4.0f*2, 4.0f*2);
+			const uint32_t N_TYPES_PARTICULES = 6;
 			const uint32_t force_rule_size = 256;// TODO better
 			const uint32_t particule_props_size = 256;
 			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
 			
+			std::vector<std::string> definitions = {
+				{std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES)},
+			};
 
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "CurrentParticulesBuffer",
 				.size = particule_size * num_particules,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
@@ -222,7 +222,7 @@ namespace vkl
 				.app = this,
 				.name = "CurrentParticulesBuffer",
 				.size = particule_size * num_particules,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 				});
@@ -230,7 +230,7 @@ namespace vkl
 			std::shared_ptr<Buffer> particule_rules_buffer = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "ParticulesRulesBuffer",
-				.size = rule_buffer_size,
+			 	.size = rule_buffer_size,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -253,6 +253,125 @@ namespace vkl
 				.create_on_construct = true,
 			});
 
+			LinearExecutor exec(_main_window);
+			
+			std::shared_ptr<ComputeCommand> init_particules = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "InitParticules",
+				.shader_path = ENGINE_SRC_PATH "/src/Particules/initParticules.comp",
+				.dispatch_size = VkExtent3D{.width = num_particules, .height = 1, .depth = 1},
+				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.buffer = current_particules,
+						.set = 0,
+						.binding = 0,
+					},
+				},
+				.definitions = definitions,
+			});
+			exec.declare(init_particules);
+
+			struct InitParticulesPC
+			{
+				uint32_t number_of_particules;
+				uint32_t seed;
+				glm::vec2 wolrd_size;
+
+			};
+
+
+			std::shared_ptr<ComputeCommand> init_rules = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "InitCommonRules",
+				.shader_path = ENGINE_SRC_PATH "/src/Particules/initCommonRules.comp",
+				.dispatch_size = VkExtent3D{.width = N_TYPES_PARTICULES, .height = N_TYPES_PARTICULES, .depth = 1},
+				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.buffer = particule_rules_buffer,
+						.set = 0,
+						.binding = 0,
+					},
+				},
+				.definitions = definitions,
+			});
+			exec.declare(init_rules);
+
+
+			std::shared_ptr<ComputeCommand> run_simulation = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "RunSimulation",
+				.shader_path = ENGINE_SRC_PATH "/src/Particules/update.comp",
+				.dispatch_size = VkExtent3D{.width = num_particules, .height = 1, .depth = 1},
+				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.buffer = previous_particules,
+						.set = 0,
+						.binding = 0,
+					},
+					Binding{
+						.buffer = current_particules,
+						.set = 0,
+						.binding = 1,
+					},
+					Binding{
+						.buffer = particule_rules_buffer,
+						.set = 0,
+						.binding = 2,
+					},
+				},
+				.definitions = definitions,
+			});
+			exec.declare(run_simulation);
+
+			struct RunSimulationPC
+			{
+				uint32_t number_of_particules;
+				float dt;
+				glm::vec2 world_size;
+			};
+
+			
+			std::shared_ptr<CopyBuffer> copy_to_previous = std::make_shared<CopyBuffer>(CopyBuffer::CI{
+				.app = this,
+				.name = "CopyToPrevious",
+				.src = current_particules,
+				.dst = previous_particules,
+			});
+			exec.declare(copy_to_previous);
+
+			std::shared_ptr<VertexCommand> render = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = this,
+				.name = "Render",
+				.draw_count = num_particules,
+				.bindings = {
+					Binding{
+						.buffer = current_particules,
+						.set = 0,
+						.binding = 0,
+					},
+					Binding{
+						.buffer = particule_rules_buffer,
+						.set = 0,
+						.binding = 1,
+					},
+
+				},
+				.color_attachements = {render_target_view},
+				.vertex_shader_path = ENGINE_SRC_PATH "/src/Particules/render.vert",
+				.geometry_shader_path = ENGINE_SRC_PATH "/src/Particules/render.geom",
+				.fragment_shader_path = ENGINE_SRC_PATH "/src/Particules/render.frag",
+				.definitions = definitions,
+			});
+			exec.declare(render);
+
+
+			exec.init();
+
+			uint32_t seed = 0x21365;
+
 			bool paused = true;
 
 			vkl::Camera2D camera;
@@ -264,7 +383,24 @@ namespace vkl
 
 			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent().height) / float(_main_window->extent().width)});
 			const glm::vec2 move_scale(2.0 / float(_main_window->extent().width), 2.0 / float(_main_window->extent().height));
+			camera.move(glm::vec2(-1, -1));
 			glm::mat3 mat_world_to_cam = glm::inverse(screen_coords_matrix * camera.matrix());
+
+			exec.beginFrame();
+			exec.beginCommandBuffer();
+			init_particules->setPushConstantsData(InitParticulesPC{
+				.number_of_particules = num_particules,
+				.seed = seed,
+				.wolrd_size = world_size,
+			});
+			exec.execute(init_particules);
+			init_rules->setPushConstantsData(seed);
+			exec.execute(init_rules);
+			render->setPushConstantsData(glm::mat4(mat_world_to_cam));
+			exec.execute(render);
+			exec.preparePresentation(render_target_view);
+			exec.endCommandBufferAndSubmit();
+			exec.present();
 
 			while (!_main_window->shouldClose())
 			{
@@ -300,15 +436,36 @@ namespace vkl
 
 				if (!paused || should_render)
 				{
+					exec.beginFrame();
+					exec.beginCommandBuffer();
+					
 					if (!paused)
 					{
-
+						exec.execute(copy_to_previous);
+						run_simulation->setPushConstantsData(RunSimulationPC{
+							.number_of_particules = num_particules,
+							.dt = static_cast<float>(dt),
+							.world_size = world_size,
+						});
+						exec.execute(run_simulation);
 					}
+					
+					{
+						render->setPushConstantsData(glm::mat4(mat_world_to_cam));
+						exec.execute(render);
+					}
+
+					exec.preparePresentation(render_target_view);
+					exec.endCommandBufferAndSubmit();
+					exec.present();
 				}
 
 			}
+			
 
-			vkDeviceWaitIdle(_device);
+			exec.waitForAllCompletion();
+
+			VK_CHECK(vkDeviceWaitIdle(_device), "Failed to wait for completion.");
 		}
 	};
 
@@ -318,7 +475,11 @@ int main()
 {
 	try
 	{
-		vkl::ParticuleSim app(true);
+		bool vl = true;
+#ifdef NDEBUG
+		vl = false;
+#endif
+		vkl::ParticuleSim app(vl);
 		app.run();
 	}
 	catch (std::exception const& e)

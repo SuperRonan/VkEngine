@@ -23,7 +23,7 @@ namespace vkl
 				.flags = 0,
 				.format = _attachements[i]->format(),
 				.samples = _attachements[i]->image()->sampleCount(),
-				.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -50,8 +50,8 @@ namespace vkl
 		VkSubpassDependency dependency = {
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
 			.dstSubpass = 0,
-			.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		};
@@ -76,7 +76,7 @@ namespace vkl
 				._end_state = ResourceState{
 					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
 					._layout = VK_IMAGE_LAYOUT_GENERAL,
-					._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			});
@@ -101,7 +101,7 @@ namespace vkl
 		for (size_t i = 0; i < clear_values.size(); ++i)
 		{
 			clear_values[i] = VkClearValue{
-				.color = VkClearColorValue{.int32{0, 0, 0, 0}},
+				.color = VkClearColorValue{.int32{0, 0, 0, 1}},
 			};
 		}
 
@@ -128,6 +128,7 @@ namespace vkl
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 		recordCommandBuffer(*cmd, context);
+		declareResourcesEndState(context);
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :
@@ -168,7 +169,7 @@ namespace vkl
 
 	void VertexCommand::init()
 	{
-		init();
+		GraphicsCommand::init();
 		createGraphicsResources();
 
 		Pipeline::GraphicsCreateInfo gci;
@@ -189,6 +190,11 @@ namespace vkl
 		gci.assemble();
 
 		_pipeline = std::make_shared<Pipeline>(gci);
+
+		resolveBindings();
+		declareGraphicsResources();
+		declareDescriptorSetsResources();
+		writeDescriptorSets();
 	}
 
 	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)

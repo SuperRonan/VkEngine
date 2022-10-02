@@ -91,6 +91,20 @@ namespace vkl
 
 	public:
 
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::vector<ShaderBindingDescriptor> bindings = {};
+			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
+			std::filesystem::path fragment_shader_path = {};
+			std::vector<std::string> definitions;
+		};
+
+		using CI = CreateInfo;
+
+		FragCommand(CreateInfo const& ci);
+
 		virtual void init() override;
 
 		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) override;

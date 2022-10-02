@@ -5,12 +5,12 @@
 
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(set = 0, binding = 0) buffer writeonly restrict CommonRulesBuffer
+layout(set = 0, binding = 0, std430) buffer writeonly restrict CommonRulesBuffer
 {
     CommonRuleBuffer rules;
 } common_rules;
 
-layout(push_constant) PushConstants
+layout(push_constant) uniform PushConstants
 {
     uint seed;
 } _pc;
@@ -43,16 +43,16 @@ void main()
         common_rules.rules.force_descriptions[forceIndex(gid.x, gid.y)] = fd;
 
         if(same_type)
-        [
+        {
             ParticuleCommonProperties cmp;
             cmp.color = vec4(
-                randFloat(rng),
-                randFloat(rng),
-                randFloat(rng),
+                randFloat(rng, 0.25, 0.75),
+                randFloat(rng, 0.25, 0.75),
+                randFloat(rng, 0.25, 0.75),
                 1.0
             );
             common_rules.rules.particules_properties[gid.x] = cmp;
-        ]
+        }
         
 
     }

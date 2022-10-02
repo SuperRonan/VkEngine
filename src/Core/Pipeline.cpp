@@ -12,6 +12,7 @@ namespace vkl
 
 	Pipeline::Pipeline(GraphicsCreateInfo & ci) :
 		VkObject(ci._program->application(), ci.name),
+		_binding(VK_PIPELINE_BIND_POINT_GRAPHICS),
 		_program(ci._program)
 	{
 		createPipeline(ci._pipeline_ci);

@@ -10,7 +10,7 @@ layout(set = 0, binding = 0, std430) buffer writeonly restrict Particulesbuffer
 	Particule particules[];
 } particules;
 
-layout(push_constant) PushConstants
+layout(push_constant) uniform PushConstants
 {
     uint number_of_particules;
     uint seed;

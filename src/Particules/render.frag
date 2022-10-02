@@ -7,7 +7,7 @@ layout(location = 1) in vec2 v_uv;
 
 layout(location = 0) out vec4 o_color;
 
-layout(set = 0, binding = 1) uniform ub_common_rules
+layout(set = 0, binding = 1) uniform restrict ub_common_rules
 {
 	CommonRuleBuffer rules;
 } ubo;
