@@ -39,6 +39,7 @@ namespace vkl
 		VkGameOfLife(bool validation=false) :
 			VkApplication("Game of Life", validation)
 		{
+			init();
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),

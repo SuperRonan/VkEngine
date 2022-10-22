@@ -147,12 +147,15 @@ namespace vkl
 		{
 			std::vector<const char* > res = VkApplication::getDeviceExtensions();
 			res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+			res.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
 			return res;
 		}
 
-		virtual void requestFeatures(VkPhysicalDeviceFeatures& features) override
+		virtual void requestFeatures(VulkanFeatures& features) override
 		{
 			VkApplication::requestFeatures(features);
+			features.features_11.storageBuffer16BitAccess = VK_TRUE;
+			features.features_12.shaderFloat16 = VK_TRUE;
 		}
 
 
@@ -161,10 +164,11 @@ namespace vkl
 		ParticuleSim(bool validation = false) :
 			VkApplication("Particules", validation)
 		{
+			init();
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
+				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
 				.name = "Particules",
 				.w = 2000,
 				.h = 1400,
@@ -198,15 +202,20 @@ namespace vkl
 		virtual void run() override
 		{
 			const uint32_t particule_size = sizeof(Particule);
-			const uint32_t num_particules = 1024*4;
+			const uint32_t num_particules = 1024*4*2;
 			const glm::vec2 world_size(4.0f*2, 4.0f*2);
-			const uint32_t N_TYPES_PARTICULES = 6;
-			const uint32_t force_rule_size = 256;// TODO better
-			const uint32_t particule_props_size = 256;
+			const uint32_t N_TYPES_PARTICULES = 7;
+			const uint32_t use_hlaf_storage = 1;
+			const uint32_t storage_float_size = use_hlaf_storage ? 2 : 4;
+			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
+			const uint32_t particule_props_size = 4 * storage_float_size;
 			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
 			
+			uint32_t seed = 0x2fe7d6d54a5;
+			
 			std::vector<std::string> definitions = {
-				{std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES)},
+				std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
+				std::string("USE_HALF_STORAGE ") + std::to_string(use_hlaf_storage),
 			};
 
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
@@ -369,8 +378,6 @@ namespace vkl
 
 
 			exec.init();
-
-			uint32_t seed = 0x21365;
 
 			bool paused = true;
 

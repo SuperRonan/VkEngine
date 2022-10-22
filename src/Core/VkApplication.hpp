@@ -67,11 +67,21 @@ namespace vkl
 
 		virtual std::vector<const char* > getDeviceExtensions(); 
 
-		std::vector<const char*> getInstanceExtensions();
+		virtual std::vector<const char*> getInstanceExtensions();
 
 		bool _enable_valid_layers = false;
 
-		virtual void requestFeatures(VkPhysicalDeviceFeatures & features);
+		std::string _name = {};
+
+		struct VulkanFeatures
+		{
+			VkPhysicalDeviceFeatures features = {};
+			VkPhysicalDeviceVulkan11Features features_11 = {};
+			VkPhysicalDeviceVulkan12Features features_12 = {};
+			VkPhysicalDeviceVulkan13Features features_13 = {};
+		};
+
+		virtual void requestFeatures(VulkanFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
 
@@ -105,7 +115,7 @@ namespace vkl
 
 		void initGLFW();
 
-		virtual void init(std::string const& name);
+		virtual void init();
 
 		virtual void cleanup();
 
@@ -124,7 +134,7 @@ namespace vkl
 
 		virtual ~VkApplication();
 
-		virtual void run();
+		virtual void run() = 0;
 
 		constexpr VkInstance instance()const
 		{

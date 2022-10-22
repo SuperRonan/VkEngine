@@ -41,10 +41,10 @@ namespace vkl
 		};
 	}
 
-	void VkApplication::requestFeatures(VkPhysicalDeviceFeatures& features)
+	void VkApplication::requestFeatures(VulkanFeatures& features)
 	{
-		features.geometryShader = VK_TRUE;
-		features.samplerAnisotropy = VK_TRUE;
+		features.features.geometryShader = VK_TRUE;
+		features.features.samplerAnisotropy = VK_TRUE;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
@@ -129,7 +129,7 @@ namespace vkl
 			.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
 			.pEngineName = "None",
 			.engineVersion = VK_MAKE_VERSION(1, 0, 0),
-			.apiVersion = VK_API_VERSION_1_2,
+			.apiVersion = VK_API_VERSION_1_3,
 		};
 
 		auto extensions = getInstanceExtensions();
@@ -376,16 +376,27 @@ namespace vkl
 			queue_create_infos.push_back(queue_create_info);
 		}
 
-		VkPhysicalDeviceFeatures device_features = {};
+		VulkanFeatures device_features;
+		device_features.features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+		device_features.features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		device_features.features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;		
+		device_features.features_11.pNext = &device_features.features_12;
+		device_features.features_12.pNext = &device_features.features_13;
 		requestFeatures(device_features);
+
+		VkPhysicalDeviceFeatures2 features2;
+		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		features2.features = device_features.features;
+		features2.pNext = &device_features.features_11;
 
 		const auto device_extensions = getDeviceExtensions();
 
 		VkDeviceCreateInfo device_create_info{};
 		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		device_create_info.pNext = &features2;
 		device_create_info.pQueueCreateInfos = queue_create_infos.data();
 		device_create_info.queueCreateInfoCount = queue_create_infos.size();
-		device_create_info.pEnabledFeatures = &device_features;
+		device_create_info.pEnabledFeatures = nullptr;
 
 		device_create_info.enabledExtensionCount = device_extensions.size();
 		device_create_info.ppEnabledExtensionNames = device_extensions.data();
@@ -443,17 +454,18 @@ namespace vkl
 		glfwInit();
 	}
 
-	VkApplication::VkApplication(std::string const& name, bool validation):
-		_enable_valid_layers(validation)
+	VkApplication::VkApplication(std::string const& name, bool validation) :
+		_enable_valid_layers(validation),
+		_name(name)
 	{
-		init(name);
+
 	}
 
-	void VkApplication::init(std::string const& name)
+	void VkApplication::init()
 	{
 		initGLFW();
 		preChecks();
-		initInstance(name);
+		initInstance(_name);
 		initValidLayers();
 		pickPhysicalDevice();
 		createLogicalDevice();
@@ -505,10 +517,5 @@ namespace vkl
 	VkApplication::~VkApplication()
 	{
 		cleanup();
-	}
-
-	void VkApplication::run()
-	{
-
 	}
 }

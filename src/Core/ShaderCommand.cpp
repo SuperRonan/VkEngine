@@ -135,6 +135,7 @@ namespace vkl
 						._layout = meta.layout,
 						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
 					};
+					
 					if (true)
 					{
 						std::cout << "Successfully resolved binding \"" << shader_binding_name << "\" to (set = " << set_id << ", binding = " << binding_id << ")\n";

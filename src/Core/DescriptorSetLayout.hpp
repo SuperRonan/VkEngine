@@ -13,6 +13,8 @@ namespace vkl
 			std::string name = "";
 			VkAccessFlags access = VK_ACCESS_NONE_KHR;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_MAX_ENUM;
+			VkImageUsageFlags image_usage = 0;
+			VkBufferUsageFlags buffer_usage = 0;
 		};
 
 	protected:
