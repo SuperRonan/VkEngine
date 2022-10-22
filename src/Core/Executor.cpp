@@ -100,6 +100,11 @@ namespace vkl
 		cmd->execute(_context);
 	}
 
+	void LinearExecutor::operator()(std::shared_ptr<Command> cmd)
+	{
+		return execute(cmd);
+	}
+
 	void LinearExecutor::beginCommandBuffer()
 	{
 		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;

@@ -12,6 +12,11 @@ layout(set = 0, binding = 1) buffer readonly restrict ub_common_rules
 	CommonRuleBuffer rules;
 } ubo;
 
+// layout(push_constant) uniform FragPushConstant
+// {
+//     layout(offset = 64) float zoom;
+// };
+
 void main()
 {
     const float d = dot(v_uv, v_uv);
@@ -23,6 +28,7 @@ void main()
     else
     {
         o_color = ubo.rules.particules_properties[v_type].color;
+
         if(d > 0.20)
         {
             o_color.xyz *= 0.5;

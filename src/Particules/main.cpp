@@ -202,16 +202,16 @@ namespace vkl
 		virtual void run() override
 		{
 			const uint32_t particule_size = sizeof(Particule);
-			const uint32_t num_particules = 1024*4*2;
-			const glm::vec2 world_size(4.0f*2, 4.0f*2);
-			const uint32_t N_TYPES_PARTICULES = 7;
+			const uint32_t num_particules = 1024*4*2*2;
+			const glm::vec2 world_size(4.0f*3, 4.0f*3);
+			const uint32_t N_TYPES_PARTICULES = 7*2;
 			const uint32_t use_hlaf_storage = 1;
 			const uint32_t storage_float_size = use_hlaf_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
 			const uint32_t particule_props_size = 4 * storage_float_size;
 			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
 			
-			uint32_t seed = 0x2fe7d6d54a5;
+			uint32_t seed = 0x2fe75454a5;
 			
 			std::vector<std::string> definitions = {
 				std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
@@ -377,6 +377,13 @@ namespace vkl
 			exec.declare(render);
 
 
+			struct RenderPC
+			{
+				glm::mat4 matrix;
+				float zoom;
+			};
+
+
 			exec.init();
 
 			bool paused = true;
@@ -400,11 +407,14 @@ namespace vkl
 				.seed = seed,
 				.wolrd_size = world_size,
 			});
-			exec.execute(init_particules);
+			exec(init_particules);
 			init_rules->setPushConstantsData(seed);
-			exec.execute(init_rules);
-			render->setPushConstantsData(glm::mat4(mat_world_to_cam));
-			exec.execute(render);
+			exec(init_rules);
+			render->setPushConstantsData(RenderPC{
+				.matrix = glm::mat4(mat_world_to_cam),
+				.zoom = static_cast<float>(mouse_handler.getScroll()),
+			});
+			exec(render);
 			exec.preparePresentation(render_target_view);
 			exec.endCommandBufferAndSubmit();
 			exec.present();
@@ -448,18 +458,21 @@ namespace vkl
 					
 					if (!paused)
 					{
-						exec.execute(copy_to_previous);
+						exec(copy_to_previous);
 						run_simulation->setPushConstantsData(RunSimulationPC{
 							.number_of_particules = num_particules,
 							.dt = static_cast<float>(dt),
 							.world_size = world_size,
 						});
-						exec.execute(run_simulation);
+						exec(run_simulation);
 					}
 					
 					{
-						render->setPushConstantsData(glm::mat4(mat_world_to_cam));
-						exec.execute(render);
+						render->setPushConstantsData(RenderPC{
+							.matrix = glm::mat4(mat_world_to_cam),
+							.zoom = static_cast<float>(mouse_handler.getScroll()),
+						});
+						exec(render);
 					}
 
 					exec.preparePresentation(render_target_view);

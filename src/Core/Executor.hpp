@@ -67,6 +67,8 @@ namespace vkl
 
 		void execute(std::shared_ptr<Command> cmd);
 
+		void operator()(std::shared_ptr<Command> cmd);
+
 		void submit();
 
 		void waitForAllCompletion(uint64_t timeout = UINT64_MAX);
