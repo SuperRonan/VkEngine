@@ -1,4 +1,4 @@
-.vs
+*.vscode
 x64
 build
 docs
