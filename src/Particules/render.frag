@@ -7,14 +7,15 @@ layout(location = 1) in vec2 v_uv;
 
 layout(location = 0) out vec4 o_color;
 
-layout(set = 0, binding = 1) uniform restrict ub_common_rules
+layout(set = 0, binding = 1) buffer readonly restrict ub_common_rules
 {
 	CommonRuleBuffer rules;
 } ubo;
 
 void main()
 {
-    if(dot(v_uv, v_uv) > 0.25)
+    const float d = dot(v_uv, v_uv);
+    if(d > 0.25)
     {
         discard;
         return;
@@ -22,5 +23,9 @@ void main()
     else
     {
         o_color = ubo.rules.particules_properties[v_type].color;
+        if(d > 0.20)
+        {
+            o_color.xyz *= 0.5;
+        }
     }
 }

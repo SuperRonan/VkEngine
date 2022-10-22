@@ -5,6 +5,24 @@
 #error "Forgot to define N_TYPES_OF_PARTICULES"
 #endif
 
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+
+#if USE_HALF_STORAGE
+
+#define StorageF    float16_t
+#define StorageVec2 f16vec2
+#define StorageVec3 f16vec3
+#define StorageVec4 f16vec4
+
+#else
+
+#define StorageF    float
+#define StorageVec2 vec2
+#define StorageVec3 vec3
+#define StorageVec4 vec4
+
+#endif
+
 struct Particule
 {
     vec2 position;
@@ -15,13 +33,13 @@ struct Particule
 
 struct ParticuleCommonProperties
 {
-    vec4 color;
+    StorageVec4 color;
 };
 
 struct ForceDescription
 {
-    vec4 intensity_inv_linear_inv_linear2_contant_linear;
-    vec4 intensity_gauss_mu_sigma;
+    StorageVec4 intensity_inv_linear_inv_linear2_contant_linear;
+    StorageVec4 intensity_gauss_mu_sigma;
 };
 
 float sqr(float x)
@@ -72,10 +90,11 @@ vec2 computeForce(const in Particule p, const in Particule q, const in ForceDesc
     const vec2 pq_norm = pq / dist;
     const vec4 inv_dist_inv_dist2_constant_linear = vec4(1.0 / dist, 1.0 / dist2, 1.0, dist);
     const float g = gaussian(dist, force.intensity_gauss_mu_sigma.y, force.intensity_gauss_mu_sigma.z);
-    const float intensity = dot(force.intensity_inv_linear_inv_linear2_contant_linear, inv_dist_inv_dist2_constant_linear) + g * force.intensity_gauss_mu_sigma.x;
+    const float intensity = dot(vec4(force.intensity_inv_linear_inv_linear2_contant_linear), inv_dist_inv_dist2_constant_linear) + g * float(force.intensity_gauss_mu_sigma.x);
     
     const float repultion_radius = (p.radius + q.radius);
-    const vec2 repultion = (dist < repultion_radius ? (-1.0 / sqr(tan(dist2 / repultion_radius * 0.5 * 3.1415))) : 0) * pq_norm * 0.05;
+    const float repution_force = min(5e3, (dist < repultion_radius ? (1.0 / sqr(tan(dist2 / repultion_radius * 0.5 * 3.1415))) : 0));
+    const vec2 repultion = -repution_force * pq_norm * 0.05;
 
     const vec2 res = pq_norm * intensity + repultion;
     return res;
