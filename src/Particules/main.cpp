@@ -10,8 +10,8 @@
 #include <Core/ComputeCommand.hpp>
 #include <Core/GraphicsCommand.hpp>
 #include <Core/TransferCommand.hpp>
+#include <Core/ImguiCommand.hpp>
 #include <Core/Executor.hpp>
-
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -135,6 +135,8 @@ namespace vkl
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
+
+			initImgui();
 		}
 
 		virtual ~ParticuleSim()
@@ -342,6 +344,13 @@ namespace vkl
 			});
 			exec.declare(render);
 
+			std::shared_ptr<ImguiCommand> render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
+				.app = this,
+				.name = "RenderGUI",
+				.target = render_target_view,
+			});
+			exec.declare(render_gui);
+
 
 			struct RenderPC
 			{
@@ -368,6 +377,7 @@ namespace vkl
 
 			exec.beginFrame();
 			exec.beginCommandBuffer();
+			ImGui_ImplVulkan_CreateFontsTexture(*exec.getCommandBuffer());
 			init_particules->setPushConstantsData(InitParticulesPC{
 				.number_of_particules = num_particules,
 				.seed = seed,

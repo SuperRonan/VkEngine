@@ -79,5 +79,6 @@ namespace vkl
 
 		void waitForCurrentCompletion(uint64_t timeout = UINT64_MAX);
 
+		std::shared_ptr<CommandBuffer> getCommandBuffer();
 	};
 }

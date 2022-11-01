@@ -233,4 +233,9 @@ namespace vkl
 			_in_between.fences.back()->wait(timeout);
 		}
 	}
+
+	std::shared_ptr<CommandBuffer> LinearExecutor::getCommandBuffer()
+	{
+		return _command_buffer_to_submit;
+	}
 }

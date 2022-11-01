@@ -7,6 +7,13 @@
 
 namespace vkl
 {
+	ImguiCommand::ImguiCommand(CreateInfo const& ci) :
+		DeviceCommand(ci.app, ci.name),
+		_target(ci.target)
+	{
+
+	}
+
 	void ImguiCommand::init()
 	{
 		const uint32_t N = 1024;
