@@ -91,48 +91,8 @@ namespace vkl
 
 		void initImgui()
 		{
-			const uint32_t N = 1024;
-			std::vector<VkDescriptorPoolSize> sizes = {
-				{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	N },
-				{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				N },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,				N },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,		N },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,		N },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			N },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			N },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	N },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	N },
-				{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
-			};
-			_imgui_descriptor_pool = std::make_shared<DescriptorPool>(DescriptorPool(this, VK_NULL_HANDLE));
-			VkDescriptorPoolCreateInfo ci{
-				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-				.maxSets = N,
-				.poolSizeCount = (uint32_t)sizes.size(),
-				.pPoolSizes = sizes.data(),
-			};
-			_imgui_descriptor_pool->create(ci);
-			
 			ImGui::CreateContext();
 			ImGui_ImplGlfw_InitForVulkan(*_main_window, false);
-
-			ImGui_ImplVulkan_InitInfo ii{
-				.Instance = _instance,
-				.PhysicalDevice = _physical_device,
-				.Device = _device,
-				.QueueFamily = _queue_family_indices.graphics_family.value(),
-				.Queue = _queues.graphics,
-				.DescriptorPool = *_imgui_descriptor_pool,
-				.MinImageCount = (uint32_t)_main_window->swapchainSize(),
-				.ImageCount = (uint32_t)_main_window->swapchainSize(),
-				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-			};
-
-			//ImGui_ImplVulkan_Init(&init_info, )
-
 		}
 
 		struct Particule
