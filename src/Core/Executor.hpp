@@ -53,6 +53,10 @@ namespace vkl
 
 		void declare(std::shared_ptr<Command> cmd);
 
+		void declare(std::shared_ptr<ImageView> view);
+
+		void declare(std::shared_ptr<Buffer> buffer);
+
 		void init();
 
 		void beginFrame();

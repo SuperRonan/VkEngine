@@ -7,6 +7,16 @@ namespace vkl
 		_commands.push_back(cmd);
 	}
 
+	void LinearExecutor::declare(std::shared_ptr<ImageView> view)
+	{
+
+	}
+
+	void LinearExecutor::declare(std::shared_ptr<Buffer> buffer)
+	{
+
+	}
+
 	void LinearExecutor::preprocessCommands()
 	{
 		for (std::shared_ptr<Command>& cmd : _commands)
@@ -17,7 +27,7 @@ namespace vkl
 	}
 
 	void LinearExecutor::init()
-	{
+	{ 
 		_blit_to_present = std::make_shared<BlitImage>(BlitImage::CI{
 			.app = _app,
 			.name = name() + std::string(".BlitToPresent"),
@@ -51,7 +61,7 @@ namespace vkl
 
 		execute(_blit_to_present);
 
-		const ResourceState current_state = _context.getImageState(*blit_target);
+		const ResourceState current_state = _context.getImageState(blit_target);
 		const ResourceState desired_state = {
 			._access = VK_ACCESS_MEMORY_READ_BIT,
 			._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -85,7 +95,7 @@ namespace vkl
 				._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // Not sure about this one
 			};
-			_context.setImageState(*blit_target, final_state);
+			_context.setImageState(blit_target, final_state);
 		}
 	}
 

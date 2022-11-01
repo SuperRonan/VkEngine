@@ -164,4 +164,16 @@ namespace vkl
 		if (s & VK_SHADER_STAGE_MESH_BIT_NV)					res |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
 		return res;
 	}
+
+	namespace vk_operators
+	{
+		constexpr bool operator==(VkImageSubresourceRange const& a, VkImageSubresourceRange const& b)
+		{
+			return (a.aspectMask == b.aspectMask)
+				&& (a.baseArrayLayer == b.baseArrayLayer)
+				&& (a.baseMipLevel == b.baseMipLevel)
+				&& (a.layerCount == b.layerCount)
+				&& (a.levelCount == b.levelCount);
+		}
+	}
 }

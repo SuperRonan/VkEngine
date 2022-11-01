@@ -201,6 +201,8 @@ namespace vkl
 
 		virtual void run() override
 		{
+			using namespace std_vector_operators;
+
 			const uint32_t particule_size = sizeof(Particule);
 			const uint32_t num_particules = 1024*4*2*2;
 			const glm::vec2 world_size(4.0f*3, 4.0f*3);
@@ -218,6 +220,8 @@ namespace vkl
 				std::string("USE_HALF_STORAGE ") + std::to_string(use_hlaf_storage),
 			};
 
+			LinearExecutor exec(_main_window);
+
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "CurrentParticulesBuffer",
@@ -226,6 +230,7 @@ namespace vkl
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
+			exec.declare(current_particules);
 
 			std::shared_ptr<Buffer> previous_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
@@ -234,7 +239,8 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
-				});
+			});
+			exec.declare(previous_particules);
 
 			std::shared_ptr<Buffer> particule_rules_buffer = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
@@ -244,6 +250,7 @@ namespace vkl
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
+			exec.declare(particule_rules_buffer);
 
 			std::shared_ptr<Image> render_target_img = std::make_shared<Image>(Image::CI{
 				.app = this,
@@ -261,8 +268,7 @@ namespace vkl
 				.image = render_target_img,
 				.create_on_construct = true,
 			});
-
-			LinearExecutor exec(_main_window);
+			exec.declare(render_target_view);
 			
 			std::shared_ptr<ComputeCommand> init_particules = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,

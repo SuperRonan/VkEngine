@@ -14,6 +14,35 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <functional>
+
+namespace vkl
+{
+	struct ImageRange
+	{
+		VkImage image = VK_NULL_HANDLE;
+		VkImageSubresourceRange range = {};
+
+		constexpr bool operator==(ImageRange const& other)const
+		{
+			using namespace vk_operators;
+			return (image == other.image) && (range == other.range);
+		}
+	};
+}
+
+namespace std
+{
+	template<>
+	struct hash<vkl::ImageRange>
+	{
+		size_t operator()(vkl::ImageRange const& ir) const
+		{
+			size_t addr = reinterpret_cast<size_t>(ir.image);
+			return addr;
+		}
+	};
+}
 
 namespace vkl
 {
@@ -50,7 +79,7 @@ namespace vkl
 			VK_ACCESS_TRANSFER_READ_BIT |
 			VK_ACCESS_HOST_READ_BIT |
 			VK_ACCESS_MEMORY_READ_BIT
-			);
+		);
 	}
 
 	constexpr bool accessIsReadAndWrite(VkAccessFlags access)
@@ -74,8 +103,7 @@ namespace vkl
 	struct ResourceStateTracker
 	{
 		std::unordered_map<VkBuffer, ResourceState> _buffer_states;
-		std::unordered_map<VkImageView, ResourceState> _image_states;
-
+		std::unordered_map<ImageRange, ResourceState> _image_states;
 	};
 
 	class ExecutionContext
@@ -91,18 +119,18 @@ namespace vkl
 
 		ExecutionContext(ResourceStateTracker * rst, std::shared_ptr<CommandBuffer> cmd);
 
-		ResourceState& getBufferState(VkBuffer b);
+		ResourceState& getBufferState(std::shared_ptr<Buffer> b);
 
-		ResourceState& getImageState(VkImageView i);
+		ResourceState& getImageState(std::shared_ptr<ImageView> i);
 
 		constexpr std::shared_ptr<CommandBuffer>& getCommandBuffer()
 		{
 			return _command_buffer;
 		}
 
-		void setBufferState(VkBuffer b, ResourceState const& s);
+		void setBufferState(std::shared_ptr<Buffer> b, ResourceState const& s);
 
-		void setImageState(VkImageView v, ResourceState const& s);
+		void setImageState(std::shared_ptr<ImageView> v, ResourceState const& s);
 
 		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
 
@@ -135,3 +163,4 @@ namespace vkl
 
 	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
 }
+

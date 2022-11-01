@@ -14,11 +14,11 @@ namespace vkl
 			const ResourceState prev = [&]() {
 				if (r.isImage())
 				{
-					return context.getImageState(*r._images[0].get());
+					return context.getImageState(r._images[0]);
 				}
 				else if (r.isBuffer())
 				{
-					return context.getBufferState(*r._buffers[0].get());
+					return context.getBufferState(r._buffers[0]);
 				}
 				else
 				{
@@ -89,11 +89,11 @@ namespace vkl
 			ResourceState const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
-				context.setBufferState(*r._buffers.front(), s);
+				context.setBufferState(r._buffers.front(), s);
 			}
 			else if (r.isImage())
 			{
-				context.setImageState(*r._images.front(), s);
+				context.setImageState(r._images.front(), s);
 			}
 			else
 			{

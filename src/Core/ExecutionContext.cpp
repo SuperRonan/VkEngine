@@ -13,34 +13,42 @@ namespace vkl
 		_reosurce_states(rst)
 	{}
 
-    ResourceState& ExecutionContext::getBufferState(VkBuffer b)
+    ResourceState& ExecutionContext::getBufferState(std::shared_ptr<Buffer> b)
 	{
-		if (!_reosurce_states->_buffer_states.contains(b))
+		if (!_reosurce_states->_buffer_states.contains(*b))
 		{
 			ResourceState not_yet_used{};
-			_reosurce_states->_buffer_states[b] = not_yet_used;
+			_reosurce_states->_buffer_states[*b] = not_yet_used;
 		}
-		return _reosurce_states->_buffer_states[b];
+		return _reosurce_states->_buffer_states[*b];
 	}
 
-	ResourceState& ExecutionContext::getImageState(VkImageView i)
+	ResourceState& ExecutionContext::getImageState(std::shared_ptr<ImageView> i)
 	{
-		if (!_reosurce_states->_image_states.contains(i))
+		const ImageRange ir = {
+			.image = *i->image(),
+			.range = i->range(),
+		};
+		if (!_reosurce_states->_image_states.contains(ir))
 		{
 			ResourceState not_yet_used{};
-			_reosurce_states->_image_states[i] = not_yet_used;
+			_reosurce_states->_image_states[ir] = not_yet_used;
 		}
-		return _reosurce_states->_image_states[i];
+		return _reosurce_states->_image_states[ir];
 	}
 
-	void ExecutionContext::setBufferState(VkBuffer b, ResourceState const& s)
+	void ExecutionContext::setBufferState(std::shared_ptr<Buffer> b, ResourceState const& s)
 	{
-		_reosurce_states->_buffer_states[b] = s;
+		_reosurce_states->_buffer_states[*b] = s;
 	}
 
-	void ExecutionContext::setImageState(VkImageView v, ResourceState const& s)
+	void ExecutionContext::setImageState(std::shared_ptr<ImageView> v, ResourceState const& s)
 	{
-		_reosurce_states->_image_states[v] = s;
+		const ImageRange ir = {
+			.image = *v->image(),
+			.range = v->range(),
+		};
+		_reosurce_states->_image_states[ir] = s;
 	}
 
 	void ExecutionContext::setCommandBuffer(std::shared_ptr<CommandBuffer> cmd)
