@@ -4,6 +4,7 @@ namespace vkl
 {
 	Image::Image(CreateInfo const& ci) : 
 		VkObject(ci.app, ci.name),
+		_flags(ci.flags),
 		_type(ci.type),
 		_format(ci.format),
 		_extent(ci.extent),
@@ -35,7 +36,7 @@ namespace vkl
 		VkImageCreateInfo image_ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 			.pNext = nullptr,
-			.flags = 0,
+			.flags = _flags,
 			.imageType = _type,
 			.format = _format,
 			.extent = _extent,

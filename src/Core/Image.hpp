@@ -15,6 +15,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = "";
+			VkImageCreateFlags flags = 0;
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
 			VkExtent3D extent = makeZeroExtent3D();
@@ -72,6 +73,7 @@ namespace vkl
 
 	protected:
 
+		VkImageCreateFlags _flags = 0;
 		VkImageType _type = VK_IMAGE_TYPE_MAX_ENUM;
 		VkFormat _format = VK_FORMAT_MAX_ENUM;
 		VkExtent3D _extent = makeZeroExtent3D();
@@ -101,6 +103,7 @@ namespace vkl
 
 		constexpr Image(Image&& other) noexcept :
 			VkObject(std::move(other)),
+			_flags(other._flags),
 			_type(other._type),
 			_format(other._format),
 			_extent(other._extent),
@@ -125,6 +128,7 @@ namespace vkl
 		constexpr Image& operator=(Image&& other)noexcept
 		{
 			VkObject::operator=(std::move(other));
+			std::swap(_flags, other._flags);
 			std::swap(_type, other._type);
 			std::swap(_format, other._format);
 			std::swap(_extent, other._extent);
@@ -168,6 +172,11 @@ namespace vkl
 		constexpr VmaAllocation alloc()const
 		{
 			return _alloc;
+		}
+
+		constexpr VkImageCreateFlags flags()const
+		{
+			return _flags;
 		}
 
 		constexpr VkImageType type()const
