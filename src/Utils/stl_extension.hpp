@@ -31,6 +31,31 @@ Stream& operator<<(Stream& stream, glm::mat<N, M, Float> const& mat)
 	return stream;
 }
 
+namespace std_vector_operators
+{
+	template<class T>
+	std::vector<T>& operator+=(std::vector<T>& a, T&& b)
+	{
+		a.emplace_back(std::forward<T>(b));
+		return a;
+	}
+
+	template<class T>
+	std::vector<T>& operator+=(std::vector<T>& a, std::vector<T>&& b)
+	{
+		a.insert(a.end(), b.cbegin(), b.cend());
+		return a;
+	}
+
+	template <class T>
+	std::vector<T> operator+(std::vector<T>&& a, std::vector<T>&& b)
+	{
+		std::vector<T> res = std::forward<std::vector<T>>(a);
+		res += b;
+		return res;
+	}
+}
+
 namespace std
 {
 	template <class T>
