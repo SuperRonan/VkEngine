@@ -95,7 +95,7 @@ namespace vkl
 	constexpr bool stateTransitionRequiresSynchronization(ResourceState prev, ResourceState next, bool is_image)
 	{
 		const bool res =
-			(prev._access != next._access || (accessIsReadAndWrite(prev._access) && accessIsReadAndWrite(next._access)))
+			!(accessIsRead(prev._access) && accessIsRead(next._access)) // Assuming that !read = write
 			|| (is_image && layoutTransitionRequired(prev, next));
 		return res;
 	}
