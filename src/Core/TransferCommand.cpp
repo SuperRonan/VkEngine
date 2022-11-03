@@ -137,6 +137,69 @@ namespace vkl
 		declareResourcesEndState(context);
 	}
 
+
+	CopyBufferToImage::CopyBufferToImage(CreateInfo const& ci) :
+		DeviceCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_regions(ci.regions)
+	{}
+
+	void CopyBufferToImage::init()
+	{
+		_resources.push_back(Resource{
+			._buffers = {_src},
+			._begin_state = ResourceState{
+				._access = VK_ACCESS_TRANSFER_READ_BIT,
+				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT
+			},
+			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		});
+		_resources.push_back(Resource{
+			._images = {_dst},
+			._begin_state = ResourceState{
+				._access = VK_ACCESS_TRANSFER_WRITE_BIT,
+				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+			},
+			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+		});
+
+		if (_regions.empty())
+		{
+			_regions.resize(1);
+			VkBufferImageCopy& region = _regions.front();
+			VkExtent3D extent;
+			// TODO Correctly manage the extent based on the type 
+			// (in the case of a 3D image viewd as a 2D imageArray)
+			extent = _dst->image()->extent();
+			// TODO manage multi mip copy
+			region = VkBufferImageCopy{
+				.bufferOffset = 0,
+				.bufferRowLength = _dst->image()->extent().height,
+				.bufferImageHeight = _dst->image()->extent().height,
+				.imageSubresource = getImageLayersFromRange(_dst->range()),
+				.imageOffset = makeZeroOffset3D(),
+				.imageExtent = _dst->image()->extent(),
+			};
+		}
+	}
+
+	void CopyBufferToImage::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+		recordInputSynchronization(*cmd, context);
+
+		vkCmdCopyBufferToImage(
+			*cmd,
+			*_src, *_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			(uint32_t)_regions.size(), _regions.data()
+		);
+
+		declareResourcesEndState(context);
+	}
+
+
 	CopyBuffer::CopyBuffer(CreateInfo const& ci) :
 		DeviceCommand(ci.app, ci.name),
 		_src(ci.src),

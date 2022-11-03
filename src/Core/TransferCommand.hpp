@@ -67,10 +67,23 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<Buffer> _src;
-		std::shared_ptr<ImageView> _dst;
+		std::shared_ptr<Buffer> _src = nullptr;
+		std::shared_ptr<ImageView> _dst = nullptr;
+		std::vector<VkBufferImageCopy> _regions = {};
 
 	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Buffer> src = nullptr;
+			std::shared_ptr<ImageView> dst = nullptr;
+			std::vector<VkBufferImageCopy> regions = {};
+		};
+		using CI = CreateInfo;
+
+		CopyBufferToImage(CreateInfo const& ci);
 
 		virtual void init() override;
 
