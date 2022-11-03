@@ -11,10 +11,12 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<ImageView> _target;
+		std::vector<std::shared_ptr<ImageView>> _targets;
 
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<DescriptorPool> _desc_pool = nullptr;
+
+		void createRenderPass();
 
 	public:
 
@@ -22,7 +24,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::shared_ptr<ImageView> target = nullptr;
+			std::vector<std::shared_ptr<ImageView>> targets = {};
 		};
 		using CI = CreateInfo;
 

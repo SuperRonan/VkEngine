@@ -1,7 +1,28 @@
 #include "Executor.hpp"
 
+#include <imgui/imgui.h>
+#include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
+
+
 namespace vkl
 {
+	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
+		VkObject(ci.app ? ci.app : ci.window->application(), ci.name),
+		_window(ci.window),
+		_context(&_resources_state, nullptr)
+	{
+		if (ci.use_ImGui)
+		{
+			_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderGui",
+				.targets = _window->views(),
+			});
+			declare(_render_gui);
+		}
+	}
+
 	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
 	{
 		_commands.push_back(cmd);
@@ -35,6 +56,15 @@ namespace vkl
 		declare(_blit_to_present);
 
 		preprocessCommands(); 
+
+		if (_render_gui)
+		{
+			beginCommandBuffer();
+			{
+				ImGui_ImplVulkan_CreateFontsTexture(*_command_buffer_to_submit);
+			}
+			endCommandBufferAndSubmit();
+		}
 	}
 
 	void LinearExecutor::beginFrame()
@@ -176,7 +206,11 @@ namespace vkl
 
 	void LinearExecutor::submit()
 	{
-		VkSemaphore sem_to_wait = *_in_between.semaphore;
+		VkSemaphore sem_to_wait = [&]() -> VkSemaphore {
+			if (_in_between.semaphore)	return *_in_between.semaphore;
+			return VK_NULL_HANDLE;
+		}();
+
 		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		std::shared_ptr<Fence> submit_fence = std::make_shared<Fence>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Fence");
 
@@ -195,11 +229,13 @@ namespace vkl
 		};
 
 		VkSemaphore sem_to_signal = *_in_between.semaphore;
-		
+
+		const bool wait_on_sem = sem_to_wait != VK_NULL_HANDLE;
+
 		VkSubmitInfo submission{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.waitSemaphoreCount = 1,
-			.pWaitSemaphores = &sem_to_wait,
+			.waitSemaphoreCount = wait_on_sem ? 1u : 0u,
+			.pWaitSemaphores = wait_on_sem ? &sem_to_wait : nullptr,
 			.pWaitDstStageMask = &wait_stage,
 			.commandBufferCount = 1,
 			.pCommandBuffers = &cb,

@@ -41,7 +41,7 @@ namespace vkl
 			.inputAttachmentCount = 0,
 			.pInputAttachments = nullptr,
 			.colorAttachmentCount = static_cast<uint32_t>(n),
-			.pColorAttachments= at_ref.data(),
+			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the data is copied
 			.pResolveAttachments = nullptr,
 			.pDepthStencilAttachment = nullptr,
 			.preserveAttachmentCount = 0,

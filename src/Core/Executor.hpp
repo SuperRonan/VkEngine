@@ -5,6 +5,7 @@
 #include "VkWindow.hpp"
 #include <queue>
 #include "TransferCommand.hpp"
+#include "ImguiCommand.hpp"
 
 namespace vkl
 {
@@ -25,6 +26,7 @@ namespace vkl
 		ExecutionContext _context;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
+		std::shared_ptr<ImguiCommand> _render_gui = nullptr;
 		std::vector<std::shared_ptr<Command>> _commands = {};
 
 		void preprocessCommands();
@@ -44,12 +46,24 @@ namespace vkl
 
 	public:
 
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<VkWindow> window = nullptr;
+			bool use_ImGui = false;
+		};
+
+		using CI = CreateInfo;
+
 		template <typename StringLike = std::string>
 		LinearExecutor(std::shared_ptr<VkWindow> window , StringLike&& name = {}):
 			VkObject(window->application(), std::forward<StringLike>(name)),
 			_window(window),
 			_context(&_resources_state, nullptr)
 		{}
+
+		LinearExecutor(CreateInfo const& ci);
 
 		void declare(std::shared_ptr<Command> cmd);
 

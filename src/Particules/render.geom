@@ -17,6 +17,7 @@ layout(set = 0, binding = 0, std430) buffer readonly restrict b_state
 layout(push_constant) uniform PushConstants
 {
     mat4 matrix;
+    float zoom;
 } _pc;
 
 void main()

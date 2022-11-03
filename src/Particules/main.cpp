@@ -106,7 +106,7 @@ namespace vkl
 		virtual std::vector<const char* > getDeviceExtensions()override
 		{
 			std::vector<const char* > res = VkApplication::getDeviceExtensions();
-			res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+			//res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
 			res.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
 			return res;
 		}
@@ -130,8 +130,8 @@ namespace vkl
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
 				.name = "Particules",
-				.w = 2000,
-				.h = 1400,
+				.w = 1600,
+				.h = 900,
 				.resizeable = GLFW_FALSE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
@@ -182,7 +182,12 @@ namespace vkl
 				std::string("USE_HALF_STORAGE ") + std::to_string(use_hlaf_storage),
 			};
 
-			LinearExecutor exec(_main_window);
+			LinearExecutor exec(LinearExecutor::CI{
+				.app = this,
+				.name = "exec",
+				.window = _main_window,
+				.use_ImGui = true,
+			});
 
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
@@ -344,13 +349,6 @@ namespace vkl
 			});
 			exec.declare(render);
 
-			std::shared_ptr<ImguiCommand> render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
-				.app = this,
-				.name = "RenderGUI",
-				.target = render_target_view,
-			});
-			exec.declare(render_gui);
-
 
 			struct RenderPC
 			{
@@ -377,7 +375,6 @@ namespace vkl
 
 			exec.beginFrame();
 			exec.beginCommandBuffer();
-			ImGui_ImplVulkan_CreateFontsTexture(*exec.getCommandBuffer());
 			init_particules->setPushConstantsData(InitParticulesPC{
 				.number_of_particules = num_particules,
 				.seed = seed,
