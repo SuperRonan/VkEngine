@@ -112,6 +112,34 @@ namespace vkl
 
 	void ImguiCommand::execute(ExecutionContext& context)
 	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 
+		size_t index = 0;
+
+		_resources = {
+			Resource{
+				._images = {_targets[index]},
+				._begin_state = ResourceState{
+					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					._layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			},
+		};
+
+		recordInputSynchronization(*cmd, context);
+		
+		VkRenderPassBeginInfo render_begin = {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+		};
+		vkCmdBeginRenderPass(*cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
+		{
+			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *cmd);
+
+		}
+		vkCmdEndRenderPass(*cmd);
+		
+		declareResourcesEndState(context);
 	}
 }

@@ -77,7 +77,7 @@ namespace vkl
 
 		void beginCommandBuffer();
 
-		void preparePresentation(std::shared_ptr<ImageView> img_to_present);
+		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
 
 		void endCommandBufferAndSubmit();
 

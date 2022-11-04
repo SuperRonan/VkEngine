@@ -81,7 +81,7 @@ namespace vkl
 		int _ = 0;
 	}
 
-	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present)
+	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui)
 	{
 		assert(!!_command_buffer_to_submit);
 		std::shared_ptr<ImageView> blit_target = _window->view(_aquired.swap_index);
@@ -90,6 +90,12 @@ namespace vkl
 		_blit_to_present->setRegions();
 
 		execute(_blit_to_present);
+
+		if (render_ImGui && _render_gui)
+		{
+			ImGui::Render();
+			execute(_render_gui);
+		}
 
 		const ResourceState current_state = _context.getImageState(blit_target);
 		const ResourceState desired_state = {

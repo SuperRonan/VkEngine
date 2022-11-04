@@ -28,29 +28,9 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<VkWindow> _main_window;
+		std::shared_ptr<VkWindow> _main_window = nullptr;
 
-		RenderPass _render_pass;
-
-		size_t _number_of_particules;
-		std::vector<Buffer> _state_buffers;
-		Buffer _rule_buffer;
-
-		// size: swapchain
-		std::vector<Framebuffer> _framebuffers;
-
-		DescriptorPool _update_descriptor_pool, _render_descriptor_pool;
-		std::vector<VkDescriptorSet> _update_descriptor_sets, _render_descriptor_sets;
-
-		std::shared_ptr<ComputeProgram> _update_program;
-		std::shared_ptr<GraphicsProgram> _render_program;
-		Pipeline _update_pipeline, _render_pipeline;
-
-		std::vector<CommandBuffer> _commands;
-
-		std::vector<Semaphore> _render_finished_semaphores;
-
-		std::shared_ptr<DescriptorPool> _imgui_descriptor_pool;
+		ImGuiContext* _imgui_ctx = nullptr;
 
 		virtual bool isDeviceSuitable(VkPhysicalDevice const& device) override
 		{
@@ -91,7 +71,8 @@ namespace vkl
 
 		void initImgui()
 		{
-			ImGui::CreateContext();
+			_imgui_ctx = ImGui::CreateContext();
+			ImGui::SetCurrentContext(_imgui_ctx);
 			ImGui_ImplGlfw_InitForVulkan(*_main_window, false);
 		}
 
@@ -349,6 +330,7 @@ namespace vkl
 			});
 			exec.declare(render);
 
+			float friction = 1.0;
 
 			struct RenderPC
 			{
@@ -388,7 +370,7 @@ namespace vkl
 				.zoom = static_cast<float>(mouse_handler.getScroll()),
 			});
 			exec(render);
-			exec.preparePresentation(render_target_view);
+			exec.preparePresentation(render_target_view, false);
 			exec.endCommandBufferAndSubmit();
 			exec.present();
 
@@ -402,10 +384,18 @@ namespace vkl
 				bool should_render = false;
 
 				_main_window->pollEvents();
+				ImGui_ImplGlfw_NewFrame();
+				ImGui_ImplVulkan_NewFrame();
 				bool p = paused;
 				processInput(paused);
 				should_render = p != paused;
 
+				ImGui::NewFrame();
+				{
+					ImGui::Begin("Control");
+					ImGui::SliderFloat("friction", &friction, 0.0, 2.0);
+					ImGui::End();
+				}
 
 				mouse_handler.update(dt);
 				if (mouse_handler.isButtonCurrentlyPressed(GLFW_MOUSE_BUTTON_1))
@@ -451,7 +441,9 @@ namespace vkl
 					exec.preparePresentation(render_target_view);
 					exec.endCommandBufferAndSubmit();
 					exec.present();
+
 				}
+				ImGui::EndFrame();
 
 			}
 			
