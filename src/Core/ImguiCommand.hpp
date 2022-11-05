@@ -11,10 +11,13 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageView>> _targets;
+		std::vector<std::shared_ptr<ImageView>> _targets = {};
+		std::vector<std::shared_ptr<Framebuffer>> _framebuffers = {};
 
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<DescriptorPool> _desc_pool = nullptr;
+
+		size_t _index = 0;
 
 		void createRenderPass();
 
@@ -34,5 +37,13 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
+		
+		virtual ~ImguiCommand() override;
+
+
+		constexpr void setIndex(size_t index)
+		{
+			_index = index;
+		}
 	};
 }

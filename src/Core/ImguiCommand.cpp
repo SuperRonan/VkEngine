@@ -20,7 +20,7 @@ namespace vkl
 			.flags = 0,
 			.format = _targets[0]->format(),
 			.samples = _targets[0]->image()->sampleCount(),
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -62,7 +62,11 @@ namespace vkl
 			{ dependency }
 		));
 
-
+		_framebuffers.resize(_targets.size());
+		for (size_t i = 0; i < _targets.size(); ++i)
+		{
+			_framebuffers[i] = std::shared_ptr<Framebuffer>(new Framebuffer({ _targets[i] }, _render_pass));
+		}
 	}
 
 	void ImguiCommand::init()
@@ -114,7 +118,7 @@ namespace vkl
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 
-		size_t index = 0;
+		const size_t index = _index;
 
 		_resources = {
 			Resource{
@@ -124,14 +128,35 @@ namespace vkl
 					._layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
 					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
+				._end_state = ResourceState{
+					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					._layout = VK_IMAGE_LAYOUT_GENERAL,
+					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			},
 		};
 
 		recordInputSynchronization(*cmd, context);
+
+		const VkExtent2D render_area = extract(_framebuffers[index]->extent());
+
+		std::vector<VkClearValue> clear_values(_framebuffers[index]->size());
+		for (size_t i = 0; i < clear_values.size(); ++i)
+		{
+			clear_values[i] = VkClearValue{
+				.color = VkClearColorValue{.int32{0, 0, 0, 1}},
+			};
+		}
 		
-		VkRenderPassBeginInfo render_begin = {
+		const VkRenderPassBeginInfo render_begin = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = *_render_pass,
+			.framebuffer = *_framebuffers[index],
+			.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
+			.clearValueCount = (uint32_t)clear_values.size(),
+			.pClearValues = clear_values.data(),
 		};
 		vkCmdBeginRenderPass(*cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
 		{
@@ -141,5 +166,11 @@ namespace vkl
 		vkCmdEndRenderPass(*cmd);
 		
 		declareResourcesEndState(context);
+	}
+
+
+	ImguiCommand::~ImguiCommand()
+	{
+		
 	}
 }

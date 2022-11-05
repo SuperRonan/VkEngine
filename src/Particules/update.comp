@@ -24,6 +24,7 @@ layout(push_constant) uniform constants
 	uint number_of_particules;	
 	float dt;
 	vec2 world_size;
+	float friction;
 } _pc;
 
 void main()
@@ -46,7 +47,7 @@ void main()
 				f += computeForce(p, o, force, world_size);
 			}
 		}
-		const float friction = -8e2;
+		const float friction = -8e2 * _pc.friction;
 		f += friction * p.velocity;
 		const float mass = sqr(p.radius);
 

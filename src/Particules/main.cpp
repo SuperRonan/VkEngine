@@ -73,7 +73,7 @@ namespace vkl
 		{
 			_imgui_ctx = ImGui::CreateContext();
 			ImGui::SetCurrentContext(_imgui_ctx);
-			ImGui_ImplGlfw_InitForVulkan(*_main_window, false);
+			ImGui_ImplGlfw_InitForVulkan(*_main_window, true);
 		}
 
 		struct Particule
@@ -109,7 +109,7 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
+				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Particules",
 				.w = 1600,
 				.h = 900,
@@ -294,6 +294,7 @@ namespace vkl
 				uint32_t number_of_particules;
 				float dt;
 				glm::vec2 world_size;
+				float friction;
 			};
 
 			
@@ -381,16 +382,19 @@ namespace vkl
 					dt = new_t - t;
 					t = new_t;
 				}
-				bool should_render = false;
+				bool should_render = false || true;
 
-				_main_window->pollEvents();
-				ImGui_ImplGlfw_NewFrame();
 				ImGui_ImplVulkan_NewFrame();
+				ImGui_ImplGlfw_NewFrame();
+				ImGui::NewFrame();
+				_main_window->pollEvents();
 				bool p = paused;
 				processInput(paused);
-				should_render = p != paused;
+				if (!paused)
+				{
+					should_render = true;
+				}
 
-				ImGui::NewFrame();
 				{
 					ImGui::Begin("Control");
 					ImGui::SliderFloat("friction", &friction, 0.0, 2.0);
@@ -426,6 +430,7 @@ namespace vkl
 							.number_of_particules = num_particules,
 							.dt = static_cast<float>(dt),
 							.world_size = world_size,
+							.friction = friction,
 						});
 						exec(run_simulation);
 					}

@@ -23,6 +23,16 @@ namespace vkl
 		}
 	}
 
+	LinearExecutor::~LinearExecutor()
+	{
+		if (_render_gui)
+		{
+			ImGui_ImplVulkan_DestroyFontUploadObjects();
+			ImGui_ImplVulkan_Shutdown();
+			//ImGui_ImplVulkan_DestroyDeviceObjects();
+		}
+	}
+
 	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
 	{
 		_commands.push_back(cmd);
@@ -94,6 +104,7 @@ namespace vkl
 		if (render_ImGui && _render_gui)
 		{
 			ImGui::Render();
+			_render_gui->setIndex(_aquired.swap_index);
 			execute(_render_gui);
 		}
 

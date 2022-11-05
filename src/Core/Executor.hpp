@@ -65,6 +65,8 @@ namespace vkl
 
 		LinearExecutor(CreateInfo const& ci);
 
+		virtual ~LinearExecutor();
+
 		void declare(std::shared_ptr<Command> cmd);
 
 		void declare(std::shared_ptr<ImageView> view);
