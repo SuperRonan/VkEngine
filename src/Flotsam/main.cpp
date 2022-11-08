@@ -41,6 +41,7 @@ namespace vkl
 		virtual void requestFeatures(VulkanFeatures& features) override
 		{
 			VkApplication::requestFeatures(features);
+			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 		}
 
 
@@ -89,6 +90,9 @@ namespace vkl
 		{
 			using namespace std_vector_operators;
 
+			const std::vector<std::string> common_definitions = {
+
+			};
 
 			LinearExecutor exec(LinearExecutor::CI{
 				.app = this,
@@ -115,15 +119,77 @@ namespace vkl
 			});
 			exec.declare(render_target_view);
 
+			
+			std::shared_ptr<Image> depth_img = std::make_shared<Image>(Image::CI{
+				.app = this,
+				.name = "DepthImg",
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_D32_SFLOAT,
+				.extent = extend(_main_window->extent()),
+				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<ImageView> depth_view = std::make_shared<ImageView>(ImageView::CI{
+				.name = "DepthView",
+				.image = depth_img,
+				.range = VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1, 
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+				.create_on_construct = true,
+			});
+			exec.declare(depth_view);
+
+			const std::filesystem::path shader_folder = ENGINE_SRC_PATH "/src/Flotsam/";
+
+			std::shared_ptr<VertexCommand> render_cube = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = this,
+				.name = "RenderCube",
+				.draw_count = 6,
+				.bindings = {
+
+				},
+				.color_attachements = { render_target_view},
+				.depth_buffer = depth_view,
+				.vertex_shader_path = shader_folder / "cube.vert",
+				.geometry_shader_path = shader_folder / "cube.geom",
+				.fragment_shader_path = shader_folder / "cube.frag",
+				.definitions = common_definitions,
+				.clear_color = VkClearColorValue{.float32{0, 0, 0, 0}},
+				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
+			});
+			exec.declare(render_cube);
+			struct RenderCubePC
+			{
+				glm::mat4 worl2proj;
+				uint32_t flags;
+			};
+
 
 			exec.init();
 
 			bool paused = true;
 
-			vkl::Camera2D camera;
-			vkl::MouseHandler mouse_handler(_main_window->handle(), vkl::MouseHandler::Mode::Position);
+			vkl::MouseHandler mouse_handler(_main_window->handle(), vkl::MouseHandler::Mode::Direction);
 
 			double t = glfwGetTime(), dt = 0.0;
+
+			size_t update_index = 0;
+
+			glm::vec3 camera_position = glm::vec3(-1.0, 1.0, 1.0);
+			glm::vec3 camera_target = glm::vec3(0, 0, 0);
+			glm::vec3 camera_direction = glm::normalize(camera_target - camera_position);
+
+			glm::vec3 camera_right = [&]() -> glm::vec3 {
+				glm::mat4 mr = glm::rotate(glm::mat4(1.0), 90.0f, glm::vec3(0, 0, 1));
+				glm::vec4 tmp = mr * glm::vec4(camera_direction, 0.0);
+				return glm::vec3(tmp.x, tmp.y, tmp.z);
+			} ();
 
 			while (!_main_window->shouldClose())
 			{
@@ -151,11 +217,21 @@ namespace vkl
 
 					if (!paused)
 					{
+						++update_index;
 
 					}
 
+					if(should_render)
 					{
+						{
+							const glm::mat4 cam2proj = glm::perspectiveFov<float>(90.0, _main_window->extent().width, _main_window->extent().height, 0.01, 10);
 
+							render_cube->setPushConstantsData(RenderCubePC{
+								.flags = static_cast<uint32_t>(update_index % 1),
+							});
+						}
+
+						exec(render_cube);
 					}
 
 					exec.preparePresentation(render_target_view);
