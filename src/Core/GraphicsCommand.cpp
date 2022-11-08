@@ -79,13 +79,20 @@ namespace vkl
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		};
 		
-		if (render_depth)
-		{
-			dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		}
+		//if (render_depth)
+		//{
+		//	dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		//}
 
-		RenderPass render_pass = RenderPass(application(), at_desc, { at_ref }, { subpass }, { dependency });
-		_render_pass = std::make_shared <RenderPass>(std::move(render_pass));
+		_render_pass = std::make_shared <RenderPass>(RenderPass::CI{
+			.app = application(),
+			.name = name() + ".RenderPass",
+			.attachement_descriptors = at_desc,
+			.attachement_ref_per_subpass = {at_ref},
+			.subpasses = {subpass},
+			.dependencies = {dependency},
+			.last_is_depth = render_depth,
+		});
 
 		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
 			.name = name() + ".Framebuffer",

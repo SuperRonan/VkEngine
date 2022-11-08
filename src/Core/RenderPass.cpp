@@ -28,8 +28,16 @@ namespace vkl
 	{
 		for (size_t i = 0; i < _subpasses.size(); ++i)
 		{
-			_subpasses[i].colorAttachmentCount = (uint32_t)_attachement_ref_per_subpass[i].size();
 			_subpasses[i].pColorAttachments = _attachement_ref_per_subpass[i].data();
+			if (_last_is_depth)
+			{
+				_subpasses[i].pDepthStencilAttachment = _attachement_ref_per_subpass[i].data() + _attachement_ref_per_subpass[i].size() - 1;
+			}
+			else
+			{
+				// Should be already like this
+				_subpasses[i].pDepthStencilAttachment = nullptr;
+			}
 		}
 
 		VkRenderPassCreateInfo res = {
@@ -46,18 +54,13 @@ namespace vkl
 		return res;
 	}
 
-	RenderPass::RenderPass(
-		VkApplication* app,
-		std::vector<VkAttachmentDescription> const& attachements_desc,
-		std::vector<std::vector<VkAttachmentReference>> const& attachement_ref_per_subpass,
-		std::vector<VkSubpassDescription> const& subpasses,
-		std::vector<VkSubpassDependency> const& dependencies
-	) :
-		VkObject(app),
-		_attachement_descriptors(attachements_desc),
-		_attachement_ref_per_subpass(attachement_ref_per_subpass),
-		_subpasses(subpasses),
-		_dependencies(dependencies)
+	RenderPass::RenderPass(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
+		_attachement_descriptors(ci.attachement_descriptors),
+		_attachement_ref_per_subpass(ci.attachement_ref_per_subpass),
+		_subpasses(ci.subpasses),
+		_dependencies(ci.dependencies),
+		_last_is_depth(ci.last_is_depth)
 	{
 		create(createInfo());
 	}

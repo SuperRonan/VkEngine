@@ -54,13 +54,15 @@ namespace vkl
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		};
 
-		_render_pass = std::make_shared<RenderPass>(RenderPass(
-			application(), 
-			{ attachement_desc }, 
-			{ attachement_reference }, 
-			{ subpass }, 
-			{ dependency }
-		));
+		_render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+			.app = application(),
+			.name = name() + ".RenderPass",
+			.attachement_descriptors = { attachement_desc },
+			.attachement_ref_per_subpass = { attachement_reference },
+			.subpasses = { subpass },
+			.dependencies ={ dependency },
+			.last_is_depth = false,
+		});
 
 		_framebuffers.resize(_targets.size());
 		for (size_t i = 0; i < _targets.size(); ++i)

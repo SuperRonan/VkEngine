@@ -14,22 +14,30 @@ namespace vkl
 		std::vector<VkSubpassDescription> _subpasses;
 		std::vector<VkSubpassDependency> _dependencies;
 
+		bool _last_is_depth = false;
+
 		VkRenderPass _handle = VK_NULL_HANDLE;
 
 	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::vector<VkAttachmentDescription> attachement_descriptors = {};
+			std::vector<std::vector<VkAttachmentReference>> attachement_ref_per_subpass = {};
+			std::vector<VkSubpassDescription> subpasses = {};
+			std::vector<VkSubpassDependency> dependencies = {};
+			bool last_is_depth = false;
+		};
+		using CI = CreateInfo;
 
 		constexpr RenderPass(VkApplication * app = nullptr, VkRenderPass handle = VK_NULL_HANDLE) noexcept:
 			VkObject(app),
 			_handle(handle)
 		{}
 
-		RenderPass(
-			VkApplication * app,
-			std::vector<VkAttachmentDescription> const& attachements_desc,
-			std::vector<std::vector<VkAttachmentReference>> const& attachement_ref_per_subpass,
-			std::vector<VkSubpassDescription> const& subpasses,
-			std::vector<VkSubpassDependency> const& dependencies
-			);
+		RenderPass(CreateInfo const& ci);
 
 		RenderPass(RenderPass const&) = delete;
 
