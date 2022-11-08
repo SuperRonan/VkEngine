@@ -12,17 +12,28 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageView>> _textures;
+		std::vector<std::shared_ptr<ImageView>> _textures = {};
+		std::shared_ptr<ImageView> _depth = nullptr;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		VkFramebuffer _handle = VK_NULL_HANDLE;
 
 	public:
 
+		struct CreateInfo
+		{
+			std::string name = {};
+			std::shared_ptr<RenderPass> render_pass = nullptr;
+			std::vector<std::shared_ptr<ImageView>> targets = {};
+			std::shared_ptr<ImageView> depth = nullptr;
+		};
+
+		using CI = CreateInfo;
+
 		constexpr Framebuffer(VkApplication * app = nullptr):
 			VkObject(app)
 		{}
-		// TODO universal ref
-		Framebuffer(std::vector<std::shared_ptr<ImageView>> const& textures, std::shared_ptr<RenderPass> render_pass);
+		
+		Framebuffer(CreateInfo const& ci);
 
 		Framebuffer(Framebuffer const&) = delete;
 

@@ -3,32 +3,38 @@
 
 namespace vkl
 {
-	Framebuffer::Framebuffer(std::vector<std::shared_ptr<ImageView>> const& textures, std::shared_ptr<RenderPass> render_pass) :
-		VkObject(textures.front()->application()),
-		_textures(std::move(textures)),
-		_render_pass(render_pass)
+	Framebuffer::Framebuffer(CreateInfo const& ci) :
+		VkObject(ci.render_pass->application(), ci.name),
+		_textures(ci.targets),
+		_depth(ci.depth),
+		_render_pass(ci.render_pass)
 	{
 		assert(!_textures.empty());
 		std::vector<VkImageView> views(_textures.size());
 		for (size_t i = 0; i < _textures.size(); ++i)	views[i] = *_textures[i];
-		VkFramebufferCreateInfo ci = {
+		if (_depth)
+		{
+			views.push_back(*_depth);
+		}
+		VkFramebufferCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
 			.renderPass = *_render_pass,
-			.attachmentCount = (uint32_t)views.size(),
+			.attachmentCount = static_cast<uint32_t>(views.size()),
 			.pAttachments = views.data(),
 			.width = _textures.front()->image()->extent().width,
 			.height = _textures.front()->image()->extent().height,
 			.layers = 1,
 		};
 
-		VK_CHECK(vkCreateFramebuffer(_app->device(), &ci, nullptr, &_handle), "Failed to create a Framebuffer.");
+		VK_CHECK(vkCreateFramebuffer(device(), &vk_ci, nullptr, &_handle), "Failed to create a Framebuffer.");
 	}
 
 	Framebuffer::Framebuffer(Framebuffer&& other) noexcept :
 		VkObject(std::move(other)),
 		_textures(std::move(other._textures)),
+		_depth(std::move(other._depth)),
 		_render_pass(std::move(other._render_pass)),
 		_handle(other._handle)
 	{
@@ -40,6 +46,7 @@ namespace vkl
 	{
 		VkObject::operator=(std::move(other));
 		std::swap(_textures, other._textures);
+		std::swap(_depth, other._depth);
 		std::swap(_render_pass, other._render_pass);
 		std::swap(_handle, other._handle);
 		return *this;

@@ -3,47 +3,70 @@
 namespace vkl
 {
 	GraphicsCommand::GraphicsCommand(
-		VkApplication * app, 
-		std::string const& name, 
-		std::vector<ShaderBindingDescriptor> const& bindings,
-		std::vector<std::shared_ptr<ImageView>> const& targets
-	):
-		ShaderCommand(app, name, bindings),
-		_attachements(targets)
+		CreateInfo const& ci
+	) :
+		ShaderCommand(ci.app, ci.name, ci.bindings),
+		_attachements(ci.targets),
+		_depth(ci.depth_buffer),
+		_clear_color(ci.clear_color),
+		_clear_depth_stencil(ci.clear_depth_stencil)
 	{}
 
 	void GraphicsCommand::createGraphicsResources()
 	{
-		const size_t n = _attachements.size();
-		std::vector<VkAttachmentDescription> at_desc(n);
-		std::vector<VkAttachmentReference> at_ref(n);
-		for (size_t i = 0; i < n; ++i)
+		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
+		std::vector<VkAttachmentDescription> at_desc(n_color);
+		std::vector<VkAttachmentReference> at_ref(n_color);
+		for (size_t i = 0; i < n_color; ++i)
 		{
 			at_desc[i] = VkAttachmentDescription{
 				.flags = 0,
 				.format = _attachements[i]->format(),
 				.samples = _attachements[i]->image()->sampleCount(),
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.loadOp = _clear_color.has_value() ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 				.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.finalLayout = VK_IMAGE_LAYOUT_GENERAL,
+				.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			};
 			at_ref[i] = VkAttachmentReference{
 				.attachment = uint32_t(i),
 				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			};
 		}
+
+
+		const bool render_depth = !!_depth;
+
+		if (render_depth)
+		{
+			at_desc.push_back(VkAttachmentDescription{
+				.flags = 0,
+				.format = _depth->format(),
+				.samples = _depth->image()->sampleCount(),
+				.loadOp = _clear_depth_stencil.has_value() ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+				.finalLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			});
+			at_ref.push_back(VkAttachmentReference{
+				.attachment = static_cast<uint32_t>(at_desc.size() - 1),
+				.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			});
+		}
+
 		VkSubpassDescription subpass = {
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
 			.pInputAttachments = nullptr,
-			.colorAttachmentCount = static_cast<uint32_t>(n),
+			.colorAttachmentCount = n_color,
 			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the data is copied
 			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = nullptr,
+			.pDepthStencilAttachment = render_depth ? (at_ref.data() + n_color) : nullptr,
 			.preserveAttachmentCount = 0,
 			.pPreserveAttachments = nullptr,
 		};
@@ -55,10 +78,21 @@ namespace vkl
 			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		};
+		
+		if (render_depth)
+		{
+			dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		}
+
 		RenderPass render_pass = RenderPass(application(), at_desc, { at_ref }, { subpass }, { dependency });
 		_render_pass = std::make_shared <RenderPass>(std::move(render_pass));
 
-		_framebuffer = std::make_shared<Framebuffer>(_attachements, _render_pass);
+		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+			.name = name() + ".Framebuffer",
+			.render_pass = _render_pass,
+			.targets = _attachements,
+			.depth = _depth,
+		});
 	}
 
 	void GraphicsCommand::declareGraphicsResources()
@@ -73,15 +107,27 @@ namespace vkl
 					._layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
-				._end_state = ResourceState{
-					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
-					._layout = VK_IMAGE_LAYOUT_GENERAL,
-					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			});
 		}
-		// TODO depth buffer
+		if (!!_depth)
+		{
+			const VkAccessFlags access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT; // TODO deduce from the depth test;
+			_resources.push_back(Resource{
+				._images = {_depth},
+				._begin_state = ResourceState{
+					._access = access,
+					._layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+					._stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
+				},
+				._end_state = ResourceState{
+					._access = access,
+					._layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+					._stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
+				},
+				._image_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			});
+		}
 	}
 
 	void GraphicsCommand::init()
@@ -97,12 +143,20 @@ namespace vkl
 
 		VkExtent2D render_area = extract(_framebuffer->extent());
 
-		std::vector<VkClearValue> clear_values(_framebuffer->size());
-		for (size_t i = 0; i < clear_values.size(); ++i)
+		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->size() + 1) : 0;
+
+		std::vector<VkClearValue> clear_values(num_clear_values);
+		if (num_clear_values)
 		{
-			clear_values[i] = VkClearValue{
-				.color = VkClearColorValue{.int32{0, 0, 0, 1}},
-			};
+			if (_clear_color.has_value())
+			{
+				const VkClearValue cv = { .color = _clear_color.value() };
+				std::fill_n(clear_values.begin(), num_clear_values - 1, cv);
+			}
+			if (_clear_depth_stencil.has_value())
+			{
+				clear_values.back() = VkClearValue{ .depthStencil = _clear_depth_stencil.value() };
+			}
 		}
 
 		VkRenderPassBeginInfo begin = {
@@ -110,9 +164,9 @@ namespace vkl
 			.pNext = nullptr,
 			.renderPass = *_render_pass,
 			.framebuffer = *_framebuffer,
-			.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
-			.clearValueCount = (uint32_t)clear_values.size(),
-			.pClearValues = clear_values.data(),
+			.renderArea = VkRect2D{.offset = makeZeroOffset2D(), .extent = render_area},
+			.clearValueCount = static_cast<uint32_t>(num_clear_values),
+			.pClearValues = num_clear_values ? clear_values.data() : nullptr,
 		};
 
 		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
@@ -132,7 +186,15 @@ namespace vkl
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :
-		GraphicsCommand(ci.app, ci.name, ci.bindings, ci.color_attachements),
+		GraphicsCommand(GraphicsCommand::CreateInfo{
+			.app = ci.app,
+			.name = ci.name,
+			.bindings = ci.bindings,
+			.targets = ci.color_attachements,
+			.depth_buffer = ci.depth_buffer,
+			.clear_color = ci.clear_color,
+			.clear_depth_stencil = ci.clear_depth_stencil,
+		}),
 		_shaders(ShaderPaths{
 			.vertex_path = ci.vertex_shader_path, 
 			.geometry_path = ci.geometry_shader_path, 

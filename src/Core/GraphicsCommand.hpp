@@ -10,8 +10,12 @@ namespace vkl
 
 		std::shared_ptr<GraphicsProgram> _program;
 		std::vector<std::shared_ptr<ImageView>> _attachements = {};
+		std::shared_ptr<ImageView> _depth = nullptr;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
+
+		std::optional<VkClearColorValue> _clear_color = {};
+		std::optional<VkClearDepthStencilValue> _clear_depth_stencil = {};
 
 		virtual void createProgramIFN() = 0;
 
@@ -21,7 +25,18 @@ namespace vkl
 
 	public:
 
-		GraphicsCommand(VkApplication* app, std::string const& name, std::vector<ShaderBindingDescriptor> const& bindings, std::vector<std::shared_ptr<ImageView>> const& targets);
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::vector<ShaderBindingDescriptor> bindings = {};
+			std::vector<std::shared_ptr<ImageView>> targets = {};
+			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::optional<VkClearColorValue> clear_color = {};
+			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
+		};
+
+		GraphicsCommand(CreateInfo const& ci);
 
 		virtual void init() override;
 
@@ -64,10 +79,14 @@ namespace vkl
 			std::vector<std::shared_ptr<Mesh>> meshes = {};
 			std::vector<ShaderBindingDescriptor> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
+			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::filesystem::path vertex_shader_path = {};
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
-			std::vector<std::string> definitions;
+			std::vector<std::string> definitions = {};
+			
+			std::optional<VkClearColorValue> clear_color = {};
+			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 		};
 
 		using CI = CreateInfo;
@@ -97,6 +116,7 @@ namespace vkl
 			std::string name = {};
 			std::vector<ShaderBindingDescriptor> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
+			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::filesystem::path fragment_shader_path = {};
 			std::vector<std::string> definitions;
 		};

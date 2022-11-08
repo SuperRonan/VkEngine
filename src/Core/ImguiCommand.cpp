@@ -65,7 +65,11 @@ namespace vkl
 		_framebuffers.resize(_targets.size());
 		for (size_t i = 0; i < _targets.size(); ++i)
 		{
-			_framebuffers[i] = std::shared_ptr<Framebuffer>(new Framebuffer({ _targets[i] }, _render_pass));
+			_framebuffers[i] = std::make_shared<Framebuffer>(Framebuffer::CI{ 
+				.name = name() + std::string(".Framebuffer ") + std::to_string(i),
+				.render_pass = _render_pass,
+				.targets = {_targets[i]}, 
+			});
 		}
 	}
 
