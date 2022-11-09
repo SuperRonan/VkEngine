@@ -155,8 +155,41 @@ namespace vkl
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
+			exec.declare(cube_buffer);
+
+			std::shared_ptr<Image> water_surface_img = std::make_shared<Image>(Image::CI{
+				.app = this,
+				.name = "WaterSurfaceImage",
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R32_SFLOAT,
+				.extent = VkExtent3D{.width = 1024, .height = 1024, .depth = 1},
+				.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
+			std::shared_ptr<ImageView> water_surface_view = std::make_shared<ImageView>(ImageView::CreateInfo{
+				.name = "WaterSurfaceView",
+				.image = water_surface_img,
+				.create_on_construct = true,
+			});
+			exec.declare(water_surface_view);
 
 			const std::filesystem::path shader_folder = ENGINE_SRC_PATH "/src/Flotsam/";
+
+			//std::shared_ptr<ComputeCommand> simul_water = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+			//	.app = this,
+			//	.name = "SimulWater",
+			//	.shader_path = shader_folder / "water.comp",
+			//	.dispatch_size = water_surface_img->extent(),
+			//	.dispatch_threads = true,
+			//	.bindings = {
+			//		Binding{
+			//			.view = water_surface_view,
+			//			.set = 0, .binding = 0,
+			//		},
+			//	},
+			//});
 
 			std::shared_ptr<VertexCommand> render_cube = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
@@ -227,6 +260,7 @@ namespace vkl
 				{
 					should_render = true;
 				}
+				mouse_handler.update(dt);
 
 
 				if (!paused || should_render)
@@ -243,8 +277,9 @@ namespace vkl
 					if(should_render)
 					{
 						{
+							const glm::vec3 camera_direction = mouse_handler.direction<float>();
 							const glm::mat4 cam2proj = [&] {glm::mat4 tmp = glm::perspectiveFov<float>(90.0, _main_window->extent().width, _main_window->extent().height, 0.01, 10); tmp[1][1] *= -1; return tmp; }();
-							const glm::mat4 world2cam = glm::lookAt(camera_position, camera_target, glm::vec3(0, 0, 1));
+							const glm::mat4 world2cam = glm::lookAt(-2.0f * camera_direction, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
 							const glm::mat4 world2proj = cam2proj * world2cam;
 							render_cube->setPushConstantsData(RenderCubePC{
 								.worl2proj = world2proj,

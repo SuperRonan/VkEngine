@@ -1,0 +1,30 @@
+#version 460 core
+
+layout(set = 0, binding = 0, r32f) uniform restrict image2D water_surface;
+
+layout(push_constant) uniform PushConstants
+{
+    float t;
+    float dt;
+
+} _pc;
+
+void main()
+{
+    const ivec2 gid = ivec2(gl_GlobalInvocationIndex.xy);
+
+    const ivec2 dims = imageSize(water_surface);
+
+    if(all(lessThan(gid, dims)))
+    {
+        const vec2 uv = (vec2(gid) + 0.5) / vec2(dims);
+
+        const vec2 water_dir = 10.0 * normalize(vec2(0.65, 0.5));
+
+        const float x = dot(uv, water_dir);
+
+        const float h = sin(x);
+
+        imageStore(water_surface, gid, h.xxxx);
+    }
+}
