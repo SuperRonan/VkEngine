@@ -63,7 +63,6 @@ namespace vkl
 		ShaderPaths _shaders;
 
 		std::vector<std::shared_ptr<Mesh>> _meshes;
-		std::shared_ptr<ImageView> _depth_stencil;
 
 		std::optional<uint32_t> _draw_count = false;
 

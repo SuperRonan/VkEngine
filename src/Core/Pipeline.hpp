@@ -18,6 +18,7 @@ namespace vkl
 			VkPipelineViewportStateCreateInfo _viewport;
 			VkPipelineRasterizationStateCreateInfo _rasterization;
 			VkPipelineMultisampleStateCreateInfo _multisampling;
+			std::optional<VkPipelineDepthStencilStateCreateInfo> _depth_stencil = {};
 			std::vector<VkPipelineColorBlendAttachmentState> _attachements_blends;
 			VkPipelineColorBlendStateCreateInfo _blending;
 			VkGraphicsPipelineCreateInfo _pipeline_ci;
@@ -72,7 +73,7 @@ namespace vkl
 					.pViewportState = &_viewport,
 					.pRasterizationState = &_rasterization,
 					.pMultisampleState = &_multisampling,
-					.pDepthStencilState = nullptr, // TODO
+					.pDepthStencilState = _depth_stencil.has_value() ? &_depth_stencil.value() : nullptr,
 					.pColorBlendState = &_blending,
 					.pDynamicState = nullptr,
 					.layout = _program->pipelineLayout(),
@@ -164,13 +165,19 @@ namespace vkl
 			return multisampling;
 		}
 
-		constexpr static VkPipelineDepthStencilStateCreateInfo DepthStencil()
+		constexpr static VkPipelineDepthStencilStateCreateInfo DepthStencilCloser()
 		{
 			VkPipelineDepthStencilStateCreateInfo depth_stencil = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				// TODO
+				.depthTestEnable  = VK_TRUE,
+				.depthWriteEnable = VK_TRUE,
+				.depthCompareOp = VK_COMPARE_OP_LESS,
+				.depthBoundsTestEnable = VK_FALSE,
+				.stencilTestEnable = VK_FALSE,
+				.minDepthBounds = 0.0,
+				.maxDepthBounds = 1.0,
 			};
 			return depth_stencil;
 		}

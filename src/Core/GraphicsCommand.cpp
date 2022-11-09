@@ -250,6 +250,11 @@ namespace vkl
 		gci._program = _program;
 		gci._render_pass = *_render_pass;
 
+		if (_depth)
+		{
+			gci._depth_stencil = Pipeline::DepthStencilCloser();
+		}
+
 		VkViewport viewport = Pipeline::Viewport(extract(_framebuffer->extent()));
 		VkRect2D scissor = Pipeline::Scissor(extract(_framebuffer->extent()));
 

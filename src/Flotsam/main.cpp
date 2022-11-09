@@ -1,4 +1,6 @@
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #include <Core/VkApplication.hpp>
 #include <Core/Camera2D.hpp>
 #include <Core/MouseHandler.hpp>
@@ -145,6 +147,15 @@ namespace vkl
 			});
 			exec.declare(depth_view);
 
+			std::shared_ptr<Buffer> cube_buffer = std::make_shared<Buffer>(Buffer::CI{
+				.app = this,
+				.name = "CubeBuffer",
+				.size = 1024,
+				.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.create_on_construct = true,
+			});
+
 			const std::filesystem::path shader_folder = ENGINE_SRC_PATH "/src/Flotsam/";
 
 			std::shared_ptr<VertexCommand> render_cube = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -152,7 +163,10 @@ namespace vkl
 				.name = "RenderCube",
 				.draw_count = 6,
 				.bindings = {
-
+					Binding{
+						.buffer = cube_buffer,
+						.set = 0, .binding = 0,
+					},
 				},
 				.color_attachements = { render_target_view},
 				.depth_buffer = depth_view,
@@ -186,10 +200,15 @@ namespace vkl
 			glm::vec3 camera_direction = glm::normalize(camera_target - camera_position);
 
 			glm::vec3 camera_right = [&]() -> glm::vec3 {
-				glm::mat4 mr = glm::rotate(glm::mat4(1.0), 90.0f, glm::vec3(0, 0, 1));
-				glm::vec4 tmp = mr * glm::vec4(camera_direction, 0.0);
-				return glm::vec3(tmp.x, tmp.y, tmp.z);
+				//glm::mat4 mr = glm::rotate(glm::mat4(1.0), 90.0f, glm::vec3(0, 0, 1));
+				//glm::vec4 tmp = mr * glm::vec4(camera_direction, 0.0);
+				//return glm::vec3(tmp.x, tmp.y, tmp.z);
+
+				return glm::normalize(glm::cross(camera_direction, glm::vec3(0, 0, -1)));
 			} ();
+
+			
+			
 
 			while (!_main_window->shouldClose())
 			{
@@ -224,9 +243,11 @@ namespace vkl
 					if(should_render)
 					{
 						{
-							const glm::mat4 cam2proj = glm::perspectiveFov<float>(90.0, _main_window->extent().width, _main_window->extent().height, 0.01, 10);
-
+							const glm::mat4 cam2proj = [&] {glm::mat4 tmp = glm::perspectiveFov<float>(90.0, _main_window->extent().width, _main_window->extent().height, 0.01, 10); tmp[1][1] *= -1; return tmp; }();
+							const glm::mat4 world2cam = glm::lookAt(camera_position, camera_target, glm::vec3(0, 0, 1));
+							const glm::mat4 world2proj = cam2proj * world2cam;
 							render_cube->setPushConstantsData(RenderCubePC{
+								.worl2proj = world2proj,
 								.flags = static_cast<uint32_t>(update_index % 1),
 							});
 						}
