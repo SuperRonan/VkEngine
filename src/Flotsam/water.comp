@@ -19,11 +19,11 @@ void main()
     {
         const vec2 uv = (vec2(gid) + 0.5) / vec2(dims);
 
-        const vec2 water_dir = 10.0 * normalize(vec2(0.65, 0.5));
+        const vec2 water_dir = 5.0 * normalize(vec2(0.65, 0.5));
 
-        const float x = dot(uv, water_dir);
+        const float x = dot(uv, water_dir) + _pc.t;
 
-        const float h = sin(x);
+        const float h = sin(x) * 0.1;
 
         imageStore(water_surface, gid, h.xxxx);
     }

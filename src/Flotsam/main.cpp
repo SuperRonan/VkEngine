@@ -220,6 +220,10 @@ namespace vkl
 				},
 			});
 			exec.declare(simul_water);
+			struct SimulWaterPC {
+				float t;
+				float dt;
+			};
 
 			std::shared_ptr<ClearImage> clear_water = std::make_shared<ClearImage>(ClearImage::CI{
 				.app = this,
@@ -351,6 +355,11 @@ namespace vkl
 					{
 						++update_index;
 
+						simul_water->setPushConstantsData(SimulWaterPC{
+							.t = static_cast<float>(t),
+							.dt = static_cast<float>(dt),
+						});
+						exec(simul_water);
 					}
 
 					if(should_render) 

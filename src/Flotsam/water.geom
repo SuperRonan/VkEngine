@@ -27,16 +27,16 @@ void main()
 	const ivec2 v_id =vertex_id[0];
 	const vec2 inv_dim = 1.0 / vec2(textureSize(water_surface, 0));
 	
-	const vec4 wl = textureGather(water_surface, (vec2(v_id) + 0.5) * inv_dim) * 0; 
+	const vec4 wl = textureGather(water_surface, (vec2(v_id) + 0.5) * inv_dim); 
 
 	const float water_scale = 2.0;
 
 	const vec2 base_v_pos = (vec2(v_id) * inv_dim - 0.5) * water_scale;
 
-	const vec3 a = vec3(base_v_pos, wl.x);
-	const vec3 b = vec3(base_v_pos + vec2(0, 1) * inv_dim * water_scale, wl.y);
+	const vec3 a = vec3(base_v_pos, wl.w);
+	const vec3 b = vec3(base_v_pos + vec2(0, 1) * inv_dim * water_scale, wl.x);
 	const vec3 c = vec3(base_v_pos + vec2(1, 0) * inv_dim * water_scale, wl.z);
-	const vec3 d = vec3(base_v_pos + vec2(1, 1) * inv_dim * water_scale, wl.w);
+	const vec3 d = vec3(base_v_pos + vec2(1, 1) * inv_dim * water_scale, wl.y);
 
 	
 	{
