@@ -241,10 +241,12 @@ namespace vkl
 				},
 				.color_attachements = { render_target_view},
 				.depth_buffer = depth_view,
+				.write_depth = false,
 				.vertex_shader_path = shader_folder / "water.vert",
 				.geometry_shader_path = shader_folder / "water.geom",
 				.fragment_shader_path = shader_folder / "water.frag",
 				.definitions = common_definitions,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			exec.declare(render_water);
 			struct RenderWaterPC
@@ -351,7 +353,7 @@ namespace vkl
 
 					}
 
-					if(should_render)
+					if(should_render) 
 					{
 						{
 							glm::vec3 camera_direction = mouse_handler.direction<float>();

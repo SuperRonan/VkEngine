@@ -8,6 +8,7 @@ namespace vkl
 		ShaderCommand(ci.app, ci.name, ci.bindings),
 		_attachements(ci.targets),
 		_depth(ci.depth_buffer),
+		_write_depth(ci.write_depth),
 		_clear_color(ci.clear_color),
 		_clear_depth_stencil(ci.clear_depth_stencil)
 	{}
@@ -41,12 +42,14 @@ namespace vkl
 
 		if (render_depth)
 		{
+			const bool write_depth = _write_depth.value_or(true);
+
 			at_desc.push_back(VkAttachmentDescription{
 				.flags = 0,
 				.format = _depth->format(),
 				.samples = _depth->image()->sampleCount(),
 				.loadOp = _clear_depth_stencil.has_value() ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.storeOp = write_depth ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_NONE,
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 				.initialLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -199,6 +202,7 @@ namespace vkl
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
+			.write_depth = ci.write_depth,
 			.clear_color = ci.clear_color,
 			.clear_depth_stencil = ci.clear_depth_stencil,
 		}),
@@ -209,7 +213,8 @@ namespace vkl
 			.definitions = ci.definitions 
 		}),
 		_draw_count(ci.draw_count),
-		_meshes(ci.meshes)
+		_meshes(ci.meshes),
+		_blending(ci.blending)
 	{
 		
 	}
@@ -252,7 +257,7 @@ namespace vkl
 
 		if (_depth)
 		{
-			gci._depth_stencil = Pipeline::DepthStencilCloser();
+			gci._depth_stencil = Pipeline::DepthStencilCloser(_write_depth.value_or(true));
 		}
 
 		VkViewport viewport = Pipeline::Viewport(extract(_framebuffer->extent()));
@@ -260,7 +265,8 @@ namespace vkl
 
 
 		gci.setViewport({ viewport }, { scissor });
-		gci.setColorBlending({ Pipeline::BlendAttachementNoBlending() });
+		std::vector<VkPipelineColorBlendAttachmentState> blending(_framebuffer->size(), _blending.value_or(Pipeline::BlendAttachementNoBlending()));
+		gci.setColorBlending(std::move(blending));
 		gci.assemble();
 
 		_pipeline = std::make_shared<Pipeline>(gci);

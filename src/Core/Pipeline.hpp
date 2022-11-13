@@ -165,14 +165,14 @@ namespace vkl
 			return multisampling;
 		}
 
-		constexpr static VkPipelineDepthStencilStateCreateInfo DepthStencilCloser()
+		constexpr static VkPipelineDepthStencilStateCreateInfo DepthStencilCloser(bool write_depth = true)
 		{
 			VkPipelineDepthStencilStateCreateInfo depth_stencil = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
 				.depthTestEnable  = VK_TRUE,
-				.depthWriteEnable = VK_TRUE,
+				.depthWriteEnable = write_depth ? VK_TRUE : VK_FALSE,
 				.depthCompareOp = VK_COMPARE_OP_LESS,
 				.depthBoundsTestEnable = VK_FALSE,
 				.stencilTestEnable = VK_FALSE,
@@ -191,6 +191,24 @@ namespace vkl
 			return color_blend_attachement;
 		}
 
+		constexpr static VkPipelineColorBlendAttachmentState BlendAttachementBlendingAlphaDefault()
+		{
+			VkPipelineColorBlendAttachmentState color_blend_attachement{
+				.blendEnable = VK_TRUE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+				.dstColorBlendFactor = VK_BLEND_FACTOR_DST_ALPHA,
+				.colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+				.alphaBlendOp = VK_BLEND_OP_ADD,
+				.colorWriteMask =
+					VK_COLOR_COMPONENT_R_BIT |
+					VK_COLOR_COMPONENT_G_BIT |
+					VK_COLOR_COMPONENT_B_BIT |
+					VK_COLOR_COMPONENT_A_BIT,
+			};
+			return color_blend_attachement;
+		}
 
 
 	protected:

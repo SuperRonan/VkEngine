@@ -14,6 +14,8 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 
+		std::optional<bool> _write_depth = {};
+
 		std::optional<VkClearColorValue> _clear_color = {};
 		std::optional<VkClearDepthStencilValue> _clear_depth_stencil = {};
 
@@ -32,6 +34,7 @@ namespace vkl
 			std::vector<ShaderBindingDescriptor> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::optional<bool> write_depth = {};
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 		};
@@ -66,6 +69,8 @@ namespace vkl
 
 		std::optional<uint32_t> _draw_count = false;
 
+		std::optional<VkPipelineColorBlendAttachmentState> _blending = {};
+
 		virtual void createProgramIFN() override;
 
 	public:
@@ -79,6 +84,7 @@ namespace vkl
 			std::vector<ShaderBindingDescriptor> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::optional<bool> write_depth = {};
 			std::filesystem::path vertex_shader_path = {};
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
@@ -86,6 +92,8 @@ namespace vkl
 			
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
+
+			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
 		};
 
 		using CI = CreateInfo;
