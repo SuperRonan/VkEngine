@@ -7,10 +7,10 @@ layout(set = 0, binding = 0) uniform sampler2D water_surface;
 
 void main()
 {
-	const uint v = gl_VertexIndex;
+	const int v = int(gl_VertexIndex);
 
 	const ivec2 dims = textureSize(water_surface, 0);
 
-	vertex_id.x = v % dims.x;
-	vertex_id.y = v / dims.x;
+	vertex_id.x = v % (dims.x - 1);
+	vertex_id.y = v / (dims.x - 1);
 }

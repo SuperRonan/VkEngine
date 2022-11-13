@@ -69,7 +69,14 @@ namespace vkl
 		virtual ~Flotsam()
 		{}
 
-		void processInput(bool& pause)
+		struct InputState
+		{
+			bool paused = true;
+			bool grabed = false;
+			double scroll = 0;
+		};
+
+		void processInput(InputState& inputs)
 		{
 			GLFWwindow* window = _main_window->handle();
 
@@ -82,10 +89,18 @@ namespace vkl
 			int current_pause = glfwGetKey(window, GLFW_KEY_SPACE);
 			if ((current_pause == GLFW_RELEASE) && (prev_pause == GLFW_PRESS))
 			{
-				pause = !pause;
+				inputs.paused = !inputs.paused;
 			}
-
 			prev_pause = current_pause;
+
+			if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
+			{
+				inputs.grabed = true;
+			}
+			else
+			{
+				inputs.grabed = false;
+			}
 		}
 
 		virtual void run() override
@@ -162,7 +177,7 @@ namespace vkl
 				.name = "WaterSurfaceImage",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R32_SFLOAT,
-				.extent = VkExtent3D{.width = 1024, .height = 1024, .depth = 1},
+				.extent = VkExtent3D{.width = 16, .height = 16, .depth = 1},
 				.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -175,21 +190,68 @@ namespace vkl
 			});
 			exec.declare(water_surface_view);
 
+			std::shared_ptr<Sampler> bilinear_sampler = std::shared_ptr<Sampler>(new Sampler(this, VkSamplerCreateInfo{
+				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.magFilter = VK_FILTER_LINEAR,
+				.minFilter = VK_FILTER_LINEAR,
+				.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+				.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+				.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+				.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+				.mipLodBias = 0,
+				.anisotropyEnable = false,
+			}));
+
 			const std::filesystem::path shader_folder = ENGINE_SRC_PATH "/src/Flotsam/";
 
-			//std::shared_ptr<ComputeCommand> simul_water = std::make_shared<ComputeCommand>(ComputeCommand::CI{
-			//	.app = this,
-			//	.name = "SimulWater",
-			//	.shader_path = shader_folder / "water.comp",
-			//	.dispatch_size = water_surface_img->extent(),
-			//	.dispatch_threads = true,
-			//	.bindings = {
-			//		Binding{
-			//			.view = water_surface_view,
-			//			.set = 0, .binding = 0,
-			//		},
-			//	},
-			//});
+			std::shared_ptr<ComputeCommand> simul_water = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "SimulWater",
+				.shader_path = shader_folder / "water.comp",
+				.dispatch_size = water_surface_img->extent(),
+				.dispatch_threads = true,
+				.bindings = {
+					Binding{
+						.view = water_surface_view,
+						.set = 0, .binding = 0,
+					},
+				},
+			});
+			exec.declare(simul_water);
+
+			std::shared_ptr<ClearImage> clear_water = std::make_shared<ClearImage>(ClearImage::CI{
+				.app = this,
+				.name = "ClearWater",
+				.view = water_surface_view,
+			});
+			exec.declare(clear_water);
+
+			std::shared_ptr<VertexCommand> render_water = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = this,
+				.name = "RenderWater",
+				.draw_count = (water_surface_img->extent().width - 1) * (water_surface_img->extent().height - 1),
+				.bindings = {
+					Binding{
+						.view = water_surface_view,
+						.sampler = bilinear_sampler,
+						.set = 0, .binding = 0,
+					},
+				},
+				.color_attachements = { render_target_view},
+				.depth_buffer = depth_view,
+				.vertex_shader_path = shader_folder / "water.vert",
+				.geometry_shader_path = shader_folder / "water.geom",
+				.fragment_shader_path = shader_folder / "water.frag",
+				.definitions = common_definitions,
+			});
+			exec.declare(render_water);
+			struct RenderWaterPC
+			{
+				glm::mat4 world2proj;
+				uint32_t flags;
+			};
 
 			std::shared_ptr<VertexCommand> render_cube = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
@@ -213,14 +275,14 @@ namespace vkl
 			exec.declare(render_cube);
 			struct RenderCubePC
 			{
-				glm::mat4 worl2proj;
+				glm::mat4 world2proj;
 				uint32_t flags;
 			};
 
 
 			exec.init();
 
-			bool paused = true;
+			InputState inputs = {};
 
 			vkl::MouseHandler mouse_handler(_main_window->handle(), vkl::MouseHandler::Mode::Direction);
 
@@ -240,8 +302,17 @@ namespace vkl
 				return glm::normalize(glm::cross(camera_direction, glm::vec3(0, 0, -1)));
 			} ();
 
+			float camera_distance = 2.0;
+
 			
+			exec.beginFrame();
+			exec.beginCommandBuffer();
+
+			exec(clear_water);
 			
+			exec.preparePresentation(render_target_view);
+			exec.endCommandBufferAndSubmit();
+			exec.present();
 
 			while (!_main_window->shouldClose())
 			{
@@ -254,21 +325,27 @@ namespace vkl
 
 				
 				_main_window->pollEvents();
-				bool p = paused;
-				processInput(paused);
-				if (!paused)
+				processInput(inputs);
+				if (!inputs.paused)
 				{
 					should_render = true;
 				}
-				mouse_handler.update(dt);
+				if (inputs.grabed)
+				{
+					mouse_handler.update(dt);
+
+					{
+						camera_distance *= std::exp(mouse_handler.getScroll() * 0.1);
+					}
+				}
 
 
-				if (!paused || should_render)
+				if (!inputs.paused || should_render)
 				{
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 
-					if (!paused)
+					if (!inputs.paused)
 					{
 						++update_index;
 
@@ -277,17 +354,26 @@ namespace vkl
 					if(should_render)
 					{
 						{
-							const glm::vec3 camera_direction = mouse_handler.direction<float>();
+							glm::vec3 camera_direction = mouse_handler.direction<float>();
+							// TODO express it with a matrix
+							std::swap(camera_direction.y, camera_direction.z);
+							camera_direction.x = -camera_direction.x;
 							const glm::mat4 cam2proj = [&] {glm::mat4 tmp = glm::perspectiveFov<float>(90.0, _main_window->extent().width, _main_window->extent().height, 0.01, 10); tmp[1][1] *= -1; return tmp; }();
-							const glm::mat4 world2cam = glm::lookAt(-2.0f * camera_direction, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
+							const glm::mat4 world2cam = glm::lookAt(-camera_distance * camera_direction, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
 							const glm::mat4 world2proj = cam2proj * world2cam;
 							render_cube->setPushConstantsData(RenderCubePC{
-								.worl2proj = world2proj,
+								.world2proj = world2proj,
+								.flags = static_cast<uint32_t>(update_index % 1),
+							});
+
+							render_water->setPushConstantsData(RenderWaterPC{
+								.world2proj = world2proj,
 								.flags = static_cast<uint32_t>(update_index % 1),
 							});
 						}
 
 						exec(render_cube);
+						exec(render_water);
 					}
 
 					exec.preparePresentation(render_target_view);

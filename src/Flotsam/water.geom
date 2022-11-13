@@ -8,18 +8,13 @@
 layout(points) in;
 layout(triangle_strip, max_vertices=4) out;
 
-layout(location = 0) in uint cube_id[1];
-layout(location = 1) in vec3 face_normal[1]; 
-layout(location = 2) in vec3 face_tangent[1]; 
+layout(location = 0) in ivec2 vertex_id[1];
 
 layout(location = 0) out vec3 world_position;
 layout(location = 1) out vec3 world_normal;
 layout(location = 2) out vec2 o_uv;
 
-layout(set = 0, binding = 0) buffer readonly restrict CubeBuffer
-{
-	CubeState[NUMBER_OF_CUBES * 2] states;
-} cubes;
+layout(set = 0, binding = 0) uniform sampler2D water_surface;
 
 layout(push_constant) uniform PushConstants
 {
@@ -27,46 +22,46 @@ layout(push_constant) uniform PushConstants
 	uint flags;
 } _pc;
 
-
-void emitVert
-(
-	CubeState cube, 
-	vec2 uv
-	)
-{
-	const vec3 face_ctan = cross(face_normal[0], face_tangent[0]);
-	world_position = 0..xxx
-		+ cube.center_position + 0.5 * face_normal[0]
-		+ mix(-0.5, 0.5, uv.x) * face_tangent[0] 
-		+ mix(-0.5, 0.5, uv.y) * face_ctan
-	;
-
-	world_normal = face_normal[0];
-
-	o_uv = uv;
-
-	gl_Position = _pc.world2proj * vec4(world_position, 1.0);
-
-	EmitVertex(); 
-		
-}
-
 void main()
 {
-	const uint buffer_id = GetCurrentBufferIndex(cube_id[0], _pc.flags);
-
-	const CubeState cube = cubes.states[buffer_id];
-
-	const vec3 face_ctan = cross(face_normal[0], face_tangent[0]);
-
-	for(int i = 0; i < 2; ++i)
-	{
-		for(int j = 0; j < 2; ++j)
-		{
-			emitVert(cube, vec2(i, j));
-
-		}
-	}
+	const ivec2 v_id =vertex_id[0];
+	const vec2 inv_dim = 1.0 / vec2(textureSize(water_surface, 0));
 	
+	const vec4 wl = textureGather(water_surface, (vec2(v_id) + 0.5) * inv_dim) * 0; 
+
+	const float water_scale = 2.0;
+
+	const vec2 base_v_pos = (vec2(v_id) * inv_dim - 0.5) * water_scale;
+
+	const vec3 a = vec3(base_v_pos, wl.x);
+	const vec3 b = vec3(base_v_pos + vec2(0, 1) * inv_dim * water_scale, wl.y);
+	const vec3 c = vec3(base_v_pos + vec2(1, 0) * inv_dim * water_scale, wl.z);
+	const vec3 d = vec3(base_v_pos + vec2(1, 1) * inv_dim * water_scale, wl.w);
+
+	
+	{
+		gl_Position = _pc.world2proj * vec4(a, 1);
+		world_position = a;
+		EmitVertex();
+	}
+
+	{
+		gl_Position = _pc.world2proj * vec4(b, 1);
+		world_position = b;
+		EmitVertex();
+	}
+
+	{
+		gl_Position = _pc.world2proj * vec4(c, 1);
+		world_position = c;
+		EmitVertex();
+	}
+
+	{
+		gl_Position = _pc.world2proj * vec4(d, 1);
+		world_position = d;
+		EmitVertex();
+	}
+
 	EndPrimitive();
 }

@@ -117,4 +117,59 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 	};
+
+	class FillBuffer : public DeviceCommand
+	{
+	protected:
+
+		std::shared_ptr<Buffer> _buffer = nullptr;
+
+		VkDeviceSize _begin = 0;
+		VkDeviceSize _size = VK_WHOLE_SIZE;
+		uint32_t _value = 0u;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Buffer> buffer = nullptr;
+			VkDeviceSize begin = 0;
+			VkDeviceSize size = 0;
+			uint32_t value;
+		};
+		using CI = CreateInfo;
+
+		FillBuffer(CreateInfo const& ci);
+
+		virtual void init() override;
+
+		virtual void execute(ExecutionContext& context) override;
+	};
+
+	class ClearImage : public DeviceCommand
+	{
+	protected:
+
+		std::shared_ptr<ImageView> _view;
+		VkClearValue _value;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ImageView> view = nullptr;
+			VkClearValue value = VkClearValue{ .color = VkClearColorValue{.int32{0, 0, 0, 0}} };
+		};
+		using CI = CreateInfo;
+
+		ClearImage(CreateInfo const& ci);
+
+		void init() override;
+
+		void execute(ExecutionContext& context) override;
+	};
 }

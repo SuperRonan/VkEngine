@@ -247,4 +247,77 @@ namespace vkl
 
 		declareResourcesEndState(context);
 	}
+
+	FillBuffer::FillBuffer(CreateInfo const& ci) :
+		DeviceCommand(ci.app, ci.name),
+		_buffer(ci.buffer),
+		_begin(ci.begin),
+		_size(ci.size),
+		_value(ci.value)
+	{
+
+	}
+
+	void FillBuffer::init()
+	{
+		_resources = {
+			Resource{
+				._buffers = {_buffer},
+				._begin_state = ResourceState{
+					._access = VK_ACCESS_TRANSFER_WRITE_BIT,
+					._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+				},
+				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			},
+		};
+	}
+
+	void FillBuffer::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+		recordInputSynchronization(*cmd, context);
+
+		vkCmdFillBuffer(*cmd, *_buffer, _begin, _size, _value);
+
+		declareResourcesEndState(context);
+	}
+
+
+
+	ClearImage::ClearImage(CreateInfo const& ci):
+		DeviceCommand(ci.app, ci.name),
+		_view(ci.view),
+		_value(ci.value)
+	{
+
+	}
+
+	void ClearImage::init()
+	{
+		_resources = {
+			Resource{
+				._images = {_view},
+				._begin_state = ResourceState{
+					._access = VK_ACCESS_TRANSFER_WRITE_BIT,
+					._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			},
+		};
+	}
+
+	void ClearImage::execute(ExecutionContext& context)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+		recordInputSynchronization(*cmd, context);
+
+		const VkImageSubresourceRange range = _view->range();
+
+		// TODO depth clear if applicable
+
+		vkCmdClearColorImage(*cmd, *_view->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &_value.color, 1, &range);
+
+		declareResourcesEndState(context);
+	}
 }

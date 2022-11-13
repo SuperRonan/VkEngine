@@ -11,7 +11,7 @@ layout(push_constant) uniform PushConstants
 
 void main()
 {
-    const ivec2 gid = ivec2(gl_GlobalInvocationIndex.xy);
+    const ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
 
     const ivec2 dims = imageSize(water_surface);
 
