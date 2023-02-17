@@ -87,7 +87,7 @@ namespace vkl
 		virtual std::vector<const char* > getDeviceExtensions()override
 		{
 			std::vector<const char* > res = VkApplication::getDeviceExtensions();
-			//res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+			res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
 			res.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
 			return res;
 		}

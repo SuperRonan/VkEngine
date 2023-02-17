@@ -46,10 +46,12 @@ namespace vkl
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
 		VkInstance _instance;
+		std::vector<VkExtensionProperties> _instance_extensions;
 		VkDebugUtilsMessengerEXT _debug_messenger;
 		VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
 		VkSampleCountFlagBits _max_msaa;
 		VkDevice _device;
+		std::vector<VkExtensionProperties> _device_extensions;
 
 		VmaAllocator _allocator;
 
@@ -65,7 +67,7 @@ namespace vkl
 
 		virtual std::vector<const char*> getValidLayers();
 
-		virtual std::vector<const char* > getDeviceExtensions(); 
+		virtual std::vector<const char*> getDeviceExtensions(); 
 
 		virtual std::vector<const char*> getInstanceExtensions();
 
