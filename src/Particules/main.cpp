@@ -87,7 +87,7 @@ namespace vkl
 		virtual std::vector<const char* > getDeviceExtensions()override
 		{
 			std::vector<const char* > res = VkApplication::getDeviceExtensions();
-			res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+			//res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
 			res.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
 			return res;
 		}
@@ -328,6 +328,7 @@ namespace vkl
 				.geometry_shader_path = ENGINE_SRC_PATH "/src/Particules/render.geom",
 				.fragment_shader_path = ENGINE_SRC_PATH "/src/Particules/render.frag",
 				.definitions = definitions,
+				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 			});
 			exec.declare(render);
 
