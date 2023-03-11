@@ -168,7 +168,7 @@ namespace vkl
 			});
 			
 
-			std::shared_ptr<Buffer> cloth = std::make_shared<Buffer>(Buffer::CI{
+			std::shared_ptr<Buffer> spring_mass_plane = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "Cloth",
 				.size = VkDeviceSize(cloth_dims.width * cloth_dims.height * elem_size),
@@ -176,9 +176,9 @@ namespace vkl
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
-			exec.declare(cloth);
+			exec.declare(spring_mass_plane);
 
-			std::shared_ptr<Buffer> cloth_prev = std::make_shared<Buffer>(Buffer::CI{
+			std::shared_ptr<Buffer> spring_mass_plane_prev = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "Cloth prev",
 				.size = VkDeviceSize(cloth_dims.width * cloth_dims.height * elem_size),
@@ -186,7 +186,7 @@ namespace vkl
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
 			});
-			exec.declare(cloth_prev);
+			exec.declare(spring_mass_plane_prev);
 
 			std::shared_ptr<Image> render_target = std::make_shared<Image>(Image::CI{
 				.app = this,
@@ -207,12 +207,31 @@ namespace vkl
 			
 			const std::string shader_folder = ENGINE_SRC_PATH "/src/Cloth/";
 
-			std::shared_ptr<ComputeCommand> init_cloth = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+			std::shared_ptr<ComputeCommand> init_spring_mass_plane = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "Init Coth",
 				.shader_path = shader_folder + "init_cloth.comp",
 				.dispatch_size = extend(cloth_dims, 1),
+				.dispatch_threads = true,
 			});
+			exec.declare(init_spring_mass_plane);
+
+			std::shared_ptr<ComputeCommand> integrate_spring_mass_plane = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = this,
+				.name = "Integrate",
+				.shader_path = shader_folder + "integrate.comp",
+				.dispatch_size = extend(cloth_dims, 1),
+				.dispatch_threads = true,
+			});
+			exec.declare(integrate_spring_mass_plane);
+
+			std::shared_ptr<CopyBuffer> copy_spring_mass_buffer = std::make_shared<CopyBuffer>(CopyBuffer::CI{
+				.app = this,
+				.name = "CopyBuffer",
+				.src = spring_mass_plane,
+				.dst = spring_mass_plane_prev,
+			});
+			exec.declare(copy_spring_mass_buffer);
 
 			while (!_window->shouldClose())
 			{
