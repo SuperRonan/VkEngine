@@ -4,9 +4,102 @@
 #include <cassert>
 #include <array>
 #include <format>
+#include "DynamicValue.hpp"
 
 namespace vkl
 {
+	class ImageInstance : public VkObject
+	{
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication  * app = nullptr;
+			std::string name = {};
+			VkImageCreateInfo ci;
+			VmaAllocationCreateInfo aci;
+		};
+
+		using CI = CreateInfo;
+
+		struct AssociateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VkImageCreateInfo ci;
+		};
+
+		using AI = AssociateInfo;
+
+	protected:
+
+		VkImageCreateInfo _ci = {};
+		VmaAllocationCreateInfo _vma_ci = {};
+
+		VmaAllocation _alloc = nullptr;
+		VkImage _image = VK_NULL_HANDLE;
+
+		void setVkNameIFP();
+
+		void create();
+
+		void destroy();
+
+	public:
+
+		ImageInstance(CreateInfo const& ci);
+
+		ImageInstance(AssociateInfo const& ci);
+
+		virtual ~ImageInstance();
+
+		ImageInstance(ImageInstance const&) = delete;
+
+		ImageInstance(ImageInstance&&) = delete;
+
+		ImageInstance& operator=(ImageInstance const&) = delete;
+		
+		ImageInstance& operator=(ImageInstance &&) = delete;
+
+		
+		constexpr VkImageCreateInfo const& CreateInfo()const
+		{
+			return _ci;
+		}
+
+		constexpr VmaAllocationCreateInfo const& AllocationInfo()const
+		{
+			return _vma_ci;
+		}
+
+
+		constexpr auto handle()const
+		{
+			return _image;
+		}
+
+		constexpr VkImage image()const
+		{
+			return _image;
+		}
+
+		constexpr operator VkImage()const
+		{
+			return _image;
+		}
+
+		constexpr VmaAllocation alloc()const
+		{
+			return _alloc;
+		}
+
+		constexpr bool ownership()const
+		{
+			return !!_alloc;
+		}
+
+	};
+
 	class Image : public VkObject
 	{
 	public:
@@ -18,7 +111,7 @@ namespace vkl
 			VkImageCreateFlags flags = 0;
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
-			VkExtent3D extent = makeZeroExtent3D();
+			std::shared_ptr<DynamicValue<VkExtent3D>> extent = nullptr;
 			uint32_t mips = 1;
 			uint32_t layers = 1;
 			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
@@ -32,18 +125,8 @@ namespace vkl
 
 		struct AssociateInfo
 		{
-			VkApplication* app = nullptr;
-			std::string name = "";
-			VkImage image = VK_NULL_HANDLE;
-			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
-			VkFormat format = VK_FORMAT_MAX_ENUM;
-			VkExtent3D extent = makeZeroExtent3D();
-			uint32_t mips = 1;
-			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
-			VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-			VkImageUsageFlags usage = 0;
-			std::vector<uint32_t> queues = {};
-			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
+			std::shared_ptr<ImageInstance> instance;
+			std::shared_ptr<DynamicValue<VkExtent3D>> extent;
 		};
 
 		using CI = CreateInfo;
@@ -76,7 +159,7 @@ namespace vkl
 		VkImageCreateFlags _flags = 0;
 		VkImageType _type = VK_IMAGE_TYPE_MAX_ENUM;
 		VkFormat _format = VK_FORMAT_MAX_ENUM;
-		VkExtent3D _extent = makeZeroExtent3D();
+		std::shared_ptr<DynamicValue<VkExtent3D>> _extent = nullptr;
 		uint32_t _mips = 1;
 		uint32_t _layers = 1;
 		VkSampleCountFlagBits _samples = VK_SAMPLE_COUNT_1_BIT;
@@ -88,8 +171,8 @@ namespace vkl
 
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
 
-		VmaAllocation _alloc = nullptr;
-		VkImage _image = VK_NULL_HANDLE;
+		std::shared_ptr<ImageInstance> _inst = nullptr;
+		
 
 	public:
 
@@ -101,7 +184,7 @@ namespace vkl
 
 		constexpr Image(Image const&) noexcept = delete;
 
-		constexpr Image(Image&& other) noexcept :
+		Image(Image&& other) noexcept :
 			VkObject(std::move(other)),
 			_flags(other._flags),
 			_type(other._type),
@@ -115,12 +198,10 @@ namespace vkl
 			_queues(std::move(other._queues)),
 			_sharing_mode(other._sharing_mode),
 			_mem_usage(other._mem_usage),
-			_alloc(other._alloc),
-			_image(other._image),
+			_inst(std::move(other._inst)),
 			_initial_layout(other._initial_layout)
 		{
-			other._alloc = nullptr;
-			other._image = VK_NULL_HANDLE;
+
 		}
 
 		constexpr Image& operator=(Image const&) noexcept = delete;
@@ -140,38 +221,32 @@ namespace vkl
 			std::swap(_queues, other._queues);
 			std::swap(_sharing_mode, other._sharing_mode);
 			std::swap(_mem_usage, other._mem_usage);
-			std::swap(_alloc, other._alloc);
-			std::swap(_image, other._image);
+			std::swap(_inst, other._inst);
 			std::swap(_initial_layout, other._initial_layout);
 			return *this;
 		}
 
-		~Image();
+		~Image() {};
 
-		void create();
+		void createInstance();
 
 		void associateImage(AssociateInfo const& assos);
 
-		void destroyImage();
+		void destroyInstance();
 
-		constexpr auto handle()const
+		constexpr const std::shared_ptr<ImageInstance>& instance()const
 		{
-			return _image;
+			return _inst;
 		}
 
-		constexpr VkImage image()const
+		constexpr std::shared_ptr<ImageInstance>& instance()
 		{
-			return _image;
+			return _inst;
 		}
 
-		constexpr operator VkImage()const
+		operator std::shared_ptr<ImageInstance>()const
 		{
-			return _image;
-		}
-
-		constexpr VmaAllocation alloc()const
-		{
-			return _alloc;
+			return instance();
 		}
 
 		constexpr VkImageCreateFlags flags()const
@@ -189,7 +264,7 @@ namespace vkl
 			return _format;
 		}
 
-		constexpr VkExtent3D extent()const
+		std::shared_ptr<DynamicValue<VkExtent3D>> extent()const
 		{
 			return _extent;
 		}
@@ -227,11 +302,6 @@ namespace vkl
 		constexpr const std::vector<uint32_t>& queues()const
 		{
 			return _queues;
-		}
-
-		constexpr bool ownership()const
-		{
-			return !!_alloc;
 		}
 
 		constexpr VkImageLayout initialLayout()const

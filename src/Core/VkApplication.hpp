@@ -196,6 +196,8 @@ namespace vkl
 		constexpr VkObject& operator=(VkObject const&) noexcept = default;
 		constexpr VkObject& operator=(VkObject&&) noexcept = default;
 
+		virtual ~VkObject() {};
+
 		constexpr VkApplication* application() noexcept
 		{
 			return _app;

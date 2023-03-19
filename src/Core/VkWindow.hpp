@@ -39,6 +39,7 @@ namespace vkl
 		std::vector<std::shared_ptr<Image>> _swapchain_images;
 		VkFormat _swapchain_image_format;
 		VkExtent2D _swapchain_extent;
+		std::shared_ptr<DynamicValue<VkExtent3D>> _dynamic_extent;
 		std::vector<std::shared_ptr<ImageView>> _swapchain_views;
 
 		std::set<uint32_t> _queues_families_indices;

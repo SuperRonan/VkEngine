@@ -3,8 +3,15 @@
 
 namespace vkl
 {
+    class DynamicValueBase
+    {
+    public:
+
+        virtual bool isConstant() const = 0;
+    };
+
     template <class T>
-    class DynamicValue
+    class DynamicValue : public DynamicValueBase
     {
     protected:
 
@@ -32,18 +39,16 @@ namespace vkl
             return this;
         }
 
-        virtual bool isConstant() const {return true;};
+        virtual bool isConstant() const override {return true;};
 
-        virtual void eval() {};
-
-        T const& value() const
+        virtual T const& value() const
         {
             return _value;
         }
 
         T const& operator T()const
         {
-            return _value;
+            return value();
         }
 
     };
@@ -65,10 +70,14 @@ namespace vkl
 
         virtual bool isConstant() const override { return false; };
 
-        virtual void eval() override
+        virtual T const& value() const override
         {
+            // TODO cache
             _value = _lambda();
+            return _value;
         }
+
+        
     };
 
 

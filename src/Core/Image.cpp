@@ -2,95 +2,8 @@
 
 namespace vkl
 {
-	Image::Image(CreateInfo const& ci) : 
-		VkObject(ci.app, ci.name),
-		_flags(ci.flags),
-		_type(ci.type),
-		_format(ci.format),
-		_extent(ci.extent),
-		_mips(ci.mips == uint32_t(-1) ? Image::howManyMips(ci.type, ci.extent) : ci.mips),
-		_layers(ci.layers),
-		_samples(ci.samples),
-		_tiling(ci.tiling),
-		_usage(ci.usage),
-		_sharing_mode(ci.queues.size() <= 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT),
-		_queues(ci.queues),
-		_initial_layout(ci.initial_layout),
-		_mem_usage(ci.mem_usage)
+	void ImageInstance::setVkNameIFP()
 	{
-		if(ci.create_on_construct)
-			create();
-	}
-
-	void Image::create()
-	{
-		assert(_image == VK_NULL_HANDLE);
-		uint32_t n_queues = 0;
-		uint32_t* p_queues = nullptr;
-		if (_sharing_mode == VK_SHARING_MODE_CONCURRENT)
-		{
-			n_queues = _queues.size();
-			p_queues = _queues.data();
-		}
-
-		VkImageCreateInfo image_ci{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = _flags,
-			.imageType = _type,
-			.format = _format,
-			.extent = _extent,
-			.mipLevels = _mips,
-			.arrayLayers = _layers,
-			.samples = _samples,
-			.tiling = _tiling,
-			.usage = _usage,
-			.sharingMode = _sharing_mode,
-			.queueFamilyIndexCount = n_queues,
-			.pQueueFamilyIndices = p_queues,
-			.initialLayout = _initial_layout,
-		};
-
-		VmaAllocationCreateInfo alloc_ci{
-			.usage = _mem_usage,
-		};
-
-		VK_CHECK(vmaCreateImage(_app->allocator(), &image_ci, &alloc_ci, &_image, &_alloc, nullptr), "Failed to create an image.");
-		
-		if (!name().empty())
-		{
-			VkDebugUtilsObjectNameInfoEXT object_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = VK_OBJECT_TYPE_IMAGE,
-				.objectHandle = (uint64_t) _image,
-				.pObjectName = _name.data(),
-			};
-			_app->nameObject(object_name);
-		}
-	}
-
-	void Image::associateImage(AssociateInfo const& assos)
-	{
-		_app = assos.app;
-		_name = assos.name;
-
-		_image = assos.image;
-		_type = assos.type;
-		_format = assos.format;
-		_extent = assos.extent;
-		_mips = assos.mips;
-		_layers = 1; // TODO Check if the swapchain can support multi layered images (VR)
-		_samples = assos.samples;
-		_usage = assos.usage;
-		_queues = assos.queues;
-		_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-		_mem_usage = assos.mem_usage;
-		_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?
-		if (!assos.name.empty())
-			_name = assos.name;
-		_alloc = nullptr;
-
 		if (!name().empty())
 		{
 			VkDebugUtilsObjectNameInfoEXT object_name = {
@@ -104,15 +17,16 @@ namespace vkl
 		}
 	}
 
-	Image::~Image()
+	void ImageInstance::create()
 	{
-		if (_image != VK_NULL_HANDLE)
-		{
-			destroyImage();
-		}
+		assert(_image == VK_NULL_HANDLE);
+
+		VK_CHECK(vmaCreateImage(_app->allocator(), &_ci, &_vma_ci, &_image, &_alloc, nullptr), "Failed to create an image.");
+
+		setVkNameIFP();
 	}
 
-	void Image::destroyImage()
+	void ImageInstance::destroy()
 	{
 		assert(_image != VK_NULL_HANDLE);
 		if (ownership())
@@ -122,6 +36,92 @@ namespace vkl
 
 		_image = VK_NULL_HANDLE;
 		_alloc = nullptr;
+	}
+
+
+	Image::Image(CreateInfo const& ci) : 
+		VkObject(ci.app, ci.name),
+		_flags(ci.flags),
+		_type(ci.type),
+		_format(ci.format),
+		_extent(ci.extent),
+		_mips(ci.mips == uint32_t(-1) ? Image::howManyMips(ci.type, ci.extent->value()) : ci.mips),
+		_layers(ci.layers),
+		_samples(ci.samples),
+		_tiling(ci.tiling),
+		_usage(ci.usage),
+		_sharing_mode(ci.queues.size() <= 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT),
+		_queues(ci.queues),
+		_initial_layout(ci.initial_layout),
+		_mem_usage(ci.mem_usage)
+	{
+		if(ci.create_on_construct)
+			createInstance();
+	}
+
+	void Image::createInstance()
+	{
+		uint32_t n_queues = 0;
+		uint32_t* p_queues = nullptr;
+		if (_sharing_mode == VK_SHARING_MODE_CONCURRENT)
+		{	
+			n_queues = _queues.size();
+			p_queues = _queues.data();
+		}
+
+		VkImageCreateInfo image_ci{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = _flags,
+			.imageType = _type,
+			.format = _format,
+			.extent = _extent->value(),
+			.mipLevels = _mips,
+			.arrayLayers = _layers,
+			.samples = _samples,
+			.tiling = _tiling,
+			.usage = _usage,
+			.sharingMode = _sharing_mode,
+			.queueFamilyIndexCount = n_queues,
+			.pQueueFamilyIndices = p_queues,
+			.initialLayout = _initial_layout,
+		};
+
+		VmaAllocationCreateInfo alloc{
+			.usage = _mem_usage,
+		};
+
+		_inst = std::make_shared<ImageInstance>(ImageInstance::CI
+		{
+			.app = _app,
+			.name = name(),
+			.ci = image_ci,
+			.aci = alloc,
+		});
+	}
+
+	void Image::associateImage(AssociateInfo const& assos)
+	{
+		_app = assos.instance->application();
+		if (!assos.instance->name().empty())
+			_name = assos.instance->name().empty();
+
+		_type = assos.instance->CreateInfo().imageType;
+		_format = assos.instance->CreateInfo().format;
+		_extent = assos.extent; // TODO
+		_mips = assos.instance->CreateInfo().mipLevels;
+		_layers = assos.instance->CreateInfo().arrayLayers; // TODO Check if the swapchain can support multi layered images (VR)
+		_samples = assos.instance->CreateInfo().samples;
+		_usage = assos.instance->CreateInfo().usage;
+		_queues = std::vector<uint32_t>(assos.instance->CreateInfo().pQueueFamilyIndices, assos.instance->CreateInfo().pQueueFamilyIndices + assos.instance->CreateInfo().queueFamilyIndexCount);
+		_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
+		_mem_usage = assos.instance->AllocationInfo().usage;
+		_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?+
+	}
+
+	void Image::destroyInstance()
+	{
+		_inst = nullptr;
 	}
 
 	//StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)

@@ -11,6 +11,8 @@
 
 #include <stdexcept>
 
+#include "DynamicValue.hpp"
+
 #define VK_LOG std::cout << "[Vk]: " 
 #define VK_ERROR_LOG std::cerr << "[Vk Error]: "
 
