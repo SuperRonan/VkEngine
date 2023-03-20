@@ -27,6 +27,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VkImageCreateInfo ci;
+			VkImage image = VK_NULL_HANDLE;
 		};
 
 		using AI = AssociateInfo;
@@ -62,7 +63,7 @@ namespace vkl
 		ImageInstance& operator=(ImageInstance &&) = delete;
 
 		
-		constexpr VkImageCreateInfo const& CreateInfo()const
+		constexpr VkImageCreateInfo const& createInfo()const
 		{
 			return _ci;
 		}

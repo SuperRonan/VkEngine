@@ -1,0 +1,68 @@
+#include "Surface.hpp"
+#include <cassert>
+
+namespace vkl
+{
+	void Surface::create()
+	{
+		assert(_surface == VK_NULL_HANDLE);
+
+		VK_CHECK(glfwCreateWindowSurface(_app->instance(), _window, nullptr, &_surface), "Failed to create a surface.");
+		queryDetails();
+	}
+
+	void Surface::queryDetails()
+	{
+		VkPhysicalDevice device = application()->physicalDevice();
+		VkBool32 present_support;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, _app->getQueueFamilyIndices().present_family.value(), _surface, &present_support);
+		if (present_support == 0)
+		{
+			throw std::runtime_error("Physical device cannot present!");
+		}
+
+		SwapchainSupportDetails & res = _details;
+
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &res.capabilities);
+
+		uint32_t format_count;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &format_count, nullptr);
+		res.formats.resize(format_count);
+		if (format_count != 0)
+		{
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &format_count, res.formats.data());
+		}
+
+		uint32_t present_count;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &present_count, nullptr);
+		res.present_modes.resize(present_count);
+		if (present_count != 0)
+		{
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &present_count, res.present_modes.data());
+		}
+	}
+
+	void Surface::destroy()
+	{
+		assert(_surface != VK_NULL_HANDLE);
+		vkDestroySurfaceKHR(_app->instance(), _surface, nullptr);
+
+		_surface = VK_NULL_HANDLE;
+		_window = nullptr;
+	}
+
+	Surface::Surface(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_window(ci.window)
+	{
+		create();
+	}
+
+	Surface::~Surface()
+	{
+		if (_surface != VK_NULL_HANDLE)
+		{
+			destroy();
+		}
+	}
+}

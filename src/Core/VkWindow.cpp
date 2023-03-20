@@ -18,184 +18,27 @@ namespace vkl
 		glfwSetWindowUserPointer(_window, this); // Map _window to this
 		if (resizeable)
 			glfwSetFramebufferSizeCallback(_window, frameBufferResizeCallback);
-		VK_CHECK(glfwCreateWindowSurface(_app->instance(), _window, nullptr, &_surface), "Failed to create a surface.");
+
+		_surface = std::make_shared<Surface>(Surface::CI{
+			.app = application(),
+			.name = this->name() + ".Surface",
+			.window = _window,
+		});
 	}
 
-	VkWindow::SwapchainSupportDetails VkWindow::querySwapChainSupport(VkPhysicalDevice device)
+
+	void VkWindow::createSwapchain()
 	{
-		VkBool32 present_support;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, _app->getQueueFamilyIndices().present_family.value(), _surface, &present_support);
-		if (present_support == 0)
-		{
-			throw std::runtime_error("Physical device cannot present!");
-		}
-
-		SwapchainSupportDetails res;
-
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _surface, &res.capabilities);
-
-		uint32_t format_count;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &format_count, nullptr);
-		res.formats.resize(format_count);
-		if (format_count != 0)
-		{
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, _surface, &format_count, res.formats.data());
-		}
-
-		uint32_t present_count;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &present_count, nullptr);
-		res.present_modes.resize(present_count);
-		if (present_count != 0)
-		{
-			vkGetPhysicalDeviceSurfacePresentModesKHR(device, _surface, &present_count, res.present_modes.data());
-		}
-
-		return res;
-	}
-
-	VkSurfaceFormatKHR VkWindow::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats)
-	{
-		VkSurfaceFormatKHR target_format{};
-		target_format.format = VK_FORMAT_B8G8R8A8_SRGB;
-		target_format.colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-
-		if (std::find_if(formats.cbegin(), formats.cend(), [&target_format](VkSurfaceFormatKHR const& f) {return f.format == target_format.format && f.colorSpace == target_format.colorSpace; }) != formats.cend())
-		{
-			return target_format;
-		}
-
-		// TODO Look for the closest format
-		return formats.front();
-	}
-
-	VkPresentModeKHR VkWindow::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& modes, VkPresentModeKHR target)
-	{
-		VkPresentModeKHR default_mode = VK_PRESENT_MODE_FIFO_KHR;
-		VkPresentModeKHR target_mode = target;
-
-		if (std::find(modes.cbegin(), modes.cend(), target_mode) != modes.cend())
-		{
-			return target_mode;
-		}
-
-		return default_mode;
-	}
-
-	VkExtent2D VkWindow::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
-	{
-		if (capabilities.currentExtent.width != UINT32_MAX)
-		{
-			return capabilities.currentExtent;
-		}
-		else
-		{
-			int width, height;
-			glfwGetFramebufferSize(_window, &width, &height);
-			VkExtent2D actual_extent = { (uint32_t)width, (uint32_t)height };
-			actual_extent.width = std::clamp(actual_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-			actual_extent.height = std::clamp(actual_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-			return actual_extent;
-		}
-	}
-
-	void VkWindow::createSwapchain(VkPresentModeKHR target)
-	{
-		const SwapchainSupportDetails swap_support = querySwapChainSupport(_app->physicalDevice());
-		const VkSurfaceFormatKHR surface_format = chooseSwapSurfaceFormat(swap_support.formats);
-		const VkPresentModeKHR present_mode = chooseSwapPresentMode(swap_support.present_modes, target);
-		const VkExtent2D extent = chooseSwapExtent(swap_support.capabilities);
-		uint32_t swap_size = swap_support.capabilities.minImageCount + 1;
-		if (swap_support.capabilities.maxImageCount > 0 && swap_size > swap_support.capabilities.maxImageCount)
-		{
-			swap_size = swap_support.capabilities.maxImageCount;
-		}
-
-		std::vector<uint32_t> queue_family_indices(_queues_families_indices.cbegin(), _queues_families_indices.cend());
-		VkSharingMode sharing_mode = queue_family_indices.size() == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-		uint32_t queue_count = queue_family_indices.size() == 1 ? 0 : queue_family_indices.size();
-		uint32_t* queues_ptr = queue_family_indices.size() == 1 ? nullptr : queue_family_indices.data();
-
-		VkSwapchainCreateInfoKHR swap_ci{
-			.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-			.pNext = nullptr,
+		_swapchain = std::make_shared <Swapchain>(Swapchain::CI{
+			.app = application(),
+			.name = name() + ".swapchain",
 			.surface = _surface,
-			.minImageCount = swap_size,
-			.imageFormat = surface_format.format,
-			.imageColorSpace = surface_format.colorSpace,
-			.imageExtent = extent,
-			.imageArrayLayers = 1,
-			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			.imageSharingMode = sharing_mode,
-			.queueFamilyIndexCount = queue_count,
-			.pQueueFamilyIndices = queues_ptr,
-			.preTransform = swap_support.capabilities.currentTransform,
-			.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-			.presentMode = present_mode,
-			.clipped = VK_TRUE,
-			.oldSwapchain = VK_NULL_HANDLE,
-		};
-
-		VK_CHECK(vkCreateSwapchainKHR(_app->device(), &swap_ci, nullptr, &_swapchain), "Failed to create a swapchain.");
-
-		if (!name().empty())
-		{
-			VkDebugUtilsObjectNameInfoEXT object_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-				.objectHandle = (uint64_t)_swapchain,
-				.pObjectName = name().data(),
-			};
-			_app->nameObject(object_name);
-		}
-
-		_swapchain_image_format = surface_format.format;
-		_swapchain_extent = extent;
-		uint32_t image_count;
-		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, nullptr);
-		_swapchain_images.resize(image_count);
-		std::vector<VkImage> tmp_images(image_count);
-		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, tmp_images.data());
-		for (uint32_t i = 0; i < image_count; ++i)
-		{
-			Image::AssociateInfo ai{
-				.app = _app,
-				.name = name() + std::string(" swapchain image #") + std::to_string(i),
-				.image = tmp_images[i],
-				.type = VK_IMAGE_TYPE_2D,
-				.format = format(),
-				.extent = VkExtent3D{.width = extent.width, .height = extent.height, .depth = 1},
-				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-				.queues = {},
-			};
-			_swapchain_images[i] = std::make_shared<Image>(_app);
-			_swapchain_images[i]->associateImage(ai);
-		}
-	}
-
-	void VkWindow::createSwapchainViews()
-	{
-		_swapchain_views.resize(_swapchain_images.size());
-		for (size_t i = 0; i < _swapchain_views.size(); ++i)
-		{
-			ImageView::CI ci{
-				.name = name() + std::string(" swapchain view #") + std::to_string(i),
-				.image = _swapchain_images[i],
-				.create_on_construct = true,
-			};
-			_swapchain_views[i] = std::make_shared<ImageView>(ci);
-			//_swapchain_views[i]->createView();
-			//_swapchain_views[i] = createImageView(_app->device(), *_swapchain_images[i], _swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-		}
-	}
-
-	void VkWindow::createSynchObjects()
-	{
-		//_image_in_flight_fence.resize(_swapchain_images.size(), nullptr);
-		//for (size_t i = 0; i < _swapchain_images.size(); ++i)
-		//{
-		//	_image_in_flight_fence[i] = std::make_shared<Fence>(_app, true);
-		//}
+			.min_image_count = _surface->getDetails().capabilities.minImageCount + 1,
+			.extent = VkExtent2D{.width = _width, .height = _height},
+			.image_usages = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			.queues = std::vector<uint32_t>(_queues_families_indices.cbegin(), _queues_families_indices.cend()),
+			.target_present_mode = _target_present_mode,
+		});
 	}
 
 	void VkWindow::init(CreateInfo const& ci)
@@ -204,11 +47,27 @@ namespace vkl
 		_width = ci.w;
 		_height = ci.h;
 
+
 		_target_present_mode = ci.target_present_mode;
 
 		initGLFW(ci.name, ci.resizeable);
 		initSwapchain();
-		createSynchObjects();
+		
+		if (ci.resizeable == GLFW_FALSE)
+		{
+			VkExtent3D ext = VkExtent3D{ .width = _width, .height = _height, .depth = 1 };
+			_dynamic_extent = std::make_shared <DynamicValue<VkExtent3D>>(ext);
+		}
+		else
+		{
+			_dynamic_extent = std::make_shared<LambdaValue<VkExtent3D>>([&]() {
+				return VkExtent3D{
+					.width = _width,
+					.height = _height,
+					.depth = 1,
+				};
+			});
+		}
 	}
 
 	void VkWindow::reCreateSwapchain()
@@ -231,25 +90,20 @@ namespace vkl
 
 	void VkWindow::initSwapchain()
 	{
-		createSwapchain(_target_present_mode);
-		createSwapchainViews();
+		createSwapchain();
 	}
 
 	void VkWindow::cleanupSwapchain()
 	{
-		_swapchain_views.clear();
-		_swapchain_views.shrink_to_fit();
-		_swapchain_images.clear();
-		_swapchain_images.shrink_to_fit();
-		vkDestroySwapchainKHR(_app->device(), _swapchain, nullptr);
+		_swapchain = nullptr;
 	}
 
 	void VkWindow::cleanup()
 	{
 		cleanupSwapchain();
 
-		vkDestroySurfaceKHR(_app->instance(), _surface, nullptr);
-
+		_surface = nullptr;
+		
 		if (_window)
 			glfwDestroyWindow(_window);
 		_window = nullptr;

@@ -38,6 +38,22 @@ namespace vkl
 		_alloc = nullptr;
 	}
 
+	ImageInstance::ImageInstance(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
+		_ci(ci.ci),
+		_vma_ci(ci.aci)
+	{
+		create();
+	}
+
+	ImageInstance::ImageInstance(AssociateInfo const& ai) :
+		VkObject(ai.app, ai.name),
+		_ci(ai.ci),
+		_image(ai.image)
+	{
+
+	}
+
 
 	Image::Image(CreateInfo const& ci) : 
 		VkObject(ci.app, ci.name),
@@ -102,18 +118,19 @@ namespace vkl
 
 	void Image::associateImage(AssociateInfo const& assos)
 	{
+		assert(_inst == nullptr);
 		_app = assos.instance->application();
 		if (!assos.instance->name().empty())
 			_name = assos.instance->name().empty();
 
-		_type = assos.instance->CreateInfo().imageType;
-		_format = assos.instance->CreateInfo().format;
-		_extent = assos.extent; // TODO
-		_mips = assos.instance->CreateInfo().mipLevels;
-		_layers = assos.instance->CreateInfo().arrayLayers; // TODO Check if the swapchain can support multi layered images (VR)
-		_samples = assos.instance->CreateInfo().samples;
-		_usage = assos.instance->CreateInfo().usage;
-		_queues = std::vector<uint32_t>(assos.instance->CreateInfo().pQueueFamilyIndices, assos.instance->CreateInfo().pQueueFamilyIndices + assos.instance->CreateInfo().queueFamilyIndexCount);
+		_type = assos.instance->createInfo().imageType;
+		_format = assos.instance->createInfo().format;
+		_extent = assos.extent;
+		_mips = assos.instance->createInfo().mipLevels;
+		_layers = assos.instance->createInfo().arrayLayers; // TODO Check if the swapchain can support multi layered images (VR)
+		_samples = assos.instance->createInfo().samples;
+		_usage = assos.instance->createInfo().usage;
+		_queues = std::vector<uint32_t>(assos.instance->createInfo().pQueueFamilyIndices, assos.instance->createInfo().pQueueFamilyIndices + assos.instance->createInfo().queueFamilyIndexCount);
 		_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 		_mem_usage = assos.instance->AllocationInfo().usage;
 		_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?+

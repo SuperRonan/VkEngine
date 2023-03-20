@@ -9,6 +9,8 @@
 #include "Semaphore.hpp"
 #include "Fence.hpp"
 #include <chrono>
+#include "Surface.hpp"
+#include "Swapchain.hpp"
 
 namespace vkl
 {
@@ -34,14 +36,12 @@ namespace vkl
 		uint32_t _width, _height;
 		GLFWwindow* _window;
 
-		VkSurfaceKHR _surface;
-		VkSwapchainKHR _swapchain;
-		std::vector<std::shared_ptr<Image>> _swapchain_images;
-		VkFormat _swapchain_image_format;
-		VkExtent2D _swapchain_extent;
+		
+		std::shared_ptr<Surface> _surface = nullptr;
+		std::shared_ptr<Swapchain> _swapchain = nullptr;
+		
+		
 		std::shared_ptr<DynamicValue<VkExtent3D>> _dynamic_extent;
-		std::vector<std::shared_ptr<ImageView>> _swapchain_views;
-
 		std::set<uint32_t> _queues_families_indices;
 
 		bool _framebuffer_resized = false;
@@ -66,26 +66,13 @@ namespace vkl
 
 		void initGLFW(std::string const& name, int resizeable);
 
-		struct SwapchainSupportDetails
-		{
-			VkSurfaceCapabilitiesKHR capabilities;
-			std::vector<VkSurfaceFormatKHR> formats;
-			std::vector<VkPresentModeKHR> present_modes;
-		};
-
-		SwapchainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-
 		virtual VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
 
 		virtual VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& modes, VkPresentModeKHR target);
 
 		virtual VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-		void createSwapchain(VkPresentModeKHR target);
-
-		void createSwapchainViews();
-
-		void createSynchObjects();
+		void createSwapchain();
 
 		virtual void init(CreateInfo const& ci);
 
