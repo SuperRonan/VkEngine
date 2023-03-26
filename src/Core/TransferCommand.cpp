@@ -67,8 +67,8 @@ namespace vkl
 		recordInputSynchronization(*cmd, context);
 
 		vkCmdBlitImage(*cmd,
-			*_src->image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			*_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			*_src->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			*_dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			(uint32_t)_regions.size(), _regions.data(), _filter
 		);
 
@@ -129,8 +129,8 @@ namespace vkl
 
 		vkCmdCopyImage(
 			*cmd,
-			*_src->image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			*_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			*_src->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			*_dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			(uint32_t)_regions.size(), _regions.data()
 		);
 
@@ -176,11 +176,11 @@ namespace vkl
 			// TODO manage multi mip copy
 			region = VkBufferImageCopy{
 				.bufferOffset = 0,
-				.bufferRowLength = _dst->image()->extent().height,
-				.bufferImageHeight = _dst->image()->extent().height,
+				.bufferRowLength = extent.height,
+				.bufferImageHeight = extent.height,
 				.imageSubresource = getImageLayersFromRange(_dst->range()),
 				.imageOffset = makeZeroOffset3D(),
-				.imageExtent = _dst->image()->extent(),
+				.imageExtent = extent,
 			};
 		}
 	}
@@ -192,7 +192,7 @@ namespace vkl
 
 		vkCmdCopyBufferToImage(
 			*cmd,
-			*_src, *_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			*_src, *_dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			(uint32_t)_regions.size(), _regions.data()
 		);
 
@@ -316,7 +316,7 @@ namespace vkl
 
 		// TODO depth clear if applicable
 
-		vkCmdClearColorImage(*cmd, *_view->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &_value.color, 1, &range);
+		vkCmdClearColorImage(*cmd, *_view->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &_value.color, 1, &range);
 
 		declareResourcesEndState(context);
 	}

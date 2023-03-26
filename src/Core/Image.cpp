@@ -54,6 +54,14 @@ namespace vkl
 
 	}
 
+	ImageInstance::~ImageInstance()
+	{
+		if (!!_image)
+		{
+			destroy();
+		}
+	}
+
 
 	Image::Image(CreateInfo const& ci) : 
 		VkObject(ci.app, ci.name),
@@ -61,7 +69,7 @@ namespace vkl
 		_type(ci.type),
 		_format(ci.format),
 		_extent(ci.extent),
-		_mips(ci.mips == uint32_t(-1) ? Image::howManyMips(ci.type, ci.extent->value()) : ci.mips),
+		_mips(ci.mips == uint32_t(-1) ? Image::howManyMips(ci.type, ci.extent) : ci.mips),
 		_layers(ci.layers),
 		_samples(ci.samples),
 		_tiling(ci.tiling),
@@ -91,7 +99,7 @@ namespace vkl
 			.flags = _flags,
 			.imageType = _type,
 			.format = _format,
-			.extent = _extent->value(),
+			.extent = _extent,
 			.mipLevels = _mips,
 			.arrayLayers = _layers,
 			.samples = _samples,

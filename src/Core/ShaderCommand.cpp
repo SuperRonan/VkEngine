@@ -66,7 +66,7 @@ namespace vkl
 					}
 					if (!b.images().empty())
 					{
-						info.imageView = *b.images().front();
+						info.imageView = *b.images().front()->instance();
 						info.imageLayout = b.resource()._begin_state._layout;
 					}
 					images.push_back(info);

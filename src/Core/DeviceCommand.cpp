@@ -40,7 +40,7 @@ namespace vkl
 						.newLayout = next._layout,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = *r._images[0]->image(),
+						.image = *r._images[0]->image()->instance(),
 						.subresourceRange = r._images[0]->range(),
 					};
 					image_barriers.push_back(barrier);

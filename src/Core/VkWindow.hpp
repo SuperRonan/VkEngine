@@ -41,7 +41,7 @@ namespace vkl
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		
 		
-		std::shared_ptr<DynamicValue<VkExtent3D>> _dynamic_extent;
+		DynamicValue<VkExtent3D> _dynamic_extent;
 		std::set<uint32_t> _queues_families_indices;
 
 		bool _framebuffer_resized = false;
@@ -65,12 +65,6 @@ namespace vkl
 		static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
 
 		void initGLFW(std::string const& name, int resizeable);
-
-		virtual VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
-
-		virtual VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& modes, VkPresentModeKHR target);
-
-		virtual VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 		void createSwapchain();
 
@@ -113,14 +107,22 @@ namespace vkl
 
 		constexpr std::vector<std::shared_ptr<ImageView>> const& views() const
 		{
-			return _swapchain_views;
+			return _swapchain->views();
 		}
 
 		VkFormat format()const;
 
 		size_t swapchainSize()const;
 
-		VkExtent2D extent()const;
+		DynamicValue<VkExtent3D> extent3D() const
+		{
+			return _dynamic_extent;
+		}
+
+		DynamicValue<VkExtent2D> extent2D() const
+		{
+			return _swapchain->extent();
+		}
 
 		constexpr operator GLFWwindow* ()const
 		{

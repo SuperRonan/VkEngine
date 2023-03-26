@@ -2,18 +2,17 @@
 
 namespace vkl
 {
-	void ImageView::createView()
-	{
-		VkImageViewCreateInfo ci{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			.image = _image->handle(),
-			.viewType = _type,
-			.format = _format,
-			.components = _components,
-			.subresourceRange = _range,
-		};
-		VK_CHECK(vkCreateImageView(_app->device(), &ci, nullptr, &_view), "Failed to create an image view.");
 
+	void ImageViewInstance::create()
+	{
+		_ci.image = *_image;
+		VK_CHECK(vkCreateImageView(_app->device(), &_ci, nullptr, &_view), "Failed to create an image view.");
+
+		setVkNameIFP();
+	}
+
+	void ImageViewInstance::setVkNameIFP()
+	{
 		if (!name().empty())
 		{
 			VkDebugUtilsObjectNameInfoEXT view_name = {
@@ -27,18 +26,57 @@ namespace vkl
 		}
 	}
 
-	void ImageView::destroyView()
+	void ImageViewInstance::destroy()
 	{
+		assert(!!_view);
 		vkDestroyImageView(_app->device(), _view, nullptr);
 		_view = VK_NULL_HANDLE;
+		_image = nullptr;
+	}
+
+	ImageViewInstance::ImageViewInstance(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_image(ci.image),
+		_ci(ci.ci)
+	{
+		create();
+	}
+
+	ImageViewInstance::~ImageViewInstance()
+	{
+		if (!!_view)
+		{
+			destroy();
+		}
+	}
+
+
+	void ImageView::createInstance()
+	{
+		VkImageViewCreateInfo ci{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.viewType = _type,
+			.format = _format,
+			.components = _components,
+			.subresourceRange = _range,
+		};
+		
+		_inst = std::make_shared<ImageViewInstance>(ImageViewInstance::CI{
+			.app = application(),
+			.name = name(),
+			.image = _image->instance(),
+			.ci = ci,
+		});
+	}
+
+	void ImageView::destroyInstance()
+	{
+		_inst = nullptr;
 	}
 
 	ImageView::~ImageView()
 	{
-		if (handle() != VK_NULL_HANDLE)
-		{
-			destroyView();
-		}
+		destroyInstance();
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
@@ -51,7 +89,7 @@ namespace vkl
 	{
 		if (ci.create_on_construct)
 		{
-			createView();
+			createInstance();
 		}
 	}
 
@@ -63,44 +101,44 @@ namespace vkl
 		_format(other._format),
 		_components(other._components),
 		_range(other._range),
-		_view(other._view)
+		_inst(std::move(other._inst))
 	{
-		other._view = VK_NULL_HANDLE;
+
 	}
 
-	ImageView::ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect) :
-		VkObject(*image),
-		_image(image),
-		_type(getDefaultViewTypeFromImageType(image->type())),
-		_format(image->format()),
-		_components(defaultComponentMapping()),
-		_range(VkImageSubresourceRange{
-			.aspectMask = aspect,
-			.baseMipLevel = 0,
-			.levelCount = image->mips(),
-			.baseArrayLayer = 0,
-			.layerCount = 1,
-		})
-		{
-			createView();
-		}
+	//ImageView::ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect) :
+	//	VkObject(*image),
+	//	_image(image),
+	//	_type(getDefaultViewTypeFromImageType(image->type())),
+	//	_format(image->format()),
+	//	_components(defaultComponentMapping()),
+	//	_range(VkImageSubresourceRange{
+	//		.aspectMask = aspect,
+	//		.baseMipLevel = 0,
+	//		.levelCount = image->mips(),
+	//		.baseArrayLayer = 0,
+	//		.layerCount = 1,
+	//	})
+	//	{
+	//		createView();
+	//	}
 
-	ImageView::ImageView(Image && image, VkImageAspectFlags aspect) :
-		VkObject(image),
-		_image(std::make_shared<Image>(std::move(image))),
-		_type(getDefaultViewTypeFromImageType(image.type())),
-		_format(image.format()),
-		_components(defaultComponentMapping()),
-		_range(VkImageSubresourceRange{
-			.aspectMask = aspect,
-			.baseMipLevel = 0,
-			.levelCount = image.mips(),
-			.baseArrayLayer = 0,
-			.layerCount = 1,
-			})
-	{
-		createView();
-	}
+	//ImageView::ImageView(Image && image, VkImageAspectFlags aspect) :
+	//	VkObject(image),
+	//	_image(std::make_shared<Image>(std::move(image))),
+	//	_type(getDefaultViewTypeFromImageType(image.type())),
+	//	_format(image.format()),
+	//	_components(defaultComponentMapping()),
+	//	_range(VkImageSubresourceRange{
+	//		.aspectMask = aspect,
+	//		.baseMipLevel = 0,
+	//		.levelCount = image.mips(),
+	//		.baseArrayLayer = 0,
+	//		.layerCount = 1,
+	//		})
+	//{
+	//	createView();
+	//}
 
 	ImageView& ImageView::operator=(ImageView&& other)
 	{
@@ -111,7 +149,7 @@ namespace vkl
 		std::swap(_format, other._format);
 		std::swap(_components, other._components);
 		std::swap(_range, other._range);
-		std::swap(_view, other._view);
+		std::swap(_inst, other._inst);
 
 		return *this;
 	}
@@ -153,7 +191,7 @@ namespace vkl
 			.newLayout = dst,
 			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = *_image,
+			.image = *_inst->image(),
 			.subresourceRange = _range,
 		};
 

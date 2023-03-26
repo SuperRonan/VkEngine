@@ -4,6 +4,20 @@
 
 namespace vkl
 {
+	bool Swapchain::reCreate()
+	{
+		VkSwapchainKHR old_swapchain = handle();
+		destroy();
+
+		const Surface::SwapchainSupportDetails& support = _surface->getDetails();
+
+		_ci.oldSwapchain = old_swapchain;
+		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
+
+		create();
+		return true;
+	}
+
 	void Swapchain::create()
 	{
 		assert(_swapchain == VK_NULL_HANDLE);
@@ -89,6 +103,7 @@ namespace vkl
 
 	Swapchain::Swapchain(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
+		_extent(ci.extent),
 		_queues(ci.queues),
 		_surface(ci.surface)
 	{
@@ -124,21 +139,7 @@ namespace vkl
 		}();
 		_ci.imageFormat = fmt.format;
 		_ci.imageColorSpace = fmt.colorSpace;
-		_ci.imageExtent = [&]() -> VkExtent2D
-		{
-			if (support.capabilities.currentExtent.width != UINT32_MAX)
-			{
-				return support.capabilities.currentExtent;
-			}
-			else
-			{
-				VkExtent2D res{
-					.width = std::clamp(ci.extent.width, support.capabilities.minImageExtent.width, support.capabilities.maxImageExtent.width),
-					.height = std::clamp(ci.extent.height, support.capabilities.minImageExtent.height, support.capabilities.maxImageExtent.height),
-				};
-				return res;
-			}
-		}();
+		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
 		_ci.imageArrayLayers = ci.layers;
 		_ci.imageUsage = ci.image_usages;
 		_ci.imageSharingMode = sharing_mode;
@@ -158,7 +159,7 @@ namespace vkl
 			}
 		}();
 		_ci.clipped = ci.clipped;
-		_ci.oldSwapchain = *ci.old_swapchain;
+		_ci.oldSwapchain = ci.old_swapchain ? *ci.old_swapchain : VK_NULL_HANDLE;
 		create();
 	}
 }

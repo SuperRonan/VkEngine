@@ -26,7 +26,7 @@ namespace vkl
 	ResourceState& ExecutionContext::getImageState(std::shared_ptr<ImageView> i)
 	{
 		const ImageRange ir = {
-			.image = *i->image(),
+			.image = *i->image()->instance(),
 			.range = i->range(),
 		};
 		if (!_reosurce_states->_image_states.contains(ir))
@@ -45,7 +45,7 @@ namespace vkl
 	void ExecutionContext::setImageState(std::shared_ptr<ImageView> v, ResourceState const& s)
 	{
 		const ImageRange ir = {
-			.image = *v->image(),
+			.image = *v->image()->instance(),
 			.range = v->range(),
 		};
 		_reosurce_states->_image_states[ir] = s;

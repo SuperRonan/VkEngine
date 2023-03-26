@@ -11,10 +11,10 @@ namespace vkl
 	{
 		assert(!_textures.empty());
 		std::vector<VkImageView> views(_textures.size());
-		for (size_t i = 0; i < _textures.size(); ++i)	views[i] = *_textures[i];
+		for (size_t i = 0; i < _textures.size(); ++i)	views[i] = *_textures[i]->instance();
 		if (_depth)
 		{
-			views.push_back(*_depth);
+			views.push_back(*_depth->instance());
 		}
 		VkFramebufferCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -23,8 +23,8 @@ namespace vkl
 			.renderPass = *_render_pass,
 			.attachmentCount = static_cast<uint32_t>(views.size()),
 			.pAttachments = views.data(),
-			.width = _textures.front()->image()->extent().width,
-			.height = _textures.front()->image()->extent().height,
+			.width = _textures.front()->image()->extent().value().width,
+			.height = _textures.front()->image()->extent().value().height,
 			.layers = 1,
 		};
 

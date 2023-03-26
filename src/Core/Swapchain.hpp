@@ -1,3 +1,5 @@
+#pragma once
+
 #include "VkApplication.hpp"
 
 #include "Surface.hpp"
@@ -16,7 +18,7 @@ namespace vkl
 			uint32_t min_image_count = 0;
 			VkFormat target_format = VK_FORMAT_MAX_ENUM;
 			VkColorSpaceKHR target_color_space = VK_COLOR_SPACE_MAX_ENUM_KHR;
-			VkExtent2D extent = makeZeroExtent2D();
+			DynamicValue<VkExtent2D> extent;
 			uint32_t layers = 1;
 			VkImageUsageFlags image_usages = 0;
 			std::vector<uint32_t> queues = {};
@@ -30,6 +32,7 @@ namespace vkl
 
 	protected:
 
+		DynamicValue<VkExtent2D> _extent;
 		std::shared_ptr<Surface> _surface;
 		std::vector<uint32_t> _queues = {};
 		std::vector<std::shared_ptr<Image>> _images;
@@ -62,6 +65,24 @@ namespace vkl
 
 		virtual ~Swapchain();
 
+		bool reCreate();
+
+		constexpr VkExtent2D getPossibleExtent(VkExtent2D target, VkSurfaceCapabilitiesKHR capabilities) const
+		{
+			if (capabilities.currentExtent.width != UINT32_MAX)
+			{
+				return capabilities.currentExtent;
+			}
+			else
+			{
+				VkExtent2D res{
+					.width = std::clamp(target.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+					.height = std::clamp(target.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
+				};
+				return res;
+			}
+		}
+
 
 		constexpr VkSwapchainKHR swapchain()const
 		{
@@ -75,7 +96,7 @@ namespace vkl
 
 		constexpr operator VkSwapchainKHR()const
 		{
-			swapchain();
+			return swapchain();
 		}
 
 		constexpr VkFormat format()const
@@ -91,6 +112,11 @@ namespace vkl
 		constexpr const std::vector<std::shared_ptr<ImageView>>& views()const
 		{
 			return _views;
+		}
+
+		const DynamicValue<VkExtent2D> & extent() const
+		{
+			return _extent;
 		}
 		
 	};

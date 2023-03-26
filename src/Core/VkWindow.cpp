@@ -34,7 +34,7 @@ namespace vkl
 			.name = name() + ".swapchain",
 			.surface = _surface,
 			.min_image_count = _surface->getDetails().capabilities.minImageCount + 1,
-			.extent = VkExtent2D{.width = _width, .height = _height},
+			.extent = DynamicValue<VkExtent2D>([&]() {return extract(_dynamic_extent.value()); }),
 			.image_usages = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			.queues = std::vector<uint32_t>(_queues_families_indices.cbegin(), _queues_families_indices.cend()),
 			.target_present_mode = _target_present_mode,
@@ -47,27 +47,26 @@ namespace vkl
 		_width = ci.w;
 		_height = ci.h;
 
+		if (ci.resizeable == GLFW_FALSE)
+		{
+			_dynamic_extent = VkExtent3D{ .width = _width, .height = _height, .depth = 1 };;
+		}
+		else
+		{
+			_dynamic_extent = [&]() {
+				return VkExtent3D{
+					.width = _width,
+					.height = _height,
+					.depth = 1,
+				};
+			};
+		}
 
 		_target_present_mode = ci.target_present_mode;
 
 		initGLFW(ci.name, ci.resizeable);
 		initSwapchain();
 		
-		if (ci.resizeable == GLFW_FALSE)
-		{
-			VkExtent3D ext = VkExtent3D{ .width = _width, .height = _height, .depth = 1 };
-			_dynamic_extent = std::make_shared <DynamicValue<VkExtent3D>>(ext);
-		}
-		else
-		{
-			_dynamic_extent = std::make_shared<LambdaValue<VkExtent3D>>([&]() {
-				return VkExtent3D{
-					.width = _width,
-					.height = _height,
-					.depth = 1,
-				};
-			});
-		}
 	}
 
 	void VkWindow::reCreateSwapchain()
@@ -82,9 +81,8 @@ namespace vkl
 		_width = width;
 		_height = height;
 		vkDeviceWaitIdle(_app->device());
+		
 
-		cleanupSwapchain();
-		initSwapchain();
 		_framebuffer_resized = false;
 	}
 
@@ -137,27 +135,22 @@ namespace vkl
 
 	std::shared_ptr<Image> VkWindow::image(uint32_t index)
 	{
-		return _swapchain_images[index];
+		return _swapchain->images()[index];
 	}
 
 	std::shared_ptr<ImageView> VkWindow::view(uint32_t index)
 	{
-		return _swapchain_views[index];
+		return _swapchain->views()[index];
 	}
 
 	VkFormat VkWindow::format()const
 	{
-		return _swapchain_image_format;
+		return _swapchain->format();
 	}
 
 	size_t VkWindow::swapchainSize()const
 	{
-		return _swapchain_images.size();
-	}
-
-	VkExtent2D VkWindow::extent()const
-	{
-		return _swapchain_extent;
+		return _swapchain->images().size();
 	}
 
 	VkWindow::AquireResult::AquireResult() :
@@ -177,7 +170,7 @@ namespace vkl
 		uint32_t image_index;
 		VkSemaphore sem_to_signal = !!semaphore_to_signal ? (VkSemaphore) * semaphore_to_signal : VK_NULL_HANDLE;
 		VkFence fence_to_signal = !!_fence_to_signal ? (VkFence) * _fence_to_signal : VK_NULL_HANDLE;
-		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), _swapchain, UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
+		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), *_swapchain, UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
 		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			reCreateSwapchain();
@@ -200,12 +193,13 @@ namespace vkl
 
 	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores)
 	{
+		VkSwapchainKHR swapchain = *_swapchain;
 		VkPresentInfoKHR presentation{
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.waitSemaphoreCount = num_semaphores,
 			.pWaitSemaphores = semaphores,
 			.swapchainCount = 1,
-			.pSwapchains = &_swapchain,
+			.pSwapchains = &swapchain,
 			.pImageIndices = &_current_frame_info.index,
 			.pResults = nullptr,
 		};

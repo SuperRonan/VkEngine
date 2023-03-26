@@ -112,7 +112,7 @@ namespace vkl
 			VkImageCreateFlags flags = 0;
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
-			std::shared_ptr<DynamicValue<VkExtent3D>> extent = nullptr;
+			DynamicValue<VkExtent3D> extent;
 			uint32_t mips = 1;
 			uint32_t layers = 1;
 			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
@@ -127,7 +127,7 @@ namespace vkl
 		struct AssociateInfo
 		{
 			std::shared_ptr<ImageInstance> instance;
-			std::shared_ptr<DynamicValue<VkExtent3D>> extent;
+			DynamicValue<VkExtent3D> extent;
 		};
 
 		using CI = CreateInfo;
@@ -160,7 +160,7 @@ namespace vkl
 		VkImageCreateFlags _flags = 0;
 		VkImageType _type = VK_IMAGE_TYPE_MAX_ENUM;
 		VkFormat _format = VK_FORMAT_MAX_ENUM;
-		std::shared_ptr<DynamicValue<VkExtent3D>> _extent = nullptr;
+		DynamicValue<VkExtent3D> _extent;
 		uint32_t _mips = 1;
 		uint32_t _layers = 1;
 		VkSampleCountFlagBits _samples = VK_SAMPLE_COUNT_1_BIT;
@@ -207,7 +207,7 @@ namespace vkl
 
 		constexpr Image& operator=(Image const&) noexcept = delete;
 
-		constexpr Image& operator=(Image&& other)noexcept
+		Image& operator=(Image&& other)noexcept
 		{
 			VkObject::operator=(std::move(other));
 			std::swap(_flags, other._flags);
@@ -265,7 +265,7 @@ namespace vkl
 			return _format;
 		}
 
-		std::shared_ptr<DynamicValue<VkExtent3D>> extent()const
+		DynamicValue<VkExtent3D> extent()const
 		{
 			return _extent;
 		}

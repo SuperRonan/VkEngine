@@ -54,7 +54,7 @@ namespace vkl
 			//createFrameBuffers();
 
 			//_world_size = _main_window->extent();
-			_world_size = VkExtent2D(_main_window->extent().width * 16, _main_window->extent().height * 16);
+			_world_size = VkExtent2D(_main_window->extent2D().value().width * 2, _main_window->extent2D().value().height * 2);
 
 		}
 
@@ -89,18 +89,21 @@ namespace vkl
 			LinearExecutor exec(_main_window);
 
 			const VkExtent2D grid_size = _world_size;
-			const VkExtent2D grid_packed_size = {.width = std::divCeil(grid_size.width, 8u), .height = grid_size.height};
+			const DynamicValue<VkExtent3D> grid_packed_size = VkExtent3D{
+				.width = std::divCeil(grid_size.width, 8u),
+				.height = grid_size.height,
+				.depth = 1
+			};
 
 			std::shared_ptr<Image> grid_storage_image = std::make_shared<Image>(Image::CI{
 				.app = this,
 				.name = "grid_storage_image",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8_UINT,
-				.extent = extend(grid_packed_size),
+				.extent = grid_packed_size,
 				.layers = 2,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.create_on_construct = true,
 			});
 
 			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(ImageView::CI{
@@ -113,7 +116,6 @@ namespace vkl
 					.baseArrayLayer = 0,
 					.layerCount = 1,
 				},
-				.create_on_construct = true,
 			});
 
 			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(ImageView::CI{
@@ -126,14 +128,13 @@ namespace vkl
 					.baseArrayLayer = 1,
 					.layerCount = 1,
 				},
-				.create_on_construct = true,
 			});
 
 			std::shared_ptr<ComputeCommand> init_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "InitGrid",
 				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/init_grid.comp"),
-				.dispatch_size = extend(grid_packed_size),
+				.dispatch_size = grid_packed_size,
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -149,7 +150,7 @@ namespace vkl
 				.app = this,
 				.name = "UpdateGrid",
 				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/update.comp"),
-				.dispatch_size = extend(grid_packed_size),
+				.dispatch_size = grid_packed_size,
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -177,23 +178,21 @@ namespace vkl
 				.name = "final image",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
-				.extent = extend(_main_window->extent()),
+				.extent = _main_window->extent3D(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.create_on_construct = true,
 			});
 
 			std::shared_ptr<ImageView> final_view = std::make_shared<ImageView>(ImageView::CI{
 				.name = "final view",
 				.image = final_image,
-				.create_on_construct = true,
 			});
 
 			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "RenderToFinal",
 				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/render.comp"),
-				.dispatch_size = extend(_main_window->extent()),
+				.dispatch_size = _main_window->extent3D(),
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -219,7 +218,7 @@ namespace vkl
 			size_t current_grid_id = 0;
 
 			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, 1.0 });
-			const glm::vec2 move_scale(1.0 / float(_main_window->extent().width), 1.0 / float(_main_window->extent().height));
+			const glm::vec2 move_scale(1.0 / float(_main_window->extent2D().value().width), 1.0 / float(_main_window->extent2D().value().height));
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
 			glm::mat4 mat_for_render = mat_uv_to_grid;

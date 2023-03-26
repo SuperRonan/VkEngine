@@ -7,6 +7,76 @@
 
 namespace vkl
 {
+	class ImageViewInstance : public VkObject
+	{
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ImageInstance> image = nullptr;
+			VkImageViewCreateInfo ci = {};
+		};
+		using CI = CreateInfo;
+
+	protected:
+		
+		std::shared_ptr<ImageInstance> _image = nullptr;
+
+		VkImageViewCreateInfo _ci = {};
+
+		VkImageView _view = VK_NULL_HANDLE;
+
+		void create();
+
+		void destroy();
+
+		void setVkNameIFP();
+
+	public:
+
+		ImageViewInstance() = delete;
+
+
+		ImageViewInstance(ImageViewInstance const&) = delete;
+		ImageViewInstance(ImageViewInstance &&) = delete;
+
+		ImageViewInstance& operator=(ImageViewInstance const&) = delete;
+		ImageViewInstance& operator=(ImageViewInstance &&) = delete;
+
+		ImageViewInstance(CreateInfo const& ci);
+
+		virtual ~ImageViewInstance();
+
+
+		constexpr VkImageView view()const
+		{
+			return _view;
+		}
+
+		constexpr auto handle()const
+		{
+			return view();
+		}
+
+		constexpr operator VkImageView()const
+		{
+			return view();
+		}
+
+		std::shared_ptr<ImageInstance> image()const
+		{
+			return _image;
+		}
+
+		constexpr const VkImageViewCreateInfo& createInfo()const
+		{
+			return _ci;
+		}
+		 
+	};
+
 	class ImageView : public VkObject
 	{
 	public:
@@ -32,10 +102,9 @@ namespace vkl
 		VkImageViewType _type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 		VkFormat _format = VK_FORMAT_MAX_ENUM;
 		VkComponentMapping _components = defaultComponentMapping();
-		VkImageSubresourceRange _range;
+		VkImageSubresourceRange _range = {};
 
-		VkImageView _view = VK_NULL_HANDLE;
-
+		std::shared_ptr<ImageViewInstance> _inst = nullptr;
 
 	public:
 
@@ -43,8 +112,8 @@ namespace vkl
 			VkObject(app)
 		{}
 
-		ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
-		ImageView(Image && image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+		//ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
+		//ImageView(Image && image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 
 		ImageView(CreateInfo const& ci);
 
@@ -58,23 +127,13 @@ namespace vkl
 
 		~ImageView();
 
-		void createView();
+		void createInstance();
 
-		void destroyView();
+		void destroyInstance();
 
-		constexpr VkImageView view()const
+		std::shared_ptr<ImageViewInstance> instance() const
 		{
-			return _view;
-		}
-
-		constexpr auto handle()const
-		{
-			return view();
-		}
-
-		constexpr operator VkImageView()const
-		{
-			return view();
+			return _inst;
 		}
 
 		constexpr const auto& image()const
@@ -101,6 +160,8 @@ namespace vkl
 		{
 			return _range;
 		}
+
+		void updateResourceIFNP()const;
 
 		// StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 		

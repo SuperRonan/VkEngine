@@ -126,7 +126,7 @@ namespace vkl
 				.newLayout = desired_state._layout,
 				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = *blit_target->image(),
+				.image = *blit_target->image()->instance(),
 				.subresourceRange = blit_target->range(),
 			};
 
