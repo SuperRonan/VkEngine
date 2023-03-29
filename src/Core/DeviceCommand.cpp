@@ -14,11 +14,11 @@ namespace vkl
 			const ResourceState prev = [&]() {
 				if (r.isImage())
 				{
-					return context.getImageState(r._images[0]);
+					return context.getImageState(r._image);
 				}
 				else if (r.isBuffer())
 				{
-					return context.getBufferState(r._buffers[0]);
+					return context.getBufferState(r._buffer);
 				}
 				else
 				{
@@ -40,8 +40,8 @@ namespace vkl
 						.newLayout = next._layout,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = *r._images[0]->image()->instance(),
-						.subresourceRange = r._images[0]->range(),
+						.image = *r._image->image()->instance(),
+						.subresourceRange = r._image->range(),
 					};
 					image_barriers.push_back(barrier);
 				}
@@ -54,7 +54,7 @@ namespace vkl
 						.dstAccessMask = next._access,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = *r._buffers[0],
+						.buffer = *r._buffer,
 						.offset = 0,
 						.size = VK_WHOLE_SIZE,
 					};
@@ -89,16 +89,23 @@ namespace vkl
 			ResourceState const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
-				context.setBufferState(r._buffers.front(), s);
+				context.setBufferState(r._buffer, s);
+				context.keppAlive(r._buffer);
 			}
 			else if (r.isImage())
 			{
-				context.setImageState(r._images.front(), s);
+				context.setImageState(r._image, s);
+				context.keppAlive(r._image);
 			}
 			else
 			{
 				assert(false);
 			}
 		}
+	}
+
+	bool DeviceCommand::updateResources()
+	{
+		return false;
 	}
 }

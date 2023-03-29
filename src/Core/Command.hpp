@@ -21,5 +21,9 @@ namespace vkl
 
 		virtual void execute(ExecutionContext & context) = 0;
 
+		virtual void prepareUpdate() = 0;
+
+		virtual bool updateResources() = 0;
+
 	};
 }

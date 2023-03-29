@@ -67,10 +67,22 @@ namespace vkl
 			.image = _image->instance(),
 			.ci = ci,
 		});
+
+		_inst->addInvalidationCallback(InvalidationCallback{
+			.callback = [&]()
+			{
+				this->destroyInstance();
+			},
+			.id = this,	
+		});
 	}
 
 	void ImageView::destroyInstance()
 	{
+		if (_image && _image->instance())
+		{
+			_image->instance()->removeInvalidationCallbacks(this);
+		}
 		_inst = nullptr;
 	}
 
@@ -202,6 +214,18 @@ namespace vkl
 			0, nullptr,
 			1, &barrier
 		);
+	}
+
+	bool ImageView::updateResource()
+	{
+		_image->updateResource();                      
+		if (!_inst)
+		{
+			createInstance();
+			return true;
+		}
+
+		return false;
 	}
 
 }

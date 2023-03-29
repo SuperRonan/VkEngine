@@ -23,6 +23,7 @@ namespace vkl
 
 		virtual void declareResourcesEndState(ExecutionContext& context);
 
+		virtual bool updateResources() override;
 	};
 }
 

@@ -40,12 +40,12 @@ namespace vkl
 
 	void LinearExecutor::declare(std::shared_ptr<ImageView> view)
 	{
-
+		_registered_images.push_back(std::move(view));
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<Buffer> buffer)
 	{
-
+		_registed_buffers.push_back(std::move(buffer));
 	}
 
 	void LinearExecutor::preprocessCommands()
@@ -55,6 +55,11 @@ namespace vkl
 			std::cout << "Initializing command " << cmd->name() << "\n";
 			cmd->init();
 		}
+	}
+
+	void LinearExecutor::preprocessResources()
+	{
+
 	}
 
 	void LinearExecutor::init()
@@ -74,6 +79,39 @@ namespace vkl
 				ImGui_ImplVulkan_CreateFontsTexture(*_command_buffer_to_submit);
 			}
 			endCommandBufferAndSubmit();
+		}
+	}
+
+	void LinearExecutor::updateResources()
+	{
+		for (auto& image_view : _registered_images)
+		{
+			const bool invalidated = image_view->updateResource();
+			if (invalidated)
+			{
+				const ImageRange ir{
+					.image = *image_view->image()->instance(),
+					.range = image_view->instance()->createInfo().subresourceRange,
+				};
+				const ResourceState state{
+					._access = VK_ACCESS_NONE_KHR,
+					._layout = image_view->image()->instance()->createInfo().initialLayout,
+					._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				};
+				_resources_state._image_states[ir] = state;
+
+				image_view->instance()->addInvalidationCallback(InvalidationCallback{ 
+					.callback = [&]() {
+						_resources_state._image_states.erase(ir);
+					},
+					.id = this,
+				});
+			}
+		}
+
+		for (auto& command : _commands)
+		{
+			const bool invalidated = command->updateResources();
 		}
 	}
 
@@ -157,9 +195,9 @@ namespace vkl
 		cmd->execute(_context);
 	}
 
-	void LinearExecutor::operator()(std::shared_ptr<Command> cmd)
+	void LinearExecutor::execute(Executable const& executable)
 	{
-		return execute(cmd);
+		executable(_context);
 	}
 
 	void LinearExecutor::beginCommandBuffer()

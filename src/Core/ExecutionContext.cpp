@@ -60,18 +60,18 @@ namespace vkl
 	{
 		// front?
 		if (isImage())
-			return _images.front()->name();
+			return _image->name();
 		else// if (isBuffer())
-			return _buffers.front()->name();
+			return _buffer->name();
 	}
 
 	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image)
 	{
 		Resource res;
 		if (!!buffer)
-			res._buffers.push_back(buffer);
+			res._buffer = buffer;
 		else if (!!image)
-			res._images.push_back(image);
+			res._image = image;
 		return res;
 
 	}

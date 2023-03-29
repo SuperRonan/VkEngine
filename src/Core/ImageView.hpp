@@ -22,6 +22,8 @@ namespace vkl
 
 	protected:
 		
+		std::vector<InvalidationCallback> _invalidation_callbacks = {};
+
 		std::shared_ptr<ImageInstance> _image = nullptr;
 
 		VkImageViewCreateInfo _ci = {};
@@ -49,6 +51,10 @@ namespace vkl
 
 		virtual ~ImageViewInstance();
 
+		void addInvalidationCallback(InvalidationCallback const& ic)
+		{
+			_invalidation_callbacks.push_back(ic);
+		}
 
 		constexpr VkImageView view()const
 		{
@@ -161,7 +167,7 @@ namespace vkl
 			return _range;
 		}
 
-		void updateResourceIFNP()const;
+		bool updateResource();
 
 		// StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 		

@@ -40,6 +40,8 @@ namespace vkl
 		VmaAllocation _alloc = nullptr;
 		VkImage _image = VK_NULL_HANDLE;
 
+		std::vector<InvalidationCallback> _invalidation_callbacks = {};
+
 		void setVkNameIFP();
 
 		void create();
@@ -62,6 +64,21 @@ namespace vkl
 		
 		ImageInstance& operator=(ImageInstance &&) = delete;
 
+		void addInvalidationCallback(InvalidationCallback const& ic)
+		{
+			_invalidation_callbacks.push_back(ic);
+		}
+
+		void removeInvalidationCallbacks(const VkObject* ptr)
+		{
+			for (auto it = _invalidation_callbacks.begin(); it != _invalidation_callbacks.end(); ++it)
+			{
+				if (it->id == ptr)
+				{
+					it = _invalidation_callbacks.erase(it);
+				}
+			}
+		}
 		
 		constexpr VkImageCreateInfo const& createInfo()const
 		{
@@ -72,7 +89,6 @@ namespace vkl
 		{
 			return _vma_ci;
 		}
-
 
 		constexpr auto handle()const
 		{
@@ -320,6 +336,8 @@ namespace vkl
 				.layerCount = _layers,
 			};
 		}
+
+		bool updateResource();
 
 		//StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 	};

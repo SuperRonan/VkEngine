@@ -29,6 +29,12 @@ namespace vkl
 	void ImageInstance::destroy()
 	{
 		assert(_image != VK_NULL_HANDLE);
+
+		for (const auto& ic : _invalidation_callbacks)
+		{
+			ic();
+		}
+
 		if (ownership())
 		{
 			vmaDestroyImage(_app->allocator(), _image, _alloc);
@@ -157,4 +163,25 @@ namespace vkl
 	//	std::memcpy(sb->data, data, size);
 	//	return sb;
 	//}
+
+
+	bool Image::updateResource()
+	{
+		using namespace vk_operators;
+
+		if (!_inst)
+		{
+			createInstance();
+			return true;
+		}
+
+		const VkExtent3D new_extent = _extent;
+
+		if (new_extent != _inst->createInfo().extent)
+		{
+			createInstance();
+			return true;
+		}
+		return false;
+	}
 }

@@ -229,4 +229,12 @@ namespace vkl
 			_name = std::forward<StringLike>(new_name);
 		}
 	};
+
+	struct InvalidationCallback
+	{
+		std::function<void(void)> callback;
+		VkObject* id = nullptr;
+	};
+
+
 }

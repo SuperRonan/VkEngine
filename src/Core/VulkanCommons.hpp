@@ -177,5 +177,16 @@ namespace vkl
 				&& (a.layerCount == b.layerCount)
 				&& (a.levelCount == b.levelCount);
 		}
+
+		constexpr bool operator==(VkExtent3D const& a, VkExtent3D const& b)
+		{
+			return (a.width == b.width) && (a.height == b.height) && (a.depth == b.depth);
+		}
+
+		constexpr bool operator!=(VkExtent3D const& a, VkExtent3D const& b)
+		{
+			return !(a == b);
+		}
+
 	}
 }

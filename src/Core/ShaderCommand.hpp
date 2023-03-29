@@ -24,7 +24,7 @@ namespace vkl
 
 	protected:
 		Resource _resource = {};
-		std::vector<std::shared_ptr<Sampler>> _samplers = {};
+		std::shared_ptr<Sampler> _sampler = {};
 		uint32_t _binding = uint32_t(-1);
 		uint32_t _set = 0;
 
@@ -101,19 +101,19 @@ namespace vkl
 				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 
-		constexpr auto& buffers()
+		constexpr auto& buffer()
 		{
-			return _resource._buffers;
+			return _resource._buffer;
 		}
 
-		constexpr auto& images()
+		constexpr auto& image()
 		{
-			return _resource._images;
+			return _resource._image;
 		}
 
-		constexpr auto& samplers()
+		constexpr auto& sampler()
 		{
-			return _samplers;
+			return _sampler;
 		}
 
 		constexpr VkDescriptorType vkType()const

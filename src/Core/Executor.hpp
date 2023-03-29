@@ -27,9 +27,16 @@ namespace vkl
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::shared_ptr<ImguiCommand> _render_gui = nullptr;
+
 		std::vector<std::shared_ptr<Command>> _commands = {};
 
+		std::vector<std::shared_ptr<ImageView>> _registered_images = {};
+		std::vector<std::shared_ptr<Buffer>> _registed_buffers = {};
+
+
 		void preprocessCommands();
+
+		void preprocessResources();
 
 		struct InBetween
 		{
@@ -75,6 +82,8 @@ namespace vkl
 
 		void init();
 
+		void updateResources();
+
 		void beginFrame();
 
 		void beginCommandBuffer();
@@ -87,7 +96,17 @@ namespace vkl
 
 		void execute(std::shared_ptr<Command> cmd);
 
-		void operator()(std::shared_ptr<Command> cmd);
+		void execute(Executable const& executable);
+
+		void operator()(std::shared_ptr<Command> cmd)
+		{
+			execute(cmd);
+		}
+
+		void operator()(Executable const& executable)
+		{
+			execute(executable);
+		}
 
 		void submit();
 

@@ -114,6 +114,8 @@ namespace vkl
 
 		ResourceStateTracker * _reosurce_states;
 
+		std::vector<std::shared_ptr<VkObject>> _objects_to_keep;
+
 
 	public:
 
@@ -134,12 +136,15 @@ namespace vkl
 
 		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
 
+		//void keepAlive(std::shared_ptr<Buffer> b);
+
+		void keppAlive(std::shared_ptr<VkObject> obj);
 	};
 
 	struct Resource
 	{
-		std::vector<std::shared_ptr<Buffer>> _buffers = {};
-		std::vector<std::shared_ptr<ImageView>> _images = {};
+		std::shared_ptr<Buffer> _buffer = {};
+		std::shared_ptr<ImageView> _image = {};
 		ResourceState _begin_state = {};
 		std::optional<ResourceState> _end_state = {}; // None means the same as begin state
 		VkImageUsageFlags _image_usage = 0;
@@ -150,17 +155,38 @@ namespace vkl
 
 		constexpr bool isImage() const
 		{
-			return !_images.empty();
+			return !_image;
 		}
 
 		constexpr bool isBuffer() const
 		{
-			return !_buffers.empty();
+			return !_buffer;
 		}
 
 		const std::string& name()const;
 	};
 
 	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
+
+	//class Executable
+	//{
+	//public:
+	//	using ExecutableFunction = std::function<void(ExecutionContext& ctx)>;
+	//protected:
+
+	//	ExecutableFunction _function;
+
+	//public:
+
+	//	Executable(ExecutableFunction const& f):
+	//		_function(f)
+	//	{}
+
+	//	void operator()(ExecutionContext& ctx)
+	//	{
+	//		_function(ctx);
+	//	}
+	//};
+	using Executable = std::function<void(ExecutionContext& ctx)>;
 }
 

@@ -9,7 +9,7 @@ namespace vkl
 		_name(desc.name)
 	{
 		if (!!desc.sampler)
-			_samplers.push_back(desc.sampler);
+			_sampler = desc.sampler;
 	}
 
 	void ShaderCommand::writeDescriptorSets()
