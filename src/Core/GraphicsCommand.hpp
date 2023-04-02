@@ -31,7 +31,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<ShaderBindingDescriptor> bindings = {};
+			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::optional<bool> write_depth = {};
@@ -81,7 +81,7 @@ namespace vkl
 			std::string name = {};
 			std::optional<uint32_t> draw_count = {};
 			std::vector<std::shared_ptr<Mesh>> meshes = {};
-			std::vector<ShaderBindingDescriptor> bindings = {};
+			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::optional<bool> write_depth = {};
@@ -121,7 +121,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<ShaderBindingDescriptor> bindings = {};
+			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::filesystem::path fragment_shader_path = {};

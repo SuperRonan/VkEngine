@@ -7,6 +7,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+using namespace std::literals;
+
 template <class Stream, class Float, glm::length_t N>
 Stream& operator<<(Stream& stream, glm::vec<N, Float> const& vec)
 {

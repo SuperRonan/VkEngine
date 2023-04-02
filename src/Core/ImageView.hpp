@@ -22,8 +22,6 @@ namespace vkl
 
 	protected:
 		
-		std::vector<InvalidationCallback> _invalidation_callbacks = {};
-
 		std::shared_ptr<ImageInstance> _image = nullptr;
 
 		VkImageViewCreateInfo _ci = {};
@@ -51,11 +49,6 @@ namespace vkl
 
 		virtual ~ImageViewInstance();
 
-		void addInvalidationCallback(InvalidationCallback const& ic)
-		{
-			_invalidation_callbacks.push_back(ic);
-		}
-
 		constexpr VkImageView view()const
 		{
 			return _view;
@@ -71,7 +64,7 @@ namespace vkl
 			return view();
 		}
 
-		std::shared_ptr<ImageInstance> image()const
+		auto image()const
 		{
 			return _image;
 		}
@@ -83,7 +76,7 @@ namespace vkl
 		 
 	};
 
-	class ImageView : public VkObject
+	class ImageView : public VkObjectWithCallbacks
 	{
 	public:
 
@@ -115,7 +108,7 @@ namespace vkl
 	public:
 
 		constexpr ImageView(VkApplication * app = nullptr) noexcept :
-			VkObject(app)
+			VkObjectWithCallbacks(app, ""sv)
 		{}
 
 		//ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
@@ -129,7 +122,7 @@ namespace vkl
 
 		ImageView& operator=(ImageView const&) = delete;
 
-		ImageView& operator=(ImageView&& other);
+		ImageView& operator=(ImageView&& other) noexcept;
 
 		~ImageView();
 

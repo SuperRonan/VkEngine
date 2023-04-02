@@ -6,9 +6,40 @@ namespace vkl
 {
 	class DeviceCommand : public Command
 	{
+	public:
+
+		class InputSynchronizationHelper
+		{
+		protected:
+
+			std::vector<VkImageMemoryBarrier2> _images_barriers;
+			std::vector<VkBufferMemoryBarrier2> _buffers_barriers;
+
+			ExecutionContext& _ctx;
+
+		public:
+
+			InputSynchronizationHelper(ExecutionContext & ctx):
+				_ctx(ctx)
+			{}
+
+			void addSynch(Resource const& r);
+
+			void record();
+
+			void declareFinalStates();
+		};
+
 	protected:
 
+		
+
 		std::vector<Resource> _resources;
+
+		virtual void clearResources()
+		{
+			_resources.clear();
+		}
 
 	public:
 

@@ -111,7 +111,7 @@ namespace vkl
 		{
 			std::shared_ptr<ImageView> view = _framebuffer->textures()[i];
 			_resources.push_back(Resource{
-				._images = {view},
+				._image = view,
 				._begin_state = ResourceState{
 					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
 					._layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -124,7 +124,7 @@ namespace vkl
 		{
 			const VkAccessFlags access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT; // TODO deduce from the depth test;
 			_resources.push_back(Resource{
-				._images = {_depth},
+				._image = _depth,
 				._begin_state = ResourceState{
 					._access = access,
 					._layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,

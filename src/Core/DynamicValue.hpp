@@ -121,7 +121,7 @@ namespace vkl
             _inst(other.instance())
         {}
 
-        DynamicValue(DynamicValue&& other) :
+        DynamicValue(DynamicValue&& other) noexcept:
             _inst(std::move(other._inst))
         {}
 
@@ -130,7 +130,7 @@ namespace vkl
             _inst = other._inst;
             return *this;
         }
-        DynamicValue& operator=(DynamicValue&& other)
+        DynamicValue& operator=(DynamicValue&& other) noexcept
         {
             _inst.swap(other._inst);
             return *this;

@@ -15,7 +15,7 @@ namespace vkl
 			std::filesystem::path shader_path;
 			VkExtent3D dispatch_size = makeZeroExtent3D();
 			bool dispatch_threads = false;
-			std::vector<ShaderBindingDescriptor> bindings = {};
+			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::string> definitions = {};
 		};
 		using CI = CreateInfo;

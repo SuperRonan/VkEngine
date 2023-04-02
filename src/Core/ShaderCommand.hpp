@@ -6,7 +6,7 @@
 
 namespace vkl
 {
-	struct ShaderBindingDescriptor
+	struct ShaderBindingDescription
 	{
 		std::shared_ptr<Buffer> buffer = nullptr;
 		std::shared_ptr<ImageView> view = nullptr;
@@ -16,7 +16,7 @@ namespace vkl
 		uint32_t binding = uint32_t(-1);
 	};
 	
-	using Binding = ShaderBindingDescriptor;
+	using Binding = ShaderBindingDescription;
 
 	class ResourceBinding
 	{
@@ -34,7 +34,7 @@ namespace vkl
 
 	public:
 
-		ResourceBinding(ShaderBindingDescriptor const& desc);
+		ResourceBinding(ShaderBindingDescription const& desc);
 
 		constexpr void resolve(uint32_t s, uint32_t b)
 		{
@@ -162,11 +162,16 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<Pipeline> _pipeline;
-		std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
-		std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
-
+		struct DescriptorSets
+		{
+			std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
+			std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
+		};
 		std::vector<ResourceBinding> _bindings;
+		DescriptorSets _sets;
+
+		std::shared_ptr<Pipeline> _pipeline;
+		
 
 		std::vector<uint8_t> _push_constants_data;
 
@@ -174,7 +179,7 @@ namespace vkl
 	public:
 
 		template <typename StringLike = std::string>
-		ShaderCommand(VkApplication* app, StringLike&& name, std::vector<ShaderBindingDescriptor> const& bindings) :
+		ShaderCommand(VkApplication* app, StringLike&& name, std::vector<ShaderBindingDescription> const& bindings) :
 			DeviceCommand(app, std::forward<StringLike>(name)),
 			_bindings(bindings.cbegin(), bindings.cend())
 		{

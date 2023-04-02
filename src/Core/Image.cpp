@@ -30,11 +30,6 @@ namespace vkl
 	{
 		assert(_image != VK_NULL_HANDLE);
 
-		for (const auto& ic : _invalidation_callbacks)
-		{
-			ic();
-		}
-
 		if (ownership())
 		{
 			vmaDestroyImage(_app->allocator(), _image, _alloc);
@@ -70,7 +65,7 @@ namespace vkl
 
 
 	Image::Image(CreateInfo const& ci) : 
-		VkObject(ci.app, ci.name),
+		VkObjectWithCallbacks(ci.app, ci.name),
 		_flags(ci.flags),
 		_type(ci.type),
 		_format(ci.format),
@@ -91,6 +86,10 @@ namespace vkl
 
 	void Image::createInstance()
 	{
+		if (_inst)
+		{
+			destroyInstance();
+		}
 		uint32_t n_queues = 0;
 		uint32_t* p_queues = nullptr;
 		if (_sharing_mode == VK_SHARING_MODE_CONCURRENT)
@@ -152,6 +151,7 @@ namespace vkl
 
 	void Image::destroyInstance()
 	{
+		callInvalidationCallbacks();
 		_inst = nullptr;
 	}
 

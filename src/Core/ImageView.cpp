@@ -53,6 +53,10 @@ namespace vkl
 
 	void ImageView::createInstance()
 	{
+		if (_inst)
+		{
+			destroyInstance();
+		}
 		VkImageViewCreateInfo ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.viewType = _type,
@@ -68,7 +72,7 @@ namespace vkl
 			.ci = ci,
 		});
 
-		_inst->addInvalidationCallback(InvalidationCallback{
+		_image->addInvalidationCallback(InvalidationCallback{
 			.callback = [&]()
 			{
 				this->destroyInstance();
@@ -79,11 +83,11 @@ namespace vkl
 
 	void ImageView::destroyInstance()
 	{
-		if (_image && _image->instance())
+		if (_inst)
 		{
-			_image->instance()->removeInvalidationCallbacks(this);
+			callInvalidationCallbacks();
+			_inst = nullptr;
 		}
-		_inst = nullptr;
 	}
 
 	ImageView::~ImageView()
@@ -92,7 +96,7 @@ namespace vkl
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
-		VkObject((ci.app ? ci.app : ci.image->application()), ci.name),
+		VkObjectWithCallbacks((ci.app ? ci.app : ci.image->application()), ci.name),
 		_image(ci.image),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format == VK_FORMAT_MAX_ENUM ? _image->format() : ci.format),
@@ -107,7 +111,7 @@ namespace vkl
 
 
 	ImageView::ImageView(ImageView&& other) noexcept :
-		VkObject(std::move(other)),
+		VkObjectWithCallbacks(std::move(other)),
 		_image(std::move(other._image)),
 		_type(other._type),
 		_format(other._format),
@@ -155,7 +159,7 @@ namespace vkl
 	ImageView& ImageView::operator=(ImageView&& other)
 	{
 		//std::copySwap(*this, other);
-		VkObject::operator=(std::move(other));
+		VkObjectWithCallbacks::operator=(std::move(other));
 		_image = std::move(other._image);
 		std::swap(_type, other._type);
 		std::swap(_format, other._format);
@@ -218,7 +222,8 @@ namespace vkl
 
 	bool ImageView::updateResource()
 	{
-		_image->updateResource();                      
+		const bool updated = _image->updateResource();                      
+		assert(updated && !_inst);
 		if (!_inst)
 		{
 			createInstance();

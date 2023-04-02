@@ -136,8 +136,6 @@ namespace vkl
 
 		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
 
-		//void keepAlive(std::shared_ptr<Buffer> b);
-
 		void keppAlive(std::shared_ptr<VkObject> obj);
 	};
 
@@ -153,14 +151,14 @@ namespace vkl
 		// Can't have a constructor and still an aggregate initialization :'(
 		//Resource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
 
-		constexpr bool isImage() const
+		bool isImage() const
 		{
-			return !_image;
+			return !!_image;
 		}
 
-		constexpr bool isBuffer() const
+		bool isBuffer() const
 		{
-			return !_buffer;
+			return !!_buffer;
 		}
 
 		const std::string& name()const;

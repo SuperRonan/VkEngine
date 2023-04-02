@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VkApplication.hpp"
+#include "AbstractInstance.hpp"
 #include <cassert>
 #include <array>
 #include <format>
@@ -40,7 +41,7 @@ namespace vkl
 		VmaAllocation _alloc = nullptr;
 		VkImage _image = VK_NULL_HANDLE;
 
-		std::vector<InvalidationCallback> _invalidation_callbacks = {};
+
 
 		void setVkNameIFP();
 
@@ -64,22 +65,6 @@ namespace vkl
 		
 		ImageInstance& operator=(ImageInstance &&) = delete;
 
-		void addInvalidationCallback(InvalidationCallback const& ic)
-		{
-			_invalidation_callbacks.push_back(ic);
-		}
-
-		void removeInvalidationCallbacks(const VkObject* ptr)
-		{
-			for (auto it = _invalidation_callbacks.begin(); it != _invalidation_callbacks.end(); ++it)
-			{
-				if (it->id == ptr)
-				{
-					it = _invalidation_callbacks.erase(it);
-				}
-			}
-		}
-		
 		constexpr VkImageCreateInfo const& createInfo()const
 		{
 			return _ci;
@@ -117,7 +102,7 @@ namespace vkl
 
 	};
 
-	class Image : public VkObject
+	class Image : public VkObjectWithCallbacks
 	{
 	public:
 
@@ -194,7 +179,7 @@ namespace vkl
 	public:
 
 		constexpr Image(VkApplication * app = nullptr) noexcept:
-			VkObject(app)
+			VkObjectWithCallbacks(app, "")
 		{}
 
 		Image(CreateInfo const& ci);
@@ -202,7 +187,7 @@ namespace vkl
 		constexpr Image(Image const&) noexcept = delete;
 
 		Image(Image&& other) noexcept :
-			VkObject(std::move(other)),
+			VkObjectWithCallbacks(std::move(other)),
 			_flags(other._flags),
 			_type(other._type),
 			_format(other._format),
@@ -225,7 +210,7 @@ namespace vkl
 
 		Image& operator=(Image&& other)noexcept
 		{
-			VkObject::operator=(std::move(other));
+			VkObjectWithCallbacks::operator=(std::move(other));
 			std::swap(_flags, other._flags);
 			std::swap(_type, other._type);
 			std::swap(_format, other._format);
