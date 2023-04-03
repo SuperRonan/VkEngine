@@ -100,7 +100,7 @@ namespace vkl
 				};
 				_resources_state._image_states[ir] = state;
 
-				image_view->instance()->addInvalidationCallback(InvalidationCallback{ 
+				image_view->addInvalidationCallback(InvalidationCallback{ 
 					.callback = [&]() {
 						_resources_state._image_states.erase(ir);
 					},
@@ -134,10 +134,10 @@ namespace vkl
 		assert(!!_command_buffer_to_submit);
 		std::shared_ptr<ImageView> blit_target = _window->view(_aquired.swap_index);
 
-		_blit_to_present->setImages(img_to_present, blit_target);
-		_blit_to_present->setRegions();
-
-		execute(_blit_to_present);
+		execute((*_blit_to_present)(BlitImage::BI{
+			.src = img_to_present,
+			.dst = blit_target,
+		}));
 
 		if (render_ImGui && _render_gui)
 		{

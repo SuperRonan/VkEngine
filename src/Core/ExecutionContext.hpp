@@ -46,14 +46,21 @@ namespace std
 
 namespace vkl
 {
-    struct ResourceState
+	struct ResourceState1
 	{
 		VkAccessFlags _access = VK_ACCESS_NONE_KHR;
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkPipelineStageFlags _stage = VK_PIPELINE_STAGE_NONE_KHR;
 	};
+	
+    struct ResourceState2
+	{
+		VkAccessFlags2 _access = VK_ACCESS_2_NONE_KHR;
+		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkPipelineStageFlags2 _stage = VK_PIPELINE_STAGE_2_NONE_KHR;
+	};
 
-	constexpr bool accessIsWrite(VkAccessFlags access)
+	constexpr bool accessIsWrite1(VkAccessFlags access)
 	{
 		return access & (
 			VK_ACCESS_HOST_WRITE_BIT |
@@ -65,7 +72,19 @@ namespace vkl
 			);
 	}
 
-	constexpr bool accessIsRead(VkAccessFlags access)
+	constexpr bool accessIsWrite2(VkAccessFlags2 access)
+	{
+		return access & (
+			VK_ACCESS_2_HOST_WRITE_BIT |
+			VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT |
+			VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+			VK_ACCESS_2_SHADER_WRITE_BIT |
+			VK_ACCESS_2_TRANSFER_WRITE_BIT |
+			VK_ACCESS_2_MEMORY_WRITE_BIT
+			);
+	}
+
+	constexpr bool accessIsRead1(VkAccessFlags access)
 	{
 		return access & (
 			VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
@@ -82,28 +101,63 @@ namespace vkl
 		);
 	}
 
-	constexpr bool accessIsReadAndWrite(VkAccessFlags access)
+	constexpr bool accessIsRead2(VkAccessFlags2 access)
 	{
-		return accessIsRead(access) && accessIsWrite(access);
+		return access & (
+			VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT |
+			VK_ACCESS_2_INDEX_READ_BIT |
+			VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT |
+			VK_ACCESS_2_UNIFORM_READ_BIT |
+			VK_ACCESS_2_INPUT_ATTACHMENT_READ_BIT |
+			VK_ACCESS_2_SHADER_READ_BIT |
+			VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT |
+			VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+			VK_ACCESS_2_TRANSFER_READ_BIT |
+			VK_ACCESS_2_HOST_READ_BIT |
+			VK_ACCESS_2_MEMORY_READ_BIT
+		);
 	}
 
-	constexpr bool layoutTransitionRequired(ResourceState prev, ResourceState next)
+	constexpr bool accessIsReadAndWrite1(VkAccessFlags access)
+	{
+		return accessIsRead1(access) && accessIsWrite1(access);
+	}
+
+	constexpr bool accessIsReadAndWrite2(VkAccessFlags2 access)
+	{
+		return accessIsRead1(access) && accessIsWrite1(access);
+	}
+
+	constexpr bool layoutTransitionRequired(ResourceState1 prev, ResourceState1 next)
 	{
 		return (prev._layout != next._layout);
 	}
 
-	constexpr bool stateTransitionRequiresSynchronization(ResourceState prev, ResourceState next, bool is_image)
+	constexpr bool layoutTransitionRequired(ResourceState2 prev, ResourceState2 next)
+	{
+		return (prev._layout != next._layout);
+	}
+
+	constexpr bool stateTransitionRequiresSynchronization1(ResourceState1 prev, ResourceState1 next, bool is_image)
 	{
 		const bool res =
-			!(accessIsRead(prev._access) && accessIsRead(next._access)) // Assuming that !read = write
+			!(accessIsRead1(prev._access) && accessIsRead1(next._access)) // Assuming that !read = write
+			|| (is_image && layoutTransitionRequired(prev, next));
+		return res;
+	}
+
+	constexpr bool stateTransitionRequiresSynchronization2(ResourceState2 prev, ResourceState2 next, bool is_image)
+	{
+		const bool res =
+			!(accessIsRead2(prev._access) && accessIsRead2(next._access)) // Assuming that !read = write
 			|| (is_image && layoutTransitionRequired(prev, next));
 		return res;
 	}
 
 	struct ResourceStateTracker
 	{
-		std::unordered_map<VkBuffer, ResourceState> _buffer_states;
-		std::unordered_map<ImageRange, ResourceState> _image_states;
+		std::unordered_map<VkBuffer, ResourceState2> _buffer_states;
+		std::unordered_map<ImageRange, ResourceState2> _image_states;
 	};
 
 	class ExecutionContext
@@ -121,18 +175,18 @@ namespace vkl
 
 		ExecutionContext(ResourceStateTracker * rst, std::shared_ptr<CommandBuffer> cmd);
 
-		ResourceState& getBufferState(std::shared_ptr<Buffer> b);
+		ResourceState2& getBufferState(std::shared_ptr<Buffer> b);
 
-		ResourceState& getImageState(std::shared_ptr<ImageView> i);
+		ResourceState2& getImageState(std::shared_ptr<ImageView> i);
 
 		constexpr std::shared_ptr<CommandBuffer>& getCommandBuffer()
 		{
 			return _command_buffer;
 		}
 
-		void setBufferState(std::shared_ptr<Buffer> b, ResourceState const& s);
+		void setBufferState(std::shared_ptr<Buffer> b, ResourceState2 const& s);
 
-		void setImageState(std::shared_ptr<ImageView> v, ResourceState const& s);
+		void setImageState(std::shared_ptr<ImageView> v, ResourceState2 const& s);
 
 		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
 
@@ -143,8 +197,8 @@ namespace vkl
 	{
 		std::shared_ptr<Buffer> _buffer = {};
 		std::shared_ptr<ImageView> _image = {};
-		ResourceState _begin_state = {};
-		std::optional<ResourceState> _end_state = {}; // None means the same as begin state
+		ResourceState2 _begin_state = {};
+		std::optional<ResourceState2> _end_state = {}; // None means the same as begin state
 		VkImageUsageFlags _image_usage = 0;
 		VkBufferUsageFlags _buffer_usage = 0;
 

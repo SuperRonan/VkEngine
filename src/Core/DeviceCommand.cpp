@@ -2,100 +2,99 @@
 
 namespace vkl
 {
-	void DeviceCommand::recordInputSynchronization(CommandBuffer& cmd, ExecutionContext& context)
+	void DeviceCommand::InputSynchronizationHelper::addSynch(const Resource& r)
 	{
-		std::vector<VkImageMemoryBarrier> image_barriers;
-		std::vector<VkBufferMemoryBarrier> buffer_barriers;
-		VkPipelineStageFlags src_stage = 0, dst_stage = 0;
-		for (size_t i = 0; i < _resources.size(); ++i)
+		_resources.push_back(r);
+		const ResourceState next = r._begin_state;
+		const ResourceState prev = [&]() {
+			if (r.isImage())
+			{
+				return _ctx.getImageState(r._image);
+			}
+			else if (r.isBuffer())
+			{
+				return _ctx.getBufferState(r._buffer);
+			}
+			else
+			{
+				assert(false);
+				// ???
+				return ResourceState{};
+			}
+		}();
+		if (stateTransitionRequiresSynchronization(prev, next, r.isImage()))
 		{
-			auto& r = _resources[i];
-			const ResourceState next = r._begin_state;
-			const ResourceState prev = [&]() {
-				if (r.isImage())
-				{
-					return context.getImageState(r._image);
-				}
-				else if (r.isBuffer())
-				{
-					return context.getBufferState(r._buffer);
-				}
-				else
-				{
-					assert(false);
-					// ???
-					return ResourceState{};
-				}
-			}();
-			if (stateTransitionRequiresSynchronization(prev, next, r.isImage()))
+			if (r.isImage())
 			{
-				if (r.isImage())
-				{
-					VkImageMemoryBarrier barrier = {
-						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-						.pNext = nullptr,
-						.srcAccessMask = prev._access,
-						.dstAccessMask = next._access,
-						.oldLayout = prev._layout,
-						.newLayout = next._layout,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = *r._image->image()->instance(),
-						.subresourceRange = r._image->range(),
-					};
-					image_barriers.push_back(barrier);
-				}
-				else if (r.isBuffer())
-				{
-					VkBufferMemoryBarrier barrier = {
-						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-						.pNext = nullptr,
-						.srcAccessMask = prev._access,
-						.dstAccessMask = next._access,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = *r._buffer,
-						.offset = 0,
-						.size = VK_WHOLE_SIZE,
-					};
-					buffer_barriers.push_back(barrier);
-				}
-				src_stage |= prev._stage;
-				dst_stage |= next._stage;
+				VkImageMemoryBarrier2 barrier = {
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcStageMask = prev._stage,
+					.srcAccessMask = prev._access,
+					.dstStageMask = next._stage,
+					.dstAccessMask = next._access,
+					.oldLayout = prev._layout,
+					.newLayout = next._layout,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = *r._image->image()->instance(),
+					.subresourceRange = r._image->range(),
+				};
+				_images_barriers.push_back(barrier);
 			}
-		}
-		if (!image_barriers.empty() || !buffer_barriers.empty())
-		{
-			if (src_stage == 0)
+			else if (r.isBuffer())
 			{
-				src_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				VkBufferMemoryBarrier2 barrier = {
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcStageMask = prev._stage,
+					.srcAccessMask = prev._access,
+					.dstStageMask = next._stage,
+					.dstAccessMask = next._access,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = *r._buffer,
+					.offset = 0,
+					.size = VK_WHOLE_SIZE,
+				};
+				_buffers_barriers.push_back(barrier);
 			}
-			if (dst_stage & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
-			{
-				int _ = 0;
-			}
-			vkCmdPipelineBarrier(cmd,
-				src_stage, dst_stage, 0,
-				0, nullptr,
-				(uint32_t)buffer_barriers.size(), buffer_barriers.data(),
-				(uint32_t)image_barriers.size(), image_barriers.data());
 		}
 	}
 
-	void DeviceCommand::declareResourcesEndState(ExecutionContext& context)
+	void DeviceCommand::InputSynchronizationHelper::record()
+	{
+		if (!_images_barriers.empty() || !_buffers_barriers.empty())
+		{
+			VkDependencyInfo dep{
+				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+				.pNext = nullptr,
+				.dependencyFlags = 0,
+				.memoryBarrierCount = 0,
+				.pMemoryBarriers = nullptr,
+				.bufferMemoryBarrierCount = static_cast<uint32_t>(_buffers_barriers.size()),
+				.pBufferMemoryBarriers = _buffers_barriers.data(),
+				.imageMemoryBarrierCount = static_cast<uint32_t>(_images_barriers.size()),
+				.pImageMemoryBarriers = _images_barriers.data(),
+			};
+			vkCmdPipelineBarrier2(*_ctx.getCommandBuffer(), &dep);
+		}
+	}
+
+	void DeviceCommand::InputSynchronizationHelper::NotifyContext()
 	{
 		for (const auto& r : _resources)
 		{
 			ResourceState const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
-				context.setBufferState(r._buffer, s);
-				context.keppAlive(r._buffer);
+				_ctx.setBufferState(r._buffer, s);
+				_ctx.keppAlive(r._buffer);
 			}
 			else if (r.isImage())
 			{
-				context.setImageState(r._image, s);
-				context.keppAlive(r._image);
+				_ctx.setImageState(r._image, s);
+				_ctx.keppAlive(r._image);
 			}
 			else
 			{

@@ -12,6 +12,7 @@ namespace vkl
 		{
 		protected:
 
+			std::vector<Resource> _resources;
 			std::vector<VkImageMemoryBarrier2> _images_barriers;
 			std::vector<VkBufferMemoryBarrier2> _buffers_barriers;
 
@@ -27,7 +28,7 @@ namespace vkl
 
 			void record();
 
-			void declareFinalStates();
+			void NotifyContext();
 		};
 
 	protected:
@@ -49,10 +50,6 @@ namespace vkl
 		{}
 
 		virtual ~DeviceCommand() override = default;
-
-		virtual void recordInputSynchronization(CommandBuffer& cmd, ExecutionContext& context);
-
-		virtual void declareResourcesEndState(ExecutionContext& context);
 
 		virtual bool updateResources() override;
 	};
