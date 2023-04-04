@@ -162,10 +162,13 @@ namespace vkl
 	{
 	protected:
 
-		struct DescriptorSets
+		class DescriptorSets
 		{
+		protected:
 			std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
 			std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
+			std::vector<Resource> _resources;
+		public:
 		};
 		std::vector<ResourceBinding> _bindings;
 		DescriptorSets _sets;

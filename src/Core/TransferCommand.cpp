@@ -232,7 +232,7 @@ namespace vkl
 
 		vkCmdCopyBufferToImage(
 			*cmd,
-			*cinfo.src, *cinfo.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			*cinfo.src->instance(), *cinfo.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, p_regions
 		);
 
@@ -301,11 +301,11 @@ namespace vkl
 		VkBufferCopy region = {
 			.srcOffset = 0,
 			.dstOffset = 0,
-			.size = std::min(cinfo.src->size(), cinfo.dst->size()),
+			.size = std::min(cinfo.src->instance()->createInfo().size, cinfo.dst->instance()->createInfo().size),
 		};
 
 		vkCmdCopyBuffer(*cmd,
-			*cinfo.src, *cinfo.dst,
+			*cinfo.src->instance(), *cinfo.dst->instance(),
 			1, &region
 		);
 
@@ -364,7 +364,7 @@ namespace vkl
 		
 		synch.record();
 
-		vkCmdFillBuffer(*cmd, *fi.buffer, fi.begin.value(), fi.size.value(), fi.value.value());
+		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.begin.value(), fi.size.value(), fi.value.value());
 
 		synch.NotifyContext();
 	}

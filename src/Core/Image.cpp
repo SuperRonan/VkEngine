@@ -151,8 +151,11 @@ namespace vkl
 
 	void Image::destroyInstance()
 	{
-		callInvalidationCallbacks();
-		_inst = nullptr;
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
 	}
 
 	//StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)

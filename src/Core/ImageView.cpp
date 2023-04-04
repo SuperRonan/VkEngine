@@ -156,7 +156,7 @@ namespace vkl
 	//	createView();
 	//}
 
-	ImageView& ImageView::operator=(ImageView&& other)
+	ImageView& ImageView::operator=(ImageView&& other) noexcept
 	{
 		//std::copySwap(*this, other);
 		VkObjectWithCallbacks::operator=(std::move(other));

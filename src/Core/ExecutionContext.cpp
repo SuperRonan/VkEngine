@@ -13,17 +13,17 @@ namespace vkl
 		_reosurce_states(rst)
 	{}
 
-    ResourceState& ExecutionContext::getBufferState(std::shared_ptr<Buffer> b)
+    ResourceState2& ExecutionContext::getBufferState(std::shared_ptr<Buffer> b)
 	{
 		if (!_reosurce_states->_buffer_states.contains(*b))
 		{
-			ResourceState not_yet_used{};
+			ResourceState2 not_yet_used{};
 			_reosurce_states->_buffer_states[*b] = not_yet_used;
 		}
 		return _reosurce_states->_buffer_states[*b];
 	}
 
-	ResourceState& ExecutionContext::getImageState(std::shared_ptr<ImageView> i)
+	ResourceState2& ExecutionContext::getImageState(std::shared_ptr<ImageView> i)
 	{
 		const ImageRange ir = {
 			.image = *i->image()->instance(),
@@ -31,18 +31,18 @@ namespace vkl
 		};
 		if (!_reosurce_states->_image_states.contains(ir))
 		{
-			ResourceState not_yet_used{};
+			ResourceState2 not_yet_used{};
 			_reosurce_states->_image_states[ir] = not_yet_used;
 		}
 		return _reosurce_states->_image_states[ir];
 	}
 
-	void ExecutionContext::setBufferState(std::shared_ptr<Buffer> b, ResourceState const& s)
+	void ExecutionContext::setBufferState(std::shared_ptr<Buffer> b, ResourceState2 const& s)
 	{
 		_reosurce_states->_buffer_states[*b] = s;
 	}
 
-	void ExecutionContext::setImageState(std::shared_ptr<ImageView> v, ResourceState const& s)
+	void ExecutionContext::setImageState(std::shared_ptr<ImageView> v, ResourceState2 const& s)
 	{
 		const ImageRange ir = {
 			.image = *v->image()->instance(),

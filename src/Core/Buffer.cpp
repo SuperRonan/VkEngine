@@ -3,47 +3,47 @@
 
 namespace vkl
 {
-	Buffer::Buffer(CreateInfo const& ci) :
+	BufferInstance::BufferInstance(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
-		_size(ci.size),
-		_usage(ci.usage),
-		_queues(std::filterRedundantValues(ci.queues)),
-		_sharing_mode(_queues.size() > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE),
-		_mem_usage(ci.mem_usage),
-		_allocator(ci.allocator ? ci.allocator : _app->allocator())
+		_ci(ci.ci),
+		_aci(ci.aci),
+		_allocator(ci.allocator)
 	{
-		if (ci.create_on_construct)
+		create();
+	}
+
+	BufferInstance::~BufferInstance()
+	{
+		if (!!_buffer)
 		{
-			create();
+			destroy();
 		}
 	}
 
-	Buffer::~Buffer()
+	void BufferInstance::create()
 	{
-		if (_buffer != VK_NULL_HANDLE)
-		{
-			destroyBuffer();
-		}
+		assert(!_buffer);
+		VK_CHECK(vmaCreateBuffer(_allocator, &_ci, &_aci, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
+
+		setName();
 	}
 
-	void Buffer::create()
+	void BufferInstance::destroy()
 	{
-		assert(_buffer == VK_NULL_HANDLE);
-		VkBufferCreateInfo ci{
-			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			.size = _size,
-			.usage = _usage,
-			.sharingMode = _sharing_mode,
-			.queueFamilyIndexCount = (uint32_t)_queues.size(),
-			.pQueueFamilyIndices = _queues.data(),
-		};
+		assert(!!_buffer);
 
-		VmaAllocationCreateInfo alloc{
-			.usage = _mem_usage,
-		};
+		if (!!_data)
+		{
+			unMap();
+		}
 
-		VK_CHECK(vmaCreateBuffer(_allocator, &ci, &alloc, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
+		vmaDestroyBuffer(_allocator, _buffer, _alloc);
+		_buffer = VK_NULL_HANDLE;
+		_alloc = VMA_NULL;
+	}
 
+	void BufferInstance::setName()
+	{
 		if (!name().empty())
 		{
 			VkDebugUtilsObjectNameInfoEXT buffer_name = {
@@ -57,31 +57,74 @@ namespace vkl
 		}
 	}
 
-	void Buffer::destroyBuffer()
-	{
-		assert(_buffer != VK_NULL_HANDLE);
-		if (_data)
-		{
-			unMap();
-		}
-		vmaDestroyBuffer(_allocator, _buffer, _alloc);
-		_buffer = VK_NULL_HANDLE;
-		_alloc = nullptr;
-		_size = 0;
-	}
 
-	void Buffer::map()
+	void BufferInstance::map()
 	{
 		assert(_buffer != VK_NULL_HANDLE);
 		vmaMapMemory(_allocator, _alloc, &_data);
 	}
 
-	void Buffer::unMap()
+	void BufferInstance::unMap()
 	{
 		assert(_buffer != VK_NULL_HANDLE);
 		vmaUnmapMemory(_allocator, _alloc);
 		_data = nullptr;
 	}
+
+
+
+	Buffer::Buffer(CreateInfo const& ci) :
+		VkObjectWithCallbacks(ci.app, ci.name),
+		_size(ci.size),
+		_usage(ci.usage),
+		_queues(std::filterRedundantValues(ci.queues)),
+		_sharing_mode(_queues.size() > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE),
+		_mem_usage(ci.mem_usage),
+		_allocator(ci.allocator ? ci.allocator : _app->allocator())
+	{
+		if (ci.create_on_construct)
+		{
+			createInstance();
+		}
+	}
+
+	Buffer::~Buffer()
+	{
+		
+	}
+
+	void Buffer::createInstance()
+	{
+		BufferInstance::CreateInfo ci{
+			.app = application(),
+			.name = name(),
+			.ci = VkBufferCreateInfo {
+				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+				.size = _size,
+				.usage = _usage,
+				.sharingMode = _sharing_mode,
+				.queueFamilyIndexCount = (uint32_t)_queues.size(),
+				.pQueueFamilyIndices = _queues.data(),
+			},
+			.aci = VmaAllocationCreateInfo{
+				.usage = _mem_usage,
+			},
+			.allocator = _allocator,
+		};
+		
+		_inst = std::make_shared<BufferInstance>(ci);
+	}
+
+	void Buffer::destroyInstance()
+	{
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
+	}
+
+	
 
 	//StagingPool::StagingBuffer * Buffer::copyToStaging(void* data, size_t size)
 	//{
