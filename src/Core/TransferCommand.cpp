@@ -162,7 +162,7 @@ namespace vkl
 		execute(context, cinfo);
 	}
 
-	Executable CopyImage::operator()(CopyInfo const& ci)
+	Executable CopyImage::executeWith(CopyInfo const& ci)
 	{
 		return [&](ExecutionContext& ctx)
 		{
