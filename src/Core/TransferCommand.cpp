@@ -29,10 +29,10 @@ namespace vkl
 			._image = bi.dst,
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		});
 
 		synch.record();
@@ -118,10 +118,10 @@ namespace vkl
 			._image = cinfo.dst,
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			});
 
 		synch.record();
@@ -292,7 +292,7 @@ namespace vkl
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
-			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
 		
 		synch.record();

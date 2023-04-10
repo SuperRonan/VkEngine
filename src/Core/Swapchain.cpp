@@ -79,6 +79,13 @@ namespace vkl
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
 				.name = name() + ".view #" + std::to_string(i),
 				.image = _images[i],
+				.range = VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
 			});
 		}
 	}

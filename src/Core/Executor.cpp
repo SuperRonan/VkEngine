@@ -169,52 +169,19 @@ namespace vkl
 			execute(_render_gui);
 		}
 
-
-		const ResourceState2 current_state = _context.getImageState(blit_target);
-		const ResourceState2 desired_state = {
-			._access = VK_ACCESS_2_MEMORY_READ_BIT,
-			._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			._stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, // Not sure about this one
-		};
-
-		if (stateTransitionRequiresSynchronization2(current_state, desired_state, true))
-		{
-			VkImageMemoryBarrier2 barrier = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-				.pNext = nullptr,
-				.srcStageMask = current_state._stage,
-				.srcAccessMask = current_state._access,
-				.dstStageMask = desired_state._stage,
-				.dstAccessMask = desired_state._access,
-				.oldLayout = current_state._layout,
-				.newLayout = desired_state._layout,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = *blit_target->image()->instance(),
-				.subresourceRange = blit_target->range(),
-			};
-			
-			VkDependencyInfo dep{
-				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-				.pNext = nullptr,
-				.dependencyFlags = 0,
-				.memoryBarrierCount = 0,
-				.pMemoryBarriers = nullptr,
-				.bufferMemoryBarrierCount = 0,
-				.pBufferMemoryBarriers = nullptr,
-				.imageMemoryBarrierCount = 1,
-				.pImageMemoryBarriers = &barrier,
-			};
-
-			vkCmdPipelineBarrier2(*_command_buffer_to_submit, &dep);
-
-			const ResourceState2 final_state = {
+		InputSynchronizationHelper synch(_context);
+		Resource res{
+			._image = blit_target,
+			._begin_state = ResourceState2 {
 				._access = VK_ACCESS_2_MEMORY_READ_BIT,
 				._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
-			};
-			_context.setImageState(blit_target, final_state);
-		}
+				._stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
+			},
+		};
+		
+		synch.addSynch(res); 
+		synch.record();
+		synch.NotifyContext();
 	}
 
 	void LinearExecutor::present()
