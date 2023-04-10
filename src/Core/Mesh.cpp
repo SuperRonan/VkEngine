@@ -224,9 +224,9 @@ namespace vkl
 	void Mesh::recordBind(VkCommandBuffer command_buffer, uint32_t first_binding)const
 	{
 		assert(_device.loaded());
-		VkBuffer vb = *_device.mesh_buffer;
+		VkBuffer vb = *_device.mesh_buffer->instance();
 		vkCmdBindVertexBuffers(command_buffer, first_binding, 1, &vb, 0);
-		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer, _device.vertices_size, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size, VK_INDEX_TYPE_UINT32);
 	}
 
 	uint32_t Mesh::deviceIndexSize()const

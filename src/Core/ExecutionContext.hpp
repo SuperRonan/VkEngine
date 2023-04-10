@@ -190,7 +190,10 @@ namespace vkl
 
 		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
 
-		void keppAlive(std::shared_ptr<VkObject> obj);
+		void keppAlive(std::shared_ptr<VkObject> obj)
+		{
+			_objects_to_keep.emplace_back(std::move(obj));
+		}
 	};
 
 	struct Resource

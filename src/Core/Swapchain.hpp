@@ -22,7 +22,7 @@ namespace vkl
 			uint32_t layers = 1;
 			VkImageUsageFlags image_usages = 0;
 			std::vector<uint32_t> queues = {};
-			VkSurfaceTransformFlagsKHR pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+			VkSurfaceTransformFlagBitsKHR pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 			VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 			VkPresentModeKHR target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 			bool clipped = true;
@@ -66,6 +66,8 @@ namespace vkl
 		virtual ~Swapchain();
 
 		bool reCreate();
+
+		bool updateResources();
 
 		constexpr VkExtent2D getPossibleExtent(VkExtent2D target, VkSurfaceCapabilitiesKHR capabilities) const
 		{

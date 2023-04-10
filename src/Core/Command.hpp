@@ -17,13 +17,13 @@ namespace vkl
 
 		virtual ~Command() = default;
 
-		virtual void init() = 0;
+		virtual void init() {};
 
 		virtual void execute(ExecutionContext & context) = 0;
 
-		virtual void prepareUpdate() = 0;
+		virtual void prepareUpdate() {};
 
-		virtual bool updateResources() = 0;
+		virtual bool updateResources() { return false; };
 
 	};
 }

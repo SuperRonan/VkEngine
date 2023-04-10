@@ -133,6 +133,7 @@ namespace vkl
 	{
 		assert(_inst == nullptr);
 		_app = assos.instance->application();
+		_inst = assos.instance;
 		if (!assos.instance->name().empty())
 			_name = assos.instance->name().empty();
 
@@ -178,13 +179,18 @@ namespace vkl
 			return true;
 		}
 
-		const VkExtent3D new_extent = _extent;
-
-		if (new_extent != _inst->createInfo().extent)
+		if (_inst->ownership())
 		{
-			createInstance();
-			return true;
+
+			const VkExtent3D new_extent = _extent;
+
+			if (new_extent != _inst->createInfo().extent)
+			{
+				createInstance();
+				return true;
+			}
 		}
+
 		return false;
 	}
 }

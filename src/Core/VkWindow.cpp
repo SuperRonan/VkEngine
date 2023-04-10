@@ -231,4 +231,11 @@ namespace vkl
 
 		_current_frame = (_current_frame + 1);
 	}
+
+	bool VkWindow::updateResources()
+	{
+		bool res = false;
+		res |= _swapchain->updateResources();
+		return res;
+	}
 }

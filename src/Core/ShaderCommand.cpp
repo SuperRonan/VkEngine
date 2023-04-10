@@ -12,16 +12,50 @@ namespace vkl
 			_sampler = desc.sampler;
 	}
 
-	void ShaderCommand::writeDescriptorSets()
+	DescriptorSetsManager::~DescriptorSetsManager()
 	{
-		std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _pipeline->program()->setLayouts();
-		_desc_pools.resize(set_layouts.size());
-		_desc_sets.resize(set_layouts.size());
-		for (size_t i = 0; i < set_layouts.size(); ++i)
+		for (auto& binding : _bindings)
 		{
-			_desc_pools[i] = std::make_shared<DescriptorPool>(set_layouts[i]);
-			_desc_sets[i] = std::make_shared<DescriptorSet>(set_layouts[i], _desc_pools[i]);
+			if (binding.isBuffer())
+			{
+				binding.buffer()->removeInvalidationCallbacks(this);
+			}
+			else if(binding.isImage())
+			{
+				binding.image()->removeInvalidationCallbacks(this);
+			}
 		}
+	}
+
+	void DescriptorSetsManager::invalidateDescriptorSets()
+	{
+		_desc_pools.clear();
+		_desc_sets.clear();
+		for (auto& binding : _bindings)
+		{
+			binding.setUpdateStatus(false);
+		}
+	}
+
+	void DescriptorSetsManager::allocateDescriptorSets()
+	{
+		if (_desc_sets.empty())
+		{
+			std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _prog->setLayouts();
+			_desc_pools.resize(set_layouts.size());
+			_desc_sets.resize(set_layouts.size());
+			for (size_t i = 0; i < set_layouts.size(); ++i)
+			{
+				_desc_pools[i] = std::make_shared<DescriptorPool>(set_layouts[i]);
+				_desc_sets[i] = std::make_shared<DescriptorSet>(set_layouts[i], _desc_pools[i]);
+			}
+		}
+	}
+
+	void DescriptorSetsManager::writeDescriptorSets()
+	{
+		allocateDescriptorSets();
+
 		const size_t N = _bindings.size();
 
 		std::vector<VkDescriptorBufferInfo> buffers;
@@ -35,7 +69,7 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& b = _bindings[i];
-			if (b.isResolved())
+			if (b.isResolved() && !b.updated())
 			{
 				VkWriteDescriptorSet write{
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -48,9 +82,8 @@ namespace vkl
 				};
 				if (b.isBuffer())
 				{
-					assert(b.buffers().size() == 1);
 					buffers.emplace_back(VkDescriptorBufferInfo{
-						.buffer = *b.buffers().front(),
+						.buffer = *b.buffer()->instance(),
 						.offset = 0,
 						.range = VK_WHOLE_SIZE,
 						});
@@ -60,13 +93,13 @@ namespace vkl
 				else if (b.isImage() || b.isSampler())
 				{
 					VkDescriptorImageInfo info;
-					if (!b.samplers().empty())
+					if (b.sampler())
 					{
-						info.sampler = *b.samplers().front();
+						info.sampler = *b.sampler();
 					}
-					if (!b.images().empty())
+					if (b.image())
 					{
-						info.imageView = *b.images().front()->instance();
+						info.imageView = *b.image()->instance();
 						info.imageLayout = b.resource()._begin_state._layout;
 					}
 					images.push_back(info);
@@ -77,16 +110,21 @@ namespace vkl
 					assert(false);
 				}
 				writes.push_back(write);
+				b.setUpdateStatus(true);
 			}
 		}
 
-		vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
+		if (!writes.empty())
+		{
+			vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
+		}
+
 	}
 
-	void ShaderCommand::resolveBindings()
+	void DescriptorSetsManager::resolveBindings()
 	{
 		// Attribute the program exposed bindings to the provided resources
-		const auto& program = *_pipeline->program();
+		const auto& program = *_prog;
 		const auto& sets = program.setLayouts();
 		for (size_t s = 0; s < sets.size(); ++s)
 		{
@@ -128,9 +166,23 @@ namespace vkl
 
 				if (corresponding_resource)
 				{
+					InvalidationCallback callback{
+						.callback = [&]() {
+							corresponding_resource->setUpdateStatus(false);
+						},
+						.id = this,
+					};
+					if (corresponding_resource->isBuffer())
+					{
+						corresponding_resource->buffer()->addInvalidationCallback(callback);
+					}
+					else if(corresponding_resource->isImage())
+					{
+						corresponding_resource->image()->addInvalidationCallback(callback);
+					}
 					corresponding_resource->resolve(set_id, binding_id);
 					corresponding_resource->setType(vkb.descriptorType);
-					corresponding_resource->resource()._begin_state = ResourceState{
+					corresponding_resource->resource()._begin_state = ResourceState2{
 						._access = meta.access,
 						._layout = meta.layout,
 						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
@@ -150,15 +202,13 @@ namespace vkl
 		}
 	}
 
-	void ShaderCommand::declareDescriptorSetsResources()
+	void DescriptorSetsManager::recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding)
 	{
-		for (size_t i = 0; i < _bindings.size(); ++i)
+		if (!_desc_sets.empty())
 		{
-			const ResourceBinding& b = _bindings[i];
-			if (b.isResolved())
-			{
-				_resources.push_back(b.resource());
-			}
+			std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
+			for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
+			vkCmdBindDescriptorSets(cmd, binding, _prog->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
 		}
 	}
 
@@ -166,20 +216,37 @@ namespace vkl
 	{
 		vkCmdBindPipeline(cmd, _pipeline->binding(), *_pipeline);
 
-		if (!_desc_sets.empty())
-		{
-			std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
-			for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
-			vkCmdBindDescriptorSets(cmd, _pipeline->binding(), _pipeline->program()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
-		}
-		if (!_push_constants_data.empty())
+		_sets.recordBindings(cmd, _pipeline->binding());
+		
+		if (_pc)
 		{
 			VkShaderStageFlags pc_stages = 0;
 			for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
 			{
 				pc_stages |= pc_range.stageFlags;
 			}
-			vkCmdPushConstants(cmd, _pipeline->program()->pipelineLayout(), pc_stages, 0, (uint32_t)_push_constants_data.size(), _push_constants_data.data());
+			vkCmdPushConstants(cmd, _pipeline->program()->pipelineLayout(), pc_stages, 0, (uint32_t)_pc.size(), _pc.data());
 		}
+	}
+
+	void DescriptorSetsManager::recordInputSynchronization(InputSynchronizationHelper& synch)
+	{
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			if (_bindings[i].isResolved() && _bindings[i].updated())
+			{
+				synch.addSynch(_bindings[i].resource());
+			}
+		}
+	}
+
+
+	bool ShaderCommand::updateResources()
+	{
+		bool res = false;
+
+		_sets.writeDescriptorSets();
+
+		return res;
 	}
 }

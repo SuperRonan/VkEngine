@@ -35,17 +35,17 @@ namespace vkl
 
 	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
 	{
-		_commands.push_back(cmd);
+		_commands.emplace_back(std::move(cmd));
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<ImageView> view)
 	{
-		_registered_images.push_back(std::move(view));
+		_registered_images.emplace_back(std::move(view));
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<Buffer> buffer)
 	{
-		_registed_buffers.push_back(std::move(buffer));
+		_registered_buffers.emplace_back(std::move(buffer));
 	}
 
 	void LinearExecutor::preprocessCommands()
@@ -93,10 +93,10 @@ namespace vkl
 					.image = *image_view->image()->instance(),
 					.range = image_view->instance()->createInfo().subresourceRange,
 				};
-				const ResourceState state{
-					._access = VK_ACCESS_NONE_KHR,
+				const ResourceState2 state{
+					._access = VK_ACCESS_2_NONE_KHR,
 					._layout = image_view->image()->instance()->createInfo().initialLayout,
-					._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+					._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
 				};
 				_resources_state._image_states[ir] = state;
 
@@ -108,6 +108,29 @@ namespace vkl
 				});
 			}
 		}
+
+		for (auto& buffer : _registered_buffers)
+		{
+			const bool invalidated = buffer->updateResource();
+			if (invalidated)
+			{
+				const ResourceState2 state{
+					._access = VK_ACCESS_2_NONE_KHR,
+					._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+				};
+				const VkBuffer b = *buffer->instance();
+				_resources_state._buffer_states[b] = state;
+
+				buffer->addInvalidationCallback(InvalidationCallback{
+					.callback = [&]() {
+						_resources_state._buffer_states.erase(b);
+					},
+					.id = this,
+				});
+			}
+		}
+
+		_window->updateResources();
 
 		for (auto& command : _commands)
 		{
@@ -146,19 +169,22 @@ namespace vkl
 			execute(_render_gui);
 		}
 
-		const ResourceState current_state = _context.getImageState(blit_target);
-		const ResourceState desired_state = {
-			._access = VK_ACCESS_MEMORY_READ_BIT,
+
+		const ResourceState2 current_state = _context.getImageState(blit_target);
+		const ResourceState2 desired_state = {
+			._access = VK_ACCESS_2_MEMORY_READ_BIT,
 			._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			._stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // Not sure about this one
+			._stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, // Not sure about this one
 		};
 
-		if (stateTransitionRequiresSynchronization(current_state, desired_state, true))
+		if (stateTransitionRequiresSynchronization2(current_state, desired_state, true))
 		{
-			VkImageMemoryBarrier barrier = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			VkImageMemoryBarrier2 barrier = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 				.pNext = nullptr,
+				.srcStageMask = current_state._stage,
 				.srcAccessMask = current_state._access,
+				.dstStageMask = desired_state._stage,
 				.dstAccessMask = desired_state._access,
 				.oldLayout = current_state._layout,
 				.newLayout = desired_state._layout,
@@ -167,18 +193,25 @@ namespace vkl
 				.image = *blit_target->image()->instance(),
 				.subresourceRange = blit_target->range(),
 			};
+			
+			VkDependencyInfo dep{
+				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+				.pNext = nullptr,
+				.dependencyFlags = 0,
+				.memoryBarrierCount = 0,
+				.pMemoryBarriers = nullptr,
+				.bufferMemoryBarrierCount = 0,
+				.pBufferMemoryBarriers = nullptr,
+				.imageMemoryBarrierCount = 1,
+				.pImageMemoryBarriers = &barrier,
+			};
 
-			vkCmdPipelineBarrier(*_command_buffer_to_submit,
-				current_state._stage, desired_state._stage, 0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
+			vkCmdPipelineBarrier2(*_command_buffer_to_submit, &dep);
 
-			const ResourceState final_state = {
-				._access = VK_ACCESS_MEMORY_READ_BIT,
+			const ResourceState2 final_state = {
+				._access = VK_ACCESS_2_MEMORY_READ_BIT,
 				._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				._stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, // Not sure about this one
+				._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
 			};
 			_context.setImageState(blit_target, final_state);
 		}

@@ -13,7 +13,7 @@ namespace vkl
 	void BlitImage::execute(ExecutionContext& context, BlitInfo const& bi)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		DeviceCommand::InputSynchronizationHelper synch(context);
+		InputSynchronizationHelper synch(context);
 		
 		synch.addSynch(Resource{
 			._image = bi.src,
@@ -102,7 +102,7 @@ namespace vkl
 	void CopyImage::execute(ExecutionContext& ctx, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
-		DeviceCommand::InputSynchronizationHelper synch(ctx);
+		InputSynchronizationHelper synch(ctx);
 
 		synch.addSynch(Resource{
 			._image = cinfo.src,

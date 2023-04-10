@@ -15,12 +15,13 @@ namespace vkl
 
     ResourceState2& ExecutionContext::getBufferState(std::shared_ptr<Buffer> b)
 	{
-		if (!_reosurce_states->_buffer_states.contains(*b))
+		const VkBuffer key = *b->instance();
+		if (!_reosurce_states->_buffer_states.contains(key))
 		{
 			ResourceState2 not_yet_used{};
-			_reosurce_states->_buffer_states[*b] = not_yet_used;
+			_reosurce_states->_buffer_states[key] = not_yet_used;
 		}
-		return _reosurce_states->_buffer_states[*b];
+		return _reosurce_states->_buffer_states[key];
 	}
 
 	ResourceState2& ExecutionContext::getImageState(std::shared_ptr<ImageView> i)
@@ -39,7 +40,7 @@ namespace vkl
 
 	void ExecutionContext::setBufferState(std::shared_ptr<Buffer> b, ResourceState2 const& s)
 	{
-		_reosurce_states->_buffer_states[*b] = s;
+		_reosurce_states->_buffer_states[*b->instance()] = s;
 	}
 
 	void ExecutionContext::setImageState(std::shared_ptr<ImageView> v, ResourceState2 const& s)

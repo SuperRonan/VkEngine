@@ -71,6 +71,7 @@ namespace vkl
 			std::shared_ptr<ImageInstance> inst = std::make_shared<ImageInstance>(instance_assos);
 			Image::AssociateInfo assos{
 				.instance = inst,
+				.extent = extend(_ci.imageExtent, 1),
 			};
 
 			_images[i] = std::make_shared<Image>();
@@ -78,7 +79,6 @@ namespace vkl
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
 				.name = name() + ".view #" + std::to_string(i),
 				.image = _images[i],
-				.create_on_construct = true,
 			});
 		}
 	}
@@ -145,7 +145,7 @@ namespace vkl
 		_ci.imageSharingMode = sharing_mode;
 		_ci.queueFamilyIndexCount = n_queues;
 		_ci.pQueueFamilyIndices = p_queues;
-		_ci.preTransform = _ci.preTransform;
+		_ci.preTransform = ci.pre_transform;
 		_ci.compositeAlpha = ci.composite_alpha;
 		_ci.presentMode = [&]() -> VkPresentModeKHR
 		{
@@ -161,5 +161,15 @@ namespace vkl
 		_ci.clipped = ci.clipped;
 		_ci.oldSwapchain = ci.old_swapchain ? *ci.old_swapchain : VK_NULL_HANDLE;
 		create();
+	}
+
+	bool Swapchain::updateResources()
+	{
+		bool res = false;
+		for (auto& view : _views)
+		{
+			res |= view->updateResource();
+		}
+		return res;
 	}
 }

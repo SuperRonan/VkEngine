@@ -13,7 +13,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::filesystem::path shader_path;
-			VkExtent3D dispatch_size = makeZeroExtent3D();
+			DynamicValue<VkExtent3D> dispatch_size = {};
 			bool dispatch_threads = false;
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::string> definitions = {};
@@ -22,8 +22,11 @@ namespace vkl
 
 	protected:
 
+		std::filesystem::path _shader_path;
+		std::vector<std::string> _definitions;
+
 		std::shared_ptr<ComputeProgram> _program = nullptr;
-		VkExtent3D _dispatch_size = makeZeroExtent3D();
+		DynamicValue<VkExtent3D> _dispatch_size = {};
 		bool _dispatch_threads = false;
 
 	public:
@@ -38,7 +41,9 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		constexpr void setDispatchSize(VkExtent3D size)
+		virtual bool updateResources()override;
+
+		void setDispatchSize(VkExtent3D size)
 		{
 			_dispatch_size = size;
 		}
@@ -48,7 +53,7 @@ namespace vkl
 			_dispatch_threads = type_is_threads;
 		}
 		
-		constexpr VkExtent3D getDispatchSize()const
+		constexpr const DynamicValue<VkExtent3D> & getDispatchSize()const
 		{
 			return _dispatch_size;
 		}
@@ -56,19 +61,19 @@ namespace vkl
 		constexpr VkExtent3D getWorkgroupsDispatchSize()const
 		{
 			const VkExtent3D res = _dispatch_threads ? VkExtent3D{
-				.width = std::divCeil(_dispatch_size.width, _program->localSize().width),
-				.height = std::divCeil(_dispatch_size.height, _program->localSize().height),
-				.depth = std::divCeil(_dispatch_size.depth, _program->localSize().depth),
-			} : _dispatch_size;
+				.width = std::divCeil(_dispatch_size.value().width, _program->localSize().width),
+				.height = std::divCeil(_dispatch_size.value().height, _program->localSize().height),
+				.depth = std::divCeil(_dispatch_size.value().depth, _program->localSize().depth),
+			} : _dispatch_size.value();
 			return res;
 		}
 
 		constexpr VkExtent3D getThreadsDispatchSize()const
 		{
-			const VkExtent3D res = _dispatch_threads ? _dispatch_size : VkExtent3D{
-				.width = (_dispatch_size.width * _program->localSize().width),
-				.height = (_dispatch_size.height * _program->localSize().height),
-				.depth = (_dispatch_size.depth * _program->localSize().depth),
+			const VkExtent3D res = _dispatch_threads ? _dispatch_size.value() : VkExtent3D{
+				.width = (_dispatch_size.value().width * _program->localSize().width),
+				.height = (_dispatch_size.value().height * _program->localSize().height),
+				.depth = (_dispatch_size.value().depth * _program->localSize().depth),
 			};
 			return res;
 		}

@@ -124,6 +124,17 @@ namespace vkl
 		}
 	}
 
+	bool Buffer::updateResource()
+	{
+		if (!_inst)
+		{
+			createInstance();
+			return true;
+		}
+
+		return false;
+	}
+
 	
 
 	//StagingPool::StagingBuffer * Buffer::copyToStaging(void* data, size_t size)

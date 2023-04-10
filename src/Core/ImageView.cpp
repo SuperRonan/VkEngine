@@ -223,7 +223,7 @@ namespace vkl
 	bool ImageView::updateResource()
 	{
 		const bool updated = _image->updateResource();                      
-		assert(updated && !_inst);
+		
 		if (!_inst)
 		{
 			createInstance();

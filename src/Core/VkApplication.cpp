@@ -43,6 +43,7 @@ namespace vkl
 
 	void VkApplication::requestFeatures(VulkanFeatures& features)
 	{
+		features.features_13.synchronization2 = VK_TRUE;
 		features.features.geometryShader = VK_TRUE;
 		features.features.samplerAnisotropy = VK_TRUE;
 	}

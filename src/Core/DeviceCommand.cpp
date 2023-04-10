@@ -2,11 +2,11 @@
 
 namespace vkl
 {
-	void DeviceCommand::InputSynchronizationHelper::addSynch(const Resource& r)
+	void InputSynchronizationHelper::addSynch(const Resource& r)
 	{
 		_resources.push_back(r);
-		const ResourceState next = r._begin_state;
-		const ResourceState prev = [&]() {
+		const ResourceState2 next = r._begin_state;
+		const ResourceState2 prev = [&]() {
 			if (r.isImage())
 			{
 				return _ctx.getImageState(r._image);
@@ -19,15 +19,15 @@ namespace vkl
 			{
 				assert(false);
 				// ???
-				return ResourceState{};
+				return ResourceState2{};
 			}
 		}();
-		if (stateTransitionRequiresSynchronization(prev, next, r.isImage()))
+		if (stateTransitionRequiresSynchronization2(prev, next, r.isImage()))
 		{
 			if (r.isImage())
 			{
 				VkImageMemoryBarrier2 barrier = {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 					.pNext = nullptr,
 					.srcStageMask = prev._stage,
 					.srcAccessMask = prev._access,
@@ -45,7 +45,7 @@ namespace vkl
 			else if (r.isBuffer())
 			{
 				VkBufferMemoryBarrier2 barrier = {
-					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 					.pNext = nullptr,
 					.srcStageMask = prev._stage,
 					.srcAccessMask = prev._access,
@@ -53,7 +53,7 @@ namespace vkl
 					.dstAccessMask = next._access,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = *r._buffer,
+					.buffer = *r._buffer->instance(),
 					.offset = 0,
 					.size = VK_WHOLE_SIZE,
 				};
@@ -62,7 +62,7 @@ namespace vkl
 		}
 	}
 
-	void DeviceCommand::InputSynchronizationHelper::record()
+	void InputSynchronizationHelper::record()
 	{
 		if (!_images_barriers.empty() || !_buffers_barriers.empty())
 		{
@@ -81,11 +81,11 @@ namespace vkl
 		}
 	}
 
-	void DeviceCommand::InputSynchronizationHelper::NotifyContext()
+	void InputSynchronizationHelper::NotifyContext()
 	{
 		for (const auto& r : _resources)
 		{
-			ResourceState const& s = r._end_state.value_or(r._begin_state);
+			ResourceState2 const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
 				_ctx.setBufferState(r._buffer, s);

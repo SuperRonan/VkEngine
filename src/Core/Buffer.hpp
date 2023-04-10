@@ -5,6 +5,9 @@
 #include <Utils/stl_extension.hpp>
 #include <Core/AbstractInstance.hpp>
 
+#ifndef VMA_NULL
+#define VMA_NULL nullptr
+#endif
 
 namespace vkl
 {
@@ -158,7 +161,7 @@ namespace vkl
 
 		constexpr Buffer& operator=(Buffer const&) noexcept = delete;
 
-		constexpr Buffer& operator=(Buffer&& other) noexcept
+		Buffer& operator=(Buffer&& other) noexcept
 		{
 			VkObjectWithCallbacks::operator=(std::move(other));
 			std::swap(_size, other._size);

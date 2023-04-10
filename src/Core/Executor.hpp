@@ -31,7 +31,7 @@ namespace vkl
 		std::vector<std::shared_ptr<Command>> _commands = {};
 
 		std::vector<std::shared_ptr<ImageView>> _registered_images = {};
-		std::vector<std::shared_ptr<Buffer>> _registed_buffers = {};
+		std::vector<std::shared_ptr<Buffer>> _registered_buffers = {};
 
 
 		void preprocessCommands();

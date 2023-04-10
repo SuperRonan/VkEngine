@@ -123,27 +123,31 @@ namespace vkl
 	void ImguiCommand::execute(ExecutionContext& context)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+		InputSynchronizationHelper synch(context);
 
 		const size_t index = _index;
 
-		_resources = {
+		std::array<Resource, 2> resources = {
 			Resource{
-				._images = {_targets[index]},
-				._begin_state = ResourceState{
-					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				._image = _targets[index],
+				._begin_state = ResourceState2{
+					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 					._layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					._stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
-				._end_state = ResourceState{
-					._access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				._end_state = ResourceState2{
+					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 					._layout = VK_IMAGE_LAYOUT_GENERAL,
-					._stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					._stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			},
 		};
+		synch.addSynch(resources[0]);
+		synch.addSynch(resources[2]);
 
-		recordInputSynchronization(*cmd, context);
+		synch.record();
+		synch.NotifyContext();
 
 		const VkExtent2D render_area = extract(_framebuffers[index]->extent());
 
@@ -171,7 +175,7 @@ namespace vkl
 		}
 		vkCmdEndRenderPass(*cmd);
 		
-		declareResourcesEndState(context);
+		synch.NotifyContext();
 	}
 
 

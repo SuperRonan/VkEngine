@@ -47,7 +47,7 @@ namespace vkl
 				.name = "Game of Life",
 				.w = 1024,
 				.h = 512,
-				.resizeable = GLFW_FALSE,
+				.resizeable = GLFW_TRUE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
 			//createRenderPass();
@@ -117,6 +117,7 @@ namespace vkl
 					.layerCount = 1,
 				},
 			});
+			exec.declare(current_grid_view);
 
 			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(ImageView::CI{
 				.image = grid_storage_image,
@@ -129,6 +130,7 @@ namespace vkl
 					.layerCount = 1,
 				},
 			});
+			exec.declare(prev_grid_view);
 
 			std::shared_ptr<ComputeCommand> init_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
@@ -187,6 +189,7 @@ namespace vkl
 				.name = "final view",
 				.image = final_image,
 			});
+			exec.declare(final_view);
 
 			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
@@ -224,6 +227,7 @@ namespace vkl
 			glm::mat4 mat_for_render = mat_uv_to_grid;
 
 
+			exec.updateResources();
 			exec.beginFrame();
 			exec.beginCommandBuffer();
 			init_grid->setPushConstantsData(std::hash<uint32_t>{}(uint32_t(12)));
@@ -267,6 +271,7 @@ namespace vkl
 				if(!paused || should_render)
 				{
 					
+					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 
