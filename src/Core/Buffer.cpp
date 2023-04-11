@@ -74,7 +74,7 @@ namespace vkl
 
 
 	Buffer::Buffer(CreateInfo const& ci) :
-		VkObjectWithCallbacks(ci.app, ci.name),
+		AbstractInstanceHolder(ci.app, ci.name),
 		_size(ci.size),
 		_usage(ci.usage),
 		_queues(std::filterRedundantValues(ci.queues)),

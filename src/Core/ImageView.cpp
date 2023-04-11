@@ -96,7 +96,7 @@ namespace vkl
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
-		VkObjectWithCallbacks((ci.app ? ci.app : ci.image->application()), ci.name),
+		AbstractInstanceHolder((ci.app ? ci.app : ci.image->application()), ci.name),
 		_image(ci.image),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format == VK_FORMAT_MAX_ENUM ? _image->format() : ci.format),
@@ -111,7 +111,7 @@ namespace vkl
 
 
 	ImageView::ImageView(ImageView&& other) noexcept :
-		VkObjectWithCallbacks(std::move(other)),
+		AbstractInstanceHolder(std::move(other)),
 		_image(std::move(other._image)),
 		_type(other._type),
 		_format(other._format),
@@ -159,7 +159,7 @@ namespace vkl
 	ImageView& ImageView::operator=(ImageView&& other) noexcept
 	{
 		//std::copySwap(*this, other);
-		VkObjectWithCallbacks::operator=(std::move(other));
+		AbstractInstanceHolder::operator=(std::move(other));
 		_image = std::move(other._image);
 		std::swap(_type, other._type);
 		std::swap(_format, other._format);

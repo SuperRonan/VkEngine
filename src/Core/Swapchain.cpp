@@ -4,36 +4,10 @@
 
 namespace vkl
 {
-	bool Swapchain::reCreate()
-	{
-		VkSwapchainKHR old_swapchain = handle();
-		destroy();
-
-		const Surface::SwapchainSupportDetails& support = _surface->getDetails();
-
-		_ci.oldSwapchain = old_swapchain;
-		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
-
-		create();
-		return true;
-	}
-
-	void Swapchain::create()
+	void SwapchainInstance::create()
 	{
 		assert(_swapchain == VK_NULL_HANDLE);
 		VK_CHECK(vkCreateSwapchainKHR(_app->device(), &_ci, nullptr, &_swapchain), "Failed to create a swapchain.");
-
-		if (!name().empty())
-		{
-			VkDebugUtilsObjectNameInfoEXT object_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-				.objectHandle = (uint64_t)_swapchain,
-				.pObjectName = name().data(),
-			};
-			_app->nameObject(object_name);
-		}
 
 		uint32_t image_count;
 		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, nullptr);
@@ -41,13 +15,13 @@ namespace vkl
 		_views.resize(image_count);
 		std::vector<VkImage> tmp(image_count);
 		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, tmp.data());
-		
-				
+
+
 		for (uint32_t i = 0; i < image_count; ++i)
 		{
 			ImageInstance::AssociateInfo instance_assos{
 				.app = application(),
-				.name = name() + std::string(".imageInstance #") + std::to_string(i),
+				.name = name() + std::string(".imageInstance_") + std::to_string(i),
 				.ci = VkImageCreateInfo{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 					.pNext = nullptr,
@@ -77,7 +51,7 @@ namespace vkl
 			_images[i] = std::make_shared<Image>();
 			_images[i]->associateImage(assos);
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
-				.name = name() + ".view #" + std::to_string(i),
+				.name = name() + ".view_" + std::to_string(i),
 				.image = _images[i],
 				.range = VkImageSubresourceRange{
 					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -90,7 +64,7 @@ namespace vkl
 		}
 	}
 
-	void Swapchain::destroy()
+	void SwapchainInstance::destroy()
 	{
 		assert(_swapchain != VK_NULL_HANDLE);
 
@@ -100,7 +74,30 @@ namespace vkl
 		_swapchain = VK_NULL_HANDLE;
 	}
 
-	Swapchain::~Swapchain()
+	void SwapchainInstance::setName()
+	{
+		if (!name().empty())
+		{
+			VkDebugUtilsObjectNameInfoEXT object_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
+				.objectHandle = (uint64_t)_swapchain,
+				.pObjectName = name().data(),
+			};
+			_app->nameObject(object_name);
+		}
+	}
+
+	SwapchainInstance::SwapchainInstance(CreateInfo const& ci):
+		VkObject(ci.app, std::move(ci.name)),
+		_ci(ci.ci),
+		_surface(ci.surface)
+	{
+		create();
+	}
+
+	SwapchainInstance::~SwapchainInstance()
 	{
 		if (_swapchain)
 		{
@@ -108,8 +105,39 @@ namespace vkl
 		}
 	}
 
+	bool Swapchain::reCreate()
+	{
+		std::shared_ptr<SwapchainInstance> old_swap = _inst;
+		_ci.oldSwapchain = *old_swap;
+		const Surface::SwapchainSupportDetails& support = _surface->getDetails();
+		_surface->queryDetails();
+		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
+
+		createInstance();
+		return true;
+	}
+
+	void Swapchain::createInstance()
+	{
+		_inst = std::make_shared<SwapchainInstance>(SwapchainInstance::CI{
+			.app = application(),
+			.name = name(),
+			.ci = _ci,
+		});
+	}
+
+	void Swapchain::destroyInstance()
+	{
+		_inst = nullptr;
+	}
+
+	Swapchain::~Swapchain()
+	{
+		destroyInstance();
+	}
+
 	Swapchain::Swapchain(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		AbstractInstanceHolder(ci.app, ci.name),
 		_extent(ci.extent),
 		_queues(ci.queues),
 		_surface(ci.surface)
@@ -166,14 +194,17 @@ namespace vkl
 			}
 		}();
 		_ci.clipped = ci.clipped;
-		_ci.oldSwapchain = ci.old_swapchain ? *ci.old_swapchain : VK_NULL_HANDLE;
-		create();
+		_ci.oldSwapchain = VK_NULL_HANDLE;
 	}
 
 	bool Swapchain::updateResources()
 	{
+		if (!_inst)
+		{
+			createInstance();
+		}
 		bool res = false;
-		for (auto& view : _views)
+		for (auto& view : _inst->views())
 		{
 			res |= view->updateResource();
 		}

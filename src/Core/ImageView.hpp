@@ -76,7 +76,7 @@ namespace vkl
 		 
 	};
 
-	class ImageView : public VkObjectWithCallbacks
+	class ImageView : public AbstractInstanceHolder
 	{
 	public:
 
@@ -108,7 +108,7 @@ namespace vkl
 	public:
 
 		constexpr ImageView(VkApplication * app = nullptr) noexcept :
-			VkObjectWithCallbacks(app, ""sv)
+			AbstractInstanceHolder(app, ""sv)
 		{}
 
 		//ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);

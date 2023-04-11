@@ -221,7 +221,7 @@ namespace vkl
 			size_t current_grid_id = 0;
 
 			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, 1.0 });
-			const glm::vec2 move_scale(1.0 / float(_main_window->extent2D().value().width), 1.0 / float(_main_window->extent2D().value().height));
+			DynamicValue<glm::vec2> move_scale([&]() {return glm::vec2(1.0 / float(_main_window->extent2D().value().width), 1.0 / float(_main_window->extent2D().value().height)); });
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
 			glm::mat4 mat_for_render = mat_uv_to_grid;
@@ -245,23 +245,23 @@ namespace vkl
 					dt = new_t - t;
 					t = new_t;
 				}
-				bool should_render = false;
+				bool should_render = true;
 
 				_main_window->pollEvents();
 				bool p = paused;
 				processInput(paused);
-				should_render = p != paused;
+				should_render |= p != paused;
 				
 
 				mouse_handler.update(dt);
 				if (mouse_handler.isButtonCurrentlyPressed(GLFW_MOUSE_BUTTON_1))
 				{
-					camera.move(mouse_handler.deltaPosition<float>() * move_scale);
+					camera.move(mouse_handler.deltaPosition<float>() * move_scale.value());
 					should_render = true;
 				}
 				if (mouse_handler.getScroll() != 0)
 				{
-					glm::vec2 screen_mouse_pos = mouse_handler.currentPosition<float>() * move_scale - glm::vec2(0.5, 0.5);
+					glm::vec2 screen_mouse_pos = mouse_handler.currentPosition<float>() * move_scale.value() - glm::vec2(0.5, 0.5);
 					camera.zoom(screen_mouse_pos, mouse_handler.getScroll());
 					should_render = true;
 				}

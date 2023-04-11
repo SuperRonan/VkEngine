@@ -102,7 +102,7 @@ namespace vkl
 
 	};
 
-	class Buffer : public VkObjectWithCallbacks
+	class Buffer : public AbstractInstanceHolder
 	{
 	public:
 
@@ -141,13 +141,13 @@ namespace vkl
 
 
 		constexpr Buffer(VkApplication * app=nullptr) noexcept:
-			VkObjectWithCallbacks(app, ""sv)
+			AbstractInstanceHolder(app, ""sv)
 		{}
 
 		constexpr Buffer(Buffer const&) noexcept = delete;
 
 		Buffer(Buffer&& other) noexcept :
-			VkObjectWithCallbacks(std::move(other)),
+			AbstractInstanceHolder(std::move(other)),
 			_size(other._size),
 			_usage(other._usage),
 			_sharing_mode(other._sharing_mode),
@@ -163,7 +163,7 @@ namespace vkl
 
 		Buffer& operator=(Buffer&& other) noexcept
 		{
-			VkObjectWithCallbacks::operator=(std::move(other));
+			AbstractInstanceHolder::operator=(std::move(other));
 			std::swap(_size, other._size);
 			std::swap(_usage, other._usage);
 			std::swap(_sharing_mode, other._sharing_mode);

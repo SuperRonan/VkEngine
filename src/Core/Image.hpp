@@ -102,7 +102,7 @@ namespace vkl
 
 	};
 
-	class Image : public VkObjectWithCallbacks
+	class Image : public AbstractInstanceHolder
 	{
 	public:
 
@@ -179,7 +179,7 @@ namespace vkl
 	public:
 
 		constexpr Image(VkApplication * app = nullptr) noexcept:
-			VkObjectWithCallbacks(app, "")
+			AbstractInstanceHolder(app, "")
 		{}
 
 		Image(CreateInfo const& ci);
@@ -187,7 +187,7 @@ namespace vkl
 		constexpr Image(Image const&) noexcept = delete;
 
 		Image(Image&& other) noexcept :
-			VkObjectWithCallbacks(std::move(other)),
+			AbstractInstanceHolder(std::move(other)),
 			_flags(other._flags),
 			_type(other._type),
 			_format(other._format),
@@ -210,7 +210,7 @@ namespace vkl
 
 		Image& operator=(Image&& other)noexcept
 		{
-			VkObjectWithCallbacks::operator=(std::move(other));
+			AbstractInstanceHolder::operator=(std::move(other));
 			std::swap(_flags, other._flags);
 			std::swap(_type, other._type);
 			std::swap(_format, other._format);

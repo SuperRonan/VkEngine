@@ -70,7 +70,7 @@ namespace vkl
 
 		virtual void init(CreateInfo const& ci);
 
-		void reCreateSwapchain();
+		
 
 		void initSwapchain();
 
@@ -101,13 +101,15 @@ namespace vkl
 
 		bool framebufferResized();
 
+		void reCreateSwapchain();
+
 		std::shared_ptr<Image> image(uint32_t index);
 
 		std::shared_ptr<ImageView> view(uint32_t index);
 
 		constexpr std::vector<std::shared_ptr<ImageView>> const& views() const
 		{
-			return _swapchain->views();
+			return _swapchain->instance()->views();
 		}
 
 		VkFormat format()const;

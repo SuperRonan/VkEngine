@@ -84,6 +84,11 @@ namespace vkl
 
 	void LinearExecutor::updateResources()
 	{
+		if (_window->framebufferResized())
+		{
+			_window->reCreateSwapchain();
+		}
+		
 		for (auto& image_view : _registered_images)
 		{
 			const bool invalidated = image_view->updateResource();
@@ -99,6 +104,8 @@ namespace vkl
 					._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
 				};
 				_resources_state._image_states[ir] = state;
+
+				image_view->removeInvalidationCallbacks(this);
 
 				image_view->addInvalidationCallback(InvalidationCallback{ 
 					.callback = [&]() {
@@ -120,6 +127,8 @@ namespace vkl
 				};
 				const VkBuffer b = *buffer->instance();
 				_resources_state._buffer_states[b] = state;
+
+				buffer->removeInvalidationCallbacks(this);
 
 				buffer->addInvalidationCallback(InvalidationCallback{
 					.callback = [&]() {

@@ -3,7 +3,7 @@
 #include "VkApplication.hpp"
 namespace vkl
 {
-	class VkObjectWithCallbacks : public VkObject
+	class AbstractInstanceHolder : public VkObject
 	{
 	protected:
 
@@ -16,7 +16,7 @@ namespace vkl
 	public:
 
 		template <class StringLike>
-		constexpr VkObjectWithCallbacks(VkApplication * app, StringLike && name = "") :
+		constexpr AbstractInstanceHolder(VkApplication * app, StringLike && name = "") :
 			VkObject(app, std::forward<StringLike>(name))
 		{}
 
@@ -35,7 +35,7 @@ namespace vkl
 
 		void removeInvalidationCallbacks(const VkObject* ptr)
 		{
-			for (auto it = _invalidation_callbacks.begin(); it != _invalidation_callbacks.end(); ++it)
+			for (auto it = _invalidation_callbacks.begin(); it < _invalidation_callbacks.end(); ++it)
 			{
 				if (it->id == ptr)
 				{

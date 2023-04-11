@@ -97,10 +97,18 @@ namespace vkl
 					{
 						info.sampler = *b.sampler();
 					}
+					else
+					{
+						info.sampler = VK_NULL_HANDLE;
+					}
 					if (b.image())
 					{
 						info.imageView = *b.image()->instance();
 						info.imageLayout = b.resource()._begin_state._layout;
+					}
+					else
+					{
+						info.imageView = VK_NULL_HANDLE;
 					}
 					images.push_back(info);
 					write.pImageInfo = &images.back();
@@ -138,6 +146,8 @@ namespace vkl
 				const DescriptorSetLayout::BindingMeta& meta = set.metas()[b];
 				const std::string& shader_binding_name = meta.name;
 
+
+				size_t corresponding_resource_id = 0;
 				ResourceBinding* corresponding_resource = [&] {
 					for (size_t i = 0; i < _bindings.size(); ++i)
 					{
@@ -149,6 +159,7 @@ namespace vkl
 								const std::string name = (resource_binding.name().empty() ? resource_binding.resource().name() : resource_binding.name());
 								if (name == shader_binding_name)
 								{
+									corresponding_resource_id = i;
 									return &resource_binding;
 								}
 							}
@@ -156,6 +167,7 @@ namespace vkl
 							{
 								if (set_id == resource_binding.set() && binding_id == resource_binding.binding())
 								{
+									corresponding_resource_id = i;
 									return &resource_binding;
 								}
 							}
@@ -166,8 +178,17 @@ namespace vkl
 
 				if (corresponding_resource)
 				{
+					
+					corresponding_resource->resolve(set_id, binding_id);
+					corresponding_resource->setType(vkb.descriptorType);
+					corresponding_resource->resource()._begin_state = ResourceState2{
+						._access = meta.access,
+						._layout = meta.layout,
+						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
+					};
+					
 					InvalidationCallback callback{
-						.callback = [&]() {
+						.callback = [=]() {
 							corresponding_resource->setUpdateStatus(false);
 						},
 						.id = this,
@@ -176,17 +197,11 @@ namespace vkl
 					{
 						corresponding_resource->buffer()->addInvalidationCallback(callback);
 					}
-					else if(corresponding_resource->isImage())
+					else if (corresponding_resource->isImage())
 					{
 						corresponding_resource->image()->addInvalidationCallback(callback);
 					}
-					corresponding_resource->resolve(set_id, binding_id);
-					corresponding_resource->setType(vkb.descriptorType);
-					corresponding_resource->resource()._begin_state = ResourceState2{
-						._access = meta.access,
-						._layout = meta.layout,
-						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
-					};
+
 					
 					if (true)
 					{

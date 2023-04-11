@@ -65,7 +65,7 @@ namespace vkl
 
 
 	Image::Image(CreateInfo const& ci) : 
-		VkObjectWithCallbacks(ci.app, ci.name),
+		AbstractInstanceHolder(ci.app, ci.name),
 		_flags(ci.flags),
 		_type(ci.type),
 		_format(ci.format),

@@ -4,10 +4,76 @@
 
 #include "Surface.hpp"
 #include "ImageView.hpp"
+#include "AbstractInstance.hpp"
 
 namespace vkl
 {
-	class Swapchain : public VkObject
+	class SwapchainInstance : public VkObject
+	{
+	protected:
+		VkSwapchainCreateInfoKHR _ci = {};
+
+		std::shared_ptr<Surface> _surface = nullptr;
+
+		std::vector<std::shared_ptr<Image>> _images;
+		std::vector<std::shared_ptr<ImageView>> _views;
+		
+		VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+
+		void create();
+
+		void destroy();
+
+		void setName();
+
+	public:
+
+		struct CreateInfo 
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Surface> surface = nullptr;
+			VkSwapchainCreateInfoKHR ci;
+		};
+		using CI = CreateInfo;
+
+		SwapchainInstance(CreateInfo const& ci);
+
+		virtual ~SwapchainInstance() override;
+
+		constexpr VkSwapchainKHR swapchain()const
+		{
+			return _swapchain;
+		}
+
+		constexpr VkSwapchainKHR handle()const
+		{
+			return swapchain();
+		}
+
+		constexpr operator VkSwapchainKHR()const
+		{
+			return swapchain();
+		}
+
+		constexpr const VkSwapchainCreateInfoKHR& createInfo()const
+		{
+			return _ci;
+		}
+
+		constexpr const std::vector<std::shared_ptr<Image>>&images()const
+		{
+			return _images;
+		}
+
+		constexpr const std::vector<std::shared_ptr<ImageView>>& views()const
+		{
+			return _views;
+		}
+
+	};
+
+	class Swapchain : public AbstractInstanceHolder
 	{
 	public:
 		struct CreateInfo
@@ -35,22 +101,16 @@ namespace vkl
 		DynamicValue<VkExtent2D> _extent;
 		std::shared_ptr<Surface> _surface;
 		std::vector<uint32_t> _queues = {};
-		std::vector<std::shared_ptr<Image>> _images;
-		std::vector<std::shared_ptr<ImageView>> _views;
 		
 		VkSwapchainCreateInfoKHR _ci = {};
 
+		std::shared_ptr<SwapchainInstance> _inst;
 
-		VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+		void createInstance();
 
-		void create();
-
-		void destroy();
+		void destroyInstance();
 
 	public:
-
-		constexpr Swapchain() = default;
-
 
 		Swapchain(CreateInfo const& ci);
 
@@ -62,8 +122,7 @@ namespace vkl
 
 		Swapchain& operator=(Swapchain&&);
 		
-
-		virtual ~Swapchain();
+		virtual ~Swapchain() override;
 
 		bool reCreate();
 
@@ -85,35 +144,14 @@ namespace vkl
 			}
 		}
 
-
-		constexpr VkSwapchainKHR swapchain()const
+		constexpr const std::shared_ptr<SwapchainInstance>& instance()const
 		{
-			return _swapchain;
-		}
-
-		constexpr VkSwapchainKHR handle()const
-		{
-			return swapchain();
-		}
-
-		constexpr operator VkSwapchainKHR()const
-		{
-			return swapchain();
+			return _inst;
 		}
 
 		constexpr VkFormat format()const
 		{
 			return _ci.imageFormat;
-		}
-
-		constexpr const std::vector<std::shared_ptr<Image>> & images()const
-		{
-			return _images;
-		}
-
-		constexpr const std::vector<std::shared_ptr<ImageView>>& views()const
-		{
-			return _views;
 		}
 
 		const DynamicValue<VkExtent2D> & extent() const

@@ -34,8 +34,6 @@ namespace vkl
 
 		void destroy();
 
-		void queryDetails();
-
 	public:
 
 		constexpr Surface() noexcept = default;
@@ -64,6 +62,8 @@ namespace vkl
 		}
 
 		virtual ~Surface();
+
+		void queryDetails();
 
 		constexpr SwapchainSupportDetails const& getDetails()const
 		{

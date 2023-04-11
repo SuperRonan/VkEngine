@@ -29,6 +29,7 @@ namespace vkl
 
 	void VkWindow::createSwapchain()
 	{
+		_surface->queryDetails();
 		_swapchain = std::make_shared <Swapchain>(Swapchain::CI{
 			.app = application(),
 			.name = name() + ".swapchain",
@@ -82,6 +83,7 @@ namespace vkl
 		_height = height;
 		vkDeviceWaitIdle(_app->device());
 		
+		_swapchain->reCreate();
 
 		_framebuffer_resized = false;
 	}
@@ -135,12 +137,12 @@ namespace vkl
 
 	std::shared_ptr<Image> VkWindow::image(uint32_t index)
 	{
-		return _swapchain->images()[index];
+		return _swapchain->instance()->images()[index];
 	}
 
 	std::shared_ptr<ImageView> VkWindow::view(uint32_t index)
 	{
-		return _swapchain->views()[index];
+		return _swapchain->instance()->views()[index];
 	}
 
 	VkFormat VkWindow::format()const
@@ -150,7 +152,7 @@ namespace vkl
 
 	size_t VkWindow::swapchainSize()const
 	{
-		return _swapchain->images().size();
+		return _swapchain->instance()->images().size();
 	}
 
 	VkWindow::AquireResult::AquireResult() :
@@ -170,7 +172,7 @@ namespace vkl
 		uint32_t image_index;
 		VkSemaphore sem_to_signal = !!semaphore_to_signal ? (VkSemaphore) * semaphore_to_signal : VK_NULL_HANDLE;
 		VkFence fence_to_signal = !!_fence_to_signal ? (VkFence) * _fence_to_signal : VK_NULL_HANDLE;
-		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), *_swapchain, UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
+		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), *_swapchain->instance(), UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
 		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			reCreateSwapchain();
@@ -193,7 +195,7 @@ namespace vkl
 
 	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores)
 	{
-		VkSwapchainKHR swapchain = *_swapchain;
+		VkSwapchainKHR swapchain = *_swapchain->instance();
 		VkPresentInfoKHR presentation{
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.waitSemaphoreCount = num_semaphores,
