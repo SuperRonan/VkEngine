@@ -117,6 +117,11 @@ namespace vkl
             _inst(new impl::LambdaValueInstance<T>(lambda))
         {}
 
+        template <class LambdaTypeLike>
+        DynamicValue(LambdaTypeLike const& l):
+            _inst(new impl::LambdaValueInstance<T>(l))
+        {}
+
         DynamicValue(DynamicValue const& other) :
             _inst(other.instance())
         {}

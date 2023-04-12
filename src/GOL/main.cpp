@@ -221,7 +221,7 @@ namespace vkl
 			size_t current_grid_id = 0;
 
 			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, 1.0 });
-			DynamicValue<glm::vec2> move_scale([&]() {return glm::vec2(1.0 / float(_main_window->extent2D().value().width), 1.0 / float(_main_window->extent2D().value().height)); });
+			DynamicValue<glm::vec2> move_scale = [&]() {return glm::vec2(1.0 / float(_main_window->extent2D().value().width), 1.0 / float(_main_window->extent2D().value().height)); };
 			glm::mat3 mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
 			glm::mat4 mat_for_render = mat_uv_to_grid;

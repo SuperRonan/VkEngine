@@ -388,7 +388,7 @@ namespace vkl
 				.buffer = fi.buffer ? fi.buffer : _buffer,
 				.begin = fi.begin.value_or(_begin),
 				.size = fi.size.value_or(_size),
-				.value = fi.size.value_or(_value),
+				.value = fi.value.value_or(_value),
 			};
 			execute(context, _fi);
 		};
