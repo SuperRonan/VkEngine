@@ -6,20 +6,30 @@
 #include <filesystem>
 #include <SPIRV-Reflect/spirv_reflect.h>
 #include "DescriptorSetLayout.hpp"
+#include "AbstractInstance.hpp"
 
 namespace vkl
 {
 	std::string readFileToString(std::filesystem::path const& path);
 
-	class Shader : public VkObject
+	class ShaderInstance : public VkObject
 	{
 	protected:
-
+		
 		VkShaderStageFlagBits _stage;
 		VkShaderModule _module = VK_NULL_HANDLE;
 		std::vector<uint32_t> _spv_code;
 		SpvReflectShaderModule _reflection;
 
+	public:
+
+	};
+
+	class Shader : public InstanceHolder< ShaderInstance>
+	{
+	protected:
+
+		
 
 	public:
 

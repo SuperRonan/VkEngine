@@ -15,6 +15,9 @@ namespace vkl
 	class StagingPool;
 	class CommandPool;
 
+	template <class T>
+	using SPtr = std::shared_ptr<T>;
+
 	class VkApplication
 	{
 	public:
@@ -36,7 +39,7 @@ namespace vkl
 
 		struct Pools
 		{
-			std::shared_ptr<CommandPool> graphics, transfer, compute;
+			SPtr<CommandPool> graphics, transfer, compute;
 		};
 
 	protected:
@@ -61,7 +64,7 @@ namespace vkl
 
 		Pools _pools;
 
-		std::unique_ptr<StagingPool> _staging_pool;
+		//std::unique_ptr<StagingPool> _staging_pool;
 
 		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
 

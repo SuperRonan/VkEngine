@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VkApplication.hpp"
+
 namespace vkl
 {
 	class AbstractInstanceHolder : public VkObject
@@ -45,6 +46,26 @@ namespace vkl
 		}
 
 
+	};
+
+	template <class Instance>
+	class InstanceHolder : public AbstractInstanceHolder
+	{
+	protected:
+
+		SPtr<Instance> _inst = nullptr;
+		
+	public:
+
+		template <class StringLike = std::string>
+		constexpr InstanceHolder(VkApplication* app, StringLike&& name = {}) :
+			AbstractInstanceHolder(app, std::forward<StringLike>(name))
+		{}
+
+		constexpr SPtr<Instance> const& instance()const
+		{
+			return _inst;
+		}
 	};
 
 }

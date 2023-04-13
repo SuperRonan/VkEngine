@@ -1,11 +1,17 @@
 #pragma once
 
 #include "Shader.hpp"
+#include "AbstractInstance.hpp"
 #include "PipelineLayout.hpp"
 #include <memory>
 
 namespace vkl
 {
+	class ProgramInstance : public VkObject
+	{
+
+	};
+
 	class Program : public VkObject
 	{
 	protected:
