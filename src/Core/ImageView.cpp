@@ -71,14 +71,6 @@ namespace vkl
 			.image = _image->instance(),
 			.ci = ci,
 		});
-
-		_image->addInvalidationCallback(InvalidationCallback{
-			.callback = [&]()
-			{
-				this->destroyInstance();
-			},
-			.id = this,	
-		});
 	}
 
 	void ImageView::destroyInstance()
@@ -103,6 +95,13 @@ namespace vkl
 		_components(ci.components),
 		_range(ci.range.has_value() ? ci.range.value() : _image->defaultSubresourceRange())
 	{
+		_image->addInvalidationCallback(InvalidationCallback{
+			.callback = [&]()
+			{
+				this->destroyInstance();
+			},
+			.id = this,
+		});
 		if (ci.create_on_construct)
 		{
 			createInstance();

@@ -5,7 +5,45 @@
 
 namespace vkl
 {
-	class Pipeline : public VkObject
+	class PipelineInstance : public VkObject
+	{
+	protected:
+
+		VkPipeline _handle = VK_NULL_HANDLE;
+		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+		std::shared_ptr<ProgramInstance> _program;
+
+	public:
+
+
+		constexpr VkPipeline pipeline()const noexcept
+		{
+			return _handle;
+		}
+
+		constexpr auto handle()const noexcept
+		{
+			return pipeline();
+		}
+
+		constexpr VkPipelineBindPoint binding()const noexcept
+		{
+			return _binding;
+		}
+
+		constexpr operator VkPipeline()const
+		{
+			return _handle;
+		}
+
+		constexpr const auto& program()const
+		{
+			return _program;
+		}
+
+	};
+
+	class Pipeline : public InstanceHolder<PipelineInstance>
 	{
 	public:
 
@@ -57,10 +95,10 @@ namespace vkl
 				};
 			}
 			
-			constexpr void assemble()
+			void assemble()
 			{
 				_shaders.resize(_program->shaders().size());
-				for (size_t i = 0; i < _shaders.size(); ++i)	_shaders[i] = _program->shaders()[i]->getPipelineShaderStageCreateInfo();
+				for (size_t i = 0; i < _shaders.size(); ++i)	_shaders[i] = _program->shaders()[i]->instance()->getPipelineShaderStageCreateInfo();
 
 				_pipeline_ci = VkGraphicsPipelineCreateInfo{
 					.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -76,13 +114,20 @@ namespace vkl
 					.pDepthStencilState = _depth_stencil.has_value() ? &_depth_stencil.value() : nullptr,
 					.pColorBlendState = &_blending,
 					.pDynamicState = nullptr,
-					.layout = _program->pipelineLayout(),
+					.layout = _program->instance()->pipelineLayout(),
 					.renderPass = _render_pass,
 					.subpass = 0,
 					.basePipelineHandle = VK_NULL_HANDLE,
 					.basePipelineIndex = 0,
 				};
 			}
+		};
+		
+		struct ComputeCreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ComputeProgram> _program = nullptr;
 		};
 
 		constexpr static VkPipelineVertexInputStateCreateInfo VertexInputWithoutVertices()
@@ -213,33 +258,27 @@ namespace vkl
 
 	protected:
 
-		VkPipeline _handle = VK_NULL_HANDLE;
+		using ParentType = InstanceHolder<PipelineInstance>;
+
+		
 		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 		std::shared_ptr<Program> _program = nullptr;
 
 	public:
 
-		constexpr Pipeline() noexcept = default;
-
-		constexpr Pipeline(VkApplication* app, VkPipeline handle, VkPipelineBindPoint type) noexcept:
-			VkObject(app),
-			_handle(handle),
-			_binding(type)
-		{}
-
 		Pipeline(Pipeline const&) = delete;
 
-		constexpr Pipeline(Pipeline&& other) noexcept :
-			VkObject(std::move(other)),
-			_handle(other._handle),
-			_binding(other._binding)
+		Pipeline(Pipeline&& other) noexcept :
+			ParentType(std::move(other)),
+			_binding(other._binding),
+			_program(std::move(other._program))
 		{
-			other._handle = VK_NULL_HANDLE;
+
 		}
 
-		Pipeline(GraphicsCreateInfo & ci);
+		Pipeline(GraphicsCreateInfo const& ci);
 
-		Pipeline(std::shared_ptr<ComputeProgram> compute_program, std::string const& name = {});
+		Pipeline(ComputeCreateInfo const& ci);
 
 		Pipeline& operator=(Pipeline const&) = delete;
 
@@ -252,31 +291,6 @@ namespace vkl
 		void createPipeline(VkComputePipelineCreateInfo const& ci);
 
 		void destroyPipeline();
-
-		constexpr VkPipeline pipeline()const noexcept
-		{
-			return _handle;
-		}
-
-		constexpr auto handle()const noexcept
-		{
-			return pipeline();
-		}
-
-		constexpr VkPipelineBindPoint binding()const noexcept
-		{
-			return _binding;
-		}
-
-		constexpr operator VkPipeline()const
-		{
-			return _handle;
-		}
-
-		constexpr auto& program()
-		{
-			return _program;
-		}
 
 		constexpr const auto& program()const
 		{

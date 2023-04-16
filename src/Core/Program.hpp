@@ -9,47 +9,21 @@ namespace vkl
 {
 	class ProgramInstance : public VkObject
 	{
-
-	};
-
-	class Program : public VkObject
-	{
 	protected:
-		 
+
 		PipelineLayout _layout;
-		std::vector<std::shared_ptr<Shader>> _shaders;
+		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
 		std::vector<std::shared_ptr<DescriptorSetLayout>> _set_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
-		constexpr Program(VkApplication * app = nullptr) : 
-			VkObject(app)
+		ProgramInstance(VkApplication* app, std::string const& name) :
+			VkObject(app, name)
 		{}
 
-		Program(Program const& other) = delete;
-
-		constexpr Program(Program && other) noexcept:
-			VkObject(std::move(other)),
-			_shaders(std::move(other._shaders)),
-			_set_layouts(std::move(other._set_layouts)),
-			_push_constants(std::move(other._push_constants))
-		{}
-
-		Program& operator=(Program const&) = delete;
-
-		constexpr Program& operator=(Program&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-
-			_layout = std::move(other._layout);
-			std::swap(_shaders, other._shaders);
-			std::swap(_set_layouts, other._set_layouts);
-			std::swap(_push_constants, other._push_constants);
-
-			return *this;
-		}
+		virtual ~ProgramInstance() override {}
 
 	public:
-		    
+
 		bool reflect();
 
 		void createLayout();
@@ -69,7 +43,7 @@ namespace vkl
 			return _layout;
 		}
 
-		constexpr PipelineLayout & pipelineLayout()
+		constexpr PipelineLayout& pipelineLayout()
 		{
 			return _layout;
 		}
@@ -79,7 +53,7 @@ namespace vkl
 			return _set_layouts;
 		}
 
-		constexpr auto& setLayouts() 
+		constexpr auto& setLayouts()
 		{
 			return _set_layouts;
 		}
@@ -94,7 +68,83 @@ namespace vkl
 			return _push_constants;
 		}
 
+	};
 
+	class Program : public InstanceHolder<ProgramInstance>
+	{
+	protected:
+
+		using ParentType = InstanceHolder<ProgramInstance>;
+		
+		std::vector<std::shared_ptr<Shader>> _shaders;
+
+		Program(VkApplication* app, std::string const& name):
+			ParentType(app, name)
+		{}
+
+		virtual ~Program()override
+		{
+			destroyInstance();
+		}
+
+		Program(Program const& other) = delete;
+
+		Program(Program && other) noexcept:
+			ParentType(std::move(other)),
+			_shaders(std::move(other._shaders))
+		{}
+
+		Program& operator=(Program const&) = delete;
+
+		constexpr Program& operator=(Program&& other) noexcept
+		{
+			ParentType::operator=(std::move(other));
+			std::swap(_shaders, other._shaders);
+			return *this;
+		}
+
+		virtual void createInstance() = 0;
+
+		void destroyInstance();
+
+	public:
+
+		constexpr const auto& shaders()const
+		{
+			return _shaders;
+		}
+
+		constexpr auto& shaders()
+		{
+			return _shaders;
+		}
+
+		bool updateResources();
+	};
+
+	class GraphicsProgramInstance : public ProgramInstance
+	{
+	protected:
+
+		std::shared_ptr<ShaderInstance> _vertex = nullptr;
+		std::shared_ptr<ShaderInstance> _geometry = nullptr;
+		std::shared_ptr<ShaderInstance> _fragment = nullptr;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ShaderInstance> vertex = nullptr;
+			std::shared_ptr<ShaderInstance> geometry = nullptr;
+			std::shared_ptr<ShaderInstance> fragment = nullptr;
+		};
+		using CI = CreateInfo;
+
+		GraphicsProgramInstance(CreateInfo const& ci);
+
+		virtual ~GraphicsProgramInstance() override {};
 
 	};
 
@@ -104,52 +154,51 @@ namespace vkl
 
 		struct CreateInfo 
 		{
-			// TODO all stages
-			std::shared_ptr<Shader> _vertex = nullptr, _geometry = nullptr, _fragment = nullptr;
-
-			VkApplication* getApplication()const;
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Shader> vertex = nullptr; 
+			std::shared_ptr<Shader> geometry = nullptr;
+			std::shared_ptr<Shader> fragment = nullptr;
 		};
+		using CI = CreateInfo;
 
 	protected:
 
-		CreateInfo _ci;
+		std::shared_ptr<Shader> _vertex = nullptr;
+		std::shared_ptr<Shader> _geometry = nullptr;
+		std::shared_ptr<Shader> _fragment = nullptr;
+
+		virtual void createInstance() override;
 
 	public:
 
 		GraphicsProgram(CreateInfo const& ci);
 
+		virtual ~GraphicsProgram() override;
+
 	};
 
-	class ComputeProgram : public Program
+	class ComputeProgramInstance : public ProgramInstance
 	{
 	protected:
 
-		VkExtent3D _local_size = { 0, 0, 0 };
+		std::shared_ptr<ShaderInstance> _shader = nullptr;
+		VkExtent3D _local_size = makeZeroExtent3D();
 
 	public:
 
-		constexpr ComputeProgram(VkApplication * app = nullptr):
-			Program(app)
-		{}
-
-		ComputeProgram(Shader&& shader);
-
-		ComputeProgram(ComputeProgram const&) = delete;
-
-		constexpr ComputeProgram(ComputeProgram && other) noexcept:
-			Program(std::move(other)),
-			_local_size(other._local_size)
-		{}
-
-		ComputeProgram& operator=(ComputeProgram const&) = delete;
-
-		constexpr ComputeProgram& operator=(ComputeProgram&& other) noexcept
+		struct CreateInfo
 		{
-			Program::operator=(std::move(other));
-			std::swap(_local_size, other._local_size);
-			return *this;
-		}
-		
+			VkApplication * app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ShaderInstance> shader = nullptr;
+		};
+		using CI = CreateInfo;
+
+		ComputeProgramInstance(CreateInfo const& ci);
+
+		virtual ~ComputeProgramInstance() override {};
+
 		void extractLocalSize();
 
 		constexpr const VkExtent3D& localSize()const
@@ -157,19 +206,64 @@ namespace vkl
 			return _local_size;
 		}
 
+		constexpr const std::shared_ptr<ShaderInstance>& shader()const
+		{
+			return _shader;
+		}
+
+		constexpr std::shared_ptr<ShaderInstance>& shader()
+		{
+			return _shader;
+		}
+
+	};
+
+	class ComputeProgram : public Program
+	{
+	protected:
+
+		std::shared_ptr<Shader> _shader = nullptr;
+
+		virtual void createInstance() override;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Shader> shader = nullptr;
+		};
+		using CI = CreateInfo;
+
+		ComputeProgram(CreateInfo const& ci);
+
+		virtual ~ComputeProgram() override;
+
+		ComputeProgram(ComputeProgram const&) = delete;
+
+		ComputeProgram(ComputeProgram && other) noexcept:
+			Program(std::move(other)),
+			_shader(other._shader)
+		{}
+
+		ComputeProgram& operator=(ComputeProgram const&) = delete;
+
+		ComputeProgram& operator=(ComputeProgram&& other) noexcept
+		{
+			Program::operator=(std::move(other));
+			std::swap(_shader, other._shader);
+			return *this;
+		}
+
 		constexpr const std::shared_ptr<Shader>& shader()const
 		{
-			return _shaders.front();
+			return _shader;
 		}
 
 		constexpr std::shared_ptr<Shader>& shader()
 		{
-			return _shaders.front();
+			return _shader;
 		}
-	};
-
-	class RayTracingProgram : public Program
-	{
-
 	};
 }

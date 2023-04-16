@@ -10,6 +10,8 @@
 
 namespace vkl
 {
+	std::vector<uint8_t> readFile(std::filesystem::path const& path);
+	
 	std::string readFileToString(std::filesystem::path const& path);
 
 	class ShaderInstance : public VkObject
@@ -20,46 +22,30 @@ namespace vkl
 		VkShaderModule _module = VK_NULL_HANDLE;
 		std::vector<uint32_t> _spv_code;
 		SpvReflectShaderModule _reflection;
+		std::vector<std::filesystem::path> _dependencies;
+
 
 	public:
 
-	};
-
-	class Shader : public InstanceHolder< ShaderInstance>
-	{
-	protected:
-
-		
-
-	public:
-
-		Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage, std::vector<std::string> const& definitions = {});
-
-		Shader(Shader const&) = delete;
-
-		constexpr Shader(Shader&& other) noexcept :
-			VkObject(std::move(other)),
-			_stage(other._stage),
-			_module(other._module),
-			_spv_code(other._spv_code),
-			_reflection(std::move(other._reflection))
+		struct CreateInfo
 		{
-			other._module = VK_NULL_HANDLE;
-			other._reflection._internal = nullptr;
-		}
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::filesystem::path const& source_path = {};
+			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+			std::vector<std::string> const& definitions = {};
+		};
+		using CI = CreateInfo;
 
-		~Shader();
+		ShaderInstance(CreateInfo const&);
 
-		Shader& operator=(Shader const&) = delete;
-		constexpr Shader& operator=(Shader&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_stage, other._stage);
-			std::swap(_module, other._module);
-			std::swap(_spv_code, other._spv_code);
-			std::swap(_reflection, other._reflection);
-			return *this;
-		}
+		ShaderInstance(ShaderInstance const&) = delete;
+		ShaderInstance(ShaderInstance &&) = delete;
+
+		virtual ~ShaderInstance() override;
+
+		ShaderInstance& operator=(ShaderInstance const&) = delete;
+		ShaderInstance& operator=(ShaderInstance &&) = delete;
 
 		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions);
 
@@ -94,7 +80,69 @@ namespace vkl
 
 		std::string entryName()const;
 
-		VkPipelineShaderStageCreateInfo getPipelineShaderStageCreateInfo()const;
+		std::vector<std::filesystem::path> const& dependencies()const
+		{
+			return _dependencies;
+		}
 
+		VkPipelineShaderStageCreateInfo getPipelineShaderStageCreateInfo()const;
+	};
+
+	class Shader : public InstanceHolder<ShaderInstance>
+	{
+	protected:
+
+		using ParentType = InstanceHolder<ShaderInstance>;
+
+		using Dependecy = std::filesystem::path;
+
+		std::filesystem::path _path;
+		VkShaderStageFlagBits _stage;
+		std::vector<std::string> _definitions;
+		std::vector<Dependecy> _dependencies;
+		std::chrono::file_time<std::chrono::file_clock::duration> _instance_time;
+
+		void createInstance();
+
+		void destroyInstance();
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::filesystem::path const& source_path = {};
+			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+			std::vector<std::string> const& definitions = {};
+		};
+		using CI = CreateInfo;
+
+		Shader(CreateInfo const& ci);
+
+		Shader(Shader && other) noexcept : 
+			ParentType(std::move(other)),
+			_path(std::move(other._path)),
+			_stage(other._stage),
+			_definitions(std::move(other._definitions)),
+			_dependencies(std::move(other._dependencies)),
+			_instance_time(std::move(other._instance_time))
+		{}
+		
+		Shader& operator=(Shader&& other) noexcept
+		{
+			ParentType::operator=(std::move(other));
+			std::swap(_path, other._path);
+			std::swap(_stage, other._stage);
+			std::swap(_definitions, other._definitions);
+			std::swap(_dependencies, other._dependencies);
+			std::swap(_instance_time, other._instance_time);
+			return *this;
+		}
+
+		virtual ~Shader() override;
+
+		bool updateResources();
+		
 	};
 }

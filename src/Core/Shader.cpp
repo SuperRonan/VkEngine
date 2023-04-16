@@ -9,6 +9,23 @@
 
 namespace vkl
 {
+	std::vector<uint8_t> readFile(std::filesystem::path const& path)
+	{
+		std::ifstream file(path, std::ios::ate | std::ios::binary);
+		if (!file.is_open())
+		{
+			throw std::runtime_error("Could not open file: " + path.string());
+		}
+
+		size_t size = file.tellg();
+		std::vector<uint8_t> res;
+		res.resize(size);
+		file.seekg(0);
+		file.read((char*)res.data(), size);
+		file.close();
+		return res;
+	}
+
 	std::string readFileToString(std::filesystem::path const& path)
 	{
 		std::ifstream file(path, std::ios::ate | std::ios::binary);
@@ -21,14 +38,15 @@ namespace vkl
 		std::string res;
 		res.resize(size);
 		file.seekg(0);
-		file.read(res.data(), size);
+		file.read((char*)res.data(), size);
 		file.close();
 		return res;
-
 	}
+	
 
-	std::string Shader::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions)
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions)
 	{
+		_dependencies.push_back(path);
 		const std::string content = readFileToString(path);
 		std::stringstream oss;
 
@@ -134,7 +152,7 @@ namespace vkl
 
 	}
 
-	void Shader::compile(std::string const& code, std::string const& filename)
+	void ShaderInstance::compile(std::string const& code, std::string const& filename)
 	{
 		shaderc::Compiler compiler;
 		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str());
@@ -154,22 +172,23 @@ namespace vkl
 		VK_CHECK(vkCreateShaderModule(_app->device(), &module_ci, nullptr, &_module), "Failed to create a shader module.");
 	}
 
-	void Shader::reflect()
+	void ShaderInstance::reflect()
 	{
 		spvReflectDestroyShaderModule(&_reflection);
 		spvReflectCreateShaderModule(_spv_code.size() * sizeof(uint32_t), _spv_code.data(), &_reflection);
 	}
 
-	Shader::Shader(VkApplication* app, std::filesystem::path const& path, VkShaderStageFlagBits stage, std::vector<std::string> const& definitions) :
-		VkObject(app),
-		_stage(stage),
+	ShaderInstance::ShaderInstance(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
+		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection))
 	{
-		compile(preprocess(path, definitions), path.string());
+		std::string preprocessed = preprocess(ci.source_path, ci.definitions);
+		compile(preprocessed, ci.source_path.string());
 		reflect();
 	}
 
-	Shader::~Shader()
+	ShaderInstance::~ShaderInstance()
 	{
 		//This function sets the module to null
 		spvReflectDestroyShaderModule(&_reflection);
@@ -181,12 +200,12 @@ namespace vkl
 		}
 	}
 
-	std::string Shader::entryName()const
+	std::string ShaderInstance::entryName()const
 	{
 		return std::string(_reflection.entry_point_name);
 	}
 
-	VkPipelineShaderStageCreateInfo Shader::getPipelineShaderStageCreateInfo()const
+	VkPipelineShaderStageCreateInfo ShaderInstance::getPipelineShaderStageCreateInfo()const
 	{
 		return VkPipelineShaderStageCreateInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -194,5 +213,52 @@ namespace vkl
 			.module = module(),
 			.pName = _reflection.entry_point_name,
 		};
+	}
+
+	void Shader::createInstance()
+	{
+		_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
+			.app = application(),
+			.name = name(),
+			.source_path = _path,
+			.stage = _stage,
+			.definitions = _definitions,
+		});
+
+		_dependencies = _inst->dependencies();
+	}
+
+	void Shader::destroyInstance()
+	{
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
+	}
+
+	bool Shader::updateResources()
+	{
+		bool res = false;
+		if (!_inst)
+		{
+			createInstance();
+			res = true;
+		}
+
+		// TODO reload if any dependency has been updated
+		return res;
+	}
+
+	Shader::Shader(CreateInfo const& ci):
+		ParentType(ci.app, ci.name),
+		_path(ci.source_path),
+		_stage(ci.stage),
+		_definitions(ci.definitions)
+	{}
+
+	Shader::~Shader()
+	{
+		destroyInstance();
 	}
 }

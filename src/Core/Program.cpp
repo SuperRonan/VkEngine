@@ -4,7 +4,7 @@
 
 namespace vkl
 {
-	bool Program::reflect()
+	bool ProgramInstance::reflect()
 	{
 		// all_bindings[set][binding]
 		struct BindingWithMeta
@@ -18,7 +18,7 @@ namespace vkl
 
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
-			const Shader& shader = *_shaders[sh];
+			const ShaderInstance& shader = *_shaders[sh];
 			const auto& refl = shader.reflection();
 			for (size_t s = 0; s < refl.descriptor_set_count; ++s)
 			{
@@ -174,7 +174,7 @@ namespace vkl
 	}
 
 
-	void Program::createLayout()
+	void ProgramInstance::createLayout()
 	{
 		const bool reflection_ok = reflect();
 		assert(reflection_ok);
@@ -195,37 +195,146 @@ namespace vkl
 		_layout = PipelineLayout(_app, ci);
 	}
 
-	VkApplication* GraphicsProgram::CreateInfo::getApplication()const
+	void Program::destroyInstance()
 	{
-		if (!!_vertex)	return _vertex->application();
-		if (!!_geometry)	return _geometry->application();
-		else //if (!!_fragment)	
-			return _fragment->application();
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
+	}
+
+	bool Program::updateResources()
+	{
+		bool res = false;
+		
+		for (auto& shader : _shaders)
+		{
+			res |= shader->updateResources();
+		}
+		
+		if (!_inst)
+		{
+			createInstance();
+			res = true;
+
+		}
+
+		return res;
+	}
+
+	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfo const& ci):
+		ProgramInstance(ci.app, ci.name),
+		_vertex(ci.vertex),
+		_geometry(ci.geometry),
+		_fragment(ci.fragment)
+	{
+		if (_vertex)	_shaders.push_back(_vertex);
+		if (_geometry)	_shaders.push_back(_geometry);
+		if (_fragment)	_shaders.push_back(_fragment);
+		
+		reflect();
+		createLayout();
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfo const& ci) :
-		Program(ci.getApplication()),
-		_ci(std::move(ci))
+		Program(ci.app, ci.name),
+		_vertex(ci.vertex),
+		_geometry(ci.geometry),
+		_fragment(ci.fragment)
 	{
-		if (_ci._vertex)	_shaders.push_back(_ci._vertex);
-		if (_ci._geometry)	_shaders.push_back(_ci._geometry);
-		if (_ci._fragment)	_shaders.push_back(_ci._fragment);
-		createLayout();
+		InvalidationCallback ic{
+			.callback = [&]() {
+				destroyInstance();
+			},
+			.id = this,
+		};
+
+		if (_vertex)
+		{
+			_shaders.push_back(_vertex);
+			_vertex->addInvalidationCallback(ic);
+		}
+		if (_geometry)
+		{
+			_shaders.push_back(_geometry);
+			_geometry->addInvalidationCallback(ic);
+		}
+		if (_fragment)
+		{
+			_shaders.push_back(_fragment);
+			_fragment->addInvalidationCallback(ic);
+		}
 	}
 
-
-	ComputeProgram::ComputeProgram(Shader&& shader) :
-		Program(shader.application())
+	GraphicsProgram::~GraphicsProgram()
 	{
-		_shaders = { std::make_shared<Shader>(std::move(shader)) };
-		createLayout();
+		if (_vertex)
+		{
+			_vertex->removeInvalidationCallbacks(this);
+		}
+		if (_geometry)
+		{
+			_geometry->removeInvalidationCallbacks(this);
+		}
+		if (_fragment)
+		{
+			_fragment->removeInvalidationCallbacks(this);
+		}
+	}
+
+	void GraphicsProgram::createInstance()
+	{
+		_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CI{
+			.app = application(),
+			.name = name(),
+			.vertex = !!_vertex ? _vertex->instance() : nullptr,
+			.geometry = !!_geometry ?  _geometry->instance() : nullptr,
+			.fragment = !!_fragment ? _fragment->instance() : nullptr,
+		});
+	}
+
+	ComputeProgramInstance::ComputeProgramInstance(CreateInfo const& ci):
+		ProgramInstance(ci.app, ci.name),
+		_shader(ci.shader)
+	{
 		extractLocalSize();
 	}
-
-	void ComputeProgram::extractLocalSize()
+	
+	void ComputeProgramInstance::extractLocalSize()
 	{
 		const auto& refl = _shaders.front()->reflection();
 		const auto& lcl = refl.entry_points[0].local_size;
 		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
 	}
+
+	ComputeProgram::ComputeProgram(CreateInfo const& ci) :
+		Program(ci.app, ci.name),
+		_shader(ci.shader)
+	{
+		_shaders = { _shader };
+
+		InvalidationCallback ic{
+			.callback = [&]() {
+				destroyInstance();
+			},
+			.id = this,
+		};
+		_shader->addInvalidationCallback(ic);
+	}
+
+	void ComputeProgram::createInstance()
+	{
+		_inst = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
+			.app = application(),
+			.name = name(),
+			.shader = _shader->instance(),
+		});
+	}
+
+	ComputeProgram::~ComputeProgram()
+	{
+		_shader->removeInvalidationCallbacks(this);
+	}
+
 }
