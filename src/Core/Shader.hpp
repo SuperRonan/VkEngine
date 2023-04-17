@@ -120,26 +120,6 @@ namespace vkl
 
 		Shader(CreateInfo const& ci);
 
-		Shader(Shader && other) noexcept : 
-			ParentType(std::move(other)),
-			_path(std::move(other._path)),
-			_stage(other._stage),
-			_definitions(std::move(other._definitions)),
-			_dependencies(std::move(other._dependencies)),
-			_instance_time(std::move(other._instance_time))
-		{}
-		
-		Shader& operator=(Shader&& other) noexcept
-		{
-			ParentType::operator=(std::move(other));
-			std::swap(_path, other._path);
-			std::swap(_stage, other._stage);
-			std::swap(_definitions, other._definitions);
-			std::swap(_dependencies, other._dependencies);
-			std::swap(_instance_time, other._instance_time);
-			return *this;
-		}
-
 		virtual ~Shader() override;
 
 		bool updateResources();

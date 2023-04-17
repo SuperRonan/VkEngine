@@ -17,24 +17,6 @@ namespace vkl
 			_layout(layout)
 		{}
 
-		constexpr PipelineLayout(PipelineLayout const&) noexcept = delete;
-
-		constexpr PipelineLayout(PipelineLayout&& other) noexcept :
-			VkObject(std::move(other)),
-			_layout(other._layout)
-		{
-			other._layout = VK_NULL_HANDLE;
-		}
-
-		constexpr PipelineLayout& operator=(PipelineLayout const&) noexcept = delete;
-
-		constexpr PipelineLayout& operator=(PipelineLayout&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_layout, other._layout);
-			return *this;
-		}
-
 		PipelineLayout(VkApplication* app, VkPipelineLayoutCreateInfo const& ci);
 
 		~PipelineLayout();

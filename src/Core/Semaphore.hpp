@@ -28,25 +28,7 @@ namespace vkl
 			create();
 		}
 
-		Semaphore(Semaphore const&) = delete;
-
-		constexpr Semaphore(Semaphore&& other) noexcept :
-			VkObject(std::move(other)),
-			_handle(other._handle)
-		{
-			other._handle = VK_NULL_HANDLE;
-		}
-
-		Semaphore& operator=(Semaphore const&) = delete;
-
-		constexpr Semaphore& operator=(Semaphore&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_handle, other._handle);
-			return *this;
-		}
-
-		~Semaphore();
+		virtual ~Semaphore() override;
 
 		void create();
 

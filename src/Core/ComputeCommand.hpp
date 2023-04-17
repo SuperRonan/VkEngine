@@ -58,22 +58,25 @@ namespace vkl
 			return _dispatch_size;
 		}
 
-		constexpr VkExtent3D getWorkgroupsDispatchSize()const
+		VkExtent3D getWorkgroupsDispatchSize()const
 		{
+			const std::shared_ptr<ComputeProgramInstance> & prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
+
 			const VkExtent3D res = _dispatch_threads ? VkExtent3D{
-				.width = std::divCeil(_dispatch_size.value().width, _program->localSize().width),
-				.height = std::divCeil(_dispatch_size.value().height, _program->localSize().height),
-				.depth = std::divCeil(_dispatch_size.value().depth, _program->localSize().depth),
+				.width = std::divCeil(_dispatch_size.value().width, prog->localSize().width),
+				.height = std::divCeil(_dispatch_size.value().height, prog->localSize().height),
+				.depth = std::divCeil(_dispatch_size.value().depth, prog->localSize().depth),
 			} : _dispatch_size.value();
 			return res;
 		}
 
-		constexpr VkExtent3D getThreadsDispatchSize()const
+		VkExtent3D getThreadsDispatchSize()const
 		{
+			const std::shared_ptr<ComputeProgramInstance>& prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
 			const VkExtent3D res = _dispatch_threads ? _dispatch_size.value() : VkExtent3D{
-				.width = (_dispatch_size.value().width * _program->localSize().width),
-				.height = (_dispatch_size.value().height * _program->localSize().height),
-				.depth = (_dispatch_size.value().depth * _program->localSize().depth),
+				.width = (_dispatch_size.value().width * prog->localSize().width),
+				.height = (_dispatch_size.value().height * prog->localSize().height),
+				.depth = (_dispatch_size.value().depth * prog->localSize().depth),
 			};
 			return res;
 		}

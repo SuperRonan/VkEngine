@@ -2,27 +2,6 @@
 
 namespace vkl
 {
-	DescriptorPool::DescriptorPool(DescriptorPool&& other) noexcept :
-		VkObject(std::move(other)),
-		_layout(std::move(other._layout)),
-		_pool_sizes(std::move(other._pool_sizes)),
-		_max_sets(other._max_sets),
-		_flags(0),
-		_handle(std::move(other._handle))
-	{
-		other._handle = VK_NULL_HANDLE;
-	}
-
-	DescriptorPool& DescriptorPool::operator=(DescriptorPool&& other) noexcept
-	{
-		VkObject::operator=(std::move(other));
-		std::swap(_layout, other._layout);
-		std::swap(_pool_sizes, other._pool_sizes);
-		std::swap(_max_sets, other._max_sets);
-		std::swap(_handle, other._handle);
-		return *this;
-	}
-
 	DescriptorPool::DescriptorPool(std::shared_ptr<DescriptorSetLayout> layout, uint32_t max_sets):
 		VkObject(layout->application()),
 		_layout(std::move(layout)),

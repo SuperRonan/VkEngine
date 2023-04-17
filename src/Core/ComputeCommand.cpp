@@ -9,7 +9,24 @@ namespace vkl
 		_dispatch_size(ci.dispatch_size),
 		_dispatch_threads(ci.dispatch_threads)
 	{
-		
+		std::shared_ptr<Shader> shader = std::make_shared<Shader>(Shader::CI{
+			.app = application(),
+			.name = _shader_path.string(),
+			.source_path = _shader_path,
+			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+			.definitions = _definitions,
+			});
+		_program = std::make_shared<ComputeProgram>(ComputeProgram::CI{
+			.app = application(),
+			.name = shader->name(),
+			.shader = shader,
+		});
+		_pipeline = std::make_shared<Pipeline>(Pipeline::ComputeCreateInfo{
+			.app = application(),
+			.name = _program->name(),
+			.program = _program,
+		});
+		_sets.setProgram(_program);
 	}
 
 	void ComputeCommand::init()
@@ -40,18 +57,14 @@ namespace vkl
 	bool ComputeCommand::updateResources()
 	{
 		bool res = false;
-		if (!_pipeline)
+		
+		res |= _pipeline->updateResources();
+		
+		if (res)
 		{
-			Shader shader(application(), _shader_path, VK_SHADER_STAGE_COMPUTE_BIT, _definitions);
-			_program = std::make_shared<ComputeProgram>(std::move(shader));
-			_pipeline = std::make_shared<Pipeline>(_program);
-			
-			_sets.setProgram(_pipeline->program());
 			_sets.invalidateDescriptorSets();
 			_sets.resolveBindings();
-
-			res = true;
-
+			
 		}
 
 		res |= ShaderCommand::updateResources();

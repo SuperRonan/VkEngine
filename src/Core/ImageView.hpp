@@ -116,15 +116,7 @@ namespace vkl
 
 		ImageView(CreateInfo const& ci);
 
-		ImageView(ImageView const&) = delete;
-
-		ImageView(ImageView&& other) noexcept;
-
-		ImageView& operator=(ImageView const&) = delete;
-
-		ImageView& operator=(ImageView&& other) noexcept;
-
-		~ImageView();
+		virtual ~ImageView() override;
 
 		void createInstance();
 

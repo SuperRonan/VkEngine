@@ -167,7 +167,7 @@ namespace vkl
 
 		Pools const& pools()const;
 
-		StagingPool& stagingPool();
+		//StagingPool& stagingPool();
 
 		void nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
 	};
@@ -193,11 +193,11 @@ namespace vkl
 			_name(std::forward<StringLike>(name))
 		{}
 
-		constexpr VkObject(VkObject const& ) noexcept = default;
-		constexpr VkObject(VkObject&&) noexcept = default;
+		VkObject(VkObject const& ) noexcept = delete;
+		VkObject(VkObject&&) noexcept = delete;
 
-		constexpr VkObject& operator=(VkObject const&) noexcept = default;
-		constexpr VkObject& operator=(VkObject&&) noexcept = default;
+		VkObject& operator=(VkObject const&) noexcept = delete;
+		VkObject& operator=(VkObject&&) noexcept = delete;
 
 		virtual ~VkObject() {};
 

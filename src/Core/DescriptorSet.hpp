@@ -25,14 +25,7 @@ namespace vkl
         
         DescriptorSet(std::shared_ptr<DescriptorSetLayout> layout, std::shared_ptr<DescriptorPool> pool, VkDescriptorSet handle);
 
-        DescriptorSet(DescriptorSet const&) = delete;
-        DescriptorSet& operator=(DescriptorSet const&) = delete;
-
-        DescriptorSet(DescriptorSet&& other) noexcept;
-
-        DescriptorSet& operator=(DescriptorSet&& other) noexcept;
-
-        ~DescriptorSet();
+        virtual ~DescriptorSet() override;
 
         void allocate(VkDescriptorSetAllocateInfo const& alloc);
 

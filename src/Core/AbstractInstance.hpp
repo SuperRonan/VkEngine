@@ -21,18 +21,6 @@ namespace vkl
 			VkObject(app, std::forward<StringLike>(name))
 		{}
 
-		AbstractInstanceHolder(AbstractInstanceHolder && other):
-			VkObject(std::move(other)),
-			_invalidation_callbacks(std::move(other._invalidation_callbacks))
-		{}
-
-		AbstractInstanceHolder& operator=(AbstractInstanceHolder&& other)
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_invalidation_callbacks, other._invalidation_callbacks);
-			return *this;
-		}
-
 		virtual ~AbstractInstanceHolder() override
 		{}
 
@@ -80,18 +68,6 @@ namespace vkl
 		constexpr SPtr<Instance> const& instance()const
 		{
 			return _inst;
-		}
-
-		InstanceHolder(InstanceHolder<Instance> && other) noexcept:
-			AbstractInstanceHolder(std::move(other)),
-			_inst(std::move(other._inst))
-		{}
-
-		InstanceHolder& operator=(InstanceHolder<Instance>&& other) noexcept
-		{
-			AbstractInstanceHolder::operator=(std::move(other));
-			std::swap(_inst, other._inst);
-			return *this;
 		}
 
 		virtual ~InstanceHolder() override

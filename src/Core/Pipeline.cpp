@@ -2,57 +2,126 @@
 
 namespace vkl
 {
-	Pipeline::~Pipeline()
+	PipelineInstance::~PipelineInstance()
 	{
 		if (_handle != VK_NULL_HANDLE)
 		{
-			destroyPipeline();
+			vkDestroyPipeline(_app->device(), _handle, nullptr);
+			_handle = VK_NULL_HANDLE;
 		}
 	}
 
-	Pipeline::Pipeline(GraphicsCreateInfo & ci) :
-		VkObject(ci._program->application(), ci.name),
+	PipelineInstance::PipelineInstance(GraphicsCreateInfo const& gci) :
+		VkObject(gci.app, gci.name),
 		_binding(VK_PIPELINE_BIND_POINT_GRAPHICS),
-		_program(ci._program)
+		_program(gci.program),
+		_render_pass(gci.render_pass)
 	{
-		createPipeline(ci._pipeline_ci);
+
+		VK_CHECK(vkCreateGraphicsPipelines(_app->device(), nullptr, 1, &gci.assemble(), nullptr, &_handle), "Failed to create a graphics pipeline.");
 	}
 
-	Pipeline::Pipeline(std::shared_ptr<ComputeProgram> compute_program, std::string const& name) :
-		VkObject(compute_program->application(), name),
+	PipelineInstance::PipelineInstance(ComputeCreateInfo const& cci) :
+		VkObject(cci.app, cci.name),
 		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
-		_program(compute_program)
+		_program(cci.program)
 	{
-		VkComputePipelineCreateInfo ci{
+		const VkComputePipelineCreateInfo ci{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-				.stage = compute_program->shader()->getPipelineShaderStageCreateInfo(),
-				.layout = compute_program->pipelineLayout(),
+				.stage = cci.program->shader()->getPipelineShaderStageCreateInfo(),
+				.layout = *_program->pipelineLayout(),
 		};
-		createPipeline(ci);
+		VK_CHECK(vkCreateComputePipelines(_app->device(), nullptr, 1, &ci, nullptr, &_handle), "Failed to create a compute pipeline.");
 	}
 
-	Pipeline& Pipeline::operator=(Pipeline&& other) noexcept
+	void Pipeline::createInstance()
 	{
-		VkObject::operator=(std::move(other));
-		std::swap(_handle, other._handle);
-		std::swap(_binding, other._binding);
-		std::swap(_program, other._program);
-		return *this;
-	}
-	
-	void Pipeline::destroyPipeline()
-	{
-		vkDestroyPipeline(_app->device(), _handle, nullptr);
-		_handle = VK_NULL_HANDLE;
+		if (_binding == VK_PIPELINE_BIND_POINT_GRAPHICS)
+		{
+			PipelineInstance::GraphicsCreateInfo gci;
+			gci.app = application();
+			gci.name = name();
+			gci.vertex_input = _gci.vertex_input;
+			gci.input_assembly = _gci.input_assembly;
+			gci.viewports = _gci.viewports;
+			gci.scissors = _gci.scissors;
+			gci.rasterization = _gci.rasterization;
+			gci.multisampling = _gci.multisampling;
+			gci.depth_stencil = _gci.depth_stencil;
+			gci.attachements_blends = _gci.attachements_blends;
+			gci.render_pass = _gci.render_pass;
+			gci.program = std::dynamic_pointer_cast<GraphicsProgramInstance>(_gci.program->instance());
+
+			_inst = std::make_shared<PipelineInstance>(gci);
+		}
+		else if (_binding == VK_PIPELINE_BIND_POINT_COMPUTE)
+		{
+			PipelineInstance::ComputeCreateInfo cci{
+				.app = application(),
+				.name = name(),
+				.program = std::dynamic_pointer_cast<ComputeProgramInstance>(_cci.program->instance()),
+			};
+
+			_inst = std::make_shared<PipelineInstance>(cci);
+		}
 	}
 
-	void Pipeline::createPipeline(VkGraphicsPipelineCreateInfo const& gpci)
+	void Pipeline::destroyInstance()
 	{
-		VK_CHECK(vkCreateGraphicsPipelines(_app->device(), nullptr, 1, &gpci, nullptr, &_handle), "Failed to create a graphics pipeline.");
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
 	}
 
-	void Pipeline::createPipeline(VkComputePipelineCreateInfo const& cpci)
+	Pipeline::Pipeline(GraphicsCreateInfo const& gci) :
+		ParentType(gci.app, gci.name),
+		_gci(gci),
+		_binding(VK_PIPELINE_BIND_POINT_GRAPHICS),
+		_render_pass(gci.render_pass),
+		_program(gci.program)
 	{
-		VK_CHECK(vkCreateComputePipelines(_app->device(), nullptr, 1, &cpci, nullptr, &_handle), "Failed to create a compute pipeline.");
+		_program->addInvalidationCallback({
+			.callback = [&]() {
+				destroyInstance();
+			},
+			.id = this,
+		});
+	}
+
+	Pipeline::Pipeline(ComputeCreateInfo const& cci) :
+		ParentType(cci.app, cci.name),
+		_cci(cci),
+		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
+		_program(cci.program)
+	{
+		_program->addInvalidationCallback({
+			.callback = [&]() {
+				destroyInstance();
+			},
+			.id = this,
+		});
+	}
+
+	Pipeline::~Pipeline()
+	{
+		destroyInstance();
+		_program->removeInvalidationCallbacks(this);
+	}
+
+	bool Pipeline::updateResources()
+	{
+		bool res = false;
+
+		res |= _program->updateResources();
+
+		if (!_inst)
+		{
+			createInstance();
+			res = true;
+		}
+
+		return res;
 	}
 }

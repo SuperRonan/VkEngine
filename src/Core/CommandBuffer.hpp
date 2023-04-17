@@ -36,14 +36,7 @@ namespace vkl
 
 		CommandBuffer(CreateInfo const& ci);
 
-		CommandBuffer(CommandBuffer const&) = delete;
-		CommandBuffer& operator=(CommandBuffer const&) = delete;
-
-		CommandBuffer(CommandBuffer&& other);
-
-		CommandBuffer& operator=(CommandBuffer&& other);
-
-		~CommandBuffer();
+		virtual ~CommandBuffer() override;
 
 		void allocate();
 

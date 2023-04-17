@@ -2,6 +2,7 @@
 
 #include "VkApplication.hpp"
 #include "Program.hpp"
+#include "RenderPass.hpp"
 
 namespace vkl
 {
@@ -12,9 +13,94 @@ namespace vkl
 		VkPipeline _handle = VK_NULL_HANDLE;
 		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 		std::shared_ptr<ProgramInstance> _program;
+		std::shared_ptr<RenderPass> _render_pass = nullptr;
 
 	public:
 
+		struct GraphicsCreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VkPipelineVertexInputStateCreateInfo vertex_input;
+			VkPipelineInputAssemblyStateCreateInfo input_assembly;
+			std::vector<VkViewport> viewports;
+			std::vector<VkRect2D> scissors;
+			VkPipelineRasterizationStateCreateInfo rasterization;
+			VkPipelineMultisampleStateCreateInfo multisampling;
+			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
+			std::vector<VkPipelineColorBlendAttachmentState> attachements_blends;
+			std::shared_ptr<RenderPass> render_pass;
+			std::shared_ptr<GraphicsProgramInstance> program;
+
+		protected:
+			mutable VkPipelineViewportStateCreateInfo _viewport;
+			mutable VkPipelineColorBlendStateCreateInfo _blending;
+			mutable std::vector<VkPipelineShaderStageCreateInfo> _shaders;
+			mutable VkGraphicsPipelineCreateInfo _pipeline_ci;
+		public:
+
+			const VkGraphicsPipelineCreateInfo & assemble() const
+			{
+				{
+					_viewport = {
+						.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+						.viewportCount = (uint32_t)viewports.size(),
+						.pViewports = viewports.data(),
+						.scissorCount = (uint32_t)scissors.size(),
+						.pScissors = scissors.data(),
+					};
+
+					_blending = {
+						.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+						.logicOpEnable = VK_FALSE, // TODO
+						.attachmentCount = (uint32_t)attachements_blends.size(),
+						.pAttachments = attachements_blends.data(),
+						.blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
+					};
+
+					_shaders.resize(program->shaders().size());
+					for (size_t i = 0; i < _shaders.size(); ++i)
+					{
+						_shaders[i] = program->shaders()[i]->getPipelineShaderStageCreateInfo();
+					}
+				}
+
+				_pipeline_ci = VkGraphicsPipelineCreateInfo{
+					.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = 0,
+					.stageCount = (uint32_t)_shaders.size(),
+					.pStages = _shaders.data(),
+					.pVertexInputState = &vertex_input,
+					.pInputAssemblyState = &input_assembly,
+					.pViewportState = &_viewport,
+					.pRasterizationState = &rasterization,
+					.pMultisampleState = &multisampling,
+					.pDepthStencilState = depth_stencil.has_value() ? &depth_stencil.value() : nullptr,
+					.pColorBlendState = &_blending,
+					.pDynamicState = nullptr,
+					.layout = *program->pipelineLayout(),
+					.renderPass = *render_pass,
+					.subpass = 0,
+					.basePipelineHandle = VK_NULL_HANDLE,
+					.basePipelineIndex = 0,
+				};
+				return _pipeline_ci;
+			}
+		};
+
+		struct ComputeCreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ComputeProgramInstance> program = nullptr;
+		};
+
+		PipelineInstance(GraphicsCreateInfo const& gci);
+
+		PipelineInstance(ComputeCreateInfo const& cci);
+
+		virtual ~PipelineInstance() override;
 
 		constexpr VkPipeline pipeline()const noexcept
 		{
@@ -43,92 +129,10 @@ namespace vkl
 
 	};
 
+
 	class Pipeline : public InstanceHolder<PipelineInstance>
 	{
 	public:
-
-		struct GraphicsCreateInfo
-		{
-			VkPipelineVertexInputStateCreateInfo _vertex_input;
-			VkPipelineInputAssemblyStateCreateInfo _input_assembly;
-			std::vector<VkViewport> _viewports;
-			std::vector<VkRect2D> _scissors;
-			VkPipelineViewportStateCreateInfo _viewport;
-			VkPipelineRasterizationStateCreateInfo _rasterization;
-			VkPipelineMultisampleStateCreateInfo _multisampling;
-			std::optional<VkPipelineDepthStencilStateCreateInfo> _depth_stencil = {};
-			std::vector<VkPipelineColorBlendAttachmentState> _attachements_blends;
-			VkPipelineColorBlendStateCreateInfo _blending;
-			VkGraphicsPipelineCreateInfo _pipeline_ci;
-			VkRenderPass _render_pass;
-
-			std::vector<VkPipelineShaderStageCreateInfo> _shaders;
-
-			std::shared_ptr<GraphicsProgram> _program;
-
-			std::string name = {};
-			
-			constexpr void setViewport(std::vector<VkViewport>&& viewports, std::vector<VkRect2D>&& scissors)
-			{
-				_viewports = std::move(viewports);
-				_scissors = std::move(scissors);
-				_viewport = {
-					.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-					.viewportCount = (uint32_t)_viewports.size(),
-					.pViewports = _viewports.data(),
-					.scissorCount = (uint32_t)_scissors.size(),
-					.pScissors = _scissors.data(),
-				};
-				
-			}
-
-			constexpr void setColorBlending(std::vector<VkPipelineColorBlendAttachmentState>&& blendings)
-			{
-				_attachements_blends = std::move(blendings);
-
-				_blending = {
-					.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-					.logicOpEnable = VK_FALSE, // TODO
-					.attachmentCount = (uint32_t)_attachements_blends.size(),
-					.pAttachments = _attachements_blends.data(),
-					.blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
-				};
-			}
-			
-			void assemble()
-			{
-				_shaders.resize(_program->shaders().size());
-				for (size_t i = 0; i < _shaders.size(); ++i)	_shaders[i] = _program->shaders()[i]->instance()->getPipelineShaderStageCreateInfo();
-
-				_pipeline_ci = VkGraphicsPipelineCreateInfo{
-					.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.stageCount = (uint32_t)_shaders.size(),
-					.pStages = _shaders.data(),
-					.pVertexInputState = &_vertex_input,
-					.pInputAssemblyState = &_input_assembly,
-					.pViewportState = &_viewport,
-					.pRasterizationState = &_rasterization,
-					.pMultisampleState = &_multisampling,
-					.pDepthStencilState = _depth_stencil.has_value() ? &_depth_stencil.value() : nullptr,
-					.pColorBlendState = &_blending,
-					.pDynamicState = nullptr,
-					.layout = _program->instance()->pipelineLayout(),
-					.renderPass = _render_pass,
-					.subpass = 0,
-					.basePipelineHandle = VK_NULL_HANDLE,
-					.basePipelineIndex = 0,
-				};
-			}
-		};
-		
-		struct ComputeCreateInfo
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			std::shared_ptr<ComputeProgram> _program = nullptr;
-		};
 
 		constexpr static VkPipelineVertexInputStateCreateInfo VertexInputWithoutVertices()
 		{
@@ -216,7 +220,7 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				.depthTestEnable  = VK_TRUE,
+				.depthTestEnable = VK_TRUE,
 				.depthWriteEnable = write_depth ? VK_TRUE : VK_FALSE,
 				.depthCompareOp = VK_COMPARE_OP_LESS,
 				.depthBoundsTestEnable = VK_FALSE,
@@ -256,45 +260,64 @@ namespace vkl
 		}
 
 
+		struct GraphicsCreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+
+			VkPipelineVertexInputStateCreateInfo vertex_input;
+			VkPipelineInputAssemblyStateCreateInfo input_assembly;
+			std::vector<VkViewport> viewports;
+			std::vector<VkRect2D> scissors;
+
+			VkPipelineRasterizationStateCreateInfo rasterization;
+			VkPipelineMultisampleStateCreateInfo multisampling;
+			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
+			std::vector<VkPipelineColorBlendAttachmentState> attachements_blends;
+
+			std::shared_ptr<RenderPass> render_pass;
+
+			std::shared_ptr<GraphicsProgram> program;
+
+		};
+		
+		struct ComputeCreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ComputeProgram> program = nullptr;
+		};
+
 	protected:
 
 		using ParentType = InstanceHolder<PipelineInstance>;
 
 		
+		GraphicsCreateInfo _gci;
+		ComputeCreateInfo _cci;
+		
+
 		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Program> _program = nullptr;
 
+		void createInstance();
+
+		void destroyInstance();
+
 	public:
-
-		Pipeline(Pipeline const&) = delete;
-
-		Pipeline(Pipeline&& other) noexcept :
-			ParentType(std::move(other)),
-			_binding(other._binding),
-			_program(std::move(other._program))
-		{
-
-		}
 
 		Pipeline(GraphicsCreateInfo const& ci);
 
 		Pipeline(ComputeCreateInfo const& ci);
 
-		Pipeline& operator=(Pipeline const&) = delete;
-
-		Pipeline& operator=(Pipeline&& other) noexcept;
-
-		virtual ~Pipeline();
-
-		void createPipeline(VkGraphicsPipelineCreateInfo const& ci);
-
-		void createPipeline(VkComputePipelineCreateInfo const& ci);
-
-		void destroyPipeline();
+		virtual ~Pipeline() override;
 
 		constexpr const auto& program()const
 		{
 			return _program;
 		}
+
+		bool updateResources();
 	};
 }

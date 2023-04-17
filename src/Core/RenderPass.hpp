@@ -32,40 +32,9 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		constexpr RenderPass(VkApplication * app = nullptr, VkRenderPass handle = VK_NULL_HANDLE) noexcept:
-			VkObject(app),
-			_handle(handle)
-		{}
-
 		RenderPass(CreateInfo const& ci);
 
-		RenderPass(RenderPass const&) = delete;
-
-		constexpr RenderPass(RenderPass&& other) noexcept :
-			VkObject(std::move(other)),
-			_attachement_descriptors(std::move(other._attachement_descriptors)),
-			_attachement_ref_per_subpass(std::move(other._attachement_ref_per_subpass)),
-			_subpasses(std::move(other._subpasses)),
-			_dependencies(std::move(other._dependencies)),
-			_handle(other._handle)
-		{
-			other._handle = VK_NULL_HANDLE;
-		}
-
-		RenderPass& operator=(RenderPass const&) = delete;
-
-		constexpr RenderPass& operator=(RenderPass && other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_attachement_descriptors, other._attachement_descriptors);
-			std::swap(_attachement_ref_per_subpass, other._attachement_ref_per_subpass);
-			std::swap(_subpasses, other._subpasses);
-			std::swap(_dependencies, other._dependencies);
-			std::swap(_handle, other._handle);
-			return *this;
-		}
-
-		~RenderPass();
+		virtual ~RenderPass() override;
 
 		VkRenderPassCreateInfo createInfo();
 

@@ -37,25 +37,7 @@ namespace vkl
 
 		Sampler(VkApplication* app, VkFilter filter, VkSamplerAddressMode address_mode, VkBool32 anisotropy, VkBool32 unormalize_coords, VkBorderColor border = defaultBorderColor());
 
-		Sampler(Sampler const&) = delete;
-
-		constexpr Sampler(Sampler&& other) noexcept :
-			VkObject(other),
-			_sampler(other._sampler)
-		{
-			other._sampler = VK_NULL_HANDLE;
-		}
-
-		Sampler& operator=(Sampler const& other) = delete;
-
-		constexpr Sampler& operator=(Sampler&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_sampler, other._sampler);
-			return *this;
-		}
-
-		~Sampler();
+		virtual ~Sampler() override;
 
 		void createSampler(VkSamplerCreateInfo const& ci);
 

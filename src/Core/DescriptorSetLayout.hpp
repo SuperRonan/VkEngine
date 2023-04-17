@@ -37,28 +37,6 @@ namespace vkl
 
 		DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<BindingMeta> const& metas);
 
-		constexpr DescriptorSetLayout(DescriptorSetLayout const&) = delete;
-
-		constexpr DescriptorSetLayout(DescriptorSetLayout&& other) noexcept:
-			VkObject(std::move(other)), 
-			_handle(other._handle),
-			_bindings(std::move(other._bindings)),
-			_metas(std::move(other._metas))
-		{
-			other._handle = VK_NULL_HANDLE;
-		}
-
-		constexpr DescriptorSetLayout& operator=(DescriptorSetLayout const&) = delete;
-
-		constexpr DescriptorSetLayout& operator=(DescriptorSetLayout&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_handle, other._handle);
-			std::swap(_bindings, other._bindings);
-			std::swap(_metas, other._metas);
-			return *this;
-		}
-
 		~DescriptorSetLayout();
 
 		constexpr decltype(auto) handle()const

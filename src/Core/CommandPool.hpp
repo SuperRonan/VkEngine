@@ -27,27 +27,6 @@ namespace vkl
 
 		CommandPool(VkApplication* app, uint32_t index, VkCommandPoolCreateFlags flags = 0);
 
-		CommandPool(CommandPool const&) = delete;
-		CommandPool& operator=(CommandPool const& other) = delete;
-
-		constexpr CommandPool(CommandPool&& other) noexcept :
-			VkObject(std::move(other)),
-			_queue_family_index(other._queue_family_index),
-			_flags(other._flags),
-			_handle(other._handle)
-		{
-			other._handle = VK_NULL_HANDLE;
-		}
-
-		constexpr CommandPool& operator=(CommandPool&& other)noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_queue_family_index, other._queue_family_index);
-			std::swap(_flags, other._flags);
-			std::swap(_handle, other._handle);
-			return *this;
-		}
-
 		~CommandPool();
 
 		void create(VkCommandPoolCreateInfo const& ci);

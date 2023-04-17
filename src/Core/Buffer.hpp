@@ -146,35 +146,9 @@ namespace vkl
 
 		constexpr Buffer(Buffer const&) noexcept = delete;
 
-		Buffer(Buffer&& other) noexcept :
-			AbstractInstanceHolder(std::move(other)),
-			_size(other._size),
-			_usage(other._usage),
-			_sharing_mode(other._sharing_mode),
-			_queues(other._queues),
-			_mem_usage(other._mem_usage),
-			_allocator(other._allocator),
-			_inst(std::move(other._inst))
-		{
-
-		}
-
 		constexpr Buffer& operator=(Buffer const&) noexcept = delete;
 
-		Buffer& operator=(Buffer&& other) noexcept
-		{
-			AbstractInstanceHolder::operator=(std::move(other));
-			std::swap(_size, other._size);
-			std::swap(_usage, other._usage);
-			std::swap(_sharing_mode, other._sharing_mode);
-			std::swap(_queues, other._queues);
-			std::swap(_mem_usage, other._mem_usage);
-			std::swap(_allocator, other._allocator);
-			std::swap(_inst, other._inst);
-			return *this;
-		}
-
-		~Buffer();
+		virtual ~Buffer() override;
 
 		constexpr const std::shared_ptr<BufferInstance> & instance()const
 		{

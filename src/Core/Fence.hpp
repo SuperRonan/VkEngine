@@ -28,25 +28,9 @@ namespace vkl
 			create(signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0);
 		}
 
-		Fence(Fence const&) = delete;
+		virtual ~Fence() override;
 
-		constexpr Fence(Fence&& other) noexcept :
-			VkObject(std::move(other)),
-			_handle(other._handle)
-		{
-			other._handle = VK_NULL_HANDLE;
-		}
-
-		~Fence();
-
-		Fence& operator=(Fence const&) = delete;
-
-		Fence& operator=(Fence&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_handle, other._handle);
-			return *this;
-		}
+		
 
 		void create(VkFenceCreateFlags flags = 0);
 

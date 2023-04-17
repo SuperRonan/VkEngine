@@ -11,7 +11,7 @@ namespace vkl
 	{
 	protected:
 
-		PipelineLayout _layout;
+		std::shared_ptr<PipelineLayout> _layout;
 		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
 		std::vector<std::shared_ptr<DescriptorSetLayout>> _set_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
@@ -38,12 +38,7 @@ namespace vkl
 			return _shaders;
 		}
 
-		constexpr PipelineLayout const& pipelineLayout()const
-		{
-			return _layout;
-		}
-
-		constexpr PipelineLayout& pipelineLayout()
+		constexpr const auto & pipelineLayout()const
 		{
 			return _layout;
 		}
@@ -85,22 +80,10 @@ namespace vkl
 		virtual ~Program()override
 		{
 			destroyInstance();
-		}
-
-		Program(Program const& other) = delete;
-
-		Program(Program && other) noexcept:
-			ParentType(std::move(other)),
-			_shaders(std::move(other._shaders))
-		{}
-
-		Program& operator=(Program const&) = delete;
-
-		constexpr Program& operator=(Program&& other) noexcept
-		{
-			ParentType::operator=(std::move(other));
-			std::swap(_shaders, other._shaders);
-			return *this;
+			for (auto& shader : _shaders)
+			{
+				shader->removeInvalidationCallbacks(this);
+			}
 		}
 
 		virtual void createInstance() = 0;
@@ -240,21 +223,6 @@ namespace vkl
 
 		virtual ~ComputeProgram() override;
 
-		ComputeProgram(ComputeProgram const&) = delete;
-
-		ComputeProgram(ComputeProgram && other) noexcept:
-			Program(std::move(other)),
-			_shader(other._shader)
-		{}
-
-		ComputeProgram& operator=(ComputeProgram const&) = delete;
-
-		ComputeProgram& operator=(ComputeProgram&& other) noexcept
-		{
-			Program::operator=(std::move(other));
-			std::swap(_shader, other._shader);
-			return *this;
-		}
 
 		constexpr const std::shared_ptr<Shader>& shader()const
 		{

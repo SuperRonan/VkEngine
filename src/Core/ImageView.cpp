@@ -85,6 +85,7 @@ namespace vkl
 	ImageView::~ImageView()
 	{
 		destroyInstance();
+		_image->removeInvalidationCallbacks(this);
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
@@ -108,18 +109,6 @@ namespace vkl
 		}
 	}
 
-
-	ImageView::ImageView(ImageView&& other) noexcept :
-		AbstractInstanceHolder(std::move(other)),
-		_image(std::move(other._image)),
-		_type(other._type),
-		_format(other._format),
-		_components(other._components),
-		_range(other._range),
-		_inst(std::move(other._inst))
-	{
-
-	}
 
 	//ImageView::ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect) :
 	//	VkObject(*image),
@@ -154,20 +143,6 @@ namespace vkl
 	//{
 	//	createView();
 	//}
-
-	ImageView& ImageView::operator=(ImageView&& other) noexcept
-	{
-		//std::copySwap(*this, other);
-		AbstractInstanceHolder::operator=(std::move(other));
-		_image = std::move(other._image);
-		std::swap(_type, other._type);
-		std::swap(_format, other._format);
-		std::swap(_components, other._components);
-		std::swap(_range, other._range);
-		std::swap(_inst, other._inst);
-
-		return *this;
-	}
 
 	//StagingPool::StagingBuffer* ImageView::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
 	//{

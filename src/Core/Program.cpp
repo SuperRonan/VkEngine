@@ -192,7 +192,7 @@ namespace vkl
 			.pPushConstantRanges = _push_constants.data(),
 		};
 
-		_layout = PipelineLayout(_app, ci);
+		_layout = std::make_shared<PipelineLayout>(_app, ci);
 	}
 
 	void Program::destroyInstance()
@@ -233,7 +233,6 @@ namespace vkl
 		if (_geometry)	_shaders.push_back(_geometry);
 		if (_fragment)	_shaders.push_back(_fragment);
 		
-		reflect();
 		createLayout();
 	}
 
@@ -298,12 +297,15 @@ namespace vkl
 		ProgramInstance(ci.app, ci.name),
 		_shader(ci.shader)
 	{
+		_shaders = { _shader };
+		createLayout();
+		
 		extractLocalSize();
 	}
 	
 	void ComputeProgramInstance::extractLocalSize()
 	{
-		const auto& refl = _shaders.front()->reflection();
+		const auto& refl = _shader->reflection();
 		const auto& lcl = refl.entry_points[0].local_size;
 		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
 	}

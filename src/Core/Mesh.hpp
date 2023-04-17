@@ -42,11 +42,6 @@ namespace vkl
 		Mesh(VkApplication* app, std::vector<Vertex> const& vertices, std::vector<uint> const& indices) noexcept;
 		Mesh(VkApplication* app, std::vector<Vertex> && vertices, std::vector<uint> && indices) noexcept;
 
-		Mesh(Mesh const&);
-		Mesh(Mesh&& mesh) noexcept;
-		Mesh& operator=(Mesh const&);
-		Mesh& operator=(Mesh&&) noexcept;
-
 		~Mesh();
 
 		void merge(Mesh const& other) noexcept;
@@ -74,6 +69,6 @@ namespace vkl
 			return _device.indices_size;
 		}
 
-		static Mesh Cube(VkApplication * app, Vector3 center=Vector3(0), bool face_normal=true, bool same_face=true);
+		static std::shared_ptr<Mesh> MakeCube(VkApplication * app, Vector3 center=Vector3(0), bool face_normal=true, bool same_face=true);
 	};
 }

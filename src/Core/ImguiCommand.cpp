@@ -94,7 +94,7 @@ namespace vkl
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
 		};
 
-		_desc_pool = std::make_shared<DescriptorPool>(DescriptorPool(_app, VK_NULL_HANDLE));
+		_desc_pool = std::make_shared<DescriptorPool>(_app, VK_NULL_HANDLE);
 		VkDescriptorPoolCreateInfo ci{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			.pNext = nullptr,
@@ -163,7 +163,7 @@ namespace vkl
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,
 			.renderPass = *_render_pass,
-			.framebuffer = *_framebuffers[index],
+			.framebuffer = *_framebuffers[index]->instance(),
 			.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
 			.clearValueCount = (uint32_t)clear_values.size(),
 			.pClearValues = clear_values.data(),

@@ -438,7 +438,7 @@ namespace vkl
 			.vulkanApiVersion = VK_API_VERSION_1_2,
 		};
 		vmaCreateAllocator(&alloc_ci, &_allocator);
-		_staging_pool = std::make_unique<StagingPool>(this, _allocator);
+		//_staging_pool = std::make_unique<StagingPool>(this, _allocator);
 	}
 
 	void VkApplication::nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name)
@@ -480,7 +480,7 @@ namespace vkl
 		_pools.transfer = nullptr;
 		_pools.compute = nullptr;
 
-		_staging_pool = nullptr;
+		//_staging_pool = nullptr;
 		vmaDestroyAllocator(_allocator);
 
 		vkDestroyDevice(_device, nullptr);
@@ -510,10 +510,10 @@ namespace vkl
 		return _pools;
 	}
 
-	StagingPool& VkApplication::stagingPool()
-	{
-		return *_staging_pool;
-	}
+	//StagingPool& VkApplication::stagingPool()
+	//{
+	//	return *_staging_pool;
+	//}
 
 	VkApplication::~VkApplication()
 	{

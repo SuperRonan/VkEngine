@@ -33,43 +33,6 @@ namespace vkl
 		};
 	}
 
-	Mesh::Mesh(Mesh const& other):
-		VkObject(other)
-	{
-		assert(!other._device.loaded());
-		_host = other._host;
-		// Can't copy the device part
-	}
-
-	Mesh::Mesh(Mesh && other) noexcept:
-		VkObject(other)
-	{
-		_host = std::move(other._host);
-		_device = std::move(other._device);
-		// Reset the other device data to prevent a device clean
-		other._device = DeviceData();
-	}
-
-	Mesh& Mesh::operator=(Mesh const& other)
-	{
-		assert(!other._device.loaded());
-		assert(_device.loaded());
-		_host = other._host;
-		return *this;
-	}
-
-	Mesh& Mesh::operator=(Mesh&& other) noexcept
-	{
-		if (_device.loaded())
-		{
-			cleanDeviceBuffer();
-		}
-		_host = std::move(other._host);
-		_device = std::move(other._device);
-		other._device = DeviceData();
-		return *this;
-	}
-
 	Mesh::~Mesh() 
 	{
 		if (_device.loaded())
@@ -236,7 +199,7 @@ namespace vkl
 	}
 
 
-	Mesh Mesh::Cube(VkApplication * app, Vector3 center, bool face_normal, bool same_face)
+	std::shared_ptr<Mesh> Mesh::MakeCube(VkApplication * app, Vector3 center, bool face_normal, bool same_face)
 	{
 		using Float = float;
 		const Float h = Float(0.5);
@@ -303,8 +266,8 @@ namespace vkl
 
 		}
 
-		Mesh res = Mesh(app, std::move(vertices), std::move(indices));
-		res.computeTangents();
+		std::shared_ptr<Mesh> res = std::make_shared<Mesh>(app, std::move(vertices), std::move(indices));
+		res->computeTangents();
 		return res;
 	}
 }

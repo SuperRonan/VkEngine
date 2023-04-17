@@ -41,7 +41,7 @@ namespace vkl
 	{
 		if (_desc_sets.empty())
 		{
-			std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _prog->setLayouts();
+			std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _prog->instance()->setLayouts();
 			_desc_pools.resize(set_layouts.size());
 			_desc_sets.resize(set_layouts.size());
 			for (size_t i = 0; i < set_layouts.size(); ++i)
@@ -133,7 +133,7 @@ namespace vkl
 	{
 		// Attribute the program exposed bindings to the provided resources
 		const auto& program = *_prog;
-		const auto& sets = program.setLayouts();
+		const auto& sets = program.instance()->setLayouts();
 		for (size_t s = 0; s < sets.size(); ++s)
 		{
 			const auto& set = *sets[s];
@@ -223,24 +223,24 @@ namespace vkl
 		{
 			std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
 			for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
-			vkCmdBindDescriptorSets(cmd, binding, _prog->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
+			vkCmdBindDescriptorSets(cmd, binding, *_prog->instance()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
 		}
 	}
 
 	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
 	{
-		vkCmdBindPipeline(cmd, _pipeline->binding(), *_pipeline);
+		vkCmdBindPipeline(cmd, _pipeline->instance()->binding(), *_pipeline->instance());
 
-		_sets.recordBindings(cmd, _pipeline->binding());
+		_sets.recordBindings(cmd, _pipeline->instance()->binding());
 		
 		if (_pc)
 		{
 			VkShaderStageFlags pc_stages = 0;
-			for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
+			for (const auto& pc_range : _pipeline->program()->instance()->pushConstantRanges())
 			{
 				pc_stages |= pc_range.stageFlags;
 			}
-			vkCmdPushConstants(cmd, _pipeline->program()->pipelineLayout(), pc_stages, 0, (uint32_t)_pc.size(), _pc.data());
+			vkCmdPushConstants(cmd, *_pipeline->program()->instance()->pipelineLayout(), pc_stages, 0, (uint32_t)_pc.size(), _pc.data());
 		}
 	}
 

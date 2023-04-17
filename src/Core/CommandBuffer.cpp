@@ -10,26 +10,8 @@ namespace vkl
 		_handle(handle)
 	{}
 
-
-	CommandBuffer::CommandBuffer(CommandBuffer&& other):
-		VkObject(std::move(other)),
-		_pool(other._pool),
-		_handle(other._handle)
-	{
-		other._pool = VK_NULL_HANDLE;
-		other._handle = VK_NULL_HANDLE;
-	}
-
-	CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other)
-	{
-		VkObject::operator=(std::move(other));
-		std::swap(_pool, other._pool);
-		std::swap(_handle, other._handle);
-		return *this;
-	}
-
 	CommandBuffer::CommandBuffer(std::shared_ptr<CommandPool> pool, VkCommandBufferLevel level) :
-		VkObject(*pool),
+		VkObject(pool->application()),
 		_pool(std::move(pool)),
 		_level(level)
 	{

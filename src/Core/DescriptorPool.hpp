@@ -23,15 +23,7 @@ namespace vkl
 
 		DescriptorPool(std::shared_ptr<DescriptorSetLayout> layout, uint32_t max_sets = 1);
 
-		DescriptorPool(DescriptorPool const&) = delete;
-
-		DescriptorPool(DescriptorPool&& other) noexcept;
-
-		DescriptorPool& operator=(DescriptorPool const&) = delete;
-
-		DescriptorPool& operator=(DescriptorPool&&) noexcept;
-
-		~DescriptorPool();
+		virtual ~DescriptorPool() override;
 
 		void create(VkDescriptorPoolCreateInfo const& ci);
 

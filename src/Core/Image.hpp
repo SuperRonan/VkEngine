@@ -184,51 +184,7 @@ namespace vkl
 
 		Image(CreateInfo const& ci);
 
-		constexpr Image(Image const&) noexcept = delete;
-
-		Image(Image&& other) noexcept :
-			AbstractInstanceHolder(std::move(other)),
-			_flags(other._flags),
-			_type(other._type),
-			_format(other._format),
-			_extent(other._extent),
-			_mips(other._mips),
-			_layers(other._layers),
-			_samples(other._samples),
-			_tiling(other._tiling),
-			_usage(other._usage),
-			_queues(std::move(other._queues)),
-			_sharing_mode(other._sharing_mode),
-			_mem_usage(other._mem_usage),
-			_inst(std::move(other._inst)),
-			_initial_layout(other._initial_layout)
-		{
-
-		}
-
-		constexpr Image& operator=(Image const&) noexcept = delete;
-
-		Image& operator=(Image&& other)noexcept
-		{
-			AbstractInstanceHolder::operator=(std::move(other));
-			std::swap(_flags, other._flags);
-			std::swap(_type, other._type);
-			std::swap(_format, other._format);
-			std::swap(_extent, other._extent);
-			std::swap(_mips, other._mips);
-			std::swap(_layers, other._layers);
-			std::swap(_samples, other._samples);
-			std::swap(_tiling, other._tiling);
-			std::swap(_usage, other._usage);
-			std::swap(_queues, other._queues);
-			std::swap(_sharing_mode, other._sharing_mode);
-			std::swap(_mem_usage, other._mem_usage);
-			std::swap(_inst, other._inst);
-			std::swap(_initial_layout, other._initial_layout);
-			return *this;
-		}
-
-		~Image() {};
+		virtual ~Image() override {};
 
 		void createInstance();
 

@@ -42,26 +42,7 @@ namespace vkl
 
 		Surface(Surface const&) = delete;
 
-		Surface& operator=(Surface const&) = delete;
-
-		constexpr Surface(Surface&& other) noexcept :
-			VkObject(std::move(other)),
-			_window(other._window),
-			_surface(other._surface)
-		{
-			other._window = nullptr;
-			other._surface = VK_NULL_HANDLE;
-		}
-
-		constexpr Surface& operator=(Surface&& other) noexcept
-		{
-			VkObject::operator=(std::move(other));
-			std::swap(_window, other._window);
-			std::swap(_surface, other._surface);
-			return *this;
-		}
-
-		virtual ~Surface();
+		virtual ~Surface() override;
 
 		void queryDetails();
 
