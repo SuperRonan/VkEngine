@@ -12,36 +12,40 @@ namespace vkl
 			_sampler = desc.sampler;
 	}
 
+	DescriptorSetsInstance::DescriptorSetsInstance(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
+		_prog(ci.program),
+		_bindings(*ci.bindings)
+	{
+		resolveBindings();
+	}
+
+	DescriptorSetsInstance::~DescriptorSetsInstance()
+	{
+		
+	}
+
 	DescriptorSetsManager::~DescriptorSetsManager()
 	{
-		for (auto& binding : _bindings)
-		{
-			if (binding.isBuffer())
-			{
-				binding.buffer()->removeInvalidationCallbacks(this);
-			}
-			else if(binding.isImage())
-			{
-				binding.image()->removeInvalidationCallbacks(this);
-			}
-		}
+		_prog->removeInvalidationCallbacks(this);
 	}
 
-	void DescriptorSetsManager::invalidateDescriptorSets()
+	DescriptorSetsManager::DescriptorSetsManager(CreateInfo const& ci):
+		ParentType(ci.app, ci.name),
+		_prog(ci.program),
+		_bindings(ci.bindings.cbegin(), ci.bindings.cend())
 	{
-		_desc_pools.clear();
-		_desc_sets.clear();
-		for (auto& binding : _bindings)
-		{
-			binding.setUpdateStatus(false);
-		}
+		_prog->addInvalidationCallback({
+			.callback = [&]() {destroyInstance(); },
+			.id = this,
+		});
 	}
 
-	void DescriptorSetsManager::allocateDescriptorSets()
+	void DescriptorSetsInstance::allocateDescriptorSets()
 	{
 		if (_desc_sets.empty())
 		{
-			std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _prog->instance()->setLayouts();
+			std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _prog->setLayouts();
 			_desc_pools.resize(set_layouts.size());
 			_desc_sets.resize(set_layouts.size());
 			for (size_t i = 0; i < set_layouts.size(); ++i)
@@ -52,7 +56,7 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetsManager::writeDescriptorSets()
+	void DescriptorSetsInstance::writeDescriptorSets()
 	{
 		allocateDescriptorSets();
 
@@ -129,11 +133,11 @@ namespace vkl
 
 	}
 
-	void DescriptorSetsManager::resolveBindings()
+	void DescriptorSetsInstance::resolveBindings()
 	{
 		// Attribute the program exposed bindings to the provided resources
 		const auto& program = *_prog;
-		const auto& sets = program.instance()->setLayouts();
+		const auto& sets = program.setLayouts();
 		for (size_t s = 0; s < sets.size(); ++s)
 		{
 			const auto& set = *sets[s];
@@ -217,21 +221,75 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetsManager::recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding)
+	void DescriptorSetsInstance::recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding)
 	{
 		if (!_desc_sets.empty())
 		{
 			std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
 			for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
-			vkCmdBindDescriptorSets(cmd, binding, *_prog->instance()->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
+			vkCmdBindDescriptorSets(cmd, binding, *_prog->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
 		}
+	}
+
+	void DescriptorSetsManager::createInstance()
+	{
+		if (_inst)
+		{
+			destroyInstance();
+		}
+
+		DescriptorSetsInstance::CreateInfo ci{
+			.app = application(),
+			.name = name(),
+			.bindings = &_bindings,
+			.program = _prog->instance(),
+		};
+
+		_inst = std::make_shared<DescriptorSetsInstance>(ci);
+	}
+
+	void DescriptorSetsManager::destroyInstance()
+	{
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			for (auto& binding : _bindings)
+			{
+				if (binding.isBuffer())
+				{
+					binding.buffer()->removeInvalidationCallbacks(this);
+				}
+				else if (binding.isImage())
+				{
+					binding.image()->removeInvalidationCallbacks(this);
+				}
+				binding.unResolve();
+				binding.setUpdateStatus(false);
+			}
+			_inst = nullptr;
+		}
+	}
+
+	bool DescriptorSetsManager::updateResources()
+	{
+		bool res = false;
+
+		//res |= _prog->updateResources();
+
+		if (!_inst)
+		{
+			createInstance();
+			res = true;
+		}
+
+		return res;
 	}
 
 	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
 	{
 		vkCmdBindPipeline(cmd, _pipeline->instance()->binding(), *_pipeline->instance());
 
-		_sets.recordBindings(cmd, _pipeline->instance()->binding());
+		_sets->instance()->recordBindings(cmd, _pipeline->instance()->binding());
 		
 		if (_pc)
 		{
@@ -244,7 +302,7 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetsManager::recordInputSynchronization(InputSynchronizationHelper& synch)
+	void DescriptorSetsInstance::recordInputSynchronization(InputSynchronizationHelper& synch)
 	{
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
@@ -260,7 +318,9 @@ namespace vkl
 	{
 		bool res = false;
 
-		_sets.writeDescriptorSets();
+		res |= _sets->updateResources();
+
+		_sets->instance()->writeDescriptorSets();
 
 		return res;
 	}

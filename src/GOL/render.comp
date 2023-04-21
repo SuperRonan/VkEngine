@@ -35,7 +35,9 @@ void main()
         const uint bits = imageLoad(grid, px).x;
         const uint bit = (bits >> bit_idx) & 1; 
 
-        const vec4 value = float(bit).xxxx;
+        const vec4 off_color = vec4(0, 0, 0, 0);
+        const vec4 on_color = vec4(1, 0, 1, 1);
+        const vec4 value = mix(off_color, on_color, float(bit));
 
         imageStore(target, ivec2(gid), value);
         //imageStore(target, ivec2(gid), vec4(uv.xy, 1.0 - uv.x - uv.y, 1));

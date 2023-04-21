@@ -226,6 +226,7 @@ namespace vkl
 		});
 
 		_dependencies = _inst->dependencies();
+		_instance_time = std::chrono::file_clock::now();
 	}
 
 	void Shader::destroyInstance()
@@ -240,6 +241,23 @@ namespace vkl
 	bool Shader::updateResources()
 	{
 		bool res = false;
+		
+		for (const auto& dep : _dependencies)
+		{
+			const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
+			if (new_time > _instance_time)
+			{
+				res = true;
+				
+			}
+		}
+
+		if (res)
+		{
+			destroyInstance();
+		}
+		
+		
 		if (!_inst)
 		{
 			createInstance();
@@ -255,7 +273,9 @@ namespace vkl
 		_path(ci.source_path),
 		_stage(ci.stage),
 		_definitions(ci.definitions)
-	{}
+	{
+		_instance_time = std::filesystem::file_time_type::min();
+	}
 
 	Shader::~Shader()
 	{

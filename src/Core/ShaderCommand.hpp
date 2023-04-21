@@ -115,6 +115,11 @@ namespace vkl
 			return _resolved_binding != uint32_t(-1);
 		}
 
+		constexpr void unResolve()
+		{
+			_resolved_binding = uint32_t(-1);
+		}
+
 		constexpr void setBinding(uint32_t s, uint32_t b)
 		{
 			_set = s;
@@ -236,41 +241,29 @@ namespace vkl
 
 	};
 
-	class DescriptorSetsManager : public VkObject
+	class DescriptorSetsInstance : public VkObject 
 	{
 	protected:
-		
-		std::shared_ptr<Program> _prog;
+		std::shared_ptr<ProgramInstance> _prog;
+		std::vector<ResourceBinding> & _bindings;
 		std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
 		std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
-		std::vector<ResourceBinding> _bindings;
 		std::vector<Resource> _resources;
-	
+
 	public:
 
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<ShaderBindingDescription> bindings = {};
+			std::vector<ResourceBinding> * bindings = nullptr;
+			std::shared_ptr<ProgramInstance> program = nullptr;
 		};
 		using CI = CreateInfo;
 
-		DescriptorSetsManager(CreateInfo const& ci):
-			VkObject(ci.app, ci.name),
-			_bindings(ci.bindings.cbegin(), ci.bindings.cend())
-		{
+		DescriptorSetsInstance(CreateInfo const& ci);
 
-		}
-		
-		virtual ~DescriptorSetsManager() override;
-
-		void setProgram(std::shared_ptr<Program> const& prog)
-		{
-			_prog = prog;
-		}
-
-		void invalidateDescriptorSets();
+		virtual ~DescriptorSetsInstance() override;
 
 		void allocateDescriptorSets();
 
@@ -280,15 +273,45 @@ namespace vkl
 
 		void recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding);
 
-		void recordInputSynchronization(InputSynchronizationHelper & synch);
+		void recordInputSynchronization(InputSynchronizationHelper& synch);
 
+	};
+
+	class DescriptorSetsManager : public InstanceHolder<DescriptorSetsInstance>
+	{
+	protected:
+		using ParentType = InstanceHolder<DescriptorSetsInstance>;
+		
+		std::shared_ptr<Program> _prog;
+		std::vector<ResourceBinding> _bindings;
+	
+		void createInstance();
+
+		void destroyInstance();
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::vector<ShaderBindingDescription> bindings = {};
+			std::shared_ptr<Program> program = nullptr;
+		};
+		using CI = CreateInfo;
+
+		DescriptorSetsManager(CreateInfo const& ci);
+
+		virtual ~DescriptorSetsManager() override;
+
+		bool updateResources();
 	};
 
 	class ShaderCommand : public DeviceCommand
 	{
 	protected:
 
-		DescriptorSetsManager _sets;
+		std::shared_ptr<DescriptorSetsManager> _sets;
 
 		std::shared_ptr<Pipeline> _pipeline;
 
@@ -298,12 +321,7 @@ namespace vkl
 
 		template <typename StringLike = std::string>
 		ShaderCommand(VkApplication* app, StringLike&& name, std::vector<ShaderBindingDescription> const& bindings) :
-			DeviceCommand(app, std::forward<StringLike>(name)),
-			_sets(DescriptorSetsManager::CI{
-				.app = app,
-				.name = this->name() + ".descs",
-				.bindings = bindings,
-			})
+			DeviceCommand(app, std::forward<StringLike>(name))
 		{
 
 		}

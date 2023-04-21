@@ -66,7 +66,7 @@ namespace vkl
 	{
 		if (!_images_barriers.empty() || !_buffers_barriers.empty())
 		{
-			VkDependencyInfo dep{
+			const VkDependencyInfo dep{
 				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
 				.pNext = nullptr,
 				.dependencyFlags = 0,

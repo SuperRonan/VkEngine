@@ -26,7 +26,12 @@ namespace vkl
 			.name = _program->name(),
 			.program = _program,
 		});
-		_sets.setProgram(_program);
+		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
+			.app = application(),
+			.name = name() + ".sets",
+			.bindings = ci.bindings,
+			.program = _program,
+		});
 	}
 
 	void ComputeCommand::init()
@@ -39,13 +44,16 @@ namespace vkl
 		InputSynchronizationHelper synch(context);
 		recordBindings(cmd, context);
 
-		_sets.recordInputSynchronization(synch);
+		_sets->instance()->recordInputSynchronization(synch);
 		synch.record();
 
 		const VkExtent3D workgroups = getWorkgroupsDispatchSize();
 		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
 
 		synch.NotifyContext();
+
+		context.keppAlive(_pipeline->instance());
+		context.keppAlive(_sets->instance());
 	}
 
 	void ComputeCommand::execute(ExecutionContext& context)
@@ -60,12 +68,6 @@ namespace vkl
 		
 		res |= _pipeline->updateResources();
 		
-		if (res)
-		{
-			_sets.invalidateDescriptorSets();
-			_sets.resolveBindings();
-			
-		}
 
 		res |= ShaderCommand::updateResources();
 

@@ -150,6 +150,7 @@ namespace vkl
 	void LinearExecutor::beginFrame()
 	{
 		++_frame_index;
+		vkDeviceWaitIdle(device());
 		stackInBetween();
 		_in_between = InBetween{
 			.prev_cb = nullptr,
@@ -239,7 +240,7 @@ namespace vkl
 			InBetween& inb = _previous_in_betweens.front();
 			assert(!inb.fences.empty());
 			bool all_success = true;
-			for (auto& fence : inb.fences)
+			for (const auto& fence : inb.fences)
 			{
 				const VkResult res = vkGetFenceStatus(fence->device(), *fence);
 				if (res == VK_NOT_READY)
