@@ -152,7 +152,7 @@ namespace vkl
 
 	}
 
-	void ShaderInstance::compile(std::string const& code, std::string const& filename)
+	bool ShaderInstance::compile(std::string const& code, std::string const& filename)
 	{
 		shaderc::Compiler compiler;
 		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str());
@@ -161,7 +161,7 @@ namespace vkl
 		if (errors)
 		{
 			std::cerr << res.GetErrorMessage() << std::endl;
-			throw(std::runtime_error(res.GetErrorMessage()));
+			return false;
 		}
 		_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
 		VkShaderModuleCreateInfo module_ci{
@@ -170,6 +170,8 @@ namespace vkl
 			.pCode = _spv_code.data(),
 		};
 		VK_CHECK(vkCreateShaderModule(_app->device(), &module_ci, nullptr, &_module), "Failed to create a shader module.");
+
+		return true;
 	}
 
 	void ShaderInstance::reflect()
@@ -183,8 +185,32 @@ namespace vkl
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection))
 	{
-		std::string preprocessed = preprocess(ci.source_path, ci.definitions);
-		compile(preprocessed, ci.source_path.string());
+		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
+
+		while (true)
+		{
+			const std::filesystem::file_time_type update_time = [&]() {
+				std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
+				for (const auto& dep : _dependencies)
+				{
+					std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
+					res = std::max(res, ft);
+				}
+				return res;
+			}();
+
+			if (update_time >= compile_time)
+			{
+				_dependencies.clear();
+				std::string preprocessed = preprocess(ci.source_path, ci.definitions);
+				bool res = compile(preprocessed, ci.source_path.string());
+				compile_time = std::chrono::file_clock::now();
+				if (res)
+				{
+					break;
+				}
+			}
+		}
 		reflect();
 	}
 

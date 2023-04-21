@@ -49,7 +49,7 @@ namespace vkl
 
 		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions);
 
-		void compile(std::string const& code, std::string const& filename = "");
+		bool compile(std::string const& code, std::string const& filename = "");
 
 		void reflect();
 
