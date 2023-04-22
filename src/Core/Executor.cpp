@@ -150,7 +150,7 @@ namespace vkl
 	void LinearExecutor::beginFrame()
 	{
 		++_frame_index;
-		vkDeviceWaitIdle(device());
+		//vkDeviceWaitIdle(device());
 		stackInBetween();
 		_in_between = InBetween{
 			.prev_cb = nullptr,

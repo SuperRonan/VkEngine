@@ -81,6 +81,7 @@ namespace vkl
 		}
 		_width = width;
 		_height = height;
+		// I don't think it is necessary to do it, but for now we have some validation errors if we don't
 		vkDeviceWaitIdle(_app->device());
 		
 		_swapchain->reCreate();

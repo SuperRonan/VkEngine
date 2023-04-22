@@ -43,7 +43,7 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
+				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
 				.name = "Game of Life",
 				.w = 1024,
 				.h = 512,
@@ -63,11 +63,18 @@ namespace vkl
 			
 		}
 
-		void processInput(bool& pause)
+		struct InputState
+		{
+			bool pause;
+			bool reset;
+		};
+
+		void processInput(InputState & state)
 		{
 			GLFWwindow* window = _main_window->handle();
 
 			static int prev_pause = glfwGetKey(window, GLFW_KEY_SPACE);
+			static int prev_reset = glfwGetKey(window, GLFW_KEY_ENTER);
 
 
 			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -76,16 +83,22 @@ namespace vkl
 			int current_pause = glfwGetKey(window, GLFW_KEY_SPACE);
 			if ((current_pause == GLFW_RELEASE) && (prev_pause == GLFW_PRESS))
 			{
-				pause = !pause;
+				state.pause = !state.pause;
 			}
 
+			int current_reset = glfwGetKey(window, GLFW_KEY_ENTER);
+			if ((current_reset == GLFW_RELEASE) && (prev_reset == GLFW_PRESS))
+			{
+				state.reset = true;
+			}
+
+
 			prev_pause = current_pause;
+			prev_reset = current_reset;
 		}
 
 		virtual void run() override
 		{
-			bool paused = true;
-
 			LinearExecutor exec(_main_window);
 
 			const VkExtent2D grid_size = _world_size;
@@ -226,17 +239,26 @@ namespace vkl
 
 			glm::mat4 mat_for_render = mat_uv_to_grid;
 
+			uint32_t seed = 12;
 
 			exec.updateResources();
 			exec.beginFrame();
 			exec.beginCommandBuffer();
-			init_grid->setPushConstantsData(std::hash<uint32_t>{}(uint32_t(12)));
-			exec.execute(init_grid);
-			render_to_final->setPushConstantsData(mat_for_render);
-			exec.execute(render_to_final);
+			exec.execute((*init_grid)(ComputeCommand::DI{
+				.push_constant = seed
+			}));
+
+			exec.execute((* render_to_final)(ComputeCommand::DI{
+				.push_constant = mat_for_render,
+			}));
 			exec.preparePresentation(final_view);
 			exec.endCommandBufferAndSubmit();
 			exec.present();
+
+			InputState input_state{
+				.pause = true,
+				.reset = false,
+			};
 
 			while (!_main_window->shouldClose())
 			{
@@ -248,9 +270,8 @@ namespace vkl
 				bool should_render = true;
 
 				_main_window->pollEvents();
-				bool p = paused;
-				processInput(paused);
-				should_render |= p != paused;
+				bool p = input_state.pause;
+				processInput(input_state);
 				
 
 				mouse_handler.update(dt);
@@ -268,21 +289,31 @@ namespace vkl
 
 				mat_uv_to_grid = screen_coords_matrix * camera.matrix();
 
-				if(!paused || should_render)
+				if(!input_state.pause|| should_render)
 				{
 					
 					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 
-					if (!paused)
+					if (input_state.reset)
+					{
+						input_state.reset = false;
+						seed = std::hash<uint32_t>{}(seed);
+						exec.execute((*init_grid)(ComputeCommand::DI{
+							.push_constant = seed
+						}));
+					}
+
+					if (!input_state.pause)
 					{
 						exec.execute(copy_back_to_prev);
 						exec.execute(update_grid);
 					}
 					mat_for_render = mat_uv_to_grid;
-					render_to_final->setPushConstantsData(mat_for_render);
-					exec.execute(render_to_final);
+					exec.execute((*render_to_final)(ComputeCommand::DI{
+						.push_constant = mat_for_render,
+					}));
 					exec.preparePresentation(final_view);
 					exec.endCommandBufferAndSubmit();
 					exec.present();

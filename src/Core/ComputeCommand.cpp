@@ -39,15 +39,15 @@ namespace vkl
 
 	}
 
-	void ComputeCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context)
+	void ComputeCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di)
 	{
 		InputSynchronizationHelper synch(context);
-		recordBindings(cmd, context);
+		recordBindings(cmd, context, di.push_constant);
 
 		_sets->instance()->recordInputSynchronization(synch);
 		synch.record();
 
-		const VkExtent3D workgroups = getWorkgroupsDispatchSize();
+		const VkExtent3D workgroups = _dispatch_threads ? getWorkgroupsDispatchSize(di.extent) : di.extent;
 		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
 
 		synch.NotifyContext();
@@ -56,10 +56,32 @@ namespace vkl
 		context.keppAlive(_sets->instance());
 	}
 
-	void ComputeCommand::execute(ExecutionContext& context)
+	void ComputeCommand::execute(ExecutionContext& context, DispatchInfo const& di)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		recordCommandBuffer(*cmd, context);
+		recordCommandBuffer(*cmd, context, di);
+	}
+
+	void ComputeCommand::execute(ExecutionContext& context)
+	{
+		DispatchInfo di{
+			.push_constant = _pc,
+			.extent = _dispatch_size.value(),
+		};
+		execute(context, di);
+	}
+
+	Executable ComputeCommand::executeWith(DispatchInfo const& di)
+	{
+		using namespace vk_operators;
+		return [this, di](ExecutionContext& ctx)
+		{
+			DispatchInfo _di{
+				.push_constant = di.push_constant.operator bool() ? di.push_constant : _pc,
+				.extent = di.extent != makeZeroExtent3D() ? di.extent : _dispatch_size.value(),
+			};
+			execute(ctx, _di);
+		};
 	}
 
 	bool ComputeCommand::updateResources()

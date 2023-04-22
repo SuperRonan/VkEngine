@@ -285,20 +285,20 @@ namespace vkl
 		return res;
 	}
 
-	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
+	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
 	{
 		vkCmdBindPipeline(cmd, _pipeline->instance()->binding(), *_pipeline->instance());
 
 		_sets->instance()->recordBindings(cmd, _pipeline->instance()->binding());
 		
-		if (_pc)
+		if (pc)
 		{
 			VkShaderStageFlags pc_stages = 0;
 			for (const auto& pc_range : _pipeline->program()->instance()->pushConstantRanges())
 			{
 				pc_stages |= pc_range.stageFlags;
 			}
-			vkCmdPushConstants(cmd, *_pipeline->program()->instance()->pipelineLayout(), pc_stages, 0, (uint32_t)_pc.size(), _pc.data());
+			vkCmdPushConstants(cmd, *_pipeline->program()->instance()->pipelineLayout(), pc_stages, 0, (uint32_t)pc.size(), pc.data());
 		}
 	}
 

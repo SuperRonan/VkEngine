@@ -20,6 +20,13 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		struct DispatchInfo
+		{
+			PushConstant push_constant = {};
+			VkExtent3D extent = makeZeroExtent3D();
+		};
+		using DI = DispatchInfo;
+
 	protected:
 
 		std::filesystem::path _shader_path;
@@ -29,17 +36,28 @@ namespace vkl
 		DynamicValue<VkExtent3D> _dispatch_size = {};
 		bool _dispatch_threads = false;
 
+		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di) ;
+
 	public:
 
 		ComputeCommand(CreateInfo const& ci);
 
 		virtual ~ComputeCommand() override = default;
 
-		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context) override;
 
 		virtual void init() override;
 
+
+		void execute(ExecutionContext& context, DispatchInfo const& di);
+		
 		virtual void execute(ExecutionContext& context) override;
+
+		Executable executeWith(DispatchInfo const& di);
+
+		Executable operator()(DispatchInfo const& di)
+		{
+			return executeWith(di);
+		}
 
 		virtual bool updateResources()override;
 
@@ -58,26 +76,19 @@ namespace vkl
 			return _dispatch_size;
 		}
 
-		VkExtent3D getWorkgroupsDispatchSize()const
+		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
 		{
 			const std::shared_ptr<ComputeProgramInstance> & prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
-
-			const VkExtent3D res = _dispatch_threads ? VkExtent3D{
-				.width = std::divCeil(_dispatch_size.value().width, prog->localSize().width),
-				.height = std::divCeil(_dispatch_size.value().height, prog->localSize().height),
-				.depth = std::divCeil(_dispatch_size.value().depth, prog->localSize().depth),
-			} : _dispatch_size.value();
-			return res;
+			return VkExtent3D{
+				.width = std::divCeil(threads.width, prog->localSize().width),
+				.height = std::divCeil(threads.height, prog->localSize().height),
+				.depth = std::divCeil(threads.depth, prog->localSize().depth),
+			};
 		}
 
-		VkExtent3D getThreadsDispatchSize()const
+		VkExtent3D getWorkgroupsDispatchSize()const
 		{
-			const std::shared_ptr<ComputeProgramInstance>& prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
-			const VkExtent3D res = _dispatch_threads ? _dispatch_size.value() : VkExtent3D{
-				.width = (_dispatch_size.value().width * prog->localSize().width),
-				.height = (_dispatch_size.value().height * prog->localSize().height),
-				.depth = (_dispatch_size.value().depth * prog->localSize().depth),
-			};
+			const VkExtent3D res = _dispatch_threads ? getWorkgroupsDispatchSize(_dispatch_size) : _dispatch_size.value();
 			return res;
 		}
 	};

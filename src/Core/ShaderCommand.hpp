@@ -16,28 +16,30 @@ namespace vkl
 
 		constexpr PushConstant() = default;
 
+		PushConstant(PushConstant const& o) :
+			_data(o._data)
+		{}
+
+		PushConstant(PushConstant&& o) noexcept :
+			_data(std::move(o._data))
+		{}
+
 		template<class T>
-		PushConstant(T&& t) :
+		PushConstant(T const& t) :
 			_data(sizeof(T))
 		{
 			std::memcpy(_data.data(), &t, sizeof(T));
 		}
 
 		template <class T>
-		PushConstant& operator=(T&& t)
+		PushConstant& operator=(T const& t)
 		{
 			_data.resize(sizeof(T));
 			std::memcpy(_data.data(), &t, sizeof(T));
 			return *this;
 		}
 
-		PushConstant(PushConstant const& o):
-			_data(o._data)
-		{}
-
-		PushConstant(PushConstant && o) noexcept:
-			_data(std::move(o._data))
-		{}
+		
 
 		PushConstant& operator=(PushConstant const& o)
 		{
@@ -328,9 +330,7 @@ namespace vkl
 
 		virtual ~ShaderCommand() override = default;
 
-		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
-
-		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context) = 0;
+		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc);
 
 		template<typename T>
 		void setPushConstantsData(T && t)
