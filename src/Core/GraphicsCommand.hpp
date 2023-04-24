@@ -19,11 +19,15 @@ namespace vkl
 		std::optional<VkClearColorValue> _clear_color = {};
 		std::optional<VkClearDepthStencilValue> _clear_depth_stencil = {};
 
+		std::optional<VkPipelineColorBlendAttachmentState> _blending = {};
+
 		virtual void createProgramIFN() = 0;
 
 		virtual void createGraphicsResources();
 
-		virtual void declareGraphicsResources();
+		void createPipeline();
+
+		virtual void declareGraphicsResources(InputSynchronizationHelper & synch);
 
 	public:
 
@@ -37,18 +41,20 @@ namespace vkl
 			std::optional<bool> write_depth = {};
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
+			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
 		};
 
 		GraphicsCommand(CreateInfo const& ci);
 
 		virtual void init() override;
+		
+		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context);
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) = 0;
-
-		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context) override;
-
-		virtual void execute(ExecutionContext& context) override;
+		virtual bool updateResources() override;
 	};
+
+
+
 
 	// Uses the "classic" vertex pipeline
 	class VertexCommand : public GraphicsCommand
@@ -69,7 +75,7 @@ namespace vkl
 
 		std::optional<uint32_t> _draw_count = false;
 
-		std::optional<VkPipelineColorBlendAttachmentState> _blending = {};
+
 
 		virtual void createProgramIFN() override;
 
@@ -95,14 +101,26 @@ namespace vkl
 
 			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
 		};
-
 		using CI = CreateInfo;
+
+		struct DrawInfo
+		{
+			uint32_t draw_count = 0;
+			std::optional<VkViewport> viewport = {};
+		};
+		using DI = DrawInfo;
 
 		VertexCommand(CreateInfo const& ci);
 
 		virtual void init() override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) override;
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di);
+
+		void execute(ExecutionContext& ctx, DrawInfo const& di);
+
+		virtual void execute(ExecutionContext& ctx) override;
+
+		virtual bool updateResources() override;
 	};
 
 	// Uses the mesh pipeline
@@ -134,7 +152,7 @@ namespace vkl
 
 		virtual void init() override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context) override;
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context);
 
 	};
 }

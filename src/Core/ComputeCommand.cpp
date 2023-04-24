@@ -87,9 +87,6 @@ namespace vkl
 	bool ComputeCommand::updateResources()
 	{
 		bool res = false;
-		
-		res |= _pipeline->updateResources();
-		
 
 		res |= ShaderCommand::updateResources();
 

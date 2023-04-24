@@ -318,6 +318,8 @@ namespace vkl
 	{
 		bool res = false;
 
+		res |= _pipeline->updateResources();
+
 		res |= _sets->updateResources();
 
 		_sets->instance()->writeDescriptorSets();

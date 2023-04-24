@@ -339,8 +339,8 @@ namespace vkl
 
 		VK_LOG << "Found " << physical_device_count << " physical device(s)\n";
 
-		//_physical_device = *std::findBest(physical_devices.cbegin(), physical_devices.cend(), [this](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
-		_physical_device = physical_devices[1];
+		_physical_device = *std::findBest(physical_devices.cbegin(), physical_devices.cend(), [this](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+		//_physical_device = physical_devices[1];
 
 		VkPhysicalDeviceProperties props;
 		vkGetPhysicalDeviceProperties(_physical_device, &props);

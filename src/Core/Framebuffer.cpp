@@ -95,4 +95,16 @@ namespace vkl
 			_textures[i]->removeInvalidationCallbacks(this);
 		}
 	}
+
+	bool Framebuffer::updateResources()
+	{
+		bool res = false;
+
+		if (!_inst)
+		{
+			createInstance();
+		}
+
+		return res;
+	}
 }

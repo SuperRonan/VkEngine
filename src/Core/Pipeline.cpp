@@ -50,6 +50,7 @@ namespace vkl
 			gci.depth_stencil = _gci.depth_stencil;
 			gci.attachements_blends = _gci.attachements_blends;
 			gci.render_pass = _gci.render_pass;
+			gci.dynamic = _gci.dynamic;
 			gci.program = std::dynamic_pointer_cast<GraphicsProgramInstance>(_gci.program->instance());
 
 			_inst = std::make_shared<PipelineInstance>(gci);

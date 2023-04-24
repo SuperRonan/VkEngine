@@ -31,11 +31,13 @@ namespace vkl
 			std::vector<VkPipelineColorBlendAttachmentState> attachements_blends;
 			std::shared_ptr<RenderPass> render_pass;
 			std::shared_ptr<GraphicsProgramInstance> program;
+			std::vector<VkDynamicState> dynamic;
 
 		protected:
 			mutable VkPipelineViewportStateCreateInfo _viewport;
 			mutable VkPipelineColorBlendStateCreateInfo _blending;
 			mutable std::vector<VkPipelineShaderStageCreateInfo> _shaders;
+			mutable VkPipelineDynamicStateCreateInfo _dynamic_state;
 			mutable VkGraphicsPipelineCreateInfo _pipeline_ci;
 		public:
 
@@ -63,6 +65,14 @@ namespace vkl
 					{
 						_shaders[i] = program->shaders()[i]->getPipelineShaderStageCreateInfo();
 					}
+
+					_dynamic_state = {
+						.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+						.pNext = nullptr,
+						.flags = 0,
+						.dynamicStateCount = static_cast<uint32_t>(dynamic.size()),
+						.pDynamicStates = dynamic.data(),
+					};
 				}
 
 				_pipeline_ci = VkGraphicsPipelineCreateInfo{
@@ -78,7 +88,7 @@ namespace vkl
 					.pMultisampleState = &multisampling,
 					.pDepthStencilState = depth_stencil.has_value() ? &depth_stencil.value() : nullptr,
 					.pColorBlendState = &_blending,
-					.pDynamicState = nullptr,
+					.pDynamicState = &_dynamic_state,
 					.layout = *program->pipelineLayout(),
 					.renderPass = *render_pass,
 					.subpass = 0,
@@ -278,6 +288,8 @@ namespace vkl
 			std::shared_ptr<RenderPass> render_pass;
 
 			std::shared_ptr<GraphicsProgram> program;
+
+			std::vector<VkDynamicState> dynamic;
 
 		};
 		
