@@ -201,8 +201,13 @@ namespace vkl
 
 			if (update_time >= compile_time)
 			{
+				Sleep(1);
 				_dependencies.clear();
 				std::string preprocessed = preprocess(ci.source_path, ci.definitions);
+				if (preprocessed == "")
+				{
+					continue;
+				}
 				bool res = compile(preprocessed, ci.source_path.string());
 				compile_time = std::chrono::file_clock::now();
 				if (res)

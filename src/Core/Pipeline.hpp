@@ -44,11 +44,22 @@ namespace vkl
 			const VkGraphicsPipelineCreateInfo & assemble() const
 			{
 				{
+					uint32_t num_viewport = static_cast<uint32_t>(viewports.size());
+					uint32_t num_scissor = static_cast<uint32_t>(scissors.size());
+					if (std::find(dynamic.cbegin(), dynamic.cend(), VK_DYNAMIC_STATE_VIEWPORT) != dynamic.cend())
+					{
+						num_viewport = 1;
+					}
+					if (std::find(dynamic.cbegin(), dynamic.cend(), VK_DYNAMIC_STATE_SCISSOR) != dynamic.cend())
+					{
+						num_scissor = 1;
+					}
+
 					_viewport = {
 						.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-						.viewportCount = (uint32_t)viewports.size(),
+						.viewportCount = num_viewport,
 						.pViewports = viewports.data(),
-						.scissorCount = (uint32_t)scissors.size(),
+						.scissorCount = num_scissor,
 						.pScissors = scissors.data(),
 					};
 
@@ -169,6 +180,16 @@ namespace vkl
 			VkPipelineInputAssemblyStateCreateInfo input_assembly{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 				.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+				.primitiveRestartEnable = VK_FALSE,
+			};
+			return input_assembly;
+		}
+
+		constexpr static VkPipelineInputAssemblyStateCreateInfo InputAssemblyLineDefault()
+		{
+			VkPipelineInputAssemblyStateCreateInfo input_assembly{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+				.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
 				.primitiveRestartEnable = VK_FALSE,
 			};
 			return input_assembly;

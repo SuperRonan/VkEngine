@@ -48,7 +48,14 @@ namespace vkl
 
 		virtual void init() override;
 		
-		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context);
+		struct DrawInfo
+		{
+			VkViewport viewport;
+		};
+
+		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di, void * user_data);
+
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data) = 0;
 
 		virtual bool updateResources() override;
 	};
@@ -114,7 +121,7 @@ namespace vkl
 
 		virtual void init() override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di);
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
 
 		void execute(ExecutionContext& ctx, DrawInfo const& di);
 

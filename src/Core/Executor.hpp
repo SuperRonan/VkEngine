@@ -44,6 +44,7 @@ namespace vkl
 			std::shared_ptr<CommandBuffer> next_cb = nullptr;
 			std::vector<std::shared_ptr<Fence>> fences = {};
 			std::shared_ptr<Semaphore> semaphore = nullptr;
+			std::vector<std::shared_ptr<VkObject>> dependecies = {};
 		};
 
 		void stackInBetween();

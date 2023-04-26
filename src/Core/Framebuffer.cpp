@@ -50,7 +50,7 @@ namespace vkl
 			.app = application(),
 			.name = name(),
 			.render_pass = _render_pass,
-			.depth = _depth->instance(),
+			.depth = _depth ? _depth->instance() : nullptr,
 		};
 		ci.targets.resize(_textures.size());
 		for (size_t i = 0; i < _textures.size(); ++i)

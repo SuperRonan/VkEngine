@@ -338,7 +338,10 @@ namespace vkl
 			_pc = t;
 		}
 
-		virtual void init() override = 0;
+		virtual void init() override 
+		{ 
+			DeviceCommand::init();
+		};
 
 		virtual void execute(ExecutionContext& context) override = 0;
 

@@ -98,6 +98,7 @@ namespace vkl
 		});
 
 		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+			.app = application(),
 			.name = name() + ".Framebuffer",
 			.render_pass = _render_pass,
 			.targets = _attachements,
@@ -143,6 +144,7 @@ namespace vkl
 	void GraphicsCommand::createPipeline()
 	{
 		Pipeline::GraphicsCreateInfo gci;
+		gci.app = application();
 		gci.name = name() + ".Pipeline";
 		gci.vertex_input = Pipeline::VertexInputWithoutVertices();
 		gci.input_assembly = Pipeline::InputAssemblyPointDefault();
@@ -177,8 +179,6 @@ namespace vkl
 
 	void GraphicsCommand::init()
 	{
-		createProgramIFN();
-		createGraphicsResources();
 		ShaderCommand::init();
 	}
 
@@ -193,9 +193,12 @@ namespace vkl
 		return res;
 	}
 
-	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context)
+	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di, void * user_info)
 	{
-		InputSynchronizationHelper sync(context);
+		InputSynchronizationHelper synch(context);
+
+		declareGraphicsResources(synch);
+		_sets->instance()->recordInputSynchronization(synch);
 
 		VkExtent2D render_area = extract(_framebuffer->extent());
 
@@ -225,6 +228,8 @@ namespace vkl
 			.pClearValues = num_clear_values ? clear_values.data() : nullptr,
 		};
 
+		synch.record();
+
 		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
 		{
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *_pipeline->instance());
@@ -240,9 +245,15 @@ namespace vkl
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
 			recordBindings(cmd, context, _pc);
-			recordDraw(cmd, context);
+			recordDraw(cmd, context, user_info);
 		}
 		vkCmdEndRenderPass(cmd);
+
+		context.keppAlive(_pipeline->instance());
+		context.keppAlive(_framebuffer->instance());
+		context.keppAlive(_render_pass);
+		context.keppAlive(_sets->instance());
+		synch.NotifyContext();
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :
@@ -266,7 +277,16 @@ namespace vkl
 		_draw_count(ci.draw_count),
 		_meshes(ci.meshes)
 	{
-		
+		createProgramIFN();
+		createGraphicsResources();
+		createPipeline();
+
+		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
+			.app = application(),
+			.name = name() + ".sets",
+			.bindings = ci.bindings,
+			.program = _program,
+		});
 	}
 
 	void VertexCommand::createProgramIFN()
@@ -274,15 +294,33 @@ namespace vkl
 		std::shared_ptr<Shader> vert = nullptr, geom = nullptr, frag = nullptr;
 		if (!_shaders.vertex_path.empty())
 		{
-			vert = std::make_shared<Shader>(application(), _shaders.vertex_path, VK_SHADER_STAGE_VERTEX_BIT, _shaders.definitions);
+			vert = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+				.name = name() + ".vert",
+				.source_path = _shaders.vertex_path,
+				.stage = VK_SHADER_STAGE_VERTEX_BIT,
+				.definitions = _shaders.definitions
+			});
 		}
 		if (!_shaders.geometry_path.empty())
 		{
-			geom = std::make_shared<Shader>(application(), _shaders.geometry_path, VK_SHADER_STAGE_GEOMETRY_BIT, _shaders.definitions);
+			geom = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+				.name = name() + ".geom",
+				.source_path = _shaders.geometry_path,
+				.stage = VK_SHADER_STAGE_GEOMETRY_BIT,
+				.definitions = _shaders.definitions
+			});
 		}
 		if (!_shaders.fragment_path.empty())
 		{
-			frag = std::make_shared<Shader>(application(), _shaders.fragment_path, VK_SHADER_STAGE_FRAGMENT_BIT, _shaders.definitions);
+			frag = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+				.name = name() + ".frag",
+				.source_path = _shaders.fragment_path,
+				.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+				.definitions = _shaders.definitions
+			});
 		}
 		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfo{
 			.app = application(),
@@ -299,8 +337,9 @@ namespace vkl
 
 	}
 
-	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di)
+	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data)
 	{
+		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
 		if (di.draw_count > 0)
 		{
 			vkCmdDraw(cmd, di.draw_count, 1, 0, 0);
@@ -313,6 +352,32 @@ namespace vkl
 				vkCmdDrawIndexed(cmd, (uint32_t)mesh->indicesSize(), 1, 0, 0, 0);
 			}
 		}
+	}
+
+	void VertexCommand::execute(ExecutionContext & ctx)
+	{
+		CommandBuffer& cmd = *ctx.getCommandBuffer();
+
+		GraphicsCommand::DrawInfo gdi{
+
+		};
+
+		DrawInfo di{
+			.draw_count = _draw_count.value_or(0),
+		};
+
+		recordCommandBuffer(cmd, ctx, gdi, &di);
+
+		
+	}
+
+	bool VertexCommand::updateResources()
+	{
+		bool res = false;
+
+		res |= GraphicsCommand::updateResources();
+
+		return res;
 	}
 
 	//void FragCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)

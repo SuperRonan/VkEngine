@@ -151,14 +151,18 @@ namespace vkl
 	{
 		++_frame_index;
 		//vkDeviceWaitIdle(device());
+		std::shared_ptr frame_semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore");
+		_context.keppAlive(frame_semaphore);
+		std::shared_ptr prev_semaphore = _in_between.semaphore;
 		stackInBetween();
 		_in_between = InBetween{
 			.prev_cb = nullptr,
 			.next_cb = nullptr,
 			.fences = {std::make_shared<Fence>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Fence")},
-			.semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore"),
+			.semaphore = frame_semaphore,
 		};
 		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fences[0]);
+		_context.keppAlive(prev_semaphore);
 		int _ = 0;
 	}
 
@@ -234,6 +238,9 @@ namespace vkl
 
 	void LinearExecutor::stackInBetween()
 	{
+		_in_between.dependecies = std::move(_context._objects_to_keep);
+		_context._objects_to_keep.clear();
+
 		// Removed finished in betweens
 		while(!_previous_in_betweens.empty())
 		{
@@ -271,7 +278,8 @@ namespace vkl
 
 	void LinearExecutor::submit()
 	{
-		VkSemaphore sem_to_wait = [&]() -> VkSemaphore {
+		std::shared_ptr sem_to_wait = _in_between.semaphore;
+		VkSemaphore vk_sem_to_wait = [&]() -> VkSemaphore {
 			if (_in_between.semaphore)	return *_in_between.semaphore;
 			return VK_NULL_HANDLE;
 		}();
@@ -282,30 +290,34 @@ namespace vkl
 		_in_between.next_cb = _command_buffer_to_submit;
 		_in_between.fences.push_back(submit_fence);
 
+		std::shared_ptr sem_to_signal = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore");
+		_context.keppAlive(sem_to_signal);
 		stackInBetween();
 
 		VkCommandBuffer cb = *_command_buffer_to_submit;
+
 
 		_in_between = InBetween{
 			.prev_cb = _command_buffer_to_submit,
 			.next_cb = nullptr,
 			.fences = {submit_fence},
-			.semaphore = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore"),
+			.semaphore = sem_to_signal,
 		};
+		_context.keppAlive(sem_to_wait);
 
-		VkSemaphore sem_to_signal = *_in_between.semaphore;
+		VkSemaphore vk_sem_to_signal = *_in_between.semaphore;
 
 		const bool wait_on_sem = sem_to_wait != VK_NULL_HANDLE;
 
 		VkSubmitInfo submission{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			.waitSemaphoreCount = wait_on_sem ? 1u : 0u,
-			.pWaitSemaphores = wait_on_sem ? &sem_to_wait : nullptr,
+			.pWaitSemaphores = wait_on_sem ? &vk_sem_to_wait : nullptr,
 			.pWaitDstStageMask = &wait_stage,
 			.commandBufferCount = 1,
 			.pCommandBuffers = &cb,
 			.signalSemaphoreCount = 1,
-			.pSignalSemaphores = &sem_to_signal,
+			.pSignalSemaphores = &vk_sem_to_signal,
 		};
 
 		vkQueueSubmit(_app->queues().graphics, 1, &submission, *_in_between.fences[0]);

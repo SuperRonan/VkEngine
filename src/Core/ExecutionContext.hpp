@@ -170,6 +170,8 @@ namespace vkl
 
 		std::vector<std::shared_ptr<VkObject>> _objects_to_keep;
 
+		friend class LinearExecutor;
+
 
 	public:
 
