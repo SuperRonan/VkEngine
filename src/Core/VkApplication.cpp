@@ -251,12 +251,12 @@ namespace vkl
 
 	bool VkApplication::isDeviceSuitable(VkPhysicalDevice const& device)
 	{
-		bool res = false;
+		bool res = true;
 
 		VkBool32 present_support = false;
 		QueueFamilyIndices indices = findQueueFamilies(device);
 
-		res = indices.isComplete();
+		//res = indices.isComplete();
 
 		if (res)
 		{
@@ -266,7 +266,7 @@ namespace vkl
 
 		if (res)
 		{
-			res = checkDeviceExtensionSupport(device);
+			//res = checkDeviceExtensionSupport(device);
 		}
 
 		//if (res)
@@ -280,7 +280,7 @@ namespace vkl
 		{
 			VkPhysicalDeviceFeatures features;
 			vkGetPhysicalDeviceFeatures(device, &features);
-			res = features.samplerAnisotropy;
+			//res = features.samplerAnisotropy;
 		}
 
 		return res;
@@ -303,7 +303,7 @@ namespace vkl
 
 		int64_t discrete_multiplicator = (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 8 : 1;
 
-		res += props.limits.maxImageDimension2D;
+		res += 1;
 
 		res *= discrete_multiplicator;
 
@@ -339,7 +339,9 @@ namespace vkl
 
 		VK_LOG << "Found " << physical_device_count << " physical device(s)\n";
 
-		_physical_device = *std::findBest(physical_devices.cbegin(), physical_devices.cend(), [this](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+		auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), [&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+		_physical_device = *it;
+		size_t device_index = it - physical_devices.cbegin();
 		//_physical_device = physical_devices[1];
 
 		VkPhysicalDeviceProperties props;

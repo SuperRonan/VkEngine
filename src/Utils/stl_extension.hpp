@@ -77,7 +77,7 @@ namespace std
 		for (; begin != end; ++begin)
 		{
 			auto new_rate = rate(*begin);
-			if (new_rate < best_rate)
+			if (new_rate > best_rate)
 			{
 				best_rate = new_rate;
 				res = begin;

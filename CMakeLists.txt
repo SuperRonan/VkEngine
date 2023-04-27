@@ -132,12 +132,12 @@ TARGET_LINK_LIBRARIES(GameOfLife ${ALL_EXT_LIBS} VkEngine)
 ADD_EXECUTABLE(Paint src/Paint/main.cpp)
 TARGET_LINK_LIBRARIES(Paint ${ALL_EXT_LIBS} VkEngine)
 
-# ADD_EXECUTABLE(Particules src/Particules/main.cpp)
-# TARGET_LINK_LIBRARIES(Particules ${ALL_EXT_LIBS} VkEngine)
+ADD_EXECUTABLE(Particules src/Particules/main.cpp)
+TARGET_LINK_LIBRARIES(Particules ${ALL_EXT_LIBS} VkEngine)
 
 # ADD_EXECUTABLE(Flotsam src/Flotsam/main.cpp)
 # TARGET_LINK_LIBRARIES(Flotsam ${ALL_EXT_LIBS} VkEngine)
 
 INSTALL(TARGETS VkEngine DESTINATION lib)
 # INSTALL(TARGETS Cloth GameOfLife Particules Flotsam DESTINATION bin)
-INSTALL(TARGETS GameOfLife Paint DESTINATION bin)
+INSTALL(TARGETS GameOfLife Paint Particules DESTINATION bin)

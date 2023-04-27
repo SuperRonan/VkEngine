@@ -101,6 +101,20 @@ namespace vkl
 			.z = z,
 		};
 	}
+
+	inline DynamicValue<VkExtent3D> extendD(DynamicValue<VkExtent2D> const& e2, uint32_t d = 1)
+	{
+		return [=]() {
+			return extend(e2.value(), d);
+		};
+	}
+
+	inline DynamicValue<VkOffset3D> extendD(DynamicValue<VkOffset2D> const& o2, int z = 0)
+	{
+		return [=]() {
+			return extend(o2.value(), z);
+		};
+	}
 	
 	constexpr VkExtent2D extract(VkExtent3D e3)
 	{

@@ -24,7 +24,7 @@
 namespace vkl
 {
 
-	class ParticuleSim : VkApplication
+	class ParticuleSim : public VkApplication
 	{
 	protected:
 
@@ -205,7 +205,7 @@ namespace vkl
 				.name = "RenderTargetImg",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
-				.extent = extend(_main_window->extent()),
+				.extent = _main_window->extent3D(),
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -352,10 +352,12 @@ namespace vkl
 
 			size_t current_grid_id = 0;
 
-			const glm::mat3 screen_coords_matrix = vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent().height) / float(_main_window->extent().width)});
-			const glm::vec2 move_scale(2.0 / float(_main_window->extent().width), 2.0 / float(_main_window->extent().height));
+			DynamicValue<glm::mat3> screen_coords_matrix = [&]() {return vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent2D().value().height) / float(_main_window->extent2D().value().width) }); };
+
+			DynamicValue<glm::vec2> move_scale = [&]() {return glm::vec2(2.0 / float(_main_window->extent2D().value().width), 2.0 / float(_main_window->extent2D().value().height)); };
+
 			camera.move(glm::vec2(-1, -1));
-			glm::mat3 mat_world_to_cam = glm::inverse(screen_coords_matrix * camera.matrix());
+			DynamicValue<glm::mat3> mat_world_to_cam = [&]() {return glm::inverse(screen_coords_matrix.value() * camera.matrix()); };
 
 			exec.beginFrame();
 			exec.beginCommandBuffer();
@@ -405,19 +407,18 @@ namespace vkl
 				mouse_handler.update(dt);
 				if (mouse_handler.isButtonCurrentlyPressed(GLFW_MOUSE_BUTTON_1))
 				{
-					camera.move(mouse_handler.deltaPosition<float>() * move_scale);
+					camera.move(mouse_handler.deltaPosition<float>() * move_scale.value());
 					should_render = true;
 				}
 				if (mouse_handler.getScroll() != 0)
 				{
 					//glm::vec3 screen_mouse_pos_tmp = glm::inverse(screen_coords_matrix * camera.matrix()) * glm::vec3(mouse_handler.currentPosition<float>() - glm::vec2(0.5, 0.5), 1.0);
 					//glm::vec2 screen_mouse_pos = glm::vec2(screen_mouse_pos_tmp.x, screen_mouse_pos_tmp.y) / screen_mouse_pos_tmp.z;
-					glm::vec2 screen_mouse_pos = (mouse_handler.currentPosition<float>() - glm::vec2(_main_window->extent().width, _main_window->extent().height) * 0.5f) * move_scale;
+					glm::vec2 screen_mouse_pos = (mouse_handler.currentPosition<float>() - glm::vec2(_main_window->extent2D().value().width, _main_window->extent2D().value().height) * 0.5f) * move_scale.value();
 					camera.zoom(screen_mouse_pos, mouse_handler.getScroll());
 					should_render = true;
 				}
 
-				mat_world_to_cam = glm::inverse(screen_coords_matrix * camera.matrix());
 
 				if (!paused || should_render)
 				{
@@ -438,7 +439,7 @@ namespace vkl
 					
 					{
 						render->setPushConstantsData(RenderPC{
-							.matrix = glm::mat4(mat_world_to_cam),
+							.matrix = glm::mat4(mat_world_to_cam.value()),
 							.zoom = static_cast<float>(mouse_handler.getScroll()),
 						});
 						exec(render);
