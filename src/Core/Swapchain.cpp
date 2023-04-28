@@ -67,7 +67,7 @@ namespace vkl
 	void SwapchainInstance::destroy()
 	{
 		assert(_swapchain != VK_NULL_HANDLE);
-
+		
 		_views.clear();
 		_images.clear();
 		vkDestroySwapchainKHR(device(), _swapchain, nullptr);
@@ -112,7 +112,7 @@ namespace vkl
 		const Surface::SwapchainSupportDetails& support = _surface->getDetails();
 		_surface->queryDetails();
 		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
-
+		callInvalidationCallbacks();
 		createInstance();
 		return true;
 	}
@@ -128,6 +128,7 @@ namespace vkl
 
 	void Swapchain::destroyInstance()
 	{
+		callInvalidationCallbacks();
 		_inst = nullptr;
 	}
 

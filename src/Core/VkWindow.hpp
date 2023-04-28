@@ -136,6 +136,11 @@ namespace vkl
 			return _window;
 		}
 
+		const std::shared_ptr<Swapchain>& swapchain() const
+		{
+			return _swapchain;
+		}
+
 		struct AquireResult
 		{
 			VkBool32 success;
@@ -154,6 +159,8 @@ namespace vkl
 		void present(uint32_t num_semaphores, VkSemaphore* semaphores);
 
 		bool updateResources();
+
+
 
 	};
 

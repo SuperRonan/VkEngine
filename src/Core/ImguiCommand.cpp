@@ -9,17 +9,80 @@ namespace vkl
 {
 	ImguiCommand::ImguiCommand(CreateInfo const& ci) :
 		DeviceCommand(ci.app, ci.name),
-		_targets(ci.targets)
+		_swapchain(ci.swapchain)
 	{
+		createRenderPass();
 
+		const uint32_t N = 1024;
+		std::vector<VkDescriptorPoolSize> sizes = {
+			{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	N },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,				N },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,		N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,		N },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			N },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	N },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
+		};
+
+		_desc_pool = std::make_shared<DescriptorPool>(_app, VK_NULL_HANDLE);
+		VkDescriptorPoolCreateInfo desc_ci{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+			.maxSets = N,
+			.poolSizeCount = (uint32_t)sizes.size(),
+			.pPoolSizes = sizes.data(),
+		};
+		_desc_pool->create(desc_ci);
+
+		ImGui_ImplVulkan_InitInfo ii{
+			.Instance = _app->instance(),
+			.PhysicalDevice = _app->physicalDevice(),
+			.Device = device(),
+			.QueueFamily = _app->getQueueFamilyIndices().graphics_family.value(),
+			.Queue = _app->queues().graphics,
+			.DescriptorPool = *_desc_pool,
+			.MinImageCount = static_cast<uint32_t>(2),
+			.ImageCount = static_cast<uint32_t>(8),
+			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+		};
+
+		ImGui_ImplVulkan_Init(&ii, *_render_pass);
+		
+		_swapchain->addInvalidationCallback({
+			.callback = [=]() {
+				_framebuffers.clear();
+			},
+			.id = this,
+		});
+
+	}
+
+	void ImguiCommand::createFramebuffers()
+	{
+		const size_t n = _swapchain->instance()->images().size();
+		_framebuffers.resize(n);
+		for (size_t i = 0; i < n; ++i)
+		{
+			_framebuffers[i] = std::make_shared<Framebuffer>(Framebuffer::CI{
+				.app = application(),
+				.name = name() + std::string(".Framebuffer ") + std::to_string(i),
+				.render_pass = _render_pass,
+				.targets = {_swapchain->instance()->views()[i]},
+			});
+		}
 	}
 
 	void ImguiCommand::createRenderPass()
 	{
 		VkAttachmentDescription attachement_desc{
 			.flags = 0,
-			.format = _targets[0]->format(),
-			.samples = _targets[0]->image()->sampleCount(),
+			.format = _swapchain->format(),
+			.samples = VK_SAMPLE_COUNT_1_BIT,// To check
 			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -63,73 +126,23 @@ namespace vkl
 			.dependencies ={ dependency },
 			.last_is_depth = false,
 		});
-
-		_framebuffers.resize(_targets.size());
-		for (size_t i = 0; i < _targets.size(); ++i)
-		{
-			_framebuffers[i] = std::make_shared<Framebuffer>(Framebuffer::CI{ 
-				.name = name() + std::string(".Framebuffer ") + std::to_string(i),
-				.render_pass = _render_pass,
-				.targets = {_targets[i]}, 
-			});
-		}
 	}
 
 	void ImguiCommand::init()
 	{
-		createRenderPass();
-
-		const uint32_t N = 1024;
-		std::vector<VkDescriptorPoolSize> sizes = {
-			{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	N },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,				N },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,		N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,		N },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			N },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	N },
-			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
-		};
-
-		_desc_pool = std::make_shared<DescriptorPool>(_app, VK_NULL_HANDLE);
-		VkDescriptorPoolCreateInfo ci{
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-			.maxSets = N,
-			.poolSizeCount = (uint32_t)sizes.size(),
-			.pPoolSizes = sizes.data(),
-		};
-		_desc_pool->create(ci);
-
-		ImGui_ImplVulkan_InitInfo ii{
-			.Instance = _app->instance(),
-			.PhysicalDevice = _app->physicalDevice(),
-			.Device = device(),
-			.QueueFamily = _app->getQueueFamilyIndices().graphics_family.value(),
-			.Queue = _app->queues().graphics,
-			.DescriptorPool = *_desc_pool,
-			.MinImageCount = static_cast<uint32_t>(_targets.size()),
-			.ImageCount = static_cast<uint32_t>(_targets.size()),
-			.MSAASamples = _targets[0]->image()->sampleCount(),
-		};
-
-		ImGui_ImplVulkan_Init(&ii, *_render_pass);
+		
 	}
 
-	void ImguiCommand::execute(ExecutionContext& context)
+	void ImguiCommand::execute(ExecutionContext& context, ExecutionInfo const& ei)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 		InputSynchronizationHelper synch(context);
 
-		const size_t index = _index;
+		const size_t index = ei.index;
 
-		std::array<Resource, 2> resources = {
+		std::array<Resource, 1> resources = {
 			Resource{
-				._image = _targets[index],
+				._image = _swapchain->instance()->views()[index],
 				._begin_state = ResourceState2{
 					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 					._layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
@@ -144,7 +157,6 @@ namespace vkl
 			},
 		};
 		synch.addSynch(resources[0]);
-		synch.addSynch(resources[2]);
 
 		synch.record();
 		synch.NotifyContext();
@@ -174,8 +186,36 @@ namespace vkl
 
 		}
 		vkCmdEndRenderPass(*cmd);
-		
-		synch.NotifyContext();
+
+		context.keppAlive(_desc_pool);
+		context.keppAlive(_render_pass);
+		context.keppAlive(_framebuffers[index]->instance());
+	}
+
+	void ImguiCommand::execute(ExecutionContext& ctx)
+	{
+		ExecutionInfo ei{
+			.index = _index,
+		};
+		execute(ctx, ei);
+	}
+
+	bool ImguiCommand::updateResources()
+	{
+		bool res = false;
+
+		if (_framebuffers.empty())
+		{
+			createFramebuffers();
+			res = true;
+		}
+
+		for (auto& fb : _framebuffers)
+		{
+			res |= fb->updateResources();
+		}
+
+		return res;
 	}
 
 

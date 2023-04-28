@@ -4,6 +4,7 @@
 #include <Core/DeviceCommand.hpp>
 #include <Core/RenderPass.hpp>
 #include <Core/DescriptorPool.hpp>
+#include <Core/Swapchain.hpp>
 
 namespace vkl
 {
@@ -11,7 +12,7 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageView>> _targets = {};
+		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		std::vector<std::shared_ptr<Framebuffer>> _framebuffers = {};
 
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
@@ -21,13 +22,15 @@ namespace vkl
 
 		void createRenderPass();
 
+		void createFramebuffers();
+
 	public:
 
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<std::shared_ptr<ImageView>> targets = {};
+			std::shared_ptr<Swapchain> swapchain = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -35,11 +38,26 @@ namespace vkl
 
 		virtual void init()override;
 
+		struct ExecutionInfo
+		{
+			size_t index;
+		};
+		using EI = ExecutionInfo;
+
+		void execute(ExecutionContext& ctx, ExecutionInfo const& ei);
+
 		virtual void execute(ExecutionContext& context) override;
 
+		Executable executeWith(ExecutionInfo const& ei);
+
+		Executable operator()(ExecutionInfo const& ei)
+		{
+			return executeWith(ei);
+		}
 		
 		virtual ~ImguiCommand() override;
 
+		virtual bool updateResources() override;
 
 		constexpr void setIndex(size_t index)
 		{

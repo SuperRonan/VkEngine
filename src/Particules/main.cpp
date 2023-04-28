@@ -96,6 +96,7 @@ namespace vkl
 		{
 			VkApplication::requestFeatures(features);
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
+			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
 			features.features_12.shaderFloat16 = VK_TRUE;
 		}
 
@@ -113,7 +114,7 @@ namespace vkl
 				.name = "Particules",
 				.w = 1600,
 				.h = 900,
-				.resizeable = GLFW_FALSE,
+				.resizeable = GLFW_TRUE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
 
@@ -359,6 +360,7 @@ namespace vkl
 			camera.move(glm::vec2(-1, -1));
 			DynamicValue<glm::mat3> mat_world_to_cam = [&]() {return glm::inverse(screen_coords_matrix.value() * camera.matrix()); };
 
+			exec.updateResources();
 			exec.beginFrame();
 			exec.beginCommandBuffer();
 			init_particules->setPushConstantsData(InitParticulesPC{
@@ -422,6 +424,7 @@ namespace vkl
 
 				if (!paused || should_render)
 				{
+					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 					

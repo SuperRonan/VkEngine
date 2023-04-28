@@ -17,7 +17,7 @@ namespace vkl
 			_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderGui",
-				.targets = _window->views(),
+				.swapchain = _window->swapchain(),
 			});
 			declare(_render_gui);
 		}
