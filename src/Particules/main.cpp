@@ -148,7 +148,7 @@ namespace vkl
 			using namespace std_vector_operators;
 
 			const uint32_t particule_size = sizeof(Particule);
-			const uint32_t num_particules = 1024*4*2*2;
+			const uint32_t num_particules = 1024*4;
 			const glm::vec2 world_size(4.0f*3, 4.0f*3);
 			const uint32_t N_TYPES_PARTICULES = 7*2;
 			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
@@ -341,8 +341,11 @@ namespace vkl
 				float zoom;
 			};
 
+			
 
 			exec.init();
+
+			
 
 			bool paused = true;
 
@@ -363,19 +366,16 @@ namespace vkl
 			exec.updateResources();
 			exec.beginFrame();
 			exec.beginCommandBuffer();
-			init_particules->setPushConstantsData(InitParticulesPC{
+			exec(init_particules->executeWith({
+				.push_constant = InitParticulesPC{
 				.number_of_particules = num_particules,
 				.seed = seed,
 				.wolrd_size = world_size,
-			});
-			exec(init_particules);
-			init_rules->setPushConstantsData(seed);
-			exec(init_rules);
-			render->setPushConstantsData(RenderPC{
-				.matrix = glm::mat4(mat_world_to_cam),
-				.zoom = static_cast<float>(mouse_handler.getScroll()),
-			});
-			exec(render);
+			},
+				}));
+
+			exec(init_rules->executeWith({ .push_constant = seed, }));
+
 			exec.preparePresentation(render_target_view, false);
 			exec.endCommandBufferAndSubmit();
 			exec.present();
@@ -431,21 +431,23 @@ namespace vkl
 					if (!paused)
 					{
 						exec(copy_to_previous);
-						run_simulation->setPushConstantsData(RunSimulationPC{
+						exec(run_simulation->executeWith({
+							.push_constant = RunSimulationPC{
 							.number_of_particules = num_particules,
 							.dt = static_cast<float>(dt),
 							.world_size = world_size,
 							.friction = friction,
-						});
-						exec(run_simulation);
+						},
+						}));
 					}
 					
 					{
-						render->setPushConstantsData(RenderPC{
+						exec(render->executeWith({
+							.pc = RenderPC{
 							.matrix = glm::mat4(mat_world_to_cam.value()),
 							.zoom = static_cast<float>(mouse_handler.getScroll()),
-						});
-						exec(render);
+						},
+						}));
 					}
 
 					exec.preparePresentation(render_target_view);

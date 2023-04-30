@@ -50,6 +50,7 @@ namespace vkl
 		
 		struct DrawInfo
 		{
+			PushConstant pc;
 			VkViewport viewport;
 		};
 
@@ -112,6 +113,7 @@ namespace vkl
 
 		struct DrawInfo
 		{
+			PushConstant pc = {};
 			uint32_t draw_count = 0;
 			std::optional<VkViewport> viewport = {};
 		};
@@ -128,6 +130,13 @@ namespace vkl
 		virtual void execute(ExecutionContext& ctx) override;
 
 		virtual bool updateResources() override;
+
+		Executable executeWith(DrawInfo const& di);
+		
+		Executable operator()(DrawInfo const& di)
+		{
+			return executeWith(di);
+		}
 	};
 
 	// Uses the mesh pipeline

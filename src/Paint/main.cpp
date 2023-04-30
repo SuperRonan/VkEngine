@@ -189,12 +189,13 @@ namespace vkl
 
 					if (render)
 					{
-						render_line->setPushConstantsData(RenderPC{
+						exec(render_line->executeWith({
+							.pc = RenderPC{
 							.p0 = prev_mouse_pos,
 							.p1 = mouse_pos,
 							.t = static_cast<float>(t),
-						});
-						exec(render_line);
+						}
+							}));
 					}
 			 		exec.preparePresentation(canvas_view, false);
 					exec.endCommandBufferAndSubmit();

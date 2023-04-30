@@ -2,9 +2,7 @@
 
 namespace vkl
 {
-	GraphicsCommand::GraphicsCommand(
-		CreateInfo const& ci
-	) :
+	GraphicsCommand::GraphicsCommand(CreateInfo const& ci) :
 		ShaderCommand(ci.app, ci.name, ci.bindings),
 		_attachements(ci.targets),
 		_depth(ci.depth_buffer),
@@ -244,7 +242,7 @@ namespace vkl
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
-			recordBindings(cmd, context, _pc);
+			recordBindings(cmd, context, di.pc);
 			recordDraw(cmd, context, user_info);
 		}
 		vkCmdEndRenderPass(cmd);
@@ -359,7 +357,7 @@ namespace vkl
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
 		GraphicsCommand::DrawInfo gdi{
-
+			.pc = _pc,
 		};
 
 		DrawInfo di{
@@ -367,8 +365,23 @@ namespace vkl
 		};
 
 		recordCommandBuffer(cmd, ctx, gdi, &di);
+	}
 
-		
+	Executable VertexCommand::executeWith(DrawInfo const& di)
+	{
+
+		GraphicsCommand::DrawInfo gdi{
+			.pc = di.pc.operator bool() ? di.pc : _pc,
+		};
+
+		DrawInfo _di{
+			.draw_count = di.draw_count ? di.draw_count : _draw_count.value(),
+		};
+
+		return [this, gdi, _di](ExecutionContext& ctx)
+		{
+			recordCommandBuffer(*ctx.getCommandBuffer(), ctx, gdi, (void*) & _di);
+		};
 	}
 
 	bool VertexCommand::updateResources()
