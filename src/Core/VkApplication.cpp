@@ -249,6 +249,18 @@ namespace vkl
 		return required_extensions.empty();
 	}
 
+	uint32_t VkApplication::getDeviceExtVersion(std::string_view ext_name)
+	{
+		for (const auto& ext : _device_extensions)
+		{
+			if (ext.extensionName == ext_name)
+			{
+				return ext.specVersion;
+			}
+		}
+		return EXT_NONE;
+	}
+
 	bool VkApplication::isDeviceSuitable(VkPhysicalDevice const& device)
 	{
 		bool res = true;
@@ -290,10 +302,14 @@ namespace vkl
 	{
 		int64_t res = 0;
 
-		VkPhysicalDeviceProperties props;
-		VkPhysicalDeviceFeatures features;
-		vkGetPhysicalDeviceProperties(device, &props);
-		vkGetPhysicalDeviceFeatures(device, &features);
+		VkPhysicalDeviceProperties2 props{
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+			.pNext = nullptr, // TODO with new vulkan versions
+		};
+		VulkanFeatures features;
+		VkPhysicalDeviceFeatures2 features2 = features.link();
+		vkGetPhysicalDeviceProperties2(device, &props);
+		vkGetPhysicalDeviceFeatures2(device, &features2);
 
 		bool suitable = isDeviceSuitable(device);
 		if (!suitable)
@@ -301,27 +317,17 @@ namespace vkl
 			return std::numeric_limits<int64_t>::min();
 		}
 
-		int64_t discrete_multiplicator = (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 8 : 1;
+		int64_t discrete_multiplicator = (props.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 8 : 1;
 
-		res += 1;
+		// TODO count the available requested features
+
+		res = 1;
 
 		res *= discrete_multiplicator;
 
-		return res;
-	}
+		VK_LOG << "Rated " << props.properties.deviceName << ": " << res << "\n";
 
-	VkSampleCountFlagBits VkApplication::getMaxUsableSampleCount()
-	{
-		VkPhysicalDeviceProperties props;
-		vkGetPhysicalDeviceProperties(_physical_device, &props);
-		VkSampleCountFlags counts = props.limits.framebufferColorSampleCounts & props.limits.framebufferDepthSampleCounts;
-		if (counts & VK_SAMPLE_COUNT_64_BIT)	return VK_SAMPLE_COUNT_64_BIT;
-		if (counts & VK_SAMPLE_COUNT_32_BIT)	return VK_SAMPLE_COUNT_32_BIT;
-		if (counts & VK_SAMPLE_COUNT_16_BIT)	return VK_SAMPLE_COUNT_16_BIT;
-		if (counts & VK_SAMPLE_COUNT_8_BIT)	return VK_SAMPLE_COUNT_8_BIT;
-		if (counts & VK_SAMPLE_COUNT_4_BIT)	return VK_SAMPLE_COUNT_4_BIT;
-		if (counts & VK_SAMPLE_COUNT_2_BIT)	return VK_SAMPLE_COUNT_2_BIT;
-		return VK_SAMPLE_COUNT_1_BIT;
+		return res;
 	}
 
 	void VkApplication::pickPhysicalDevice()
@@ -344,13 +350,13 @@ namespace vkl
 		size_t device_index = it - physical_devices.cbegin();
 		//_physical_device = physical_devices[1];
 
-		VkPhysicalDeviceProperties props;
-		vkGetPhysicalDeviceProperties(_physical_device, &props);
-		_max_msaa = getMaxUsableSampleCount();
+		VkPhysicalDeviceProperties2 _physical_device_propeties = _device_props.link();
+		vkGetPhysicalDeviceProperties2(_physical_device, &_physical_device_propeties);
+		_device_props.props = _physical_device_propeties.properties;
+
 		_queue_family_indices = findQueueFamilies(_physical_device);
 
-		VK_LOG << "Using " << props.deviceName << " as physical device.\n";
-		VK_LOG << "With up to MSAA x" << _max_msaa << ".\n";
+		VK_LOG << "Using " << _physical_device_propeties.properties.deviceName << " as physical device.\n";
 	}
 
 	void VkApplication::createLogicalDevice()
@@ -379,20 +385,16 @@ namespace vkl
 			queue_create_infos.push_back(queue_create_info);
 		}
 
-		VulkanFeatures device_features;
-		device_features.features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-		device_features.features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-		device_features.features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;		
-		device_features.features_11.pNext = &device_features.features_12;
-		device_features.features_12.pNext = &device_features.features_13;
-		requestFeatures(device_features);
+		VulkanFeatures exposed_device_features;
+		VkPhysicalDeviceFeatures2 physical_device_features2 = exposed_device_features.link();
+		vkGetPhysicalDeviceFeatures2(_physical_device, &physical_device_features2);
+		exposed_device_features.features = physical_device_features2.features;
 
-		VkPhysicalDeviceFeatures2 features2;
-		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-		features2.features = device_features.features;
-		features2.pNext = &device_features.features_11;
+		_available_features = filterFeatures(_requested_features, exposed_device_features);
 
-		const auto device_extensions = getDeviceExtensions();
+		VkPhysicalDeviceFeatures2 features2 = _available_features.link();
+
+		std::vector<const char*> device_extensions = getDeviceExtensions();
 
 		VkDeviceCreateInfo device_create_info{};
 		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -468,6 +470,9 @@ namespace vkl
 	{
 		initGLFW();
 		preChecks();
+
+		requestFeatures(_requested_features);
+
 		initInstance(_name);
 		initValidLayers();
 		pickPhysicalDevice();

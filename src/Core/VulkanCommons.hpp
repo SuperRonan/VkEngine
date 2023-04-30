@@ -23,8 +23,43 @@ if (call != VK_SUCCESS) {				\
 
 namespace vkl
 {
+	struct VulkanFeatures
+	{
+		VkPhysicalDeviceFeatures features = {};
+		VkPhysicalDeviceVulkan11Features features_11 = {};
+		VkPhysicalDeviceVulkan12Features features_12 = {};
+		VkPhysicalDeviceVulkan13Features features_13 = {};
 
-	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t mips);
+		VkPhysicalDeviceFeatures2 link()
+		{
+			features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+			features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+			features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+			features_11.pNext = &features_12;
+			features_12.pNext = &features_13;
+			return VkPhysicalDeviceFeatures2{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+				.pNext = &features_11,
+				.features = features,
+			};
+		}
+	};
+
+	struct VulkanDeviceProps
+	{
+		VkPhysicalDeviceProperties props = {};
+		// TODO add new vulkan versions props
+
+		VkPhysicalDeviceProperties2 link()
+		{
+			return VkPhysicalDeviceProperties2{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+				.pNext = nullptr,
+				.properties = props,
+			};
+		}
+	};
 
 	constexpr VkComponentMapping defaultComponentMapping()
 	{
@@ -198,6 +233,47 @@ namespace vkl
 		if (s & VK_SHADER_STAGE_CALLABLE_BIT_KHR)				res |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
 		if (s & VK_SHADER_STAGE_TASK_BIT_NV)					res |= VK_PIPELINE_STAGE_2_TASK_SHADER_BIT_NV;
 		if (s & VK_SHADER_STAGE_MESH_BIT_NV)					res |= VK_PIPELINE_STAGE_2_MESH_SHADER_BIT_NV;
+		return res;
+	}
+
+	template <class Op>
+	void VkBool32ArrayOp(VkBool32 *res, const VkBool32* a, const VkBool32 * b, size_t n, Op const& op)
+	{
+		for (size_t i = 0; i < n; ++i)
+		{
+			res[i] = op(a[i], b[i]);
+		}
+	}
+
+	inline VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available)
+	{
+		const auto op_and = [](VkBool32 a, VkBool32 b) {return a & b; };
+
+		VulkanFeatures res;
+		
+		VkBool32ArrayOp(
+			&res.features.robustBufferAccess,
+			&requested.features.robustBufferAccess,
+			&available.features.robustBufferAccess,
+			(offsetof(VkPhysicalDeviceFeatures, inheritedQueries) - offsetof(VkPhysicalDeviceFeatures, robustBufferAccess)) / sizeof(VkBool32) + 1, 
+			op_and
+		);
+
+#define FILTER_VK_FEATURES(VK_VER, firstFeature, lastFeature) \
+		VkBool32ArrayOp( \
+			&res.features_##VK_VER . firstFeature, \
+			&requested.features_##VK_VER . firstFeature, \
+			&available.features_##VK_VER . firstFeature, \
+			(offsetof(VkPhysicalDeviceVulkan##VK_VER##Features, lastFeature) - offsetof(VkPhysicalDeviceVulkan##VK_VER##Features, firstFeature)) / sizeof(VkBool32) + 1, \
+			op_and \
+		)
+
+		FILTER_VK_FEATURES(11, storageBuffer16BitAccess, shaderDrawParameters);
+		FILTER_VK_FEATURES(12, samplerMirrorClampToEdge, subgroupBroadcastDynamicId);
+		FILTER_VK_FEATURES(13, robustImageAccess, maintenance4);
+
+#undef FILTER_VK_FEATURES
+
 		return res;
 	}
 

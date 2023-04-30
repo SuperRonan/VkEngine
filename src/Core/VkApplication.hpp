@@ -52,11 +52,15 @@ namespace vkl
 		std::vector<VkExtensionProperties> _instance_extensions;
 		VkDebugUtilsMessengerEXT _debug_messenger;
 		VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
-		VkSampleCountFlagBits _max_msaa;
+		VulkanDeviceProps _device_props;
 		VkDevice _device;
 		std::vector<VkExtensionProperties> _device_extensions;
 
-		VmaAllocator _allocator;
+
+		static const constexpr uint32_t EXT_NONE = uint32_t(-1);
+		uint32_t getDeviceExtVersion(std::string_view ext_name);
+
+		VmaAllocator _allocator = nullptr;
 
 		Queues _queues;
 
@@ -78,13 +82,8 @@ namespace vkl
 
 		std::string _name = {};
 
-		struct VulkanFeatures
-		{
-			VkPhysicalDeviceFeatures features = {};
-			VkPhysicalDeviceVulkan11Features features_11 = {};
-			VkPhysicalDeviceVulkan12Features features_12 = {};
-			VkPhysicalDeviceVulkan13Features features_13 = {};
-		};
+		VulkanFeatures _requested_features;
+		VulkanFeatures _available_features;
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -108,8 +107,6 @@ namespace vkl
 
 		virtual int64_t ratePhysicalDevice(VkPhysicalDevice const& device);
 
-		VkSampleCountFlagBits getMaxUsableSampleCount();
-
 		void pickPhysicalDevice();
 
 		void createLogicalDevice();
@@ -128,14 +125,6 @@ namespace vkl
 	public:
 
 		VkApplication(std::string const& name, bool enable_validation_layers=false);
-
-		VkApplication(VkApplication const&) = delete;
-
-		VkApplication(VkApplication&&) = default;
-
-		VkApplication& operator=(VkApplication const&) = delete;
-
-		VkApplication& operator=(VkApplication&&) = default;
 
 		virtual ~VkApplication();
 

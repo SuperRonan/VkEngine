@@ -97,7 +97,7 @@ namespace vkl
 			VkApplication::requestFeatures(features);
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
 			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-			features.features_12.shaderFloat16 = VK_TRUE;
+			//features.features_12.shaderFloat16 = VK_TRUE;
 		}
 
 
@@ -151,8 +151,8 @@ namespace vkl
 			const uint32_t num_particules = 1024*4*2*2;
 			const glm::vec2 world_size(4.0f*3, 4.0f*3);
 			const uint32_t N_TYPES_PARTICULES = 7*2;
-			const uint32_t use_hlaf_storage = 1;
-			const uint32_t storage_float_size = use_hlaf_storage ? 2 : 4;
+			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
+			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
 			const uint32_t particule_props_size = 4 * storage_float_size;
 			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
@@ -161,7 +161,7 @@ namespace vkl
 			
 			std::vector<std::string> definitions = {
 				std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
-				std::string("USE_HALF_STORAGE ") + std::to_string(use_hlaf_storage),
+				std::string("USE_HALF_STORAGE ") + std::to_string(use_half_storage),
 			};
 
 			LinearExecutor exec(LinearExecutor::CI{

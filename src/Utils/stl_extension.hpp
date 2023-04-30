@@ -101,6 +101,7 @@ namespace std
 		while (begin1 != end1)
 		{
 			acc += *begin1 * *begin2;
+			++begin1;
 			++begin2;
 		}
 		return acc;
@@ -125,4 +126,17 @@ namespace std
 		}
 		return res;
 	}
-}
+
+
+	template <class It1, class It2, class T>
+	bool contains(It1 begin, It2 const& end, T const& value)
+	{
+		return std::find(begin, end, value) != end;
+	}
+
+	template <class T, class Q = T>
+	bool contains(std::vector<T> const& vec, Q const& value)
+	{
+		return std::contains(vec.cbegin(), vec.cend(), value);
+	}
+}	
