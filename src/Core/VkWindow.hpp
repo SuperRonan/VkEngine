@@ -103,6 +103,8 @@ namespace vkl
 
 		void reCreateSwapchain();
 
+		void setSize(uint32_t w, uint32_t h);
+
 		std::shared_ptr<Image> image(uint32_t index);
 
 		std::shared_ptr<ImageView> view(uint32_t index);

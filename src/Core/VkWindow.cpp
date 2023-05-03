@@ -89,6 +89,12 @@ namespace vkl
 		_framebuffer_resized = false;
 	}
 
+	void VkWindow::setSize(uint32_t w, uint32_t h)
+	{
+		glfwSetWindowSize(_window, w, h);
+		reCreateSwapchain();
+	}
+
 	void VkWindow::initSwapchain()
 	{
 		createSwapchain();

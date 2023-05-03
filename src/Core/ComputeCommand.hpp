@@ -88,7 +88,7 @@ namespace vkl
 
 		VkExtent3D getWorkgroupsDispatchSize()const
 		{
-			const VkExtent3D res = _dispatch_threads ? getWorkgroupsDispatchSize(_dispatch_size) : _dispatch_size.value();
+			const VkExtent3D res = _dispatch_threads ? getWorkgroupsDispatchSize(*_dispatch_size) : _dispatch_size.value();
 			return res;
 		}
 	};

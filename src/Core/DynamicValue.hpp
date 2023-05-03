@@ -2,6 +2,7 @@
 #include <functional>
 #include <memory>
 #include <cassert>
+#include <type_traits>
 
 namespace vkl
 {
@@ -159,6 +160,29 @@ namespace vkl
             return *this;
         }
 
+#define DECLARE_DYNAMIC_OP(op) \
+        template <class Q=T> \
+        auto operator op(DynamicValue<Q> const& o)const \
+        { \
+            using _op = decltype([](T const& t, Q const& q){return t op q;}); \
+            using RetType = std::invoke_result<_op, T, Q>::type; \
+            return DynamicValue<RetType>([=]() -> RetType {return _inst->value() op o.value(); }); \
+        } 
+
+        DECLARE_DYNAMIC_OP(+)
+        DECLARE_DYNAMIC_OP(-)
+        DECLARE_DYNAMIC_OP(*)
+        DECLARE_DYNAMIC_OP(/)
+        
+        DECLARE_DYNAMIC_OP(==)
+        DECLARE_DYNAMIC_OP(!=)
+        DECLARE_DYNAMIC_OP(<)
+        DECLARE_DYNAMIC_OP(<=)
+        DECLARE_DYNAMIC_OP(>)
+        DECLARE_DYNAMIC_OP(>=)
+
+
+#undef DECLARE_DYNAMIC_OP
 
         T const& value()const
         {
@@ -166,7 +190,7 @@ namespace vkl
             return _inst->value();
         }
 
-        operator T()const
+        T const& operator*()const
         {
             return value();
         }
@@ -182,5 +206,8 @@ namespace vkl
         }
 
     };
+
+    template <class T>
+    using dv_ = DynamicValue<T>;
 
 }

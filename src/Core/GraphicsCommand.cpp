@@ -158,8 +158,8 @@ namespace vkl
 
 		if (false)
 		{
-			VkViewport viewport = Pipeline::Viewport(extract(_framebuffer->extent()));
-			VkRect2D scissor = Pipeline::Scissor(extract(_framebuffer->extent()));
+			VkViewport viewport = Pipeline::Viewport(extract(*_framebuffer->extent()));
+			VkRect2D scissor = Pipeline::Scissor(extract(*_framebuffer->extent()));
 
 			gci.viewports = { viewport };
 			gci.scissors = { scissor };
@@ -198,7 +198,7 @@ namespace vkl
 		declareGraphicsResources(synch);
 		_sets->instance()->recordInputSynchronization(synch);
 
-		VkExtent2D render_area = extract(_framebuffer->extent());
+		VkExtent2D render_area = extract(*_framebuffer->extent());
 
 		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->size() + 1) : 0;
 
@@ -237,8 +237,8 @@ namespace vkl
 			}
 			else
 			{
-				VkViewport viewport = Pipeline::Viewport(extract(_framebuffer->extent()));
-				VkRect2D scissor = Pipeline::Scissor(extract(_framebuffer->extent()));
+				VkViewport viewport = Pipeline::Viewport(extract(*_framebuffer->extent()));
+				VkRect2D scissor = Pipeline::Scissor(extract(*_framebuffer->extent()));
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}

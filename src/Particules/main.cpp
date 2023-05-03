@@ -1,5 +1,5 @@
 
-#include <Core/VkApplication.hpp>
+#include <Core/ImGuiApp.hpp>
 #include <Core/Camera2D.hpp>
 #include <Core/MouseHandler.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -13,10 +13,6 @@
 #include <Core/ImguiCommand.hpp>
 #include <Core/Executor.hpp>
 
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_vulkan.h>
-
 #include <iostream>
 #include <chrono>
 #include <random>
@@ -24,7 +20,7 @@
 namespace vkl
 {
 
-	class ParticuleSim : public VkApplication
+	class ParticuleSim : public AppWithWithImGui
 	{
 	protected:
 
@@ -69,13 +65,6 @@ namespace vkl
 			return res;
 		}
 
-		void initImgui()
-		{
-			_imgui_ctx = ImGui::CreateContext();
-			ImGui::SetCurrentContext(_imgui_ctx);
-			ImGui_ImplGlfw_InitForVulkan(*_main_window, true);
-		}
-
 		struct Particule
 		{
 			glm::vec2 position;
@@ -97,14 +86,14 @@ namespace vkl
 			VkApplication::requestFeatures(features);
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
 			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-			//features.features_12.shaderFloat16 = VK_TRUE;
+			features.features_12.shaderFloat16 = VK_TRUE;
 		}
 
 
 	public:
 
 		ParticuleSim(bool validation = false) :
-			VkApplication("Particules", validation)
+			AppWithWithImGui(AppWithWithImGui::CI{ .name = "Particules", .enable_validation = validation })
 		{
 			init();
 			VkWindow::CreateInfo window_ci{
@@ -118,7 +107,7 @@ namespace vkl
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
 
-			initImgui();
+			initImGui(_main_window);
 		}
 
 		virtual ~ParticuleSim()

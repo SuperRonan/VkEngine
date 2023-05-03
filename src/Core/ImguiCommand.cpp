@@ -161,7 +161,7 @@ namespace vkl
 		synch.record();
 		synch.NotifyContext();
 
-		const VkExtent2D render_area = extract(_framebuffers[index]->extent());
+		const VkExtent2D render_area = extract(*_framebuffers[index]->extent());
 
 		std::vector<VkClearValue> clear_values(_framebuffers[index]->size());
 		for (size_t i = 0; i < clear_values.size(); ++i)

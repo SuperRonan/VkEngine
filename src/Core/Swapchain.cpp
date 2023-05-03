@@ -111,7 +111,7 @@ namespace vkl
 		_ci.oldSwapchain = *old_swap;
 		const Surface::SwapchainSupportDetails& support = _surface->getDetails();
 		_surface->queryDetails();
-		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
+		_ci.imageExtent = getPossibleExtent(*_extent, support.capabilities);
 		callInvalidationCallbacks();
 		createInstance();
 		return true;
@@ -175,7 +175,7 @@ namespace vkl
 		}();
 		_ci.imageFormat = fmt.format;
 		_ci.imageColorSpace = fmt.colorSpace;
-		_ci.imageExtent = getPossibleExtent(_extent, support.capabilities);
+		_ci.imageExtent = getPossibleExtent(*_extent, support.capabilities);
 		_ci.imageArrayLayers = ci.layers;
 		_ci.imageUsage = ci.image_usages;
 		_ci.imageSharingMode = sharing_mode;

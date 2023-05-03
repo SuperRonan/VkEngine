@@ -44,9 +44,9 @@ namespace vkl
 		{
 			_region = VkImageBlit{
 				.srcSubresource = getImageLayersFromRange(bi.src->range()),
-				.srcOffsets = {makeZeroOffset3D(), convert(bi.src->image()->extent())},
+				.srcOffsets = {makeZeroOffset3D(), convert(*bi.src->image()->extent())},
 				.dstSubresource = getImageLayersFromRange(bi.dst->range()),
-				.dstOffsets = {makeZeroOffset3D(), convert(bi.dst->image()->extent())},
+				.dstOffsets = {makeZeroOffset3D(), convert(*bi.dst->image()->extent())},
 			};
 			regions = &_region;
 			n_regions = 1;
@@ -136,7 +136,7 @@ namespace vkl
 				.srcOffset = makeZeroOffset3D(),
 				.dstSubresource = getImageLayersFromRange(cinfo.dst->range()),
 				.dstOffset = makeZeroOffset3D(),
-				.extent = cinfo.dst->image()->extent(),
+				.extent = *cinfo.dst->image()->extent(),
 			};
 			regions = &_region;
 			n_regions = 1;
@@ -217,7 +217,7 @@ namespace vkl
 		VkBufferImageCopy _reg;
 		if (n_regions == 0)
 		{
-			const VkExtent3D extent = cinfo.dst->image()->extent();
+			const VkExtent3D extent = *cinfo.dst->image()->extent();
 			_reg = VkBufferImageCopy{
 				.bufferOffset = 0,
 				.bufferRowLength = extent.height,
