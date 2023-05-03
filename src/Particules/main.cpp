@@ -138,8 +138,8 @@ namespace vkl
 
 			const uint32_t particule_size = sizeof(Particule);
 			const uint32_t num_particules = 1024*4;
-			const glm::vec2 world_size(4.0f*3, 4.0f*3);
-			const uint32_t N_TYPES_PARTICULES = 7*2;
+			const glm::vec2 world_size(4.0f, 4.0f);
+			const uint32_t N_TYPES_PARTICULES = 7;
 			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
 			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
@@ -378,9 +378,7 @@ namespace vkl
 				}
 				bool should_render = false || true;
 
-				ImGui_ImplVulkan_NewFrame();
-				ImGui_ImplGlfw_NewFrame();
-				ImGui::NewFrame();
+				
 				_main_window->pollEvents();
 				bool p = paused;
 				processInput(paused);
@@ -389,11 +387,13 @@ namespace vkl
 					should_render = true;
 				}
 
+				beginImGuiFrame();
 				{
 					ImGui::Begin("Control");
 					ImGui::SliderFloat("friction", &friction, 0.0, 2.0);
 					ImGui::End();
 				}
+				ImGui::EndFrame();
 
 				mouse_handler.update(dt);
 				if (mouse_handler.isButtonCurrentlyPressed(GLFW_MOUSE_BUTTON_1))
@@ -411,7 +411,6 @@ namespace vkl
 				}
 
 
-				if (!paused || should_render)
 				{
 					exec.updateResources();
 					exec.beginFrame();
@@ -439,13 +438,14 @@ namespace vkl
 						}));
 					}
 
+					ImGui::Render();
 					exec.preparePresentation(render_target_view);
+					ImGui::UpdatePlatformWindows();
+					ImGui::RenderPlatformWindowsDefault();
 					exec.endCommandBufferAndSubmit();
 					exec.present();
 
 				}
-				ImGui::EndFrame();
-
 			}
 			
 

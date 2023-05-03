@@ -178,7 +178,6 @@ namespace vkl
 
 		if (render_ImGui && _render_gui)
 		{
-			ImGui::Render();
 			_render_gui->setIndex(_aquired.swap_index);
 			execute(_render_gui);
 		}

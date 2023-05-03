@@ -9,14 +9,16 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<VkAttachmentDescription> _attachement_descriptors;
-		std::vector<std::vector<VkAttachmentReference>> _attachement_ref_per_subpass;
-		std::vector<VkSubpassDescription> _subpasses;
-		std::vector<VkSubpassDependency> _dependencies;
+		std::vector<VkAttachmentDescription2> _attachement_descriptors;
+		std::vector<std::vector<VkAttachmentReference2>> _attachement_ref_per_subpass;
+		std::vector<VkSubpassDescription2> _subpasses;
+		std::vector<VkSubpassDependency2> _dependencies;
 
 		bool _last_is_depth = false;
 
 		VkRenderPass _handle = VK_NULL_HANDLE;
+
+		void setVulkanName();
 
 	public:
 
@@ -24,10 +26,10 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<VkAttachmentDescription> attachement_descriptors = {};
-			std::vector<std::vector<VkAttachmentReference>> attachement_ref_per_subpass = {};
-			std::vector<VkSubpassDescription> subpasses = {};
-			std::vector<VkSubpassDependency> dependencies = {};
+			std::vector<VkAttachmentDescription2> attachement_descriptors = {};
+			std::vector<std::vector<VkAttachmentReference2>> attachement_ref_per_subpass = {};
+			std::vector<VkSubpassDescription2> subpasses = {};
+			std::vector<VkSubpassDependency2> dependencies = {};
 			bool last_is_depth = false;
 		};
 		using CI = CreateInfo;
@@ -36,9 +38,9 @@ namespace vkl
 
 		virtual ~RenderPass() override;
 
-		VkRenderPassCreateInfo createInfo();
+		VkRenderPassCreateInfo2 createInfo2();
 
-		void create(VkRenderPassCreateInfo const& ci);
+		void create(VkRenderPassCreateInfo2 const& ci);
 
 		void destroy();
 

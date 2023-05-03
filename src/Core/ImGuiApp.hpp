@@ -26,6 +26,13 @@ namespace vkl
 
 		VkPresentModeKHR _present_mode = VK_PRESENT_MODE_FIFO_KHR;
 
+		void beginImGuiFrame()
+		{			
+			ImGui_ImplVulkan_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+		}
+
 	public:
 
 		void initImGui(std::shared_ptr<VkWindow> const& main_windo);

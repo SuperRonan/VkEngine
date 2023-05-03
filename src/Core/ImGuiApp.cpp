@@ -9,8 +9,8 @@ namespace vkl
 	{
 		_imgui_ctx = ImGui::CreateContext();
 		ImGui::SetCurrentContext(_imgui_ctx);
-		
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
+		
 
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 

@@ -14,11 +14,13 @@ namespace vkl
 	void GraphicsCommand::createGraphicsResources()
 	{
 		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
-		std::vector<VkAttachmentDescription> at_desc(n_color);
-		std::vector<VkAttachmentReference> at_ref(n_color);
+		std::vector<VkAttachmentDescription2> at_desc(n_color);
+		std::vector<VkAttachmentReference2> at_ref(n_color);
 		for (size_t i = 0; i < n_color; ++i)
 		{
-			at_desc[i] = VkAttachmentDescription{
+			at_desc[i] = VkAttachmentDescription2{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+				.pNext = nullptr,
 				.flags = 0,
 				.format = _attachements[i]->format(),
 				.samples = _attachements[i]->image()->sampleCount(),
@@ -29,7 +31,9 @@ namespace vkl
 				.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			};
-			at_ref[i] = VkAttachmentReference{
+			at_ref[i] = VkAttachmentReference2{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+				.pNext = nullptr,
 				.attachment = uint32_t(i),
 				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			};
@@ -42,7 +46,9 @@ namespace vkl
 		{
 			const bool write_depth = _write_depth.value_or(true);
 
-			at_desc.push_back(VkAttachmentDescription{
+			at_desc.push_back(VkAttachmentDescription2{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+				.pNext = nullptr,
 				.flags = 0,
 				.format = _depth->format(),
 				.samples = _depth->image()->sampleCount(),
@@ -53,13 +59,17 @@ namespace vkl
 				.initialLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 				.finalLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 			});
-			at_ref.push_back(VkAttachmentReference{
+			at_ref.push_back(VkAttachmentReference2{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+				.pNext = nullptr,
 				.attachment = static_cast<uint32_t>(at_desc.size() - 1),
 				.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			});
 		}
 
-		VkSubpassDescription subpass = {
+		VkSubpassDescription2 subpass = {
+			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+			.pNext = nullptr,
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
@@ -71,12 +81,14 @@ namespace vkl
 			.preserveAttachmentCount = 0,
 			.pPreserveAttachments = nullptr,
 		};
-		VkSubpassDependency dependency = {
+		VkSubpassDependency2 dependency = {
+			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+			.pNext = nullptr,
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
 			.dstSubpass = 0,
 			.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = 0,
+			.srcAccessMask = VK_ACCESS_NONE,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		};
 		

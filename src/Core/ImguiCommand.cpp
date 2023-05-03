@@ -79,7 +79,9 @@ namespace vkl
 
 	void ImguiCommand::createRenderPass()
 	{
-		VkAttachmentDescription attachement_desc{
+		VkAttachmentDescription2 attachement_desc{
+			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+			.pNext = nullptr,
 			.flags = 0,
 			.format = _swapchain->format(),
 			.samples = VK_SAMPLE_COUNT_1_BIT,// To check
@@ -91,12 +93,16 @@ namespace vkl
 			.finalLayout = VK_IMAGE_LAYOUT_GENERAL,
 		};
 		
-		std::vector<VkAttachmentReference> attachement_reference = { {
+		std::vector<VkAttachmentReference2> attachement_reference = { {
+			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+			.pNext = nullptr,
 			.attachment = 0,
 			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		} };
 
-		VkSubpassDescription subpass = {
+		VkSubpassDescription2 subpass = {
+			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+			.pNext = nullptr,
 			.flags = 0,
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.inputAttachmentCount = 0,
@@ -108,12 +114,14 @@ namespace vkl
 			.preserveAttachmentCount = 0,
 			.pPreserveAttachments = nullptr,
 		};
-		VkSubpassDependency dependency = {
+		VkSubpassDependency2 dependency = {
+			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+			.pNext = nullptr,
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
 			.dstSubpass = 0,
-			.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = 0,
+			.srcAccessMask = VK_ACCESS_NONE,
 			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		};
 
@@ -146,7 +154,7 @@ namespace vkl
 				._begin_state = ResourceState2{
 					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
 					._layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-					._stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					._stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 				},
 				._end_state = ResourceState2{
 					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
@@ -183,7 +191,6 @@ namespace vkl
 		vkCmdBeginRenderPass(*cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
 		{
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *cmd);
-
 		}
 		vkCmdEndRenderPass(*cmd);
 
