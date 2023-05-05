@@ -20,10 +20,40 @@
 namespace vkl
 {
 
+	class ImGuiRadioButtons
+	{
+	protected:
+
+		size_t _index = 0;
+		std::vector<std::string> _buttons = {};
+
+	public:
+
+		ImGuiRadioButtons(std::vector<std::string> const& labels):
+			_buttons(labels)
+		{}
+
+		size_t declare()
+		{
+			size_t active_index = _index;
+			for (size_t i = 0; i < _buttons.size(); ++i)
+			{
+				bool b = ImGui::RadioButton(_buttons[i].c_str(), i == _index);
+				if (b)	active_index = i;
+				if(i != _buttons.size()-1)
+					ImGui::SameLine();
+			}
+			_index = active_index;
+			return _index;
+		}
+
+	};
+
 	class ParticuleSim : public AppWithWithImGui
 	{
 	protected:
 
+		VkPresentModeKHR _present_mode = VK_PRESENT_MODE_FIFO_KHR;
 		std::shared_ptr<VkWindow> _main_window = nullptr;
 
 		ImGuiContext* _imgui_ctx = nullptr;
@@ -62,7 +92,7 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
+				.target_present_mode = &_present_mode,
 				.name = "Particules",
 				.w = 900,
 				.h = 900,
@@ -313,6 +343,12 @@ namespace vkl
 
 			exec.init();
 
+			ImGuiRadioButtons gui_present_modes({
+				"Immediate",
+				"Mailbox",
+				"Fifo",
+				"Fifo relaxed",
+			});
 			
 
 			bool paused = true;
@@ -359,6 +395,11 @@ namespace vkl
 					ImGui::Text(str_n_particules.c_str());
 					ImGui::Checkbox("reset rules", &reset_rules);
 					ImGui::Checkbox("reset particules", &reset_particules);
+
+					ImGui::Text("Present mode");
+					size_t present_mode = gui_present_modes.declare();
+					_present_mode = static_cast<VkPresentModeKHR>(present_mode);
+
 					ImGui::End();
 				}
 				ImGui::EndFrame();

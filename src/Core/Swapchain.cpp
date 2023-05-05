@@ -105,18 +105,6 @@ namespace vkl
 		}
 	}
 
-	bool Swapchain::reCreate()
-	{
-		std::shared_ptr<SwapchainInstance> old_swap = _inst;
-		_ci.oldSwapchain = *old_swap;
-		const Surface::SwapchainSupportDetails& support = _surface->getDetails();
-		_surface->queryDetails();
-		_ci.imageExtent = getPossibleExtent(*_extent, support.capabilities);
-		callInvalidationCallbacks();
-		createInstance();
-		return true;
-	}
-
 	void Swapchain::createInstance()
 	{
 		_inst = std::make_shared<SwapchainInstance>(SwapchainInstance::CI{
@@ -128,8 +116,15 @@ namespace vkl
 
 	void Swapchain::destroyInstance()
 	{
-		callInvalidationCallbacks();
-		_inst = nullptr;
+		if (_inst)
+		{
+			_old_swapchain = _inst;
+			_ci.oldSwapchain = *_old_swapchain;
+			callInvalidationCallbacks();
+			
+			_surface->queryDetails();
+			_inst = nullptr;
+		}
 	}
 
 	Swapchain::~Swapchain()
@@ -138,11 +133,13 @@ namespace vkl
 	}
 
 	Swapchain::Swapchain(CreateInfo const& ci) :
-		AbstractInstanceHolder(ci.app, ci.name),
+		InstanceHolder<SwapchainInstance>(ci.app, ci.name),
 		_extent(ci.extent),
 		_queues(ci.queues),
-		_surface(ci.surface)
+		_surface(ci.surface),
+		_target_present_mode(ci.target_present_mode)
 	{
+		_surface->queryDetails();
 		const Surface::SwapchainSupportDetails & support = _surface->getDetails();
 
 		const uint32_t n_queues = _queues.size();
@@ -185,9 +182,9 @@ namespace vkl
 		_ci.compositeAlpha = ci.composite_alpha;
 		_ci.presentMode = [&]() -> VkPresentModeKHR
 		{
-			if (std::find(support.present_modes.cbegin(), support.present_modes.cend(), ci.target_present_mode) != support.present_modes.cend())
+			if (std::find(support.present_modes.cbegin(), support.present_modes.cend(), *_target_present_mode) != support.present_modes.cend())
 			{
-				return ci.target_present_mode;
+				return *_target_present_mode;
 			}
 			else
 			{
@@ -200,11 +197,41 @@ namespace vkl
 
 	bool Swapchain::updateResources()
 	{
+		bool res = false;
+		if (_inst)
+		{
+			const Surface::SwapchainSupportDetails& support = _surface->getDetails();
+			VkPresentModeKHR prev_present_mode = _inst->createInfo().presentMode;
+			VkPresentModeKHR new_present_mode = [&]() -> VkPresentModeKHR
+			{
+				if (std::find(support.present_modes.cbegin(), support.present_modes.cend(), *_target_present_mode) != support.present_modes.cend())
+				{
+					return *_target_present_mode;
+				}
+				else
+				{
+					return support.present_modes.front();
+				}
+			}();
+			if (new_present_mode != prev_present_mode)
+			{
+				_ci.presentMode = new_present_mode;
+				destroyInstance();
+			}
+			VkExtent2D new_extent = getPossibleExtent(*_extent, support.capabilities);
+			using namespace vk_operators;
+			if (new_extent != _ci.imageExtent)
+			{
+				_ci.imageExtent = new_extent;
+				destroyInstance();
+			}
+		}
+
 		if (!_inst)
 		{
 			createInstance();
+			res = true;
 		}
-		bool res = false;
 		for (auto& view : _inst->views())
 		{
 			res |= view->updateResource();

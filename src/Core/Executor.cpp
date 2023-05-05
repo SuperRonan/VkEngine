@@ -89,9 +89,9 @@ namespace vkl
 
 	void LinearExecutor::updateResources()
 	{
-		if (_window->framebufferResized())
+		if (_window->updateResources())
 		{
-			_window->reCreateSwapchain();
+			// TODO un register swapchain images
 		}
 		
 		for (auto& image_view : _registered_images)
@@ -149,8 +149,6 @@ namespace vkl
 			const bool invalidated = sampler->updateResources();
 		}
 
-		_window->updateResources();
-
 		for (auto& command : _commands)
 		{
 			const bool invalidated = command->updateResources();
@@ -172,6 +170,7 @@ namespace vkl
 			.semaphore = frame_semaphore,
 		};
 		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fences[0]);
+		assert(_aquired.swap_index < _window->swapchainSize());
 		_context.keppAlive(prev_semaphore);
 		int _ = 0;
 	}

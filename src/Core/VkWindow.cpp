@@ -70,29 +70,32 @@ namespace vkl
 		
 	}
 
-	void VkWindow::reCreateSwapchain()
+	void VkWindow::updateDynSize()
 	{
-		int width = 0, height = 0;
-		glfwGetFramebufferSize(_window, &width, &height);
-		while (width == 0 || height == 0)
+		if (_framebuffer_resized)
 		{
-			glfwWaitEvents();
+			int width = 0, height = 0;
 			glfwGetFramebufferSize(_window, &width, &height);
-		}
-		_width = width;
-		_height = height;
-		// I don't think it is necessary to do it, but for now we have some validation errors if we don't
-		vkDeviceWaitIdle(_app->device());
-		
-		_swapchain->reCreate();
+			while (width == 0 || height == 0)
+			{
+				glfwWaitEvents();
+				glfwGetFramebufferSize(_window, &width, &height);
+			}
 
-		_framebuffer_resized = false;
+			// I don't think it is necessary to do it, but for now we have some validation errors if we don't
+			vkDeviceWaitIdle(_app->device());
+
+			_width = width;
+			_height = height;
+			_framebuffer_resized = false;
+		}
 	}
 
 	void VkWindow::setSize(uint32_t w, uint32_t h)
 	{
 		glfwSetWindowSize(_window, w, h);
-		reCreateSwapchain();
+		_framebuffer_resized = true;
+		updateDynSize();
 	}
 
 	void VkWindow::initSwapchain()
@@ -182,7 +185,7 @@ namespace vkl
 		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), *_swapchain->instance(), UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
 		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR)
 		{
-			reCreateSwapchain();
+			assert(false);
 			return AquireResult();
 		}
 		else if (aquire_res != VK_SUCCESS && aquire_res != VK_SUBOPTIMAL_KHR)
@@ -215,7 +218,8 @@ namespace vkl
 		VkResult present_res = vkQueuePresentKHR(_app->queues().present, &presentation);
 		if (present_res == VK_ERROR_OUT_OF_DATE_KHR || present_res == VK_SUBOPTIMAL_KHR)
 		{
-			reCreateSwapchain();
+			_surface->queryDetails();
+			//_swapchain->updateResources();
 		}
 		else if (present_res != VK_SUCCESS)
 		{
@@ -244,6 +248,7 @@ namespace vkl
 	bool VkWindow::updateResources()
 	{
 		bool res = false;
+		updateDynSize();
 		res |= _swapchain->updateResources();
 		return res;
 	}

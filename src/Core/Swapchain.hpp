@@ -73,7 +73,7 @@ namespace vkl
 
 	};
 
-	class Swapchain : public AbstractInstanceHolder
+	class Swapchain : public InstanceHolder<SwapchainInstance>
 	{
 	public:
 		struct CreateInfo
@@ -90,7 +90,7 @@ namespace vkl
 			std::vector<uint32_t> queues = {};
 			VkSurfaceTransformFlagBitsKHR pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 			VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-			VkPresentModeKHR target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+			DynamicValue<VkPresentModeKHR> target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 			bool clipped = true;
 			std::shared_ptr<Swapchain> old_swapchain = nullptr;
 		};
@@ -98,13 +98,14 @@ namespace vkl
 
 	protected:
 
+
 		DynamicValue<VkExtent2D> _extent;
 		std::shared_ptr<Surface> _surface;
 		std::vector<uint32_t> _queues = {};
-		
-		VkSwapchainCreateInfoKHR _ci = {};
+		DynamicValue<VkPresentModeKHR> _target_present_mode;
+		std::shared_ptr<SwapchainInstance> _old_swapchain = nullptr;
 
-		std::shared_ptr<SwapchainInstance> _inst;
+		VkSwapchainCreateInfoKHR _ci = {};
 
 		void createInstance();
 
@@ -124,17 +125,10 @@ namespace vkl
 		
 		virtual ~Swapchain() override;
 
-		bool reCreate();
-
 		bool updateResources();
 
 		constexpr VkExtent2D getPossibleExtent(VkExtent2D target, VkSurfaceCapabilitiesKHR capabilities) const
 		{
-			if (capabilities.currentExtent.width != UINT32_MAX)
-			{
-				return capabilities.currentExtent;
-			}
-			else
 			{
 				VkExtent2D res{
 					.width = std::clamp(target.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),

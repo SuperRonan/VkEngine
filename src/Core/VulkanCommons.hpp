@@ -298,5 +298,15 @@ namespace vkl
 			return !(a == b);
 		}
 
+		constexpr bool operator==(VkExtent2D const& a, VkExtent2D const& b)
+		{
+			return (a.width == b.width) && (a.height == b.height);
+		}
+
+		constexpr bool operator!=(VkExtent2D const& a, VkExtent2D const& b)
+		{
+			return !(a == b);
+		}
+
 	}
 }

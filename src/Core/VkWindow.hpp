@@ -24,7 +24,7 @@ namespace vkl
 			VkApplication* app;
 			std::set<uint32_t> queue_families_indices;
 
-			VkPresentModeKHR target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			DynamicValue<VkPresentModeKHR> target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 
 			std::string name;
 			uint32_t w, h;
@@ -50,7 +50,7 @@ namespace vkl
 		// Of size swapchain (One per swap image)
 		//std::vector<std::shared_ptr<Fence>> _image_in_flight_fence;
 
-		VkPresentModeKHR _target_present_mode;
+		DynamicValue<VkPresentModeKHR> _target_present_mode;
 
 		struct FrameInfo
 		{
@@ -101,7 +101,7 @@ namespace vkl
 
 		bool framebufferResized();
 
-		void reCreateSwapchain();
+		void updateDynSize();
 
 		void setSize(uint32_t w, uint32_t h);
 
