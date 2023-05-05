@@ -121,7 +121,7 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render_line = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
 				.name = "RenderLine",
-				.draw_count = 1,
+				.draw_count = 1u,
 				.color_attachements = {canvas_view},
 				.vertex_shader_path = shaders / "render.vert",
 				.geometry_shader_path= shaders / "render.geom",

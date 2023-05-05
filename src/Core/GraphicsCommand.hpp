@@ -81,7 +81,7 @@ namespace vkl
 
 		std::vector<std::shared_ptr<Mesh>> _meshes;
 
-		std::optional<uint32_t> _draw_count = false;
+		DynamicValue<uint32_t> _draw_count = false;
 
 
 
@@ -93,7 +93,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::optional<uint32_t> draw_count = {};
+			DynamicValue<uint32_t> draw_count = {};
 			std::vector<std::shared_ptr<Mesh>> meshes = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};

@@ -46,6 +46,15 @@ namespace vkl
 		features.features_13.synchronization2 = VK_TRUE;
 		features.features.geometryShader = VK_TRUE;
 		features.features.samplerAnisotropy = VK_TRUE;
+
+	
+		features.features_12.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+		features.features_12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+		features.features_12.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+		features.features_12.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+		features.features_12.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
+		features.features_12.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
+		features.features_12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()

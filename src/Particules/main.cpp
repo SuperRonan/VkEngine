@@ -101,7 +101,7 @@ namespace vkl
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = "Particules",
-				.w = 1600,
+				.w = 900,
 				.h = 900,
 				.resizeable = GLFW_TRUE,
 			};
@@ -137,13 +137,20 @@ namespace vkl
 			using namespace std_vector_operators;
 
 			const uint32_t particule_size = sizeof(Particule);
-			const uint32_t num_particules = 1024*4;
+			uint32_t num_particules_log2 = 10;
+			dv_<uint32_t> num_particules = [&num_particules_log2]() {
+				uint32_t res = 1;
+				for (uint32_t i = 0; i < num_particules_log2; ++i)
+					res *= 2;
+				return res;
+			};
 			const glm::vec2 world_size(4.0f, 4.0f);
 			const uint32_t N_TYPES_PARTICULES = 7;
 			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
 			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
 			const uint32_t particule_props_size = 4 * storage_float_size;
+			
 			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
 			
 			uint32_t seed = 0x2fe75454a5;
@@ -163,7 +170,7 @@ namespace vkl
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "CurrentParticulesBuffer",
-				.size = particule_size * num_particules,
+				.size = num_particules * particule_size,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -173,7 +180,7 @@ namespace vkl
 			std::shared_ptr<Buffer> previous_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "CurrentParticulesBuffer",
-				.size = particule_size * num_particules,
+				.size = current_particules->size(),
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -212,7 +219,7 @@ namespace vkl
 				.app = this,
 				.name = "InitParticules",
 				.shader_path = ENGINE_SRC_PATH "/src/Particules/initParticules.comp",
-				.dispatch_size = VkExtent3D{.width = num_particules, .height = 1, .depth = 1},
+				.dispatch_size = [&]() {return VkExtent3D{.width = *num_particules, .height = 1, .depth = 1}; } ,
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -256,7 +263,7 @@ namespace vkl
 				.app = this,
 				.name = "RunSimulation",
 				.shader_path = ENGINE_SRC_PATH "/src/Particules/update.comp",
-				.dispatch_size = VkExtent3D{.width = num_particules, .height = 1, .depth = 1},
+				.dispatch_size = init_particules->getDispatchSize(),
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -323,6 +330,15 @@ namespace vkl
 			exec.declare(render);
 
 			float friction = 1.0;
+			bool reset_particules = true;
+			bool reset_rules = true;
+
+			current_particules->addInvalidationCallback({
+				.callback = [&]() {
+					reset_particules = true;
+				},
+				.id = nullptr,
+			});
 
 			struct RenderPC
 			{
@@ -352,22 +368,6 @@ namespace vkl
 			camera.move(glm::vec2(-1, -1));
 			DynamicValue<glm::mat3> mat_world_to_cam = [&]() {return glm::inverse(screen_coords_matrix.value() * camera.matrix()); };
 
-			exec.updateResources();
-			exec.beginFrame();
-			exec.beginCommandBuffer();
-			exec(init_particules->executeWith({
-				.push_constant = InitParticulesPC{
-				.number_of_particules = num_particules,
-				.seed = seed,
-				.wolrd_size = world_size,
-			},
-				}));
-
-			exec(init_rules->executeWith({ .push_constant = seed, }));
-
-			exec.preparePresentation(render_target_view, false);
-			exec.endCommandBufferAndSubmit();
-			exec.present();
 
 			while (!_main_window->shouldClose())
 			{
@@ -391,6 +391,11 @@ namespace vkl
 				{
 					ImGui::Begin("Control");
 					ImGui::SliderFloat("friction", &friction, 0.0, 2.0);
+					ImGui::InputInt("log2(Number of particules)", (int*)& num_particules_log2);
+					std::string str_n_particules = std::to_string(*num_particules) + " particules";
+					ImGui::Text(str_n_particules.c_str());
+					ImGui::Checkbox("reset rules", &reset_rules);
+					ImGui::Checkbox("reset particules", &reset_particules);
 					ImGui::End();
 				}
 				ImGui::EndFrame();
@@ -416,12 +421,32 @@ namespace vkl
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 					
+					if (reset_particules)
+					{
+						exec(init_particules->executeWith({
+								.push_constant = InitParticulesPC{
+								.number_of_particules = *num_particules,
+								.seed = seed,
+								.wolrd_size = world_size,
+							},
+							}));
+						seed = std::hash<uint32_t>()(seed);
+						reset_particules = false;
+					}
+					if(reset_rules)
+					{
+						exec(init_rules->executeWith({ .push_constant = seed, }));
+
+						seed = std::hash<uint32_t>()(seed);
+						reset_rules = false;
+					}
+
 					if (!paused)
 					{
 						exec(copy_to_previous);
 						exec(run_simulation->executeWith({
 							.push_constant = RunSimulationPC{
-							.number_of_particules = num_particules,
+							.number_of_particules = *num_particules,
 							.dt = static_cast<float>(dt),
 							.world_size = world_size,
 							.friction = friction,

@@ -373,7 +373,7 @@ namespace vkl
 		};
 
 		DrawInfo di{
-			.draw_count = _draw_count.value_or(0),
+			.draw_count = _draw_count.valueOr(0),
 		};
 
 		recordCommandBuffer(cmd, ctx, gdi, &di);

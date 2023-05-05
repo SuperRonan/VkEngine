@@ -102,7 +102,7 @@ namespace vkl
 
 	};
 
-	class Buffer : public AbstractInstanceHolder
+	class Buffer : public InstanceHolder<BufferInstance>
 	{
 	public:
 
@@ -110,7 +110,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = "";
-			VkDeviceSize size = 0;
+			DynamicValue<VkDeviceSize> size = VkDeviceSize(0);
 			VkBufferUsageFlags usage = 0;
 			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
@@ -122,7 +122,7 @@ namespace vkl
 
 	protected:
 
-		size_t _size = 0;
+		DynamicValue<VkDeviceSize> _size = 0;
 		VkBufferUsageFlags _usage = 0;
 		std::vector<uint32_t> _queues = {};
 		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
@@ -139,14 +139,9 @@ namespace vkl
 
 		Buffer(CreateInfo const& ci);
 
-
-		constexpr Buffer(VkApplication * app=nullptr) noexcept:
-			AbstractInstanceHolder(app, ""sv)
+		Buffer(VkApplication * app=nullptr) noexcept:
+			InstanceHolder<BufferInstance>(app, ""sv)
 		{}
-
-		constexpr Buffer(Buffer const&) noexcept = delete;
-
-		constexpr Buffer& operator=(Buffer const&) noexcept = delete;
 
 		virtual ~Buffer() override;
 
@@ -155,7 +150,7 @@ namespace vkl
 			return _inst;
 		}
 
-		constexpr size_t size()const
+		constexpr const DynamicValue<VkDeviceSize> & size()const
 		{
 			return _size;
 		}

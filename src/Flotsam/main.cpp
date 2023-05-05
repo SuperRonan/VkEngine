@@ -60,7 +60,7 @@ namespace vkl
 				.name = "Flotsam",
 				.w = 1600,
 				.h = 900,
-				.resizeable = GLFW_FALSE,
+				.resizeable = GLFW_TRUE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
 
@@ -123,7 +123,7 @@ namespace vkl
 				.name = "RenderTargetImg",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
-				.extent = extend(_main_window->extent()),
+				.extent = (_main_window->extent3D()),
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -142,7 +142,7 @@ namespace vkl
 				.name = "DepthImg",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_D32_SFLOAT,
-				.extent = extend(_main_window->extent()),
+				.extent = (_main_window->extent3D()),
 				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				.create_on_construct = true,
@@ -235,7 +235,7 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render_water = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
 				.name = "RenderWater",
-				.draw_count = (water_surface_img->extent().width - 1) * (water_surface_img->extent().height - 1),
+				.draw_count = [&]() {return (water_surface_img->extent().value().width - 1) * (water_surface_img->extent().value().height - 1); },
 				.bindings = {
 					Binding{
 						.view = water_surface_view,
@@ -262,7 +262,7 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render_cube = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
 				.name = "RenderCube",
-				.draw_count = 6,
+				.draw_count = 6u,
 				.bindings = {
 					Binding{
 						.buffer = cube_buffer,
@@ -311,6 +311,7 @@ namespace vkl
 			float camera_distance = 2.0;
 
 			
+			exec.updateResources();
 			exec.beginFrame();
 			exec.beginCommandBuffer();
 
@@ -348,6 +349,7 @@ namespace vkl
 
 				if (!inputs.paused || should_render)
 				{
+					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 
@@ -369,7 +371,7 @@ namespace vkl
 							// TODO express it with a matrix
 							std::swap(camera_direction.y, camera_direction.z);
 							camera_direction.x = -camera_direction.x;
-							const glm::mat4 cam2proj = [&] {glm::mat4 tmp = glm::perspectiveFov<float>(90.0, _main_window->extent().width, _main_window->extent().height, 0.01, 10); tmp[1][1] *= -1; return tmp; }();
+							const glm::mat4 cam2proj = [&] {glm::mat4 tmp = glm::perspectiveFov<float>(90.0, _main_window->extent3D().value().width, _main_window->extent3D().value().height, 0.01, 10); tmp[1][1] *= -1; return tmp; }();
 							const glm::mat4 world2cam = glm::lookAt(-camera_distance * camera_direction, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
 							const glm::mat4 world2proj = cam2proj * world2cam;
 							render_cube->setPushConstantsData(RenderCubePC{

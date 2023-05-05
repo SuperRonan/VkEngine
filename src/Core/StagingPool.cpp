@@ -14,7 +14,7 @@ namespace vkl
 		_mutex.lock();
 		for(StagingBuffer & sb : _free_buffers)
 		{
-			if (sb->size())
+			if (*sb->size())
 			{
 				sb = nullptr;
 			}
@@ -25,7 +25,7 @@ namespace vkl
 			std::cerr << "Destroying in use staging buffers!" << std::endl;
 			for (StagingBuffer& sb : _used_buffers)
 			{
-				if (sb->size())
+				if (*sb->size())
 				{
 					sb = nullptr;
 				}
@@ -43,11 +43,11 @@ namespace vkl
 		auto it = _free_buffers.begin(), end = _free_buffers.end(), found_it = end;
 		while (it != end)
 		{
-			if ((*it)->size() >= size)
+			if (*(*it)->size() >= size)
 			{
 				if (res)
 				{
-					if (res->size ()> (*it)->size())
+					if (*res->size() > *(*it)->size())
 					{
 						found_it = it;
 						res = *it;

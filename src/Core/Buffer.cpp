@@ -74,7 +74,7 @@ namespace vkl
 
 
 	Buffer::Buffer(CreateInfo const& ci) :
-		AbstractInstanceHolder(ci.app, ci.name),
+		InstanceHolder<BufferInstance>(ci.app, ci.name),
 		_size(ci.size),
 		_usage(ci.usage),
 		_queues(std::filterRedundantValues(ci.queues)),
@@ -100,7 +100,7 @@ namespace vkl
 			.name = name(),
 			.ci = VkBufferCreateInfo {
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-				.size = _size,
+				.size = *_size,
 				.usage = _usage,
 				.sharingMode = _sharing_mode,
 				.queueFamilyIndexCount = (uint32_t)_queues.size(),
@@ -126,13 +126,22 @@ namespace vkl
 
 	bool Buffer::updateResource()
 	{
+		bool res = false;
+		if (_inst)
+		{
+			if (_inst->createInfo().size != *_size)
+			{
+				destroyInstance();
+			}
+		}
+
 		if (!_inst)
 		{
 			createInstance();
-			return true;
+			res = true;
 		}
 
-		return false;
+		return res;
 	}
 
 	

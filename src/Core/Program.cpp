@@ -130,7 +130,14 @@ namespace vkl
 				bindings.push_back(bd.binding);
 				metas.push_back(bd.meta);
 			}
-			set_layout = std::make_shared<DescriptorSetLayout>(_app, bindings, metas);
+			set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+				.app = application(),
+				.name = name() + "DescSetLayout",
+				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT ,
+				.bindings = bindings,
+				.metas = metas,
+				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+			});
 		}
 
 

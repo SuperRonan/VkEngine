@@ -50,7 +50,12 @@ namespace vkl
 			_desc_sets.resize(set_layouts.size());
 			for (size_t i = 0; i < set_layouts.size(); ++i)
 			{
-				_desc_pools[i] = std::make_shared<DescriptorPool>(set_layouts[i]);
+				_desc_pools[i] = std::make_shared<DescriptorPool>(DescriptorPool::CI{
+					.app = application(),
+					.name = name() + ".DescPool",
+					.layout = set_layouts[i],
+					.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+				});
 				_desc_sets[i] = std::make_shared<DescriptorSet>(set_layouts[i], _desc_pools[i]);
 			}
 		}
@@ -70,6 +75,11 @@ namespace vkl
 		std::vector<VkWriteDescriptorSet> writes;
 		writes.reserve(N);
 
+		bool update_uniform_buffer = false;
+		bool update_storage_image = false;
+		bool update_storage_buffer = false;
+		bool update_sampled_image = false;
+
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& b = _bindings[i];
@@ -84,6 +94,25 @@ namespace vkl
 					.descriptorCount = 1,
 					.descriptorType = b.vkType(),
 				};
+				switch (b.vkType())
+				{
+				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+					update_uniform_buffer = true;
+					break;
+				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+					update_storage_buffer = true;
+					break;
+				case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+					update_storage_image = true;
+					break;
+				case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+				case VK_DESCRIPTOR_TYPE_SAMPLER:
+				case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+					update_sampled_image = true;
+					break;
+				default:
+					std::cerr << "Unknown descriptor type!" << std::endl;
+				}
 				if (b.isBuffer())
 				{
 					buffers.emplace_back(VkDescriptorBufferInfo{
@@ -128,6 +157,30 @@ namespace vkl
 
 		if (!writes.empty())
 		{
+			bool wait = false;
+			const auto& features12 = application()->availableFeatures().features_12;
+			if (update_uniform_buffer && features12.descriptorBindingUniformBufferUpdateAfterBind == VK_FALSE)
+			{
+				wait = true;
+			}
+			if (update_storage_buffer && features12.descriptorBindingStorageBufferUpdateAfterBind == VK_FALSE)
+			{
+				wait = true;
+			}
+			if (update_storage_image && features12.descriptorBindingStorageImageUpdateAfterBind == VK_FALSE)
+			{
+				wait = false;
+			}
+			if (update_sampled_image && features12.descriptorBindingSampledImageUpdateAfterBind == VK_FALSE)
+			{
+				wait = true;
+			}
+
+			if (wait)
+			{
+				vkDeviceWaitIdle(device());
+			}
+
 			vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
 		}
 

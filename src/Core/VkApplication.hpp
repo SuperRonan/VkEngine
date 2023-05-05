@@ -85,6 +85,8 @@ namespace vkl
 		VulkanFeatures _requested_features;
 		VulkanFeatures _available_features;
 
+		
+
 		virtual void requestFeatures(VulkanFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
@@ -159,6 +161,11 @@ namespace vkl
 		//StagingPool& stagingPool();
 
 		void nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
+
+		constexpr const VulkanFeatures& availableFeatures() const
+		{
+			return _available_features;
+		}
 	};
 
 	class VkObject

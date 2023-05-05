@@ -29,15 +29,26 @@ namespace vkl
 
 	public:
 
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VkDescriptorSetLayoutCreateFlags flags = 0;
+			std::vector<VkDescriptorSetLayoutBinding> bindings = {};
+			std::vector<BindingMeta> metas = {};
+			VkDescriptorBindingFlags binding_flags = 0;
+		};
+		using CI = CreateInfo;
+
 		constexpr DescriptorSetLayout(VkApplication * app = nullptr):
 			VkObject(app)
 		{}
 
 		DescriptorSetLayout(VkApplication* app, VkDescriptorSetLayoutCreateInfo const& ci);
 
-		DescriptorSetLayout(VkApplication* app, std::vector<VkDescriptorSetLayoutBinding> const& bindings, std::vector<BindingMeta> const& metas);
+		DescriptorSetLayout(CreateInfo const& ci);
 
-		~DescriptorSetLayout();
+		virtual ~DescriptorSetLayout() override;
 
 		constexpr decltype(auto) handle()const
 		{

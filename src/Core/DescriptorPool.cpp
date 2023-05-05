@@ -2,10 +2,11 @@
 
 namespace vkl
 {
-	DescriptorPool::DescriptorPool(std::shared_ptr<DescriptorSetLayout> layout, uint32_t max_sets):
-		VkObject(layout->application()),
-		_layout(std::move(layout)),
-		_max_sets(max_sets)
+	DescriptorPool::DescriptorPool(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_layout(ci.layout),
+		_max_sets(ci.max_sets),
+		_flags(ci.flags)
 	{
 		_pool_sizes.resize(_layout->bindings().size());
 		for (size_t i = 0; i < _pool_sizes.size(); ++i)
@@ -17,7 +18,7 @@ namespace vkl
 			};
 		}
 
-		VkDescriptorPoolCreateInfo ci = {
+		VkDescriptorPoolCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = _flags,
@@ -26,7 +27,7 @@ namespace vkl
 			.pPoolSizes = _pool_sizes.data(),
 		};
 
-		create(ci);
+		create(vk_ci);
 	}
 
 	DescriptorPool::~DescriptorPool()

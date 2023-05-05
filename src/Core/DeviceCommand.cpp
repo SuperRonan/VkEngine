@@ -89,12 +89,12 @@ namespace vkl
 			if (r.isBuffer())
 			{
 				_ctx.setBufferState(r._buffer, s);
-				_ctx.keppAlive(r._buffer);
+				_ctx.keppAlive(r._buffer->instance());
 			}
 			else if (r.isImage())
 			{
 				_ctx.setImageState(r._image, s);
-				_ctx.keppAlive(r._image);
+				_ctx.keppAlive(r._image->instance());
 			}
 			else
 			{

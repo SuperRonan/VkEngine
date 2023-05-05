@@ -172,25 +172,28 @@ namespace vkl
 	bool Image::updateResource()
 	{
 		using namespace vk_operators;
+		bool res = false;
+		if (_inst)
+		{
+			if (_inst->ownership())
+			{
+				const VkExtent3D new_extent = *_extent;
+
+				if (new_extent != _inst->createInfo().extent)
+				{
+					destroyInstance();
+					res = true;
+				}
+			}
+		}
 
 		if (!_inst)
 		{
 			createInstance();
-			return true;
+			res = true;
 		}
 
-		if (_inst->ownership())
-		{
 
-			const VkExtent3D new_extent = *_extent;
-
-			if (new_extent != _inst->createInfo().extent)
-			{
-				createInstance();
-				return true;
-			}
-		}
-
-		return false;
+		return res;
 	}
 }

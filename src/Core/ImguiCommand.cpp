@@ -28,7 +28,7 @@ namespace vkl
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
 		};
 
-		_desc_pool = std::make_shared<DescriptorPool>(_app, VK_NULL_HANDLE);
+		_desc_pool = std::make_shared<DescriptorPool>(_app, name() + ".DescPool");
 		VkDescriptorPoolCreateInfo desc_ci{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			.pNext = nullptr,

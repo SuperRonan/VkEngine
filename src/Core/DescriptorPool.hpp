@@ -16,12 +16,21 @@ namespace vkl
 
 	public:
 
-		constexpr DescriptorPool(VkApplication* app = nullptr, VkDescriptorPool handle = VK_NULL_HANDLE) noexcept :
-			VkObject(app),
-			_handle(handle)
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<DescriptorSetLayout> layout = nullptr;
+			VkDescriptorPoolCreateFlags flags = 0;
+			uint32_t max_sets = 1;
+		};
+		using CI = CreateInfo;
+
+		DescriptorPool(VkApplication* app, std::string const& name = "") :
+			VkObject(app, name)
 		{}
 
-		DescriptorPool(std::shared_ptr<DescriptorSetLayout> layout, uint32_t max_sets = 1);
+		DescriptorPool(CreateInfo const& ci);
 
 		virtual ~DescriptorPool() override;
 
