@@ -48,6 +48,11 @@ namespace vkl
 		_registered_buffers.emplace_back(std::move(buffer));
 	}
 
+	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
+	{
+		_registered_samplers.emplace_back(std::move(sampler));
+	}
+
 	void LinearExecutor::preprocessCommands()
 	{
 		for (std::shared_ptr<Command>& cmd : _commands)
@@ -137,6 +142,11 @@ namespace vkl
 					.id = this,
 				});
 			}
+		}
+
+		for (auto& sampler : _registered_samplers)
+		{
+			const bool invalidated = sampler->updateResources();
 		}
 
 		_window->updateResources();

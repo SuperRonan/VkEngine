@@ -1,47 +1,36 @@
 #pragma once
 
-#include "VkApplication.hpp"
+#include "AbstractInstance.hpp"
 #include <cassert>
 #include <utility>
 
 namespace vkl
 {
-	class Sampler : public VkObject
+	class SamplerInstance: public VkObject
 	{
 	protected:
 
 		VkSampler _sampler = VK_NULL_HANDLE;
+		VkSamplerCreateInfo _ci = {};
 
 	public:
 
-		constexpr static VkBorderColor defaultBorderColor()
+		struct CreateInfo
 		{
-			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-		}
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VkSamplerCreateInfo vk_ci = {};
+		};
+		using CI = CreateInfo;
 
-		constexpr static VkSamplerMipmapMode mipMapModeFromFilter(VkFilter filter)
+		SamplerInstance(CreateInfo const& ci);
+
+		virtual ~SamplerInstance() override;
+
+		constexpr const VkSamplerCreateInfo& createInfo()const
 		{
-			if (filter == VK_FILTER_NEAREST)	return VK_SAMPLER_MIPMAP_MODE_NEAREST;
-			else //if (filter == VK_FILTER_LINEAR)
-				return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			return _ci;
 		}
-
-		constexpr Sampler()noexcept = default;
-
-		constexpr Sampler(VkApplication* app, VkSampler handle) :
-			VkObject(app),
-			_sampler(handle)
-		{}
-
-		Sampler(VkApplication* app, VkSamplerCreateInfo const& ci);
-
-		Sampler(VkApplication* app, VkFilter filter, VkSamplerAddressMode address_mode, VkBool32 anisotropy, VkBool32 unormalize_coords, VkBorderColor border = defaultBorderColor());
-
-		virtual ~Sampler() override;
-
-		void createSampler(VkSamplerCreateInfo const& ci);
-
-		void destroySampler();
 
 		constexpr VkSampler handle()const
 		{
@@ -57,10 +46,55 @@ namespace vkl
 		{
 			return sampler();
 		}
+	};
 
-		static Sampler Nearest(VkApplication * app = nullptr);
+	class Sampler : public InstanceHolder<SamplerInstance>
+	{
+	public:
+		constexpr static VkBorderColor defaultBorderColor()
+		{
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		}
 
-		static Sampler Bilinear(VkApplication* app = nullptr);
+		constexpr static VkSamplerMipmapMode mipMapModeFromFilter(VkFilter filter)
+		{
+			if (filter == VK_FILTER_NEAREST)	return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			else //if (filter == VK_FILTER_LINEAR)
+				return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		}
 
+	protected:
+
+		void createInstance();
+
+		void destroyInstance();
+
+		VkSamplerCreateInfo _vk_ci = {};
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VkSamplerCreateFlags flags = 0;
+			VkFilter filter = VK_FILTER_NEAREST;
+			VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			std::optional<float> max_anisotropy = {};
+			VkBorderColor border_color = {};
+			VkBool32 unnormalized_coordinates = false;
+			bool create_on_construct = false;
+		};
+		using CI = CreateInfo;
+
+		Sampler(CreateInfo const& ci);
+
+		virtual ~Sampler() override;
+
+		static std::shared_ptr<Sampler> MakeNearest(VkApplication * app = nullptr);
+
+		static std::shared_ptr<Sampler> MakeBilinear(VkApplication* app = nullptr);
+
+		bool updateResources();
 	};
 }

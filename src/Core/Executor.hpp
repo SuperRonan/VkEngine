@@ -32,7 +32,7 @@ namespace vkl
 
 		std::vector<std::shared_ptr<ImageView>> _registered_images = {};
 		std::vector<std::shared_ptr<Buffer>> _registered_buffers = {};
-
+		std::vector<std::shared_ptr<Sampler>> _registered_samplers = {};
 
 		void preprocessCommands();
 
@@ -80,6 +80,8 @@ namespace vkl
 		void declare(std::shared_ptr<ImageView> view);
 
 		void declare(std::shared_ptr<Buffer> buffer);
+
+		void declare(std::shared_ptr<Sampler> sampler);
 
 		void init();
 

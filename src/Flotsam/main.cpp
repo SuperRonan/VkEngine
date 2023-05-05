@@ -190,19 +190,8 @@ namespace vkl
 			});
 			exec.declare(water_surface_view);
 
-			std::shared_ptr<Sampler> bilinear_sampler = std::shared_ptr<Sampler>(new Sampler(this, VkSamplerCreateInfo{
-				.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.magFilter = VK_FILTER_LINEAR,
-				.minFilter = VK_FILTER_LINEAR,
-				.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-				.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-				.mipLodBias = 0,
-				.anisotropyEnable = false,
-			}));
+			std::shared_ptr<Sampler> bilinear_sampler = Sampler::MakeBilinear(this);
+			exec.declare(bilinear_sampler);
 
 			const std::filesystem::path shader_folder = ENGINE_SRC_PATH "/src/Flotsam/";
 

@@ -128,7 +128,7 @@ namespace vkl
 					VkDescriptorImageInfo info;
 					if (b.sampler())
 					{
-						info.sampler = *b.sampler();
+						info.sampler = *b.sampler()->instance();
 					}
 					else
 					{
@@ -257,6 +257,10 @@ namespace vkl
 					else if (corresponding_resource->isImage())
 					{
 						corresponding_resource->image()->addInvalidationCallback(callback);
+					}
+					else if (corresponding_resource->isSampler())
+					{
+						corresponding_resource->sampler()->addInvalidationCallback(callback);
 					}
 
 					

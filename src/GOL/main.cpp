@@ -28,8 +28,6 @@ namespace vkl
 
 		VkExtent2D _world_size;
 
-		Sampler _grid_sampler;
-
 		std::vector<Buffer> _mouse_update_buffers;
 
 		std::vector<Semaphore> _render_finished_semaphores;

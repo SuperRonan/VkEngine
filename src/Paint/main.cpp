@@ -27,9 +27,6 @@ namespace vkl
 
 		std::shared_ptr<VkWindow> _main_window;
 
-
-		Sampler _grid_sampler;
-
 		std::vector<Buffer> _mouse_update_buffers;
 
 		std::vector<Semaphore> _render_finished_semaphores;
