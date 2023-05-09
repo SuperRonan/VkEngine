@@ -131,11 +131,11 @@ namespace vkl
 
 		virtual bool updateResources() override;
 
-		Executable executeWith(DrawInfo const& di);
+		Executable with(DrawInfo const& di);
 		
 		Executable operator()(DrawInfo const& di)
 		{
-			return executeWith(di);
+			return with(di);
 		}
 	};
 

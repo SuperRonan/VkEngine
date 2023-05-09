@@ -48,11 +48,11 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(ExecutionInfo const& ei);
+		Executable with(ExecutionInfo const& ei);
 
 		Executable operator()(ExecutionInfo const& ei)
 		{
-			return executeWith(ei);
+			return with(ei);
 		}
 		
 		virtual ~ImguiCommand() override;

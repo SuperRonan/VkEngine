@@ -186,7 +186,7 @@ namespace vkl
 
 					if (render)
 					{
-						exec(render_line->executeWith({
+						exec(render_line->with({
 							.pc = RenderPC{
 							.p0 = prev_mouse_pos,
 							.p1 = mouse_pos,

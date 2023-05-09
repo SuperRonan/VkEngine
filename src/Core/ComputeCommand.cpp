@@ -71,7 +71,7 @@ namespace vkl
 		execute(context, di);
 	}
 
-	Executable ComputeCommand::executeWith(DispatchInfo const& di)
+	Executable ComputeCommand::with(DispatchInfo const& di)
 	{
 		using namespace vk_operators;
 		return [this, di](ExecutionContext& ctx)

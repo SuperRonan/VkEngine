@@ -73,7 +73,7 @@ namespace vkl
 		execute(context, bi);
 	}
 
-	Executable BlitImage::executeWith(BlitInfo const& bi)
+	Executable BlitImage::with(BlitInfo const& bi)
 	{
 		return [&](ExecutionContext& ctx)
 		{
@@ -162,7 +162,7 @@ namespace vkl
 		execute(context, cinfo);
 	}
 
-	Executable CopyImage::executeWith(CopyInfo const& ci)
+	Executable CopyImage::with(CopyInfo const& ci)
 	{
 		return [&](ExecutionContext& ctx)
 		{
@@ -250,7 +250,7 @@ namespace vkl
 		execute(context, cinfo);
 	}
 
-	Executable CopyBufferToImage::executeWith(CopyInfo const& info)
+	Executable CopyBufferToImage::with(CopyInfo const& info)
 	{
 		return [&](ExecutionContext& context)
 		{
@@ -321,7 +321,7 @@ namespace vkl
 		execute(context, cinfo);
 	}
 
-	Executable CopyBuffer::executeWith(CopyInfo const& cinfo)
+	Executable CopyBuffer::with(CopyInfo const& cinfo)
 	{
 		return [&](ExecutionContext& context)
 		{
@@ -354,7 +354,7 @@ namespace vkl
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 		InputSynchronizationHelper synch(context);
 		synch.addSynch(Resource{
-			._buffer = _buffer,
+			._buffer = fi.buffer,
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -380,7 +380,7 @@ namespace vkl
 		execute(context, fi);
 	}
 
-	Executable FillBuffer::executeWith(FillInfo const& fi)
+	Executable FillBuffer::with(FillInfo const& fi)
 	{
 		return [&](ExecutionContext& context)
 		{
@@ -451,7 +451,7 @@ namespace vkl
 		execute(context, ci);
 	}
 
-	Executable ClearImage::executeWith(ClearInfo const& ci)
+	Executable ClearImage::with(ClearInfo const& ci)
 	{
 		return [&](ExecutionContext& context)
 		{
@@ -462,4 +462,57 @@ namespace vkl
 			execute(context, cinfo);
 		};
 	}
+
+	UpdateBuffer::UpdateBuffer(CreateInfo const& ci) :
+		DeviceCommand(ci.app, ci.name),
+		_buffer(ci.buffer),
+		_data(ci.data),
+		_size(ci.size)
+	{}
+
+	UpdateBuffer::~UpdateBuffer()
+	{
+
+	}
+
+	void UpdateBuffer::execute(ExecutionContext& ctx, UpdateInfo const& ui)
+	{
+		InputSynchronizationHelper synch(ctx);
+		synch.addSynch(Resource{
+			._buffer = ui.buffer,
+			._begin_state = ResourceState2{
+				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+			},
+			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		});
+		synch.record();
+		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.buffer->instance(), 0, ui.size, ui.data);
+		synch.NotifyContext();
+	}
+
+	void UpdateBuffer::execute(ExecutionContext& ctx)
+	{
+		UpdateInfo ui{
+			.buffer = _buffer,
+			.data = _data,
+			.size = _size,
+		};
+		execute(ctx, ui);
+	}
+
+	Executable UpdateBuffer::with(UpdateInfo const& ui)
+	{
+		UpdateInfo _ui
+		{
+			.buffer = ui.buffer ? ui.buffer : _buffer,
+			.data = ui.data ? ui.data : _data,
+			.size = ui.size ? ui.size : _size,
+		};
+		return [=](ExecutionContext& ctx)
+		{
+			execute(ctx, _ui);
+		};
+	}
+	
 }

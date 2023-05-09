@@ -427,7 +427,7 @@ namespace vkl
 					
 					if (reset_particules)
 					{
-						exec(init_particules->executeWith({
+						exec(init_particules->with({
 								.push_constant = InitParticulesPC{
 								.number_of_particules = *num_particules,
 								.seed = seed,
@@ -439,7 +439,7 @@ namespace vkl
 					}
 					if(reset_rules)
 					{
-						exec(init_rules->executeWith({ .push_constant = seed, }));
+						exec(init_rules->with({ .push_constant = seed, }));
 
 						seed = std::hash<uint32_t>()(seed);
 						reset_rules = false;
@@ -448,7 +448,7 @@ namespace vkl
 					if (!paused)
 					{
 						exec(copy_to_previous);
-						exec(run_simulation->executeWith({
+						exec(run_simulation->with({
 							.push_constant = RunSimulationPC{
 							.number_of_particules = *num_particules,
 							.dt = static_cast<float>(dt),
@@ -459,7 +459,7 @@ namespace vkl
 					}
 					
 					{
-						exec(render->executeWith({
+						exec(render->with({
 							.pc = RenderPC{
 							.matrix = glm::mat4(mat_world_to_cam.value()),
 							.zoom = static_cast<float>(mouse_handler.getScroll()),

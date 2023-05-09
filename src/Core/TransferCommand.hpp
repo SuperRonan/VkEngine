@@ -43,11 +43,11 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(BlitInfo const& bi);
+		Executable with(BlitInfo const& bi);
 
 		Executable operator()(BlitInfo const& bi)
 		{
-			return executeWith(bi);
+			return with(bi);
 		}
 
 	};
@@ -86,11 +86,11 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(CopyInfo const& cinfo);
+		Executable with(CopyInfo const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
-			return executeWith(cinfo);
+			return with(cinfo);
 		}
 	};
 
@@ -129,11 +129,11 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(CopyInfo const& cinfo);
+		Executable with(CopyInfo const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
-			return executeWith(cinfo);
+			return with(cinfo);
 		}
 	};
 
@@ -170,11 +170,11 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(CopyInfo const& cinfo);
+		Executable with(CopyInfo const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
-			return executeWith(cinfo);
+			return with(cinfo);
 		}
 	};
 
@@ -217,11 +217,11 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(FillInfo const& fi);
+		Executable with(FillInfo const& fi);
 
 		Executable operator()(FillInfo const& fi)
 		{
-			return executeWith(fi);
+			return with(fi);
 		}
 	};
 
@@ -255,13 +255,57 @@ namespace vkl
 
 		void execute(ExecutionContext& context, ClearInfo const& ci);
 
-		void execute(ExecutionContext& context) override;
+		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(ClearInfo const& ci);
+		Executable with(ClearInfo const& ci);
 
 		Executable operator()(ClearInfo const& ci)
 		{
-			return executeWith(ci);
+			return with(ci);
+		}
+	};
+
+	class UpdateBuffer : public DeviceCommand
+	{
+	protected:
+
+		std::shared_ptr<Buffer> _buffer;
+		const void* _data = nullptr;
+		size_t _size = 0;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Buffer> buffer = nullptr;
+			const void* data = nullptr;
+			size_t size = 0;
+		};
+		using CI = CreateInfo;
+
+		UpdateBuffer(CreateInfo const& ci);
+
+		virtual ~UpdateBuffer() override;
+
+		struct UpdateInfo
+		{
+			std::shared_ptr<Buffer> buffer = nullptr;
+			const void* data = nullptr;
+			size_t size = 0;
+		};
+		using UI = UpdateInfo;
+
+		void execute(ExecutionContext& ctx, UpdateInfo const& ui);
+
+		virtual void execute(ExecutionContext& ctx) override;
+
+		Executable with(UpdateInfo const& ui);
+
+		Executable operator()(UpdateInfo const& ui)
+		{
+			return with(ui);
 		}
 	};
 }

@@ -52,11 +52,11 @@ namespace vkl
 		
 		virtual void execute(ExecutionContext& context) override;
 
-		Executable executeWith(DispatchInfo const& di);
+		Executable with(DispatchInfo const& di);
 
 		Executable operator()(DispatchInfo const& di)
 		{
-			return executeWith(di);
+			return with(di);
 		}
 
 		virtual bool updateResources()override;

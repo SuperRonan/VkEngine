@@ -379,7 +379,7 @@ namespace vkl
 		recordCommandBuffer(cmd, ctx, gdi, &di);
 	}
 
-	Executable VertexCommand::executeWith(DrawInfo const& di)
+	Executable VertexCommand::with(DrawInfo const& di)
 	{
 
 		GraphicsCommand::DrawInfo gdi{
