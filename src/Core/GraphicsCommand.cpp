@@ -8,7 +8,8 @@ namespace vkl
 		_depth(ci.depth_buffer),
 		_write_depth(ci.write_depth),
 		_clear_color(ci.clear_color),
-		_clear_depth_stencil(ci.clear_depth_stencil)
+		_clear_depth_stencil(ci.clear_depth_stencil),
+		_blending(ci.blending)
 	{}
 
 	void GraphicsCommand::createGraphicsResources()

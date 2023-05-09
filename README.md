@@ -18,3 +18,4 @@ Projects Ideas:
 - [ ] Mutiple rigid body simulation
 - [ ] Fluid simulation? 
 - [ ] Reversed perspective redering
+- [ ] Wave Function Collapse
