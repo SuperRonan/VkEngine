@@ -327,7 +327,7 @@ namespace vkl
 		}
 	}
 
-	bool DescriptorSetsManager::updateResources()
+	bool DescriptorSetsManager::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
@@ -371,13 +371,13 @@ namespace vkl
 	}
 
 
-	bool ShaderCommand::updateResources()
+	bool ShaderCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
-		res |= _pipeline->updateResources();
+		res |= _pipeline->updateResources(ctx);
 
-		res |= _sets->updateResources();
+		res |= _sets->updateResources(ctx);
 
 		_sets->instance()->writeDescriptorSets();
 

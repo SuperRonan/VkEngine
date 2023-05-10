@@ -59,7 +59,7 @@ namespace vkl
 			return with(di);
 		}
 
-		virtual bool updateResources()override;
+		virtual bool updateResources(UpdateContext & ctx)override;
 
 		void setDispatchSize(DynamicValue<VkExtent3D> size)
 		{

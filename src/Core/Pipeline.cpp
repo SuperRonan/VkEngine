@@ -111,11 +111,11 @@ namespace vkl
 		_program->removeInvalidationCallbacks(this);
 	}
 
-	bool Pipeline::updateResources()
+	bool Pipeline::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
-		res |= _program->updateResources();
+		res |= _program->updateResources(ctx);
 
 		if (!_inst)
 		{

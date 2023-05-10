@@ -122,7 +122,7 @@ namespace vkl
 
 		virtual ~Shader() override;
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 		
 	};
 }

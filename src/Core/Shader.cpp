@@ -269,17 +269,20 @@ namespace vkl
 		}
 	}
 
-	bool Shader::updateResources()
+	bool Shader::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 		
-		for (const auto& dep : _dependencies)
+		if (ctx.checkShaders())
 		{
-			const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
-			if (new_time > _instance_time)
+			for (const auto& dep : _dependencies)
 			{
-				res = true;
-				
+				const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
+				if (new_time > _instance_time)
+				{
+					res = true;
+
+				}
 			}
 		}
 
@@ -295,7 +298,6 @@ namespace vkl
 			res = true;
 		}
 
-		// TODO reload if any dependency has been updated
 		return res;
 	}
 

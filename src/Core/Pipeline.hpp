@@ -351,6 +351,6 @@ namespace vkl
 			return _program;
 		}
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 	};
 }

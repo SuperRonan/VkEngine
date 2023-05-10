@@ -39,7 +39,7 @@ namespace vkl
 
 		virtual ~DeviceCommand() override = default;
 
-		virtual bool updateResources() override;
+		virtual bool updateResources(UpdateContext & ctx) override;
 	};
 }
 

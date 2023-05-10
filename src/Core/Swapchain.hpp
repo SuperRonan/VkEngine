@@ -125,7 +125,7 @@ namespace vkl
 		
 		virtual ~Swapchain() override;
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 
 		constexpr VkExtent2D getPossibleExtent(VkExtent2D target, VkSurfaceCapabilitiesKHR capabilities) const
 		{

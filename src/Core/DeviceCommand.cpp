@@ -103,7 +103,7 @@ namespace vkl
 		}
 	}
 
-	bool DeviceCommand::updateResources()
+	bool DeviceCommand::updateResources(UpdateContext & ctx)
 	{
 		return false;
 	}

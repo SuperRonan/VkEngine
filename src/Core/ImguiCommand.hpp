@@ -57,7 +57,7 @@ namespace vkl
 		
 		virtual ~ImguiCommand() override;
 
-		virtual bool updateResources() override;
+		virtual bool updateResources(UpdateContext & ctx) override;
 
 		constexpr void setIndex(size_t index)
 		{

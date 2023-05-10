@@ -165,7 +165,7 @@ namespace vkl
 			return _allocator;
 		}
 
-		bool updateResource();
+		bool updateResource(UpdateContext & ctx);
 
 		//StagingPool::StagingBuffer * copyToStaging(void* data, size_t size = 0);
 

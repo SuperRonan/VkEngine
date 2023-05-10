@@ -278,7 +278,7 @@ namespace vkl
 			};
 		}
 
-		bool updateResource();
+		bool updateResource(UpdateContext & ctx);
 
 		//StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
 	};

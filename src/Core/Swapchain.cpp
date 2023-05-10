@@ -195,7 +195,7 @@ namespace vkl
 		_ci.oldSwapchain = VK_NULL_HANDLE;
 	}
 
-	bool Swapchain::updateResources()
+	bool Swapchain::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 		if (_inst)
@@ -234,7 +234,7 @@ namespace vkl
 		}
 		for (auto& view : _inst->views())
 		{
-			res |= view->updateResource();
+			res |= view->updateResource(ctx);
 		}
 		return res;
 	}

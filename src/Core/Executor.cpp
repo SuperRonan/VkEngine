@@ -89,14 +89,28 @@ namespace vkl
 
 	void LinearExecutor::updateResources()
 	{
-		if (_window->updateResources())
+		bool should_check_shaders = false;
+		{
+			std::chrono::time_point now = std::chrono::system_clock::now();
+			std::chrono::duration diff = (now - _shader_check_time);
+			if (diff > _shader_check_period)
+			{
+				should_check_shaders = true;
+				_shader_check_time = now;
+			}
+		}
+		UpdateContext update_context(UpdateContext::CI{
+			.check_shaders = should_check_shaders,
+		});
+
+		if (_window->updateResources(update_context))
 		{
 			// TODO un register swapchain images
 		}
 		
 		for (auto& image_view : _registered_images)
 		{
-			const bool invalidated = image_view->updateResource();
+			const bool invalidated = image_view->updateResource(update_context);
 			if (invalidated)
 			{
 				const ImageRange ir{
@@ -123,7 +137,7 @@ namespace vkl
 
 		for (auto& buffer : _registered_buffers)
 		{
-			const bool invalidated = buffer->updateResource();
+			const bool invalidated = buffer->updateResource(update_context);
 			if (invalidated)
 			{
 				const ResourceState2 state{
@@ -146,12 +160,12 @@ namespace vkl
 
 		for (auto& sampler : _registered_samplers)
 		{
-			const bool invalidated = sampler->updateResources();
+			const bool invalidated = sampler->updateResources(update_context);
 		}
 
 		for (auto& command : _commands)
 		{
-			const bool invalidated = command->updateResources();
+			const bool invalidated = command->updateResources(update_context);
 		}
 	}
 

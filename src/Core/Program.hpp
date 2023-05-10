@@ -102,7 +102,7 @@ namespace vkl
 			return _shaders;
 		}
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 	};
 
 	class GraphicsProgramInstance : public ProgramInstance

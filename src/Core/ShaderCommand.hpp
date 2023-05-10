@@ -306,7 +306,7 @@ namespace vkl
 
 		virtual ~DescriptorSetsManager() override;
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 	};
 
 	class ShaderCommand : public DeviceCommand
@@ -345,7 +345,7 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& context) override = 0;
 
-		virtual bool updateResources() override;
+		virtual bool updateResources(UpdateContext & ctx) override;
 
 	};
 }

@@ -96,7 +96,7 @@ namespace vkl
 		}
 	}
 
-	bool Framebuffer::updateResources()
+	bool Framebuffer::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 

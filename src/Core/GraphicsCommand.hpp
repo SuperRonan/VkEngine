@@ -58,7 +58,7 @@ namespace vkl
 
 		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data) = 0;
 
-		virtual bool updateResources() override;
+		virtual bool updateResources(UpdateContext & ctx) override;
 	};
 
 
@@ -129,7 +129,7 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& ctx) override;
 
-		virtual bool updateResources() override;
+		virtual bool updateResources(UpdateContext & ctx) override;
 
 		Executable with(DrawInfo const& di);
 		

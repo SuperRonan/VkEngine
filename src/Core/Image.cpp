@@ -169,7 +169,7 @@ namespace vkl
 	//}
 
 
-	bool Image::updateResource()
+	bool Image::updateResource(UpdateContext & ctx)
 	{
 		using namespace vk_operators;
 		bool res = false;

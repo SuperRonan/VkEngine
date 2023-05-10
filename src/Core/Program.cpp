@@ -211,13 +211,13 @@ namespace vkl
 		}
 	}
 
-	bool Program::updateResources()
+	bool Program::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 		
 		for (auto& shader : _shaders)
 		{
-			res |= shader->updateResources();
+			res |= shader->updateResources(ctx);
 		}
 		
 		if (!_inst)

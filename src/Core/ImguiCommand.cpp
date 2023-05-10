@@ -207,7 +207,7 @@ namespace vkl
 		execute(ctx, ei);
 	}
 
-	bool ImguiCommand::updateResources()
+	bool ImguiCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
@@ -219,7 +219,7 @@ namespace vkl
 
 		for (auto& fb : _framebuffers)
 		{
-			res |= fb->updateResources();
+			res |= fb->updateResources(ctx);
 		}
 
 		return res;

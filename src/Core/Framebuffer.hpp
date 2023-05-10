@@ -113,7 +113,7 @@ namespace vkl
 
 		virtual ~Framebuffer() override;
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 
 		constexpr auto& renderPass()
 		{

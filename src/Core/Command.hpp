@@ -23,7 +23,7 @@ namespace vkl
 
 		virtual void prepareUpdate() {};
 
-		virtual bool updateResources() { return false; };
+		virtual bool updateResources(UpdateContext & ctx) { return false; };
 
 	};
 }

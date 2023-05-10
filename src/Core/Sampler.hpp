@@ -91,10 +91,11 @@ namespace vkl
 
 		virtual ~Sampler() override;
 
+		bool updateResources(UpdateContext & ctx);
+
 		static std::shared_ptr<Sampler> MakeNearest(VkApplication * app = nullptr);
 
 		static std::shared_ptr<Sampler> MakeBilinear(VkApplication* app = nullptr);
 
-		bool updateResources();
 	};
 }

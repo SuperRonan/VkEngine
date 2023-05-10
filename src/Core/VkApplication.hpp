@@ -235,5 +235,28 @@ namespace vkl
 		VkObject* id = nullptr;
 	};
 
+	class UpdateContext
+	{
+	protected:
+
+		bool _check_shaders = false;
+
+	public:
+
+		struct CreateInfo
+		{
+			bool check_shaders = false;
+		};
+		using CI = CreateInfo;
+
+		UpdateContext(CreateInfo const& ci) :
+			_check_shaders(ci.check_shaders)
+		{
+
+		}
+
+		constexpr bool checkShaders() const { return _check_shaders; }
+
+	};
 
 }

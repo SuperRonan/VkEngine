@@ -71,7 +71,7 @@ namespace vkl
 		}
 	}
 
-	bool Sampler::updateResources()
+	bool Sampler::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 

@@ -193,13 +193,13 @@ namespace vkl
 		ShaderCommand::init();
 	}
 
-	bool GraphicsCommand::updateResources()
+	bool GraphicsCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
-		res |= ShaderCommand::updateResources();
+		res |= ShaderCommand::updateResources(ctx);
 
-		_framebuffer->updateResources();
+		_framebuffer->updateResources(ctx);
 
 		return res;
 	}
@@ -397,11 +397,11 @@ namespace vkl
 		};
 	}
 
-	bool VertexCommand::updateResources()
+	bool VertexCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
-		res |= GraphicsCommand::updateResources();
+		res |= GraphicsCommand::updateResources(ctx);
 
 		return res;
 	}

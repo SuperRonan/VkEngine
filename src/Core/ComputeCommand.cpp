@@ -84,11 +84,11 @@ namespace vkl
 		};
 	}
 
-	bool ComputeCommand::updateResources()
+	bool ComputeCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
-		res |= ShaderCommand::updateResources();
+		res |= ShaderCommand::updateResources(ctx);
 
 		return res;
 	}

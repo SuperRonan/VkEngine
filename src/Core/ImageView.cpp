@@ -171,32 +171,32 @@ namespace vkl
 	//	vkCmdCopyBufferToImage(command_buffer, sb->buffer, *_image, layout, 1, &copy);
 	//}
 
-	void ImageView::recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage)
-	{
-		VkImageMemoryBarrier barrier{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			.srcAccessMask = src_access,
-			.dstAccessMask = dst_access,
-			.oldLayout = src,
-			.newLayout = dst,
-			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-			.image = *_inst->image(),
-			.subresourceRange = _range,
-		};
+	//void ImageView::recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage)
+	//{
+	//	VkImageMemoryBarrier barrier{
+	//		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+	//		.srcAccessMask = src_access,
+	//		.dstAccessMask = dst_access,
+	//		.oldLayout = src,
+	//		.newLayout = dst,
+	//		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	//		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+	//		.image = *_inst->image(),
+	//		.subresourceRange = _range,
+	//	};
 
-		vkCmdPipelineBarrier(command,
-			src_stage, dst_stage,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-	}
+	//	vkCmdPipelineBarrier(command,
+	//		src_stage, dst_stage,
+	//		0,
+	//		0, nullptr,
+	//		0, nullptr,
+	//		1, &barrier
+	//	);
+	//}
 
-	bool ImageView::updateResource()
+	bool ImageView::updateResource(UpdateContext & ctx)
 	{
-		const bool updated = _image->updateResource();                      
+		const bool updated = _image->updateResource(ctx);                      
 		
 		if (!_inst)
 		{

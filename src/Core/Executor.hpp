@@ -9,6 +9,8 @@
 
 namespace vkl
 {
+	using namespace std::chrono_literals;
+
 	class LinearExecutor : public VkObject
 	{
 	protected:
@@ -51,6 +53,10 @@ namespace vkl
 
 		std::queue<InBetween> _previous_in_betweens;
 		InBetween _in_between;
+		
+
+		std::chrono::milliseconds _shader_check_period = 1s;
+		std::chrono::time_point<std::chrono::system_clock> _shader_check_time = std::chrono::system_clock::now();
 
 	public:
 

@@ -160,7 +160,7 @@ namespace vkl
 
 		void present(uint32_t num_semaphores, VkSemaphore* semaphores);
 
-		bool updateResources();
+		bool updateResources(UpdateContext & ctx);
 
 
 

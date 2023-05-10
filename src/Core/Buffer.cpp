@@ -124,7 +124,7 @@ namespace vkl
 		}
 	}
 
-	bool Buffer::updateResource()
+	bool Buffer::updateResource(UpdateContext & ctx)
 	{
 		bool res = false;
 		if (_inst)
