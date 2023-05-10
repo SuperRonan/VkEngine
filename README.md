@@ -1,17 +1,29 @@
-TODO List:
+# TODO List:
 - [x] Fill UBO transfer command
+- [ ] SDL Window?
 - [ ] CPU Parallel task executions
     - [ ] Shader compilation
     - [ ] Pipeline creation
-- [ ] UpdateContext
+- [x] UpdateContext
+- [ ] VkShaderObjectEXT? 
+- [ ] Complete Graphics command
+    - [ ] Bresenham line rasterization
+    - [ ] MSAA
+- [ ] RenderPass-less rendering? 
 - [ ] Mesh loading
-- [ ] .obj loader
+    - [ ] .obj loader
 - [ ] Mesh renderer, Mesh representation
     - [ ] Mesh attribs from reflection
-- [ ] Scene, TLAS
-- [ ] Ray tracing
+- [ ] Scene
+- [ ] Mesh compression?
+    - [ ] Meshlets ? 
+- [ ] Mesh Shaders command
+- [ ] VkRayTracingKHR
+    - [ ] TLAS
+    - [ ] SBT
 - [ ] Modules
 - [ ] Multi layer swapchain (for VR)
+- [ ] Debug buffers
 
 Projects Ideas:
 - [ ] Seam Carving
@@ -19,3 +31,8 @@ Projects Ideas:
 - [ ] Fluid simulation? 
 - [ ] Reversed perspective redering
 - [ ] Wave Function Collapse
+- [ ] PT, LT, BDPT, VCM?
+- [ ] SIBR
+- [ ] HashCache based field storage + neural recontstruction?
+- [ ] ReStiR
+- [ ] Radiance guiding
