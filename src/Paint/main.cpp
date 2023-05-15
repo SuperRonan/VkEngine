@@ -9,7 +9,7 @@
 #include <Core/Sampler.hpp>
 #include <Core/Semaphore.hpp>
 
-#include <Core/Executor.hpp>
+#include <Core/LinearExecutor.hpp>
 #include <Core/ComputeCommand.hpp>
 #include <Core/TransferCommand.hpp>
 #include <Core/GraphicsCommand.hpp>
@@ -34,14 +34,14 @@ namespace vkl
 	public:
 
 		Paint(bool validation=false) :
-			VkApplication("Game of Life", validation)
+			VkApplication("Paint", validation)
 		{
 			init();
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
-				.name = "Game of Life",
+				.name = "Paint",
 				.w = 1024,
 				.h = 512,
 				.resizeable = GLFW_TRUE,

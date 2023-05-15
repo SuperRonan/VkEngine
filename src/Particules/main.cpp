@@ -11,7 +11,7 @@
 #include <Core/GraphicsCommand.hpp>
 #include <Core/TransferCommand.hpp>
 #include <Core/ImguiCommand.hpp>
-#include <Core/Executor.hpp>
+#include <Core/LinearExecutor.hpp>
 
 #include <iostream>
 #include <chrono>

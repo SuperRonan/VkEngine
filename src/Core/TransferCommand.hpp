@@ -5,7 +5,20 @@
 
 namespace vkl
 {
-	class BlitImage : public DeviceCommand
+	class TransferCommand : public DeviceCommand
+	{
+	protected:
+
+	public:
+		TransferCommand(VkApplication * app, std::string const& name):
+			DeviceCommand(app, name)
+		{}
+
+		virtual ~TransferCommand() override
+		{}
+	};
+
+	class BlitImage : public TransferCommand
 	{
 	protected:
 
@@ -52,7 +65,7 @@ namespace vkl
 
 	};
 
-	class CopyImage : public DeviceCommand
+	class CopyImage : public TransferCommand
 	{
 	protected:
 
@@ -94,7 +107,7 @@ namespace vkl
 		}
 	};
 
-	class CopyBufferToImage : public DeviceCommand
+	class CopyBufferToImage : public TransferCommand
 	{
 	protected:
 
@@ -137,7 +150,7 @@ namespace vkl
 		}
 	};
 
-	class CopyBuffer : public DeviceCommand
+	class CopyBuffer : public TransferCommand
 	{
 	protected:
 
@@ -178,7 +191,7 @@ namespace vkl
 		}
 	};
 
-	class FillBuffer : public DeviceCommand
+	class FillBuffer : public TransferCommand
 	{
 	protected:
 
@@ -225,7 +238,7 @@ namespace vkl
 		}
 	};
 
-	class ClearImage : public DeviceCommand
+	class ClearImage : public TransferCommand
 	{
 	protected:
 
@@ -265,7 +278,7 @@ namespace vkl
 		}
 	};
 
-	class UpdateBuffer : public DeviceCommand
+	class UpdateBuffer : public TransferCommand
 	{
 	protected:
 

@@ -9,7 +9,7 @@
 #include <Core/Sampler.hpp>
 #include <Core/Semaphore.hpp>
 
-#include <Core/Executor.hpp>
+#include <Core/LinearExecutor.hpp>
 #include <Core/ComputeCommand.hpp>
 #include <Core/TransferCommand.hpp>
 

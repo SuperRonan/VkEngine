@@ -3,7 +3,7 @@
 namespace vkl
 {
 	BlitImage::BlitImage(CreateInfo const& ci) :
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst),
 		_regions(ci.regions),
@@ -88,7 +88,7 @@ namespace vkl
 	}
 
 	CopyImage::CopyImage(CreateInfo const& ci):
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst),
 		_regions(ci.regions)
@@ -177,7 +177,7 @@ namespace vkl
 
 
 	CopyBufferToImage::CopyBufferToImage(CreateInfo const& ci) :
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst),
 		_regions(ci.regions)
@@ -265,7 +265,7 @@ namespace vkl
 
 
 	CopyBuffer::CopyBuffer(CreateInfo const& ci) :
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst)
 	{}
@@ -335,7 +335,7 @@ namespace vkl
 
 
 	FillBuffer::FillBuffer(CreateInfo const& ci) :
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_buffer(ci.buffer),
 		_begin(ci.begin),
 		_size(ci.size),
@@ -397,7 +397,7 @@ namespace vkl
 
 
 	ClearImage::ClearImage(CreateInfo const& ci):
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_view(ci.view),
 		_value(ci.value)
 	{
@@ -464,7 +464,7 @@ namespace vkl
 	}
 
 	UpdateBuffer::UpdateBuffer(CreateInfo const& ci) :
-		DeviceCommand(ci.app, ci.name),
+		TransferCommand(ci.app, ci.name),
 		_buffer(ci.buffer),
 		_data(ci.data),
 		_size(ci.size)
