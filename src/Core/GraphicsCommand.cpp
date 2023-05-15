@@ -160,6 +160,7 @@ namespace vkl
 		gci.vertex_input = Pipeline::VertexInputWithoutVertices();
 		gci.input_assembly = Pipeline::InputAssemblyPointDefault();
 		gci.rasterization = Pipeline::RasterizationDefault();
+		gci.line_raster = Pipeline::BresenhamLineRasterization();
 		gci.multisampling = Pipeline::MultisampleOneSample();
 		gci.program = _program;
 		gci.render_pass = _render_pass;

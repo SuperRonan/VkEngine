@@ -46,6 +46,7 @@ namespace vkl
 			gci.viewports = _gci.viewports;
 			gci.scissors = _gci.scissors;
 			gci.rasterization = _gci.rasterization;
+			gci.line_raster = _gci.line_raster;
 			gci.multisampling = _gci.multisampling;
 			gci.depth_stencil = _gci.depth_stencil;
 			gci.attachements_blends = _gci.attachements_blends;

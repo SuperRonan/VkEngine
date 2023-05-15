@@ -11,7 +11,45 @@ namespace vkl
 {
 	using namespace std::chrono_literals;
 
-	class LinearExecutor : public VkObject
+	class Executor : public VkObject
+	{
+	public:
+
+		template <class StringLike = std::string>
+		Executor(VkApplication * app, StringLike && name):
+			VkObject(app, std::forward<StringLike>(name))
+		{}
+
+		virtual void declare(std::shared_ptr<Command> cmd) = 0;
+
+		virtual void declare(std::shared_ptr<ImageView> view) = 0;
+
+		virtual void declare(std::shared_ptr<Buffer> buffer) = 0;
+
+		virtual void declare(std::shared_ptr<Sampler> sampler) = 0;
+
+		virtual void init() = 0;
+
+		virtual void updateResources() = 0;
+
+		virtual void execute(std::shared_ptr<Command> cmd) = 0;
+
+		virtual void execute(Executable const& executable) = 0;
+
+		void operator()(std::shared_ptr<Command> cmd)
+		{
+			execute(cmd);
+		}
+
+		void operator()(Executable const& executable)
+		{
+			execute(executable);
+		}
+
+		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) = 0;
+	};
+
+	class LinearExecutor : public Executor
 	{
 	protected:
 
@@ -70,28 +108,21 @@ namespace vkl
 
 		using CI = CreateInfo;
 
-		template <typename StringLike = std::string>
-		LinearExecutor(std::shared_ptr<VkWindow> window , StringLike&& name = {}):
-			VkObject(window->application(), std::forward<StringLike>(name)),
-			_window(window),
-			_context(&_resources_state, nullptr)
-		{}
-
 		LinearExecutor(CreateInfo const& ci);
 
-		virtual ~LinearExecutor();
+		virtual ~LinearExecutor() override;
 
-		void declare(std::shared_ptr<Command> cmd);
+		virtual void declare(std::shared_ptr<Command> cmd) override final;
 
-		void declare(std::shared_ptr<ImageView> view);
+		virtual void declare(std::shared_ptr<ImageView> view) override final;
 
-		void declare(std::shared_ptr<Buffer> buffer);
+		virtual void declare(std::shared_ptr<Buffer> buffer) override final;
 
-		void declare(std::shared_ptr<Sampler> sampler);
+		virtual void declare(std::shared_ptr<Sampler> sampler) override final;
 
-		void init();
+		virtual void init() override final;
 
-		void updateResources();
+		virtual void updateResources() override final;
 
 		void beginFrame();
 
@@ -103,23 +134,13 @@ namespace vkl
 
 		void present();
 
-		void execute(std::shared_ptr<Command> cmd);
+		virtual void execute(std::shared_ptr<Command> cmd) override final;
 
-		void execute(Executable const& executable);
-
-		void operator()(std::shared_ptr<Command> cmd)
-		{
-			execute(cmd);
-		}
-
-		void operator()(Executable const& executable)
-		{
-			execute(executable);
-		}
+		virtual void execute(Executable const& executable) override final;
 
 		void submit();
 
-		void waitForAllCompletion(uint64_t timeout = UINT64_MAX);
+		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) override final;
 
 		void waitForCurrentCompletion(uint64_t timeout = UINT64_MAX);
 

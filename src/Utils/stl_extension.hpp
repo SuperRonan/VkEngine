@@ -127,7 +127,6 @@ namespace std
 		return res;
 	}
 
-
 	template <class It1, class It2, class T>
 	bool contains(It1 begin, It2 const& end, T const& value)
 	{

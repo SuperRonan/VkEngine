@@ -29,15 +29,18 @@ namespace vkl
 		VkPhysicalDeviceVulkan11Features features_11 = {};
 		VkPhysicalDeviceVulkan12Features features_12 = {};
 		VkPhysicalDeviceVulkan13Features features_13 = {};
+		VkPhysicalDeviceLineRasterizationFeaturesEXT line_raster_ext = {};
 
 		VkPhysicalDeviceFeatures2 link()
 		{
 			features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 			features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 			features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+			line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
 
 			features_11.pNext = &features_12;
 			features_12.pNext = &features_13;
+			features_13.pNext = &line_raster_ext;
 			return VkPhysicalDeviceFeatures2{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 				.pNext = &features_11,
@@ -50,12 +53,14 @@ namespace vkl
 	{
 		VkPhysicalDeviceProperties props = {};
 		// TODO add new vulkan versions props
+		VkPhysicalDeviceLineRasterizationPropertiesEXT line_raster_ext = {};
 
 		VkPhysicalDeviceProperties2 link()
 		{
+			line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_PROPERTIES_EXT;
 			return VkPhysicalDeviceProperties2{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-				.pNext = nullptr,
+				.pNext = &line_raster_ext,
 				.properties = props,
 			};
 		}
@@ -273,6 +278,14 @@ namespace vkl
 		FILTER_VK_FEATURES(13, robustImageAccess, maintenance4);
 
 #undef FILTER_VK_FEATURES
+
+		VkBool32ArrayOp(
+			&res.line_raster_ext.rectangularLines,
+			&requested.line_raster_ext.rectangularLines,
+			&available.line_raster_ext.rectangularLines,
+			(offsetof(VkPhysicalDeviceLineRasterizationFeaturesEXT, stippledSmoothLines) - offsetof(VkPhysicalDeviceLineRasterizationFeaturesEXT, rectangularLines)) / sizeof(VkBool32) + 1,
+			op_and
+		);
 
 		return res;
 	}

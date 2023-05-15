@@ -2,13 +2,18 @@
 - [x] Fill UBO transfer command
 - [ ] SDL Window?
 - [ ] CPU Parallel task executions
+    - [ ] Task executor
     - [ ] Shader compilation
     - [ ] Pipeline creation
+- [ ] Common Shaders Definitions
+- [ ] Automatic shader definitions
+- [ ] Dynamic Shaders Definitions (keep a table)
 - [x] UpdateContext
 - [ ] VkShaderObjectEXT? 
 - [ ] Complete Graphics command
-    - [ ] Bresenham line rasterization
+    - [x] Bresenham line rasterization
     - [ ] MSAA
+    - [ ] FragmentCommand
 - [ ] RenderPass-less rendering? 
 - [ ] Mesh loading
     - [ ] .obj loader
@@ -24,8 +29,14 @@
 - [ ] Modules
 - [ ] Multi layer swapchain (for VR)
 - [ ] Debug buffers
+- [ ] Input manager
+- [ ] Improve CMake
+    - [ ] Separate list for .exe
+    - [ ] Option to build .exe
+    - [ ] Correctly import Vulkan
+- [ ] Multi window mode (without ImGui)
 
-Projects Ideas:
+# Projects Ideas:
 - [ ] Seam Carving
 - [ ] Mutiple rigid body simulation
 - [ ] Fluid simulation? 

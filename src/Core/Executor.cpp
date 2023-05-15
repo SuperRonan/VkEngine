@@ -8,7 +8,7 @@
 namespace vkl
 {
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
-		VkObject(ci.app ? ci.app : ci.window->application(), ci.name),
+		Executor(ci.app ? ci.app : ci.window->application(), ci.name),
 		_window(ci.window),
 		_context(&_resources_state, nullptr)
 	{

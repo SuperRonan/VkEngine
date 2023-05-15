@@ -38,6 +38,8 @@ namespace vkl
 	{
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+			VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
 		};
 	}
 
@@ -46,7 +48,6 @@ namespace vkl
 		features.features_13.synchronization2 = VK_TRUE;
 		features.features.geometryShader = VK_TRUE;
 		features.features.samplerAnisotropy = VK_TRUE;
-
 	
 		features.features_12.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
 		features.features_12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
@@ -55,6 +56,9 @@ namespace vkl
 		features.features_12.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
 		features.features_12.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
 		features.features_12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+
+		features.line_raster_ext.bresenhamLines = VK_TRUE;
+		features.line_raster_ext.stippledBresenhamLines = VK_TRUE;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
@@ -240,25 +244,30 @@ namespace vkl
 		return indices;
 	}
 
-	bool VkApplication::checkDeviceExtensionSupport(VkPhysicalDevice const& device)
+	uint32_t VkApplication::checkDeviceExtensionSupport(VkPhysicalDevice const& device)
 	{
 		const auto device_extensions = getDeviceExtensions();
 
 		uint32_t extension_count;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
-		std::vector<VkExtensionProperties> availabl_extensions(extension_count);
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, availabl_extensions.data());
-		std::set<std::string> required_extensions(device_extensions.cbegin(), device_extensions.cend());
+		_device_extensions.resize(extension_count);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, _device_extensions.data());
 
-		for (const auto& ext : availabl_extensions)
+		for (auto it = _device_extensions.begin(); it != _device_extensions.end(); ++it)
 		{
-			required_extensions.erase(ext.extensionName);
+			if(!std::contains(device_extensions, std::string_view(it->extensionName)))
+			{
+				it = _device_extensions.erase(it);
+				--it;
+			}
 		}
 
-		return required_extensions.empty();
+		assert(_device_extensions.size() <= device_extensions.size());
+		
+		return _device_extensions.size();
 	}
 
-	uint32_t VkApplication::getDeviceExtVersion(std::string_view ext_name)
+	uint32_t VkApplication::getDeviceExtVersion(std::string_view ext_name) const
 	{
 		for (const auto& ext : _device_extensions)
 		{
@@ -284,18 +293,6 @@ namespace vkl
 			//vkGetPhysicalDeviceSurfaceSupportKHR(device, indices.present_family.value(), _surface, &present_support);
 			res = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, indices.present_family.value());
 		}
-
-		if (res)
-		{
-			//res = checkDeviceExtensionSupport(device);
-		}
-
-		//if (res)
-		//{
-		//	SwapChainSupportDetails swapchain_support_detail = querySwapChainSupport(device);
-		//	bool swapchain_adequate = !swapchain_support_detail.formats.empty() && !swapchain_support_detail.present_modes.empty();
-		//	res = swapchain_adequate;
-		//}
 
 		if (res)
 		{
@@ -362,7 +359,7 @@ namespace vkl
 		VkPhysicalDeviceProperties2 _physical_device_propeties = _device_props.link();
 		vkGetPhysicalDeviceProperties2(_physical_device, &_physical_device_propeties);
 		_device_props.props = _physical_device_propeties.properties;
-
+		checkDeviceExtensionSupport(_physical_device);
 		_queue_family_indices = findQueueFamilies(_physical_device);
 
 		VK_LOG << "Using " << _physical_device_propeties.properties.deviceName << " as physical device.\n";
@@ -403,8 +400,6 @@ namespace vkl
 
 		VkPhysicalDeviceFeatures2 features2 = _available_features.link();
 
-		std::vector<const char*> device_extensions = getDeviceExtensions();
-
 		VkDeviceCreateInfo device_create_info{};
 		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device_create_info.pNext = &features2;
@@ -412,7 +407,12 @@ namespace vkl
 		device_create_info.queueCreateInfoCount = queue_create_infos.size();
 		device_create_info.pEnabledFeatures = nullptr;
 
-		device_create_info.enabledExtensionCount = device_extensions.size();
+		device_create_info.enabledExtensionCount = _device_extensions.size();
+		std::vector<const char*> device_extensions(_device_extensions.size());
+		for (size_t e = 0; e < device_extensions.size(); ++e)
+		{
+			device_extensions[e] = _device_extensions[e].extensionName;
+		}
 		device_create_info.ppEnabledExtensionNames = device_extensions.data();
 
 		const auto valid_layers = getValidLayers();
@@ -431,7 +431,8 @@ namespace vkl
 		if(indices.graphics_family.has_value()) vkGetDeviceQueue(_device, indices.graphics_family.value(), 0, &_queues.graphics);
 		if(indices.present_family.has_value()) vkGetDeviceQueue(_device, indices.present_family.value(), 0, &_queues.present);
 		if(indices.transfer_family.has_value()) vkGetDeviceQueue(_device, indices.transfer_family.value(), 0, &_queues.transfer);
-		if(indices.compute_family.has_value()) vkGetDeviceQueue(_device, indices.compute_family.value(), 0, &_queues.compute);
+		if (indices.compute_family.has_value()) vkGetDeviceQueue(_device, indices.compute_family.value(), 0, &_queues.compute);
+
 	}
 
 	void VkApplication::createCommandPools()

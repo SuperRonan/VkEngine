@@ -57,9 +57,6 @@ namespace vkl
 		std::vector<VkExtensionProperties> _device_extensions;
 
 
-		static const constexpr uint32_t EXT_NONE = uint32_t(-1);
-		uint32_t getDeviceExtVersion(std::string_view ext_name);
-
 		VmaAllocator _allocator = nullptr;
 
 		Queues _queues;
@@ -103,7 +100,8 @@ namespace vkl
 
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
-		bool checkDeviceExtensionSupport(VkPhysicalDevice const& device);
+		// Returns number of extensions 
+		uint32_t checkDeviceExtensionSupport(VkPhysicalDevice const& device);
 
 		virtual bool isDeviceSuitable(VkPhysicalDevice const& device);
 
@@ -165,6 +163,13 @@ namespace vkl
 		constexpr const VulkanFeatures& availableFeatures() const
 		{
 			return _available_features;
+		}
+
+		static const constexpr uint32_t EXT_NONE = uint32_t(0);
+		uint32_t getDeviceExtVersion(std::string_view ext_name) const;
+		bool hasDeviceExtension(std::string_view ext_name) const
+		{
+			return getDeviceExtVersion(ext_name) != EXT_NONE;
 		}
 	};
 

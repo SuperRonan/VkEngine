@@ -95,7 +95,12 @@ namespace vkl
 
 		virtual void run() override
 		{
-			LinearExecutor exec(_main_window);
+			LinearExecutor exec(LinearExecutor::CI{
+				.app = this,
+				.name = "Executor",
+				.window = _main_window,
+				.use_ImGui = false,
+			});
 
 			std::shared_ptr<Image> canvas = std::make_shared<Image>(Image::CI{
 				.app = this,

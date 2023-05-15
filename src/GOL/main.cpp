@@ -97,7 +97,12 @@ namespace vkl
 
 		virtual void run() override
 		{
-			LinearExecutor exec(_main_window);
+			LinearExecutor exec(LinearExecutor::CI{
+				.app = this,
+				.name = "Executor",
+				.window = _main_window,
+				.use_ImGui = false,
+			});
 
 			const VkExtent2D grid_size = _world_size;
 			const DynamicValue<VkExtent3D> grid_packed_size = VkExtent3D{

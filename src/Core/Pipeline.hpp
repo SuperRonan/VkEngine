@@ -25,7 +25,8 @@ namespace vkl
 			VkPipelineInputAssemblyStateCreateInfo input_assembly;
 			std::vector<VkViewport> viewports;
 			std::vector<VkRect2D> scissors;
-			VkPipelineRasterizationStateCreateInfo rasterization;
+			mutable VkPipelineRasterizationStateCreateInfo rasterization;
+			std::optional<VkPipelineRasterizationLineStateCreateInfoEXT> line_raster;
 			VkPipelineMultisampleStateCreateInfo multisampling;
 			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
 			std::vector<VkPipelineColorBlendAttachmentState> attachements_blends;
@@ -84,6 +85,15 @@ namespace vkl
 						.dynamicStateCount = static_cast<uint32_t>(dynamic.size()),
 						.pDynamicStates = dynamic.data(),
 					};
+
+					if (line_raster.has_value() && app->hasDeviceExtension(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
+					{
+						rasterization.pNext = &line_raster.value();
+					}
+					else
+					{
+						rasterization.pNext = nullptr;
+					}
 				}
 
 				_pipeline_ci = VkGraphicsPipelineCreateInfo{
@@ -221,6 +231,8 @@ namespace vkl
 		{
 			VkPipelineRasterizationStateCreateInfo rasterization{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
 				.depthClampEnable = VK_FALSE,
 				.rasterizerDiscardEnable = VK_FALSE,
 				.polygonMode = VK_POLYGON_MODE_FILL,
@@ -230,6 +242,17 @@ namespace vkl
 				.lineWidth = 1.0f,
 			};
 			return rasterization;
+		}
+
+		constexpr static VkPipelineRasterizationLineStateCreateInfoEXT BresenhamLineRasterization()
+		{
+			VkPipelineRasterizationLineStateCreateInfoEXT res{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_EXT,
+				.pNext = nullptr,
+				.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.stippledLineEnable = VK_FALSE,
+			};
+			return res;
 		}
 
 		constexpr static VkPipelineMultisampleStateCreateInfo MultisampleOneSample()
@@ -302,6 +325,7 @@ namespace vkl
 			std::vector<VkRect2D> scissors;
 
 			VkPipelineRasterizationStateCreateInfo rasterization;
+			std::optional<VkPipelineRasterizationLineStateCreateInfoEXT> line_raster;
 			VkPipelineMultisampleStateCreateInfo multisampling;
 			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
 			std::vector<VkPipelineColorBlendAttachmentState> attachements_blends;
