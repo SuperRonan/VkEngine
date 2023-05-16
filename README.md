@@ -5,8 +5,9 @@
     - [ ] Task executor
     - [ ] Shader compilation
     - [ ] Pipeline creation
-- [ ] Common Shaders Definitions
-- [ ] Automatic shader definitions
+- [x] Common Shaders Definitions
+- [x] Automatic shader definitions (to progressively complete)
+- [ ] Shader pragma once
 - [ ] Dynamic Shaders Definitions (keep a table)
 - [x] UpdateContext
 - [ ] VkShaderObjectEXT? 
@@ -17,6 +18,11 @@
 - [ ] RenderPass-less rendering? 
 - [ ] Mesh loading
     - [ ] .obj loader
+- [ ] Simple mesh generation
+    - [ ] Tetrahedron
+    - [ ] Box
+    - [ ] Sphere
+    - [ ] Icosphere
 - [ ] Mesh renderer, Mesh representation
     - [ ] Mesh attribs from reflection
 - [ ] Scene
@@ -29,6 +35,7 @@
 - [x] Modules
 - [ ] Multi layer swapchain (for VR)
 - [ ] Debug buffers
+    - [ ] GLSL strings
 - [ ] Input manager
 - [ ] Improve CMake
     - [ ] Separate list for .exe

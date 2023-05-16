@@ -102,7 +102,7 @@ namespace vkl
 
 	shaderc_shader_kind getShaderKind(VkShaderStageFlagBits stage)
 	{
-		shaderc_shader_kind kind;
+		shaderc_shader_kind kind = (shaderc_shader_kind)-1;
 		switch (stage)
 		{
 		case VK_SHADER_STAGE_VERTEX_BIT:
@@ -147,9 +147,65 @@ namespace vkl
 		case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
 			kind = shaderc_callable_shader;
 			break;
+		default:
+			assert(false);
+			break;
 		}
 		return kind;
+	}
 
+	std::string getShaderStageName(VkShaderStageFlagBits stage)
+	{
+		std::string res = {};
+		switch (stage)
+		{
+		case VK_SHADER_STAGE_VERTEX_BIT:
+			res = "VERTEX";
+			break;
+		case VK_SHADER_STAGE_FRAGMENT_BIT:
+			res = "FRAGMENT";
+			break;
+		case VK_SHADER_STAGE_GEOMETRY_BIT:
+			res = "GEOMETRY";
+			break;
+		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+			res = "TESSELLATION_CONTROL";
+			break;
+		case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+			res = "TESSELLATION_EVALUATION";
+			break;
+		case VK_SHADER_STAGE_TASK_BIT_NV:
+			res = "TASK";
+			break;
+		case VK_SHADER_STAGE_MESH_BIT_NV:
+			res = "MESH";
+			break;
+		case VK_SHADER_STAGE_COMPUTE_BIT:
+			res = "COMPUTE";
+			break;
+		case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
+			res = "RAYGEN";
+			break;
+		case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
+			res = "INTERSECTION";
+			break;
+		case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
+			res = "ANY_HIT";
+			break;
+		case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
+			res = "CLOSEST_HIT";
+			break;
+		case VK_SHADER_STAGE_MISS_BIT_KHR:
+			res = "MISS";
+			break;
+		case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
+			res = "CALLABLE";
+			break;
+		default:
+			assert(false);
+			break;
+		}
+		return res;
 	}
 
 	bool ShaderInstance::compile(std::string const& code, std::string const& filename)
@@ -202,9 +258,13 @@ namespace vkl
 
 			if (update_time >= compile_time)
 			{
+				// Ugly, to be sure the file is not accessed by another program (like the text editor editing the file)
+				// TODO wait for the file to be properly available
 				Sleep(1);
 				_dependencies.clear();
-				std::string preprocessed = preprocess(ci.source_path, ci.definitions + application()->getCommonShaderDefines());
+				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
+				std::vector<std::string> defines = std::vector<std::string>({ semantic_definition }) + application()->getCommonShaderDefines() + ci.definitions;
+				std::string preprocessed = preprocess(ci.source_path, defines);
 				if (preprocessed == "")
 				{
 					continue;
