@@ -26,7 +26,7 @@
 - [ ] VkRayTracingKHR
     - [ ] TLAS
     - [ ] SBT
-- [ ] Modules
+- [x] Modules
 - [ ] Multi layer swapchain (for VR)
 - [ ] Debug buffers
 - [ ] Input manager

@@ -244,13 +244,15 @@ namespace vkl
 			return rasterization;
 		}
 
-		constexpr static VkPipelineRasterizationLineStateCreateInfoEXT BresenhamLineRasterization()
+		constexpr static VkPipelineRasterizationLineStateCreateInfoEXT BresenhamLineRasterization(uint32_t factor = 1, uint16_t pattern = 1)
 		{
 			VkPipelineRasterizationLineStateCreateInfoEXT res{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_EXT,
 				.pNext = nullptr,
 				.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
-				.stippledLineEnable = VK_FALSE,
+				.stippledLineEnable = (factor != 1 && pattern != 1) ? VK_TRUE : VK_FALSE,
+				.lineStippleFactor = factor,
+				.lineStipplePattern = pattern,
 			};
 			return res;
 		}
