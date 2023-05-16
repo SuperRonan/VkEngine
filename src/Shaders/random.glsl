@@ -1,5 +1,4 @@
-#ifndef Random_INCLUDED
-#define Random_INCLUDED
+#pragma once
 
 uint hash(uint x)
 {
@@ -35,5 +34,3 @@ float randFloat(inout uint rng, float lower, float upper)
 	const float xi = randFloat01(rng);
 	return (xi * (upper - lower)) + lower; 
 }
-
-#endif

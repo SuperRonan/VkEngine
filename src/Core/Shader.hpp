@@ -7,6 +7,7 @@
 #include <SPIRV-Reflect/spirv_reflect.h>
 #include "DescriptorSetLayout.hpp"
 #include "AbstractInstance.hpp"
+#include <set>
 
 namespace vkl
 {
@@ -47,7 +48,11 @@ namespace vkl
 		ShaderInstance& operator=(ShaderInstance const&) = delete;
 		ShaderInstance& operator=(ShaderInstance &&) = delete;
 
-		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions);
+		struct PreprocessingState
+		{
+			std::set<std::filesystem::path> pragma_once_files = {};
+		};
+		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 

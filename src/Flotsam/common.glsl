@@ -1,4 +1,4 @@
-
+#pragma once
 
 #ifndef NUMBER_OF_CUBES
 #define NUMBER_OF_CUBES 1

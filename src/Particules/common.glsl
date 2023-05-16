@@ -1,5 +1,4 @@
-#ifndef Particules_Common_INCLUDED
-#define Particules_Common_INCLUDED
+#pragma once
 
 #ifndef N_TYPES_OF_PARTICULES
 #error "Forgot to define N_TYPES_OF_PARTICULES"
@@ -99,5 +98,3 @@ vec2 computeForce(const in Particule p, const in Particule q, const in ForceDesc
     const vec2 res = pq_norm * intensity + repultion;
     return res;
 }
-
-#endif

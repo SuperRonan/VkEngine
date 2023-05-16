@@ -7,7 +7,7 @@
     - [ ] Pipeline creation
 - [x] Common Shaders Definitions
 - [x] Automatic shader definitions (to progressively complete)
-- [ ] Shader pragma once
+- [x] Shader pragma once
 - [ ] Dynamic Shaders Definitions (keep a table)
 - [x] UpdateContext
 - [ ] VkShaderObjectEXT? 

@@ -44,10 +44,10 @@ namespace vkl
 	}
 	
 
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions)
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
 	{
 		_dependencies.push_back(path);
-		const std::string content = readFileToString(path);
+		std::string content = readFileToString(path);
 		std::stringstream oss;
 
 		const std::filesystem::path folder = path.parent_path();
@@ -70,7 +70,17 @@ namespace vkl
 
 		while (true)
 		{
+			// TODO check if not in comment
 			const size_t include_begin = content.find("#include", copied_so_far);
+			const size_t pragma_once_begin = content.find("#pragma once", copied_so_far); // TODO regex?
+
+			if (pragma_once_begin != std::string::npos)
+			{
+				preprocessing_state.pragma_once_files.emplace(path);
+				// Comment the #pragma once so the glsl compiler doesn't print a warning
+				content[pragma_once_begin] = '/';
+				content[pragma_once_begin + 1] = '/';
+			}	
 
 			if (std::string::npos != include_begin)
 			{
@@ -84,10 +94,17 @@ namespace vkl
 
 				const std::filesystem::path path_to_include = folder.string() + std::string("/") + std::string(include_path_relative);
 
-				const std::string included_code = preprocess(path_to_include, {});
-
 				oss << std::string_view(content.data() + copied_so_far, include_begin - copied_so_far);
-				oss << included_code;
+				
+				if (!preprocessing_state.pragma_once_files.contains(path_to_include))
+				{
+					const std::string included_code = preprocess(path_to_include, {}, preprocessing_state);
+					oss << included_code;
+				}
+				else
+				{
+					int _ = 0;
+				}
 				copied_so_far = line_end;
 
 			}
@@ -264,7 +281,8 @@ namespace vkl
 				_dependencies.clear();
 				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 				std::vector<std::string> defines = std::vector<std::string>({ semantic_definition }) + application()->getCommonShaderDefines() + ci.definitions;
-				std::string preprocessed = preprocess(ci.source_path, defines);
+				PreprocessingState preprocessing_state = {};
+				std::string preprocessed = preprocess(ci.source_path, defines, preprocessing_state);
 				if (preprocessed == "")
 				{
 					continue;
