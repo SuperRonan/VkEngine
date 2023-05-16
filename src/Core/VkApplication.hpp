@@ -56,7 +56,6 @@ namespace vkl
 		VkDevice _device;
 		std::vector<VkExtensionProperties> _device_extensions;
 
-
 		VmaAllocator _allocator = nullptr;
 
 		Queues _queues;
@@ -68,6 +67,7 @@ namespace vkl
 		//std::unique_ptr<StagingPool> _staging_pool;
 
 		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
+		
 
 		virtual std::vector<const char*> getValidLayers();
 
@@ -82,6 +82,7 @@ namespace vkl
 		VulkanFeatures _requested_features;
 		VulkanFeatures _available_features;
 
+		std::vector<std::string> _common_shader_defines = {};
 		
 
 		virtual void requestFeatures(VulkanFeatures & features);
@@ -170,6 +171,16 @@ namespace vkl
 		bool hasDeviceExtension(std::string_view ext_name) const
 		{
 			return getDeviceExtVersion(ext_name) != EXT_NONE;
+		}
+
+		const std::vector<std::string>& getCommonShaderDefines() const
+		{
+			return _common_shader_defines;
+		}
+
+		std::vector<std::string>& getCommonShaderDefines() 
+		{
+			return _common_shader_defines;
 		}
 	};
 

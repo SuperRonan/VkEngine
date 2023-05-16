@@ -185,6 +185,7 @@ namespace vkl
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection))
 	{
+		using namespace std_vector_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
 		while (true)
@@ -203,7 +204,7 @@ namespace vkl
 			{
 				Sleep(1);
 				_dependencies.clear();
-				std::string preprocessed = preprocess(ci.source_path, ci.definitions);
+				std::string preprocessed = preprocess(ci.source_path, ci.definitions + application()->getCommonShaderDefines());
 				if (preprocessed == "")
 				{
 					continue;

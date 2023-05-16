@@ -43,16 +43,16 @@ namespace std_vector_operators
 	}
 
 	template<class T>
-	std::vector<T>& operator+=(std::vector<T>& a, std::vector<T>&& b)
+	std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b)
 	{
 		a.insert(a.end(), b.cbegin(), b.cend());
 		return a;
 	}
 
 	template <class T>
-	std::vector<T> operator+(std::vector<T>&& a, std::vector<T>&& b)
+	std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
 	{
-		std::vector<T> res = std::forward<std::vector<T>>(a);
+		std::vector<T> res = a;
 		res += b;
 		return res;
 	}
