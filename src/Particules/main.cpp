@@ -166,7 +166,6 @@ namespace vkl
 				.size = num_particules * particule_size,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.create_on_construct = true,
 			});
 			exec.declare(current_particules);
 
@@ -176,7 +175,6 @@ namespace vkl
 				.size = current_particules->size(),
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.create_on_construct = true,
 			});
 			exec.declare(previous_particules);
 
@@ -186,7 +184,6 @@ namespace vkl
 			 	.size = rule_buffer_size,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.create_on_construct = true,
 			});
 			exec.declare(particule_rules_buffer);
 
@@ -198,13 +195,11 @@ namespace vkl
 				.extent = _main_window->extent3D(),
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				.create_on_construct = true,
 			});
 
 			std::shared_ptr<ImageView> render_target_view = std::make_shared<ImageView>(ImageView::CI{
 				.name = "RenderTargetView",
 				.image = render_target_img,
-				.create_on_construct = true,
 			});
 			exec.declare(render_target_view);
 			
