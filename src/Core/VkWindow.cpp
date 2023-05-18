@@ -34,7 +34,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".swapchain",
 			.surface = _surface,
-			.min_image_count = _surface->getDetails().capabilities.minImageCount + 1,
+			.min_image_count = std::max(_surface->getDetails().capabilities.minImageCount + 1, _surface->getDetails().capabilities.maxImageCount),
 			.extent = DynamicValue<VkExtent2D>([&]() {return extract(_dynamic_extent.value()); }),
 			.image_usages = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			.queues = std::vector<uint32_t>(_queues_families_indices.cbegin(), _queues_families_indices.cend()),
