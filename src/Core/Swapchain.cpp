@@ -45,7 +45,7 @@ namespace vkl
 			std::shared_ptr<ImageInstance> inst = std::make_shared<ImageInstance>(instance_assos);
 			Image::AssociateInfo assos{
 				.instance = inst,
-				.extent = extend(_ci.imageExtent, 1),
+				.extent = extendD(_ci.imageExtent, 1),
 			};
 
 			_images[i] = std::make_shared<Image>();
