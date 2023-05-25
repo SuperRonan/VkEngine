@@ -142,19 +142,19 @@ namespace vkl
 		};
 	}
 
-	inline DynamicValue<VkExtent3D> extendD(DynamicValue<VkExtent2D> const& e2, uint32_t d = 1)
+	inline DynamicValue<VkExtent3D> extend(DynamicValue<VkExtent2D> const& e2, uint32_t d = 1)
 	{
-		return DynamicValue<VkExtent3D>([=]() {
+		return [=]() {
 			return extend(e2.value(), d);
-		});
+		};
 	}
 
-	//inline DynamicValue<VkOffset3D> extendD(DynamicValue<VkOffset2D> const& o2, int z = 0)
-	//{
-	//	return DynamicValue<VkOffset3D>([=]() {
-	//		return extend(o2.value(), z);
-	//	});
-	//}
+	inline DynamicValue<VkOffset3D> extend(DynamicValue<VkOffset2D> const& o2, int z = 0)
+	{
+		return [=]() {
+			return extend(o2.value(), z);
+		};
+	}
 	
 	constexpr VkExtent2D extract(VkExtent3D e3)
 	{
@@ -172,14 +172,20 @@ namespace vkl
 		};
 	}
 
-	inline DynamicValue<VkExtent2D> extractD(DynamicValue<VkExtent3D> const& e3)
+	inline DynamicValue<VkExtent2D> extract(DynamicValue<VkExtent3D> const& e3)
 	{
-		return [=]() {return extract(e3.value());};
+		return [=]()
+		{
+			return extract(*e3);
+		};
 	}
 
-	inline DynamicValue<VkOffset2D> extractD(DynamicValue<VkOffset3D> const& o3)
+	inline DynamicValue<VkOffset2D> extract(DynamicValue<VkOffset3D> const& o3)
 	{
-		return [=]() {return extract(o3.value());};
+		return [=]()
+		{
+			return extract(*o3);
+		};
 	}
 
 	constexpr VkImageViewType getDefaultViewTypeFromImageType(VkImageType type)
