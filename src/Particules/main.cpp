@@ -86,14 +86,14 @@ namespace vkl
 	public:
 
 		ParticuleSim(bool validation = false) :
-			AppWithWithImGui(AppWithWithImGui::CI{ .name = "Particules", .enable_validation = validation })
+			AppWithWithImGui(AppWithWithImGui::CI{ .name = PROJECT_NAME, .enable_validation = validation })
 		{
 			init();
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = &_present_mode,
-				.name = "Particules",
+				.name = PROJECT_NAME,
 				.w = 900,
 				.h = 900,
 				.resizeable = GLFW_TRUE,
@@ -203,10 +203,12 @@ namespace vkl
 			});
 			exec.declare(render_target_view);
 			
+			const std::filesystem::path shaders = PROJECT_SRC_PATH;
+
 			std::shared_ptr<ComputeCommand> init_particules = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "InitParticules",
-				.shader_path = ENGINE_SRC_PATH "/src/Particules/initParticules.comp",
+				.shader_path = shaders / "initParticules.comp",
 				.dispatch_size = [&]() {return VkExtent3D{.width = *num_particules, .height = 1, .depth = 1}; } ,
 				.dispatch_threads = true,
 				.bindings = {
@@ -232,7 +234,7 @@ namespace vkl
 			std::shared_ptr<ComputeCommand> init_rules = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "InitCommonRules",
-				.shader_path = ENGINE_SRC_PATH "/src/Particules/initCommonRules.comp",
+				.shader_path = shaders / "initCommonRules.comp",
 				.dispatch_size = VkExtent3D{.width = N_TYPES_PARTICULES, .height = N_TYPES_PARTICULES, .depth = 1},
 				.dispatch_threads = true,
 				.bindings = {
@@ -250,7 +252,7 @@ namespace vkl
 			std::shared_ptr<ComputeCommand> run_simulation = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "RunSimulation",
-				.shader_path = ENGINE_SRC_PATH "/src/Particules/update.comp",
+				.shader_path = shaders / "update.comp",
 				.dispatch_size = init_particules->getDispatchSize(),
 				.dispatch_threads = true,
 				.bindings = {
@@ -309,9 +311,9 @@ namespace vkl
 
 				},
 				.color_attachements = {render_target_view},
-				.vertex_shader_path = ENGINE_SRC_PATH "/src/Particules/render.vert",
-				.geometry_shader_path = ENGINE_SRC_PATH "/src/Particules/render.geom",
-				.fragment_shader_path = ENGINE_SRC_PATH "/src/Particules/render.frag",
+				.vertex_shader_path = shaders / "render.vert",
+				.geometry_shader_path = shaders / "render.geom",
+				.fragment_shader_path = shaders / "render.frag",
 				.definitions = definitions,
 				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 			});

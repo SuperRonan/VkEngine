@@ -35,14 +35,14 @@ namespace vkl
 	public:
 
 		VkGameOfLife(bool validation=false) :
-			VkApplication("Game of Life", validation)
+			VkApplication(PROJECT_NAME, validation)
 		{
 			init();
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
-				.name = "Game of Life",
+				.name = PROJECT_NAME,
 				.w = 1024,
 				.h = 512,
 				.resizeable = GLFW_TRUE,
@@ -148,10 +148,12 @@ namespace vkl
 			});
 			exec.declare(prev_grid_view);
 
+			const std::filesystem::path shaders = PROJECT_SRC_PATH;
+
 			std::shared_ptr<ComputeCommand> init_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "InitGrid",
-				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/init_grid.comp"),
+				.shader_path = shaders / "init_grid.comp",
 				.dispatch_size = grid_packed_size,
 				.dispatch_threads = true,
 				.bindings = {
@@ -167,7 +169,7 @@ namespace vkl
 			std::shared_ptr<ComputeCommand> update_grid = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "UpdateGrid",
-				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/update.comp"),
+				.shader_path = shaders / "update.comp",
 				.dispatch_size = grid_packed_size,
 				.dispatch_threads = true,
 				.bindings = {
@@ -207,10 +209,12 @@ namespace vkl
 			});
 			exec.declare(final_view);
 
+			
+
 			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "RenderToFinal",
-				.shader_path = std::filesystem::path(ENGINE_SRC_PATH "/src/GOL/render.comp"),
+				.shader_path = shaders / "render.comp",
 				.dispatch_size = _main_window->extent3D(),
 				.dispatch_threads = true,
 				.bindings = {

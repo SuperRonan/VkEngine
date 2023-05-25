@@ -193,12 +193,12 @@ namespace vkl
 			std::shared_ptr<Sampler> bilinear_sampler = Sampler::MakeBilinear(this);
 			exec.declare(bilinear_sampler);
 
-			const std::filesystem::path shader_folder = ENGINE_SRC_PATH "/src/Flotsam/";
+			const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
 			std::shared_ptr<ComputeCommand> simul_water = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
 				.name = "SimulWater",
-				.shader_path = shader_folder / "water.comp",
+				.shader_path = shaders / "water.comp",
 				.dispatch_size = water_surface_img->extent(),
 				.dispatch_threads = true,
 				.bindings = {
@@ -235,9 +235,9 @@ namespace vkl
 				.color_attachements = { render_target_view},
 				.depth_buffer = depth_view,
 				.write_depth = false,
-				.vertex_shader_path = shader_folder / "water.vert",
-				.geometry_shader_path = shader_folder / "water.geom",
-				.fragment_shader_path = shader_folder / "water.frag",
+				.vertex_shader_path = shaders / "water.vert",
+				.geometry_shader_path = shaders / "water.geom",
+				.fragment_shader_path = shaders / "water.frag",
 				.definitions = common_definitions,
 				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 			});
@@ -260,9 +260,9 @@ namespace vkl
 				},
 				.color_attachements = { render_target_view},
 				.depth_buffer = depth_view,
-				.vertex_shader_path = shader_folder / "cube.vert",
-				.geometry_shader_path = shader_folder / "cube.geom",
-				.fragment_shader_path = shader_folder / "cube.frag",
+				.vertex_shader_path = shaders / "cube.vert",
+				.geometry_shader_path = shaders / "cube.geom",
+				.fragment_shader_path = shaders / "cube.frag",
 				.definitions = common_definitions,
 				.clear_color = VkClearColorValue{.float32{0, 0, 0, 0}},
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},

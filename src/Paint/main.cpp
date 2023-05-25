@@ -34,24 +34,19 @@ namespace vkl
 	public:
 
 		Paint(bool validation=false) :
-			VkApplication("Paint", validation)
+			VkApplication(PROJECT_NAME, validation)
 		{
 			init();
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
-				.name = "Paint",
+				.name = PROJECT_NAME,
 				.w = 1024,
 				.h = 512,
 				.resizeable = GLFW_TRUE,
 			};
 			_main_window = std::make_shared<VkWindow>(window_ci);
-			//createRenderPass();
-			//createFrameBuffers();
-
-			
-
 		}
 
 		virtual ~Paint()
@@ -118,7 +113,7 @@ namespace vkl
 			});
 			exec.declare(canvas_view);
 
-			const std::filesystem::path shaders = ENGINE_SRC_PATH "/src/Paint/";
+			const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
 			std::shared_ptr<VertexCommand> render_line = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
