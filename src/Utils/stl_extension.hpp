@@ -33,57 +33,57 @@ Stream& operator<<(Stream& stream, glm::mat<N, M, Float> const& mat)
 	return stream;
 }
 
-namespace std_vector_operators
-{
-	template<class T>
-	std::vector<T>& operator+=(std::vector<T>& a, T&& b)
-	{
-		a.emplace_back(std::forward<T>(b));
-		return a;
-	}
-
-	template<class T>
-	std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b)
-	{
-		a.insert(a.end(), b.cbegin(), b.cend());
-		return a;
-	}
-
-	template <class T>
-	std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
-	{
-		std::vector<T> res = a;
-		res += b;
-		return res;
-	}
-
-	template <class T>
-	std::vector<T> operator+(std::vector<T> && a, const std::vector<T>& b)
-	{
-		std::vector<T> res = std::move(a);
-		res += b;
-		return res;
-	}
-
-	template <class T>
-	std::vector<T> operator+(const std::vector<T>& a, T && b)
-	{
-		std::vector<T> res = a;
-		res += b;
-		return res;
-	}
-
-	template <class T>
-	std::vector<T> operator+(std::vector<T>&& a, T && b)
-	{
-		std::vector<T> res = std::move(a);
-		res += b;
-		return res;
-	}
-}
-
 namespace std
 {
+	namespace vector_operators
+	{
+		template<class T>
+		std::vector<T>& operator+=(std::vector<T>& a, T&& b)
+		{
+			a.emplace_back(std::forward<T>(b));
+			return a;
+		}
+
+		template<class T>
+		std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b)
+		{
+			a.insert(a.end(), b.cbegin(), b.cend());
+			return a;
+		}
+
+		template <class T>
+		std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
+		{
+			std::vector<T> res = a;
+			res += b;
+			return res;
+		}
+
+		template <class T>
+		std::vector<T> operator+(std::vector<T> && a, const std::vector<T>& b)
+		{
+			std::vector<T> res = std::move(a);
+			res += b;
+			return res;
+		}
+
+		template <class T>
+		std::vector<T> operator+(const std::vector<T>& a, T && b)
+		{
+			std::vector<T> res = a;
+			res += b;
+			return res;
+		}
+
+		template <class T>
+		std::vector<T> operator+(std::vector<T>&& a, T && b)
+		{
+			std::vector<T> res = std::move(a);
+			res += b;
+			return res;
+		}
+	}
+
 	template <class T>
 	constexpr T& zeroInit(T& t)
 	{

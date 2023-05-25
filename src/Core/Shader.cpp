@@ -258,7 +258,7 @@ namespace vkl
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection))
 	{
-		using namespace std_vector_operators;
+		using namespace std::vector_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
 		while (true)
@@ -280,7 +280,9 @@ namespace vkl
 				Sleep(1);
 				_dependencies.clear();
 				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
-				std::vector<std::string> defines = std::vector<std::string>({ semantic_definition }) + application()->getCommonShaderDefines() + ci.definitions;
+				std::vector<std::string> defines = { semantic_definition };
+				defines += application()->getCommonShaderDefines();
+				defines += ci.definitions;
 				PreprocessingState preprocessing_state = {};
 				std::string preprocessed = preprocess(ci.source_path, defines, preprocessing_state);
 				if (preprocessed == "")

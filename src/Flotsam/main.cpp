@@ -105,7 +105,7 @@ namespace vkl
 
 		virtual void run() override
 		{
-			using namespace std_vector_operators;
+			using namespace std::vector_operators;
 
 			const std::vector<std::string> common_definitions = {
 

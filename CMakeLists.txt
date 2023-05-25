@@ -121,22 +121,35 @@ SOURCE_GROUP("SPIRV-Reflect" REGULAR_EXPRESSION ext/SPIRV-Reflect/spirv_reflect.
 
 ADD_LIBRARY(VkEngine STATIC ${VK_ENGINE_SOURCE})
 SET_TARGET_PROPERTIES(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
-TARGET_COMPILE_DEFINITIONS(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}\"")
+TARGET_COMPILE_DEFINITIONS(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/\"")
 
 # ADD_EXECUTABLE(Cloth src/Cloth/main.cpp)
 # TARGET_LINK_LIBRARIES(Cloth ${ALL_EXT_LIBS} VkEngine)
 
-ADD_EXECUTABLE(GameOfLife src/GOL/main.cpp)
-TARGET_LINK_LIBRARIES(GameOfLife ${ALL_EXT_LIBS} VkEngine)
+SET(EXECUTABLES)
 
-ADD_EXECUTABLE(Paint src/Paint/main.cpp)
-TARGET_LINK_LIBRARIES(Paint ${ALL_EXT_LIBS} VkEngine)
+function(AddProject p_name)
+	if(DEFINED ARGV1)
+		SET(folder ${ARGV1})
+	else()
+		SET(folder ${p_name})
+	endif()
+	ADD_EXECUTABLE(${p_name} src/${folder}/main.cpp)
+	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_NAME=\"${p_name}\"")
+	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/${folder}/\"")
+	TARGET_LINK_LIBRARIES(${p_name} ${ALL_EXT_LIBS} VkEngine)
+	SET(EXECUTABLES ${EXECUTABLES} ${p_name})
+endfunction()
 
-ADD_EXECUTABLE(Particules src/Particules/main.cpp)
-TARGET_LINK_LIBRARIES(Particules ${ALL_EXT_LIBS} VkEngine)
+AddProject(Test)
 
-ADD_EXECUTABLE(Flotsam src/Flotsam/main.cpp)
-TARGET_LINK_LIBRARIES(Flotsam ${ALL_EXT_LIBS} VkEngine)
+AddProject(GameOfLife "GOL")
+
+AddProject(Paint)
+
+AddProject(Particules)
+
+AddProject(Flotsam)
 
 INSTALL(TARGETS VkEngine DESTINATION lib)
 # INSTALL(TARGETS Cloth GameOfLife Particules Flotsam DESTINATION bin)

@@ -38,6 +38,7 @@
     - [ ] GLSL strings
 - [ ] Input manager
 - [ ] Improve CMake
+    - [x] AddProject function
     - [ ] Separate list for .exe
     - [ ] Option to build .exe
     - [ ] Correctly import Vulkan

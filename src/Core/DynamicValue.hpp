@@ -4,6 +4,15 @@
 #include <cassert>
 #include <type_traits>
 
+template <class Q, class T>
+concept TLike = std::is_convertible<Q, T>::value;
+
+template<class T>
+using LambdaType = std::function<T(void)>;
+
+template <class Q, class T>
+concept LambdaLike = std::is_convertible<Q, LambdaType<T>>::value;
+
 namespace vkl
 {
 	namespace impl
@@ -127,7 +136,7 @@ namespace vkl
 
 	public:
 
-		using LambdaType = std::function<T(void)>;
+		using LambdaType = LambdaType<T>;
 
 		constexpr DynamicValue() = default;
 
@@ -147,10 +156,6 @@ namespace vkl
 			_inst(new impl::DynamicValueInstance<T>(std::move(t)))
 		{}
 
-		DynamicValue(LambdaType const& lambda):
-			_inst(new impl::LambdaValueInstance<T>(lambda))
-		{}
-
 		DynamicValue(const T * ptr):
 			_inst(new impl::PointedValueInstance<T>(ptr))
 		{}
@@ -159,26 +164,20 @@ namespace vkl
 			_inst(new impl::PointedValueInstance<T>(ptr))
 		{}
 
-		template <class Q>
-		DynamicValue(DynamicValue<Q> const& q):
+		template <TLike<T> Q>
+		DynamicValue(DynamicValue<Q> const& q) :
 			_inst(new impl::LambdaValueInstance<T>([=]() {return T(q.value()); }))
-		{
-			static_assert(std::is_convertible<Q, T>::value);
-		}
+		{}
 
-		template <class TLike>
-		DynamicValue(TLike const& t):
-			_inst(nullptr)
-		{
-			if constexpr (std::is_convertible<TLike, T>::value)
-			{
-				_inst = std::make_shared<impl::DynamicValueInstance<T>>(T(t));
-			}
-			else
-			{
-				_inst = std::make_shared<impl::LambdaValueInstance<T>>(t);
-			}
-		}
+		template <TLike<T> Q>
+		DynamicValue(Q const& q):
+			_inst(std::make_shared<impl::DynamicValueInstance<T>>(T(q)))
+		{}
+
+		template <LambdaLike<T> L>
+		DynamicValue(L const& l):
+			_inst(std::make_shared<impl::LambdaValueInstance<T>>(l))
+		{}
 
 		DynamicValue& operator=(DynamicValue const& other)
 		{
@@ -191,10 +190,9 @@ namespace vkl
 			return *this;
 		}
 
-		template <class Q>
+		template <TLike<T> Q>
 		DynamicValue& operator=(DynamicValue<Q> const& o)
 		{
-			static_assert(std::is_convertible<Q, T>::value);
 			_inst = std::make_shared<impl::LambdaValueInstance<T>>([=]() {return T(o.value()); });
 			return *this;
 		}
@@ -223,55 +221,21 @@ namespace vkl
 			return *this;
 		}
 
-		template <class TLike>
-		DynamicValue& operator=(TLike const & t)
+		template <TLike<T> Q>
+		DynamicValue& operator=(Q const& q)
 		{
-			if constexpr (std::is_convertible<TLike, T>::value)
-			{
-				_inst = std::make_shared<impl::DynamicValueInstance<T>>(T(t));
-			}
-			else
-			{
-				_inst = std::make_shared<impl::LambdaValueInstance<T>>(t);
-			}
+			_inst = std::make_shared<impl::DynamicValueInstance<T>>(T(q));
 			return *this;
 		}
 
-#define DECLARE_DYNAMIC_OP_2(op) \
-		template <class Q = T> \
-		auto operator op(DynamicValue<Q> const& o)const \
-		{ \
-			using _op = decltype([](T const& t, Q const& q){return t op q;}); \
-			using RetType = std::invoke_result<_op, T, Q>::type; \
-			return DynamicValue<RetType>([=]() -> RetType {return _inst->value() op o.value(); }); \
+		template <LambdaLike<T> L>
+		DynamicValue& operator=(L const& l)
+		{
+			_inst = std::make_shared<impl::LambdaValueInstance<T>>(l);
+			return *this;
 		}
 
-#define DECLARE_DYNAMIC_OP_1(op) \
-		auto operator op(T const& o)const \
-		{ \
-			using _op = decltype([](T const& t, T const& q) {return t op q; }); \
-			using RetType = std::invoke_result<_op, T, T>::type; \
-			return DynamicValue<RetType>([=]() -> RetType {return _inst->value() op o; }); \
-		}
 
-#define DECLARE_DYNAMIC_OP(op) DECLARE_DYNAMIC_OP_1(op) DECLARE_DYNAMIC_OP_2(op)
-
-
-		DECLARE_DYNAMIC_OP(+)
-		DECLARE_DYNAMIC_OP(-)
-		DECLARE_DYNAMIC_OP(*)
-		DECLARE_DYNAMIC_OP(/)
-		
-		DECLARE_DYNAMIC_OP(==)
-		DECLARE_DYNAMIC_OP(!=)
-		DECLARE_DYNAMIC_OP(<)
-		DECLARE_DYNAMIC_OP(<=)
-		DECLARE_DYNAMIC_OP(>)
-		DECLARE_DYNAMIC_OP(>=)
-
-#undef DECLARE_DYNAMIC_OP
-#undef DECLARE_DYNAMIC_OP_1
-#undef DECLARE_DYNAMIC_OP_2
 
 		T const& value()const
 		{
@@ -300,6 +264,53 @@ namespace vkl
 		}
 
 	};
+
+#define DECLARE_DYNAMIC_OP_DD(op) \
+		template <class T, class Q = T> \
+		auto operator op(DynamicValue<T> const& t, DynamicValue<Q> const& q) \
+		{ \
+			using _op = decltype([](T const& t, Q const& q){return t op q;}); \
+			using RetType = std::invoke_result<_op, T, Q>::type; \
+			return DynamicValue<RetType>([=]() -> RetType {return t.value() op q.value(); }); \
+		}
+
+#define DECLARE_DYNAMIC_OP_DS(op) \
+		template <class T, class Q = T> \
+		auto operator op(DynamicValue<T> const& t, Q const& q) \
+		{ \
+			using _op = decltype([](T const& t, Q const& q) {return t op q; }); \
+			using RetType = std::invoke_result<_op, T, Q>::type; \
+			return DynamicValue<RetType>([=]() -> RetType {return t.value() op q; }); \
+		}
+
+#define DECLARE_DYNAMIC_OP_SD(op) \
+		template <class Q, class T = Q> \
+		auto operator op(T const& t, DynamicValue<Q> const& q) \
+		{ \
+			using _op = decltype([](Q const& q, T const& t) {return q op t; }); \
+			using RetType = std::invoke_result<_op, Q, T>::type; \
+			return DynamicValue<RetType>([=]() -> RetType {return t op q.value(); }); \
+		}
+
+#define DECLARE_DYNAMIC_OP(op) DECLARE_DYNAMIC_OP_DD(op) DECLARE_DYNAMIC_OP_SD(op) DECLARE_DYNAMIC_OP_DS(op)
+
+
+	DECLARE_DYNAMIC_OP(+)
+	DECLARE_DYNAMIC_OP(-)
+	DECLARE_DYNAMIC_OP(*)
+	DECLARE_DYNAMIC_OP(/ )
+
+	DECLARE_DYNAMIC_OP(== )
+	DECLARE_DYNAMIC_OP(!= )
+	DECLARE_DYNAMIC_OP(< )
+	DECLARE_DYNAMIC_OP(<= )
+	DECLARE_DYNAMIC_OP(> )
+	DECLARE_DYNAMIC_OP(>= )
+
+#undef DECLARE_DYNAMIC_OP
+#undef DECLARE_DYNAMIC_OP_DD
+#undef DECLARE_DYNAMIC_OP_DS
+#undef DECLARE_DYNAMIC_OP_SD
 
 	template <class T>
 	using dv_ = DynamicValue<T>;
