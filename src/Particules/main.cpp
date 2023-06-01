@@ -127,7 +127,7 @@ namespace vkl
 
 		virtual void run() override
 		{
-			using namespace std::vector_operators;
+			using namespace std::containers_operators;
 
 			const uint32_t particule_size = sizeof(Particule);
 			uint32_t num_particules_log2 = 10;

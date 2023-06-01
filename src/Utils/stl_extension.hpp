@@ -33,9 +33,24 @@ Stream& operator<<(Stream& stream, glm::mat<N, M, Float> const& mat)
 	return stream;
 }
 
+template <class T, class Q>
+concept Container = std::is_same<Q, typename T::value_type>::value && requires(T const& t) { t.begin(); t.end(); };
+
 namespace std
 {
-	namespace vector_operators
+	template <class T, Container<T> C>
+	std::vector<typename C::value_type> makeVector(C const& c)
+	{
+		return std::vector(c.begin(), c.end());
+	}
+
+	template <class T>
+	std::vector<T> makeVector(std::vector<T>&& v)
+	{
+		return std::move(v);
+	}
+
+	namespace containers_operators
 	{
 		template<class T>
 		std::vector<T>& operator+=(std::vector<T>& a, T&& b)
@@ -44,34 +59,51 @@ namespace std
 			return a;
 		}
 
-		template<class T>
-		std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b)
+		template<class T, Container<T> Q>
+		std::vector<T>& operator+=(std::vector<T>& a, const Q & b)
 		{
-			a.insert(a.end(), b.cbegin(), b.cend());
+			a.insert(a.end(), b.begin(), b.end());
 			return a;
 		}
 
-		template <class T>
-		std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
+		// Can't work because can't deduce T...
+		//template <class T, Container<T> A, Container<T> B>
+		//std::vector<T> operator+(const A& a, const B& b)
+		//{
+		//	std::vector<T> res = MakeVector(a);
+		//	res += b;
+		//	return res;
+		//}
+
+		template <class T, Container<T> C>
+		std::vector<T> operator+(const std::vector<T>& a, const C& b)
 		{
 			std::vector<T> res = a;
 			res += b;
 			return res;
 		}
 
-		template <class T>
-		std::vector<T> operator+(std::vector<T> && a, const std::vector<T>& b)
+		template <class T, Container<T> C>
+		std::vector<T> operator+(std::vector<T> && a, const C & b)
 		{
 			std::vector<T> res = std::move(a);
 			res += b;
 			return res;
 		}
 
+		template <class T, Container<T> C>
+		std::vector<T> operator+(const C & a, T && b)
+		{
+			std::vector<T> res = makeVector(a);
+			res += std::forward<T>(b);
+			return res;
+		}
+
 		template <class T>
-		std::vector<T> operator+(const std::vector<T>& a, T && b)
+		std::vector<T> operator+(const std::vector<T>& a, T&& b)
 		{
 			std::vector<T> res = a;
-			res += b;
+			res += std::forward<T>(b);
 			return res;
 		}
 
@@ -79,7 +111,7 @@ namespace std
 		std::vector<T> operator+(std::vector<T>&& a, T && b)
 		{
 			std::vector<T> res = std::move(a);
-			res += b;
+			res += std::forward<T>(b);
 			return res;
 		}
 	}
@@ -111,7 +143,7 @@ namespace std
 	}
 
 	template <class Object>
-	constexpr void copySwap(Object& a, Object& b)
+	constexpr void rawCopySwap(Object& a, Object& b)
 	{
 		std::array<int8_t, sizeof(Object)> tmp;
 		std::copy((int8_t*)&a, (int8_t*)&a + sizeof(Object), tmp.data()); // tmp = a
