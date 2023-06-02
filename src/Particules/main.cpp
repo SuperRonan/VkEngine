@@ -137,7 +137,7 @@ namespace vkl
 					res *= 2;
 				return res;
 			};
-			const glm::vec2 world_size(4.0f, 4.0f);
+			glm::vec2 world_size(4.0f, 4.0f);
 			uint32_t N_TYPES_PARTICULES = 7;
 			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
 			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
@@ -396,6 +396,8 @@ namespace vkl
 					reset_particules |= changed;
 					ImGui::Checkbox("reset rules", &reset_rules);
 					ImGui::Checkbox("reset particules", &reset_particules);
+
+					ImGui::SliderFloat2("World Size", (float*)&world_size, 0.0, 10.0);
 
 					ImGui::Text("Present mode");
 					size_t present_mode = gui_present_modes.declare();
