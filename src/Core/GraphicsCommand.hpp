@@ -102,7 +102,7 @@ namespace vkl
 			std::filesystem::path vertex_shader_path = {};
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
-			DynamicValue<std::vector<std::string>> definitions = {};
+			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
 			
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
