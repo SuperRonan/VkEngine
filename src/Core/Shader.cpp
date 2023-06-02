@@ -78,6 +78,11 @@ namespace vkl
 			}
 		}
 
+		const auto countLines = [&](size_t b, size_t e)
+		{
+			return std::count(content.data() + b, content.data() + e, '\n');
+		};
+
 		while (true)
 		{
 			// TODO check if not in comment
@@ -109,7 +114,9 @@ namespace vkl
 				if (!preprocessing_state.pragma_once_files.contains(path_to_include))
 				{
 					const std::string included_code = preprocess(path_to_include, {}, preprocessing_state);
+					oss << "#line 1 " << path_to_include << "\n";
 					oss << included_code;
+					oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
 				}
 				else
 				{
@@ -274,8 +281,10 @@ namespace vkl
 		VK_LOG << "Compiling: " << ci.source_path << "\n";
 
 		// Try to compile while it fails
+		size_t attempt = 0;
 		while (true)
 		{
+			++attempt;
 			const std::filesystem::file_time_type update_time = [&]() {
 				std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
 				for (const auto& dep : _dependencies)
@@ -288,6 +297,7 @@ namespace vkl
 
 			if (update_time >= compile_time)
 			{
+				Sleep(1);
 				_dependencies.clear();
 				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 				std::vector<std::string> defines = { semantic_definition };
@@ -306,6 +316,10 @@ namespace vkl
 				if (res)
 				{
 					break;
+				}
+				else
+				{
+					int _ = 0;
 				}
 			}
 		}
