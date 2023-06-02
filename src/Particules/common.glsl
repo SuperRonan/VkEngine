@@ -1,26 +1,15 @@
 #pragma once
+#include "../Shaders/common.glsl"
 
 #ifndef N_TYPES_OF_PARTICULES
 #error "Forgot to define N_TYPES_OF_PARTICULES"
 #endif
 
-#extension GL_EXT_shader_explicit_arithmetic_types : require
 
-#if USE_HALF_STORAGE
-
-#define StorageF    float16_t
-#define StorageVec2 f16vec2
-#define StorageVec3 f16vec3
-#define StorageVec4 f16vec4
-
-#else
-
-#define StorageF    float
-#define StorageVec2 vec2
-#define StorageVec3 vec3
-#define StorageVec4 vec4
-
-#endif
+#define StorageF    fp16IFP
+#define StorageVec2 fp16vec2IFP
+#define StorageVec3 fp16vec3IFP
+#define StorageVec4 fp16vec4IFP
 
 struct Particule
 {
@@ -40,16 +29,6 @@ struct ForceDescription
     StorageVec4 intensity_inv_linear_inv_linear2_contant_linear;
     StorageVec4 intensity_gauss_mu_sigma;
 };
-
-float rcp(float x)
-{
-    return 1.0f / x;
-}
-
-float sqr(float x)
-{
-    return x*x;
-}
 
 float gaussian(float x, float mu, float sigma)
 {
