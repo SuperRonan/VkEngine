@@ -74,7 +74,7 @@ namespace vkl
 			std::filesystem::path vertex_path;
 			std::filesystem::path geometry_path;
 			std::filesystem::path fragment_path;
-			std::vector<std::string> definitions;
+			DynamicValue<std::vector<std::string>> definitions;
 		};
 
 		ShaderPaths _shaders;
@@ -102,7 +102,7 @@ namespace vkl
 			std::filesystem::path vertex_shader_path = {};
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
-			std::vector<std::string> definitions = {};
+			DynamicValue<std::vector<std::string>> definitions = {};
 			
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
@@ -159,7 +159,7 @@ namespace vkl
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::filesystem::path fragment_shader_path = {};
-			std::vector<std::string> definitions;
+			DynamicValue<std::vector<std::string>> definitions;
 		};
 
 		using CI = CreateInfo;

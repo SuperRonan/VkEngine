@@ -43,6 +43,8 @@
     - [ ] Option to build .exe
     - [ ] Correctly import Vulkan
 - [ ] Multi window mode (without ImGui)
+- [ ] Buffer / Image on recreate instancte command policy
+- [ ] MultiExecutor
 
 # Projects Ideas:
 - [ ] Seam Carving

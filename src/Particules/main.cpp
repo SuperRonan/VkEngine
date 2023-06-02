@@ -138,20 +138,22 @@ namespace vkl
 				return res;
 			};
 			const glm::vec2 world_size(4.0f, 4.0f);
-			const uint32_t N_TYPES_PARTICULES = 7;
+			uint32_t N_TYPES_PARTICULES = 7;
 			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
 			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
 			const uint32_t particule_props_size = 4 * storage_float_size;
 			
-			const uint32_t rule_buffer_size = N_TYPES_PARTICULES * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
+			dv_<uint32_t> rule_buffer_size = dv_<uint32_t>(&N_TYPES_PARTICULES) * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
 			
 			uint32_t seed = 0x2fe75454a5;
 			
-			std::vector<std::string> definitions = {
-				std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
-				std::string("USE_HALF_STORAGE ") + std::to_string(use_half_storage),
+			dv_<std::vector<std::string>> definitions = [&]() {
+				return std::vector<std::string>({
+					std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
+				});
 			};
+			_common_shader_defines += std::string("USE_HALF_STORAGE ") + std::to_string(use_half_storage);
 
 			LinearExecutor exec(LinearExecutor::CI{
 				.app = this,
@@ -235,7 +237,7 @@ namespace vkl
 				.app = this,
 				.name = "InitCommonRules",
 				.shader_path = shaders / "initCommonRules.comp",
-				.dispatch_size = VkExtent3D{.width = N_TYPES_PARTICULES, .height = N_TYPES_PARTICULES, .depth = 1},
+				.dispatch_size = [&]() {return VkExtent3D{.width = N_TYPES_PARTICULES, .height = N_TYPES_PARTICULES, .depth = 1}; },
 				.dispatch_threads = true,
 				.bindings = {
 					Binding{
@@ -374,7 +376,6 @@ namespace vkl
 				}
 				bool should_render = false || true;
 
-				
 				_main_window->pollEvents();
 				bool p = paused;
 				processInput(paused);
@@ -390,6 +391,9 @@ namespace vkl
 					ImGui::InputInt("log2(Number of particules)", (int*)& num_particules_log2);
 					std::string str_n_particules = std::to_string(*num_particules) + " particules";
 					ImGui::Text(str_n_particules.c_str());
+					bool changed = ImGui::InputInt("Types of particules", (int*)&N_TYPES_PARTICULES);
+					reset_rules |= changed;
+					reset_particules |= changed;
 					ImGui::Checkbox("reset rules", &reset_rules);
 					ImGui::Checkbox("reset particules", &reset_particules);
 

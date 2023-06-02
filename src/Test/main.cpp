@@ -16,7 +16,7 @@ int main(int argc, const char** argv)
 	using namespace vkl;
 	using namespace std::containers_operators;
 
-	dv_<VkExtent3D> e = makeZeroExtent3D();
+	dv_<VkExtent3D> ex = makeZeroExtent3D();
 
 	dv_<float> pi = 3.14f;
 

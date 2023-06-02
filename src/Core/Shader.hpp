@@ -8,6 +8,7 @@
 #include "DescriptorSetLayout.hpp"
 #include "AbstractInstance.hpp"
 #include <set>
+#include <unordered_map>
 
 namespace vkl
 {
@@ -95,19 +96,51 @@ namespace vkl
 
 	class Shader : public InstanceHolder<ShaderInstance>
 	{
+	public:
+		
+		struct SpecializationKey
+		{
+			std::string definitions = {};
+
+			bool operator==(SpecializationKey const& o) const
+			{
+				return definitions == o.definitions;
+			}
+
+			bool operator!=(SpecializationKey const& o) const
+			{
+				return definitions != o.definitions;
+			}
+
+		};
+
+		struct SpecKeyHasher
+		{
+			size_t operator()(SpecializationKey const& key) const
+			{
+				return std::hash<std::string>()(key.definitions);
+			}
+		};
+		using SpecializationTable = std::unordered_map<SpecializationKey, std::shared_ptr<ShaderInstance>, SpecKeyHasher>;
+
 	protected:
 
 		using ParentType = InstanceHolder<ShaderInstance>;
 
 		using Dependecy = std::filesystem::path;
 
+
+
 		std::filesystem::path _path;
 		VkShaderStageFlagBits _stage;
-		std::vector<std::string> _definitions;
+		DynamicValue<std::vector<std::string>> _definitions;
 		std::vector<Dependecy> _dependencies;
 		std::chrono::file_time<std::chrono::file_clock::duration> _instance_time;
 
-		void createInstance();
+		SpecializationKey _current_key = {};
+		SpecializationTable _specializations = {};
+
+		void createInstance(SpecializationKey const& key);
 
 		void destroyInstance();
 
@@ -119,7 +152,7 @@ namespace vkl
 			std::string name = {};
 			std::filesystem::path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
-			std::vector<std::string> const& definitions = {};
+			DynamicValue<std::vector<std::string>> definitions;
 		};
 		using CI = CreateInfo;
 

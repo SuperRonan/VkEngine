@@ -41,6 +41,11 @@ struct ForceDescription
     StorageVec4 intensity_gauss_mu_sigma;
 };
 
+float rcp(float x)
+{
+    return 1.0f / x;
+}
+
 float sqr(float x)
 {
     return x*x;

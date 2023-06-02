@@ -264,7 +264,7 @@ namespace vkl
 					}
 
 					
-					if (true)
+					if (false)
 					{
 						std::cout << "Successfully resolved binding \"" << shader_binding_name << "\" to (set = " << set_id << ", binding = " << binding_id << ")\n";
 					}

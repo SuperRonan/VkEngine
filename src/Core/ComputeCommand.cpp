@@ -15,7 +15,7 @@ namespace vkl
 			.source_path = _shader_path,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 			.definitions = _definitions,
-			});
+		});
 		_program = std::make_shared<ComputeProgram>(ComputeProgram::CI{
 			.app = application(),
 			.name = shader->name(),

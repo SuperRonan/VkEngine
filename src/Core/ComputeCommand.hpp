@@ -16,7 +16,7 @@ namespace vkl
 			DynamicValue<VkExtent3D> dispatch_size = {};
 			bool dispatch_threads = false;
 			std::vector<ShaderBindingDescription> bindings = {};
-			std::vector<std::string> definitions = {};
+			DynamicValue<std::vector<std::string>> definitions;
 		};
 		using CI = CreateInfo;
 
@@ -30,7 +30,7 @@ namespace vkl
 	protected:
 
 		std::filesystem::path _shader_path;
-		std::vector<std::string> _definitions;
+		DynamicValue<std::vector<std::string>> _definitions;
 
 		std::shared_ptr<ComputeProgram> _program = nullptr;
 		DynamicValue<VkExtent3D> _dispatch_size = {};

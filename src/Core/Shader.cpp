@@ -28,7 +28,16 @@ namespace vkl
 
 	std::string readFileToString(std::filesystem::path const& path)
 	{
-		std::ifstream file(path, std::ios::ate | std::ios::binary);
+		std::ifstream file = std::ifstream(path, std::ios::ate | std::ios::binary);
+		int tries = 0;
+		const int max_tries = 8;
+		while (!file.is_open() && tries != max_tries)
+		{
+			++tries;
+			file = std::ifstream(path, std::ios::ate | std::ios::binary);
+			std::this_thread::sleep_for(1us);
+		}
+
 		if (!file.is_open())
 		{
 			throw std::runtime_error("Could not open file: " + path.string());
@@ -48,6 +57,7 @@ namespace vkl
 	{
 		_dependencies.push_back(path);
 		std::string content = readFileToString(path);
+
 		std::stringstream oss;
 
 		const std::filesystem::path folder = path.parent_path();
@@ -258,9 +268,12 @@ namespace vkl
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection))
 	{
-		using namespace std::vector_operators;
+		using namespace std::containers_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
+		VK_LOG << "Compiling: " << ci.source_path << "\n";
+
+		// Try to compile while it fails
 		while (true)
 		{
 			const std::filesystem::file_time_type update_time = [&]() {
@@ -275,16 +288,15 @@ namespace vkl
 
 			if (update_time >= compile_time)
 			{
-				// Ugly, to be sure the file is not accessed by another program (like the text editor editing the file)
-				// TODO wait for the file to be properly available
-				Sleep(1);
 				_dependencies.clear();
 				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 				std::vector<std::string> defines = { semantic_definition };
 				defines += application()->getCommonShaderDefines();
 				defines += ci.definitions;
 				PreprocessingState preprocessing_state = {};
+				
 				std::string preprocessed = preprocess(ci.source_path, defines, preprocessing_state);
+				
 				if (preprocessed == "")
 				{
 					continue;
@@ -327,18 +339,25 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance()
+	void Shader::createInstance(SpecializationKey const& key)
 	{
-		_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
-			.app = application(),
-			.name = name(),
-			.source_path = _path,
-			.stage = _stage,
-			.definitions = _definitions,
-		});
+		if (_specializations.contains(key))
+		{
+			_inst = _specializations[key];
+		}
+		else {
+			_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
+				.app = application(),
+				.name = name(),
+				.source_path = _path,
+				.stage = _stage,
+				.definitions = *_definitions,
+				});
+			_specializations[key] = _inst;
+			_instance_time = std::chrono::file_clock::now();
+		}
 
 		_dependencies = _inst->dependencies();
-		_instance_time = std::chrono::file_clock::now();
 	}
 
 	void Shader::destroyInstance()
@@ -353,6 +372,13 @@ namespace vkl
 	bool Shader::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
+
+		const std::vector<std::string> definitions = *_definitions;
+		SpecializationKey new_key;
+		new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
+		{
+			return a + "\n"s + b;
+		});
 		
 		if (ctx.checkShaders())
 		{
@@ -361,10 +387,17 @@ namespace vkl
 				const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
 				if (new_time > _instance_time)
 				{
+					_specializations.clear();
 					res = true;
-
 				}
 			}
+		}
+		
+		const bool use_different_spec = new_key != _current_key;
+		if (use_different_spec)
+		{
+			_current_key = new_key;
+			res = true;
 		}
 
 		if (res)
@@ -375,7 +408,7 @@ namespace vkl
 		
 		if (!_inst)
 		{
-			createInstance();
+			createInstance(_current_key);
 			res = true;
 		}
 
