@@ -330,7 +330,9 @@ namespace vkl
 
 		virtual ~ShaderCommand() override = default;
 
-		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc);
+		virtual void recordPushConstant(CommandBuffer& cmd, ExecutionContext& ctx, PushConstant const& pc);
+
+		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
 
 		template<typename T>
 		void setPushConstantsData(T && t)

@@ -4,6 +4,7 @@ namespace vkl
 {
 	GraphicsCommand::GraphicsCommand(CreateInfo const& ci) :
 		ShaderCommand(ci.app, ci.name, ci.bindings),
+		_topology(ci.topology),
 		_attachements(ci.targets),
 		_depth(ci.depth_buffer),
 		_write_depth(ci.write_depth),
@@ -152,15 +153,20 @@ namespace vkl
 		}
 	}
 
-	void GraphicsCommand::createPipeline()
+	void GraphicsCommand::createPipeline(VertexInputDescription const& vid)
 	{
 		Pipeline::GraphicsCreateInfo gci;
 		gci.app = application();
 		gci.name = name() + ".Pipeline";
-		gci.vertex_input = Pipeline::VertexInputWithoutVertices();
-		gci.input_assembly = Pipeline::InputAssemblyPointDefault();
+		gci.vertex_input = vid;
+		gci.input_assembly = Pipeline::InputAssemblyDefault(_topology);
 		gci.rasterization = Pipeline::RasterizationDefault();
-		gci.line_raster = Pipeline::BresenhamLineRasterization();
+		
+		if (_line_raster_mode.has_value())
+		{
+			gci.line_raster = Pipeline::LineRasterization(_line_raster_mode.value());
+		}
+
 		gci.multisampling = Pipeline::MultisampleOneSample();
 		gci.program = _program;
 		gci.render_pass = _render_pass;
@@ -256,7 +262,8 @@ namespace vkl
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
-			recordBindings(cmd, context, di.pc);
+			recordBindings(cmd, context);
+			recordPushConstant(cmd, context, di.pc);
 			recordDraw(cmd, context, user_info);
 		}
 		vkCmdEndRenderPass(cmd);
@@ -272,6 +279,7 @@ namespace vkl
 		GraphicsCommand(GraphicsCommand::CreateInfo{
 			.app = ci.app,
 			.name = ci.name,
+			.topology = ci.topology,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
@@ -287,11 +295,21 @@ namespace vkl
 			.definitions = ci.definitions 
 		}),
 		_draw_count(ci.draw_count),
+		_fetch_vertex_attrib(ci.fetch_vertex_attributes),
 		_meshes(ci.meshes)
 	{
 		createProgramIFN();
 		createGraphicsResources();
-		createPipeline();
+		VertexInputDescription vid = [&]() -> VertexInputDescription {
+			if (_fetch_vertex_attrib == 0)
+				return Pipeline::VertexInputWithoutVertices();
+			if (_fetch_vertex_attrib == 1);
+			if (_fetch_vertex_attrib == 2);
+			if (_fetch_vertex_attrib == 3)
+				return Mesh::vertexInputDesc();
+			assert(false);
+		}();
+		createPipeline(vid);
 
 		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
 			.app = application(),
@@ -358,10 +376,11 @@ namespace vkl
 		}
 		else
 		{
-			for (auto& mesh : _meshes)
+			for (auto& mesh : di.meshes)
 			{
-				mesh->recordBind(cmd);
-				vkCmdDrawIndexed(cmd, (uint32_t)mesh->indicesSize(), 1, 0, 0, 0);
+				mesh.mesh->recordBind(cmd);
+				recordPushConstant(cmd, context, mesh.pc);
+				vkCmdDrawIndexed(cmd, (uint32_t)mesh.mesh->indicesLength(), 1, 0, 0, 0);
 			}
 		}
 	}
@@ -383,13 +402,13 @@ namespace vkl
 
 	Executable VertexCommand::with(DrawInfo const& di)
 	{
-
 		GraphicsCommand::DrawInfo gdi{
 			.pc = di.pc.operator bool() ? di.pc : _pc,
 		};
 
 		DrawInfo _di{
-			.draw_count = di.draw_count ? di.draw_count : _draw_count.value(),
+			.draw_count = di.draw_count ? di.draw_count : (_draw_count.hasValue() ? _draw_count.value() : 0),
+			.meshes = di.meshes,
 		};
 
 		return [this, gdi, _di](ExecutionContext& ctx)

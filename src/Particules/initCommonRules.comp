@@ -25,16 +25,16 @@ void main()
         const uint seed = (_pc.seed) ^ hash(gid);
         uint rng = hash(seed);
 
-        float g = randFloat(rng, 0.5, 1.5);
+        float g = randomFloat(rng, 0.5, 1.5);
         if(!same_type)
         {
-            if((randUint(rng) & 1) == 0)
+            if((randomUint(rng) & 1) == 0)
             {
                 g = -g; 
             }
         }
-        float mu = randFloat(rng, 0.2, 0.5);
-        float sigma = randFloat(rng, 0.05, 0.06);
+        float mu = randomFloat(rng, 0.2, 0.5);
+        float sigma = randomFloat(rng, 0.05, 0.06);
 
         ForceDescription fd;
         fd.intensity_inv_linear_inv_linear2_contant_linear = StorageVec4(0, 0, 0, 0);
@@ -46,8 +46,8 @@ void main()
         {
             ParticuleCommonProperties cmp;
             vec3 rgb;
-            rgb.r = randFloat(rng, 0, 1);
-            rgb.g = randFloat(rng, 0, 1);
+            rgb.r = randomFloat(rng, 0, 1);
+            rgb.g = randomFloat(rng, 0, 1);
             if(rgb.r + rgb.g > 1)
             {
                 rgb.r = 1.0 - rgb.r;

@@ -141,16 +141,28 @@ function(AddProject p_name)
 	SET(EXECUTABLES ${EXECUTABLES} ${p_name})
 endfunction()
 
-AddProject(Test)
+option(BUILD_PROJECTS ON)
 
-AddProject(GameOfLife "GOL")
+if(${BUILD_PROJECTS})
 
-AddProject(Paint)
+	AddProject(Test)
 
-AddProject(Particules)
+	AddProject(GameOfLife "GOL")
 
-AddProject(Flotsam)
+	AddProject(Paint)
+
+	AddProject(Particules)
+
+	AddProject(Flotsam)
+
+	AddProject(Renderer)
+
+endif()
 
 INSTALL(TARGETS VkEngine DESTINATION lib)
-# INSTALL(TARGETS Cloth GameOfLife Particules Flotsam DESTINATION bin)
-INSTALL(TARGETS GameOfLife Paint Particules Flotsam DESTINATION bin)
+
+if(${BUILD_PROJECTS})
+
+	INSTALL(TARGETS ${EXECUTABLES} DESTINATION bin)
+
+endif()

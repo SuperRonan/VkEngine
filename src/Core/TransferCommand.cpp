@@ -465,9 +465,8 @@ namespace vkl
 
 	UpdateBuffer::UpdateBuffer(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
-		_buffer(ci.buffer),
-		_data(ci.data),
-		_size(ci.size)
+		_src(ci.src),
+		_dst(ci.dst)
 	{}
 
 	UpdateBuffer::~UpdateBuffer()
@@ -479,7 +478,7 @@ namespace vkl
 	{
 		InputSynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
-			._buffer = ui.buffer,
+			._buffer = ui.dst,
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -487,16 +486,16 @@ namespace vkl
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
 		synch.record();
-		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.buffer->instance(), 0, ui.size, ui.data);
+		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset, ui.src.size, ui.src.ptr);
 		synch.NotifyContext();
 	}
 
 	void UpdateBuffer::execute(ExecutionContext& ctx)
 	{
 		UpdateInfo ui{
-			.buffer = _buffer,
-			.data = _data,
-			.size = _size,
+			.src = _src,
+			.dst = _dst,
+			.offset = 0,
 		};
 		execute(ctx, ui);
 	}
@@ -505,9 +504,9 @@ namespace vkl
 	{
 		UpdateInfo _ui
 		{
-			.buffer = ui.buffer ? ui.buffer : _buffer,
-			.data = ui.data ? ui.data : _data,
-			.size = ui.size ? ui.size : _size,
+			.src = ui.src.ptr ? ui.src : _src,
+			.dst = ui.dst ? ui.dst : _dst,
+			.offset = ui.offset,
 		};
 		return [=](ExecutionContext& ctx)
 		{

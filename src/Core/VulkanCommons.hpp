@@ -23,6 +23,9 @@ if (call != VK_SUCCESS) {				\
 
 namespace vkl
 {
+	static constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	static constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
 	struct VulkanFeatures
 	{
 		VkPhysicalDeviceFeatures features = {};
@@ -65,6 +68,43 @@ namespace vkl
 			};
 		}
 	};
+
+	struct VertexInputDescription
+	{
+		std::vector<VkVertexInputBindingDescription> binding;
+		std::vector<VkVertexInputAttributeDescription> attrib;
+
+		VkPipelineVertexInputStateCreateInfo link() const
+		{
+			return VkPipelineVertexInputStateCreateInfo{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.vertexBindingDescriptionCount = static_cast<uint32_t>(binding.size()),
+				.pVertexBindingDescriptions = binding.data(),
+				.vertexAttributeDescriptionCount = static_cast<uint32_t>(attrib.size()),
+				.pVertexAttributeDescriptions = attrib.data(),
+			};
+		}
+
+		constexpr VertexInputDescription() {};
+
+		constexpr VertexInputDescription(VertexInputDescription const&) = default;
+		constexpr VertexInputDescription(VertexInputDescription &&) = default;
+
+		constexpr VertexInputDescription& operator=(VertexInputDescription const&) = default;
+		constexpr VertexInputDescription& operator=(VertexInputDescription &&) = default;
+
+		VertexInputDescription(VkPipelineVertexInputStateCreateInfo const& ci)
+		{
+			binding.resize(ci.vertexBindingDescriptionCount);
+			std::copy(ci.pVertexBindingDescriptions, ci.pVertexBindingDescriptions + ci.vertexBindingDescriptionCount, binding.data());
+
+			attrib.resize(ci.vertexAttributeDescriptionCount);
+			std::copy(ci.pVertexAttributeDescriptions, ci.pVertexAttributeDescriptions + ci.vertexAttributeDescriptionCount, attrib.data());
+		}
+	};
+
 
 	constexpr VkComponentMapping defaultComponentMapping()
 	{

@@ -278,13 +278,29 @@ namespace vkl
 		}
 	};
 
+	struct ObjectView
+	{
+		const void* ptr = nullptr;
+		size_t size = 0;
+
+		ObjectView(const void * ptr, size_t size) :
+			ptr(ptr),
+			size(size)
+		{}
+
+		template <class T>
+		ObjectView(T&& t):
+			ptr(&t),
+			size(sizeof(T))
+		{}
+	};
+
 	class UpdateBuffer : public TransferCommand
 	{
 	protected:
 
-		std::shared_ptr<Buffer> _buffer;
-		const void* _data = nullptr;
-		size_t _size = 0;
+		ObjectView _src;
+		std::shared_ptr<Buffer> _dst;
 
 	public:
 
@@ -292,9 +308,8 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::shared_ptr<Buffer> buffer = nullptr;
-			const void* data = nullptr;
-			size_t size = 0;
+			ObjectView src;
+			std::shared_ptr<Buffer> dst = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -304,9 +319,9 @@ namespace vkl
 
 		struct UpdateInfo
 		{
-			std::shared_ptr<Buffer> buffer = nullptr;
-			const void* data = nullptr;
-			size_t size = 0;
+			ObjectView src;
+			std::shared_ptr<Buffer> dst = nullptr;
+			VkDeviceSize offset = 0;
 		};
 		using UI = UpdateInfo;
 

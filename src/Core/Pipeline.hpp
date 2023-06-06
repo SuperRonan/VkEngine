@@ -21,7 +21,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			VkPipelineVertexInputStateCreateInfo vertex_input;
+			VertexInputDescription vertex_input;
 			VkPipelineInputAssemblyStateCreateInfo input_assembly;
 			std::vector<VkViewport> viewports;
 			std::vector<VkRect2D> scissors;
@@ -35,6 +35,7 @@ namespace vkl
 			std::vector<VkDynamicState> dynamic;
 
 		protected:
+			mutable VkPipelineVertexInputStateCreateInfo _vk_vertex_input;
 			mutable VkPipelineViewportStateCreateInfo _viewport;
 			mutable VkPipelineColorBlendStateCreateInfo _blending;
 			mutable std::vector<VkPipelineShaderStageCreateInfo> _shaders;
@@ -45,6 +46,8 @@ namespace vkl
 			const VkGraphicsPipelineCreateInfo & assemble() const
 			{
 				{
+					_vk_vertex_input = vertex_input.link();
+
 					uint32_t num_viewport = static_cast<uint32_t>(viewports.size());
 					uint32_t num_scissor = static_cast<uint32_t>(scissors.size());
 					if (std::find(dynamic.cbegin(), dynamic.cend(), VK_DYNAMIC_STATE_VIEWPORT) != dynamic.cend())
@@ -96,13 +99,14 @@ namespace vkl
 					}
 				}
 
+
 				_pipeline_ci = VkGraphicsPipelineCreateInfo{
 					.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 					.pNext = nullptr,
 					.flags = 0,
 					.stageCount = (uint32_t)_shaders.size(),
 					.pStages = _shaders.data(),
-					.pVertexInputState = &vertex_input,
+					.pVertexInputState = &_vk_vertex_input,
 					.pInputAssemblyState = &input_assembly,
 					.pViewportState = &_viewport,
 					.pRasterizationState = &rasterization,
@@ -175,31 +179,11 @@ namespace vkl
 			return vertex_input;
 		}
 
-		constexpr static VkPipelineInputAssemblyStateCreateInfo InputAssemblyTriangleDefault()
+		constexpr static VkPipelineInputAssemblyStateCreateInfo InputAssemblyDefault(VkPrimitiveTopology topology)
 		{
 			VkPipelineInputAssemblyStateCreateInfo input_assembly{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-				.primitiveRestartEnable = VK_FALSE,
-			};
-			return input_assembly;
-		}
-
-		constexpr static VkPipelineInputAssemblyStateCreateInfo InputAssemblyPointDefault()
-		{
-			VkPipelineInputAssemblyStateCreateInfo input_assembly{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-				.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-				.primitiveRestartEnable = VK_FALSE,
-			};
-			return input_assembly;
-		}
-
-		constexpr static VkPipelineInputAssemblyStateCreateInfo InputAssemblyLineDefault()
-		{
-			VkPipelineInputAssemblyStateCreateInfo input_assembly{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-				.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+				.topology = topology,
 				.primitiveRestartEnable = VK_FALSE,
 			};
 			return input_assembly;
@@ -244,12 +228,12 @@ namespace vkl
 			return rasterization;
 		}
 
-		constexpr static VkPipelineRasterizationLineStateCreateInfoEXT BresenhamLineRasterization(uint32_t factor = 1, uint16_t pattern = 1)
+		constexpr static VkPipelineRasterizationLineStateCreateInfoEXT LineRasterization(VkLineRasterizationModeEXT mode, uint32_t factor = 1, uint16_t pattern = 1)
 		{
 			VkPipelineRasterizationLineStateCreateInfoEXT res{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_EXT,
 				.pNext = nullptr,
-				.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.lineRasterizationMode = mode,
 				.stippledLineEnable = (factor != 1 && pattern != 1) ? VK_TRUE : VK_FALSE,
 				.lineStippleFactor = factor,
 				.lineStipplePattern = pattern,
@@ -321,7 +305,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 
-			VkPipelineVertexInputStateCreateInfo vertex_input;
+			VertexInputDescription vertex_input;
 			VkPipelineInputAssemblyStateCreateInfo input_assembly;
 			std::vector<VkViewport> viewports;
 			std::vector<VkRect2D> scissors;

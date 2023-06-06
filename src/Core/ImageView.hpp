@@ -85,6 +85,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = "";
 			std::shared_ptr<Image> image = nullptr;
+			std::optional<Image::CreateInfo> image_ci = {};
 			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 			VkFormat format = VK_FORMAT_MAX_ENUM;
 			VkComponentMapping components = defaultComponentMapping();
@@ -106,13 +107,6 @@ namespace vkl
 		std::shared_ptr<ImageViewInstance> _inst = nullptr;
 
 	public:
-
-		constexpr ImageView(VkApplication * app = nullptr) noexcept :
-			AbstractInstanceHolder(app, ""sv)
-		{}
-
-		//ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
-		//ImageView(Image && image, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT);
 
 		ImageView(CreateInfo const& ci);
 

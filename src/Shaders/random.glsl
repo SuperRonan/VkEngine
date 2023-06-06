@@ -13,14 +13,14 @@ uint hash(uvec2 v)
 	return hash(v.x ^ hash(v.y));
 }
 
-uint randUint(inout uint rng)
+uint randomUint(inout uint rng)
 {
 	uint res = hash(rng);
 	++rng;
 	return res;
 }
 
-float randFloat01(inout uint rng)
+float randomFloat01(inout uint rng)
 {
 	const uint mask = 0x0000ffff;
 	const uint tmp = hash(rng) & mask;
@@ -29,8 +29,22 @@ float randFloat01(inout uint rng)
 	return res;
 }
 
-float randFloat(inout uint rng, float lower, float upper)
+float randomFloat(inout uint rng, float lower, float upper)
 {
-	const float xi = randFloat01(rng);
+	const float xi = randomFloat01(rng);
 	return (xi * (upper - lower)) + lower; 
+}
+
+vec3 randomRGB(inout uint rng)
+{
+	return vec3(
+		randomFloat01(rng),
+		randomFloat01(rng),
+		randomFloat01(rng)
+	);
+}
+
+vec3 RGBFromIndex(uint id)
+{
+	return randomRGB(id);
 }

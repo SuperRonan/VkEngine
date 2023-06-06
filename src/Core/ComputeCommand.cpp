@@ -42,7 +42,7 @@ namespace vkl
 	void ComputeCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di)
 	{
 		InputSynchronizationHelper synch(context);
-		recordBindings(cmd, context, di.push_constant);
+		recordBindings(cmd, context);
 
 		_sets->instance()->recordInputSynchronization(synch);
 		synch.record();

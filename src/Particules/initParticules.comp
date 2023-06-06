@@ -29,10 +29,10 @@ void main()
         p.velocity = vec2(0);
         p.radius = 0.02; 
 
-        p.position.x = randFloat(rng, 0, _pc.world_size.x);
-        p.position.y = randFloat(rng, 0, _pc.world_size.y);
+        p.position.x = randomFloat(rng, 0, _pc.world_size.x);
+        p.position.y = randomFloat(rng, 0, _pc.world_size.y);
 
-        p.type = randUint(rng) % N_TYPES_OF_PARTICULES;
+        p.type = randomUint(rng) % N_TYPES_OF_PARTICULES;
 
         particules.particules[gid] = p;
     }

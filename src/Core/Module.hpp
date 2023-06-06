@@ -1,6 +1,6 @@
 #pragma once
 
-#include <VkApplication.hpp>
+#include <Core/VkApplication.hpp>
 
 namespace vkl
 {

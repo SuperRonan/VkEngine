@@ -21,7 +21,7 @@
 - [ ] Simple mesh generation
     - [ ] Tetrahedron
     - [ ] Box
-    - [ ] Sphere
+    - [x] Sphere
     - [ ] Icosphere
 - [ ] Mesh renderer, Mesh representation
     - [ ] Mesh attribs from reflection
@@ -40,13 +40,14 @@
 - [ ] Improve CMake
     - [x] AddProject function
     - [ ] Separate list for .exe
-    - [ ] Option to build .exe
+    - [x] Option to build .exe
     - [ ] Correctly import Vulkan
 - [ ] Multi window mode (without ImGui)
 - [ ] Buffer / Image on recreate instancte command policy
 - [ ] MultiExecutor
 
 # Projects Ideas:
+- [ ] Basic Renderer
 - [ ] Seam Carving
 - [ ] Mutiple rigid body simulation
 - [ ] Fluid simulation? 

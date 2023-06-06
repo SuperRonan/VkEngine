@@ -56,19 +56,44 @@ namespace vkl
 
 		void createDeviceBuffer(std::vector<uint32_t> const& queues);
 
-		// void copyToDevice();
-
 		void cleanDeviceBuffer();
 
 		void recordBind(VkCommandBuffer command_buffer, uint32_t first_binding = 0)const;
 
-		uint32_t deviceIndexSize()const;
+		static VertexInputDescription vertexInputDesc();
 
-		constexpr auto indicesSize()const
+		const std::vector<Vertex>& vertices() const
 		{
-			return _device.indices_size;
+			return _host.vertices;
+		}
+
+		const std::vector<uint>& indices() const
+		{
+			return _host.indices;
+		}
+
+		std::shared_ptr<Buffer> combinedBuffer()const
+		{
+			return _device.mesh_buffer;
+		}
+
+		constexpr auto indicesLength()const
+		{
+			return _device.indices_size / sizeof(uint32_t);
 		}
 
 		static std::shared_ptr<Mesh> MakeCube(VkApplication * app, Vector3 center=Vector3(0), bool face_normal=true, bool same_face=true);
+
+		struct SphereMakeInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Vector3 center = Vector3(0);
+			float radius = 1;
+			uint theta_divisions = 16;
+			uint phi_divisions = 32;
+		};
+		using SMI = SphereMakeInfo;
+		static std::shared_ptr<Mesh> MakeSphere(SphereMakeInfo const& smi);
 	};
 }

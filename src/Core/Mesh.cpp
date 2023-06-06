@@ -1,9 +1,51 @@
 #include "Mesh.hpp"
 #include "StagingPool.hpp"
 #include <numeric>
+#include <numbers>
 
 namespace vkl
 {
+	VertexInputDescription Mesh::vertexInputDesc()
+	{
+		VertexInputDescription res;
+		res.binding = {
+			VkVertexInputBindingDescription{
+				.binding = 0,
+				.stride = sizeof(Vertex),
+				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+			},
+		};
+
+		res.attrib = {
+			VkVertexInputAttributeDescription{
+				.location = 0,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32B32_SFLOAT,
+				.offset = offsetof(Vertex, position),
+			},
+			VkVertexInputAttributeDescription{
+				.location = 1,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32B32_SFLOAT,
+				.offset = offsetof(Vertex, normal),
+			},
+			VkVertexInputAttributeDescription{
+				.location = 2,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32B32_SFLOAT,
+				.offset = offsetof(Vertex, tangent),
+			},
+			VkVertexInputAttributeDescription{
+				.location = 3,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32_SFLOAT,
+				.offset = offsetof(Vertex, uv),
+			},
+		};
+
+		return res;
+	}
+
 	bool Mesh::DeviceData::loaded()const
 	{
 		return !!mesh_buffer;
@@ -145,6 +187,8 @@ namespace vkl
 			Float w = (glm::dot(c, btg) < 0) ? -1 : 1;
 			_host.vertices[vertex_id].tangent = t * w;
 		}
+		tans.resize(0);
+		tans.shrink_to_fit();
 	}
 
 	void Mesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
@@ -188,14 +232,9 @@ namespace vkl
 	{
 		assert(_device.loaded());
 		VkBuffer vb = *_device.mesh_buffer->instance();
-		vkCmdBindVertexBuffers(command_buffer, first_binding, 1, &vb, 0);
+		VkDeviceSize offset = 0;
+		vkCmdBindVertexBuffers(command_buffer, first_binding, 1, &vb, &offset);
 		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size, VK_INDEX_TYPE_UINT32);
-	}
-
-	uint32_t Mesh::deviceIndexSize()const
-	{
-		assert(_device.loaded());
-		return _device.indices_size;
 	}
 
 
@@ -268,6 +307,63 @@ namespace vkl
 
 		std::shared_ptr<Mesh> res = std::make_shared<Mesh>(app, std::move(vertices), std::move(indices));
 		res->computeTangents();
+		return res;
+	}
+
+	std::shared_ptr<Mesh> Mesh::MakeSphere(SphereMakeInfo const& smi)
+	{
+		const uint theta_divisions = smi.theta_divisions;
+		const uint phi_divisions = smi.phi_divisions;
+		const size_t num_vertices = (theta_divisions + 1) * (phi_divisions + 1);
+		std::vector<Vertex> vertices(num_vertices);
+		std::vector<uint> indices(num_vertices * 2 * 3);
+
+		for (int t = 0; t <= theta_divisions; ++t)
+		{
+			const float v = float(t) / float(theta_divisions);
+			const float theta = v * std::numbers::pi;
+			const float ct = cos(theta);
+			const float st = sin(theta);
+			const float z = ct;
+
+
+			const int base_line_index = t * (phi_divisions + 1);
+			const int next_line_index = (t+1) * (phi_divisions + 1);
+
+			for (int p = 0; p < phi_divisions; ++p)
+			{
+				const float u = float(p) / float(phi_divisions);
+				const float phi = u * 2.0 * std::numbers::pi;
+
+				const float cp = cos(phi);
+				const float sp = sin(phi);
+
+				const float x = st * cp;
+				const float y = st * sp;
+
+				vertices[base_line_index + p] = Vertex{
+					.position = smi.center + smi.radius * Vector3(x, y, z),
+					.normal = Vector3(x, y, z),
+					.uv = Vector2(u, v),
+				};
+
+				const int base_index = 2 * 3 * (base_line_index + p);
+				indices[base_index + 0] = base_line_index + p;
+				indices[base_index + 1] = base_line_index + p + 1;
+				indices[base_index + 2] = next_line_index + p + 1;
+
+				indices[base_index + 3] = next_line_index + p + 1;
+				indices[base_index + 4] = next_line_index + p;
+				indices[base_index + 5] = base_line_index + p;
+			}
+
+			vertices[base_line_index + phi_divisions] = vertices[base_line_index];
+			vertices[base_line_index + phi_divisions].uv.x = 1.0;
+
+		}
+
+		std::shared_ptr<Mesh> res = std::make_shared<Mesh>(smi.app, std::move(vertices), std::move(indices));
+		//res->computeTangents();
 		return res;
 	}
 }

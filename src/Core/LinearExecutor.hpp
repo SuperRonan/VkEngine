@@ -77,7 +77,7 @@ namespace vkl
 		virtual void declare(std::shared_ptr<ImageView> view) override final;
 
 		virtual void declare(std::shared_ptr<Buffer> buffer) override final;
-
+		
 		virtual void declare(std::shared_ptr<Sampler> sampler) override final;
 
 		virtual void init() override final;

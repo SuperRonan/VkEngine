@@ -342,12 +342,8 @@ namespace vkl
 		return res;
 	}
 
-	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
+	void ShaderCommand::recordPushConstant(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
 	{
-		vkCmdBindPipeline(cmd, _pipeline->instance()->binding(), *_pipeline->instance());
-
-		_sets->instance()->recordBindings(cmd, _pipeline->instance()->binding());
-		
 		if (pc)
 		{
 			VkShaderStageFlags pc_stages = 0;
@@ -357,6 +353,13 @@ namespace vkl
 			}
 			vkCmdPushConstants(cmd, *_pipeline->program()->instance()->pipelineLayout(), pc_stages, 0, (uint32_t)pc.size(), pc.data());
 		}
+	}
+
+	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
+	{
+		vkCmdBindPipeline(cmd, _pipeline->instance()->binding(), *_pipeline->instance());
+
+		_sets->instance()->recordBindings(cmd, _pipeline->instance()->binding());
 	}
 
 	void DescriptorSetsInstance::recordInputSynchronization(InputSynchronizationHelper& synch)

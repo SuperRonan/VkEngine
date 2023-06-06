@@ -8,6 +8,7 @@ namespace vkl
 	{
 	protected:
 
+		VkPrimitiveTopology _topology;
 		std::shared_ptr<GraphicsProgram> _program;
 		std::vector<std::shared_ptr<ImageView>> _attachements = {};
 		std::shared_ptr<ImageView> _depth = nullptr;
@@ -21,11 +22,13 @@ namespace vkl
 
 		std::optional<VkPipelineColorBlendAttachmentState> _blending = {};
 
+		std::optional<VkLineRasterizationModeEXT> _line_raster_mode = {};
+
 		virtual void createProgramIFN() = 0;
 
 		virtual void createGraphicsResources();
 
-		void createPipeline();
+		void createPipeline(VertexInputDescription const& vid);
 
 		virtual void declareGraphicsResources(InputSynchronizationHelper & synch);
 
@@ -35,6 +38,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			VkPrimitiveTopology topology;
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -79,6 +83,8 @@ namespace vkl
 
 		ShaderPaths _shaders;
 
+		int _fetch_vertex_attrib = 0;
+
 		std::vector<std::shared_ptr<Mesh>> _meshes;
 
 		DynamicValue<uint32_t> _draw_count = false;
@@ -93,6 +99,8 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			int fetch_vertex_attributes = 0;
+			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			DynamicValue<uint32_t> draw_count = {};
 			std::vector<std::shared_ptr<Mesh>> meshes = {};
 			std::vector<ShaderBindingDescription> bindings = {};
@@ -111,13 +119,23 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		struct DrawMeshInfo
+		{
+			std::shared_ptr<Mesh> mesh;
+			PushConstant pc;
+		};
+		
 		struct DrawInfo
 		{
 			PushConstant pc = {};
 			uint32_t draw_count = 0;
 			std::optional<VkViewport> viewport = {};
+
+			std::vector<DrawMeshInfo> meshes;
 		};
 		using DI = DrawInfo;
+
+		
 
 		VertexCommand(CreateInfo const& ci);
 

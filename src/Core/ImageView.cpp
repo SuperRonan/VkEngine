@@ -89,8 +89,8 @@ namespace vkl
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
-		AbstractInstanceHolder((ci.app ? ci.app : ci.image->application()), ci.name),
-		_image(ci.image),
+		AbstractInstanceHolder((ci.app ? ci.app : (ci.image ? ci.image->application() : ci.image_ci->app)), ci.name),
+		_image(ci.image ? ci.image : std::make_shared<Image>(*ci.image_ci)),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format == VK_FORMAT_MAX_ENUM ? _image->format() : ci.format),
 		_components(ci.components),

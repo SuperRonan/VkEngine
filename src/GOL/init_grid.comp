@@ -26,7 +26,7 @@ void main()
 		uint value = 0;
 		for(uint i=0; i<8; ++i)
 		{
-			const float xi = randFloat01(rng);
+			const float xi = randomFloat01(rng);
 			const uint bit = (xi < p) ? 1 : 0;
 			value |= (bit << i);
 		}
