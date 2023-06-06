@@ -182,6 +182,11 @@ namespace vkl
 		{
 			return _common_shader_defines;
 		}
+
+		constexpr bool enableValidation()const
+		{
+			return _enable_valid_layers;
+		}
 	};
 
 	class VkObject

@@ -18,9 +18,7 @@
 #include <chrono>
 #include <random>
 
-#include <glm/ext/matrix_common.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
+#include "RenderObjects.hpp"
 
 namespace vkl
 {
@@ -233,17 +231,7 @@ namespace vkl
 			double t = glfwGetTime(), dt = 0.0;
 			size_t frame_index = 0;
 
-			glm::vec3 camera_position = glm::vec3(-1.0, 1.0, 1.0);
-			glm::vec3 camera_target = glm::vec3(0, 0, 0);
-			glm::vec3 camera_direction = glm::normalize(camera_target - camera_position);
-
-			glm::vec3 camera_right = [&]() -> glm::vec3 {
-				//glm::mat4 mr = glm::rotate(glm::mat4(1.0), 90.0f, glm::vec3(0, 0, 1));
-				//glm::vec4 tmp = mr * glm::vec4(camera_direction, 0.0);
-				//return glm::vec3(tmp.x, tmp.y, tmp.z);
-
-				return glm::normalize(glm::cross(camera_direction, glm::vec3(0, 0, -1)));
-			} ();
+			Camera camera;
 			float camera_distance = 2.0;
 
 			while (!window->shouldClose())
@@ -263,7 +251,7 @@ namespace vkl
 					{
 						camera_distance *= std::exp(mouse_handler.getScroll() * 0.1);
 					}
-					camera_direction = mouse_handler.direction<float>();
+					//camera_direction = mouse_handler.direction<float>();
 				}
 
 				beginImGuiFrame();
@@ -275,17 +263,10 @@ namespace vkl
 				ubo.time = static_cast<float>(t);
 				ubo.delta_time = static_cast<float>(dt);
 				ubo.frame_idx = static_cast<uint32_t>(frame_index);
-				
-				const glm::mat4 cam2proj = [&] {
-					glm::mat4 tmp = glm::perspectiveFov<float>(90.0, window->extent3D().value().width, window->extent3D().value().height, 0.01, 10); 
-					tmp[1][1] *= -1; 
-					return tmp; 
-				}();
-				const glm::mat4 world2cam = glm::lookAt(-camera_distance * camera_direction, glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
 
-				ubo.camera_to_proj = cam2proj;
-				ubo.world_to_camera = world2cam;
-				ubo.world_to_proj = cam2proj * world2cam;
+				ubo.camera_to_proj = camera.getCamToProj();
+				ubo.world_to_camera = camera.getWorldToCam();
+				ubo.world_to_proj = camera.getWorldToProj();
 
 				{
 					exec.updateResources();

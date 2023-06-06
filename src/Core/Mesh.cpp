@@ -51,6 +51,17 @@ namespace vkl
 		return !!mesh_buffer;
 	}
 
+	bool Mesh::checkIntegrity() const
+	{
+		bool res = true;
+		for (size_t i=0; i<_host.indices.size(); ++i)
+		{
+			res &= (_host.indices[i] < _host.vertices.size());
+			assert(res);
+		}
+		return res;
+	}
+
 	Mesh::Mesh(VkApplication* app):
 		VkObject(app)
 	{}
@@ -63,6 +74,8 @@ namespace vkl
 			.vertices = vertices,
 			.indices = indices,
 		};
+		
+		if (app->enableValidation()) checkIntegrity();
 	}
 
 	Mesh::Mesh(VkApplication* app, std::vector<Vertex> && vertices, std::vector<uint> && indices) noexcept:
@@ -73,6 +86,8 @@ namespace vkl
 			.vertices = std::move(vertices),
 			.indices = std::move(indices),
 		};
+
+		if (app->enableValidation()) checkIntegrity();
 	}
 
 	Mesh::~Mesh() 
@@ -122,12 +137,14 @@ namespace vkl
 		// https://learnopengl.com/Advanced-Lighting/Normal-Mapping
 		uint number_of_triangles = _host.indices.size() / 3;
 
-		struct tan
+		struct Tan
 		{
-			Vector3 tg, btg;
+			alignas(16) Vector3 tg = Vector3(0);
+			alignas(16) Vector3 btg = Vector3(0);
 		};
 
-		std::vector<tan> tans(_host.vertices.size(), tan{ Vector3(0), Vector3(0) });
+		
+		std::vector<Tan> tans(_host.vertices.size());
 
 		for (uint triangle_index = 0; triangle_index < number_of_triangles; ++triangle_index)
 		{
@@ -187,8 +204,6 @@ namespace vkl
 			Float w = (glm::dot(c, btg) < 0) ? -1 : 1;
 			_host.vertices[vertex_id].tangent = t * w;
 		}
-		tans.resize(0);
-		tans.shrink_to_fit();
 	}
 
 	void Mesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
@@ -347,14 +362,17 @@ namespace vkl
 					.uv = Vector2(u, v),
 				};
 
-				const int base_index = 2 * 3 * (base_line_index + p);
-				indices[base_index + 0] = base_line_index + p;
-				indices[base_index + 1] = base_line_index + p + 1;
-				indices[base_index + 2] = next_line_index + p + 1;
+				if (t != theta_divisions)
+				{
+					const int base_index = 2 * 3 * (base_line_index + p);
+					indices[base_index + 0] = base_line_index + p;
+					indices[base_index + 1] = base_line_index + p + 1;
+					indices[base_index + 2] = next_line_index + p + 1;
 
-				indices[base_index + 3] = next_line_index + p + 1;
-				indices[base_index + 4] = next_line_index + p;
-				indices[base_index + 5] = base_line_index + p;
+					indices[base_index + 3] = next_line_index + p + 1;
+					indices[base_index + 4] = next_line_index + p;
+					indices[base_index + 5] = base_line_index + p;
+				}
 			}
 
 			vertices[base_line_index + phi_divisions] = vertices[base_line_index];
@@ -363,7 +381,7 @@ namespace vkl
 		}
 
 		std::shared_ptr<Mesh> res = std::make_shared<Mesh>(smi.app, std::move(vertices), std::move(indices));
-		//res->computeTangents();
+		res->computeTangents();
 		return res;
 	}
 }

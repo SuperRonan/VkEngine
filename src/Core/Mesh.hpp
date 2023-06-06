@@ -36,6 +36,8 @@ namespace vkl
 			bool loaded()const;
 		} _device;
 
+		bool checkIntegrity() const;
+
 	public:
 
 		Mesh(VkApplication * app);
