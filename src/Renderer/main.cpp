@@ -12,7 +12,7 @@
 #include <Core/LinearExecutor.hpp>
 #include <Core/ImGuiUtils.hpp>
 #include <Core/Module.hpp>
-#include <Core/MouseHandler.hpp>
+#include <Core/InputListener.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -211,21 +211,15 @@ namespace vkl
 			};
 			InputState input_state;
 
-			vkl::MouseHandler mouse_handler(window->handle(), vkl::MouseHandler::Mode::Direction);
+			KeyboardListener keyboard(*window);
+			MouseListener mouse(*window);
 
 			const auto process_input = [&](InputState& state)
 			{
 				if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 					glfwSetWindowShouldClose(*window, true);
-				
-				if (glfwGetMouseButton(*window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-				{
-					state.grabed = true;
-				}
-				else
-				{
-					state.grabed = false;
-				}
+
+				state.grabed = mouse.getButton(GLFW_MOUSE_BUTTON_LEFT).currentlyPressed();
 			};
 
 			double t = glfwGetTime(), dt = 0.0;
@@ -242,14 +236,15 @@ namespace vkl
 					t = new_t;
 				}
 				window->pollEvents();
+				keyboard.update();
+				mouse.update();
 
 				process_input(input_state);
 				if (input_state.grabed)
 				{
-					mouse_handler.update(dt);
-
+					
 					{
-						camera_distance *= std::exp(mouse_handler.getScroll() * 0.1);
+						camera_distance *= std::exp(mouse.getScroll().current.y * 0.1);
 					}
 					//camera_direction = mouse_handler.direction<float>();
 				}
