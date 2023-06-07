@@ -152,6 +152,7 @@ namespace vkl
 		int _joystick = 0;
 		std::vector<KeyState> _buttons;
 		
+		float _deadzone = 1e-1;
 		std::vector<VWP<float>> _axis;
 
 	public:

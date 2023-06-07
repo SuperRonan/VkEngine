@@ -88,6 +88,14 @@ namespace vkl
 		InputListenerGLFW(window),
 		_joystick(jid)
 	{
+		if (glfwJoystickIsGamepad(_joystick))
+		{
+			std::cout << "Connected to jostick " << _joystick << ": " << glfwGetJoystickName(_joystick) << std::endl;
+		}
+		else
+		{
+			std::cout << "Failed to connect to jostick " << _joystick << std::endl;
+		}
 		_buttons.resize(GLFW_GAMEPAD_BUTTON_LAST + 1);
 
 		for (int b = 0; b < _buttons.size(); ++b)
@@ -108,7 +116,9 @@ namespace vkl
 		}
 		for (int a = 0; a < _axis.size(); ++a)
 		{
-			_axis[a] << state.axes[a];
+			float ax = state.axes[a];
+			if (std::abs(ax) < _deadzone)	ax = 0;
+			_axis[a] << ax;
 		}
 	}
 

@@ -20,7 +20,7 @@
     - [ ] .obj loader
 - [ ] Simple mesh generation
     - [ ] Tetrahedron
-    - [ ] Box
+    - [x] Box
     - [x] Sphere
     - [ ] Icosphere
 - [ ] Mesh renderer, Mesh representation
@@ -36,7 +36,7 @@
 - [ ] Multi layer swapchain (for VR)
 - [ ] Debug buffers
     - [ ] GLSL strings
-- [ ] Input manager
+- [x] Input manager
 - [ ] Improve CMake
     - [x] AddProject function
     - [ ] Separate list for .exe

@@ -74,7 +74,7 @@ namespace vkl
 		vec3 _up = vec3(0, 1, 0);
 
 		float _aspect = 16.0/9.0;
-		float _fov = glm::radians(70.0);
+		float _fov = glm::radians(90.0);
 		float _near = 0.1;
 		float _far = 10.0;
 
@@ -135,6 +135,11 @@ namespace vkl
 		float inclination()const
 		{
 			return std::acos(glm::dot(_direction, _up));
+		}
+
+		constexpr float fov()const
+		{
+			return _fov;
 		}
 
 		Ray getRay(vec2 uv = vec2(0))
@@ -199,6 +204,7 @@ namespace vkl
 
 		KeyboardListener* _keyboard = nullptr;
 		MouseListener* _mouse = nullptr;
+		GamepadListener* _gamepad = nullptr;
 
 		int _key_forward = GLFW_KEY_W;
 		int _key_backward = GLFW_KEY_S;
@@ -208,7 +214,8 @@ namespace vkl
 		int _key_downward = GLFW_KEY_LEFT_CONTROL;
 
 		float _movement_speed = 1;
-		float _look_speed = 5e-1;
+		float _mouse_sensitivity = 5e-1;
+		float _joystick_sensitivity = 5;
 		float _fov_sensitivity = 1e-1;
 
 	public:
@@ -218,51 +225,86 @@ namespace vkl
 			Camera* camera = nullptr;
 			KeyboardListener* keyboard = nullptr;
 			MouseListener* mouse = nullptr;
+			GamepadListener* gamepad = nullptr;
 		};
 		
 		FirstPersonCameraController(CreateInfo const& ci):
 			CameraController(ci.camera),
 			_keyboard(ci.keyboard),
-			_mouse(ci.mouse)
+			_mouse(ci.mouse),
+			_gamepad(ci.gamepad)
 		{}
 
 		virtual void updateCamera(float dt) override
 		{
 			Camera::CameraDelta delta;
 
-			if (_keyboard->getKey(_key_forward).currentlyPressed())
+			const float fov_sensitivity = (_camera->fov()) / (std::numbers::pi / 2.0);
+			std::cout << fov_sensitivity << std::endl;
+
+			if (_keyboard)
 			{
-				delta.movement.z += 1;
-			}
-			if (_keyboard->getKey(_key_backward).currentlyPressed())
-			{
-				delta.movement.z += -1;
-			}
-			if (_keyboard->getKey(_key_left).currentlyPressed())
-			{
-				delta.movement.x += -1;
-			}
-			if (_keyboard->getKey(_key_right).currentlyPressed())
-			{
-				delta.movement.x += 1;
-			}
-			if (_keyboard->getKey(_key_upward).currentlyPressed())
-			{
-				delta.movement.y += 1;
-			}
-			if (_keyboard->getKey(_key_downward).currentlyPressed())
-			{
-				delta.movement.y += -1;
+
+				if (_keyboard->getKey(_key_forward).currentlyPressed())
+				{
+					delta.movement.z += 1;
+				}
+				if (_keyboard->getKey(_key_backward).currentlyPressed())
+				{
+					delta.movement.z += -1;
+				}
+				if (_keyboard->getKey(_key_left).currentlyPressed())
+				{
+					delta.movement.x += -1;
+				}
+				if (_keyboard->getKey(_key_right).currentlyPressed())
+				{
+					delta.movement.x += 1;
+				}
+				if (_keyboard->getKey(_key_upward).currentlyPressed())
+				{
+					delta.movement.y += 1;
+				}
+				if (_keyboard->getKey(_key_downward).currentlyPressed())
+				{
+					delta.movement.y += -1;
+				}
+
+				delta.movement = normalizeSafe(delta.movement);
 			}
 
 			
-			delta.movement = normalizeSafe(delta.movement) * dt * _movement_speed;
 			
+			if (_mouse)
+			{
+				delta.angle += _mouse->getPos().delta() * dt * _mouse_sensitivity;
 
-			delta.angle += _mouse->getPos().delta() * dt * _look_speed;
+				delta.fov *= exp(-_mouse->getScroll().current.y * _fov_sensitivity);
+			}
 
-			delta.fov *= exp(-_mouse->getScroll().current.y * _fov_sensitivity);
+			if (_gamepad)
+			{
+				delta.movement.x += _gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_X).current;
+				delta.movement.z -= _gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_Y).current;
 
+				if (_gamepad->getButton(GLFW_GAMEPAD_BUTTON_CROSS).currentlyPressed())
+				{
+					delta.movement.y += 1;
+				}
+				if (_gamepad->getButton(GLFW_GAMEPAD_BUTTON_CIRCLE).currentlyPressed())
+				{
+					delta.movement.y -= 1;
+				}
+
+				delta.angle.x += _gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_X).current * dt * _joystick_sensitivity;
+				delta.angle.y += _gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_Y).current * dt * _joystick_sensitivity;
+
+				float fov_zoom = _gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_TRIGGER).current - _gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER).current;
+				delta.fov *= exp(fov_zoom * _fov_sensitivity * dt * 1e1);
+			}
+
+			delta.movement *= dt * _movement_speed;
+			delta.angle *= fov_sensitivity;
 			_camera->update(delta);
 		}
 	};

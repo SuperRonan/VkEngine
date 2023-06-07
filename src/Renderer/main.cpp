@@ -211,8 +211,17 @@ namespace vkl
 			};
 			InputState input_state;
 
+			for (int jid = 0; jid <= GLFW_JOYSTICK_LAST; ++jid)
+			{
+				if (glfwJoystickPresent(jid))
+				{
+					std::cout << "Joystick " << jid << ": " << glfwGetJoystickName(jid) << std::endl;
+				}
+			}
+
 			KeyboardListener keyboard(*window);
 			MouseListener mouse(*window);
+			GamepadListener gamepad(*window, 0);
 
 			const auto process_input = [&](InputState& state)
 			{
@@ -232,6 +241,7 @@ namespace vkl
 				.camera = &camera, 
 				.keyboard = &keyboard,
 				.mouse = &mouse,
+				.gamepad = &gamepad,
 			});
 
 			while (!window->shouldClose())
@@ -244,6 +254,7 @@ namespace vkl
 				window->pollEvents();
 				keyboard.update();
 				mouse.update();
+				gamepad.update();
 				process_input(input_state);
 				camera_controller.updateCamera(dt);
 
@@ -257,8 +268,6 @@ namespace vkl
 				beginImGuiFrame();
 				{
 					ImGui::Text("Camera inclination: %f", glm::degrees(camera.inclination()));
-					std::string w2p = toString(camera.getWorldToProj());
-					ImGui::Text(w2p.c_str());
 				}
 				ImGui::EndFrame();
 
