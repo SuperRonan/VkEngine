@@ -2,10 +2,13 @@
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
+#include <Core/InputListener.hpp>
 
 #include <glm/ext/matrix_common.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
+
+#include <numbers>
 
 namespace vkl
 {
@@ -23,6 +26,25 @@ namespace vkl
 	constexpr vec2 uvToClipSpace(vec2 uv)
 	{
 		return uv * 2.0f - vec2(1);
+	}
+
+	template <glm::length_t N>
+	glm::vec<N, float> normalizeSafe(glm::vec<N, float> v)
+	{
+		const float lv2 = glm::dot(v, v);
+		if (lv2 != 0)
+		{
+			v = glm::normalize(v);
+		}
+		return v;
+	}
+
+	vec3 rotate(vec3 v, vec3 axis, float angle)
+	{
+		mat4 rotation = glm::rotate(mat4(1), angle, axis);
+
+		vec4 res = rotation * vec4(v, 1);
+		return vec3(res.x, res.y, res.z);
 	}
 
 	struct Ray
@@ -52,22 +74,31 @@ namespace vkl
 		vec3 _up = vec3(0, 1, 0);
 
 		float _aspect = 16.0/9.0;
-		float _fov = 90.0;
+		float _fov = glm::radians(70.0);
 		float _near = 0.1;
 		float _far = 10.0;
 
 	public:
 
+		struct CameraDelta
+		{
+			vec3 movement = vec3(0);
+			vec2 angle = vec2(0);
+			float fov = 1;
+		};
+
 		constexpr Camera() = default;
 
 		mat4 getCamToProj()const
 		{
-			return glm::perspective(_fov, _aspect, _near, _far);
+			mat4 res = glm::perspective(_fov, _aspect, _near, _far);
+			res[1][1] *= -1;
+			return res;
 		}
 
 		mat4 getWorldToCam() const
 		{
-			return glm::lookAt(_position, _position + _direction, _up);
+			return glm::lookAt(_position, _position + _direction, glm::cross(_right, _direction));
 		}
 
 		mat4 getWorldToProj() const
@@ -77,6 +108,7 @@ namespace vkl
 
 		void computeInternal()
 		{
+			_direction = glm::normalize(_direction);
 			_right = glm::normalize(glm::cross(_direction, _up));
 		}
 
@@ -100,6 +132,11 @@ namespace vkl
 			return _direction;
 		}
 
+		float inclination()const
+		{
+			return std::acos(glm::dot(_direction, _up));
+		}
+
 		Ray getRay(vec2 uv = vec2(0))
 		{
 			const vec2 cp = uvToClipSpace(uv);
@@ -107,6 +144,34 @@ namespace vkl
 				.origin = _position,
 				.direction = glm::normalize(_direction + cp.x * _right - cp.y * _up),
 			};
+		}
+
+		void update(CameraDelta const& delta)
+		{
+			const vec3 front = glm::cross(_up, _right);
+			const float d = glm::dot(front, _direction);
+			vec3 dp = delta.movement.x * _right + delta.movement.y * _up + delta.movement.z * front;
+			
+			dp = normalizeSafe(dp) * glm::length(delta.movement);
+			_position += dp;
+
+			_direction = rotate(_direction, _up, -delta.angle.x);
+			computeInternal();
+			
+			const float y_angle = [&]() {
+				const float current_cos_angle = glm::dot(_direction, _up);
+				const float current_angle = std::acos(current_cos_angle);
+				const float margin = 0.01;
+				const float new_angle = std::clamp<float>(current_angle + delta.angle.y, margin * std::numbers::pi, (1.0f - margin) * std::numbers::pi);
+				const float diff = new_angle - current_angle;
+				//std::cout << glm::degrees(new_angle) << ", " << glm::degrees(diff) << ", " << glm::degrees(_fov) << std::endl;
+				return diff;
+			}();
+			_direction = rotate(_direction, _right, -y_angle);
+			//computeInternal();
+
+			_fov *= delta.fov;
+			_fov = std::clamp(_fov, glm::radians(1e-1f), glm::radians(179.0f));
 		}
 
 		friend class CameraController;
@@ -124,7 +189,7 @@ namespace vkl
 			_camera(camera)
 		{}
 
-		virtual void updateCamera() = 0;
+		virtual void updateCamera(float dt) = 0;
 
 	};
 
@@ -132,16 +197,73 @@ namespace vkl
 	{
 	protected:
 
+		KeyboardListener* _keyboard = nullptr;
+		MouseListener* _mouse = nullptr;
+
+		int _key_forward = GLFW_KEY_W;
+		int _key_backward = GLFW_KEY_S;
+		int _key_left = GLFW_KEY_A;
+		int _key_right = GLFW_KEY_D;
+		int _key_upward = GLFW_KEY_SPACE;
+		int _key_downward = GLFW_KEY_LEFT_CONTROL;
+
+		float _movement_speed = 1;
+		float _look_speed = 5e-1;
+		float _fov_sensitivity = 1e-1;
 
 	public:
+
+		struct CreateInfo
+		{
+			Camera* camera = nullptr;
+			KeyboardListener* keyboard = nullptr;
+			MouseListener* mouse = nullptr;
+		};
 		
-		FirstPersonCameraController(Camera * camera):
-			CameraController(camera)
+		FirstPersonCameraController(CreateInfo const& ci):
+			CameraController(ci.camera),
+			_keyboard(ci.keyboard),
+			_mouse(ci.mouse)
 		{}
 
-		virtual void updateCamera() override
+		virtual void updateCamera(float dt) override
 		{
+			Camera::CameraDelta delta;
 
+			if (_keyboard->getKey(_key_forward).currentlyPressed())
+			{
+				delta.movement.z += 1;
+			}
+			if (_keyboard->getKey(_key_backward).currentlyPressed())
+			{
+				delta.movement.z += -1;
+			}
+			if (_keyboard->getKey(_key_left).currentlyPressed())
+			{
+				delta.movement.x += -1;
+			}
+			if (_keyboard->getKey(_key_right).currentlyPressed())
+			{
+				delta.movement.x += 1;
+			}
+			if (_keyboard->getKey(_key_upward).currentlyPressed())
+			{
+				delta.movement.y += 1;
+			}
+			if (_keyboard->getKey(_key_downward).currentlyPressed())
+			{
+				delta.movement.y += -1;
+			}
+
+			
+			delta.movement = normalizeSafe(delta.movement) * dt * _movement_speed;
+			
+
+			delta.angle += _mouse->getPos().delta() * dt * _look_speed;
+
+			delta.fov *= exp(-_mouse->getScroll().current.y * _fov_sensitivity);
+
+			_camera->update(delta);
 		}
 	};
 }

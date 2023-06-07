@@ -160,7 +160,7 @@ namespace vkl
 		gci.name = name() + ".Pipeline";
 		gci.vertex_input = vid;
 		gci.input_assembly = Pipeline::InputAssemblyDefault(_topology);
-		gci.rasterization = Pipeline::RasterizationDefault();
+		gci.rasterization = Pipeline::RasterizationDefault(VK_CULL_MODE_BACK_BIT);
 		
 		if (_line_raster_mode.has_value())
 		{

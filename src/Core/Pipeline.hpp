@@ -211,7 +211,7 @@ namespace vkl
 			return scissor;
 		}
 
-		constexpr static VkPipelineRasterizationStateCreateInfo RasterizationDefault()
+		constexpr static VkPipelineRasterizationStateCreateInfo RasterizationDefault(VkCullModeFlags cull = VK_CULL_MODE_NONE)
 		{
 			VkPipelineRasterizationStateCreateInfo rasterization{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -220,7 +220,7 @@ namespace vkl
 				.depthClampEnable = VK_FALSE,
 				.rasterizerDiscardEnable = VK_FALSE,
 				.polygonMode = VK_POLYGON_MODE_FILL,
-				.cullMode = VK_CULL_MODE_NONE,
+				.cullMode = cull,
 				.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 				.depthBiasEnable = VK_FALSE,
 				.lineWidth = 1.0f,
@@ -260,7 +260,7 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				.depthTestEnable = VK_TRUE,
+				.depthTestEnable = VK_FALSE,
 				.depthWriteEnable = write_depth ? VK_TRUE : VK_FALSE,
 				.depthCompareOp = VK_COMPARE_OP_LESS,
 				.depthBoundsTestEnable = VK_FALSE,

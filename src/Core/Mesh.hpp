@@ -56,6 +56,8 @@ namespace vkl
 
 		void computeTangents();
 
+		void flipFaces();
+
 		void createDeviceBuffer(std::vector<uint32_t> const& queues);
 
 		void cleanDeviceBuffer();

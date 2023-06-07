@@ -206,6 +206,15 @@ namespace vkl
 		}
 	}
 
+	void Mesh::flipFaces()
+	{
+		const size_t N = _host.indices.size() / 3;
+		for (size_t t = 0; t < N; ++t)
+		{
+			std::swap(_host.indices[3 * t + 0], _host.indices[3 * t + 2]);
+		}
+	}
+
 	void Mesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
 	{
 		assert(_host.loaded);
@@ -356,9 +365,10 @@ namespace vkl
 				const float x = st * cp;
 				const float y = st * sp;
 
+				const Vector3 normal = Vector3(x, z, y);
 				vertices[base_line_index + p] = Vertex{
-					.position = smi.center + smi.radius * Vector3(x, y, z),
-					.normal = Vector3(x, y, z),
+					.position = smi.center + smi.radius * normal,
+					.normal = normal,
 					.uv = Vector2(u, v),
 				};
 

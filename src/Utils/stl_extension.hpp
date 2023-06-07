@@ -9,28 +9,53 @@
 
 using namespace std::literals;
 
-template <class Stream, class Float, glm::length_t N>
-Stream& operator<<(Stream& stream, glm::vec<N, Float> const& vec)
+namespace glm_operators
 {
-	stream << "[";
-	for (int i = 0; i < N; ++i)
+	template <class Stream, class Float, glm::length_t N, glm::qualifier q>
+	Stream& operator<<(Stream& stream, glm::vec<N, Float, q> const& vec)
 	{
-		stream << vec[i] << ", ";
+		stream << "[";
+		for (int i = 0; i < N; ++i)
+		{
+			stream << vec[i] << ", ";
+		}
+		stream << "]";
+		return stream;
 	}
-	stream << "]";
-	return stream;
+
+	template <class Stream, class Float, glm::length_t N, glm::length_t M, glm::qualifier q>
+	Stream& operator<<(Stream& stream, glm::mat<N, M, Float, q> const& mat)
+	{
+		stream << "[";
+		for (int i = 0; i < N; ++i)
+		{
+			stream << mat[i] << ", ";
+		}
+		stream << "]";
+		return stream;
+	}
 }
 
-template <class Stream, class Float, glm::length_t N, glm::length_t M>
-Stream& operator<<(Stream& stream, glm::mat<N, M, Float> const& mat)
+namespace glm
 {
-	stream << "[";
-	for (int i = 0; i < N; ++i)
-	{	
-		stream << mat[i] << ", ";
+	template<class Float, glm::length_t N, qualifier q>
+	std::string toString(vec<N, Float, q> const& vec)
+	{
+		//using namespace glm_operators;
+		std::stringstream ss;
+		//ss << vec;
+		glm_operators::operator<<(ss, vec);
+		return ss.str();
 	}
-	stream << "]";
-	return stream;
+
+	template <class Float, glm::length_t N, glm::length_t M, qualifier q>
+	std::string toString(mat<N, M, Float, q> const& mat)
+	{
+		//using namespace glm_operators;
+		std::stringstream ss;
+		glm_operators::operator<<(ss, mat);
+		return ss.str();
+	}
 }
 
 template <class T, class Q>

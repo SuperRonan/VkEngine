@@ -9,6 +9,7 @@ layout(location = 2) in vec3 a_tangent;
 layout(location = 3) in vec2 a_uv;
 
 layout(location = 0) out vec2 v_uv;
+layout(location = 1) out vec3 v_p_position;
 
 layout(push_constant) uniform PushConstant
 {
@@ -23,13 +24,7 @@ void main()
 	
 	
 	gl_Position = o2p * vec4(a_position, 1);
-	gl_Position.xyz /= gl_Position.w;
-	gl_Position.w = 1;
 
+	v_p_position = gl_Position.xyz;
 	v_uv = a_uv;
-	
-	// uint rng = hash(gl_VertexIndex);
-	// gl_Position.x = randomFloat(rng, -1, 1);
-	// gl_Position.y = randomFloat(rng, -1, 1);
-	// gl_Position.z = randomFloat(rng, 0, 1);
 }

@@ -31,7 +31,7 @@ namespace vkl
 			for (int k = range.begin; k < range.end; ++k)
 			{
 				const int new_state = glfwGetKey(_window, _keys[k].key);
-				_keys[k].key << new_state;
+				_keys[k] << new_state;
 			}
 		}
 	}
@@ -57,8 +57,23 @@ namespace vkl
 
 	void MouseListener::update()
 	{
-		_scroll << glm::vec2(s_scroll.x, s_scroll.y);
+		_focus << glfwGetWindowAttrib(_window, GLFW_FOCUSED);
+		if (_focus.current && !_focus.prev)
+		{
+			glm::dvec2 mouse_pos;
+			glfwGetCursorPos(_window, &mouse_pos.x, &mouse_pos.y);
+			_mouse_pos = glm::vec2(mouse_pos.x, mouse_pos.y);
+		}
+		if (_focus.current)
+		{
+			_scroll << glm::vec2(s_scroll.x, s_scroll.y);
+
+			glm::dvec2 mouse_pos;
+			glfwGetCursorPos(_window, &mouse_pos.x, &mouse_pos.y);
+			_mouse_pos << glm::vec2(mouse_pos.x, mouse_pos.y);
+		}
 		s_scroll = glm::dvec2(0);
+
 
 		for (auto& key : _keys)
 		{
@@ -66,9 +81,6 @@ namespace vkl
 			key << new_state;
 		}
 
-		glm::dvec2 mouse_pos;
-		glfwGetCursorPos(_window, &mouse_pos.x, &mouse_pos.y);
-		_mouse_pos << glm::vec2(mouse_pos.x, mouse_pos.y);
 	}
 	
 	

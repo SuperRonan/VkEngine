@@ -228,6 +228,12 @@ namespace vkl
 			Camera camera;
 			float camera_distance = 2.0;
 
+			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
+				.camera = &camera, 
+				.keyboard = &keyboard,
+				.mouse = &mouse,
+			});
+
 			while (!window->shouldClose())
 			{
 				{
@@ -238,20 +244,21 @@ namespace vkl
 				window->pollEvents();
 				keyboard.update();
 				mouse.update();
-
 				process_input(input_state);
+				camera_controller.updateCamera(dt);
+
 				if (input_state.grabed)
 				{
-					
 					{
 						camera_distance *= std::exp(mouse.getScroll().current.y * 0.1);
 					}
-					//camera_direction = mouse_handler.direction<float>();
 				}
 
 				beginImGuiFrame();
 				{
-
+					ImGui::Text("Camera inclination: %f", glm::degrees(camera.inclination()));
+					std::string w2p = toString(camera.getWorldToProj());
+					ImGui::Text(w2p.c_str());
 				}
 				ImGui::EndFrame();
 

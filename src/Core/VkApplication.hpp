@@ -24,22 +24,22 @@ namespace vkl
 		
 		struct QueueFamilyIndices
 		{
-			std::optional<uint32_t> graphics_family;
-			std::optional<uint32_t> transfer_family;
-			std::optional<uint32_t> present_family;
-			std::optional<uint32_t> compute_family;
+			std::optional<uint32_t> graphics_family = {};
+			std::optional<uint32_t> transfer_family = {};
+			std::optional<uint32_t> present_family = {};
+			std::optional<uint32_t> compute_family = {};
 
 			bool isComplete()const;
 		};
 
 		struct Queues
 		{
-			VkQueue graphics, transfer, present, compute;
+			VkQueue graphics = VK_NULL_HANDLE, transfer = VK_NULL_HANDLE, present = VK_NULL_HANDLE, compute = VK_NULL_HANDLE;
 		};
 
 		struct Pools
 		{
-			SPtr<CommandPool> graphics, transfer, compute;
+			SPtr<CommandPool> graphics = nullptr, transfer = nullptr, compute = nullptr;
 		};
 
 	protected:
@@ -48,25 +48,25 @@ namespace vkl
 
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
 
-		VkInstance _instance;
-		std::vector<VkExtensionProperties> _instance_extensions;
-		VkDebugUtilsMessengerEXT _debug_messenger;
+		VkInstance _instance = VK_NULL_HANDLE;
+		std::vector<VkExtensionProperties> _instance_extensions = {};
+		VkDebugUtilsMessengerEXT _debug_messenger = VK_NULL_HANDLE;
 		VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
-		VulkanDeviceProps _device_props;
-		VkDevice _device;
-		std::vector<VkExtensionProperties> _device_extensions;
+		VulkanDeviceProps _device_props = {};
+		VkDevice _device = VK_NULL_HANDLE;
+		std::vector<VkExtensionProperties> _device_extensions = {};
 
 		VmaAllocator _allocator = nullptr;
 
-		Queues _queues;
+		Queues _queues = {};
 
-		QueueFamilyIndices _queue_family_indices;
+		QueueFamilyIndices _queue_family_indices = {};
 
-		Pools _pools;
+		Pools _pools = {};
 
 		//std::unique_ptr<StagingPool> _staging_pool;
 
-		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT;
+		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
 		
 
 		virtual std::vector<const char*> getValidLayers();
@@ -79,8 +79,8 @@ namespace vkl
 
 		std::string _name = {};
 
-		VulkanFeatures _requested_features;
-		VulkanFeatures _available_features;
+		VulkanFeatures _requested_features = {};
+		VulkanFeatures _available_features = {};
 
 		std::vector<std::string> _common_shader_defines = {};
 		
