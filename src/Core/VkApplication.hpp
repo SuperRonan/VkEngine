@@ -82,9 +82,6 @@ namespace vkl
 		VulkanFeatures _requested_features = {};
 		VulkanFeatures _available_features = {};
 
-		std::vector<std::string> _common_shader_defines = {};
-		
-
 		virtual void requestFeatures(VulkanFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
@@ -173,16 +170,6 @@ namespace vkl
 			return getDeviceExtVersion(ext_name) != EXT_NONE;
 		}
 
-		const std::vector<std::string>& getCommonShaderDefines() const
-		{
-			return _common_shader_defines;
-		}
-
-		std::vector<std::string>& getCommonShaderDefines() 
-		{
-			return _common_shader_defines;
-		}
-
 		constexpr bool enableValidation()const
 		{
 			return _enable_valid_layers;
@@ -261,22 +248,33 @@ namespace vkl
 	protected:
 
 		bool _check_shaders = false;
+		const std::vector<std::string>& _common_definitions;
 
 	public:
 
 		struct CreateInfo
 		{
 			bool check_shaders = false;
+			const std::vector<std::string>& common_definitions;
 		};
 		using CI = CreateInfo;
 
 		UpdateContext(CreateInfo const& ci) :
-			_check_shaders(ci.check_shaders)
+			_check_shaders(ci.check_shaders),
+			_common_definitions(ci.common_definitions)
 		{
 
 		}
 
-		constexpr bool checkShaders() const { return _check_shaders; }
+		constexpr bool checkShaders() const 
+		{ 
+			return _check_shaders; 
+		}
+
+		constexpr std::vector<std::string> const& commonDefinitions()
+		{
+			return _common_definitions;
+		}
 
 	};
 

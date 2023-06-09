@@ -125,14 +125,15 @@ namespace vkl
 					std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
 				});
 			};
-			_common_shader_defines += std::string("USE_HALF_STORAGE ") + std::to_string(use_half_storage);
-
+			
 			LinearExecutor exec(LinearExecutor::CI{
 				.app = this,
 				.name = "exec",
 				.window = _main_window,
 				.use_ImGui = true,
 			});
+
+			exec.getCommonDefinitions().setDefinition("USE_HALF_STORAGE", std::to_string(use_half_storage));
 
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,

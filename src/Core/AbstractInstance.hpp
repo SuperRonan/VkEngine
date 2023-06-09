@@ -8,11 +8,7 @@ namespace vkl
 	{
 	protected:
 
-		
-
 		std::vector<InvalidationCallback> _invalidation_callbacks = {};
-
-		
 
 	public:
 
@@ -47,8 +43,6 @@ namespace vkl
 				}
 			}
 		}
-
-
 	};
 
 	template <class Instance>

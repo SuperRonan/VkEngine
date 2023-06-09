@@ -146,7 +146,7 @@ namespace vkl
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key);
+		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions);
 
 		void destroyInstance();
 

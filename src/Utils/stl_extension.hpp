@@ -109,6 +109,23 @@ namespace std
 		}
 
 		template <class T, Container<T> C>
+		std::vector<T> operator+(const C& b, const std::vector<T>& a)
+		{
+			std::vector<T> res = makeVector(b);
+			res += a;
+			return res;
+		}
+
+		// Have to declare this one, else it would be ambiguous
+		template <class T>
+		std::vector<T> operator+(std::vector<T> const& a, std::vector<T> const& b)
+		{
+			std::vector<T> res = a;
+			res += b;
+			return res;
+		}
+
+		template <class T, Container<T> C>
 		std::vector<T> operator+(std::vector<T> && a, const C & b)
 		{
 			std::vector<T> res = std::move(a);

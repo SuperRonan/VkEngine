@@ -98,9 +98,13 @@ namespace vkl
 				_shader_check_time = now;
 			}
 		}
-		UpdateContext update_context(UpdateContext::CI{
+
+		_common_definitions.update();
+
+		UpdateContext update_context = UpdateContext::CI{
 			.check_shaders = should_check_shaders,
-			});
+			.common_definitions = _common_definitions.collapsed(),
+		};
 
 		if (_window->updateResources(update_context))
 		{

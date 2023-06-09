@@ -432,7 +432,6 @@ namespace vkl
 				_dependencies.clear();
 				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 				std::vector<std::string> defines = { semantic_definition };
-				defines += application()->getCommonShaderDefines();
 				defines += ci.definitions;
 
 				std::string preprocessed = preprocess(ci.source_path, defines);
@@ -483,19 +482,22 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key)
+	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions)
 	{
 		if (_specializations.contains(key))
 		{
 			_inst = _specializations[key];
 		}
 		else {
+			using namespace std::containers_operators;
+			std::vector<std::string> definitions = (*_definitions);
+			definitions += common_definitions;
 			_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 				.app = application(),
 				.name = name(),
 				.source_path = _path,
 				.stage = _stage,
-				.definitions = *_definitions,
+				.definitions = definitions,
 				});
 			_specializations[key] = _inst;
 			_instance_time = std::chrono::file_clock::now();
@@ -552,7 +554,7 @@ namespace vkl
 		
 		if (!_inst)
 		{
-			createInstance(_current_key);
+			createInstance(_current_key, ctx.commonDefinitions());
 			res = true;
 		}
 
