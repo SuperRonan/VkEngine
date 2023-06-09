@@ -26,6 +26,14 @@ namespace vkl
 		SpvReflectShaderModule _reflection;
 		std::vector<std::filesystem::path> _dependencies;
 
+		struct PreprocessingState
+		{
+			std::set<std::filesystem::path> pragma_once_files = {};
+		};
+
+		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state);
+
+		std::string preprocessStrings(std::string const& glsl);
 
 	public:
 
@@ -49,11 +57,9 @@ namespace vkl
 		ShaderInstance& operator=(ShaderInstance const&) = delete;
 		ShaderInstance& operator=(ShaderInstance &&) = delete;
 
-		struct PreprocessingState
-		{
-			std::set<std::filesystem::path> pragma_once_files = {};
-		};
-		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state);
+
+
+		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 

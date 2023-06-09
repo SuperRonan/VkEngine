@@ -240,7 +240,6 @@ namespace vkl
 			Camera::CameraDelta delta;
 
 			const float fov_sensitivity = (_camera->fov()) / (std::numbers::pi / 2.0);
-			std::cout << fov_sensitivity << std::endl;
 
 			if (_keyboard)
 			{
@@ -277,7 +276,10 @@ namespace vkl
 			
 			if (_mouse)
 			{
-				delta.angle += _mouse->getPos().delta() * dt * _mouse_sensitivity;
+				if(_mouse->getButton(GLFW_MOUSE_BUTTON_RIGHT).currentlyPressed())
+				{
+					delta.angle += _mouse->getPos().delta() * dt * _mouse_sensitivity;
+				}
 
 				delta.fov *= exp(-_mouse->getScroll().current.y * _fov_sensitivity);
 			}

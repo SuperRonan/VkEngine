@@ -8,7 +8,7 @@
 - [x] Common Shaders Definitions
 - [x] Automatic shader definitions (to progressively complete)
 - [x] Shader pragma once
-- [ ] Dynamic Shaders Definitions (keep a table)
+- [x] Dynamic Shaders Definitions (keep a table)
 - [x] UpdateContext
 - [ ] VkShaderObjectEXT? 
 - [ ] Complete Graphics command

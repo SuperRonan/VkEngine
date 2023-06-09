@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string_view>
 #include <iostream>
+#include <format>
 
 namespace vkl
 {
@@ -53,7 +54,7 @@ namespace vkl
 	}
 	
 
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
+	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
 	{
 		_dependencies.push_back(path);
 		std::string content = readFileToString(path);
@@ -113,7 +114,7 @@ namespace vkl
 				
 				if (!preprocessing_state.pragma_once_files.contains(path_to_include))
 				{
-					const std::string included_code = preprocess(path_to_include, {}, preprocessing_state);
+					const std::string included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state);
 					oss << "#line 1 " << path_to_include << "\n";
 					oss << included_code;
 					oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
@@ -132,6 +133,136 @@ namespace vkl
 		oss << std::string_view(content.data() + copied_so_far, content.size() - copied_so_far);
 
 		return oss.str();
+	}
+	
+	std::string ShaderInstance::preprocessStrings(const std::string& glsl)
+	{
+		std::stringstream res;
+
+		const auto findNextStringLiteral = [&](size_t from)
+		{
+			const size_t opening_dq = glsl.find_first_of('"', from);
+
+			if (opening_dq == std::string::npos)
+			{
+				return ""sv;
+			}
+
+			const size_t closing_dq = [&]() {
+				size_t begin = opening_dq + 1;
+				size_t res = begin; 
+				while (true)
+				{
+					res = glsl.find_first_of('"', begin);
+					if (glsl[res - 1] != '\\')
+					{
+						break;
+					}
+					begin = res;
+				}
+				return res;
+			}();
+			const std::string_view res(glsl.data() + opening_dq, closing_dq - opening_dq + 1);
+			return res;
+		};
+
+		const auto extractLiteralContent = [](std::string_view lt)
+		{
+			return std::string_view(lt.data() + 1, lt.size() - 2);
+		};
+
+		const auto ignoreStringLiteral = [&](std::string_view literal)
+		{
+			// Check if literal is in a macro
+			const size_t begin = literal.data() - glsl.data();
+			const size_t line_begin = glsl.rfind('\n', begin);
+			const std::string_view line = std::string_view(glsl.data() + line_begin, literal.size() + (begin - line_begin));
+			const size_t error_begin = line.find("#error");
+			if (error_begin != std::string::npos)
+			{
+				return true;
+			}
+			const size_t macro_line_begin = line.find("#line");
+			if (macro_line_begin != std::string::npos)
+			{
+				return true;
+			}
+			// TODO check if literal is in a comment, but not necessary
+			return false;
+		};
+
+		// TODO 
+		const size_t max_str_len = 32 - 1;
+
+		const auto convertLiteralContentToGLSL = [&](std::string_view lt)
+		{
+			if (lt.size() > max_str_len)
+			{
+				VK_LOG << "Warning: string literal \"" << lt << "\" exceeding maximum capacity of " << max_str_len << "!" << std::endl;
+				lt = std::string_view(lt.data(), max_str_len); // Crop the literal
+			}
+
+			std::vector<uint32_t> chunks((max_str_len + 1) / 4, 0u);
+			std::memcpy(chunks.data(), lt.data(), lt.size());
+			
+			// Set len
+			chunks.back() &= 0x00ff'ffff;
+			chunks.back() |= (uint32_t(lt.size()) << (3 * 8));
+
+			std::string str_glsl = "makeShaderString(uint32_t[](";
+			for (uint32_t c : chunks)
+			{
+				std::string c_hex = "0x" + std::format("{:x}", c);
+				str_glsl += c_hex + ",";
+			}
+			// Replace the last comma
+			str_glsl.back() = ')';
+			// Close the "makeShaderString" function call
+			str_glsl += ")";
+			return str_glsl;
+		};
+
+		
+		size_t copied_so_far = 0;
+		while (true)
+		{
+			std::string_view lt = findNextStringLiteral(copied_so_far);
+			if (lt == ""sv)
+			{
+				break;
+			}
+			const size_t lt_begin = lt.data() - glsl.data();
+			if (ignoreStringLiteral(lt))
+			{
+				const std::string_view to_copy = std::string_view(glsl.data() + copied_so_far, lt_begin - copied_so_far + lt.size());
+				res << to_copy;
+				copied_so_far += to_copy.size();
+				continue;
+			}
+
+			const std::string_view copied_so_far_view = std::string_view(glsl.data(), copied_so_far);
+			const std::string_view lt_content = extractLiteralContent(lt);
+			const std::string lt_glsl = convertLiteralContentToGLSL(lt_content);
+
+			const std::string_view to_copy = std::string_view(glsl.data() + copied_so_far, lt_begin - copied_so_far);
+			res << to_copy;
+			res << lt_glsl;
+			copied_so_far = (lt_begin + lt.size());
+		}
+
+		res << std::string_view(glsl.data() + copied_so_far, glsl.size() - copied_so_far);
+
+		const std::string _res = res.str();
+		return _res;
+	}
+
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions)
+	{
+		PreprocessingState preprocessing_state = {};
+		std::string full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state);
+
+		std::string final_source = preprocessStrings(full_source);
+		return final_source;
 	}
 
 	shaderc_shader_kind getShaderKind(VkShaderStageFlagBits stage)
@@ -303,9 +434,8 @@ namespace vkl
 				std::vector<std::string> defines = { semantic_definition };
 				defines += application()->getCommonShaderDefines();
 				defines += ci.definitions;
-				PreprocessingState preprocessing_state = {};
-				
-				std::string preprocessed = preprocess(ci.source_path, defines, preprocessing_state);
+
+				std::string preprocessed = preprocess(ci.source_path, defines);
 				
 				if (preprocessed == "")
 				{

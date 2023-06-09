@@ -36,6 +36,16 @@ float16_t sqr(float16_t x)
 }
 #endif
 
+vec2 clipSpaceToUV(vec2 cp)
+{
+	return (cp * 0.5f) + 0.5f;
+}
+
+vec2 UVToClipSpace(vec2 uv)
+{
+	return (uv * 2.0f) - 1.0f;
+}
+
 mat2 diagonal(vec2 v)
 {
 	return mat2(v.x, 0, 0, v.y);
