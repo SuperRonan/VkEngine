@@ -3,6 +3,7 @@
 #include "AbstractInstance.hpp"
 #include <cassert>
 #include <utility>
+#include <Core/UpdateContext.hpp>
 
 namespace vkl
 {

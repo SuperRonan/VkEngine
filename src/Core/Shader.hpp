@@ -9,6 +9,7 @@
 #include "AbstractInstance.hpp"
 #include <set>
 #include <unordered_map>
+#include <Core/UpdateContext.hpp>
 
 namespace vkl
 {

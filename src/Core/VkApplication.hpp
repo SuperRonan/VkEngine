@@ -236,46 +236,4 @@ namespace vkl
 			_name = std::forward<StringLike>(new_name);
 		}
 	};
-
-	struct InvalidationCallback
-	{
-		std::function<void(void)> callback;
-		VkObject* id = nullptr;
-	};
-
-	class UpdateContext
-	{
-	protected:
-
-		bool _check_shaders = false;
-		const std::vector<std::string>& _common_definitions;
-
-	public:
-
-		struct CreateInfo
-		{
-			bool check_shaders = false;
-			const std::vector<std::string>& common_definitions;
-		};
-		using CI = CreateInfo;
-
-		UpdateContext(CreateInfo const& ci) :
-			_check_shaders(ci.check_shaders),
-			_common_definitions(ci.common_definitions)
-		{
-
-		}
-
-		constexpr bool checkShaders() const 
-		{ 
-			return _check_shaders; 
-		}
-
-		constexpr std::vector<std::string> const& commonDefinitions()
-		{
-			return _common_definitions;
-		}
-
-	};
-
 }

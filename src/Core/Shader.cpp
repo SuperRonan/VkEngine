@@ -517,9 +517,11 @@ namespace vkl
 
 	bool Shader::updateResources(UpdateContext & ctx)
 	{
+		using namespace std::containers_operators;
 		bool res = false;
 
-		const std::vector<std::string> definitions = *_definitions;
+		std::vector<std::string> definitions = *_definitions;
+		definitions += ctx.commonDefinitions().collapsed();
 		SpecializationKey new_key;
 		new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
 		{
@@ -554,7 +556,7 @@ namespace vkl
 		
 		if (!_inst)
 		{
-			createInstance(_current_key, ctx.commonDefinitions());
+			createInstance(_current_key, ctx.commonDefinitions().collapsed());
 			res = true;
 		}
 

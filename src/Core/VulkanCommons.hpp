@@ -23,8 +23,18 @@ if (call != VK_SUCCESS) {				\
 
 namespace vkl
 {
+	class VkObject;
+	
+	struct InvalidationCallback
+	{
+		std::function<void(void)> callback;
+		VkObject* id = nullptr;
+	};
+
+
 	static constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	static constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
 
 	struct VulkanFeatures
 	{

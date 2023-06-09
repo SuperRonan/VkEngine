@@ -6,6 +6,7 @@
 #include <array>
 #include <format>
 #include "DynamicValue.hpp"
+#include <Core/UpdateContext.hpp>
 
 namespace vkl
 {

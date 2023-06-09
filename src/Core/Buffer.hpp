@@ -4,6 +4,7 @@
 #include <set>
 #include <Utils/stl_extension.hpp>
 #include <Core/AbstractInstance.hpp>
+#include <Core/UpdateContext.hpp>
 
 #ifndef VMA_NULL
 #define VMA_NULL nullptr
