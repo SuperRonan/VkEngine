@@ -19,6 +19,7 @@
 #include <random>
 
 #include "RenderObjects.hpp"
+#include "DebugRenderer.hpp"
 
 namespace vkl
 {
@@ -141,6 +142,11 @@ namespace vkl
 				.target = final_image,
 			});
 
+			DebugRenderer debugger(DebugRenderer::CreateInfo{
+				.exec = exec,
+				.target = final_image,
+			});
+
 			std::shared_ptr<Mesh> mesh = Mesh::MakeSphere(Mesh::SMI{
 				.app = this,
 				.radius = 1,
@@ -205,9 +211,7 @@ namespace vkl
 
 			struct InputState
 			{
-				bool paused = true;
-				bool grabed = false;
-				double scroll = 0;
+
 			};
 			InputState input_state;
 
@@ -227,8 +231,6 @@ namespace vkl
 			{
 				if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 					glfwSetWindowShouldClose(*window, true);
-
-				state.grabed = mouse.getButton(GLFW_MOUSE_BUTTON_LEFT).currentlyPressed();
 			};
 
 			double t = glfwGetTime(), dt = 0.0;
@@ -258,16 +260,11 @@ namespace vkl
 				process_input(input_state);
 				camera_controller.updateCamera(dt);
 
-				if (input_state.grabed)
-				{
-					{
-						camera_distance *= std::exp(mouse.getScroll().current.y * 0.1);
-					}
-				}
-
 				beginImGuiFrame();
 				{
 					ImGui::Text("Camera inclination: %f", glm::degrees(camera.inclination()));
+
+					debugger.declareToImGui();
 				}
 				ImGui::EndFrame();
 
@@ -308,6 +305,8 @@ namespace vkl
 								{.mesh = mesh, .pc = glm::mat4(1)},
 							},
 						}));
+
+						debugger.execute();
 					}
 
 

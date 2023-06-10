@@ -2,19 +2,27 @@
 
 #include "interop_cpp.glsl"
 
+#ifndef I_WANT_TO_DEBUG
+#define I_WANT_TO_DEBUG 0
+#endif
+
+#ifndef GLOBAL_ENABLE_GLSL_DEBUG
+#define GLOBAL_ENABLE_GLSL_DEBUG 0
+#endif
+
+
 #ifndef SHADER_STRING_CAPACITY
-#define SHADER_STRING_CAPACITY (32-1)
+#define SHADER_STRING_CAPACITY 32
 #endif
 
-#if ((SHADER_STRING_CAPACITY + 1) % 4) != 0
-#error "SHADER_STRING_CAPACITY must be a multiple of 4 minus 1"
+#if ((SHADER_STRING_CAPACITY % 4) != 0)
+#error "SHADER_STRING_CAPACITY must be a multiple of 4"
 #endif
 
-#define SHADER_STRING_PACKED_CAPACITY ((SHADER_STRING_CAPACITY + 1) / 4)
+#define SHADER_STRING_PACKED_CAPACITY (SHADER_STRING_CAPACITY / 4)
 
-#define GLOBAL_ENABLE_DEBUG_STRING 1
 #ifndef ENABLE_SHADER_STRING
-#define ENABLE_SHADER_STRING GLOBAL_ENABLE_DEBUG_STRING
+#define ENABLE_SHADER_STRING (GLOBAL_ENABLE_GLSL_DEBUG && I_WANT_TO_DEBUG)
 #endif
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require

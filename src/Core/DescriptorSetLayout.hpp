@@ -74,5 +74,10 @@ namespace vkl
 		{
 			return _metas;
 		}
+
+		constexpr bool empty()const
+		{
+			return _bindings.empty();
+		}
 	};
 }

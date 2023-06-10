@@ -2,6 +2,7 @@
 
 #include "common.glsl"
 
+#define I_WANT_TO_DEBUG 1
 #include "../Shaders/DebugBuffers.glsl"
 
 #include "../Shaders/random.glsl"
@@ -12,7 +13,7 @@ layout(location = 2) in vec3 a_tangent;
 layout(location = 3) in vec2 a_uv;
 
 layout(location = 0) out vec2 v_uv;
-layout(location = 1) out vec3 v_p_position;
+layout(location = 1) out vec3 v_w_normal;
 
 layout(push_constant) uniform PushConstant
 {
@@ -28,11 +29,12 @@ void main()
 	
 	gl_Position = o2p * vec4(a_position, 1);
 
-	v_p_position = gl_Position.xyz;
 	v_uv = a_uv;
+	v_w_normal = mat3(o2w) * a_normal;
 	
 	if(gl_VertexIndex == 0)
 	{
-		Str str = "abc";
+		Caret crt = Caret(vec2(100, 100), 0);
+		crt = pushToDebugPix("abcd", crt, true);
 	}
 }

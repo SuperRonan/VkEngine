@@ -15,7 +15,7 @@ namespace vkl
 	DescriptorSetsInstance::DescriptorSetsInstance(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
 		_prog(ci.program),
-		_bindings(*ci.bindings)
+		_bindings(ci.bindings)
 	{
 		resolveBindings();
 	}
@@ -45,18 +45,43 @@ namespace vkl
 	{
 		if (_desc_sets.empty())
 		{
-			std::vector<std::shared_ptr<DescriptorSetLayout>> set_layouts = _prog->setLayouts();
+			_set_ranges.clear();
+			_set_ranges.push_back(SetRange{
+				.begin = 0,
+				.len = 0,
+			});
+
+			const std::vector<std::shared_ptr<DescriptorSetLayout>> & set_layouts = _prog->setLayouts();
 			_desc_pools.resize(set_layouts.size());
 			_desc_sets.resize(set_layouts.size());
 			for (size_t i = 0; i < set_layouts.size(); ++i)
 			{
-				_desc_pools[i] = std::make_shared<DescriptorPool>(DescriptorPool::CI{
+				if (_set_ranges.back().len == 0)
+				{
+					_set_ranges.back().begin = static_cast<uint32_t>(i);
+				}
+				if (!set_layouts[i]->empty())
+				{
+					_desc_pools[i] = std::make_shared<DescriptorPool>(DescriptorPool::CI{
 					.app = application(),
 					.name = name() + ".DescPool",
 					.layout = set_layouts[i],
 					.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-				});
-				_desc_sets[i] = std::make_shared<DescriptorSet>(set_layouts[i], _desc_pools[i]);
+						});
+					_desc_sets[i] = std::make_shared<DescriptorSet>(set_layouts[i], _desc_pools[i]);
+					
+					++_set_ranges.back().len;
+				}
+				else
+				{
+					if (_set_ranges.back().len != 0)
+					{
+						_set_ranges.push_back(SetRange{
+							.begin = 0,
+							.len = 0
+						});
+					}
+				}
 			}
 		}
 	}
@@ -282,23 +307,47 @@ namespace vkl
 	{
 		if (!_desc_sets.empty())
 		{
-			std::vector<VkDescriptorSet> desc_sets(_desc_sets.size());
-			for (size_t i = 0; i < desc_sets.size(); ++i)	desc_sets[i] = *_desc_sets[i];
-			vkCmdBindDescriptorSets(cmd, binding, *_prog->pipelineLayout(), 0, (uint32_t)_desc_sets.size(), desc_sets.data(), 0, nullptr);
+			std::vector<VkDescriptorSet> desc_sets;
+			desc_sets.reserve(_desc_sets.size());
+			for (const auto& range : _set_ranges)
+			{
+				desc_sets.resize(range.len);
+				for (uint32_t i = 0; i < range.len; ++i)
+				{
+					assert(_desc_sets[i + range.begin]);
+					desc_sets[i] = *_desc_sets[i + range.begin];
+				}
+				vkCmdBindDescriptorSets(
+					cmd, 
+					binding, 
+					*_prog->pipelineLayout(), 
+					range.begin, 
+					range.len, 
+					desc_sets.data(), 
+					0, 
+					nullptr
+				);
+			}
+			
 		}
 	}
 
-	void DescriptorSetsManager::createInstance()
+	void DescriptorSetsManager::createInstance(ShaderBindings const& common_bindings)
 	{
 		if (_inst)
 		{
 			destroyInstance();
 		}
+		using namespace std::containers_operators;
+
+		std::vector<ResourceBinding> bindings = _bindings;
+		std::vector<ResourceBinding> resources_common_bindings(common_bindings.begin(), common_bindings.end());
+		bindings += resources_common_bindings;
 
 		DescriptorSetsInstance::CreateInfo ci{
 			.app = application(),
 			.name = name(),
-			.bindings = &_bindings,
+			.bindings = bindings,
 			.program = _prog->instance(),
 		};
 
@@ -335,7 +384,7 @@ namespace vkl
 
 		if (!_inst)
 		{
-			createInstance();
+			createInstance(ctx.commonShaderBindings());
 			res = true;
 		}
 

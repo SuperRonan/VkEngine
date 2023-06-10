@@ -104,6 +104,7 @@ namespace vkl
 		UpdateContext update_context = UpdateContext::CI{
 			.check_shaders = should_check_shaders,
 			.common_definitions = _common_definitions,
+			.common_bindings = _common_bindings,
 		};
 
 		if (_window->updateResources(update_context))

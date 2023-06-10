@@ -4,6 +4,7 @@
 #include <string>
 
 #include <Core/DefinitionMap.hpp>
+#include <Core/ShaderCommand.hpp>
 
 namespace vkl
 {
@@ -14,6 +15,8 @@ namespace vkl
 	protected:
 
 		DefinitionsMap _common_definitions;
+
+		ShaderBindings _common_bindings;
 
 	public:
 
@@ -63,6 +66,16 @@ namespace vkl
 		const DefinitionsMap& getCommonDefinitions()const
 		{
 			return _common_definitions;
+		}
+
+		ShaderBindings const& getCommonBindings() const
+		{
+			return _common_bindings;
+		}
+
+		ShaderBindings& getCommonBindings()
+		{
+			return _common_bindings;
 		}
 	};
 }

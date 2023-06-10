@@ -1,9 +1,11 @@
 #pragma once
 
-
+#ifndef RENDERER_FIRST_BINDING
+#define RENDERER_FIRST_BINDING set = 1, binding = 0
+#endif
 
 #ifndef UBO_BINDING
-#define UBO_BINDING set = 0, binding = 0
+#define UBO_BINDING RENDERER_FIRST_BINDING
 #endif
 
 

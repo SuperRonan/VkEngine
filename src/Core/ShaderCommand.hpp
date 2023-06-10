@@ -3,6 +3,7 @@
 #include "DeviceCommand.hpp"
 #include <utility>
 #include <cassert>
+#include "ShaderBindingDescriptor.hpp"
 
 namespace vkl
 {
@@ -72,16 +73,6 @@ namespace vkl
 		{
 			return !_data.empty();
 		}
-	};
-
-	struct ShaderBindingDescription
-	{
-		std::shared_ptr<Buffer> buffer = nullptr;
-		std::shared_ptr<ImageView> view = nullptr;
-		std::shared_ptr<Sampler> sampler = nullptr;
-		std::string name = {};
-		uint32_t set = uint32_t(0);
-		uint32_t binding = uint32_t(-1);
 	};
 	
 	using Binding = ShaderBindingDescription;
@@ -246,10 +237,19 @@ namespace vkl
 	class DescriptorSetsInstance : public VkObject 
 	{
 	protected:
+		struct SetRange
+		{
+			uint32_t begin = 0;
+			uint32_t len = 0;
+		};
+
 		std::shared_ptr<ProgramInstance> _prog;
-		std::vector<ResourceBinding> & _bindings;
+		std::vector<ResourceBinding> _bindings;
 		std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
+		
 		std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
+		std::vector<SetRange> _set_ranges;
+		
 		std::vector<Resource> _resources;
 
 	public:
@@ -258,7 +258,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<ResourceBinding> * bindings = nullptr;
+			std::vector<ResourceBinding> bindings;
 			std::shared_ptr<ProgramInstance> program = nullptr;
 		};
 		using CI = CreateInfo;
@@ -287,7 +287,7 @@ namespace vkl
 		std::shared_ptr<Program> _prog;
 		std::vector<ResourceBinding> _bindings;
 	
-		void createInstance();
+		void createInstance(ShaderBindings const& common_bindings);
 
 		void destroyInstance();
 

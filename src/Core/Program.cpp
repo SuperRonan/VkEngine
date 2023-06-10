@@ -116,20 +116,34 @@ namespace vkl
 			}
 		}
 
-		_set_layouts.resize(all_bindings.size());
-		for (auto& [s, sb] : all_bindings)
+		uint32_t max_set_index = [&all_bindings]()
 		{
-			assert(s < _set_layouts.size());
+			uint32_t res = 0;
+			for (const auto& [s, sb] : all_bindings)
+			{
+				res = std::max(res, s);
+			}
+			return res;
+		}();
+
+		_set_layouts.resize(max_set_index + 1);
+		for (size_t s = 0; s < _set_layouts.size(); ++s)
+		{
 			std::shared_ptr<DescriptorSetLayout> & set_layout = _set_layouts[s];
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 			std::vector<DescriptorSetLayout::BindingMeta> metas;
-			bindings.reserve(sb.size());
-			metas.reserve(sb.size());
-			for (const auto& [bdi, bd] : sb)
+			if (all_bindings.contains(s))
 			{
-				bindings.push_back(bd.binding);
-				metas.push_back(bd.meta);
+				const auto& sb = all_bindings[s];
+				bindings.reserve(sb.size());
+				metas.reserve(sb.size());
+				for (const auto& [bdi, bd] : sb)
+				{
+					bindings.push_back(bd.binding);
+					metas.push_back(bd.meta);
+				}
 			}
+
 			set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = application(),
 				.name = name() + "DescSetLayout",
@@ -139,9 +153,6 @@ namespace vkl
 				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			});
 		}
-
-
-		
 
 		// Push constants
 		{
@@ -186,8 +197,18 @@ namespace vkl
 		const bool reflection_ok = reflect();
 		assert(reflection_ok);
 
-		std::vector<VkDescriptorSetLayout> set_layouts(_set_layouts.size());
-		for (size_t i = 0; i < set_layouts.size(); ++i)	set_layouts[i] = *_set_layouts[i];
+		std::vector<VkDescriptorSetLayout> set_layouts;
+		for (size_t i = 0; i < _set_layouts.size(); ++i)
+		{
+			if (_set_layouts[i])
+			{
+				set_layouts.push_back(*_set_layouts[i]);
+			}
+			else
+			{
+				set_layouts.push_back(VK_NULL_HANDLE);
+			}
+		}
 
 		const VkPipelineLayoutCreateInfo ci = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
