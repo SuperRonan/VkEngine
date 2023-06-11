@@ -1,11 +1,15 @@
 # TODO List:
 - [x] Fill UBO transfer command
-- [ ] SDL Window?
+- [ ] SDL backend?
+	- [ ] SDL Window
+	- [ ] SDL Input listeners
+	- [ ] SDL Audio
 - [ ] CPU Parallel task executions
-    - [ ] Task executor
-    - [ ] Shader compilation
-    - [ ] Pipeline creation
+	- [ ] Task executor
+	- [ ] Shader compilation
+	- [ ] Pipeline creation
 - [x] Common Shaders Definitions
+- [x] Commong shaders bindings
 - [x] Automatic shader definitions (to progressively complete)
 - [x] Shader pragma once
 - [x] Dynamic Shaders Definitions (keep a table)
@@ -17,34 +21,35 @@
     - [ ] FragmentCommand
 - [ ] RenderPass-less rendering? 
 - [ ] Mesh loading
-    - [ ] .obj loader
+	- [ ] .obj loader
 - [ ] Simple mesh generation
-    - [ ] Tetrahedron
-    - [x] Box
-    - [x] Sphere
-    - [ ] Icosphere
+	- [ ] Tetrahedron
+	- [x] Box
+	- [x] Sphere
+	- [ ] Icosphere
 - [ ] Mesh renderer, Mesh representation
-    - [ ] Mesh attribs from reflection
+	- [ ] Mesh attribs from reflection
 - [ ] Scene
 - [ ] Mesh compression?
-    - [ ] Meshlets ? 
+	- [ ] Meshlets ? 
 - [ ] Mesh Shaders command
 - [ ] VkRayTracingKHR
-    - [ ] TLAS
-    - [ ] SBT
+	- [ ] TLAS
+	- [ ] SBT
 - [x] Modules
 - [ ] Multi layer swapchain (for VR)
 - [ ] Debug buffers
-    - [ ] GLSL strings
+	- [x] GLSL strings
 - [x] Input manager
 - [ ] Improve CMake
-    - [x] AddProject function
-    - [ ] Separate list for .exe
-    - [x] Option to build .exe
-    - [ ] Correctly import Vulkan
+	- [x] AddProject function
+	- [ ] Separate list for .exe
+	- [x] Option to build .exe
+	- [ ] Correctly import Vulkan
 - [ ] Multi window mode (without ImGui)
-- [ ] Buffer / Image on recreate instancte command policy
+- [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
+- [ ] Find a better project name
 
 # Projects Ideas:
 - [ ] Basic Renderer

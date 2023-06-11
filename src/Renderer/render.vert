@@ -36,5 +36,6 @@ void main()
 	{
 		Caret crt = Caret(vec2(100, 100), 0);
 		crt = pushToDebugPix("abcd", crt, true);
+		crt = pushToDebugPix("efghij", crt, true);
 	}
 }

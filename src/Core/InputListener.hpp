@@ -123,6 +123,9 @@ namespace vkl
 
 		std::vector<KeyState> _keys;
 
+		std::vector<glm::vec2> _pressed_pos;
+		std::vector<glm::vec2> _released_pos;
+
 	public:
 
 		MouseListener(GLFWwindow* window);
@@ -142,6 +145,16 @@ namespace vkl
 		const VWP<glm::vec2>& getPos()const
 		{
 			return _mouse_pos;
+		}
+
+		glm::vec2 getPressedPos(int b)const
+		{
+			return _pressed_pos[b];
+		}
+
+		glm::vec2 getReleasedPos(int b)const
+		{
+			return _released_pos[b];
 		}
 	};
 

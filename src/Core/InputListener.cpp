@@ -47,7 +47,10 @@ namespace vkl
 	MouseListener::MouseListener(GLFWwindow* window) :
 		InputListenerGLFW(window)
 	{
-		_keys.resize(8);
+		
+		_keys.resize(GLFW_MOUSE_BUTTON_LAST + 1);
+		_pressed_pos.reserve(_keys.size());
+		_released_pos.reserve(_keys.size());
 		for (int k = 0; k < _keys.size(); ++k)
 		{
 			_keys[k].key = k;
@@ -75,10 +78,21 @@ namespace vkl
 		s_scroll = glm::dvec2(0);
 
 
-		for (auto& key : _keys)
+		for (int k = 0; k < _keys.size(); ++k)
 		{
+			auto& key = _keys[k];
 			const int new_state = glfwGetMouseButton(_window, key.key);
 			key << new_state;
+
+			if (key.justPressed())
+			{
+				_pressed_pos[k] = _mouse_pos.current;
+			}
+			else if (key.justReleased())
+			{
+				_released_pos[k] = _mouse_pos.current;
+			}
+			
 		}
 
 	}
