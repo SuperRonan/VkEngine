@@ -9,6 +9,8 @@ namespace vkl
 	{
 	protected:
 
+		static const std::string _s_empty;
+
 		using MapType = std::unordered_map<std::string, std::string>;
 		MapType _definitions;
 

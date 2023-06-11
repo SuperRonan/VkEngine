@@ -3,6 +3,8 @@
 
 namespace vkl
 {
+	const std::string DefinitionsMap::_s_empty = {};
+
 	void DefinitionsMap::setDefinition(std::string const& key, std::string const& value)
 	{
 		_definitions[key] = value;
@@ -18,7 +20,7 @@ namespace vkl
 		}
 		else
 		{
-			return ""s;
+			return _s_empty;
 		}
 	}
 

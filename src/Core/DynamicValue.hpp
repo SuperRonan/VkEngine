@@ -21,7 +21,7 @@ namespace vkl
 		{
 		public:
 
-			virtual bool isConstant() const = 0;
+
 		};
 
 		template <class T>
@@ -58,11 +58,19 @@ namespace vkl
 				return this;
 			}
 
-			virtual bool isConstant() const override { return true; };
-
 			virtual T const& value() const
 			{
 				return _value;
+			}
+
+			void setValue(T const& t)
+			{
+				_value = t;
+			}
+
+			void setValue(T && t)
+			{
+				_value = std::move(t);
 			}
 		};
 
@@ -79,11 +87,6 @@ namespace vkl
 				DynamicValueInstance<T>(),
 				_ptr(ptr)
 			{}
-
-			virtual bool isConstant() const override
-			{
-				return false;
-			}
 
 			virtual T const& value() const override
 			{
@@ -113,8 +116,6 @@ namespace vkl
 				DynamicValueInstance<T>(),
 				_lambda(lambda)
 			{}
-
-			virtual bool isConstant() const override { return false; };
 
 			virtual T const& value() const override
 			{
@@ -261,6 +262,18 @@ namespace vkl
 		constexpr bool hasValue() const
 		{
 			return _inst.operator bool();
+		}
+
+		void setValue(T const& t)
+		{
+			assert(hasValue());
+			_inst->setValue(t);
+		}
+
+		void setValue(T&& t)
+		{
+			assert(hasValue());
+			_inst->setValue(std::move(t));
 		}
 
 	};
