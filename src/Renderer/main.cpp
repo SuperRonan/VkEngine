@@ -1,25 +1,28 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
-#include <Core/ImGuiApp.hpp>
+#include <Core/App/ImGuiApp.hpp>
 
-#include <Core/VkWindow.hpp>
-#include <Core/ImageView.hpp>
-#include <Core/Buffer.hpp>
-#include <Core/ComputeCommand.hpp>
-#include <Core/GraphicsCommand.hpp>
-#include <Core/TransferCommand.hpp>
-#include <Core/ImguiCommand.hpp>
-#include <Core/LinearExecutor.hpp>
-#include <Core/ImGuiUtils.hpp>
-#include <Core/Module.hpp>
-#include <Core/InputListener.hpp>
+#include <Core/VkObjects/VkWindow.hpp>
+#include <Core/VkObjects/ImageView.hpp>
+#include <Core/VkObjects/Buffer.hpp>
+
+#include <Core/Commands/ComputeCommand.hpp>
+#include <Core/Commands/GraphicsCommand.hpp>
+#include <Core/Commands/TransferCommand.hpp>
+#include <Core/Commands/ImguiCommand.hpp>
+
+#include <Core/Execution/LinearExecutor.hpp>
+
+#include <Core/IO/ImGuiUtils.hpp>
+#include <Core/IO/InputListener.hpp>
+
+#include <Core/Modules/DebugRenderer.hpp>
+
+#include <Core/Rendering/RenderObjects.hpp>
 
 #include <iostream>
 #include <chrono>
 #include <random>
-
-#include "RenderObjects.hpp"
-#include "DebugRenderer.hpp"
 
 namespace vkl
 {

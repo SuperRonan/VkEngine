@@ -1,18 +1,22 @@
 
-#include <Core/ImGuiApp.hpp>
-#include <Core/Camera2D.hpp>
-#include <Core/MouseHandler.hpp>
+#include <Core/App/ImGuiApp.hpp>
+
+#include <Core/Rendering/Camera2D.hpp>
+
+#include <Core/IO/MouseHandler.hpp>
+#include <Core/IO/ImGuiUtils.hpp>
+
 #include <glm/gtc/type_ptr.hpp>
 
-#include <Core/VkWindow.hpp>
-#include <Core/ImageView.hpp>
-#include <Core/Buffer.hpp>
-#include <Core/ComputeCommand.hpp>
-#include <Core/GraphicsCommand.hpp>
-#include <Core/TransferCommand.hpp>
-#include <Core/ImguiCommand.hpp>
-#include <Core/LinearExecutor.hpp>
-#include <Core/ImGuiUtils.hpp>
+#include <Core/VkObjects/VkWindow.hpp>
+#include <Core/VkObjects/ImageView.hpp>
+#include <Core/VkObjects/Buffer.hpp>
+
+#include <Core/Commands/ComputeCommand.hpp>
+#include <Core/Commands/GraphicsCommand.hpp>
+#include <Core/Commands/TransferCommand.hpp>
+#include <Core/Commands/ImguiCommand.hpp>
+#include <Core/Execution/LinearExecutor.hpp>
 
 #include <iostream>
 #include <chrono>

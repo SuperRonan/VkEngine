@@ -1,17 +1,22 @@
-#include <Core/VkApplication.hpp>
-#include <Core/VkWindow.hpp>
-#include <Core/ImageView.hpp>
-#include <Core/Shader.hpp>
-#include <Core/Camera2D.hpp>
-#include <Core/MouseHandler.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <Core/Buffer.hpp>
-#include <Core/Sampler.hpp>
-#include <Core/Semaphore.hpp>
 
-#include <Core/LinearExecutor.hpp>
-#include <Core/ComputeCommand.hpp>
-#include <Core/TransferCommand.hpp>
+#include <Core/App/VkApplication.hpp>
+
+#include <Core/VkObjects/VkWindow.hpp>
+#include <Core/VkObjects/ImageView.hpp>
+#include <Core/VkObjects/Shader.hpp>
+#include <Core/VkObjects/Buffer.hpp>
+#include <Core/VkObjects/Sampler.hpp>
+#include <Core/VkObjects/Semaphore.hpp>
+
+#include <Core/Rendering/Camera2D.hpp>
+
+#include <Core/IO/MouseHandler.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <Core/Execution/LinearExecutor.hpp>
+
+#include <Core/Commands/ComputeCommand.hpp>
+#include <Core/Commands/TransferCommand.hpp>
 
 #include <iostream>
 #include <chrono>
