@@ -308,6 +308,7 @@ namespace vkl
 			if (_fetch_vertex_attrib == 3)
 				return Mesh::vertexInputDesc();
 			assert(false);
+			return VertexInputDescription{ };
 		}();
 		createPipeline(vid);
 

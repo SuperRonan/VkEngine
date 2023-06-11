@@ -10,6 +10,7 @@
 #include "RenderPass.hpp"
 #include "Framebuffer.hpp"
 #include "Mesh.hpp"
+#include "StagingPool.hpp"
 
 #include <memory>
 #include <vector>
@@ -166,16 +167,27 @@ namespace vkl
 
 		std::shared_ptr<CommandBuffer> _command_buffer = nullptr;
 
-		ResourceStateTracker * _reosurce_states;
+		ResourceStateTracker * _reosurce_states = nullptr;
 
-		std::vector<std::shared_ptr<VkObject>> _objects_to_keep;
+		std::vector<std::shared_ptr<VkObject>> _objects_to_keep = {};
+
+		StagingPool* _staging_pool = nullptr;
+
 
 		friend class LinearExecutor;
 
 
 	public:
 
-		ExecutionContext(ResourceStateTracker * rst, std::shared_ptr<CommandBuffer> cmd);
+		struct CreateInfo
+		{
+			std::shared_ptr<CommandBuffer> cmd = nullptr;
+			ResourceStateTracker* rst = nullptr;
+			StagingPool* staging_pool = nullptr;
+		};
+		using CI = CreateInfo;
+
+		ExecutionContext(CreateInfo const& ci);
 
 		ResourceState2& getBufferState(std::shared_ptr<Buffer> b);
 
@@ -195,6 +207,21 @@ namespace vkl
 		void keppAlive(std::shared_ptr<VkObject> obj)
 		{
 			_objects_to_keep.emplace_back(std::move(obj));
+		}
+
+		auto& objectsToKeepAlive()
+		{
+			return _objects_to_keep;
+		}
+
+		const auto& objectsToKeepAlive() const
+		{
+			return _objects_to_keep;
+		}
+
+		StagingPool* stagingPool()
+		{
+			return _staging_pool;
 		}
 	};
 

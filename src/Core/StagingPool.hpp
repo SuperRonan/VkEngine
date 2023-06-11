@@ -7,39 +7,76 @@
 
 namespace vkl
 {
+	class Executor;
+
 	class StagingPool : public VkObject
 	{
 	public:
 		
-		using StagingBuffer = std::shared_ptr<Buffer>;
-
 	protected:
 
 		VmaAllocator _allocator = nullptr;
 
-		std::vector<StagingBuffer> _free_buffers, _used_buffers;
+		std::vector<std::shared_ptr<Buffer>> _free_buffers, _used_buffers;
 		
 		std::mutex _mutex;
 
-		void allocStagingBuffer(StagingBuffer & staging_buffer);
+		Executor* _exec;
 
 	public:
 
-		StagingPool(VkApplication * app, VmaAllocator alloc=nullptr);
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VmaAllocator allocator = nullptr;
+			Executor* exec = nullptr;
+		};
+		using CI = CreateInfo;
 
-		StagingPool(StagingPool const&) = delete;
-		StagingPool(StagingPool&&) = delete;
+		StagingPool(CreateInfo const& ci);
 
-		StagingPool& operator=(StagingPool const&) = delete;
-		StagingPool& operator=(StagingPool&&) = delete;
+		virtual ~StagingPool() override;
 
-		~StagingPool();
+		std::shared_ptr<Buffer> getStagingBuffer(size_t size);
 
-		void setAllocator(VmaAllocator alloc);
+		void releaseStagingBuffer(std::shared_ptr<Buffer> staging_buffer);
 
-		StagingBuffer getStagingBuffer(size_t size);
+		void clearFreeBuffers();
 
-		void releaseStagingBuffer(StagingBuffer staging_buffer);
+	};
 
+	class StagingBuffer : public VkObject
+	{
+	protected:
+
+		StagingPool* _pool;
+		std::shared_ptr<Buffer> _buffer;
+
+	public:
+
+		StagingBuffer(StagingPool* pool, size_t size) :
+			VkObject(pool->application(), ""s),
+			_pool(pool)
+		{
+			assert(size);
+			_buffer = _pool->getStagingBuffer(size);
+		}
+
+		StagingBuffer(StagingPool* pool, std::shared_ptr<Buffer> buffer) :
+			VkObject(pool->application(), ""s),
+			_pool(pool),
+			_buffer(buffer)
+		{}
+
+		virtual ~StagingBuffer() override
+		{
+			_pool->releaseStagingBuffer(_buffer);
+		}
+
+		std::shared_ptr<Buffer> const& buffer()const
+		{
+			return _buffer;
+		}
 	};
 }

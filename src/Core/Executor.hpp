@@ -31,10 +31,9 @@ namespace vkl
 
 		virtual void declare(std::shared_ptr<Buffer> buffer) = 0;
 
-		void declare(std::shared_ptr<Mesh> mesh)
-		{
-			declare(mesh->combinedBuffer());
-		}
+		virtual void release(std::shared_ptr<Buffer> buffer) = 0;
+
+		virtual void declare(std::shared_ptr<Mesh> mesh) = 0;
 
 		virtual void declare(std::shared_ptr<Sampler> sampler) = 0;
 

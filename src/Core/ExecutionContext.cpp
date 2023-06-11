@@ -8,9 +8,10 @@ namespace vkl
 	//	_images({view})
 	//{}
 	
-	ExecutionContext::ExecutionContext(ResourceStateTracker * rst, std::shared_ptr<CommandBuffer> cmd):
-		_command_buffer(cmd),
-		_reosurce_states(rst)
+	ExecutionContext::ExecutionContext(CreateInfo const& ci) :
+		_command_buffer(ci.cmd),
+		_reosurce_states(ci.rst),
+		_staging_pool(ci.staging_pool)
 	{}
 
     ResourceState2& ExecutionContext::getBufferState(std::shared_ptr<Buffer> b)

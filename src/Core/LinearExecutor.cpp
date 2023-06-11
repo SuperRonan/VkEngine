@@ -9,7 +9,16 @@ namespace vkl
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
 		Executor(ci.app ? ci.app : ci.window->application(), ci.name),
 		_window(ci.window),
-		_context(&_resources_state, nullptr)
+		_staging_pool(StagingPool::CI{
+			.app = application(),
+			.name = name() + ".StagingPool",
+			.allocator = application()->allocator(),
+			.exec = this,
+		}),
+		_context(ExecutionContext::CI{
+			.rst = &_resources_state,
+			.staging_pool = &_staging_pool,
+		})
 	{
 		if (ci.use_ImGui)
 		{
@@ -34,6 +43,7 @@ namespace vkl
 
 	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
 	{
+		cmd->init();
 		_commands.emplace_back(std::move(cmd));
 	}
 
@@ -47,23 +57,29 @@ namespace vkl
 		_registered_buffers.emplace_back(std::move(buffer));
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
+	void LinearExecutor::release(std::shared_ptr<Buffer> buffer)
 	{
-		_registered_samplers.emplace_back(std::move(sampler));
-	}
-
-	void LinearExecutor::preprocessCommands()
-	{
-		for (std::shared_ptr<Command>& cmd : _commands)
+		auto it = std::find(_registered_buffers.begin(), _registered_buffers.end(), buffer);
+		if (it != _registered_buffers.end())
 		{
-			std::cout << "Initializing command " << cmd->name() << "\n";
-			cmd->init();
+			_registered_buffers.erase(it);
+
+		}
+		if (buffer->instance())
+		{
+			VkBuffer b = *buffer->instance();
+			_resources_state._buffer_states.erase(b);
 		}
 	}
 
-	void LinearExecutor::preprocessResources()
+	void LinearExecutor::declare(std::shared_ptr<Mesh> mesh)
 	{
+		_registered_buffers.emplace_back(std::move(mesh->combinedBuffer()));
+	}
 
+	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
+	{
+		_registered_samplers.emplace_back(std::move(sampler));
 	}
 
 	void LinearExecutor::init()
@@ -71,10 +87,8 @@ namespace vkl
 		_blit_to_present = std::make_shared<BlitImage>(BlitImage::CI{
 			.app = _app,
 			.name = name() + std::string(".BlitToPresent"),
-			});
+		});
 		declare(_blit_to_present);
-
-		preprocessCommands();
 
 		if (_render_gui)
 		{
@@ -135,7 +149,7 @@ namespace vkl
 						_resources_state._image_states.erase(ir);
 					},
 					.id = this,
-					});
+				});
 			}
 		}
 

@@ -6,6 +6,7 @@
 #include <queue>
 #include "TransferCommand.hpp"
 #include "ImguiCommand.hpp"
+#include "StagingPool.hpp"
 
 namespace vkl
 {
@@ -23,7 +24,7 @@ namespace vkl
 
 		ResourceStateTracker _resources_state = {};
 
-		ExecutionContext _context;
+		StagingPool _staging_pool;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::shared_ptr<ImguiCommand> _render_gui = nullptr;
@@ -34,9 +35,7 @@ namespace vkl
 		std::vector<std::shared_ptr<Buffer>> _registered_buffers = {};
 		std::vector<std::shared_ptr<Sampler>> _registered_samplers = {};
 
-		void preprocessCommands();
-
-		void preprocessResources();
+		ExecutionContext _context;
 
 		struct InBetween
 		{
@@ -77,7 +76,11 @@ namespace vkl
 		virtual void declare(std::shared_ptr<ImageView> view) override final;
 
 		virtual void declare(std::shared_ptr<Buffer> buffer) override final;
-		
+
+		virtual void release(std::shared_ptr<Buffer> buffer) override final;
+
+		virtual void declare(std::shared_ptr<Mesh> mesh) override final;
+
 		virtual void declare(std::shared_ptr<Sampler> sampler) override final;
 
 		virtual void init() override final;
