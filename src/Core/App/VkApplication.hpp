@@ -163,6 +163,11 @@ namespace vkl
 			return _available_features;
 		}
 
+		const VulkanDeviceProps& deviceProperties()const
+		{
+			return _device_props;
+		}
+
 		static const constexpr uint32_t EXT_NONE = uint32_t(0);
 		uint32_t getDeviceExtVersion(std::string_view ext_name) const;
 		bool hasDeviceExtension(std::string_view ext_name) const

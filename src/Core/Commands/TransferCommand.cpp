@@ -714,4 +714,36 @@ namespace vkl
 			execute(ctx, _ei);
 		};
 	}
+
+
+
+	UploadBuffer::UploadBuffer(CreateInfo const& ci):
+		TransferCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_use_update_buffer_ifp(ci.use_update_buffer_ifp)
+	{}
+
+	void UploadBuffer::execute(ExecutionContext& ctx, UploadInfo const& ui)
+	{
+		const bool use_update = [&](){
+			bool res = ui.use_update_buffer_ifp.value();
+			if (res)
+			{
+				const uint32_t max_size = 65536;
+				res &= (ui.src.size() <= max_size);
+				res &= (ui.src.size() % 4 == 0);
+			}
+			return true;
+		}();
+
+		if (use_update)
+		{
+
+		}
+		else // Use Staging Buffer
+		{
+
+		}
+	}
 }

@@ -362,4 +362,46 @@ namespace vkl
 		}
 	};
 
+
+	class UploadBuffer : public TransferCommand
+	{
+	protected:
+
+		std::shared_ptr<Buffer> _dst = nullptr;
+		ObjectView _src;
+
+		bool _use_update_buffer_ifp = false;
+
+	public:
+
+		struct CreateInfo 
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			ObjectView src = {};
+			std::shared_ptr<Buffer> dst = nullptr;
+			bool use_update_buffer_ifp = false;
+		};
+		using CI = CreateInfo;
+
+		UploadBuffer(CreateInfo const& ci);
+
+		virtual ~UploadBuffer() override = default;
+
+		struct UploadInfo
+		{
+			ObjectView src = {};
+			std::shared_ptr<Buffer> dst = nullptr;
+			std::optional<bool> use_update_buffer_ifp = {};
+		};
+		using UI = UploadInfo;
+
+		void execute(ExecutionContext& ctx, UploadInfo const& ui);
+
+		virtual void execute(ExecutionContext& ctx) override;
+
+		Executable with(UploadInfo const& ui);
+
+		Executable operator()(UploadInfo const& ui);
+	};
 }

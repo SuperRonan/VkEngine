@@ -24,6 +24,8 @@
 #include <chrono>
 #include <random>
 
+#include <thatlib/src/img/ImRead.h>
+
 namespace vkl
 {
 	class Renderer : public Module
