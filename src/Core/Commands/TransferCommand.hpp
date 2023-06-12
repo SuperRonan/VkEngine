@@ -336,4 +336,47 @@ namespace vkl
 			return with(ui);
 		}
 	};
+
+	class ComputeMips : public TransferCommand
+	{
+	protected:
+
+		std::shared_ptr<ImageView> _target;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ImageView> target;
+		};
+
+		ComputeMips(CreateInfo const& ci):
+			TransferCommand(ci.app, ci.name),
+			_target(ci.target)
+		{
+
+		}
+
+		virtual ~ComputeMips() override {};
+
+		struct ExecInfo
+		{
+			std::shared_ptr<ImageView> target;
+		};
+		using EI = ExecInfo;
+
+		void execute(ExecutionContext& ctx, ExecInfo const& ei);
+
+		virtual void execute(ExecutionContext& ctx) override;
+
+		Executable with(ExecInfo const& ei);
+
+		Executable operator()(ExecInfo const& ei)
+		{
+			return with(ei);
+		}
+	};
+
 }
