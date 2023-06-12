@@ -485,18 +485,22 @@ namespace vkl
 		{}
 
 		template <class T>
-		constexpr ObjectView(T const* t) :
-			_storage(typeid(T)),
-			_data(t),
-			_size(sizeof(T))
-		{}
-
-		template <class T>
-		ObjectView(T const& t) :
-			_storage(t),
-			_data(_storage.data()),
-			_size(_storage.size())
-		{}
+		ObjectView(T const& t)
+		{
+			if constexpr (std::is_pointer<T>::value)
+			{
+				using Q = typename std::remove_pointer<T>::type;
+				_storage = AnyPOD(typeid(Q));
+				_data = t;
+				_size = sizeof(Q);
+			}
+			else
+			{
+				_storage = AnyPOD(t);
+				_data = _storage.data();
+				_size = _storage.size();
+			}
+		}
 
 		constexpr ObjectView(ObjectView const& other) :
 			_storage(other._storage)

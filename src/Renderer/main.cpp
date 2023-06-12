@@ -299,9 +299,7 @@ namespace vkl
 					}
 
 					{
-						exec(update_ubo->with(UpdateBuffer::UpdateInfo{
-							.src = ubo,
-						}));
+						exec(update_ubo);
 
 						exec(render->with(VertexCommand::DrawInfo{
 							.meshes = {
