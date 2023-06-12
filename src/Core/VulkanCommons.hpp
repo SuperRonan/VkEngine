@@ -10,6 +10,7 @@
 #include <vk_mem_alloc.h>
 
 #include <stdexcept>
+#include <utility>
 
 #include "DynamicValue.hpp"
 
@@ -386,6 +387,212 @@ namespace vkl
 		{
 			return !(a == b);
 		}
-
 	}
+
+	class AnyPOD
+	{
+	protected:
+
+		std::vector<uint8_t> _data = {};
+		const std::type_info * _type = &typeid(void);
+
+	public:
+
+		constexpr AnyPOD() = default;
+
+		template <class T>
+		AnyPOD(T const& t) :
+			_type(&typeid(T))
+		{
+			_data.resize(sizeof(T));
+			std::memcpy(_data.data(), &t, sizeof(T));
+		}
+
+		constexpr AnyPOD(std::type_info const& rti) :
+			_type(&rti)
+		{}
+
+		constexpr AnyPOD(AnyPOD const& other) :
+			_data(other._data),
+			_type(other._type)
+		{}
+
+		constexpr AnyPOD(AnyPOD&& other) noexcept:
+			_data(std::move(other._data)),
+			_type(other._type)
+		{
+			other._data.clear();
+			other._type = &typeid(void);
+		}
+
+		constexpr AnyPOD& operator=(AnyPOD const& other)
+		{
+			_data = other._data;
+			_type = other._type;
+			return *this;
+		}
+
+		constexpr AnyPOD& operator=(AnyPOD&& other) noexcept
+		{
+			std::swap(_data, other._data);
+			std::swap(_type, other._type);
+			return *this;
+		}
+
+		constexpr const void* data()const
+		{
+			return _data.data();
+		}
+
+		constexpr size_t size()const
+		{
+			return _data.size();
+		}
+
+		const std::type_info& type()const
+		{
+			assert(_type != nullptr);
+			return *_type;
+		}
+
+		constexpr bool empty() const
+		{
+			return _data.empty();
+		}
+
+		constexpr bool hasValue() const
+		{
+			return !empty();
+		}
+	};
+
+
+	class ObjectView
+	{
+	protected:
+
+		const void* _data = nullptr;
+		size_t _size = 0;
+		AnyPOD _storage = {};
+
+	public:
+
+		constexpr ObjectView() = default;
+
+		constexpr ObjectView(const void* ptr, size_t size) :
+			_data(ptr),
+			_size(size)
+		{}
+
+		template <class T>
+		constexpr ObjectView(T const* t) :
+			_storage(typeid(T)),
+			_data(t),
+			_size(sizeof(T))
+		{}
+
+		template <class T>
+		ObjectView(T const& t) :
+			_storage(t),
+			_data(_storage.data()),
+			_size(_storage.size())
+		{}
+
+		constexpr ObjectView(ObjectView const& other) :
+			_storage(other._storage)
+		{
+			if (_storage.empty())
+			{
+				_data = other._data;
+				_size = other._size;
+			}
+			else
+			{
+				_data = _storage.data();
+				_size = _storage.size();
+			}
+		}
+
+		constexpr ObjectView(ObjectView && other) noexcept:
+			_storage(std::move(other._storage))
+		{
+			if (_storage.empty())
+			{
+				std::swap(_data, other._data);
+				std::swap(_size, other._size);
+			}
+			else
+			{
+				_data = _storage.data();
+				_size = _storage.size();
+			}
+		}
+
+		constexpr ObjectView& operator=(ObjectView const& other)
+		{
+			_storage = other._storage;
+			if (_storage.empty())
+			{
+				_data = other._data;
+				_size = other._size;
+			}
+			else
+			{
+				_data = _storage.data();
+				_size = _storage.size();
+			}
+			return *this;
+		}
+
+		constexpr ObjectView& operator=(ObjectView && other) noexcept
+		{
+			_storage = std::move(other._storage);
+			if (_storage.empty())
+			{
+				std::swap(_data, other._data);
+				std::swap(_size, other._size);
+			}
+			else
+			{
+				_data = _storage.data();
+				_size = _storage.size();
+			}
+			return *this;
+		}
+
+		constexpr const void* data()const
+		{
+			return _data;
+		}
+
+		constexpr size_t size()const
+		{
+			return _size;
+		}
+
+		constexpr uint32_t size32()const
+		{
+			return static_cast<uint32_t>(size());
+		}
+
+		const std::type_info& type()const
+		{
+			return _storage.type();
+		}
+
+		constexpr bool empty()const
+		{
+			return _data == nullptr;
+		}
+
+		constexpr bool hasValue()const
+		{
+			return !empty();
+		}
+
+		constexpr bool ownsValue()const
+		{
+			return _storage.hasValue();
+		}
+	};
 }

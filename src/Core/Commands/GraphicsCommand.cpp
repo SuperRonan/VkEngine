@@ -404,7 +404,7 @@ namespace vkl
 	Executable VertexCommand::with(DrawInfo const& di)
 	{
 		GraphicsCommand::DrawInfo gdi{
-			.pc = di.pc.operator bool() ? di.pc : _pc,
+			.pc = di.pc.hasValue() ? di.pc : _pc,
 		};
 
 		DrawInfo _di{

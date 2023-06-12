@@ -180,7 +180,7 @@ namespace vkl
 			std::shared_ptr<UpdateBuffer> update_ubo = std::make_shared<UpdateBuffer>(UpdateBuffer::CI{
 				.app = this,
 				.name = "UpdateUBO",
-				.src = ubo,
+				.src = &ubo,
 				.dst = ubo_buffer,
 			});
 			exec.declare(update_ubo);

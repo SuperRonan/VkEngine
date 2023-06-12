@@ -486,7 +486,7 @@ namespace vkl
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
 		synch.record();
-		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset, ui.src.size, ui.src.ptr);
+		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset, ui.src.size(), ui.src.data());
 		synch.NotifyContext();
 	}
 
@@ -504,7 +504,7 @@ namespace vkl
 	{
 		UpdateInfo _ui
 		{
-			.src = ui.src.ptr ? ui.src : _src,
+			.src = ui.src.hasValue() ? ui.src : _src,
 			.dst = ui.dst ? ui.dst : _dst,
 			.offset = ui.offset,
 		};

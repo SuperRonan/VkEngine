@@ -77,7 +77,7 @@ namespace vkl
 		return [this, di](ExecutionContext& ctx)
 		{
 			DispatchInfo _di{
-				.push_constant = di.push_constant.operator bool() ? di.push_constant : _pc,
+				.push_constant = di.push_constant.hasValue() ? di.push_constant : _pc,
 				.extent = di.extent != makeZeroExtent3D() ? di.extent : _dispatch_size.value(),
 			};
 			execute(ctx, _di);

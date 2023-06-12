@@ -278,23 +278,6 @@ namespace vkl
 		}
 	};
 
-	struct ObjectView
-	{
-		const void* ptr = nullptr;
-		size_t size = 0;
-
-		ObjectView(const void * ptr, size_t size) :
-			ptr(ptr),
-			size(size)
-		{}
-
-		template <class T>
-		ObjectView(T&& t):
-			ptr(&t),
-			size(sizeof(T))
-		{}
-	};
-
 	class UpdateBuffer : public TransferCommand
 	{
 	protected:

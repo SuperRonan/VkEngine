@@ -393,7 +393,7 @@ namespace vkl
 
 	void ShaderCommand::recordPushConstant(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
 	{
-		if (pc)
+		if (pc.hasValue())
 		{
 			VkShaderStageFlags pc_stages = 0;
 			for (const auto& pc_range : _pipeline->program()->instance()->pushConstantRanges())

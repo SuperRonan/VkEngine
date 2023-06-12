@@ -6,76 +6,10 @@
 #include "ShaderBindingDescriptor.hpp"
 
 namespace vkl
-{
-	class PushConstant
-	{
-	protected:
-
-		std::vector<uint8_t> _data = {};
-
-	public:
-
-		constexpr PushConstant() = default;
-
-		PushConstant(PushConstant const& o) :
-			_data(o._data)
-		{}
-
-		PushConstant(PushConstant&& o) noexcept :
-			_data(std::move(o._data))
-		{}
-
-		template<class T>
-		PushConstant(T const& t) :
-			_data(sizeof(T))
-		{
-			std::memcpy(_data.data(), &t, sizeof(T));
-		}
-
-		template <class T>
-		PushConstant& operator=(T const& t)
-		{
-			_data.resize(sizeof(T));
-			std::memcpy(_data.data(), &t, sizeof(T));
-			return *this;
-		}
-
-		
-
-		PushConstant& operator=(PushConstant const& o)
-		{
-			_data = o._data;
-			return *this;
-		}
-
-		PushConstant& operator=(PushConstant&& o) noexcept
-		{
-			_data = std::move(o._data);
-			return *this;
-		}
-
-		const uint8_t* data()const
-		{
-			return _data.data();
-		}
-
-		operator const void* ()const
-		{
-			return data();
-		}
-
-		size_t size()const
-		{
-			return _data.size();
-		}
-
-		operator bool()const
-		{
-			return !_data.empty();
-		}
-	};
-	
+{	
 	using Binding = ShaderBindingDescription;
+
+	using PushConstant = ObjectView;
 
 	class ResourceBinding
 	{
