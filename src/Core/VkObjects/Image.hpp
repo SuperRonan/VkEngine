@@ -107,6 +107,8 @@ namespace vkl
 	{
 	public:
 
+		constexpr static uint32_t ALL_MIPS = uint32_t(-1);
+
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;

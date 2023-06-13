@@ -6,6 +6,7 @@
 #include <Core/Commands/GraphicsCommand.hpp>
 #include <Core/Commands/TransferCommand.hpp>
 #include <Core/Execution/Executor.hpp>
+#include <thatlib/src/img/ImRead.h>
 
 namespace vkl
 {
@@ -15,6 +16,7 @@ namespace vkl
 
 		Executor& _exec;
 		
+		img::Image<uint8_t> _host_font;
 		std::shared_ptr<ImageView> _font = nullptr;
 		std::shared_ptr<ImageView> _target = nullptr;
 		
@@ -22,6 +24,7 @@ namespace vkl
 
 		std::shared_ptr<VertexCommand> _render_strings = nullptr;
 		std::shared_ptr<FillBuffer> _clear_buffer;
+
 
 		bool _enable_debug = true;
 		uint32_t _number_of_debug_strings = 16384;
@@ -42,6 +45,8 @@ namespace vkl
 		DebugRenderer(CreateInfo const& ci);
 
 		void declareToImGui();
+
+		void loadFont();
 
 		void execute();
 

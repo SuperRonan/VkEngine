@@ -42,6 +42,25 @@ namespace vkl
 		});
 		_exec.declare(_clear_buffer);
 
+		const glm::uvec2 glyph_size = { 16, 16 };
+		_font = std::make_shared<ImageView>(ImageView::CI{
+			.app = application(),
+			.name = name() + ".Font",
+			.image_ci = Image::CI{
+				.app = application(),
+				.name = name() + ".Font",
+				.type = VK_IMAGE_TYPE_3D,
+				.format = VK_FORMAT_R8_SNORM,
+				.extent = VkExtent3D{.width = glyph_size.x, .height = glyph_size.y, .depth = 1},
+				.mips = 1,
+				.layers = 256,
+				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			},
+			.type = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+		});
+		_exec.declare(_font);
+
 		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
 
 		using namespace std::containers_operators;
@@ -71,10 +90,23 @@ namespace vkl
 		common_defs.setDefinition("DEBUG_BUFFER_BINDING", "set = " + std::to_string(_desc_set) + ", binding = " + std::to_string(_first_binding));
 	}
 
+	void DebugRenderer::loadFont()
+	{
+		_host_font = img::io::read<img::io::Grey8>(ENGINE_SRC_PATH "/Core/Modules/16x16.png");
+
+		
+	}
+
 	void DebugRenderer::execute()
 	{
 		if (_enable_debug)
 		{
+
+			if (!_font)
+			{
+				loadFont();
+			}
+
 			struct PC 
 			{
 				alignas(16) glm::uvec3 resolution;

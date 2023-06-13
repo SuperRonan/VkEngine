@@ -805,6 +805,8 @@ namespace vkl
 			};
 
 			vkCmdCopyBuffer2(cmd, &copy);
+
+			ctx.keppAlive(sb);
 		}
 
 
