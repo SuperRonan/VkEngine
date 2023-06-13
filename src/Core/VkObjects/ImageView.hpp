@@ -76,7 +76,7 @@ namespace vkl
 		 
 	};
 
-	class ImageView : public AbstractInstanceHolder
+	class ImageView : public InstanceHolder<ImageViewInstance>
 	{
 	public:
 
@@ -103,9 +103,7 @@ namespace vkl
 		VkFormat _format = VK_FORMAT_MAX_ENUM;
 		VkComponentMapping _components = defaultComponentMapping();
 		VkImageSubresourceRange _range = {};
-
-		std::shared_ptr<ImageViewInstance> _inst = nullptr;
-
+		
 	public:
 
 		ImageView(CreateInfo const& ci);
@@ -115,11 +113,6 @@ namespace vkl
 		void createInstance();
 
 		void destroyInstance();
-
-		std::shared_ptr<ImageViewInstance> instance() const
-		{
-			return _inst;
-		}
 
 		constexpr const auto& image()const
 		{

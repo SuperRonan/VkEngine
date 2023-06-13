@@ -157,7 +157,7 @@ namespace vkl
 				.radius = 1,
 			});
 			mesh->createDeviceBuffer({_queue_family_indices.graphics_family.value()});
-			exec.declare(mesh->combinedBuffer());
+			exec.declare(mesh);
 
 			struct UBO
 			{
@@ -340,7 +340,7 @@ int main(int argc, char** argv)
 {
 	try
 	{
-		bool vl = true;
+		bool vl = false;
 #ifdef NDEBUG
 		vl = false;
 #endif

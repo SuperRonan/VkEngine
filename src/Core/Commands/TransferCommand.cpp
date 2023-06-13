@@ -476,6 +476,8 @@ namespace vkl
 
 	void UpdateBuffer::execute(ExecutionContext& ctx, UpdateInfo const& ui)
 	{
+		const bool buffer_ok = ui.dst->instance().operator bool();
+		assert(buffer_ok);
 		InputSynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._buffer = ui.dst,
@@ -745,5 +747,15 @@ namespace vkl
 		{
 
 		}
+	}
+
+	void UploadBuffer::execute(ExecutionContext& ctx)
+	{
+		UploadInfo ui{
+			.src = _src,
+			.dst = _dst,
+			.use_update_buffer_ifp = _use_update_buffer_ifp,
+		};
+		execute(ctx, ui);
 	}
 }

@@ -11,6 +11,7 @@ namespace vkl
 
 		uint32_t image_count;
 		vkGetSwapchainImagesKHR(_app->device(), _swapchain, &image_count, nullptr);
+		image_count = std::min(image_count, 3u);// TODO Depend on the present mode
 		_images.resize(image_count);
 		_views.resize(image_count);
 		std::vector<VkImage> tmp(image_count);
@@ -48,8 +49,7 @@ namespace vkl
 				.extent = extend(_ci.imageExtent, 1),
 			};
 
-			_images[i] = std::make_shared<Image>();
-			_images[i]->associateImage(assos);
+			_images[i] = std::make_shared<Image>(assos);
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
 				.name = name() + ".view_" + std::to_string(i),
 				.image = _images[i],
@@ -151,7 +151,7 @@ namespace vkl
 		_ci.pNext = nullptr;
 		_ci.flags = 0;
 		_ci.surface = *_surface;
-		_ci.minImageCount = std::max(support.capabilities.minImageCount, ci.min_image_count);
+		_ci.minImageCount = std::min(support.capabilities.minImageCount, ci.min_image_count);
 		const VkSurfaceFormatKHR fmt = [&]()
 		{
 			VkSurfaceFormatKHR res = support.formats.front();

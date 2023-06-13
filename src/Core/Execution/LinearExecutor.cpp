@@ -74,7 +74,7 @@ namespace vkl
 
 	void LinearExecutor::declare(std::shared_ptr<Mesh> mesh)
 	{
-		_registered_buffers.emplace_back(std::move(mesh->combinedBuffer()));
+		declare(mesh->combinedBuffer());
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)

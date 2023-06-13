@@ -7,6 +7,7 @@
 #include <string_view>
 #include <iostream>
 #include <format>
+#include <thread>
 
 namespace vkl
 {

@@ -130,8 +130,6 @@ namespace vkl
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
 		VmaAllocator _allocator = nullptr;
 
-		std::shared_ptr<BufferInstance> _inst = nullptr;
-		
 		void createInstance();
 
 		void destroyInstance();
@@ -145,11 +143,6 @@ namespace vkl
 		{}
 
 		virtual ~Buffer() override;
-
-		constexpr const std::shared_ptr<BufferInstance> & instance()const
-		{
-			return _inst;
-		}
 
 		constexpr const DynamicValue<VkDeviceSize> & size()const
 		{

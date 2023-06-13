@@ -103,7 +103,7 @@ namespace vkl
 
 	};
 
-	class Image : public AbstractInstanceHolder
+	class Image : public InstanceHolder<ImageInstance>
 	{
 	public:
 
@@ -157,6 +157,8 @@ namespace vkl
 			return howManyMips(((uint32_t)type) + 1, extent);
 		}
 
+		void associateImage(AssociateInfo const& assos);
+
 	protected:
 
 		VkImageCreateFlags _flags = 0;
@@ -174,39 +176,20 @@ namespace vkl
 
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
 
-		std::shared_ptr<ImageInstance> _inst = nullptr;
-		
 
 	public:
 
-		constexpr Image(VkApplication * app = nullptr) noexcept:
-			AbstractInstanceHolder(app, "")
-		{}
-
 		Image(CreateInfo const& ci);
+
+		Image(AssociateInfo const& assos);
 
 		virtual ~Image() override {};
 
 		void createInstance();
 
-		void associateImage(AssociateInfo const& assos);
+		
 
 		void destroyInstance();
-
-		constexpr const std::shared_ptr<ImageInstance>& instance()const
-		{
-			return _inst;
-		}
-
-		constexpr std::shared_ptr<ImageInstance>& instance()
-		{
-			return _inst;
-		}
-
-		operator std::shared_ptr<ImageInstance>()const
-		{
-			return instance();
-		}
 
 		constexpr VkImageCreateFlags flags()const
 		{

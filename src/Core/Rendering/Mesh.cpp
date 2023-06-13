@@ -230,7 +230,6 @@ namespace vkl
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			.queues = queues,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-			.create_on_construct = true,
 		});
 	}
 

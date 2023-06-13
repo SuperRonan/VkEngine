@@ -26,6 +26,7 @@ namespace vkl
 		{
 			if (r.isImage())
 			{
+				assert(r._image->instance());
 				VkImageMemoryBarrier2 barrier = {
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 					.pNext = nullptr,
@@ -44,6 +45,7 @@ namespace vkl
 			}
 			else if (r.isBuffer())
 			{
+				assert(r._buffer->instance());
 				VkBufferMemoryBarrier2 barrier = {
 					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 					.pNext = nullptr,

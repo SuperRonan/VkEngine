@@ -65,7 +65,7 @@ namespace vkl
 
 
 	Image::Image(CreateInfo const& ci) : 
-		AbstractInstanceHolder(ci.app, ci.name),
+		InstanceHolder<ImageInstance>(ci.app, ci.name),
 		_flags(ci.flags),
 		_type(ci.type),
 		_format(ci.format),
@@ -82,6 +82,12 @@ namespace vkl
 	{
 		if(ci.create_on_construct)
 			createInstance();
+	}
+
+	Image::Image(AssociateInfo const& assos):
+		InstanceHolder<ImageInstance>(assos.instance->application(), assos.instance->name())
+	{
+		associateImage(assos);
 	}
 
 	void Image::createInstance()
