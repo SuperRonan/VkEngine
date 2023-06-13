@@ -728,6 +728,7 @@ namespace vkl
 
 	void UploadBuffer::execute(ExecutionContext& ctx, UploadInfo const& ui)
 	{
+		CommandBuffer& cmd = *ctx.getCommandBuffer();
 		const bool use_update = [&](){
 			bool res = ui.use_update_buffer_ifp.value();
 			if (res)
@@ -739,14 +740,75 @@ namespace vkl
 			return true;
 		}();
 
+		InputSynchronizationHelper synch(ctx);
+		synch.addSynch(Resource{
+			._buffer = ui.dst,
+			._begin_state = {
+				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+			},
+		});
+
 		if (use_update)
 		{
-
+			synch.record();
+			vkCmdUpdateBuffer(cmd, *ui.dst->instance(), 0, _src.size(), _src.data());
 		}
 		else // Use Staging Buffer
 		{
+			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), _src.size());
+			BufferInstance& sbbi = *sb->buffer()->instance();
+			
 
+			// Copy to Staging Buffer
+			{
+				sbbi.map();
+				std::memcpy(sbbi.data(), _src.data(), _src.size());
+				sbbi.unMap();
+
+				InputSynchronizationHelper synch2(ctx);
+				synch2.addSynch(Resource{
+					._buffer = sb->buffer(),
+					._begin_state = {
+						._access = VK_ACCESS_2_HOST_WRITE_BIT,
+						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+					},
+				});
+				synch2.record();
+				synch2.NotifyContext();
+			}
+
+			synch.addSynch(Resource{
+				._buffer = sb->buffer(),
+				._begin_state = {
+					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				},
+			});
+			synch.record();
+
+			VkBufferCopy2 region{
+				.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+				.pNext = nullptr,
+				.srcOffset = 0,
+				.dstOffset = 0,
+				.size = _src.size(),
+			};
+			
+			VkCopyBufferInfo2 copy{
+				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+				.pNext = nullptr,
+				.srcBuffer = sbbi,
+				.dstBuffer = *_dst->instance(),
+				.regionCount = 1,
+				.pRegions = &region,
+			};
+
+			vkCmdCopyBuffer2(cmd, &copy);
 		}
+
+
+		synch.NotifyContext();
 	}
 
 	void UploadBuffer::execute(ExecutionContext& ctx)
@@ -757,5 +819,17 @@ namespace vkl
 			.use_update_buffer_ifp = _use_update_buffer_ifp,
 		};
 		execute(ctx, ui);
+	}
+
+	Executable UploadBuffer::with(UploadInfo const& ui)
+	{
+		UploadInfo _ui{
+			.src = ui.src.hasValue() ? ui.src : _src,
+			.dst = ui.dst ? ui.dst : _dst,
+			.use_update_buffer_ifp = ui.use_update_buffer_ifp.value_or(_use_update_buffer_ifp),
+		};
+		return [=](ExecutionContext & ctx) {
+			execute(ctx, _ui);
+		};
 	}
 }

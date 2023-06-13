@@ -70,6 +70,7 @@ namespace vkl
 				.create_on_construct = true,
 			});
 			_exec->declare(res);
+			res->createInstance();
 
 			_free_buffers.push_back(res);
 			found_it = _free_buffers.end() - 1;

@@ -26,9 +26,9 @@ namespace vkl
 
 		void create();
 
-		void destroy();
-
 		void setName();
+
+		void destroy();
 
 	public:
 
@@ -130,7 +130,7 @@ namespace vkl
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
 		VmaAllocator _allocator = nullptr;
 
-		void createInstance();
+		
 
 		void destroyInstance();
 
@@ -158,6 +158,8 @@ namespace vkl
 		{
 			return _allocator;
 		}
+
+		void createInstance();
 
 		bool updateResource(UpdateContext & ctx);
 

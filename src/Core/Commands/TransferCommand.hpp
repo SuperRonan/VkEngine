@@ -402,6 +402,9 @@ namespace vkl
 
 		Executable with(UploadInfo const& ui);
 
-		Executable operator()(UploadInfo const& ui);
+		Executable operator()(UploadInfo const& ui)
+		{
+			return with(ui);
+		}
 	};
 }
