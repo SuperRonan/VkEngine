@@ -1,0 +1,72 @@
+#include "common.glsl"
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+#define SET_BINDING set = 1, binding = 0
+
+#ifndef BufferElemType
+#define BufferElemType uint8_t
+#endif
+
+layout(SET_BINDING + 0) restrict readonly buffer Buffer
+{
+	BufferElemType data[];
+} _buffer;
+
+#ifndef IMAGE_FORMAT
+#define IMAGE_FORMAT r8ui
+#endif
+
+// 0: float, 1: int, 2: uint
+#ifndef IMAGE_TYPE
+#define IMAGE_TYPE 2
+#endif
+
+
+#if IMAGE_TYPE == 0
+#define ImageType image2DArray
+#define ImageElemType vec4
+#elif IMAGE_TYPE == 1
+#define ImageType iimage2DArray
+#define ImageElemType ivec4
+#elif IMAGE_TYPE == 2
+#define ImageType uimage2DArray
+#define ImageElemType uvec4
+#endif
+
+layout(SET_BINDING + 1, IMAGE_FORMAT) uniform writeonly ImageType Image;
+
+layout(push_constant) uniform PushConstant
+{
+	bool row_major;
+	int tile_stride; 
+} _pc;
+
+void main()
+{
+	const ivec3 gid = ivec3(gl_GlobalInvocationID);
+	const ivec3 dims = imageSize(Image);
+	const ivec2 tile_size = dims.xy;
+	const int layers = dims.z;
+
+	if(all(lessThan(gid, dims)))
+	{
+		int index = 0;
+		const ivec2 tile = ivec2(gid.z % tile_stride, gid.z / tile_stride);
+		if(_pc.row_major)
+		{
+			
+		}
+		else
+		{
+			// TODO
+		}
+
+		const BufferElemType e = _buffer.data[index];
+
+		const ImageElemType i = ImageElemType(e);
+
+		imageStore(Image, gid, i);
+		
+	}
+}

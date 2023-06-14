@@ -60,6 +60,15 @@ namespace vkl
 			.type = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 		});
 		_exec.declare(_font);
+		
+		_font_tmp_buffer = std::make_shared<Buffer>(Buffer::CI{
+			.app = application(),
+			.name = name() + ".FontTmpBuffer",
+			.size = glyph_size.x * glyph_size.y * 256,
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+		_exec.declare(_font_tmp_buffer);
 
 		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
 
@@ -92,9 +101,21 @@ namespace vkl
 
 	void DebugRenderer::loadFont()
 	{
-		_host_font = img::io::read<img::io::Grey8>(ENGINE_SRC_PATH "/Core/Modules/16x16.png");
+		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Modules/16x16.png");
+
+		std::shared_ptr<UploadBuffer> upload = std::make_shared<UploadBuffer>(UploadBuffer::CI{
+			.app = application(),
+			.name = name() + ".UploadBuffer",
+			.src = ObjectView(host_font.data(), host_font.bufferByteSize()),
+			.dst = _font_tmp_buffer,
+		});
+
+		_exec(upload);
+
 
 		
+
+		_font_loaded = true;
 	}
 
 	void DebugRenderer::execute()
@@ -102,7 +123,7 @@ namespace vkl
 		if (_enable_debug)
 		{
 
-			if (!_font)
+			if (!_font_loaded)
 			{
 				loadFont();
 			}

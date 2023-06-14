@@ -16,7 +16,8 @@ namespace vkl
 
 		Executor& _exec;
 		
-		img::Image<uint8_t> _host_font;
+		bool _font_loaded = false;
+		std::shared_ptr<Buffer> _font_tmp_buffer = nullptr;
 		std::shared_ptr<ImageView> _font = nullptr;
 		std::shared_ptr<ImageView> _target = nullptr;
 		
