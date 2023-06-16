@@ -97,7 +97,7 @@ struct DebugStringCaret
 #define GLYPH_SIZE_HUGE 4
 
 #ifndef GLYPH_SIZE
-#define GLYPH_SIZE GLYPH_SIZE_NORMAL
+#define GLYPH_SIZE GLYPH_SIZE_LARGE
 #endif
 
 float getGlyphSizeMult()
@@ -130,8 +130,17 @@ vec4 debugStringDefaultBackColor()
 	return vec4(0..xxx, 0.05);
 }
 
+vec4 debugVectorColor(uint index)
+{
+	vec4 res = vec4(0..xxx, 1);
+	res[index] = 1;
+	if(index == 3)	res = 0.9.xxxx;
+	return res;
+}
+
 Caret pushToDebugPix(const in ShaderString str, Caret c, bool ln)
 {
+	
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
 	BufferStringMeta meta;
 	meta.position = c.pos;

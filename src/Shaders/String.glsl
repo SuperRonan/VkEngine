@@ -25,6 +25,22 @@
 #define ENABLE_SHADER_STRING (GLOBAL_ENABLE_GLSL_DEBUG && I_WANT_TO_DEBUG)
 #endif
 
+#ifndef HEX_USE_CAPS
+#define HEX_USE_CAPS 0
+#endif
+
+#ifndef DEFAULT_NUMBER_BASIS
+#define DEFAULT_NUMBER_BASIS 10u
+#endif
+
+#ifndef DEFAULT_SHOW_PLUS
+#define DEFAULT_SHOW_PLUS false
+#endif
+
+#ifndef DEFAULT_FLOAT_PRECISION
+#define DEFAULT_FLOAT_PRECISION 3u
+#endif
+
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #define char uint8_t
@@ -57,12 +73,11 @@ ShaderString makeShaderString(const in uint32_t data[SHADER_STRING_PACKED_CAPACI
 ShaderString makeShaderString()
 {
 #if ENABLE_SHADER_STRING
-	uint32_t data[SHADER_STRING_PACKED_CAPACITY];
+	ShaderString res;
 	for(uint c = 0; c < SHADER_STRING_PACKED_CAPACITY; ++c)
 	{
-		data[c] = uint32_t(0);
+		res.data[c] = uint32_t(0);
 	}
-	ShaderString res = ShaderString(data);
 #else
 	ShaderString res = ShaderString(0);
 #endif
@@ -147,13 +162,9 @@ struct PendingChunk
 
 PendingChunk getPendingChunkForReading(const in ShaderString s)
 {
-#if ENABLE_SHADER_STRING
-	const uint ls = getShaderStringLength(s);	
-	const uint32_t c = (ls % 4 != 0) ? s.data[ls / 4] : 0;
-	return PendingChunk(ls, c);
-#else
+	// Read from the begining of the string
+	// The chunk read will be done in pendingRead
 	return PendingChunk(0, 0);
-#endif
 }
 
 PendingChunk getPendingChunkForWriting(const in ShaderString s)
@@ -162,6 +173,17 @@ PendingChunk getPendingChunkForWriting(const in ShaderString s)
 	const uint ls = getShaderStringLength(s);	
 	const uint32_t c = s.data[ls / 4];
 	return PendingChunk(ls, c);
+#else
+	return PendingChunk(0, 0);
+#endif
+}
+
+PendingChunk getPendingChunkForWritingReverse(const in ShaderString s)
+{
+#if ENABLE_SHADER_STRING
+	const uint ls = getShaderStringLength(s);	
+	const uint32_t c = s.data[ls / 4];
+	return PendingChunk(ls-1, c);
 #else
 	return PendingChunk(0, 0);
 #endif
@@ -191,8 +213,23 @@ void pendingWrite(inout PendingChunk chunk, inout ShaderString str, char c)
 	if(id_in_chunk == 3)
 	{
 		str.data[chunk.index / 4] = chunk.chunk;
+		chunk.chunk = 0;
 	}
 	++chunk.index;
+#endif
+}
+
+void pendingWriteReverse(inout PendingChunk chunk, inout ShaderString str, char c)
+{
+#if ENABLE_SHADER_STRING
+	const uint id_in_chunk = chunk.index % 4;
+	chunk.chunk |= (uint32_t(c) << (id_in_chunk * 8));
+	if(id_in_chunk == 0)
+	{
+		str.data[chunk.index / 4] = chunk.chunk;
+		chunk.chunk = str.data[chunk.index / 4 - 1];
+	}
+	--chunk.index;
 #endif
 }
 
@@ -203,6 +240,26 @@ void flushPendingWriteIFN(const in PendingChunk chunk, inout ShaderString str)
 	{
 		str.data[chunk.index / 4] = chunk.chunk;
 	}
+#endif
+}
+
+void flushPendingWriteReverseIFN(const in PendingChunk chunk, inout ShaderString str)
+{
+#if ENABLE_SHADER_STRING
+	if((chunk.index % 4) != 3)
+	{
+		str.data[chunk.index / 4] = chunk.chunk;
+	}
+#endif
+}
+
+void appendOneChar(inout ShaderString s, char c)
+{
+#if ENABLE_SHADER_STRING
+	const uint ls = getShaderStringLength(s);
+	assert(ls + 1 < SHADER_STRING_CAPACITY);
+	setShaderStringChar(s, ls, c);
+	setShaderStringLength(s, ls + 1);
 #endif
 }
 
@@ -232,19 +289,203 @@ ShaderString concat(ShaderString a, const in ShaderString b)
 	return a;
 }
 
-#define CHAR_SPACE char(0x20)
-#define CHAR_0 char(0x30)
+#define CHAR_space char(0x20)
+#define CHAR_plus char(0x2B)
 #define CHAR_minus char(0x2D)
 #define CHAR_dot char(0x2E)
+#define CHAR_0 char(0x30)
 #define CHAR_A char(0x41)
 #define CHAR_at char(0x40)
 #define CHAR_a char(0x61)
 
-void appendDec(inout ShaderString s, uint n)
+uint howManyDigits(uint n, uint basis)
 {
-	PendingChunk writer = getPendingChunkForWriting(s);
-	//while(n != 0)
+	if(n == 0)	return 1;
+	uint res = 0;
+	while(n != 0)
 	{
-		
+		n /= basis;
+		++ res;
 	}
+	return res;
+}
+
+char getASCII(uint n)
+{
+	if(n < 10)	return char(CHAR_0 + n);
+#if HEX_USE_CAPS
+	else 		return char(CHAR_A + (n - 10));
+#else
+	else 		return char(CHAR_a + (n - 10));
+#endif
+}
+
+ShaderString getBasisPrefix(uint b)
+{
+	if(b == 2)			return "0b";
+	else if(b == 8)		return "0";
+	else if(b == 16)	return "0x";
+	else 				return "";
+}
+
+void append(inout ShaderString s, uint n, uint basis)
+{
+#if ENABLE_SHADER_STRING
+	const uint ls = getShaderStringLength(s);
+	const uint len = howManyDigits(n, basis);
+	setShaderStringLength(s, ls + len);
+	PendingChunk writer = getPendingChunkForWritingReverse(s);
+	
+	for(uint i = 0; i < len; ++i)
+	{
+		const uint digit = n % basis;
+		n /= basis;
+		char ascii = getASCII(digit);
+		pendingWriteReverse(writer, s, ascii);
+	}
+	flushPendingWriteReverseIFN(writer, s);
+#endif
+}
+
+ShaderString concat(ShaderString s, uint n, uint b)
+{
+	append(s, n, b);
+	return s;
+}
+
+ShaderString concat(ShaderString s, uint n)
+{
+	return concat(s, n, DEFAULT_NUMBER_BASIS);
+}
+
+ShaderString toStr(uint n, uint basis)
+{
+	ShaderString res = makeShaderString();
+	append(res, n, basis);
+	return res;
+}
+
+ShaderString toStr(uint n)
+{
+	return toStr(n, DEFAULT_NUMBER_BASIS);
+}
+
+ShaderString concat(uint n, in const ShaderString s)
+{
+	ShaderString res = toStr(n);
+	append(res, s);
+	return res;
+}
+
+void append(inout ShaderString s, int n, uint basis, bool show_plus)
+{
+	const uint a = abs(n);
+	const bool neg = n < 0;
+	if(neg)
+	{
+		appendOneChar(s, CHAR_minus);
+	}
+	else if(show_plus)
+	{
+		appendOneChar(s, CHAR_plus);
+	}
+	append(s, a, basis);
+}
+
+void append(inout ShaderString s, int n)
+{
+	append(s, n, DEFAULT_NUMBER_BASIS, DEFAULT_SHOW_PLUS);
+}
+
+ShaderString toStr(int n, uint basis, bool show_plus)
+{
+	ShaderString res = makeShaderString();
+	append(res, n, basis, show_plus);
+	return res;
+}
+
+ShaderString toStr(int n)
+{
+	return toStr(n, DEFAULT_NUMBER_BASIS, DEFAULT_SHOW_PLUS);
+}
+
+ShaderString concat(ShaderString s, int n)
+{
+	append(s, n);
+	return s;
+}
+
+ShaderString concat(int n, in const ShaderString s)
+{
+	ShaderString res = toStr(n);
+	append(res, s);
+	return res;
+}
+
+void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
+{
+	// Never gonna show float in hex or bin
+	const uint basis = 10;
+	const bool neg = f < 0.0f;
+	if(neg)
+	{
+		appendOneChar(s, CHAR_minus);
+	}
+	else if(show_plus)
+	{
+		appendOneChar(s, CHAR_plus);
+	}
+
+	const uint integral_part = uint(abs(f));
+	append(s, integral_part, basis);
+	appendOneChar(s, CHAR_dot);
+	const float dec = f - floor(f);
+	const uint dec_part = uint(dec * pow(basis, flt_precision));
+	append(s, dec_part, basis);
+}
+
+void append(inout ShaderString s, float f, uint flt_precision)
+{
+	append(s, f, flt_precision, DEFAULT_SHOW_PLUS);
+}
+
+void append(inout ShaderString s, float f)
+{
+	append(s, f, DEFAULT_FLOAT_PRECISION);
+}
+
+ShaderString toStr(float f, uint flt_precision, bool show_plus)
+{
+	ShaderString res = makeShaderString();
+	append(res, f, flt_precision, show_plus);
+	return res;
+}
+
+ShaderString toStr(float f, uint flt_precision)
+{
+	return toStr(f, flt_precision, DEFAULT_SHOW_PLUS);
+}
+
+ShaderString toStr(float f)
+{
+	return toStr(f, DEFAULT_FLOAT_PRECISION);
+}
+
+ShaderString concat(ShaderString s, float f, uint flt_precision)
+{
+	append(s, f, flt_precision);
+	return s;
+}
+
+ShaderString concat(ShaderString s, float f)
+{
+	append(s, f);
+	return s;
+}
+
+ShaderString concat(float f, in const ShaderString s)
+{
+	ShaderString res = toStr(f);
+	append(res, s);
+	return res;
 }

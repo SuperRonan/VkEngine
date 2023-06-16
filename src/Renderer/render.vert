@@ -34,8 +34,10 @@ void main()
 	
 	if(gl_VertexIndex == 0)
 	{
-		Caret crt = Caret(vec2(500, 500), 0);
+		Caret crt = Caret(vec2(500, 300), 0);
 		crt = pushToDebugPix("abcd", crt, true);
-		crt = pushToDebugPix("efghij", crt, true);
+		crt = pushToDebugPix(toStr(3.1415), crt, true);
+		crt = pushToDebugPix(toStr(420), crt, true);
+		crt = pushToDebugPix(concat("", "4567abcd8"), crt, true);
 	}
 }
