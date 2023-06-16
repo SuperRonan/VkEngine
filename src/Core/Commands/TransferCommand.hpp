@@ -407,4 +407,46 @@ namespace vkl
 			return with(ui);
 		}
 	};
+
+	class UploadImage : public TransferCommand
+	{
+	protected:
+
+		ObjectView _src;
+		std::shared_ptr<ImageView> _dst = nullptr;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			ObjectView src = {};
+			std::shared_ptr<ImageView> dst = nullptr;
+		};
+		using CI = CreateInfo;
+
+		UploadImage(CreateInfo const& ci);
+
+		virtual ~UploadImage() override = default;
+
+		struct UploadInfo
+		{
+			ObjectView src = {};
+			std::shared_ptr<ImageView> dst = nullptr;
+		};
+		using UI = UploadInfo;
+
+		void execute(ExecutionContext& ctx, UploadInfo const& ui);
+
+		virtual void execute(ExecutionContext& ctx) override;
+
+		Executable with(UploadInfo const& ui);
+
+		Executable operator()(UploadInfo const& ui)
+		{
+			return with(ui);
+		}
+
+	};
 }

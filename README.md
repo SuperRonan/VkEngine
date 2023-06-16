@@ -50,6 +50,7 @@
 - [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
 - [ ] Find a better project name
+- [ ] Rework on thatlib
 
 # Projects Ideas:
 - [ ] Basic Renderer

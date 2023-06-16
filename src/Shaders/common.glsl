@@ -31,6 +31,7 @@
 #define uint3 uvec3
 #define uint4 uvec4
 
+#define lerp mix
 
 float sqr(float x)
 {

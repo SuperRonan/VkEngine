@@ -34,7 +34,7 @@ void main()
 	
 	if(gl_VertexIndex == 0)
 	{
-		Caret crt = Caret(vec2(100, 100), 0);
+		Caret crt = Caret(vec2(500, 500), 0);
 		crt = pushToDebugPix("abcd", crt, true);
 		crt = pushToDebugPix("efghij", crt, true);
 	}

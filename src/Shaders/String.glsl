@@ -82,6 +82,11 @@ char getShaderStringChar(const in ShaderString s, uint i)
 #endif
 }
 
+char getCharInChunk(uint c, uint i)
+{
+	return char((c >> (i * 8)) & 0xff);
+}
+
 uint32_t charMask(uint i)
 {
 	return 0xff << (i * 8);

@@ -2,6 +2,8 @@
 
 #include "imgui.h"
 
+#include <thatlib/src/img/ImWrite.h>
+
 namespace vkl
 {
 	DebugRenderer::DebugRenderer(CreateInfo const& ci) :
@@ -49,8 +51,8 @@ namespace vkl
 			.image_ci = Image::CI{
 				.app = application(),
 				.name = name() + ".Font",
-				.type = VK_IMAGE_TYPE_3D,
-				.format = VK_FORMAT_R8_SNORM,
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R8_UNORM,
 				.extent = VkExtent3D{.width = glyph_size.x, .height = glyph_size.y, .depth = 1},
 				.mips = 1,
 				.layers = 256,
@@ -60,16 +62,21 @@ namespace vkl
 			.type = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 		});
 		_exec.declare(_font);
-		
-		_font_tmp_buffer = std::make_shared<Buffer>(Buffer::CI{
-			.app = application(),
-			.name = name() + ".FontTmpBuffer",
-			.size = glyph_size.x * glyph_size.y * 256,
-			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-		});
-		_exec.declare(_font_tmp_buffer);
 
+		//_font_for_upload = std::make_shared<ImageView>(ImageView::CI{
+		//	.image = _font->image(),
+		//	.format = VK_FORMAT_R8_UINT,
+
+		//});
+
+		_sampler = std::make_shared<Sampler>(Sampler::CI{
+			.app = application(),
+			.name = name() + ".Sampler",
+			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+			.max_anisotropy = application()->deviceProperties().props.limits.maxSamplerAnisotropy,
+		});
+		_exec.declare(_sampler);
+		
 		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
 
 		using namespace std::containers_operators;
@@ -85,12 +92,19 @@ namespace vkl
 			.name = name() + ".RenderStrings",
 			.draw_count = &_number_of_debug_strings,
 			.bindings = {
+				Binding{
+					.view = _font,
+					.sampler = _sampler,
+					.set = 1,
+					.binding = 0,
+				},
 			},
 			.color_attachements = {_target},
 			.write_depth = false,
 			.vertex_shader_path = shaders,
 			.geometry_shader_path = shaders,
 			.fragment_shader_path = shaders,
+			.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 		});
 		_exec.declare(_render_strings);
 
@@ -101,19 +115,32 @@ namespace vkl
 
 	void DebugRenderer::loadFont()
 	{
-		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Modules/16x16.png");
+		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Modules/16x16_linear.png");
 
-		std::shared_ptr<UploadBuffer> upload = std::make_shared<UploadBuffer>(UploadBuffer::CI{
+		//{
+		//	img::Image<img::io::byte> font_with_new_layout(16, 16 * 256);
+		//	for (size_t x = 0; x < 16; ++x)
+		//	{
+		//		for (size_t y = 0; y < 16; ++y)
+		//		{
+		//			for (size_t l = 0; l < 256; ++l)
+		//			{
+		//				font_with_new_layout(x, y + 16 * l) = host_font(x + (l % 16) * 16, y + (l / 16) * 16);
+		//			}
+		//		}
+		//	}
+		//	std::filesystem::path save_path = ENGINE_SRC_PATH "/Core/Modules/16x16_linear.png";
+		//	img::io::write(font_with_new_layout, save_path, img::io::WriteInfo{.is_default = false, .magic_number = 2 });
+		//}
+
+		std::shared_ptr<UploadImage> upload = std::make_shared<UploadImage>(UploadImage::CI{
 			.app = application(),
 			.name = name() + ".UploadBuffer",
 			.src = ObjectView(host_font.data(), host_font.bufferByteSize()),
-			.dst = _font_tmp_buffer,
+			.dst = _font,
 		});
 
 		_exec(upload);
-
-
-		
 
 		_font_loaded = true;
 	}

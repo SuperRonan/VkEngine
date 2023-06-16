@@ -90,9 +90,34 @@ struct DebugStringCaret
 #define GLYPH_SIZE_PIX vec2(16, 16)
 #endif
 
+#define GLYPH_SIZE_TINY 0
+#define GLYPH_SIZE_SMALL 1
+#define GLYPH_SIZE_NORMAL 2
+#define GLYPH_SIZE_LARGE 3
+#define GLYPH_SIZE_HUGE 4
+
+#ifndef GLYPH_SIZE
+#define GLYPH_SIZE GLYPH_SIZE_NORMAL
+#endif
+
+float getGlyphSizeMult()
+{
+#if GLYPH_SIZE == GLYPH_SIZE_TINY
+	return 0.25f;
+#elif GLYPH_SIZE == GLYPH_SIZE_SMALL
+	return 0.5f;
+#elif GLYPH_SIZE == GLYPH_SIZE_NORMAL
+	return 1.0f;
+#elif GLYPH_SIZE == GLYPH_SIZE_LARGE
+	return 2.0f;
+#elif GLYPH_SIZE == GLYPH_SIZE_HUGE
+	return 3.0f;
+#endif
+}
+
 vec2 debugStringDefaultGlyphSizePix()
 {
-	return GLYPH_SIZE_PIX;
+	return GLYPH_SIZE_PIX * getGlyphSizeMult();
 }
 
 vec4 debugStringDefaultFrontColor()
@@ -102,7 +127,7 @@ vec4 debugStringDefaultFrontColor()
 
 vec4 debugStringDefaultBackColor()
 {
-	return vec4(0..xxx, 0.25);
+	return vec4(0..xxx, 0.05);
 }
 
 Caret pushToDebugPix(const in ShaderString str, Caret c, bool ln)

@@ -220,9 +220,9 @@ namespace vkl
 			const VkExtent3D extent = *cinfo.dst->image()->extent();
 			_reg = VkBufferImageCopy{
 				.bufferOffset = 0,
-				.bufferRowLength = extent.height,
-				.bufferImageHeight = extent.height,
-				.imageSubresource = getImageLayersFromRange(cinfo.dst->range()),
+				.bufferRowLength = 0,   // 0 => tightly packed
+				.bufferImageHeight = 0, // 0 => tightly packed
+				.imageSubresource = getImageLayersFromRange(cinfo.dst->instance()->createInfo().subresourceRange),
 				.imageOffset = makeZeroOffset3D(),
 				.imageExtent = extent,
 			};
@@ -752,18 +752,18 @@ namespace vkl
 		if (use_update)
 		{
 			synch.record();
-			vkCmdUpdateBuffer(cmd, *ui.dst->instance(), 0, _src.size(), _src.data());
+			vkCmdUpdateBuffer(cmd, *ui.dst->instance(), 0, ui.src.size(), ui.src.data());
 		}
 		else // Use Staging Buffer
 		{
-			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), _src.size());
+			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), ui.src.size());
 			BufferInstance& sbbi = *sb->buffer()->instance();
 			
 
 			// Copy to Staging Buffer
 			{
 				sbbi.map();
-				std::memcpy(sbbi.data(), _src.data(), _src.size());
+				std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
 				sbbi.unMap();
 
 				InputSynchronizationHelper synch2(ctx);
@@ -792,14 +792,14 @@ namespace vkl
 				.pNext = nullptr,
 				.srcOffset = 0,
 				.dstOffset = 0,
-				.size = _src.size(),
+				.size = ui.src.size(),
 			};
 			
 			VkCopyBufferInfo2 copy{
 				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
 				.pNext = nullptr,
 				.srcBuffer = sbbi,
-				.dstBuffer = *_dst->instance(),
+				.dstBuffer = *ui.dst->instance(),
 				.regionCount = 1,
 				.pRegions = &region,
 			};
@@ -834,4 +834,109 @@ namespace vkl
 			execute(ctx, _ui);
 		};
 	}
+
+
+
+	UploadImage::UploadImage(CreateInfo const& ci):
+		TransferCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst)
+	{}
+
+	void UploadImage::execute(ExecutionContext& ctx, UploadInfo const& ui)
+	{
+		CommandBuffer& cmd = *ctx.getCommandBuffer();
+
+		InputSynchronizationHelper synch(ctx);
+		synch.addSynch(Resource{
+			._image = ui.dst,
+			._begin_state = {
+				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+			},
+		});
+
+		{
+			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), ui.src.size());
+			BufferInstance& sbbi = *sb->buffer()->instance();
+
+
+			// Copy to Staging Buffer
+			{
+				sbbi.map();
+				std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
+				sbbi.unMap();
+
+				InputSynchronizationHelper synch2(ctx);
+				synch2.addSynch(Resource{
+					._buffer = sb->buffer(),
+					._begin_state = {
+						._access = VK_ACCESS_2_HOST_WRITE_BIT,
+						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+					},
+				});
+				synch2.record();
+				synch2.NotifyContext();
+			}
+
+			synch.addSynch(Resource{
+				._buffer = sb->buffer(),
+				._begin_state = {
+					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				},
+			});
+			synch.record();
+
+			VkBufferImageCopy2 region{
+				.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+				.pNext = nullptr,
+				.bufferOffset = 0,
+				.bufferRowLength = 0,   // 0 => tightly packed
+				.bufferImageHeight = 0, // 0 => tightly packed
+				.imageSubresource = getImageLayersFromRange(ui.dst->instance()->createInfo().subresourceRange),
+				.imageOffset = makeZeroOffset3D(),
+				.imageExtent = ui.dst->image()->instance()->createInfo().extent,
+			};
+
+			VkCopyBufferToImageInfo2 copy{
+				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+				.pNext = nullptr,
+				.srcBuffer = sbbi,
+				.dstImage = *ui.dst->image()->instance(),
+				.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.regionCount = 1,
+				.pRegions = &region,
+			};
+
+			vkCmdCopyBufferToImage2(cmd, &copy);
+
+			ctx.keppAlive(sb);
+		}
+
+		synch.NotifyContext();
+	}
+
+
+	void UploadImage::execute(ExecutionContext& ctx)
+	{
+		UploadInfo ui{
+			.src = _src,
+			.dst = _dst,
+		};
+		execute(ctx, ui);
+	}
+
+	Executable UploadImage::with(UploadInfo const& ui)
+	{
+		UploadInfo _ui{
+			.src = ui.src.hasValue() ? ui.src : _src,
+			.dst = ui.dst ? ui.dst : _dst,
+		};
+		return [=](ExecutionContext& ctx) {
+			execute(ctx, _ui);
+		};
+	}
+
 }

@@ -340,7 +340,7 @@ int main(int argc, char** argv)
 {
 	try
 	{
-		bool vl = false;
+		bool vl = true;
 #ifdef NDEBUG
 		vl = false;
 #endif

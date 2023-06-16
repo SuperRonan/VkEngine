@@ -17,8 +17,10 @@ namespace vkl
 		Executor& _exec;
 		
 		bool _font_loaded = false;
-		std::shared_ptr<Buffer> _font_tmp_buffer = nullptr;
 		std::shared_ptr<ImageView> _font = nullptr;
+		std::shared_ptr<ImageView> _font_for_upload = nullptr;
+		std::shared_ptr<Sampler> _sampler = nullptr;
+
 		std::shared_ptr<ImageView> _target = nullptr;
 		
 		std::shared_ptr<Buffer> _string_buffer = nullptr;
