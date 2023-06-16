@@ -32,12 +32,13 @@ void main()
 	v_uv = a_uv;
 	v_w_normal = mat3(o2w) * a_normal;
 	
+
 	if(gl_VertexIndex == 0)
 	{
+		vec4 v = vec4(1, 2, 3, 4); 
 		Caret crt = Caret(vec2(500, 300), 0);
-		crt = pushToDebugPix("abcd", crt, true);
-		crt = pushToDebugPix(toStr(3.1415), crt, true);
-		crt = pushToDebugPix(toStr(420), crt, true);
-		crt = pushToDebugPix(concat("", "4567abcd8"), crt, true);
+		crt = pushToDebugPix("ABC", crt, true);
+		crt = pushToDebugPix(toStr(v), crt, true);
+		crt = pushToDebugPix(toStr(ivec3(1, -12, 54)), crt, true);
 	}
 }

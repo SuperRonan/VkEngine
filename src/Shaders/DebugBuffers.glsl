@@ -97,7 +97,7 @@ struct DebugStringCaret
 #define GLYPH_SIZE_HUGE 4
 
 #ifndef GLYPH_SIZE
-#define GLYPH_SIZE GLYPH_SIZE_LARGE
+#define GLYPH_SIZE GLYPH_SIZE_NORMAL
 #endif
 
 float getGlyphSizeMult()

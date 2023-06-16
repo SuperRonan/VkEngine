@@ -182,7 +182,7 @@ PendingChunk getPendingChunkForWritingReverse(const in ShaderString s)
 {
 #if ENABLE_SHADER_STRING
 	const uint ls = getShaderStringLength(s);	
-	const uint32_t c = s.data[ls / 4];
+	const uint32_t c = s.data[(ls-1) / 4];
 	return PendingChunk(ls-1, c);
 #else
 	return PendingChunk(0, 0);
@@ -197,7 +197,7 @@ char pendingRead(inout PendingChunk chunk, const in ShaderString str)
 	{
 		chunk.chunk = str.data[chunk.index / 4];
 	}
-	char res = char((chunk.chunk >> (8 * id_in_chunk)) & 0xff); 
+	const char res = char((chunk.chunk >> (8 * id_in_chunk)) & 0xff); 
 	++chunk.index;
 	return res;
 #else
@@ -246,7 +246,7 @@ void flushPendingWriteIFN(const in PendingChunk chunk, inout ShaderString str)
 void flushPendingWriteReverseIFN(const in PendingChunk chunk, inout ShaderString str)
 {
 #if ENABLE_SHADER_STRING
-	if((chunk.index % 4) != 3)
+	//if((chunk.index % 4) != 3)
 	{
 		str.data[chunk.index / 4] = chunk.chunk;
 	}
@@ -289,14 +289,17 @@ ShaderString concat(ShaderString a, const in ShaderString b)
 	return a;
 }
 
-#define CHAR_space char(0x20)
-#define CHAR_plus char(0x2B)
-#define CHAR_minus char(0x2D)
-#define CHAR_dot char(0x2E)
-#define CHAR_0 char(0x30)
-#define CHAR_A char(0x41)
-#define CHAR_at char(0x40)
-#define CHAR_a char(0x61)
+#define CHAR_space 		char(0x20)
+#define CHAR_lpar 		char(0x28)
+#define CHAR_rpar 		char(0x29)
+#define CHAR_plus 		char(0x2B)
+#define CHAR_comma		char(0x2C)
+#define CHAR_minus 		char(0x2D)
+#define CHAR_dot 		char(0x2E)
+#define CHAR_0 			char(0x30)
+#define CHAR_A 			char(0x41)
+#define CHAR_at 		char(0x40)
+#define CHAR_a 			char(0x61)
 
 uint howManyDigits(uint n, uint basis)
 {
@@ -437,10 +440,11 @@ void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
 	}
 
 	const uint integral_part = uint(abs(f));
-	append(s, integral_part, basis);
-	appendOneChar(s, CHAR_dot);
 	const float dec = f - floor(f);
 	const uint dec_part = uint(dec * pow(basis, flt_precision));
+	
+	append(s, integral_part, basis);
+	appendOneChar(s, CHAR_dot);
 	append(s, dec_part, basis);
 }
 
@@ -489,3 +493,27 @@ ShaderString concat(float f, in const ShaderString s)
 	append(res, s);
 	return res;
 }
+
+// Wish I had templates
+
+#define DECLARE_append_gvec_impl(vecType, N) void append(inout ShaderString s, in const vecType##N v) { appendOneChar(s, CHAR_lpar); for(uint i=0; i < N; ++i)	{ append(s, v[i]); if(i != (N - 1))	{appendOneChar(s, CHAR_comma); appendOneChar(s, CHAR_space); } } appendOneChar(s, CHAR_rpar); }
+
+#define DECLARE_append_gvec_for_type(vecType) DECLARE_append_gvec_impl(vecType, 2) DECLARE_append_gvec_impl(vecType, 3) DECLARE_append_gvec_impl(vecType, 4)
+
+#define DECLARE_append_gvec DECLARE_append_gvec_for_type(vec) DECLARE_append_gvec_for_type(uvec) DECLARE_append_gvec_for_type(ivec)
+
+#define DECLARE_toStr_gvec_impl(vecType, N) ShaderString toStr(in const vecType##N v) { ShaderString res = makeShaderString(); append(res, v); return res; }
+
+#define DECLARE_toStr_gvec_for_type(vecType) DECLARE_toStr_gvec_impl(vecType, 2) DECLARE_toStr_gvec_impl(vecType, 3) DECLARE_toStr_gvec_impl(vecType, 4)
+
+#define DECLARE_toStr_gvec DECLARE_toStr_gvec_for_type(vec) DECLARE_toStr_gvec_for_type(uvec) DECLARE_toStr_gvec_for_type(ivec)
+
+#define DECLARE_concat_gvec_impl(vecType, N) ShaderString concat(ShaderString s, in const vecType##N vec) { append(s, vec); return s; } ShaderString concat(in const vecType##N vec, in const ShaderString s) {	ShaderString res = toStr(vec); append(res, s); return res; }
+
+#define DECLARE_concat_gvec_for_type(vecType) DECLARE_concat_gvec_impl(vecType, 2) DECLARE_concat_gvec_impl(vecType, 3) DECLARE_concat_gvec_impl(vecType, 4)
+
+#define DECLARE_concat_gvec DECLARE_concat_gvec_for_type(vec) DECLARE_concat_gvec_for_type(uvec) DECLARE_concat_gvec_for_type(ivec)
+
+DECLARE_append_gvec
+DECLARE_toStr_gvec
+DECLARE_concat_gvec
