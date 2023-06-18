@@ -9,7 +9,8 @@ namespace vkl
 	DebugRenderer::DebugRenderer(CreateInfo const& ci) :
 		Module(ci.exec.application(), "DebugRenderer"),
 		_exec(ci.exec),
-		_target(ci.target)
+		_target(ci.target),
+		_depth(ci.depth)
 	{
 		//struct BufferStringMeta
 		//{
@@ -100,6 +101,7 @@ namespace vkl
 				},
 			},
 			.color_attachements = {_target},
+			.depth_buffer = _depth,
 			.write_depth = false,
 			.vertex_shader_path = shaders,
 			.geometry_shader_path = shaders,

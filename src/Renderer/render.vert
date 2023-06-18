@@ -33,10 +33,9 @@ void main()
 	v_w_normal = mat3(o2w) * a_normal;
 	
 
-	if((gl_VertexIndex % (16) == 0))
+	if((gl_VertexIndex % (64) == 0))
 	{
-		Caret crt = Caret(gl_Position.xy / gl_Position.w, 0);
-		Caret crt2 = Caret(0..xx, 0);
-		crt = pushToDebugClipSpaceLn(a_position, crt);
+		Caret crt = Caret(gl_Position, 0);
+		crt = pushToDebugClipSpaceLn(gl_Position / gl_Position.w, crt);
 	}
 }

@@ -59,22 +59,24 @@ void main()
 		const BufferStringMeta meta = _debug.strings[index].meta;
 		const uint coord_space_flags = meta.flags & DEBUG_SPACE_MASK;
 
-		vec2 position = meta.position;
+		vec4 position = meta.position;
 		vec2 gs = meta.glyph_size;
 		if(coord_space_flags == DEBUG_UV_SPACE_BIT || coord_space_flags == DEBUG_PIXEL_SPACE_BIT)
 		{
 			if(coord_space_flags == DEBUG_PIXEL_SPACE_BIT)
 			{
-				position = (position + 0.5f) * pc.oo_resolution;
+				position.xy = (position.xy + 0.5f) * pc.oo_resolution;
 				gs = gs * pc.oo_resolution;
 			}
 			
-			position = UVToClipSpace(position);
+			position.xy = UVToClipSpace(position.xy);
 			gs *= 2;
+
+			// On Screen
+			position.zw = vec2(0, 1);
 		}
 
-
-		const vec2 tl = position;
+		const vec2 tl = position.xy;
 		const vec2 tr = tl + vec2(len * gs.x, 0);
 		const vec2 br = tr + vec2(0, gs.y);
 		const vec2 bl = tl + vec2(0, gs.y);
@@ -87,7 +89,7 @@ void main()
 			v_uv = vec2(0, 0);
 			v_ft_color = meta.color;
 			v_bg_color = meta.back_color;
-			gl_Position = vec4(tl, 0.5, 1);
+			gl_Position = vec4(tl, position.zw);
 			EmitVertex();
 		}
 
@@ -96,7 +98,7 @@ void main()
 			v_uv = vec2(0, 1);
 			v_ft_color = meta.color;
 			v_bg_color = meta.back_color;
-			gl_Position = vec4(bl, 0.5, 1);
+			gl_Position = vec4(bl, position.zw);
 			EmitVertex();
 		}
 
@@ -105,7 +107,7 @@ void main()
 			v_uv = vec2(len, 0);
 			v_ft_color = meta.color;
 			v_bg_color = meta.back_color;
-			gl_Position = vec4(tr, 0.5, 1);
+			gl_Position = vec4(tr, position.zw);
 			EmitVertex();
 		}
 
@@ -114,7 +116,7 @@ void main()
 			v_uv = vec2(len, 1);
 			v_ft_color = meta.color;
 			v_bg_color = meta.back_color;
-			gl_Position = vec4(br, 0.5, 1);
+			gl_Position = vec4(br, position.zw);
 			EmitVertex();
 		}
 
@@ -126,8 +128,6 @@ void main()
 #endif
 
 #if SHADER_SEMANTIC_FRAGMENT
-
-#include "random.glsl"
 
 layout(set = 1, binding = 0) uniform sampler2DArray glyphs;
 
@@ -150,12 +150,8 @@ void main()
 	float glyph_texel = textureLod(glyphs, vec3(uv_in_char, ascii), 0).x;
 
 	o_color = lerp(v_bg_color, v_ft_color, glyph_texel);
-
-	uint rng = char_index;
-	// o_color.xyz = randomRGB(rng);
-	//o_color.xy = uv_in_char;
-	// o_color.z = 0;
 #endif
 }
 
 #endif
+

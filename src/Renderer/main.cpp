@@ -150,6 +150,7 @@ namespace vkl
 			DebugRenderer debugger(DebugRenderer::CreateInfo{
 				.exec = exec,
 				.target = final_image,
+				.depth = renderer.depth(),
 			});
 
 			std::shared_ptr<Mesh> mesh = Mesh::MakeSphere(Mesh::SMI{

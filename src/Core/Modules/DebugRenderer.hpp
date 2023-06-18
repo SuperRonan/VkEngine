@@ -22,6 +22,7 @@ namespace vkl
 		std::shared_ptr<Sampler> _sampler = nullptr;
 
 		std::shared_ptr<ImageView> _target = nullptr;
+		std::shared_ptr<ImageView> _depth = nullptr;
 		
 		std::shared_ptr<Buffer> _string_buffer = nullptr;
 
@@ -43,6 +44,7 @@ namespace vkl
 		{
 			Executor& exec;
 			std::shared_ptr<ImageView> target;
+			std::shared_ptr<ImageView> depth;
 		};
 
 		DebugRenderer(CreateInfo const& ci);

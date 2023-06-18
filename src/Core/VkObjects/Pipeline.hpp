@@ -260,7 +260,7 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				.depthTestEnable = VK_FALSE,
+				.depthTestEnable = VK_TRUE,
 				.depthWriteEnable = write_depth ? VK_TRUE : VK_FALSE,
 				.depthCompareOp = VK_COMPARE_OP_LESS,
 				.depthBoundsTestEnable = VK_FALSE,

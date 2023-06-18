@@ -16,7 +16,7 @@
 
 struct BufferStringMeta
 {
-	vec2 position;
+	vec4 position;
 	uint layer;
 	uint len;
 	vec2 glyph_size;
@@ -81,9 +81,20 @@ uint allocateDebugString()
 
 struct DebugStringCaret
 {
-	vec2 pos;
+	vec4 pos;
 	uint layer;
 };
+
+DebugStringCaret Caret2D(vec2 pos, uint layer)
+{
+	return DebugStringCaret(vec4(pos, 0, 1), layer);
+}
+
+DebugStringCaret Caret3D(vec4 pos, uint layer)
+{
+	return DebugStringCaret(pos, layer);
+}
+
 #define Caret DebugStringCaret
 
 #ifndef GLYPH_SIZE_PIX
