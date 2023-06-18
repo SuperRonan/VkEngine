@@ -57,8 +57,7 @@ void main()
 	{
 		const uint flags = _debug.strings[index].meta.flags;
 		const BufferStringMeta meta = _debug.strings[index].meta;
-		// const uint coord_space_flags = meta.flags & DEBUG_SPACE_MASK;
-		const uint coord_space_flags = DEBUG_PIXEL_SPACE_BIT;
+		const uint coord_space_flags = meta.flags & DEBUG_SPACE_MASK;
 
 		vec2 position = meta.position;
 		vec2 gs = meta.glyph_size;

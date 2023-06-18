@@ -35,7 +35,7 @@ struct BufferString
 #define DEBUG_ENABLE_MASK	0x1
 #define DEBUG_ENABLE_BIT	0x1
 
-#define DEBUG_SPACE_MASK		(0b11 << 1)
+#define DEBUG_SPACE_MASK		(0x3 << 1)
 #define DEBUG_PIXEL_SPACE_BIT	(0x0 << 1)
 #define DEBUG_UV_SPACE_BIT		(0x1 << 1)
 #define DEBUG_CLIP_SPACE_BIT	(0x2 << 1)
@@ -120,6 +120,24 @@ vec2 debugStringDefaultGlyphSizePix()
 	return GLYPH_SIZE_PIX * getGlyphSizeMult();
 }
 
+vec2 debugStringDefaultGlyphSizeUV()
+{
+	return debugStringDefaultGlyphSizePix() * vec2(1.0f/1600.0f, 1.0/900.0f);
+}
+
+vec2 debugStringDefaultGlyphSizeClipSpace()
+{
+	return debugStringDefaultGlyphSizeUV() * 2.0f;
+}
+
+vec2 debugStringDefaultGlyphSize(uint flags)
+{
+	flags = flags & DEBUG_SPACE_MASK; 
+	if(flags == DEBUG_PIXEL_SPACE_BIT)		return debugStringDefaultGlyphSizePix();
+	else if (flags == DEBUG_UV_SPACE_BIT)	return debugStringDefaultGlyphSizeUV();
+	else									return debugStringDefaultGlyphSizeClipSpace();
+}
+
 vec4 debugStringDefaultFrontColor()
 {
 	return vec4(1);
@@ -130,26 +148,26 @@ vec4 debugStringDefaultBackColor()
 	return vec4(0..xxx, 0.05);
 }
 
-vec4 debugVectorColor(uint index)
+vec4 debugDimColor(uint index)
 {
 	vec4 res = vec4(0..xxx, 1);
 	res[index] = 1;
-	if(index == 3)	res = 0.9.xxxx;
+	if(index == 2)	res.xy = 0.25.xx; // blue can be hard to read else
+	else if(index == 3)	res = 0.9.xxxx;
 	return res;
 }
 
-Caret pushToDebugPix(const in ShaderString str, Caret c, bool ln)
+Caret pushToDebug(const in ShaderString str, Caret c, bool ln, vec4 ft_color, vec4 bg_color, vec2 glyph_size, uint flags)
 {
-	
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
 	BufferStringMeta meta;
 	meta.position = c.pos;
 	meta.layer = c.layer;
 	meta.len = getShaderStringLength(str);
-	meta.glyph_size = debugStringDefaultGlyphSizePix();
-	meta.color = debugStringDefaultFrontColor();
-	meta.back_color = debugStringDefaultBackColor();
-	meta.flags = DEBUG_PIXEL_SPACE_BIT;
+	meta.glyph_size = glyph_size;
+	meta.color = ft_color;
+	meta.back_color = bg_color;
+	meta.flags = flags;
 
 	const uint index = allocateDebugString();
 
@@ -174,3 +192,56 @@ Caret pushToDebugPix(const in ShaderString str, Caret c, bool ln)
 #endif
 }
 
+Caret pushToDebug(uint n, Caret c, bool ln, vec4 ft_color, vec4 bg_color, vec2 glyph_size, uint flags)
+{
+	return pushToDebug(toStr(n), c, ln, ft_color, bg_color, glyph_size, flags);
+}
+
+Caret pushToDebug(int n, Caret c, bool ln, vec4 ft_color, vec4 bg_color, vec2 glyph_size, uint flags)
+{
+	return pushToDebug(toStr(n), c, ln, ft_color, bg_color, glyph_size, flags);
+}
+
+Caret pushToDebug(float f, Caret c, bool ln, vec4 ft_color, vec4 bg_color, vec2 glyph_size, uint flags)
+{
+	return pushToDebug(toStr(f), c, ln, ft_color, bg_color, glyph_size, flags);
+}
+
+
+#define DECLARE_pushToDebug_gvec(vecType, N) Caret pushToDebug(const in vecType##N v, Caret c, bool ln, vec4 ft_color, vec4 bg_color, vec2 glyph_size, uint flags) { for(int i=0; i<N; ++i)	{ c = pushToDebug(v[i], c, ln, debugDimColor(i), bg_color, glyph_size, flags); } return c; }
+
+#define DECLARE_pushToDebug_gvec_all_dims(vecType) DECLARE_pushToDebug_gvec(vecType, 2) DECLARE_pushToDebug_gvec(vecType, 3) DECLARE_pushToDebug_gvec(vecType, 4)
+
+#define DECLARE_pushToDebug_gvec_all_types DECLARE_pushToDebug_gvec_all_dims(vec) DECLARE_pushToDebug_gvec_all_dims(uvec) DECLARE_pushToDebug_gvec_all_dims(ivec)
+
+DECLARE_pushToDebug_gvec_all_types
+
+
+
+#define DEBUG_SPACE_FLAG_Pix DEBUG_PIXEL_SPACE_BIT
+#define DEBUG_SPACE_FLAG_UV DEBUG_UV_SPACE_BIT
+#define DEBUG_SPACE_FLAG_ClipSpace DEBUG_CLIP_SPACE_BIT
+#define GET_DEBUG_SPACE_FLAG(Space) DEBUG_SPACE_FLAG_##Space
+
+// Wish I had templates
+
+#define DECLARE_pushToDebug_space_type_param_eol_color(Type, Space)  Caret pushToDebug##Space(const in Type t, Caret c, bool ln, vec4 color) { 	return pushToDebug(t, c, ln, color, debugStringDefaultBackColor(), debugStringDefaultGlyphSize(GET_DEBUG_SPACE_FLAG(Space)), GET_DEBUG_SPACE_FLAG(Space)); }
+
+#define DECLARE_pushToDebug_space_type_eol_color(Type, Space, eol) Caret pushToDebug##Space##eol(const in Type t, Caret c, vec4 color) { return pushToDebug##Space(t, c, true, color);}
+#define DECLARE_pushToDebug_space_type_eol(Type, Space, eol) Caret pushToDebug##Space##eol(const in Type t, Caret c) { return pushToDebug##Space(t, c, true, debugStringDefaultFrontColor());}
+
+#define DECLARE_pushToDebug_space_type_eol_2(Type, Space, eol) DECLARE_pushToDebug_space_type_eol_color(Type, Space, eol) DECLARE_pushToDebug_space_type_eol(Type, Space, eol)
+
+#define DECLARE_pushToDebug_space_type_all_eol(Type, Space) DECLARE_pushToDebug_space_type_param_eol_color(Type, Space) DECLARE_pushToDebug_space_type_eol_2(Type, Space, Ln) DECLARE_pushToDebug_space_type_eol_2(Type, Space, Sl)
+
+#define DECLARE_pushToDebug_type_all_space(Type) DECLARE_pushToDebug_space_type_all_eol(Type, Pix) DECLARE_pushToDebug_space_type_all_eol(Type, UV) DECLARE_pushToDebug_space_type_all_eol(Type, ClipSpace)
+
+#define DECLARE_pushToDebug_type_all_vec_dims(vecType) DECLARE_pushToDebug_type_all_space(vecType##2) DECLARE_pushToDebug_type_all_space(vecType##3) DECLARE_pushToDebug_type_all_space(vecType##4)
+
+#define DECLARE_pushToDebug_type_all_vec DECLARE_pushToDebug_type_all_vec_dims(vec) DECLARE_pushToDebug_type_all_vec_dims(ivec) DECLARE_pushToDebug_type_all_vec_dims(uvec)
+
+#define DECLARE_pushToDebug_all_type DECLARE_pushToDebug_type_all_space(ShaderString) DECLARE_pushToDebug_type_all_space(uint) DECLARE_pushToDebug_type_all_space(int) DECLARE_pushToDebug_type_all_space(float)
+
+
+DECLARE_pushToDebug_all_type
+DECLARE_pushToDebug_type_all_vec

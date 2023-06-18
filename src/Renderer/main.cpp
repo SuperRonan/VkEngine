@@ -155,6 +155,8 @@ namespace vkl
 			std::shared_ptr<Mesh> mesh = Mesh::MakeSphere(Mesh::SMI{
 				.app = this,
 				.radius = 1,
+				//.theta_divisions = 180,
+				//.phi_divisions = 360,
 			});
 			mesh->createDeviceBuffer({_queue_family_indices.graphics_family.value()});
 			exec.declare(mesh);

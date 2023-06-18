@@ -33,12 +33,10 @@ void main()
 	v_w_normal = mat3(o2w) * a_normal;
 	
 
-	if(gl_VertexIndex == 0)
+	if((gl_VertexIndex % (16) == 0))
 	{
-		vec4 v = vec4(1, 2, 3, 4); 
-		Caret crt = Caret(vec2(500, 300), 0);
-		crt = pushToDebugPix("ABC", crt, true);
-		crt = pushToDebugPix(toStr(v), crt, true);
-		crt = pushToDebugPix(toStr(ivec3(1, -12, 54)), crt, true);
+		Caret crt = Caret(gl_Position.xy / gl_Position.w, 0);
+		Caret crt2 = Caret(0..xx, 0);
+		crt = pushToDebugClipSpaceLn(a_position, crt);
 	}
 }

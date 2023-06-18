@@ -331,11 +331,10 @@ ShaderString getBasisPrefix(uint b)
 	else 				return "";
 }
 
-void append(inout ShaderString s, uint n, uint basis)
+void append(inout ShaderString s, uint n, uint basis, uint len)
 {
 #if ENABLE_SHADER_STRING
 	const uint ls = getShaderStringLength(s);
-	const uint len = howManyDigits(n, basis);
 	setShaderStringLength(s, ls + len);
 	PendingChunk writer = getPendingChunkForWritingReverse(s);
 	
@@ -348,6 +347,12 @@ void append(inout ShaderString s, uint n, uint basis)
 	}
 	flushPendingWriteReverseIFN(writer, s);
 #endif
+}
+
+void append(inout ShaderString s, uint n, uint basis)
+{
+	const uint len = howManyDigits(n, basis);
+	append(s, n, basis, len);
 }
 
 ShaderString concat(ShaderString s, uint n, uint b)
@@ -440,12 +445,12 @@ void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
 	}
 
 	const uint integral_part = uint(abs(f));
-	const float dec = f - floor(f);
-	const uint dec_part = uint(dec * pow(basis, flt_precision));
+	const float dec = abs(f - trunc(f));
+	uint dec_part = uint(dec * pow(basis, flt_precision));
 	
 	append(s, integral_part, basis);
 	appendOneChar(s, CHAR_dot);
-	append(s, dec_part, basis);
+	append(s, dec_part, basis, flt_precision);
 }
 
 void append(inout ShaderString s, float f, uint flt_precision)
