@@ -38,7 +38,7 @@
 	- [ ] SBT
 - [x] Modules
 - [ ] Multi layer swapchain (for VR)
-- [ ] Debug buffers
+- [x] Debug buffers
 	- [x] GLSL strings
 - [x] Input manager
 - [ ] Improve CMake
