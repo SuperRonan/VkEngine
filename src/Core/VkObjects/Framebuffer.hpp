@@ -8,7 +8,7 @@
 
 namespace vkl
 {
-	class FramebufferInstance : public VkObject
+	class FramebufferInstance : public AbstractInstance
 	{
 	protected:
 

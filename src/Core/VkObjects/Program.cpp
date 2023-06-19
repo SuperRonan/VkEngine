@@ -4,6 +4,15 @@
 
 namespace vkl
 {
+	ProgramInstance::ProgramInstance(VkApplication * app, std::string const& name) : 
+		AbstractInstance(app, name)
+	{}
+
+	ProgramInstance::~ProgramInstance()
+	{
+		callDestructionCallbacks();
+	}
+
 	bool ProgramInstance::reflect()
 	{
 		// all_bindings[set][binding]
@@ -270,7 +279,7 @@ namespace vkl
 		_geometry(ci.geometry),
 		_fragment(ci.fragment)
 	{
-		InvalidationCallback ic{
+		Callback ic{
 			.callback = [&]() {
 				destroyInstance();
 			},
@@ -344,7 +353,7 @@ namespace vkl
 	{
 		_shaders = { _shader };
 
-		InvalidationCallback ic{
+		Callback ic{
 			.callback = [&]() {
 				destroyInstance();
 			},

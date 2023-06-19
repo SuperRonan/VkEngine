@@ -168,7 +168,7 @@ namespace vkl
 
 	};
 
-	class DescriptorSetsInstance : public VkObject 
+	class DescriptorSetsInstance : public AbstractInstance
 	{
 	protected:
 		struct SetRange

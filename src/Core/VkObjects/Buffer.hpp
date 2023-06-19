@@ -12,7 +12,7 @@
 
 namespace vkl
 {
-	class BufferInstance : public VkObject
+	class BufferInstance : public AbstractInstance
 	{
 	protected:
 

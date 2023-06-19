@@ -10,7 +10,7 @@
 
 namespace vkl
 {
-	class ImageInstance : public VkObject
+	class ImageInstance : public AbstractInstance
 	{
 	public:
 

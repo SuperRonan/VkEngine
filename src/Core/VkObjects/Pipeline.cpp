@@ -6,13 +6,14 @@ namespace vkl
 	{
 		if (_handle != VK_NULL_HANDLE)
 		{
+			callDestructionCallbacks();
 			vkDestroyPipeline(_app->device(), _handle, nullptr);
 			_handle = VK_NULL_HANDLE;
 		}
 	}
 
 	PipelineInstance::PipelineInstance(GraphicsCreateInfo const& gci) :
-		VkObject(gci.app, gci.name),
+		AbstractInstance(gci.app, gci.name),
 		_binding(VK_PIPELINE_BIND_POINT_GRAPHICS),
 		_program(gci.program),
 		_render_pass(gci.render_pass)
@@ -22,7 +23,7 @@ namespace vkl
 	}
 
 	PipelineInstance::PipelineInstance(ComputeCreateInfo const& cci) :
-		VkObject(cci.app, cci.name),
+		AbstractInstance(cci.app, cci.name),
 		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
 		_program(cci.program)
 	{

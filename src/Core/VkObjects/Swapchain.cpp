@@ -70,6 +70,7 @@ namespace vkl
 		
 		_views.clear();
 		_images.clear();
+		callDestructionCallbacks();
 		vkDestroySwapchainKHR(device(), _swapchain, nullptr);
 		_swapchain = VK_NULL_HANDLE;
 	}
@@ -90,7 +91,7 @@ namespace vkl
 	}
 
 	SwapchainInstance::SwapchainInstance(CreateInfo const& ci):
-		VkObject(ci.app, std::move(ci.name)),
+		AbstractInstance(ci.app, std::move(ci.name)),
 		_ci(ci.ci),
 		_surface(ci.surface)
 	{

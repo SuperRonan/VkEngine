@@ -403,7 +403,7 @@ namespace vkl
 	}
 
 	ShaderInstance::ShaderInstance(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name),
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection))
 	{
@@ -463,6 +463,7 @@ namespace vkl
 
 		if (_module)
 		{
+			callDestructionCallbacks();
 			vkDestroyShaderModule(_app->device(), _module, nullptr);
 			_module = VK_NULL_HANDLE;
 		}

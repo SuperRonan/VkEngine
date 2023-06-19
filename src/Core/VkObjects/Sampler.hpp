@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class SamplerInstance: public VkObject
+	class SamplerInstance: public AbstractInstance
 	{
 	protected:
 

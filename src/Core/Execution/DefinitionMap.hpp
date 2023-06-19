@@ -16,7 +16,7 @@ namespace vkl
 
 		std::vector<std::string> _collapsed;
 
-		std::vector<InvalidationCallback> _invalidation_callbacks;
+		std::vector<Callback> _invalidation_callbacks;
 
 	public:
 
@@ -43,7 +43,7 @@ namespace vkl
 			}
 		}
 
-		void addInvalidationCallback(InvalidationCallback const& ic)
+		void addInvalidationCallback(Callback const& ic)
 		{
 			_invalidation_callbacks.push_back(ic);
 		}

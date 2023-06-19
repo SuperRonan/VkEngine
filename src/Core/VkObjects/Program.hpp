@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class ProgramInstance : public VkObject
+	class ProgramInstance : public AbstractInstance
 	{
 	protected:
 
@@ -16,11 +16,9 @@ namespace vkl
 		std::vector<std::shared_ptr<DescriptorSetLayout>> _set_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
-		ProgramInstance(VkApplication* app, std::string const& name) :
-			VkObject(app, name)
-		{}
+		ProgramInstance(VkApplication* app, std::string const& name);
 
-		virtual ~ProgramInstance() override {}
+		virtual ~ProgramInstance() override;
 
 	public:
 

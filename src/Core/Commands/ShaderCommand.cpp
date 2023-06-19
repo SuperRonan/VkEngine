@@ -13,7 +13,7 @@ namespace vkl
 	}
 
 	DescriptorSetsInstance::DescriptorSetsInstance(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name),
 		_prog(ci.program),
 		_bindings(ci.bindings)
 	{
@@ -22,7 +22,7 @@ namespace vkl
 
 	DescriptorSetsInstance::~DescriptorSetsInstance()
 	{
-		
+		callDestructionCallbacks();
 	}
 
 	DescriptorSetsManager::~DescriptorSetsManager()
@@ -269,7 +269,7 @@ namespace vkl
 						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
 					};
 					
-					InvalidationCallback callback{
+					Callback callback{
 						.callback = [=]() {
 							corresponding_resource->setUpdateStatus(false);
 						},

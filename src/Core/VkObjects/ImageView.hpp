@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class ImageViewInstance : public VkObject
+	class ImageViewInstance : public AbstractInstance
 	{
 	public:
 

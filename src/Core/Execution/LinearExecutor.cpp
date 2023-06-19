@@ -144,7 +144,7 @@ namespace vkl
 
 				image_view->removeInvalidationCallbacks(this);
 
-				image_view->addInvalidationCallback(InvalidationCallback{
+				image_view->addInvalidationCallback(Callback{
 					.callback = [&]() {
 						_resources_state._image_states.erase(ir);
 					},
@@ -167,7 +167,7 @@ namespace vkl
 
 				buffer->removeInvalidationCallbacks(this);
 
-				buffer->addInvalidationCallback(InvalidationCallback{
+				buffer->addInvalidationCallback(Callback{
 					.callback = [&]() {
 						_resources_state._buffer_states.erase(b);
 					},

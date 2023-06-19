@@ -6,7 +6,7 @@
 
 namespace vkl
 {
-	class PipelineInstance : public VkObject
+	class PipelineInstance : public AbstractInstance
 	{
 	protected:
 

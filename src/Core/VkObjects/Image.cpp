@@ -30,6 +30,8 @@ namespace vkl
 	{
 		assert(_image != VK_NULL_HANDLE);
 
+		callDestructionCallbacks();
+
 		if (ownership())
 		{
 			vmaDestroyImage(_app->allocator(), _image, _alloc);
@@ -40,7 +42,7 @@ namespace vkl
 	}
 
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
 		_vma_ci(ci.aci)
 	{
@@ -48,7 +50,7 @@ namespace vkl
 	}
 
 	ImageInstance::ImageInstance(AssociateInfo const& ai) :
-		VkObject(ai.app, ai.name),
+		AbstractInstance(ai.app, ai.name),
 		_ci(ai.ci),
 		_image(ai.image)
 	{

@@ -4,11 +4,53 @@
 
 namespace vkl
 {
+	class AbstractInstance : public VkObject
+	{
+	protected:
+
+		std::vector<Callback> _destruction_callbacks = {};
+
+	public:
+
+		template <class StringLike>
+		constexpr AbstractInstance(VkApplication* app, StringLike&& name = "") :
+			VkObject(app, std::forward<StringLike>(name))
+		{}
+
+		virtual ~AbstractInstance() override
+		{}
+
+		void callDestructionCallbacks()
+		{
+			for (auto& ic : _destruction_callbacks)
+			{
+				ic.callback();
+			}
+		}
+
+		void addDestructionCallback(Callback const& ic)
+		{
+			_destruction_callbacks.push_back(ic);
+		}
+
+		void removeDestructionCallbacks(const VkObject* ptr)
+		{
+			for (auto it = _destruction_callbacks.begin(); it < _destruction_callbacks.end(); ++it)
+			{
+				if (it->id == ptr)
+				{
+					it = _destruction_callbacks.erase(it);
+				}
+			}
+		}
+	};
+
+
 	class AbstractInstanceHolder : public VkObject
 	{
 	protected:
 
-		std::vector<InvalidationCallback> _invalidation_callbacks = {};
+		std::vector<Callback> _invalidation_callbacks = {};
 
 	public:
 
@@ -28,7 +70,7 @@ namespace vkl
 			}
 		}
 
-		void addInvalidationCallback(InvalidationCallback const& ic)
+		void addInvalidationCallback(Callback const& ic)
 		{
 			_invalidation_callbacks.push_back(ic);
 		}
@@ -49,6 +91,8 @@ namespace vkl
 	class InstanceHolder : public AbstractInstanceHolder
 	{
 	protected:
+
+		static_assert(std::is_base_of<AbstractInstance, Instance>::value, "Instance must derive from AbstracInstance");
 
 		SPtr<Instance> _inst = nullptr;
 		

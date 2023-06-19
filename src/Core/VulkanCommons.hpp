@@ -26,7 +26,7 @@ namespace vkl
 {
 	class VkObject;
 	
-	struct InvalidationCallback
+	struct Callback
 	{
 		std::function<void(void)> callback;
 		VkObject* id = nullptr;

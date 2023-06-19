@@ -4,7 +4,7 @@
 namespace vkl
 {
 	FramebufferInstance::FramebufferInstance(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name),
 		_textures(ci.targets),
 		_depth(ci.depth),
 		_render_pass(ci.render_pass)
@@ -33,6 +33,7 @@ namespace vkl
 
 	FramebufferInstance::~FramebufferInstance()
 	{
+		callDestructionCallbacks();
 		vkDestroyFramebuffer(_app->device(), _handle, nullptr);
 		_handle = VK_NULL_HANDLE;
 		_render_pass = nullptr;

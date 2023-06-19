@@ -29,13 +29,14 @@ namespace vkl
 	void ImageViewInstance::destroy()
 	{
 		assert(!!_view);
+		callDestructionCallbacks();
 		vkDestroyImageView(_app->device(), _view, nullptr);
 		_view = VK_NULL_HANDLE;
 		_image = nullptr;
 	}
 
 	ImageViewInstance::ImageViewInstance(CreateInfo const& ci):
-		VkObject(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name),
 		_image(ci.image),
 		_ci(ci.ci)
 	{
@@ -96,7 +97,7 @@ namespace vkl
 		_components(ci.components),
 		_range(ci.range.has_value() ? ci.range.value() : _image->defaultSubresourceRange())
 	{
-		_image->addInvalidationCallback(InvalidationCallback{
+		_image->addInvalidationCallback(Callback{
 			.callback = [&]()
 			{
 				this->destroyInstance();

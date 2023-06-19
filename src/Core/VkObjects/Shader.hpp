@@ -17,7 +17,7 @@ namespace vkl
 	
 	std::string readFileToString(std::filesystem::path const& path);
 
-	class ShaderInstance : public VkObject
+	class ShaderInstance : public AbstractInstance
 	{
 	protected:
 		

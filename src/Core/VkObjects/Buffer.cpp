@@ -4,7 +4,7 @@
 namespace vkl
 {
 	BufferInstance::BufferInstance(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
 		_aci(ci.aci),
 		_allocator(ci.allocator)
@@ -36,6 +36,8 @@ namespace vkl
 		{
 			unMap();
 		}
+
+		callDestructionCallbacks();
 
 		vmaDestroyBuffer(_allocator, _buffer, _alloc);
 		_buffer = VK_NULL_HANDLE;

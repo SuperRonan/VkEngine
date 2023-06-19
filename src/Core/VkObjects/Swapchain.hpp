@@ -8,7 +8,7 @@
 
 namespace vkl
 {
-	class SwapchainInstance : public VkObject
+	class SwapchainInstance : public AbstractInstance
 	{
 	protected:
 		VkSwapchainCreateInfoKHR _ci = {};
