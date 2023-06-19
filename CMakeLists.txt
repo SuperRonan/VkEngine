@@ -127,7 +127,6 @@ FILE(
 	src/Core/Commands/*
 	src/Core/Execution/*
 	src/Core/IO/*
-	src/Core/Modules/*
 	src/Core/Rendering/*
 	src/Core/VkObjects/*
 	src/Core/Utils/* 
