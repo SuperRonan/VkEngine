@@ -117,7 +117,7 @@ namespace vkl
 
 	void DebugRenderer::loadFont()
 	{
-		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Modules/16x16_linear.png");
+		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Rendering/16x16_linear.png");
 
 		//{
 		//	img::Image<img::io::byte> font_with_new_layout(16, 16 * 256);
