@@ -7,6 +7,7 @@
 #include <format>
 #include <Core/DynamicValue.hpp>
 #include <Core/Execution/UpdateContext.hpp>
+#include <atomic>
 
 namespace vkl
 {
@@ -36,12 +37,14 @@ namespace vkl
 
 	protected:
 
+		static std::atomic<size_t> _instance_counter;
+
 		VkImageCreateInfo _ci = {};
 		VmaAllocationCreateInfo _vma_ci = {};
 
 		VmaAllocation _alloc = nullptr;
 		VkImage _image = VK_NULL_HANDLE;
-
+		size_t _unique_id = 0;
 
 
 		void setVkNameIFP();
@@ -99,6 +102,11 @@ namespace vkl
 		constexpr bool ownership()const
 		{
 			return !!_alloc;
+		}
+
+		constexpr size_t uniqueId()const
+		{
+			return _unique_id;
 		}
 
 	};

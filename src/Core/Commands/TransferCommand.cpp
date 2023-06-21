@@ -179,6 +179,7 @@ namespace vkl
 	CopyBufferToImage::CopyBufferToImage(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
+		_range(ci.range),
 		_dst(ci.dst),
 		_regions(ci.regions)
 	{}
@@ -193,6 +194,7 @@ namespace vkl
 		InputSynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._buffer = cinfo.src,
+			._buffer_range = cinfo.range,
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
@@ -244,6 +246,7 @@ namespace vkl
 	{
 		const CopyInfo cinfo{
 			.src = _src,
+			.range = _range.value(),
 			.dst = _dst,
 			.regions = _regions,
 		};
@@ -256,6 +259,7 @@ namespace vkl
 		{
 			const CopyInfo cinfo{
 				.src = info.src ? info.src : _src,
+				.range = info.range.len ? info.range : _range.value(),
 				.dst = info.dst ? info.dst : _dst,
 				.regions = info.regions.empty() ? _regions : info.regions,
 			};
@@ -263,11 +267,13 @@ namespace vkl
 		};
 	}
 
-
 	CopyBuffer::CopyBuffer(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
-		_dst(ci.dst)
+		_src_offset(ci.src_offset),
+		_dst(ci.dst),
+		_dst_offset(ci.dst_offset),
+		_size(ci.size)
 	{}
 
 	void CopyBuffer::init()
@@ -280,6 +286,7 @@ namespace vkl
 		InputSynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._buffer = cinfo.src,
+			._buffer_range = Range_st{.begin = cinfo.src_offset, .len = cinfo.size},
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -288,6 +295,7 @@ namespace vkl
 		});
 		synch.addSynch(Resource{
 			._buffer = cinfo.dst,
+			._buffer_range = Range_st{.begin = cinfo.dst_offset, .len = cinfo.size},
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -297,11 +305,11 @@ namespace vkl
 		
 		synch.record();
 
-		// TODO from the ci
+		size_t size = cinfo.size; 
 		VkBufferCopy region = {
-			.srcOffset = 0,
-			.dstOffset = 0,
-			.size = std::min(cinfo.src->instance()->createInfo().size, cinfo.dst->instance()->createInfo().size),
+			.srcOffset = cinfo.src_offset,
+			.dstOffset = cinfo.dst_offset,
+			.size = size,
 		};
 
 		vkCmdCopyBuffer(*cmd,
@@ -314,21 +322,39 @@ namespace vkl
 
 	void CopyBuffer::execute(ExecutionContext& context)
 	{
-		const CopyInfo cinfo{
+		CopyInfo cinfo{
 			.src = _src,
+			.src_offset = _src_offset.value(),
 			.dst = _dst,
+			.dst_offset = _dst_offset.value(),
+			.size = _size.value(),
 		};
+		if (cinfo.size == 0)
+		{
+			size_t src_max_size = _src->instance()->createInfo().size - cinfo.src_offset;
+			size_t dst_max_size = _dst->instance()->createInfo().size - cinfo.dst_offset;
+			cinfo.size = std::min(src_max_size, dst_max_size);
+		}
 		execute(context, cinfo);
 	}
 
 	Executable CopyBuffer::with(CopyInfo const& cinfo)
 	{
-		return [&](ExecutionContext& context)
+		CopyInfo ci{
+			.src = cinfo.src ? cinfo.src : _src,
+			.src_offset = cinfo.src_offset ? cinfo.src_offset : _src_offset.value(),
+			.dst = cinfo.dst ? cinfo.dst : _dst,
+			.dst_offset = cinfo.dst_offset ? cinfo.dst_offset : _dst_offset.value(),
+			.size = cinfo.size ? cinfo.size : _size.value(),
+		};
+		if (cinfo.size == 0)
 		{
-			const CopyInfo ci{
-				.src = cinfo.src ? cinfo.src : _src,
-				.dst = cinfo.dst ? cinfo.dst : _dst,
-			};
+			size_t src_max_size = ci.src->instance()->createInfo().size - cinfo.src_offset;
+			size_t dst_max_size = ci.dst->instance()->createInfo().size - cinfo.dst_offset;
+			ci.size = std::min(src_max_size, dst_max_size);
+		}
+		return [this, ci](ExecutionContext& context)
+		{
 			execute(context, ci);
 		};
 	}
@@ -337,8 +363,7 @@ namespace vkl
 	FillBuffer::FillBuffer(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
 		_buffer(ci.buffer),
-		_begin(ci.begin),
-		_size(ci.size),
+		_range(ci.range),
 		_value(ci.value)
 	{
 
@@ -355,6 +380,7 @@ namespace vkl
 		InputSynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._buffer = fi.buffer,
+			._buffer_range = fi.range.value(),
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -364,7 +390,7 @@ namespace vkl
 		
 		synch.record();
 
-		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.begin.value(), fi.size.value(), fi.value.value());
+		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.range.value().begin, fi.range.value().len, fi.value.value());
 
 		synch.NotifyContext();
 	}
@@ -373,8 +399,7 @@ namespace vkl
 	{
 		const FillInfo fi{
 			.buffer = _buffer,
-			.begin = _begin, 
-			.size = _size,
+			.range = _range.value(),
 			.value = _value,
 		};
 		execute(context, fi);
@@ -386,8 +411,7 @@ namespace vkl
 		{
 			const FillInfo _fi{
 				.buffer = fi.buffer ? fi.buffer : _buffer,
-				.begin = fi.begin.value_or(_begin),
-				.size = fi.size.value_or(_size),
+				.range = fi.range.has_value() ? fi.range.value() : _range.value(),
 				.value = fi.value.value_or(_value),
 			};
 			execute(context, _fi);
@@ -466,7 +490,8 @@ namespace vkl
 	UpdateBuffer::UpdateBuffer(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
-		_dst(ci.dst)
+		_dst(ci.dst),
+		_offset(ci.offset)
 	{}
 
 	UpdateBuffer::~UpdateBuffer()
@@ -481,6 +506,7 @@ namespace vkl
 		InputSynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._buffer = ui.dst,
+			._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
 			._begin_state = ResourceState2{
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -488,7 +514,7 @@ namespace vkl
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
 		synch.record();
-		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset, ui.src.size(), ui.src.data());
+		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset.value(), ui.src.size(), ui.src.data());
 		synch.NotifyContext();
 	}
 
@@ -497,7 +523,7 @@ namespace vkl
 		UpdateInfo ui{
 			.src = _src,
 			.dst = _dst,
-			.offset = 0,
+			.offset = _offset.value(),
 		};
 		execute(ctx, ui);
 	}
@@ -508,7 +534,7 @@ namespace vkl
 		{
 			.src = ui.src.hasValue() ? ui.src : _src,
 			.dst = ui.dst ? ui.dst : _dst,
-			.offset = ui.offset,
+			.offset = ui.offset.has_value() ? ui.offset.value() : _offset.value(),
 		};
 		return [=](ExecutionContext& ctx)
 		{
@@ -723,6 +749,7 @@ namespace vkl
 		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst),
+		_offset(ci.offset),
 		_use_update_buffer_ifp(ci.use_update_buffer_ifp)
 	{}
 
@@ -743,6 +770,7 @@ namespace vkl
 		InputSynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._buffer = ui.dst,
+			._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(),},
 			._begin_state = {
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -752,7 +780,7 @@ namespace vkl
 		if (use_update)
 		{
 			synch.record();
-			vkCmdUpdateBuffer(cmd, *ui.dst->instance(), 0, ui.src.size(), ui.src.data());
+			vkCmdUpdateBuffer(cmd, *ui.dst->instance(), ui.offset.value(), ui.src.size(), ui.src.data());
 		}
 		else // Use Staging Buffer
 		{
@@ -769,6 +797,7 @@ namespace vkl
 				InputSynchronizationHelper synch2(ctx);
 				synch2.addSynch(Resource{
 					._buffer = sb->buffer(),
+					._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 					._begin_state = {
 						._access = VK_ACCESS_2_HOST_WRITE_BIT,
 						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
@@ -780,6 +809,7 @@ namespace vkl
 
 			synch.addSynch(Resource{
 				._buffer = sb->buffer(),
+				._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 				._begin_state = {
 					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -791,7 +821,7 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
 				.pNext = nullptr,
 				.srcOffset = 0,
-				.dstOffset = 0,
+				.dstOffset = ui.offset.value(),
 				.size = ui.src.size(),
 			};
 			
@@ -818,6 +848,7 @@ namespace vkl
 		UploadInfo ui{
 			.src = _src,
 			.dst = _dst,
+			.offset = _offset.value(),
 			.use_update_buffer_ifp = _use_update_buffer_ifp,
 		};
 		execute(ctx, ui);
@@ -828,6 +859,7 @@ namespace vkl
 		UploadInfo _ui{
 			.src = ui.src.hasValue() ? ui.src : _src,
 			.dst = ui.dst ? ui.dst : _dst,
+			.offset = ui.offset.has_value() ? ui.offset.value() : _offset.value(),
 			.use_update_buffer_ifp = ui.use_update_buffer_ifp.value_or(_use_update_buffer_ifp),
 		};
 		return [=](ExecutionContext & ctx) {
@@ -871,6 +903,7 @@ namespace vkl
 				InputSynchronizationHelper synch2(ctx);
 				synch2.addSynch(Resource{
 					._buffer = sb->buffer(),
+					._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 					._begin_state = {
 						._access = VK_ACCESS_2_HOST_WRITE_BIT,
 						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
@@ -882,6 +915,7 @@ namespace vkl
 
 			synch.addSynch(Resource{
 				._buffer = sb->buffer(),
+				._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 				._begin_state = {
 					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,

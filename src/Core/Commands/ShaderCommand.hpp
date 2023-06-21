@@ -171,11 +171,8 @@ namespace vkl
 	class DescriptorSetsInstance : public AbstractInstance
 	{
 	protected:
-		struct SetRange
-		{
-			uint32_t begin = 0;
-			uint32_t len = 0;
-		};
+		
+		using SetRange = Range32;
 
 		std::shared_ptr<ProgramInstance> _prog;
 		std::vector<ResourceBinding> _bindings;

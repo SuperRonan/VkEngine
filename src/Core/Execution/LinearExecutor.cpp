@@ -14,6 +14,7 @@ namespace vkl
 			.name = name() + ".StagingPool",
 			.allocator = application()->allocator(),
 			.exec = this,
+			.rst = &_resources_state,
 		}),
 		_context(ExecutionContext::CI{
 			.rst = &_resources_state,
@@ -39,6 +40,29 @@ namespace vkl
 			ImGui_ImplVulkan_Shutdown();
 			//ImGui_ImplVulkan_DestroyDeviceObjects();
 		}
+		
+
+
+		if (_window->swapchain()->instance())
+		{
+			_window->swapchain()->instance()->removeDestructionCallbacks(this);
+		}
+
+		for (auto& image_view : _registered_images)
+		{
+			if (image_view->instance())
+			{
+				image_view->instance()->removeDestructionCallbacks(this);
+			}
+		}
+
+		for (auto& buffer : _registered_buffers)
+		{
+			if (buffer->instance())
+			{
+				buffer->instance()->removeDestructionCallbacks(this);
+			}
+		}
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
@@ -63,12 +87,6 @@ namespace vkl
 		if (it != _registered_buffers.end())
 		{
 			_registered_buffers.erase(it);
-
-		}
-		if (buffer->instance())
-		{
-			VkBuffer b = *buffer->instance();
-			_resources_state._buffer_states.erase(b);
 		}
 	}
 
@@ -123,30 +141,35 @@ namespace vkl
 
 		if (_window->updateResources(update_context))
 		{
-			// TODO un register swapchain images
+			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
+			for (auto& view : swapchain->views())
+			{
+				_resources_state.registerImage(view->image()->instance().get());
+			}
+			swapchain->addDestructionCallback(Callback{
+				.callback = [this, swapchain]() {
+					for (auto & view : swapchain->views())
+					{
+						_resources_state.releaseImage(view->image()->instance().get());
+					}
+				},
+				.id = this,
+			});
 		}
 
 		for (auto& image_view : _registered_images)
 		{
+			// The invalidation callback should be for the image, not the view...
+			// It might create some bugs later if we have certain cases of overlapping views on the same image
 			const bool invalidated = image_view->updateResource(update_context);
 			if (invalidated)
 			{
-				const ImageRange ir{
-					.image = *image_view->image()->instance(),
-					.range = image_view->instance()->createInfo().subresourceRange,
-				};
-				const ResourceState2 state{
-					._access = VK_ACCESS_2_NONE_KHR,
-					._layout = image_view->image()->instance()->createInfo().initialLayout,
-					._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-				};
-				_resources_state._image_states[ir] = state;
+				ImageInstance * img = image_view->image()->instance().get();
+				_resources_state.registerImage(img);
 
-				image_view->removeInvalidationCallbacks(this);
-
-				image_view->addInvalidationCallback(Callback{
-					.callback = [&]() {
-						_resources_state._image_states.erase(ir);
+				image_view->instance()->addDestructionCallback(Callback{
+					.callback = [this, img]() {
+						_resources_state.releaseImage(img);
 					},
 					.id = this,
 				});
@@ -158,21 +181,16 @@ namespace vkl
 			const bool invalidated = buffer->updateResource(update_context);
 			if (invalidated)
 			{
-				const ResourceState2 state{
-					._access = VK_ACCESS_2_NONE_KHR,
-					._stage = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
-				};
-				const VkBuffer b = *buffer->instance();
-				_resources_state._buffer_states[b] = state;
+				BufferInstance * b = buffer->instance().get();
+				_resources_state.registerBuffer(b);
 
-				buffer->removeInvalidationCallbacks(this);
-
-				buffer->addInvalidationCallback(Callback{
-					.callback = [&]() {
-						_resources_state._buffer_states.erase(b);
+				buffer->instance()->addDestructionCallback(Callback{
+					.callback = [this, b]() {
+						_resources_state.releaseBuffer(b);
 					},
 					.id = this,
-					});
+				});
+
 			}
 		}
 
@@ -190,6 +208,12 @@ namespace vkl
 	void LinearExecutor::beginFrame()
 	{
 		++_frame_index;
+
+		if ((_frame_index % 1024) == 0)
+		{
+			
+		}
+
 		//vkDeviceWaitIdle(device());
 		std::shared_ptr frame_semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore");
 		_context.keppAlive(frame_semaphore);

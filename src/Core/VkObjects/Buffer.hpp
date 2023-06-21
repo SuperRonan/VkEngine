@@ -5,6 +5,7 @@
 #include <Core/Utils/stl_extension.hpp>
 #include "AbstractInstance.hpp"
 #include <Core/Execution/UpdateContext.hpp>
+#include <atomic>
 
 #ifndef VMA_NULL
 #define VMA_NULL nullptr
@@ -16,9 +17,13 @@ namespace vkl
 	{
 	protected:
 
+		static std::atomic<size_t> _instance_counter;
+
 		VkBufferCreateInfo _ci;
 		VmaAllocationCreateInfo  _aci;
+		// The VkBuffer handle is not unique (it can be the same as one used before when recreating the instance)
 		VkBuffer _buffer = VK_NULL_HANDLE;
+		size_t _unique_id = 0;
 		VmaAllocator _allocator = VMA_NULL;
 		VmaAllocation _alloc = VMA_NULL;
 
@@ -101,6 +106,32 @@ namespace vkl
 			return _allocator;
 		}
 
+		constexpr size_t uniqueId()const
+		{
+			return _unique_id;
+		}
+
+		using Range = Range_st;
+
+		struct ResourceKey
+		{
+			size_t id = 0;
+			Range range;
+		};
+
+		constexpr ResourceKey getResourceKey(Range const& r)const
+		{
+			return ResourceKey{
+				.id = _unique_id,
+				.range = r,
+			};
+		}
+
+		constexpr ResourceKey getResourceKey() const
+		{
+			return getResourceKey(Range{.begin = 0, .len = _ci.size, });
+		}
+
 	};
 
 	class Buffer : public InstanceHolder<BufferInstance>
@@ -136,6 +167,8 @@ namespace vkl
 
 	public:
 
+		using Range = typename BufferInstance::Range;
+
 		Buffer(CreateInfo const& ci);
 
 		Buffer(VkApplication * app=nullptr) noexcept:
@@ -159,6 +192,16 @@ namespace vkl
 			return _allocator;
 		}
 
+		DynamicValue<Range> fullRange() const
+		{
+			return [this](){
+				return Range{
+					.begin = 0, 
+					.len = size().value(),
+				};
+			};
+		}
+
 		void createInstance();
 
 		bool updateResource(UpdateContext & ctx);
@@ -166,5 +209,19 @@ namespace vkl
 		//StagingPool::StagingBuffer * copyToStaging(void* data, size_t size = 0);
 
 		//void recordCopyStagingToBuffer(VkCommandBuffer cmd, StagingPool::StagingBuffer * sb);
+	};
+}
+
+
+namespace std
+{
+	template<>
+	struct hash<vkl::Buffer::Range>
+	{
+		size_t operator()(vkl::Buffer::Range const& r) const noexcept
+		{
+			hash<size_t> h;
+			return h(h(r.begin) xor h(r.len));
+		}
 	};
 }

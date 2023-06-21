@@ -9,11 +9,11 @@ namespace vkl
 		const ResourceState2 prev = [&]() {
 			if (r.isImage())
 			{
-				return _ctx.getImageState(r._image);
+				return _ctx.resources().getImageState(r._image->instance().get());
 			}
 			else if (r.isBuffer())
 			{
-				return _ctx.getBufferState(r._buffer);
+				return _ctx.resources().getBufferState(r._buffer->instance()->getResourceKey(r._buffer_range.value()));
 			}
 			else
 			{
@@ -90,12 +90,12 @@ namespace vkl
 			ResourceState2 const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
-				_ctx.setBufferState(r._buffer, s);
+				_ctx.resources().setBufferState(r._buffer->instance()->getResourceKey(r._buffer_range.value()), s);
 				_ctx.keppAlive(r._buffer->instance());
 			}
 			else if (r.isImage())
 			{
-				_ctx.setImageState(r._image, s);
+				_ctx.resources().setImageState(r._image->instance().get(), s);
 				_ctx.keppAlive(r._image->instance());
 			}
 			else

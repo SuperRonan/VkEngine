@@ -2,6 +2,8 @@
 
 namespace vkl
 {
+	std::atomic<size_t> ImageInstance::_instance_counter = 0;
+
 	void ImageInstance::setVkNameIFP()
 	{
 		if (!name().empty())
@@ -44,7 +46,8 @@ namespace vkl
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
-		_vma_ci(ci.aci)
+		_vma_ci(ci.aci),
+		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
 		create();
 	}
@@ -52,7 +55,8 @@ namespace vkl
 	ImageInstance::ImageInstance(AssociateInfo const& ai) :
 		AbstractInstance(ai.app, ai.name),
 		_ci(ai.ci),
-		_image(ai.image)
+		_image(ai.image),
+		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
 
 	}

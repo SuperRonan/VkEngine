@@ -3,10 +3,14 @@
 
 namespace vkl
 {
+	std::atomic<size_t> BufferInstance::_instance_counter = 0;
+
+
 	BufferInstance::BufferInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
 		_aci(ci.aci),
+		_unique_id(std::atomic_fetch_add(&_instance_counter, 1)),
 		_allocator(ci.allocator)
 	{
 		create();

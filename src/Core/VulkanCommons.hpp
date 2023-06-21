@@ -32,6 +32,23 @@ namespace vkl
 		VkObject* id = nullptr;
 	};
 
+	template <class UInt>
+	struct Range
+	{
+		UInt begin = 0;
+		UInt len = 0;
+
+		template <class Q>
+		constexpr bool operator==(Range<Q> const& o) const
+		{
+			return begin == o.begin && len == o.len;
+		}
+	};
+
+	using Range32 = Range<uint32_t>;
+	using Range64 = Range<uint64_t>;
+	using Range_st = Range<size_t>;
+
 
 	static constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	static constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -308,6 +325,33 @@ namespace vkl
 		return res;
 	}
 
+	constexpr VkImageAspectFlags getImageAspectFromFormat(VkFormat f)
+	{
+		if (f >= VK_FORMAT_R4G4_UNORM_PACK8 && f <= VK_FORMAT_E5B9G9R9_UFLOAT_PACK32)
+		{
+			return VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+		else if (f >= VK_FORMAT_D16_UNORM && f <= VK_FORMAT_D32_SFLOAT)
+		{
+			return VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+		else if (f == VK_FORMAT_S8_UINT)
+		{
+			return VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		else if (f >= VK_FORMAT_D16_UNORM_S8_UINT && f <= VK_FORMAT_D32_SFLOAT_S8_UINT)
+		{
+			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+		}
+		else
+		{
+			// TODO compressed, packed and multiplanar formats
+			assert(false);
+			// Probably a color aspect though
+			return VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+	}
+
 	template <class Op>
 	void VkBool32ArrayOp(VkBool32 *res, const VkBool32* a, const VkBool32 * b, size_t n, Op const& op)
 	{
@@ -359,34 +403,7 @@ namespace vkl
 
 	namespace vk_operators
 	{
-		constexpr bool operator==(VkImageSubresourceRange const& a, VkImageSubresourceRange const& b)
-		{
-			return (a.aspectMask == b.aspectMask)
-				&& (a.baseArrayLayer == b.baseArrayLayer)
-				&& (a.baseMipLevel == b.baseMipLevel)
-				&& (a.layerCount == b.layerCount)
-				&& (a.levelCount == b.levelCount);
-		}
-
-		constexpr bool operator==(VkExtent3D const& a, VkExtent3D const& b)
-		{
-			return (a.width == b.width) && (a.height == b.height) && (a.depth == b.depth);
-		}
-
-		constexpr bool operator!=(VkExtent3D const& a, VkExtent3D const& b)
-		{
-			return !(a == b);
-		}
-
-		constexpr bool operator==(VkExtent2D const& a, VkExtent2D const& b)
-		{
-			return (a.width == b.width) && (a.height == b.height);
-		}
-
-		constexpr bool operator!=(VkExtent2D const& a, VkExtent2D const& b)
-		{
-			return !(a == b);
-		}
+		
 	}
 
 	class AnyPOD
@@ -599,4 +616,34 @@ namespace vkl
 			return _storage.hasValue();
 		}
 	};
+}
+
+
+constexpr bool operator==(VkImageSubresourceRange const& a, VkImageSubresourceRange const& b)
+{
+	return (a.aspectMask == b.aspectMask)
+		&& (a.baseArrayLayer == b.baseArrayLayer)
+		&& (a.baseMipLevel == b.baseMipLevel)
+		&& (a.layerCount == b.layerCount)
+		&& (a.levelCount == b.levelCount);
+}
+
+constexpr bool operator==(VkExtent3D const& a, VkExtent3D const& b)
+{
+	return (a.width == b.width) && (a.height == b.height) && (a.depth == b.depth);
+}
+
+constexpr bool operator!=(VkExtent3D const& a, VkExtent3D const& b)
+{
+	return !(a == b);
+}
+
+constexpr bool operator==(VkExtent2D const& a, VkExtent2D const& b)
+{
+	return (a.width == b.width) && (a.height == b.height);
+}
+
+constexpr bool operator!=(VkExtent2D const& a, VkExtent2D const& b)
+{
+	return !(a == b);
 }

@@ -8,6 +8,15 @@ namespace vkl
 		_set(desc.set),
 		_name(desc.name)
 	{
+		if (!desc.buffer_range.hasValue())
+		{
+			_resource._buffer_range = desc.buffer->fullRange();
+		}
+		else
+		{
+			_resource._buffer_range = desc.buffer_range;
+		}
+		
 		if (!!desc.sampler)
 			_sampler = desc.sampler;
 	}

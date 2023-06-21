@@ -11,6 +11,10 @@ namespace vkl
 	class SwapchainInstance : public AbstractInstance
 	{
 	protected:
+		
+		static std::atomic<size_t> _total_instance_counter;
+		static std::atomic<size_t> _alive_instance_counter;
+
 		VkSwapchainCreateInfoKHR _ci = {};
 
 		std::shared_ptr<Surface> _surface = nullptr;
@@ -19,6 +23,7 @@ namespace vkl
 		std::vector<std::shared_ptr<ImageView>> _views;
 		
 		VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+		size_t _unique_id = 0;
 
 		void create();
 

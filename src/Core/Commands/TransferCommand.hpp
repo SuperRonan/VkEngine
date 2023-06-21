@@ -112,6 +112,7 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<Buffer> _src = nullptr;
+		DynamicValue<Range_st> _range = {};
 		std::shared_ptr<ImageView> _dst = nullptr;
 		std::vector<VkBufferImageCopy> _regions = {};
 
@@ -122,6 +123,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Buffer> src = nullptr;
+			DynamicValue<Range_st> range = Range_st{0, 0};
 			std::shared_ptr<ImageView> dst = nullptr;
 			std::vector<VkBufferImageCopy> regions = {};
 		};
@@ -130,6 +132,7 @@ namespace vkl
 		struct CopyInfo
 		{
 			std::shared_ptr<Buffer> src = nullptr;
+			Range_st range;
 			std::shared_ptr<ImageView> dst = nullptr;
 			std::vector<VkBufferImageCopy> regions = {};
 		};
@@ -154,8 +157,11 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<Buffer> _src;
-		std::shared_ptr<Buffer> _dst;
+		std::shared_ptr<Buffer> _src = nullptr;
+		DynamicValue<size_t> _src_offset = {};
+		std::shared_ptr<Buffer> _dst = nullptr;
+		DynamicValue<size_t> _dst_offset = {};
+		DynamicValue<size_t> _size = {};
 
 	public:
 
@@ -164,7 +170,10 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Buffer> src = nullptr;
+			DynamicValue<size_t> src_offset = 0;
 			std::shared_ptr<Buffer> dst = nullptr;
+			DynamicValue<size_t> dst_offset = 0;
+			DynamicValue<size_t> size = 0; // 0 means VK_WHOLE_SIZE
 			// TODO copy range
 		};
 		using CI = CreateInfo;
@@ -172,7 +181,10 @@ namespace vkl
 		struct CopyInfo
 		{
 			std::shared_ptr<Buffer> src = nullptr;
+			size_t src_offset = 0;
 			std::shared_ptr<Buffer> dst = nullptr;
+			size_t dst_offset = 0;
+			size_t size = 0;
 		};
 
 		CopyBuffer(CreateInfo const& ci);
@@ -196,9 +208,7 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<Buffer> _buffer = nullptr;
-
-		VkDeviceSize _begin = 0;
-		VkDeviceSize _size = VK_WHOLE_SIZE;
+		DynamicValue<Range_st> _range = {};
 		uint32_t _value = 0u;
 
 	public:
@@ -208,8 +218,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Buffer> buffer = nullptr;
-			VkDeviceSize begin = 0;
-			VkDeviceSize size = VK_WHOLE_SIZE;
+			DynamicValue<Range_st> range = Range_st{.begin = 0, .len = VK_WHOLE_SIZE};
 			uint32_t value = 0;
 		};
 		using CI = CreateInfo;
@@ -217,8 +226,7 @@ namespace vkl
 		struct FillInfo
 		{
 			std::shared_ptr<Buffer> buffer = nullptr;
-			std::optional<VkDeviceSize> begin = {};
-			std::optional<VkDeviceSize> size = {};
+			std::optional<Range_st> range = {};
 			std::optional<uint32_t> value = {};
 		};
 
@@ -284,7 +292,7 @@ namespace vkl
 
 		ObjectView _src;
 		std::shared_ptr<Buffer> _dst;
-
+		DynamicValue<size_t> _offset;
 	public:
 
 		struct CreateInfo
@@ -293,6 +301,7 @@ namespace vkl
 			std::string name = {};
 			ObjectView src;
 			std::shared_ptr<Buffer> dst = nullptr;
+			DynamicValue<size_t> offset = 0;
 		};
 		using CI = CreateInfo;
 
@@ -304,7 +313,7 @@ namespace vkl
 		{
 			ObjectView src;
 			std::shared_ptr<Buffer> dst = nullptr;
-			VkDeviceSize offset = 0;
+			std::optional<size_t> offset = {};
 		};
 		using UI = UpdateInfo;
 
@@ -368,6 +377,7 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<Buffer> _dst = nullptr;
+		DynamicValue<size_t> _offset = {};
 		ObjectView _src;
 
 		bool _use_update_buffer_ifp = false;
@@ -380,6 +390,7 @@ namespace vkl
 			std::string name = {};
 			ObjectView src = {};
 			std::shared_ptr<Buffer> dst = nullptr;
+			DynamicValue<size_t> offset = 0;
 			bool use_update_buffer_ifp = false;
 		};
 		using CI = CreateInfo;
@@ -392,6 +403,7 @@ namespace vkl
 		{
 			ObjectView src = {};
 			std::shared_ptr<Buffer> dst = nullptr;
+			std::optional<size_t> offset = {};
 			std::optional<bool> use_update_buffer_ifp = {};
 		};
 		using UI = UploadInfo;

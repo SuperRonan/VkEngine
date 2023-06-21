@@ -4,6 +4,9 @@
 
 namespace vkl
 {
+	std::atomic<size_t> SwapchainInstance::_total_instance_counter = 0;
+	std::atomic<size_t> SwapchainInstance::_alive_instance_counter = 0;
+
 	void SwapchainInstance::create()
 	{
 		assert(_swapchain == VK_NULL_HANDLE);
@@ -30,7 +33,7 @@ namespace vkl
 					.imageType = VK_IMAGE_TYPE_2D, // Sure about that?
 					.format = _ci.imageFormat,
 					.extent = extend(_ci.imageExtent, 1),
-					.mipLevels = 0,
+					.mipLevels = 1,
 					.arrayLayers = _ci.imageArrayLayers, // What if not 1?
 					.samples = VK_SAMPLE_COUNT_1_BIT, // Sure about that?
 					.tiling = VK_IMAGE_TILING_MAX_ENUM, // Don't know
@@ -68,9 +71,9 @@ namespace vkl
 	{
 		assert(_swapchain != VK_NULL_HANDLE);
 		
+		callDestructionCallbacks();
 		_views.clear();
 		_images.clear();
-		callDestructionCallbacks();
 		vkDestroySwapchainKHR(device(), _swapchain, nullptr);
 		_swapchain = VK_NULL_HANDLE;
 	}
@@ -93,8 +96,10 @@ namespace vkl
 	SwapchainInstance::SwapchainInstance(CreateInfo const& ci):
 		AbstractInstance(ci.app, std::move(ci.name)),
 		_ci(ci.ci),
-		_surface(ci.surface)
+		_surface(ci.surface),
+		_unique_id(std::atomic_fetch_add(&_total_instance_counter, 1))
 	{
+		std::atomic_fetch_add(&_alive_instance_counter, 1);
 		create();
 	}
 
@@ -104,6 +109,7 @@ namespace vkl
 		{
 			destroy();
 		}
+		std::atomic_fetch_sub(&_alive_instance_counter, 1);
 	}
 
 	void Swapchain::createInstance()

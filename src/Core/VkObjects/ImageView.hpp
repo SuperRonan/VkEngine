@@ -21,12 +21,16 @@ namespace vkl
 		using CI = CreateInfo;
 
 	protected:
+
+		static std::atomic<size_t> _instance_counter;
 		
 		std::shared_ptr<ImageInstance> _image = nullptr;
 
 		VkImageViewCreateInfo _ci = {};
 
 		VkImageView _view = VK_NULL_HANDLE;
+
+		size_t _unique_id = 0;
 
 		void create();
 
@@ -72,6 +76,25 @@ namespace vkl
 		constexpr const VkImageViewCreateInfo& createInfo()const
 		{
 			return _ci;
+		}
+
+		constexpr size_t uniqueId() const
+		{
+			return _unique_id;
+		}
+
+		struct ResourceKey
+		{
+			size_t id = 0;
+			VkImageSubresourceRange range = {};
+		};
+
+		constexpr ResourceKey getResourceKey() const
+		{
+			return ResourceKey{
+				.id = _image->uniqueId(),
+				.range = _ci.subresourceRange,
+			};
 		}
 		 
 	};

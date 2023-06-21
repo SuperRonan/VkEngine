@@ -2,7 +2,8 @@
 
 namespace vkl
 {
-
+	std::atomic<size_t> ImageViewInstance::_instance_counter = 0;
+	
 	void ImageViewInstance::create()
 	{
 		_ci.image = *_image;
@@ -38,7 +39,8 @@ namespace vkl
 	ImageViewInstance::ImageViewInstance(CreateInfo const& ci):
 		AbstractInstance(ci.app, ci.name),
 		_image(ci.image),
-		_ci(ci.ci)
+		_ci(ci.ci),
+		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
 		create();
 	}
