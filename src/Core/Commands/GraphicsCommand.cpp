@@ -5,6 +5,7 @@ namespace vkl
 	GraphicsCommand::GraphicsCommand(CreateInfo const& ci) :
 		ShaderCommand(ci.app, ci.name, ci.bindings),
 		_topology(ci.topology),
+		_vertex_input_desc(ci.vertex_input_description),
 		_attachements(ci.targets),
 		_depth(ci.depth_buffer),
 		_write_depth(ci.write_depth),
@@ -153,12 +154,12 @@ namespace vkl
 		}
 	}
 
-	void GraphicsCommand::createPipeline(VertexInputDescription const& vid)
+	void GraphicsCommand::createPipeline()
 	{
 		Pipeline::GraphicsCreateInfo gci;
 		gci.app = application();
 		gci.name = name() + ".Pipeline";
-		gci.vertex_input = vid;
+		gci.vertex_input = _vertex_input_desc;
 		gci.input_assembly = Pipeline::InputAssemblyDefault(_topology);
 		gci.rasterization = Pipeline::RasterizationDefault(VK_CULL_MODE_BACK_BIT);
 		
@@ -280,6 +281,7 @@ namespace vkl
 			.app = ci.app,
 			.name = ci.name,
 			.topology = ci.topology,
+			.vertex_input_description = ci.vertex_input_desc,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
@@ -295,22 +297,11 @@ namespace vkl
 			.definitions = ci.definitions 
 		}),
 		_draw_count(ci.draw_count),
-		_fetch_vertex_attrib(ci.fetch_vertex_attributes),
 		_meshes(ci.meshes)
 	{
 		createProgramIFN();
 		createGraphicsResources();
-		VertexInputDescription vid = [&]() -> VertexInputDescription {
-			if (_fetch_vertex_attrib == 0)
-				return Pipeline::VertexInputWithoutVertices();
-			if (_fetch_vertex_attrib == 1);
-			if (_fetch_vertex_attrib == 2);
-			if (_fetch_vertex_attrib == 3)
-				return Mesh::vertexInputDesc();
-			assert(false);
-			return VertexInputDescription{ };
-		}();
-		createPipeline(vid);
+		createPipeline();
 
 		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
 			.app = application(),
@@ -379,9 +370,8 @@ namespace vkl
 		{
 			for (auto& mesh : di.meshes)
 			{
-				mesh.mesh->recordBind(cmd);
 				recordPushConstant(cmd, context, mesh.pc);
-				vkCmdDrawIndexed(cmd, (uint32_t)mesh.mesh->indicesLength(), 1, 0, 0, 0);
+				mesh.mesh->recordBindAndDraw(cmd);
 			}
 		}
 	}

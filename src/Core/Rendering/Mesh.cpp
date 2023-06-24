@@ -4,7 +4,13 @@
 
 namespace vkl
 {
-	VertexInputDescription Mesh::vertexInputDesc()
+	
+	Mesh::Mesh(CreateInfo const& ci):
+		VkObject(ci.app, ci.name)
+	{}
+
+
+	VertexInputDescription RigidMesh::vertexInputDesc()
 	{
 		VertexInputDescription res;
 		res.binding = {
@@ -45,76 +51,158 @@ namespace vkl
 		return res;
 	}
 
-	bool Mesh::DeviceData::loaded()const
-	{
-		return !!mesh_buffer;
-	}
-
-	bool Mesh::checkIntegrity() const
+	bool RigidMesh::checkIntegrity() const
 	{
 		bool res = true;
-		for (size_t i=0; i<_host.indices.size(); ++i)
+		for (size_t i=0; i<_host.indicesSize(); ++i)
 		{
-			res &= (_host.indices[i] < _host.vertices.size());
+			res &= (_host.getIndex(i) < _host.vertices.size());
 			assert(res);
 		}
 		return res;
 	}
 
-	Mesh::Mesh(VkApplication* app):
-		VkObject(app)
-	{}
-
-	Mesh::Mesh(VkApplication* app, std::vector<Vertex> const& vertices, std::vector<uint> const& indices) noexcept:
-		VkObject(app)
+	RigidMesh::RigidMesh(CreateInfo const& ci) :
+		Mesh(Mesh::CreateInfo{
+			.app = ci.app, 
+			.name = ci.name,
+		})
 	{
-		_host = {
-			.loaded = true,
-			.vertices = vertices,
-			.indices = indices,
-		};
-		
-		if (app->enableValidation()) checkIntegrity();
-	}
+		_host.vertices = ci.vertices;
+		_host.indices32 = ci.indices;
+		_host.loaded = true;
 
-	Mesh::Mesh(VkApplication* app, std::vector<Vertex> && vertices, std::vector<uint> && indices) noexcept:
-		VkObject(app)
-	{
-		_host = {
-			.loaded = true,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-		};
+		compressIndices();
 
-		if (app->enableValidation()) checkIntegrity();
-	}
-
-	Mesh::~Mesh() 
-	{
-		if (_device.loaded())
+		if (ci.auto_compute_tangents)
 		{
-			cleanDeviceBuffer();
+			computeTangents();
+		}
+	}
+	
+
+	RigidMesh::~RigidMesh()
+	{
+		
+	}
+
+	void RigidMesh::compressIndices()
+	{
+		const bool index_uint8_t_available = false;// TODO activate the feature
+		const size_t vs = _host.vertices.size();
+		const size_t is = _host.indicesSize();
+		const bool can8 = vs <= UINT8_MAX && index_uint8_t_available;
+		const bool can16 = vs <= UINT16_MAX;
+		const bool can32 = vs <= UINT32_MAX;
+		VkIndexType & idxt = _host.index_type;
+		if (can8)
+		{
+			if (idxt == VK_INDEX_TYPE_UINT16)
+			{
+				std::vector<u16> tmp = std::move(_host.indices16);
+				_host.indices8 = std::vector<u8>(is);
+				std::copy(tmp.begin(), tmp.end(), _host.indices8.begin());
+				_device.up_to_date = false;
+			}
+			else if (idxt == VK_INDEX_TYPE_UINT32)
+			{
+				std::vector<u32> tmp = std::move(_host.indices32);
+				_host.indices8 = std::vector<u8>(is);
+				std::copy(tmp.begin(), tmp.end(), _host.indices8.begin());
+				_device.up_to_date = false;
+			}
+			else
+			{
+				assert(idxt == VK_INDEX_TYPE_UINT8_EXT);
+			}
+			idxt = VK_INDEX_TYPE_UINT8_EXT;
+		}
+		else if (can16)
+		{
+			if (idxt == VK_INDEX_TYPE_UINT32)
+			{
+				std::vector<u32> tmp = std::move(_host.indices32);
+				_host.indices16 = std::vector<u16>(is);
+				std::copy(tmp.begin(), tmp.end(), _host.indices16.begin());
+				_device.up_to_date = false;
+			}
+			else
+			{
+				assert(idxt == VK_INDEX_TYPE_UINT16);
+			}
+			idxt = VK_INDEX_TYPE_UINT16;
+		}
+		else if (can32)
+		{
+			assert(idxt == VK_INDEX_TYPE_UINT32);
+		}
+		else
+		{
+			// Should not be here
+			assert(false);
 		}
 	}
 
-	void Mesh::merge(Mesh const& other) noexcept
+	void RigidMesh::decompressIndices()
 	{
-		size_t offset = _host.vertices.size();
-		size_t elem_size = sizeof(typename decltype(_host.vertices)::value_type);
-		_host.vertices.resize(offset + other._host.vertices.size());
-		std::copy(other._host.vertices.begin(), other._host.vertices.end(), _host.vertices.begin() + offset);
-		size_t n_indices = _host.indices.size();
-		_host.indices.resize(n_indices + other._host.indices.size());
-		std::iota(_host.indices.begin() + n_indices, _host.indices.end(), (uint)offset);
+		if (_host.index_type == VK_INDEX_TYPE_UINT8_EXT)
+		{
+			std::vector<u8> tmp = std::move(_host.indices8);
+			_host.indices32 = std::vector<u32>(tmp.size());
+			std::copy(tmp.begin(), tmp.end(), _host.indices32.begin());
+			_device.up_to_date = false;
+		}
+		else if (_host.index_type == VK_INDEX_TYPE_UINT16)
+		{
+			std::vector<u16> tmp = std::move(_host.indices16);
+			_host.indices32 = std::vector<u32>(tmp.size());
+			std::copy(tmp.begin(), tmp.end(), _host.indices32.begin());
+			_device.up_to_date = false;
+		}
+		else
+		{
+			assert(_host.index_type == VK_INDEX_TYPE_UINT32);
+		}
+		_host.index_type = VK_INDEX_TYPE_UINT32;
 	}
 
-	Mesh& Mesh::operator+=(Mesh const& other) noexcept
+	void RigidMesh::merge(RigidMesh const& other) noexcept
+	{
+		const size_t offset = _host.vertices.size();
+		_host.vertices.resize(offset + other._host.vertices.size());
+		std::copy(other._host.vertices.begin(), other._host.vertices.end(), _host.vertices.begin() + offset);
+		
+		const size_t old_size = _host.indicesSize();
+		const size_t new_size = old_size + other._host.indicesSize();
+		decompressIndices();
+		{
+			_host.indices32.resize(new_size);
+			switch (other._host.index_type)
+			{
+			case VK_INDEX_TYPE_UINT32:
+				for(size_t i = 0; i < other._host.indices32.size(); ++i)
+					_host.indices32[i + old_size] = other._host.indices32[i] + offset;
+			break;
+			case VK_INDEX_TYPE_UINT16:
+				for (size_t i = 0; i < other._host.indices16.size(); ++i)
+					_host.indices32[i + old_size] = other._host.indices16[i] + offset;
+			break;
+			case VK_INDEX_TYPE_UINT8_EXT:
+				for (size_t i = 0; i < other._host.indices8.size(); ++i)
+					_host.indices32[i + old_size] = other._host.indices8[i] + offset;
+			break;
+			}
+		}
+		compressIndices();
+	}
+
+	RigidMesh& RigidMesh::operator+=(RigidMesh const& other) noexcept
 	{
 		merge(other);
 		return *this;
 	}
 
-	void Mesh::transform(Matrix4 const& m)
+	void RigidMesh::transform(Matrix4 const& m)
 	{
 		const Matrix3 nm = glm::transpose(glm::inverse(glm::mat3(m)));
 		for (Vertex& vertex : _host.vertices)
@@ -123,18 +211,18 @@ namespace vkl
 		}
 	}
 
-	Mesh& Mesh::operator*=(Matrix4 const& m)
+	RigidMesh& RigidMesh::operator*=(Matrix4 const& m)
 	{
 		transform(m);
 		return *this;
 	}
 
-	void Mesh::computeTangents()
+	void RigidMesh::computeTangents()
 	{
 		using Float = float;
 		// https://marti.works/posts/post-calculating-tangents-for-your-mesh/post/
 		// https://learnopengl.com/Advanced-Lighting/Normal-Mapping
-		uint number_of_triangles = _host.indices.size() / 3;
+		uint number_of_triangles = _host.indicesSize() / 3;
 
 		struct Tan
 		{
@@ -147,9 +235,9 @@ namespace vkl
 
 		for (uint triangle_index = 0; triangle_index < number_of_triangles; ++triangle_index)
 		{
-			uint i0 = _host.indices[triangle_index * 3];
-			uint i1 = _host.indices[triangle_index * 3 + 1];
-			uint i2 = _host.indices[triangle_index * 3 + 2];
+			uint i0 = _host.getIndex(triangle_index * 3);
+			uint i1 = _host.getIndex(triangle_index * 3 + 1);
+			uint i2 = _host.getIndex(triangle_index * 3 + 2);
 
 			Vector3 pos0 = _host.vertices[i0].position;
 			Vector3 pos1 = _host.vertices[i1].position;
@@ -205,62 +293,88 @@ namespace vkl
 		}
 	}
 
-	void Mesh::flipFaces()
+	void RigidMesh::flipFaces()
 	{
-		const size_t N = _host.indices.size() / 3;
+		const size_t N = _host.indicesSize() / 3;
 		for (size_t t = 0; t < N; ++t)
 		{
-			std::swap(_host.indices[3 * t + 0], _host.indices[3 * t + 2]);
+			switch (_host.index_type)
+			{
+			case VK_INDEX_TYPE_UINT32:
+				std::swap(_host.indices32[3 * t + 0], _host.indices32[3 * t + 2]);
+				break;
+			case VK_INDEX_TYPE_UINT16:
+				std::swap(_host.indices16[3 * t + 0], _host.indices16[3 * t + 2]);
+				break;
+			case VK_INDEX_TYPE_UINT8_EXT:
+				std::swap(_host.indices8[3 * t + 0], _host.indices8[3 * t + 2]);
+				break;
+			}
 		}
 	}
 
-	void Mesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
+	void RigidMesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
 	{
 		assert(_host.loaded);
 		assert(!_device.loaded());
 
-		_device.vertices_size = _host.vertices.size() * sizeof(Vertex), _device.indices_size = _host.indices.size() * sizeof(uint);
-		_device.mesh_size = _device.vertices_size + _device.indices_size;
+		DeviceData::Header header{
+			.num_vertices = static_cast<uint32_t>(_host.vertices.size()),
+			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
+			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
+			.vertices_per_primitive = 3,
+		};
+
+		_device.header_size = sizeof(header);
+		_device.vertices_size = header.num_vertices * sizeof(Vertex);
+		_device.indices_size = _host.indexBufferSize();
+		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
 		
 		_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = _app,
 			.name = name() + ".mesh_buffer",
-			.size = _device.mesh_size,
+			.size = &_device.total_buffer_size,
 			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			.queues = queues,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 	}
 
-	//void Mesh::copyToDevice()
-	//{
-	//	assert(_device.loaded());
-	//	assert(_host.loaded);
-	//	StagingPool& sp = _app->stagingPool();
-	//	StagingPool::StagingBuffer* sb = sp.getStagingBuffer(_device.mesh_size);
-	//		std::memcpy(sb->data, _host.vertices.data(), _device.vertices_size);
-	//		std::memcpy((char *)sb->data + _device.vertices_size, _host.indices.data(), _device.indices_size);
-	//	sp.releaseStagingBuffer(sb);
-	//}
-
-	void Mesh::cleanDeviceBuffer()
-	{
-		assert(_device.loaded());
-		_device = DeviceData();
-	}
-
-	void Mesh::recordBind(VkCommandBuffer command_buffer, uint32_t first_binding)const
+	void RigidMesh::recordBindAndDraw(CommandBuffer& command_buffer)const
 	{
 		assert(_device.loaded());
 		VkBuffer vb = *_device.mesh_buffer->instance();
-		VkDeviceSize offset = 0;
-		vkCmdBindVertexBuffers(command_buffer, first_binding, 1, &vb, &offset);
-		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size, VK_INDEX_TYPE_UINT32);
+		VkDeviceSize offset = _device.header_size;
+		vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, &offset);
+		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, VK_INDEX_TYPE_UINT32);
+	}
+
+	Mesh::Status RigidMesh::getStatus() const
+	{
+		return Status{
+			.host_loaded = _host.loaded,
+			.device_loaded = _device.loaded(),
+			.device_up_to_date = _device.up_to_date,
+		};
+	}
+
+	bool RigidMesh::updateResources(UpdateContext& ctx)
+	{
+		bool res = false;
+		
+		if (!_device.loaded())
+		{
+			createDeviceBuffer({});
+		}
+		
+		res |= _device.mesh_buffer->updateResource(ctx);
+
+		return res;
 	}
 
 
-	std::shared_ptr<Mesh> Mesh::MakeCube(VkApplication * app, Vector3 center, bool face_normal, bool same_face)
+	std::shared_ptr<RigidMesh> RigidMesh::MakeCube(CubeMakeInfo const& cmi)
 	{
 		using Float = float;
 		const Float h = Float(0.5);
@@ -270,7 +384,9 @@ namespace vkl
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
-		if (face_normal)
+		const Vector3 center = cmi.center;
+
+		if (cmi.face_normal)
 		{
 			Vector3 X(1, 0, 0), Y(0, 1, 0), Z(0, 0, 1);
 			const auto sign = [](Float f) {return f > 0 ? Float(1) : (f < 0 ? Float(-1) : Float(0)); };
@@ -288,7 +404,7 @@ namespace vkl
 				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u2, v2 } });
 			};
 
-			if (same_face)
+			if (cmi.same_face)
 			{
 				addVertexes3(-h, h, -h,		0, 0, 0, 1, 1, 0); // x0
 				addVertexes3(h, h, -h,		1, 0, 1, 1, 0, 0); // x1
@@ -327,12 +443,17 @@ namespace vkl
 
 		}
 
-		std::shared_ptr<Mesh> res = std::make_shared<Mesh>(app, std::move(vertices), std::move(indices));
-		res->computeTangents();
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
+			.app = cmi.app, 
+			.name = cmi.name,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.auto_compute_tangents = true,
+		});
 		return res;
 	}
 
-	std::shared_ptr<Mesh> Mesh::MakeSphere(SphereMakeInfo const& smi)
+	std::shared_ptr<RigidMesh> RigidMesh::MakeSphere(SphereMakeInfo const& smi)
 	{
 		const uint theta_divisions = smi.theta_divisions;
 		const uint phi_divisions = smi.phi_divisions;
@@ -388,8 +509,13 @@ namespace vkl
 
 		}
 
-		std::shared_ptr<Mesh> res = std::make_shared<Mesh>(smi.app, std::move(vertices), std::move(indices));
-		res->computeTangents();
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
+			.app = smi.app,
+			.name = smi.name,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.auto_compute_tangents = true,
+		});
 		return res;
 	}
 }

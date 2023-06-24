@@ -30,4 +30,6 @@ namespace vkl
 		
 		static constexpr std::array<VkVertexInputAttributeDescription, 4> getAttributeDescription() noexcept;
 	};
+
+	
 }

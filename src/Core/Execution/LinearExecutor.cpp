@@ -92,7 +92,7 @@ namespace vkl
 
 	void LinearExecutor::declare(std::shared_ptr<Mesh> mesh)
 	{
-		declare(mesh->combinedBuffer());
+		_registered_meshes.emplace_back(mesh);
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
@@ -155,6 +155,11 @@ namespace vkl
 				},
 				.id = this,
 			});
+		}
+
+		for (auto& mesh : _registered_meshes)
+		{
+			const bool invalidated = mesh->updateResources(update_context);
 		}
 
 		for (auto& image_view : _registered_images)

@@ -34,6 +34,7 @@ namespace vkl
 		std::vector<std::shared_ptr<ImageView>> _registered_images = {};
 		std::vector<std::shared_ptr<Buffer>> _registered_buffers = {};
 		std::vector<std::shared_ptr<Sampler>> _registered_samplers = {};
+		std::vector<std::shared_ptr<Mesh>> _registered_meshes = {};
 
 		ExecutionContext _context;
 

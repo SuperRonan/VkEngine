@@ -20,18 +20,23 @@
     - [ ] MSAA
     - [ ] FragmentCommand
 - [ ] RenderPass-less rendering? 
-- [ ] Mesh loading
+- [ ] Mesh
+	- [ ] Mesh interface
+		- [ ] Rigid Mesh
+		- [ ] Animated Mesh with skeleton
+		- [ ] Terrain
+		- [ ] ??? 
 	- [ ] .obj loader
-- [ ] Simple mesh generation
-	- [ ] Tetrahedron
-	- [x] Box
-	- [x] Sphere
-	- [ ] Icosphere
-- [ ] Mesh renderer, Mesh representation
-	- [ ] Mesh attribs from reflection
-- [ ] Scene
-- [ ] Mesh compression?
+	- [ ] Simple mesh generation
+		- [ ] Platonic solids
+		- [x] Box
+		- [x] Sphere
+		- [ ] Icosphere
+	- [ ] Mesh renderer, Mesh representation
+		- [ ] Mesh attribs from reflection
+	- [ ] Mesh compression?
 	- [ ] Meshlets ? 
+- [ ] Scene
 - [ ] Mesh Shaders command
 - [ ] VkRayTracingKHR
 	- [ ] TLAS
@@ -46,9 +51,20 @@
 	- [ ] Separate list for .exe
 	- [x] Option to build .exe
 	- [ ] Correctly import Vulkan
+- [ ] Better ResourceStateTracker
+	- [x] Remake the interface
+	- [ ] Actually store the resource state in the resource rather than in a separate map?
+	- [ ] Correctly track potentially overlapping subresources
+- [ ] Re use descriptor sets
+	- [ ] set = 0: common set (debug, ...)
+	- [ ] set = 1: scene set
+	- [ ] set = 2: module set
+	- [ ] set = 3: shader set
+	- [ ] set = 4: push_descriptor set (shader invocation specific data)
 - [ ] Multi window mode (without ImGui)
 - [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
+
 - [ ] Find a better project name
 - [ ] Rework on thatlib
 

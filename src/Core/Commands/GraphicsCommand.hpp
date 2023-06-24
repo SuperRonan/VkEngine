@@ -9,6 +9,7 @@ namespace vkl
 	protected:
 
 		VkPrimitiveTopology _topology;
+		VertexInputDescription _vertex_input_desc;
 		std::shared_ptr<GraphicsProgram> _program;
 		std::vector<std::shared_ptr<ImageView>> _attachements = {};
 		std::shared_ptr<ImageView> _depth = nullptr;
@@ -28,7 +29,7 @@ namespace vkl
 
 		virtual void createGraphicsResources();
 
-		void createPipeline(VertexInputDescription const& vid);
+		void createPipeline();
 
 		virtual void declareGraphicsResources(InputSynchronizationHelper & synch);
 
@@ -39,6 +40,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VkPrimitiveTopology topology;
+			VertexInputDescription vertex_input_description;
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -83,8 +85,6 @@ namespace vkl
 
 		ShaderPaths _shaders;
 
-		int _fetch_vertex_attrib = 0;
-
 		std::vector<std::shared_ptr<Mesh>> _meshes;
 
 		DynamicValue<uint32_t> _draw_count = false;
@@ -99,7 +99,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			int fetch_vertex_attributes = 0;
+			VertexInputDescription vertex_input_desc = {};
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			DynamicValue<uint32_t> draw_count = {};
 			std::vector<std::shared_ptr<Mesh>> meshes = {};

@@ -153,7 +153,7 @@ namespace vkl
 				.depth = renderer.depth(),
 			});
 
-			std::shared_ptr<Mesh> mesh = Mesh::MakeSphere(Mesh::SMI{
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SMI{
 				.app = this,
 				.radius = 1,
 				//.theta_divisions = 180,
@@ -194,7 +194,7 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
 				.name = "Render",
-				.fetch_vertex_attributes = 3,
+				.vertex_input_desc = RigidMesh::vertexInputDesc(),
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 				.bindings = {
 					Binding{
@@ -291,16 +291,16 @@ namespace vkl
 
 					if (frame_index == 0)
 					{
-						exec(update_ubo->with(UpdateBuffer::UpdateInfo{
-							.src = ObjectView(mesh->vertices().data(), mesh->vertices().size() * sizeof(Vertex)),
-							.dst = mesh->combinedBuffer(),
-						}));
+						//exec(update_ubo->with(UpdateBuffer::UpdateInfo{
+						//	.src = ObjectView(mesh->vertices().data(), mesh->vertices().size() * sizeof(Vertex)),
+						//	.dst = mesh->combinedBuffer(),
+						//}));
 
-						exec(update_ubo->with(UpdateBuffer::UpdateInfo{
-							.src = ObjectView(mesh->indices().data(), mesh->indices().size() * sizeof(uint32_t)),
-							.dst = mesh->combinedBuffer(),
-							.offset = mesh->vertices().size() * sizeof(Vertex),
-						}));
+						//exec(update_ubo->with(UpdateBuffer::UpdateInfo{
+						//	.src = ObjectView(mesh->indices().data(), mesh->indices().size() * sizeof(uint32_t)),
+						//	.dst = mesh->combinedBuffer(),
+						//	.offset = mesh->vertices().size() * sizeof(Vertex),
+						//}));
 					}
 
 					{
