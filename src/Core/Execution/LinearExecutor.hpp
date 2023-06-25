@@ -98,6 +98,8 @@ namespace vkl
 
 		void present();
 
+		virtual void execute(Command & cmd) override final;
+
 		virtual void execute(std::shared_ptr<Command> cmd) override final;
 
 		virtual void execute(Executable const& executable) override final;

@@ -70,6 +70,7 @@ namespace vkl
 	{
 		_host.vertices = ci.vertices;
 		_host.indices32 = ci.indices;
+		_host.index_type = VK_INDEX_TYPE_UINT32;
 		_host.loaded = true;
 
 		compressIndices();
@@ -370,6 +371,42 @@ namespace vkl
 		
 		res |= _device.mesh_buffer->updateResource(ctx);
 
+		return res;
+	}
+
+	Mesh::ResourcesToUpload RigidMesh::getResourcesToUpload()
+	{
+		assert(_device.loaded());
+		ResourcesToUpload res;
+
+		std::vector<PositionedObjectView> sources(3);
+		
+		DeviceData::Header header{
+			.num_vertices = static_cast<uint32_t>(_host.vertices.size()),
+			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
+			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
+			.vertices_per_primitive = 3,
+		};
+
+		sources[0] = PositionedObjectView{
+			.obj = header,
+			.pos = 0,
+		};
+
+		sources[1] = PositionedObjectView{
+			.obj = _host.vertices,
+			.pos = _device.header_size,
+		};
+
+		sources[2] = PositionedObjectView{
+			.obj = _host.indicesView(),
+			.pos = _device.header_size + _device.vertices_size,
+		};
+
+		res.buffers.push_back(ResourcesToUpload::BufferUpload{
+			.sources = sources,
+			.dst = _device.mesh_buffer,
+		});
 		return res;
 	}
 

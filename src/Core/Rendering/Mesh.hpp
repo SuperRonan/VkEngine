@@ -65,6 +65,29 @@ namespace vkl
 
 		virtual bool updateResources(UpdateContext & ctx) = 0;
 
+		struct ResourcesToUpload
+		{
+			struct ImageUpload
+			{
+				ObjectView src;
+				std::shared_ptr<ImageView> dst;
+			};
+
+			std::vector<ImageUpload> images;
+
+			struct BufferUpload
+			{
+				std::vector<PositionedObjectView> sources;
+				std::shared_ptr<Buffer> dst;
+			};
+			
+			std::vector<BufferUpload> buffers;
+		};
+
+		virtual ResourcesToUpload getResourcesToUpload() = 0;
+
+		virtual void notifyDeviceDataIsUpToDate() = 0;
+
 	};
 
 	class RigidMesh : public Mesh
@@ -189,6 +212,11 @@ namespace vkl
 				}
 			}
 
+			ObjectView indicesView() const
+			{
+				return ObjectView(indicesData(), indexBufferSize());
+			}
+
 		} _host;
 
 		struct DeviceData
@@ -268,6 +296,13 @@ namespace vkl
 		}
 
 		virtual bool updateResources(UpdateContext & ctx) override;
+
+		virtual void notifyDeviceDataIsUpToDate() override
+		{
+			_device.up_to_date = true;
+		}
+
+		virtual ResourcesToUpload getResourcesToUpload() override;
 
 		static VertexInputDescription vertexInputDesc();
 

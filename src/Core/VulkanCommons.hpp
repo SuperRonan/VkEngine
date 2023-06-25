@@ -502,6 +502,13 @@ namespace vkl
 		{}
 
 		template <class T>
+		ObjectView(std::vector<T> const& v)
+		{
+			_data = v.data();
+			_size = v.size() * sizeof(T);
+		}
+
+		template <class T>
 		ObjectView(T const& t)
 		{
 			if constexpr (std::is_pointer<T>::value)
@@ -615,6 +622,13 @@ namespace vkl
 		{
 			return _storage.hasValue();
 		}
+	};
+
+
+	struct PositionedObjectView
+	{
+		ObjectView obj = {};
+		size_t pos = 0;
 	};
 }
 

@@ -291,16 +291,12 @@ namespace vkl
 
 					if (frame_index == 0)
 					{
-						//exec(update_ubo->with(UpdateBuffer::UpdateInfo{
-						//	.src = ObjectView(mesh->vertices().data(), mesh->vertices().size() * sizeof(Vertex)),
-						//	.dst = mesh->combinedBuffer(),
-						//}));
-
-						//exec(update_ubo->with(UpdateBuffer::UpdateInfo{
-						//	.src = ObjectView(mesh->indices().data(), mesh->indices().size() * sizeof(uint32_t)),
-						//	.dst = mesh->combinedBuffer(),
-						//	.offset = mesh->vertices().size() * sizeof(Vertex),
-						//}));
+						UploadMesh mesh_uploader(UploadMesh::CI{
+							.app = this,
+						});
+						exec(mesh_uploader(UploadMesh::UI{
+							.mesh = mesh,
+						}));
 					}
 
 					{

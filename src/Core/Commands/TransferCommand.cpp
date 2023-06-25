@@ -994,4 +994,73 @@ namespace vkl
 		};
 	}
 
+
+
+
+	UploadMesh::UploadMesh(CreateInfo const& ci) :
+		TransferCommand(ci.app, ci.name),
+		_mesh(ci.mesh)
+	{
+
+	}
+
+	void UploadMesh::execute(ExecutionContext& ctx, UploadInfo const& ui)
+	{
+		assert(!!ui.mesh);
+
+		Mesh::ResourcesToUpload resources = ui.mesh->getResourcesToUpload();
+
+		if (!resources.images.empty())
+		{
+			UploadImage uploader(UploadImage::CI{
+				.app = application(),
+				.name = name() + ".ImageUploader",
+			});
+
+			for (auto& image_upload : resources.images)
+			{
+				uploader.execute(ctx, UploadImage::UI{
+					.src = image_upload.src,
+					.dst = image_upload.dst,
+				});
+			}
+		}
+
+		if (!resources.buffers.empty())
+		{
+			UploadBuffer uploader(UploadBuffer::CI{
+				.app = application(),
+				.name = name() + ".BufferUploader",
+			});
+
+			for (auto& buffer_upload : resources.buffers)
+			{
+				uploader.execute(ctx, UploadBuffer::UI{
+					.sources = buffer_upload.sources,
+					.dst = buffer_upload.dst,
+				});
+			}
+		}
+
+		ui.mesh->notifyDeviceDataIsUpToDate();
+	}
+
+	void UploadMesh::execute(ExecutionContext& ctx)
+	{
+		UploadInfo ui{
+			.mesh = _mesh,
+		};
+		execute(ctx, ui);
+	}
+
+	Executable UploadMesh::with(UploadInfo const& ui)
+	{
+		const UploadInfo _ui{
+			.mesh = ui.mesh ? ui.mesh : _mesh,
+		};
+		return [this, _ui](ExecutionContext & ctx)
+		{
+			execute(ctx, _ui);
+		};
+	}
 }

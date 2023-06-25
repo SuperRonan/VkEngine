@@ -41,6 +41,8 @@ namespace vkl
 
 		virtual void updateResources() = 0;
 
+		virtual void execute(Command& cmd) = 0;
+
 		virtual void execute(std::shared_ptr<Command> cmd) = 0;
 
 		virtual void execute(Executable const& executable) = 0;

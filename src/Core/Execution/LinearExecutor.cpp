@@ -220,14 +220,14 @@ namespace vkl
 		}
 
 		//vkDeviceWaitIdle(device());
-		std::shared_ptr frame_semaphore = std::make_shared<Semaphore>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Semaphore");
+		std::shared_ptr frame_semaphore = std::make_shared<Semaphore>(_app, name() + ".BeginFrame_" + std::to_string(_frame_index) + ".Semaphore");
 		_context.keppAlive(frame_semaphore);
 		std::shared_ptr prev_semaphore = _in_between.semaphore;
 		stackInBetween();
 		_in_between = InBetween{
 			.prev_cb = nullptr,
 			.next_cb = nullptr,
-			.fences = {std::make_shared<Fence>(_app, name() + " BeginFrame # " + std::to_string(_frame_index) + " Fence")},
+			.fences = {std::make_shared<Fence>(_app, name() + ".BeginFrame_" + std::to_string(_frame_index) + ".Fence")},
 			.semaphore = frame_semaphore,
 		};
 		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fences[0]);
@@ -271,6 +271,11 @@ namespace vkl
 	{
 		VkSemaphore sem_to_wait = *_in_between.semaphore;
 		_window->present(1, &sem_to_wait);
+	}
+
+	void LinearExecutor::execute(Command& cmd)
+	{
+		cmd.execute(_context);
 	}
 
 	void LinearExecutor::execute(std::shared_ptr<Command> cmd)

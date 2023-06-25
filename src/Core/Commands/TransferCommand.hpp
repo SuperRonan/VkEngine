@@ -2,6 +2,7 @@
 
 #include "DeviceCommand.hpp"
 #include <Core/DynamicValue.hpp>
+#include <Core/Rendering/Mesh.hpp>
 
 namespace vkl
 {
@@ -371,11 +372,7 @@ namespace vkl
 		}
 	};
 
-	struct PositionedObjectView
-	{
-		ObjectView obj = {};
-		size_t pos = 0;
-	};
+
 
 
 	class UploadBuffer : public TransferCommand
@@ -465,5 +462,44 @@ namespace vkl
 			return with(ui);
 		}
 
+	};
+
+
+	class UploadMesh : public TransferCommand
+	{
+	protected:
+	
+		std::shared_ptr<Mesh> _mesh;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Mesh> mesh = nullptr;
+		};
+		using CI = CreateInfo;
+
+		UploadMesh(CreateInfo const& ci);
+
+		virtual ~UploadMesh() override = default;
+
+		struct UploadInfo
+		{
+			std::shared_ptr<Mesh> mesh = nullptr;
+		};
+		using UI = UploadInfo;
+
+		void execute(ExecutionContext & ctx, UploadInfo const& ui);
+
+		virtual void execute(ExecutionContext & ctx) override;
+
+		Executable with(UploadInfo const& ui);
+
+		Executable operator()(UploadInfo const& ui)
+		{
+			return with(ui);
+		}
 	};
 }
