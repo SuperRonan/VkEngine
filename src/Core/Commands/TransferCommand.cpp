@@ -755,22 +755,35 @@ namespace vkl
 
 	void UploadBuffer::execute(ExecutionContext& ctx, UploadInfo const& ui)
 	{
+		if(ui.sources.empty())	return;
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
+
+		// first consider .len as .end
+		Buffer::Range buffer_range {.begin = size_t(-1), .len = 0};
+
 		const bool use_update = [&](){
 			bool res = ui.use_update_buffer_ifp.value();
 			if (res)
 			{
 				const uint32_t max_size = 65536;
-				res &= (ui.src.size() <= max_size);
-				res &= (ui.src.size() % 4 == 0);
+				for (const auto& src : ui.sources)
+				{
+					buffer_range.begin = std::min(buffer_range.begin, src.pos);
+					buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
+					res &= (src.obj.size() <= max_size);
+					res &= (src.obj.size() % 4 == 0);
+				}
 			}
 			return true;
 		}();
 
+		// now .len is .len
+		buffer_range.len = buffer_range.len - buffer_range.begin;
+
 		InputSynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._buffer = ui.dst,
-			._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(),},
+			._buffer_range = buffer_range,
 			._begin_state = {
 				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -780,24 +793,30 @@ namespace vkl
 		if (use_update)
 		{
 			synch.record();
-			vkCmdUpdateBuffer(cmd, *ui.dst->instance(), ui.offset.value(), ui.src.size(), ui.src.data());
+			for (const auto& src : ui.sources)
+			{
+				vkCmdUpdateBuffer(cmd, *ui.dst->instance(), src.pos, src.obj.size(), src.obj.data());
+			}
 		}
 		else // Use Staging Buffer
 		{
-			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), ui.src.size());
+			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), buffer_range.len);
 			BufferInstance& sbbi = *sb->buffer()->instance();
 			
 
 			// Copy to Staging Buffer
 			{
 				sbbi.map();
-				std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
+				for (const auto& src : ui.sources)
+				{
+					std::memcpy(static_cast<uint8_t*>(sbbi.data()) + src.pos, src.obj.data(), src.obj.size());
+				}
 				sbbi.unMap();
 
 				InputSynchronizationHelper synch2(ctx);
 				synch2.addSynch(Resource{
 					._buffer = sb->buffer(),
-					._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
+					._buffer_range = buffer_range,
 					._begin_state = {
 						._access = VK_ACCESS_2_HOST_WRITE_BIT,
 						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
@@ -809,7 +828,7 @@ namespace vkl
 
 			synch.addSynch(Resource{
 				._buffer = sb->buffer(),
-				._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
+				._buffer_range = buffer_range,
 				._begin_state = {
 					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
@@ -817,13 +836,17 @@ namespace vkl
 			});
 			synch.record();
 
-			VkBufferCopy2 region{
-				.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
-				.pNext = nullptr,
-				.srcOffset = 0,
-				.dstOffset = ui.offset.value(),
-				.size = ui.src.size(),
-			};
+			std::vector<VkBufferCopy2> regions(ui.sources.size());
+			for (size_t r = 0; r < regions.size(); ++r)
+			{
+				regions[r] = VkBufferCopy2{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+					.pNext = nullptr,
+					.srcOffset = ui.sources[r].pos,
+					.dstOffset = ui.sources[r].pos,
+					.size = ui.sources[r].obj.size(),
+				};
+			}
 			
 			VkCopyBufferInfo2 copy{
 				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
@@ -831,7 +854,7 @@ namespace vkl
 				.srcBuffer = sbbi,
 				.dstBuffer = *ui.dst->instance(),
 				.regionCount = 1,
-				.pRegions = &region,
+				.pRegions = regions.data(),
 			};
 
 			vkCmdCopyBuffer2(cmd, &copy);
@@ -846,9 +869,8 @@ namespace vkl
 	void UploadBuffer::execute(ExecutionContext& ctx)
 	{
 		UploadInfo ui{
-			.src = _src,
+			.sources = {PositionedObjectView{.obj = _src, .pos = _offset.valueOr(0), }},
 			.dst = _dst,
-			.offset = _offset.value(),
 			.use_update_buffer_ifp = _use_update_buffer_ifp,
 		};
 		execute(ctx, ui);
@@ -857,9 +879,8 @@ namespace vkl
 	Executable UploadBuffer::with(UploadInfo const& ui)
 	{
 		UploadInfo _ui{
-			.src = ui.src.hasValue() ? ui.src : _src,
+			.sources = (!ui.sources.empty()) ? ui.sources : std::vector{PositionedObjectView{.obj = _src, .pos = _offset.valueOr(0), }},
 			.dst = ui.dst ? ui.dst : _dst,
-			.offset = ui.offset.has_value() ? ui.offset.value() : _offset.value(),
 			.use_update_buffer_ifp = ui.use_update_buffer_ifp.value_or(_use_update_buffer_ifp),
 		};
 		return [=](ExecutionContext & ctx) {

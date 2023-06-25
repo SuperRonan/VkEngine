@@ -371,6 +371,12 @@ namespace vkl
 		}
 	};
 
+	struct PositionedObjectView
+	{
+		ObjectView obj = {};
+		size_t pos = 0;
+	};
+
 
 	class UploadBuffer : public TransferCommand
 	{
@@ -401,9 +407,8 @@ namespace vkl
 
 		struct UploadInfo
 		{
-			ObjectView src = {};
+			std::vector<PositionedObjectView> sources = {};
 			std::shared_ptr<Buffer> dst = nullptr;
-			std::optional<size_t> offset = {};
 			std::optional<bool> use_update_buffer_ifp = {};
 		};
 		using UI = UploadInfo;
