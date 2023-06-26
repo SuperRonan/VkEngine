@@ -229,6 +229,8 @@ namespace vkl
 				uint32_t vertices_per_primitive = 0;
 			};
 
+			uint32_t num_indices = 0;
+			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
 
 			std::shared_ptr<Buffer> mesh_buffer = nullptr;
 			// In bytes

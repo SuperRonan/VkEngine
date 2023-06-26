@@ -331,6 +331,8 @@ namespace vkl
 		_device.indices_size = _host.indexBufferSize();
 		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
+		_device.num_indices = header.num_indices;
+		_device.index_type = _host.index_type;
 		
 		_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = _app,
@@ -348,9 +350,9 @@ namespace vkl
 		VkBuffer vb = *_device.mesh_buffer->instance();
 		VkDeviceSize offset = _device.header_size;
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, &offset);
-		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, _host.index_type);
+		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, _device.index_type);
 
-		vkCmdDrawIndexed(command_buffer, _host.indicesSize(), 1, 0, 0, 0);
+		vkCmdDrawIndexed(command_buffer, _device.num_indices, 1, 0, 0, 0);
 	}
 
 	Mesh::Status RigidMesh::getStatus() const
