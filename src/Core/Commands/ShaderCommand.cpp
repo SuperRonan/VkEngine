@@ -177,7 +177,7 @@ namespace vkl
 					if (b.image())
 					{
 						info.imageView = *b.image()->instance();
-						info.imageLayout = b.resource()._begin_state._layout;
+						info.imageLayout = b.resource()._begin_state.layout;
 					}
 					else
 					{
@@ -279,9 +279,9 @@ namespace vkl
 					corresponding_resource->resolve(set_id, binding_id);
 					corresponding_resource->setType(vkb.descriptorType);
 					corresponding_resource->resource()._begin_state = ResourceState2{
-						._access = meta.access,
-						._layout = meta.layout,
-						._stage = getPipelineStageFromShaderStage(vkb.stageFlags),
+						.access = meta.access,
+						.layout = meta.layout,
+						.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
 					};
 					
 					Callback callback{

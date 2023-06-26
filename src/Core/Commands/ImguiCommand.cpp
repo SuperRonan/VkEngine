@@ -152,14 +152,14 @@ namespace vkl
 			Resource{
 				._image = _swapchain->instance()->views()[index],
 				._begin_state = ResourceState2{
-					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-					._layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-					._stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 				},
 				._end_state = ResourceState2{
-					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-					._layout = VK_IMAGE_LAYOUT_GENERAL,
-					._stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_GENERAL,
+					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			},

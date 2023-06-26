@@ -6,16 +6,25 @@ namespace vkl
 {
 	struct ResourceState1
 	{
-		VkAccessFlags _access = VK_ACCESS_NONE_KHR;
-		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		VkPipelineStageFlags _stage = VK_PIPELINE_STAGE_NONE_KHR;
+		VkAccessFlags access = VK_ACCESS_NONE_KHR;
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkPipelineStageFlags stage = VK_PIPELINE_STAGE_NONE_KHR;
 	};
 
 	struct ResourceState2
 	{
-		VkAccessFlags2 _access = VK_ACCESS_2_NONE_KHR;
-		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		VkPipelineStageFlags2 _stage = VK_PIPELINE_STAGE_2_NONE_KHR;
+		VkAccessFlags2 access = VK_ACCESS_2_NONE_KHR;
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_NONE_KHR;
+
+		constexpr bool operator==(ResourceState2 const& o) const noexcept
+		{
+			return 
+				(access == o.access) && 
+				(layout == o.layout) &&
+				(stage == o.stage)
+			;
+		}
 	};
 
 	constexpr bool accessIsWrite1(VkAccessFlags access)
@@ -88,18 +97,18 @@ namespace vkl
 
 	constexpr bool layoutTransitionRequired(ResourceState1 prev, ResourceState1 next)
 	{
-		return (prev._layout != next._layout);
+		return (prev.layout != next.layout);
 	}
 
 	constexpr bool layoutTransitionRequired(ResourceState2 prev, ResourceState2 next)
 	{
-		return (prev._layout != next._layout);
+		return (prev.layout != next.layout);
 	}
 
 	constexpr bool stateTransitionRequiresSynchronization1(ResourceState1 prev, ResourceState1 next, bool is_image)
 	{
 		const bool res =
-			!(accessIsRead1(prev._access) && accessIsRead1(next._access)) // Assuming that !read = write
+			!(accessIsRead1(prev.access) && accessIsRead1(next.access)) // Assuming that !read = write
 			|| (is_image && layoutTransitionRequired(prev, next));
 		return res;
 	}
@@ -107,7 +116,7 @@ namespace vkl
 	constexpr bool stateTransitionRequiresSynchronization2(ResourceState2 prev, ResourceState2 next, bool is_image)
 	{
 		const bool res =
-			!(accessIsRead2(prev._access) && accessIsRead2(next._access)) // Assuming that !read = write
+			!(accessIsRead2(prev.access) && accessIsRead2(next.access)) // Assuming that !read = write
 			|| (is_image && layoutTransitionRequired(prev, next));
 		return res;
 	}

@@ -225,9 +225,9 @@ namespace vkl
 		Resource res{
 			._image = blit_target,
 			._begin_state = ResourceState2 {
-				._access = VK_ACCESS_2_MEMORY_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				._stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
+				.access = VK_ACCESS_2_MEMORY_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
 			},
 		};
 

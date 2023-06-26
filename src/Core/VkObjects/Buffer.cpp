@@ -33,8 +33,8 @@ namespace vkl
 		is.states.push_back(InternalStates::PosAndState{
 			.pos = 0,
 			.state = ResourceState2{
-				._access = VK_ACCESS_2_NONE,
-				._stage = VK_PIPELINE_STAGE_2_NONE,
+				.access = VK_ACCESS_2_NONE,
+				.stage = VK_PIPELINE_STAGE_2_NONE,
 			},
 		});
 
@@ -99,8 +99,8 @@ namespace vkl
 		const InternalStates & is = _states.at(tid);
 
 		ResourceState2 res{
-			._access = VK_ACCESS_2_NONE,
-			._stage = VK_PIPELINE_STAGE_2_NONE,
+			.access = VK_ACCESS_2_NONE,
+			.stage = VK_PIPELINE_STAGE_2_NONE,
 		};
 
 		for (size_t i = 0; i < is.states.size(); ++i)
@@ -121,8 +121,8 @@ namespace vkl
 			}
 
 			// The sub range intersects with the requested range
-			res._access |= is.states[i].state._access;
-			res._stage |= is.states[i].state._stage;
+			res.access |= is.states[i].state.access;
+			res.stage |= is.states[i].state.stage;
 		}
 
 		return res;
@@ -163,9 +163,39 @@ namespace vkl
 			}
 			else
 			{
-				
+				if (r.begin > it->pos)
+				{
+					it = is.states.insert(it, InternalStates::PosAndState{
+						.pos = r.begin,
+						.state = state,
+					});
+				}
+
+				if (range_end < range_i_end)
+				{
+					ResourceState2 tmp_state = it->state;
+					it->state = state;
+					it = is.states.insert(it, InternalStates::PosAndState {
+						.pos = range_end,
+						.state = tmp_state,
+					});
+				}
 			}
-			
+		}
+
+		// I don't think it is always necessary, maybe do it periodically
+		bool reduce = false;
+
+		if (reduce)
+		{
+			for (auto it = is.states.begin(); (it+1) != is.states.end(); ++it)
+			{
+				const auto next = it + 1;
+				if (it->state == next->state)
+				{
+					is.states.erase(next);
+				}
+			}
 		}
 	}
 

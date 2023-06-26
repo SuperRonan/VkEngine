@@ -18,9 +18,9 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = bi.src,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		});
@@ -28,9 +28,9 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = bi.dst,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		});
@@ -107,9 +107,9 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = cinfo.src,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			});
@@ -117,9 +117,9 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = cinfo.dst,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			});
@@ -196,17 +196,17 @@ namespace vkl
 			._buffer = cinfo.src,
 			._buffer_range = cinfo.range,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		});
 		synch.addSynch(Resource{
 			._image = cinfo.dst,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		});
@@ -288,8 +288,8 @@ namespace vkl
 			._buffer = cinfo.src,
 			._buffer_range = Range_st{.begin = cinfo.src_offset, .len = cinfo.size},
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		});
@@ -297,8 +297,8 @@ namespace vkl
 			._buffer = cinfo.dst,
 			._buffer_range = Range_st{.begin = cinfo.dst_offset, .len = cinfo.size},
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
@@ -382,8 +382,8 @@ namespace vkl
 			._buffer = fi.buffer,
 			._buffer_range = fi.range.value(),
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
@@ -440,9 +440,9 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = ci.view,
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		});
@@ -508,8 +508,8 @@ namespace vkl
 			._buffer = ui.dst,
 			._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
 			._begin_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		});
@@ -555,14 +555,14 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = ei.target,
 			._begin_state = {
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
 			},
 			._end_state = ResourceState2{
-				._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 			._image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
 		});
@@ -787,8 +787,8 @@ namespace vkl
 			._buffer = ui.dst,
 			._buffer_range = buffer_range,
 			._begin_state = {
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
 			},
 		});
 
@@ -820,8 +820,8 @@ namespace vkl
 					._buffer = sb->buffer(),
 					._buffer_range = buffer_range,
 					._begin_state = {
-						._access = VK_ACCESS_2_HOST_WRITE_BIT,
-						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+						.access = VK_ACCESS_2_HOST_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 					},
 				});
 				synch2.record();
@@ -832,8 +832,8 @@ namespace vkl
 				._buffer = sb->buffer(),
 				._buffer_range = buffer_range,
 				._begin_state = {
-					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 				},
 			});
 			synch.record();
@@ -906,9 +906,9 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = ui.dst,
 			._begin_state = {
-				._access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				._layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				._stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
 			},
 		});
 
@@ -928,8 +928,8 @@ namespace vkl
 					._buffer = sb->buffer(),
 					._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 					._begin_state = {
-						._access = VK_ACCESS_2_HOST_WRITE_BIT,
-						._stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+						.access = VK_ACCESS_2_HOST_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 					},
 				});
 				synch2.record();
@@ -940,8 +940,8 @@ namespace vkl
 				._buffer = sb->buffer(),
 				._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 				._begin_state = {
-					._access = VK_ACCESS_2_TRANSFER_READ_BIT,
-					._stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 				},
 			});
 			synch.record();

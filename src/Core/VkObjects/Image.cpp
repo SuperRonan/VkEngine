@@ -30,9 +30,9 @@ namespace vkl
 			.layerCount = _ci.arrayLayers,
 		};
 		is.states[range] = ResourceState2{
-			._access = VK_ACCESS_2_NONE,
-			._layout = _ci.initialLayout,
-			._stage = VK_PIPELINE_STAGE_2_NONE,
+			.access = VK_ACCESS_2_NONE,
+			.layout = _ci.initialLayout,
+			.stage = VK_PIPELINE_STAGE_2_NONE,
 		};
 
 		_states[0] = std::move(is);

@@ -127,9 +127,9 @@ namespace vkl
 			synch.addSynch(Resource{
 				._image = view,
 				._begin_state = ResourceState2{
-					._access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
-					._layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-					._stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
+					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			});
@@ -140,14 +140,14 @@ namespace vkl
 			synch.addSynch(Resource{
 				._image = _depth,
 				._begin_state = ResourceState2{
-					._access = access2,
-					._layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-					._stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
+					.access = access2,
+					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
 				},
 				._end_state = ResourceState2{
-					._access = access2,
-					._layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-					._stage = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
+					.access = access2,
+					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
 				},
 				._image_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			});

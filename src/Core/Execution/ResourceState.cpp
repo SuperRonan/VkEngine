@@ -10,8 +10,8 @@ namespace vkl
 	//		.len = buffer->createInfo().size,
 	//	};
 	//	_states[range] = ResourceState2{
-	//		._access = VK_ACCESS_2_NONE,
-	//		._stage = VK_PIPELINE_STAGE_2_NONE,
+	//		.access = VK_ACCESS_2_NONE,
+	//		.stage = VK_PIPELINE_STAGE_2_NONE,
 	//	};
 	//}
 
@@ -21,8 +21,8 @@ namespace vkl
 	//	if (!_states.contains(r))
 	//	{
 	//		_states[r] = ResourceState2{
-	//			._access = VK_ACCESS_2_NONE,
-	//			._stage = VK_PIPELINE_STAGE_2_NONE,
+	//			.access = VK_ACCESS_2_NONE,
+	//			.stage = VK_PIPELINE_STAGE_2_NONE,
 	//		};
 	//	}
 	//	return _states.at(r);
@@ -45,9 +45,9 @@ namespace vkl
 	//		.layerCount = _image->createInfo().arrayLayers,
 	//	};
 	//	_states[range] = ResourceState2{
-	//		._access = VK_ACCESS_2_NONE,
-	//		._layout = _image->createInfo().initialLayout,
-	//		._stage = VK_PIPELINE_STAGE_2_NONE,
+	//		.access = VK_ACCESS_2_NONE,
+	//		.layout = _image->createInfo().initialLayout,
+	//		.stage = VK_PIPELINE_STAGE_2_NONE,
 	//	};
 	//}
 
@@ -57,9 +57,9 @@ namespace vkl
 	//	if (!_states.contains(r))
 	//	{
 	//		_states[r] = ResourceState2{
-	//			._access = VK_ACCESS_2_NONE,
-	//			._layout = _image->createInfo().initialLayout,
-	//			._stage = VK_PIPELINE_STAGE_2_NONE,
+	//			.access = VK_ACCESS_2_NONE,
+	//			.layout = _image->createInfo().initialLayout,
+	//			.stage = VK_PIPELINE_STAGE_2_NONE,
 	//		};
 	//	}
 	//	return _states.at(r);

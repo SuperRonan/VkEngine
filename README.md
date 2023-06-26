@@ -53,8 +53,10 @@
 	- [ ] Correctly import Vulkan
 - [ ] Better ResourceStateTracker
 	- [x] Remake the interface
-	- [ ] Actually store the resource state in the resource rather than in a separate map?
+	- [x] Actually store the resource state in the resource rather than in a separate map?
 	- [ ] Correctly track potentially overlapping subresources
+		- [x] for Buffers
+		- [ ] for Images
 - [ ] Re use descriptor sets
 	- [ ] set = 0: common set (debug, ...)
 	- [ ] set = 1: scene set
