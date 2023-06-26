@@ -29,6 +29,17 @@ namespace vkl
 		assert(!_buffer);
 		VK_CHECK(vmaCreateBuffer(_allocator, &_ci, &_aci, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
 
+		InternalStates is;
+		is.states.push_back(InternalStates::PosAndState{
+			.pos = 0,
+			.state = ResourceState2{
+				._access = VK_ACCESS_2_NONE,
+				._stage = VK_PIPELINE_STAGE_2_NONE,
+			},
+		});
+
+		_states[0] = std::move(is);
+
 		setName();
 	}
 
@@ -75,6 +86,87 @@ namespace vkl
 		assert(_buffer != VK_NULL_HANDLE);
 		vmaUnmapMemory(_allocator, _alloc);
 		_data = nullptr;
+	}
+
+	ResourceState2 BufferInstance::getState(size_t tid, Range r) const
+	{
+		if (r.len == 0 || r.len == VK_WHOLE_SIZE)
+		{
+			r.len = (_ci.size - r.begin);
+		}
+		const size_t range_end = r.begin + r.len;
+		assert(_states.contains(tid));
+		const InternalStates & is = _states.at(tid);
+
+		ResourceState2 res{
+			._access = VK_ACCESS_2_NONE,
+			._stage = VK_PIPELINE_STAGE_2_NONE,
+		};
+
+		for (size_t i = 0; i < is.states.size(); ++i)
+		{
+			const size_t range_i_end = [&]()
+			{
+				if(i == is.states.size() - 1)	return _ci.size;
+				else							return is.states[i+1].pos;
+			}();
+
+			if (r.begin >= range_i_end) // Not yet there
+			{
+				continue;
+			}
+			if (is.states[i].pos >= range_end) // Done
+			{
+				break;
+			}
+
+			// The sub range intersects with the requested range
+			res._access |= is.states[i].state._access;
+			res._stage |= is.states[i].state._stage;
+		}
+
+		return res;
+	}
+
+	void BufferInstance::setState(size_t tid, Range r, ResourceState2 const& state)
+	{
+		if (r.len == 0 || r.len == VK_WHOLE_SIZE)
+		{
+			r.len = (_ci.size - r.begin);
+		}
+		const size_t range_end = r.begin + r.len;
+		assert(_states.contains(tid));
+		InternalStates& is = _states[tid];
+
+		for (auto it = is.states.begin(); it != is.states.end(); ++it)
+		{
+			const size_t range_i_end = [&]()
+			{
+				if ((it+1) == is.states.end())	return _ci.size;
+				else							return (it+1)->pos;
+			}();
+
+			if (r.begin >= range_i_end) // Not yet there
+			{
+				continue;
+			}
+			if (it->pos >= range_end) // Done
+			{
+				break;
+			}
+
+			// The sub range intersects with the requested range
+
+			if (r.begin <= it->pos && range_end >= range_i_end) // range_i is a subset of r
+			{
+				it->state = state;
+			}
+			else
+			{
+				
+			}
+			
+		}
 	}
 
 

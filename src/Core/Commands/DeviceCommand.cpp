@@ -9,11 +9,11 @@ namespace vkl
 		const ResourceState2 prev = [&]() {
 			if (r.isImage())
 			{
-				return _ctx.resources().getImageState(r._image->instance().get());
+				return r._image->instance()->getState(_ctx.resourceThreadId());
 			}
 			else if (r.isBuffer())
 			{
-				return _ctx.resources().getBufferState(r._buffer->instance()->getResourceKey(r._buffer_range.value()));
+				return r._buffer->instance()->getState(_ctx.resourceThreadId(), r._buffer_range.value());
 			}
 			else
 			{
@@ -46,6 +46,11 @@ namespace vkl
 			else if (r.isBuffer())
 			{
 				assert(r._buffer->instance());
+				Buffer::Range range = r._buffer_range.value();
+				if (range.len == 0)
+				{
+					range.len = r._buffer->instance()->createInfo().size - range.begin;
+				}
 				VkBufferMemoryBarrier2 barrier = {
 					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 					.pNext = nullptr,
@@ -56,8 +61,8 @@ namespace vkl
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.buffer = *r._buffer->instance(),
-					.offset = 0,
-					.size = VK_WHOLE_SIZE,
+					.offset = range.begin,
+					.size = range.len,
 				};
 				_buffers_barriers.push_back(barrier);
 			}
@@ -90,12 +95,12 @@ namespace vkl
 			ResourceState2 const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
-				_ctx.resources().setBufferState(r._buffer->instance()->getResourceKey(r._buffer_range.value()), s);
+				r._buffer->instance()->setState(_ctx.resourceThreadId(), r._buffer_range.value(), s);
 				_ctx.keppAlive(r._buffer->instance());
 			}
 			else if (r.isImage())
 			{
-				_ctx.resources().setImageState(r._image->instance().get(), s);
+				r._image->instance()->setState(_ctx.resourceThreadId(), s);
 				_ctx.keppAlive(r._image->instance());
 			}
 			else

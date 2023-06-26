@@ -14,10 +14,9 @@ namespace vkl
 			.name = name() + ".StagingPool",
 			.allocator = application()->allocator(),
 			.exec = this,
-			.rst = &_resources_state,
 		}),
 		_context(ExecutionContext::CI{
-			.rst = &_resources_state,
+			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
 		})
 	{
@@ -142,19 +141,6 @@ namespace vkl
 		if (_window->updateResources(update_context))
 		{
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
-			for (auto& view : swapchain->views())
-			{
-				_resources_state.registerImage(view->image()->instance().get());
-			}
-			swapchain->addDestructionCallback(Callback{
-				.callback = [this, swapchain]() {
-					for (auto & view : swapchain->views())
-					{
-						_resources_state.releaseImage(view->image()->instance().get());
-					}
-				},
-				.id = this,
-			});
 		}
 
 		for (auto& mesh : _registered_meshes)
@@ -170,14 +156,6 @@ namespace vkl
 			if (invalidated)
 			{
 				ImageInstance * img = image_view->image()->instance().get();
-				_resources_state.registerImage(img);
-
-				image_view->instance()->addDestructionCallback(Callback{
-					.callback = [this, img]() {
-						_resources_state.releaseImage(img);
-					},
-					.id = this,
-				});
 			}
 		}
 
@@ -187,15 +165,6 @@ namespace vkl
 			if (invalidated)
 			{
 				BufferInstance * b = buffer->instance().get();
-				_resources_state.registerBuffer(b);
-
-				buffer->instance()->addDestructionCallback(Callback{
-					.callback = [this, b]() {
-						_resources_state.releaseBuffer(b);
-					},
-					.id = this,
-				});
-
 			}
 		}
 

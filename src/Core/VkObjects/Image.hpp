@@ -8,6 +8,7 @@
 #include <Core/DynamicValue.hpp>
 #include <Core/Execution/UpdateContext.hpp>
 #include <atomic>
+#include <Core/Execution/ResourceState.hpp>
 
 namespace vkl
 {
@@ -35,6 +36,8 @@ namespace vkl
 
 		using AI = AssociateInfo;
 
+		using Range = VkImageSubresourceRange;
+
 	protected:
 
 		static std::atomic<size_t> _instance_counter;
@@ -46,12 +49,21 @@ namespace vkl
 		VkImage _image = VK_NULL_HANDLE;
 		size_t _unique_id = 0;
 
+		struct InternalStates
+		{
+			mutable std::HMap<Range, ResourceState2> states = {};
+		};
+
+		std::HMap<size_t, InternalStates> _states = {};
+
 
 		void setVkNameIFP();
 
 		void create();
 
 		void destroy();
+
+		void setInitialState(size_t tid);
 
 	public:
 
@@ -107,6 +119,26 @@ namespace vkl
 		constexpr size_t uniqueId()const
 		{
 			return _unique_id;
+		}
+
+		ResourceState2 getState(size_t tid, Range const& range)const
+		{
+			assert(_states.contains(tid));
+			const InternalStates& is = _states.at(tid);
+			if (!is.states.contains(range))
+			{
+				is.states[range] = ResourceState2();
+			}
+			return is.states.at(range);
+		}
+
+		void setState(size_t tid, Range const& range, ResourceState2 const& state)
+		{
+			if (!_states.contains(tid))
+			{
+				_states[tid] = InternalStates{};
+			}
+			_states[tid].states[range] = state;
 		}
 
 	};

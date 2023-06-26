@@ -96,7 +96,16 @@ namespace vkl
 				.range = _ci.subresourceRange,
 			};
 		}
-		 
+		
+		ResourceState2 getState(size_t tid)const
+		{
+			return _image->getState(tid, _ci.subresourceRange);
+		}
+
+		void setState(size_t tid, ResourceState2 const& state)
+		{
+			_image->setState(tid, _ci.subresourceRange, state);
+		}
 	};
 
 	class ImageView : public InstanceHolder<ImageViewInstance>

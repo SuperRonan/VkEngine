@@ -19,6 +19,25 @@ namespace vkl
 		}
 	}
 
+	void ImageInstance::setInitialState(size_t tid)
+	{
+		InternalStates is;
+		VkImageSubresourceRange range{
+			.aspectMask = getImageAspectFromFormat(_ci.format),
+			.baseMipLevel = 0,
+			.levelCount = _ci.mipLevels,
+			.baseArrayLayer = 0,
+			.layerCount = _ci.arrayLayers,
+		};
+		is.states[range] = ResourceState2{
+			._access = VK_ACCESS_2_NONE,
+			._layout = _ci.initialLayout,
+			._stage = VK_PIPELINE_STAGE_2_NONE,
+		};
+
+		_states[0] = std::move(is);
+	}
+
 	void ImageInstance::create()
 	{
 		assert(_image == VK_NULL_HANDLE);
@@ -50,6 +69,7 @@ namespace vkl
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
 		create();
+		setInitialState(0);
 	}
 
 	ImageInstance::ImageInstance(AssociateInfo const& ai) :
@@ -58,7 +78,7 @@ namespace vkl
 		_image(ai.image),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
-
+		setInitialState(0);
 	}
 
 	ImageInstance::~ImageInstance()
@@ -68,6 +88,13 @@ namespace vkl
 			destroy();
 		}
 	}
+
+
+
+
+
+
+
 
 
 	Image::Image(CreateInfo const& ci) : 

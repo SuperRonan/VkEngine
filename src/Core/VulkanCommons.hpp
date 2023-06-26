@@ -661,3 +661,32 @@ constexpr bool operator!=(VkExtent2D const& a, VkExtent2D const& b)
 {
 	return !(a == b);
 }
+
+namespace std
+{
+	template<class K, class V, class Hasher = std::hash<K>, class Eq = std::equal_to<K>>
+	using HMap = std::unordered_map<K, V, Hasher, Eq>;
+
+	template<>
+	struct hash<VkImageSubresourceRange>
+	{
+		size_t operator()(VkImageSubresourceRange const& r) const
+		{
+			const std::hash<size_t> hs;
+			const std::hash<uint32_t> hu;
+			// don't consider the aspect in the hash since it should be the same
+			return hu(r.baseMipLevel) ^ hu(r.levelCount) ^ hu(r.baseArrayLayer) ^ hu(r.layerCount);
+		}
+	};
+
+	template<class UInt>
+	struct hash<vkl::Range<UInt>>
+	{
+		size_t operator()(vkl::Range<UInt> const& r) const noexcept
+		{
+			hash<UInt> h;
+			hash<size_t> hs;
+			return hs(h(r.begin) xor h(r.len));
+		}
+	};
+}

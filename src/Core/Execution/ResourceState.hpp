@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Core/VkObjects/Buffer.hpp>
-#include <Core/VkObjects/ImageView.hpp>
 #include <Core/VulkanCommons.hpp>
 
 namespace vkl
@@ -115,97 +113,97 @@ namespace vkl
 	}
 
 
-	class ResourceStateTracker
-	{
-	public:
+	//class ResourceStateTracker
+	//{
+	//public:
 
-		using BufferKey = typename BufferInstance::ResourceKey;
-		using ImageKey = typename ImageViewInstance::ResourceKey;
+	//	using BufferKey = typename BufferInstance::ResourceKey;
+	//	using ImageKey = typename ImageViewInstance::ResourceKey;
 
-		template<class K, class V, class Hasher = std::hash<K>, class Eq = std::equal_to<K>>
-		using Map = std::unordered_map<K, V, Hasher, Eq>;
+	//	template<class K, class V, class Hasher = std::hash<K>, class Eq = std::equal_to<K>>
+	//	using Map = std::unordered_map<K, V, Hasher, Eq>;
 
-		class BufferStates
-		{
-		protected:
+	//	class BufferStates
+	//	{
+	//	protected:
 
-			using Range = typename BufferInstance::Range;
+	//		using Range = typename BufferInstance::Range;
 
-			BufferInstance* _buffer = nullptr;
+	//		BufferInstance* _buffer = nullptr;
 
-			Map<Range, ResourceState2> _states;
+	//		Map<Range, ResourceState2> _states;
 
-		public:
+	//	public:
 
-			BufferStates(BufferInstance* buffer = nullptr);
+	//		BufferStates(BufferInstance* buffer = nullptr);
 
-			ResourceState2 getState(Range const& r);
+	//		ResourceState2 getState(Range const& r);
 
-			void setState(Range const& r, ResourceState2 const& state);
+	//		void setState(Range const& r, ResourceState2 const& state);
 
-		};
+	//	};
 
-		class ImageStates
-		{
-		protected:
+	//	class ImageStates
+	//	{
+	//	protected:
 
-			using Range = VkImageSubresourceRange;
+	//		using Range = VkImageSubresourceRange;
 
-			struct Hasher
-			{
-				size_t operator()(Range const& r) const
-				{
-					const std::hash<size_t> hs;
-					const std::hash<uint32_t> hu;
-					// don't consider the aspect in the hash since it should be the same
-					return hu(r.baseMipLevel) ^ hu(r.levelCount) ^ hu(r.baseArrayLayer) ^ hu(r.layerCount);
-				}
-			};
+	//		struct Hasher
+	//		{
+	//			size_t operator()(Range const& r) const
+	//			{
+	//				const std::hash<size_t> hs;
+	//				const std::hash<uint32_t> hu;
+	//				// don't consider the aspect in the hash since it should be the same
+	//				return hu(r.baseMipLevel) ^ hu(r.levelCount) ^ hu(r.baseArrayLayer) ^ hu(r.layerCount);
+	//			}
+	//		};
 
-			ImageInstance* _image = nullptr;
+	//		ImageInstance* _image = nullptr;
 
-			Map<Range, ResourceState2, Hasher> _states;
+	//		Map<Range, ResourceState2, Hasher> _states;
 
-		public:
+	//	public:
 
-			ImageStates(ImageInstance* image = nullptr);
+	//		ImageStates(ImageInstance* image = nullptr);
 
-			ResourceState2 getState(Range const& r);
+	//		ResourceState2 getState(Range const& r);
 
-			void setState(Range const& r, ResourceState2 const& state);
+	//		void setState(Range const& r, ResourceState2 const& state);
 
-		};
+	//	};
 
-	protected:
-
-
-		Map<size_t, ImageStates> _images;
-		Map<size_t, BufferStates> _buffers;
+	//protected:
 
 
-	public:
+	//	Map<size_t, ImageStates> _images;
+	//	Map<size_t, BufferStates> _buffers;
 
-		ResourceStateTracker();
 
-		void registerImage(ImageInstance* image);
+	//public:
 
-		void registerBuffer(BufferInstance* buffer);
+	//	ResourceStateTracker();
 
-		void releaseImage(ImageInstance* image);
+	//	void registerImage(ImageInstance* image);
 
-		void releaseBuffer(BufferInstance* buffer);
+	//	void registerBuffer(BufferInstance* buffer);
 
-		ResourceState2 getImageState(ImageKey const& key);
+	//	void releaseImage(ImageInstance* image);
 
-		ResourceState2 getImageState(ImageViewInstance* view);
+	//	void releaseBuffer(BufferInstance* buffer);
 
-		ResourceState2 getBufferState(BufferKey const& key);
+	//	ResourceState2 getImageState(ImageKey const& key);
 
-		void setImageState(ImageKey const& key, ResourceState2 const& state);
+	//	ResourceState2 getImageState(ImageViewInstance* view);
 
-		void setImageState(ImageViewInstance* view, ResourceState2 const& state);
+	//	ResourceState2 getBufferState(BufferKey const& key);
 
-		void setBufferState(BufferKey const& key, ResourceState2 const& state);
+	//	void setImageState(ImageKey const& key, ResourceState2 const& state);
 
-	};
+	//	void setImageState(ImageViewInstance* view, ResourceState2 const& state);
+
+	//	void setBufferState(BufferKey const& key, ResourceState2 const& state);
+
+	//};
 }

@@ -6,6 +6,7 @@
 #include "AbstractInstance.hpp"
 #include <Core/Execution/UpdateContext.hpp>
 #include <atomic>
+#include <Core/Execution/ResourceState.hpp>
 
 #ifndef VMA_NULL
 #define VMA_NULL nullptr
@@ -15,6 +16,10 @@ namespace vkl
 {
 	class BufferInstance : public AbstractInstance
 	{
+	public:
+
+		using Range = Range_st;
+
 	protected:
 
 		static std::atomic<size_t> _instance_counter;
@@ -26,6 +31,19 @@ namespace vkl
 		size_t _unique_id = 0;
 		VmaAllocator _allocator = VMA_NULL;
 		VmaAllocation _alloc = VMA_NULL;
+
+		struct InternalStates
+		{
+			struct PosAndState
+			{
+				size_t pos;
+				ResourceState2 state;
+			};
+			// Sorted by pos
+			std::vector<PosAndState> states;
+		};
+
+		std::HMap<size_t, InternalStates> _states = {};
 
 		void* _data = nullptr;
 
@@ -111,7 +129,7 @@ namespace vkl
 			return _unique_id;
 		}
 
-		using Range = Range_st;
+		
 
 		struct ResourceKey
 		{
@@ -131,6 +149,10 @@ namespace vkl
 		{
 			return getResourceKey(Range{.begin = 0, .len = _ci.size, });
 		}
+
+		ResourceState2 getState(size_t tid, Range range)const;
+
+		void setState(size_t tid, Range range, ResourceState2 const& state);
 
 	};
 
@@ -209,19 +231,5 @@ namespace vkl
 		//StagingPool::StagingBuffer * copyToStaging(void* data, size_t size = 0);
 
 		//void recordCopyStagingToBuffer(VkCommandBuffer cmd, StagingPool::StagingBuffer * sb);
-	};
-}
-
-
-namespace std
-{
-	template<>
-	struct hash<vkl::Buffer::Range>
-	{
-		size_t operator()(vkl::Buffer::Range const& r) const noexcept
-		{
-			hash<size_t> h;
-			return h(h(r.begin) xor h(r.len));
-		}
 	};
 }

@@ -5,7 +5,7 @@ namespace vkl
 {
 	ExecutionContext::ExecutionContext(CreateInfo const& ci) :
 		_command_buffer(ci.cmd),
-		_resources_states(ci.rst),
+		_resource_tid(ci.resource_tid),
 		_staging_pool(ci.staging_pool)
 	{}
 

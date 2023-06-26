@@ -26,7 +26,7 @@ namespace vkl
 
 		std::shared_ptr<CommandBuffer> _command_buffer = nullptr;
 
-		ResourceStateTracker * _resources_states = nullptr;
+		size_t _resource_tid = 0;
 
 		std::vector<std::shared_ptr<VkObject>> _objects_to_keep = {};
 
@@ -41,17 +41,12 @@ namespace vkl
 		struct CreateInfo
 		{
 			std::shared_ptr<CommandBuffer> cmd = nullptr;
-			ResourceStateTracker* rst = nullptr;
+			size_t resource_tid = 0;
 			StagingPool* staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
 		ExecutionContext(CreateInfo const& ci);
-
-		ResourceStateTracker& resources()
-		{
-			return *_resources_states;
-		}
 
 		constexpr std::shared_ptr<CommandBuffer>& getCommandBuffer()
 		{
@@ -78,6 +73,11 @@ namespace vkl
 		StagingPool* stagingPool()
 		{
 			return _staging_pool;
+		}
+
+		size_t resourceThreadId()const
+		{
+			return  _resource_tid;
 		}
 	};
 

@@ -7,7 +7,6 @@ namespace vkl
 {
 	StagingPool::StagingPool(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
-		_resources_states(ci.rst),
 		_allocator(ci.allocator),
 		_exec(ci.exec)
 	{}
@@ -72,14 +71,6 @@ namespace vkl
 			});
 			res->createInstance();
 			BufferInstance * inst = res->instance().get();
-			_resources_states->registerBuffer(inst);
-
-			res->instance()->addDestructionCallback(Callback{
-				.callback = [this, inst]() {
-					_resources_states->releaseBuffer(inst);
-				},
-				.id = this,
-			});
 
 			_free_buffers.push_back(res);
 			found_it = _free_buffers.end() - 1;

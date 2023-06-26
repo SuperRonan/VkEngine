@@ -149,11 +149,17 @@ namespace vkl
 				}
 				if (b.isBuffer())
 				{
+					assert(b.resource()._buffer_range.hasValue());
+					Buffer::Range range = b.resource()._buffer_range.value();
+					if(range.len == 0) 
+					{
+						range.len = VK_WHOLE_SIZE;
+					}
 					buffers.emplace_back(VkDescriptorBufferInfo{
 						.buffer = *b.buffer()->instance(),
-						.offset = 0,
-						.range = VK_WHOLE_SIZE,
-						});
+						.offset = range.begin,
+						.range = range.len,
+					});
 					VkDescriptorBufferInfo& info = buffers.back();
 					write.pBufferInfo = &info;
 				}

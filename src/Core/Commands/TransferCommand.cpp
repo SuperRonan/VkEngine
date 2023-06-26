@@ -758,8 +758,6 @@ namespace vkl
 		if(ui.sources.empty())	return;
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
-		// first consider .len as .end
-		Buffer::Range buffer_range {.begin = size_t(-1), .len = 0};
 
 		const bool use_update = [&](){
 			bool res = ui.use_update_buffer_ifp.value();
@@ -768,15 +766,19 @@ namespace vkl
 				const uint32_t max_size = 65536;
 				for (const auto& src : ui.sources)
 				{
-					buffer_range.begin = std::min(buffer_range.begin, src.pos);
-					buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
 					res &= (src.obj.size() <= max_size);
 					res &= (src.obj.size() % 4 == 0);
 				}
 			}
 			return true;
 		}();
-
+		// first consider .len as .end
+		Buffer::Range buffer_range {.begin = size_t(-1), .len = 0};
+		for (const auto& src : ui.sources)
+		{
+			buffer_range.begin = std::min(buffer_range.begin, src.pos);
+			buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
+		}
 		// now .len is .len
 		buffer_range.len = buffer_range.len - buffer_range.begin;
 
@@ -1038,6 +1040,7 @@ namespace vkl
 				uploader.execute(ctx, UploadBuffer::UI{
 					.sources = buffer_upload.sources,
 					.dst = buffer_upload.dst,
+					.use_update_buffer_ifp = false,
 				});
 			}
 		}

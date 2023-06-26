@@ -348,7 +348,9 @@ namespace vkl
 		VkBuffer vb = *_device.mesh_buffer->instance();
 		VkDeviceSize offset = _device.header_size;
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, &offset);
-		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, _host.index_type);
+
+		vkCmdDrawIndexed(command_buffer, _host.indicesSize(), 1, 0, 0, 0);
 	}
 
 	Mesh::Status RigidMesh::getStatus() const

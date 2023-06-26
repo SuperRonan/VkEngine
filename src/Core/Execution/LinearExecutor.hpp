@@ -22,8 +22,6 @@ namespace vkl
 
 		std::shared_ptr<CommandBuffer> _command_buffer_to_submit = nullptr;
 
-		ResourceStateTracker _resources_state = {};
-
 		StagingPool _staging_pool;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;

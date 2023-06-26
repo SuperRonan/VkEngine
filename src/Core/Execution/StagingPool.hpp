@@ -18,7 +18,6 @@ namespace vkl
 
 		VmaAllocator _allocator = nullptr;
 
-		ResourceStateTracker * _resources_states;
 		std::vector<std::shared_ptr<Buffer>> _free_buffers, _used_buffers;
 		
 		std::mutex _mutex;
@@ -33,7 +32,6 @@ namespace vkl
 			std::string name = {};
 			VmaAllocator allocator = nullptr;
 			Executor* exec = nullptr;
-			ResourceStateTracker * rst = nullptr;
 		};
 		using CI = CreateInfo;
 
