@@ -260,6 +260,7 @@ namespace vkl
 			std::string name = {};
 			std::vector<Vertex> vertices = {};
 			std::vector<uint> indices = {};
+			int compute_normals = 0;
 			bool auto_compute_tangents = false;
 		};
 		using CI = CreateInfo;
@@ -281,6 +282,8 @@ namespace vkl
 		RigidMesh& operator*=(Matrix4 const& m);
 
 		void computeTangents();
+
+		void computeNormals(int mode);
 
 		void flipFaces();
 
@@ -335,5 +338,21 @@ namespace vkl
 		};
 		using SMI = SphereMakeInfo;
 		static std::shared_ptr<RigidMesh> MakeSphere(SphereMakeInfo const& smi);
+
+		struct PlatonMakeInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Vector3 center = Vector3(0);
+			float radius = 1;
+			int position = 1;
+			bool face_normal = false;
+		};
+		using PMI = PlatonMakeInfo;
+
+		static std::shared_ptr<RigidMesh> MakeTetrahedron(PlatonMakeInfo const& pmi);
+		static std::shared_ptr<RigidMesh> MakeOctahedron(PlatonMakeInfo const& pmi);
+		static std::shared_ptr<RigidMesh> MakeIcosahedron(PlatonMakeInfo const& pmi);
+		static std::shared_ptr<RigidMesh> MakeDodecahedron(PlatonMakeInfo const& pmi);
 	};
 }

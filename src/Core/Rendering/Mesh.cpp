@@ -75,6 +75,11 @@ namespace vkl
 
 		compressIndices();
 
+		if (ci.compute_normals != 0)
+		{
+			computeNormals(ci.compute_normals);
+		}
+
 		if (ci.auto_compute_tangents)
 		{
 			computeTangents();
@@ -292,6 +297,53 @@ namespace vkl
 			Float w = (glm::dot(c, btg) < 0) ? -1 : 1;
 			_host.vertices[vertex_id].tangent = t * w;
 		}
+	}
+
+	void RigidMesh::computeNormals(int mode)
+	{
+		const size_t N = _host.indicesSize();
+
+		for (Vertex& v : _host.vertices)
+		{
+			v.normal = vec3(0);
+		}
+
+		for (size_t i = 0; i < N; i += 3)
+		{
+			const size_t i0 = _host.getIndex(i + 0);
+			const size_t i1 = _host.getIndex(i + 1);
+			const size_t i2 = _host.getIndex(i + 2);
+
+			Vertex& v0 = _host.vertices[i0];
+			Vertex& v1 = _host.vertices[i1];
+			Vertex& v2 = _host.vertices[i2];
+
+			vec3 e1 = v1.position - v0.position;
+			vec3 e2 = v2.position - v0.position;
+
+			vec3 e1n = glm::normalize(e1);
+			vec3 e2n = glm::normalize(e2);
+
+			vec3 face_normal = glm::normalize(glm::cross(e1n, e2n));
+
+			// Use some weighting? 
+			// - based on triangle surface?
+			// - based on vertex angle? 
+
+			v0.normal += face_normal;
+			v1.normal += face_normal;
+			v2.normal += face_normal;
+		}
+
+		for (Vertex& v : _host.vertices)
+		{
+			if (glm::dot(v.normal, v.normal) != 0)
+			{
+				v.normal = glm::normalize(v.normal);
+			}
+		}
+
+		_device.up_to_date = false;
 	}
 
 	void RigidMesh::flipFaces()
@@ -553,6 +605,126 @@ namespace vkl
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
 			.app = smi.app,
 			.name = smi.name,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.auto_compute_tangents = true,
+		});
+		return res;
+	}
+
+
+	std::shared_ptr<RigidMesh> RigidMesh::MakeTetrahedron(PlatonMakeInfo const& pmi)
+	{
+		const float phi = std::numbers::phi;
+		std::vector<Vertex> vertices;
+		std::vector<uint> indices;
+
+		const float r = pmi.radius;
+		const vec3 c = pmi.center;
+
+		if (pmi.face_normal)
+		{
+			vertices.reserve(3 * 4);
+			
+			vec3 v0 = vec3(r, r, r);
+			vec3 v1 = vec3(r, -r, -r);
+			vec3 v2 = vec3(-r, r, -r);
+			vec3 v3 = vec3(-r, -r, r);
+
+			const auto addFace = [&](vec3 v0, vec3 v1, vec3 v2)
+			{
+				vertices.push_back(Vertex{.position = c + v0});
+				vertices.push_back(Vertex{.position = c + v1});
+				vertices.push_back(Vertex{.position = c + v2});
+			};
+			
+			addFace(v0, v1, v2);
+			addFace(v1, v3, v2);
+			addFace(v0, v2, v3);
+			addFace(v0, v3, v1);
+			
+			indices.resize(3 * 4);
+			std::iota(indices.begin(), indices.end(), 0);
+		}
+		else
+		{
+			vertices.resize(4);
+
+			vertices[0].position = c + vec3(r, r, r);
+			vertices[1].position = c + vec3(r, -r, -r);
+			vertices[2].position = c + vec3(-r, r, -r);
+			vertices[3].position = c + vec3(-r, -r, r);
+
+			indices.reserve(3 * 4);
+
+			const auto addFace = [&](uint i0, uint i1, uint i2)
+			{
+				indices.push_back(i0);
+				indices.push_back(i1);
+				indices.push_back(i2);
+			};
+
+			addFace(0, 1, 2);
+			addFace(1, 3, 2);
+			addFace(0, 2, 3);
+			addFace(0, 3, 1);
+		}
+
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
+			.app = pmi.app,
+			.name = pmi.name,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.compute_normals = 1,
+			.auto_compute_tangents = false,
+		});
+		return res;
+	}
+
+	std::shared_ptr<RigidMesh> RigidMesh::MakeOctahedron(PlatonMakeInfo const& pmi)
+	{
+		const float phi = std::numbers::phi;
+		std::vector<Vertex> vertices;
+		std::vector<uint> indices;
+
+
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
+			.app = pmi.app,
+			.name = pmi.name,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.auto_compute_tangents = true,
+		});
+		return res;
+	}
+
+	std::shared_ptr<RigidMesh> RigidMesh::MakeIcosahedron(PlatonMakeInfo const& pmi)
+	{
+		const float phi = std::numbers::phi;
+		std::vector<Vertex> vertices;
+		std::vector<uint> indices;
+
+
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
+			.app = pmi.app,
+			.name = pmi.name,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.auto_compute_tangents = true,
+		});
+		return res;
+	}
+
+	std::shared_ptr<RigidMesh> RigidMesh::MakeDodecahedron(PlatonMakeInfo const& pmi)
+	{
+		const float phi = std::numbers::phi;
+		std::vector<Vertex> vertices;
+		std::vector<uint> indices;
+
+
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
+			.app = pmi.app,
+			.name = pmi.name,
 			.vertices = std::move(vertices),
 			.indices = std::move(indices),
 			.auto_compute_tangents = true,
