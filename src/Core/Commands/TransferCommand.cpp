@@ -770,7 +770,7 @@ namespace vkl
 					res &= (src.obj.size() % 4 == 0);
 				}
 			}
-			return true;
+			return res;
 		}();
 		// first consider .len as .end
 		Buffer::Range buffer_range {.begin = size_t(-1), .len = 0};
@@ -855,7 +855,7 @@ namespace vkl
 				.pNext = nullptr,
 				.srcBuffer = sbbi,
 				.dstBuffer = *ui.dst->instance(),
-				.regionCount = 1,
+				.regionCount = static_cast<uint32_t>(regions.size()),
 				.pRegions = regions.data(),
 			};
 

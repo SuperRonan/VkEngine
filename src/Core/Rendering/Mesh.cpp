@@ -687,13 +687,87 @@ namespace vkl
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
+		const float r = pmi.radius;
+		const vec3 c = pmi.center;
+
+		if (pmi.face_normal)
+		{
+			
+		}
+		else
+		{
+			vertices.resize(6 + 3);
+
+			vertices[0] = Vertex{
+				.position = c + vec3(r, 0, 0),
+				.uv = vec2(1, 0.5),
+			};
+			vertices[1] = Vertex{
+				.position = c + vec3(0, r, 0),
+				.uv = vec2(0.5, 0.5),
+			};
+			vertices[2] = Vertex{
+				.position = c + vec3(0, 0, r),
+				.uv = vec2(0.5, 1),
+			};
+			vertices[3] = Vertex{
+				.position = c + vec3(-r, 0, 0),
+				.uv = vec2(0, 0.5),
+			};
+			vertices[4] = Vertex{
+				.position = c + vec3(0, -r, 0),
+				.uv = vec2(0, 0),
+			};
+			vertices[5] = Vertex{
+				.position = c + vec3(0, 0, -r),
+				.uv = vec2(0.5 ,0),
+			};
+
+			vertices[6] = Vertex{
+				.position = vertices[4].position,
+				.uv = vec2(0, 1), 
+			};
+
+			vertices[7] = Vertex{
+				.position = vertices[4].position,
+				.uv = vec2(1, 0), 
+			};
+
+			vertices[8] = Vertex{
+				.position = vertices[4].position,
+				.uv = vec2(1, 1), 
+			};
+
+
+			indices.reserve(3 * 8);
+
+			const auto addFace = [&](uint i0, uint i1, uint i2)
+			{
+				indices.push_back(i0);
+				indices.push_back(i1);
+				indices.push_back(i2);
+			};
+
+			addFace(0, 1, 2);
+			addFace(1, 3, 2);
+			addFace(0, 5, 1);
+			addFace(1, 5, 3);
+
+			addFace(0, 2, 8);
+			addFace(6, 2, 3);
+			addFace(0, 7, 5);
+			addFace(4, 3, 5);
+
+		}
+
 
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
 			.app = pmi.app,
 			.name = pmi.name,
 			.vertices = std::move(vertices),
 			.indices = std::move(indices),
-			.auto_compute_tangents = true,
+			.compute_normals = 1,
+			.auto_compute_tangents = false,
 		});
 		return res;
 	}

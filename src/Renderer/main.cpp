@@ -160,7 +160,7 @@ namespace vkl
 			//	//.phi_divisions = 360,
 			//});
 
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeTetrahedron(RigidMesh::PMI{
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PMI{
 				.app = this,
 				.radius = 0.5,
 				.face_normal = false,
@@ -220,6 +220,25 @@ namespace vkl
 				glm::mat4 object_to_world;
 			};
 
+			std::shared_ptr<VertexCommand> show_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = this,
+				.name = "Show3DGrid",
+				.vertex_input_desc = Pipeline::VertexInputWithoutVertices(),
+				.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+				.draw_count = 3,
+				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.bindings = {
+					Binding{
+						.buffer = ubo_buffer,
+					}
+				},
+				.color_attachements = {final_image},
+				.vertex_shader_path = shaders / "Show3DBasis.glsl",
+				.geometry_shader_path = shaders / "Show3DBasis.glsl",
+				.fragment_shader_path = shaders / "Show3DBasis.glsl",
+			});
+			exec.declare(show_3D_basis);
+
 			
 			exec.init();
 
@@ -253,7 +272,6 @@ namespace vkl
 			Camera camera(Camera::CreateInfo{
 				.resolution = window->extent2D(),
 			});
-			float camera_distance = 2.0;
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
 				.camera = &camera, 
@@ -316,6 +334,8 @@ namespace vkl
 								{.mesh = mesh, .pc = glm::mat4(1)},
 							},
 						}));
+
+						exec(show_3D_basis);
 
 						debugger.execute();
 					}

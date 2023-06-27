@@ -108,7 +108,7 @@ DebugStringCaret Caret3D(vec4 pos, uint layer)
 #define GLYPH_SIZE_HUGE 4
 
 #ifndef GLYPH_SIZE
-#define GLYPH_SIZE GLYPH_SIZE_NORMAL
+#define GLYPH_SIZE GLYPH_SIZE_LARGE
 #endif
 
 float getGlyphSizeMult()

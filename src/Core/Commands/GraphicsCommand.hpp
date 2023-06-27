@@ -41,6 +41,7 @@ namespace vkl
 			std::string name = {};
 			VkPrimitiveTopology topology;
 			VertexInputDescription vertex_input_description;
+			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -102,6 +103,7 @@ namespace vkl
 			VertexInputDescription vertex_input_desc = {};
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			DynamicValue<uint32_t> draw_count = {};
+			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			std::vector<std::shared_ptr<Mesh>> meshes = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};

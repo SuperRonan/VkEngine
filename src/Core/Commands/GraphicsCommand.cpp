@@ -11,7 +11,8 @@ namespace vkl
 		_write_depth(ci.write_depth),
 		_clear_color(ci.clear_color),
 		_clear_depth_stencil(ci.clear_depth_stencil),
-		_blending(ci.blending)
+		_blending(ci.blending),
+		_line_raster_mode(ci.line_raster_mode)
 	{}
 
 	void GraphicsCommand::createGraphicsResources()
@@ -282,6 +283,7 @@ namespace vkl
 			.name = ci.name,
 			.topology = ci.topology,
 			.vertex_input_description = ci.vertex_input_desc,
+			.line_raster_mode = ci.line_raster_mode,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
