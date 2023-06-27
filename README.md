@@ -58,7 +58,7 @@
 		- [x] for Buffers
 		- [ ] for Images
 - [ ] Re use descriptor sets
-	- [ ] set = 0: common set (debug, ...)
+	- [ ] set = 0: common set (debug, ...), managed by the executor
 	- [ ] set = 1: scene set
 	- [ ] set = 2: module set
 	- [ ] set = 3: shader set

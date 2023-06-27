@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <Core/DynamicValue.hpp>
+#include <Core/VulkanCommons.hpp>
 
 namespace vkl
 {

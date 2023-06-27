@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Command.hpp"
+#include <Core/Execution/Resource.hpp>
 
 namespace vkl
 {

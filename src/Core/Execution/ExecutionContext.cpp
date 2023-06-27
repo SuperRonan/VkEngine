@@ -13,24 +13,4 @@ namespace vkl
 	{
 		_command_buffer = cmd;
 	}
-
-	const std::string& Resource::name()const
-	{
-		// front?
-		if (isImage())
-			return _image->name();
-		else// if (isBuffer())
-			return _buffer->name();
-	}
-
-	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image)
-	{
-		Resource res;
-		if (!!buffer)
-			res._buffer = buffer;
-		else if (!!image)
-			res._image = image;
-		return res;
-
-	}
 }
