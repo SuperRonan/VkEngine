@@ -73,6 +73,8 @@ namespace vkl
 		vec3 _right = vec3(1, 0, 0);
 		vec3 _up = vec3(0, 1, 0);
 
+		DynamicValue<VkExtent2D> _resolution_ifp = {};
+
 		float _aspect = 16.0/9.0;
 		float _fov = glm::radians(90.0);
 		float _near = 0.1;
@@ -87,7 +89,17 @@ namespace vkl
 			float fov = 1;
 		};
 
-		constexpr Camera() = default;
+		struct CreateInfo
+		{
+			DynamicValue<VkExtent2D> resolution = {};
+		};
+		using CI = CreateInfo;
+
+		Camera(CreateInfo const& ci) : 
+			_resolution_ifp(ci.resolution)
+		{
+
+		}
 
 		mat4 getCamToProj()const
 		{
@@ -142,12 +154,17 @@ namespace vkl
 			return _fov;
 		}
 
+		constexpr float aspect()const
+		{
+			return _aspect;
+		}
+
 		Ray getRay(vec2 uv = vec2(0))
 		{
 			const vec2 cp = uvToClipSpace(uv);
 			return Ray{
 				.origin = _position,
-				.direction = glm::normalize(_direction + cp.x * _right - cp.y * _up),
+				.direction = glm::normalize(_direction + cp.x * _right * _aspect - cp.y * _up),
 			};
 		}
 
@@ -177,6 +194,13 @@ namespace vkl
 
 			_fov *= delta.fov;
 			_fov = std::clamp(_fov, glm::radians(1e-1f), glm::radians(179.0f));
+			
+			if (_resolution_ifp.hasValue())
+			{
+				VkExtent2D res = _resolution_ifp.value();
+				_aspect = float(res.width) / float(res.height);
+			}
+
 		}
 
 		friend class CameraController;

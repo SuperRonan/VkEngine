@@ -153,13 +153,19 @@ namespace vkl
 				.depth = renderer.depth(),
 			});
 
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SMI{
+			//std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SMI{
+			//	.app = this,
+			//	.radius = 1,
+			//	//.theta_divisions = 180,
+			//	//.phi_divisions = 360,
+			//});
+
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeTetrahedron(RigidMesh::PMI{
 				.app = this,
-				.radius = 1,
-				//.theta_divisions = 180,
-				//.phi_divisions = 360,
+				.radius = 0.5,
+				.face_normal = false,
 			});
-			mesh->createDeviceBuffer({_queue_family_indices.graphics_family.value()});
+
 			exec.declare(mesh);
 
 			struct UBO
@@ -244,7 +250,9 @@ namespace vkl
 			double t = glfwGetTime(), dt = 0.0;
 			size_t frame_index = 0;
 
-			Camera camera;
+			Camera camera(Camera::CreateInfo{
+				.resolution = window->extent2D(),
+			});
 			float camera_distance = 2.0;
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
@@ -262,6 +270,7 @@ namespace vkl
 					t = new_t;
 				}
 				window->pollEvents();
+
 				keyboard.update();
 				mouse.update();
 				gamepad.update();

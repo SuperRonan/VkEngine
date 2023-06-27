@@ -22,6 +22,8 @@ if (call != VK_SUCCESS) {				\
 	throw std::runtime_error(msg);		\
 }										\
 
+#define NOT_YET_IMPLEMENTED assert(false)
+
 namespace vkl
 {
 	class VkObject;
