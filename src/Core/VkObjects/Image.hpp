@@ -51,7 +51,14 @@ namespace vkl
 
 		struct InternalStates
 		{
-			mutable std::HMap<Range, ResourceState2> states = {};
+			struct PosAndState
+			{
+				uint32_t pos;
+				ResourceState2 state;
+			};
+			// One per mip level
+			//	- Layers (similar to buffer)
+			std::vector<std::vector<PosAndState>> states;
 		};
 
 		std::HMap<size_t, InternalStates> _states = {};
@@ -121,25 +128,14 @@ namespace vkl
 			return _unique_id;
 		}
 
-		ResourceState2 getState(size_t tid, Range const& range)const
+		struct StateInRange
 		{
-			assert(_states.contains(tid));
-			const InternalStates& is = _states.at(tid);
-			if (!is.states.contains(range))
-			{
-				is.states[range] = ResourceState2();
-			}
-			return is.states.at(range);
-		}
+			ResourceState2 state;
+			Range range;
+		};
+		std::vector<StateInRange> getState(size_t tid, Range const& range)const;
 
-		void setState(size_t tid, Range const& range, ResourceState2 const& state)
-		{
-			if (!_states.contains(tid))
-			{
-				_states[tid] = InternalStates{};
-			}
-			_states[tid].states[range] = state;
-		}
+		void setState(size_t tid, Range const& range, ResourceState2 const& state);
 
 	};
 

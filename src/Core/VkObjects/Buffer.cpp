@@ -193,7 +193,7 @@ namespace vkl
 				const auto next = it + 1;
 				if (it->state == next->state)
 				{
-					is.states.erase(next);
+					it = is.states.erase(next);
 				}
 			}
 		}

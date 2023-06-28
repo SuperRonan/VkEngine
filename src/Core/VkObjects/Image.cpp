@@ -21,21 +21,24 @@ namespace vkl
 
 	void ImageInstance::setInitialState(size_t tid)
 	{
-		InternalStates is;
-		VkImageSubresourceRange range{
-			.aspectMask = getImageAspectFromFormat(_ci.format),
-			.baseMipLevel = 0,
-			.levelCount = _ci.mipLevels,
-			.baseArrayLayer = 0,
-			.layerCount = _ci.arrayLayers,
-		};
-		is.states[range] = ResourceState2{
-			.access = VK_ACCESS_2_NONE,
-			.layout = _ci.initialLayout,
-			.stage = VK_PIPELINE_STAGE_2_NONE,
-		};
+		_states[0] = InternalStates();
+		InternalStates &is = _states[0];
 
-		_states[0] = std::move(is);
+		is.states.resize(_ci.mipLevels);
+		for (size_t m = 0; m < is.states.size(); ++m)
+		{
+			is.states[m] = {
+				InternalStates::PosAndState{
+					.pos = 0,
+					.state = ResourceState2{
+						.access = VK_ACCESS_2_NONE,
+						.layout = _ci.initialLayout,
+						.stage = VK_PIPELINE_STAGE_2_NONE,
+					},		
+				},
+			};
+		}
+
 	}
 
 	void ImageInstance::create()
@@ -90,7 +93,101 @@ namespace vkl
 	}
 
 
+	std::vector<ImageInstance::StateInRange> ImageInstance::getState(size_t tid, Range const& range) const
+	{
+		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
+		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
+		std::vector<std::vector<StateInRange>> states_per_mip(range.levelCount);
+		
+		for (uint32_t m = range.baseMipLevel; m < (range.baseMipLevel + range.levelCount); ++m)
+		{
+			std::vector<StateInRange>& res_states = states_per_mip[m - range.baseMipLevel];
+			const std::vector<InternalStates::PosAndState> & layers_states = _states.at(tid).states[m];
+			
+			for (size_t i = 0; i < layers_states.size(); ++i)
+			{
+				const uint32_t layers_begin = layers_states[i].pos;
+				const uint32_t layers_end = [&]() {
+					if (i == layers_states.size() - 1)
+						return _ci.arrayLayers;
+					else
+						return layers_states[i+1].pos;
+				}();
+				
+				if (range.baseArrayLayer >= layers_end)
+				{
+					continue;
+				}
+				if (layers_begin >= range_max_layer)
+				{
+					break;
+				}
+
+				uint32_t begin = std::max(layers_begin, range.baseArrayLayer);
+				uint32_t end = std::min(layers_end, range_max_layer);
+				res_states.push_back(StateInRange{
+					.state = layers_states[i].state,
+					.range = Range{
+						.aspectMask = range.aspectMask,
+						.baseMipLevel = m,
+						.levelCount = 1,
+						.baseArrayLayer = begin,
+						.layerCount = end - begin,
+					},
+				});
+			}
+		}
+
+		
+		// Try to merge mips
+		for (size_t m = states_per_mip.size() - 1; m > 0; --m)
+		{
+			std::vector<StateInRange> & mip_minus = states_per_mip[m - 1];
+			std::vector<StateInRange> & current_mip = states_per_mip[m];
+
+			if (mip_minus.size() == current_mip.size())
+			{
+				bool can_merge = true;
+				for (size_t i = 0; i < mip_minus.size(); ++i)
+				{
+					can_merge &= (
+						(mip_minus[i].state == current_mip[i].state) &&
+						(mip_minus[i].range.baseArrayLayer == current_mip[i].range.baseArrayLayer) &&
+						(mip_minus[i].range.layerCount == current_mip[i].range.layerCount)
+					);
+					if (!can_merge)
+					{
+						break;
+					}
+				}
+
+				if (can_merge)
+				{
+					for (size_t i = 0; i < mip_minus.size(); ++i)
+					{
+						mip_minus[i].range.levelCount += current_mip[i].range.levelCount;
+					}
+					states_per_mip.pop_back();
+				}
+			}
+		}
+
+		std::vector<StateInRange> res;
+		res.reserve(states_per_mip.size() * states_per_mip[0].size());
+		using namespace std::containers_operators;
+		for (size_t m = 0; m < states_per_mip.size(); ++m)
+		{
+			res += states_per_mip[m];
+		}
+
+		return res;
+	}
+
+	void ImageInstance::setState(size_t tid, Range const& range, ResourceState2 const& state)
+	{
+
+	}
 
 
 
