@@ -11,6 +11,8 @@ SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # SET(CMAKE_CXX_FLAGS_RELEASE	"/MD")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
 # ThatLib
 ADD_SUBDIRECTORY(ext/thatlib)
@@ -110,7 +112,7 @@ SET(IMGUI_LIBS imgui)
 # SET(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
 
 # VkEngine
-SET(ALL_EXT_LIBS ${THAT_LIB} ${GLFW_LIBS} ${GLM_LIBS} ${VULKAN_LIBS} ${VMA_LIBS} ${IMGUI_LIBS} ${SPV_CROSS_LIBS})
+SET(ALL_EXT_LIBS ${THAT_LIB} ${GLFW_LIBS} ${GLM_LIBS} ${VMA_LIBS} ${IMGUI_LIBS})
 
 ADD_DEFINITIONS(-DNOMINMAX)
 SET(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
@@ -158,6 +160,8 @@ function(AddProject p_name)
 	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_NAME=\"${p_name}\"")
 	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/${folder}/\"")
 	TARGET_LINK_LIBRARIES(${p_name} PUBLIC ${ALL_EXT_LIBS} VkEngine)
+	TARGET_LINK_LIBRARIES(${p_name} PUBLIC ${VULKAN_LIBS} VkEngine)
+	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # TODO don't have the warning in the first place
 	SET(EXECUTABLES ${EXECUTABLES} ${p_name})
 endfunction()
 
@@ -165,15 +169,15 @@ option(BUILD_PROJECTS ON)
 
 if(${BUILD_PROJECTS})
 
-	AddProject(Test)
+	# AddProject(Test)
 
-	AddProject(GameOfLife "GOL")
+	# AddProject(GameOfLife "GOL")
 
-	AddProject(Paint)
+	# AddProject(Paint)
 
-	AddProject(Particules)
+	# AddProject(Particules)
 
-	AddProject(Flotsam)
+	# AddProject(Flotsam)
 
 	AddProject(Renderer)
 
