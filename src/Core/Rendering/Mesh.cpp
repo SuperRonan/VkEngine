@@ -107,14 +107,16 @@ namespace vkl
 			{
 				std::vector<u16> tmp = std::move(_host.indices16);
 				_host.indices8 = std::vector<u8>(is);
-				std::copy(tmp.begin(), tmp.end(), _host.indices8.begin());
+				std::transform(tmp.begin(), tmp.end(), _host.indices8.begin(), [](u16 i){return static_cast<u8>(i);});
+				//std::copy(tmp.begin(), tmp.end(), _host.indices8.begin());
 				_device.up_to_date = false;
 			}
 			else if (idxt == VK_INDEX_TYPE_UINT32)
 			{
 				std::vector<u32> tmp = std::move(_host.indices32);
 				_host.indices8 = std::vector<u8>(is);
-				std::copy(tmp.begin(), tmp.end(), _host.indices8.begin());
+				std::transform(tmp.begin(), tmp.end(), _host.indices8.begin(), [](u32 i) {return static_cast<u8>(i); });
+				//std::copy(tmp.begin(), tmp.end(), _host.indices8.begin());
 				_device.up_to_date = false;
 			}
 			else
@@ -129,7 +131,8 @@ namespace vkl
 			{
 				std::vector<u32> tmp = std::move(_host.indices32);
 				_host.indices16 = std::vector<u16>(is);
-				std::copy(tmp.begin(), tmp.end(), _host.indices16.begin());
+				std::transform(tmp.begin(), tmp.end(), _host.indices16.begin(), [](u32 i) {return static_cast<u16>(i); });
+				//std::copy(tmp.begin(), tmp.end(), _host.indices16.begin());
 				_device.up_to_date = false;
 			}
 			else
@@ -615,7 +618,6 @@ namespace vkl
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeTetrahedron(PlatonMakeInfo const& pmi)
 	{
-		const float phi = std::numbers::phi;
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
@@ -683,7 +685,7 @@ namespace vkl
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeOctahedron(PlatonMakeInfo const& pmi)
 	{
-		const float phi = std::numbers::phi;
+		const float phi = std::numbers::phi_v<float>;
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
@@ -774,7 +776,7 @@ namespace vkl
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeIcosahedron(PlatonMakeInfo const& pmi)
 	{
-		const float phi = std::numbers::phi;
+		const float phi = std::numbers::phi_v<float>;
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
@@ -791,7 +793,7 @@ namespace vkl
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeDodecahedron(PlatonMakeInfo const& pmi)
 	{
-		const float phi = std::numbers::phi;
+		const float phi = std::numbers::phi_v<float>;
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
