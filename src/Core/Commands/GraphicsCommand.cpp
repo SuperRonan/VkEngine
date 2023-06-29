@@ -120,7 +120,7 @@ namespace vkl
 		});
 	}
 
-	void GraphicsCommand::declareGraphicsResources(InputSynchronizationHelper & synch)
+	void GraphicsCommand::declareGraphicsResources(SynchronizationHelper & synch)
 	{
 		for (size_t i = 0; i < _framebuffer->size(); ++i)
 		{
@@ -215,7 +215,7 @@ namespace vkl
 
 	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di, void * user_info)
 	{
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 
 		declareGraphicsResources(synch);
 		_sets->instance()->recordInputSynchronization(synch);

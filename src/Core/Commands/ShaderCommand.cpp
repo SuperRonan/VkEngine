@@ -407,7 +407,7 @@ namespace vkl
 		_sets->instance()->recordBindings(cmd, _pipeline->instance()->binding());
 	}
 
-	void DescriptorSetsInstance::recordInputSynchronization(InputSynchronizationHelper& synch)
+	void DescriptorSetsInstance::recordInputSynchronization(SynchronizationHelper& synch)
 	{
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{

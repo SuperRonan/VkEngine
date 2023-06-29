@@ -49,17 +49,21 @@ namespace vkl
 						meta.access = [&]()
 						{
 							const VkDescriptorType type = vkb.descriptorType;
-							VkAccessFlags res = VK_ACCESS_NONE_KHR;
-							if ( // Must be read only
+							VkAccessFlags res = VK_ACCESS_2_NONE_KHR;
+							if (
 								type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-								type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+								type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC || 
+								type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT
+							) {
+								res |= VK_ACCESS_2_UNIFORM_READ_BIT;
+							}
+							else if ( // Must be read only
 								type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR ||
 								type == VK_DESCRIPTOR_TYPE_SAMPLER ||
 								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-								type == VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT
-								) {
-								res |= VK_ACCESS_SHADER_READ_BIT;
+								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+							) {
+								res |= VK_ACCESS_2_SHADER_READ_BIT;
 							}
 							else
 							{
@@ -68,15 +72,15 @@ namespace vkl
 								const bool writeonly = false; // decoration& SPV_REFLECT_DECORATION_NONE; // TODO add writeonly to spirv reflect
 								if (readonly == writeonly) // Kind of an adge case
 								{
-									res |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+									res |= VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 								}
 								else if (readonly)
 								{
-									res |= VK_ACCESS_SHADER_READ_BIT;
+									res |= VK_ACCESS_2_SHADER_READ_BIT;
 								}
 								else if (writeonly)
 								{
-									res |= VK_ACCESS_SHADER_WRITE_BIT;
+									res |= VK_ACCESS_2_SHADER_WRITE_BIT;
 								}
 							}
 							return res;
@@ -94,7 +98,7 @@ namespace vkl
 									res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 								else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 								{
-									if (meta.access == VK_ACCESS_SHADER_READ_BIT)
+									if (meta.access == VK_ACCESS_2_SHADER_READ_BIT)
 										res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 									else
 										res = VK_IMAGE_LAYOUT_GENERAL;

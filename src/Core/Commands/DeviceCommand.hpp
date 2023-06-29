@@ -2,31 +2,11 @@
 
 #include "Command.hpp"
 #include <Core/Execution/Resource.hpp>
+#include <Core/Execution/SynchronizationHelper.hpp>
 
 namespace vkl
 {
-	class InputSynchronizationHelper
-	{
-	protected:
 
-		std::vector<Resource> _resources;
-		std::vector<VkImageMemoryBarrier2> _images_barriers;
-		std::vector<VkBufferMemoryBarrier2> _buffers_barriers;
-
-		ExecutionContext& _ctx;
-
-	public:
-
-		InputSynchronizationHelper(ExecutionContext& ctx) :
-			_ctx(ctx)
-		{}
-
-		void addSynch(Resource const& r);
-
-		void record();
-
-		void NotifyContext();
-	};
 
 	class DeviceCommand : public Command
 	{

@@ -50,7 +50,7 @@ namespace vkl
 
 		void recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding);
 
-		void recordInputSynchronization(InputSynchronizationHelper& synch);
+		void recordInputSynchronization(SynchronizationHelper& synch);
 
 	};
 

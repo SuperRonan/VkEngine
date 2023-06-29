@@ -144,7 +144,7 @@ namespace vkl
 	void ImguiCommand::execute(ExecutionContext& context, ExecutionInfo const& ei)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 
 		const size_t index = ei.index;
 

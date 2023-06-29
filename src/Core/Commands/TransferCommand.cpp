@@ -13,7 +13,7 @@ namespace vkl
 	void BlitImage::execute(ExecutionContext& context, BlitInfo const& bi)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 		
 		synch.addSynch(Resource{
 			._image = bi.src,
@@ -102,7 +102,7 @@ namespace vkl
 	void CopyImage::execute(ExecutionContext& ctx, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
-		InputSynchronizationHelper synch(ctx);
+		SynchronizationHelper synch(ctx);
 
 		synch.addSynch(Resource{
 			._image = cinfo.src,
@@ -191,7 +191,7 @@ namespace vkl
 	void CopyBufferToImage::execute(ExecutionContext& context, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._buffer = cinfo.src,
 			._buffer_range = cinfo.range,
@@ -283,7 +283,7 @@ namespace vkl
 	void CopyBuffer::execute(ExecutionContext& context, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._buffer = cinfo.src,
 			._buffer_range = Range_st{.begin = cinfo.src_offset, .len = cinfo.size},
@@ -377,7 +377,7 @@ namespace vkl
 	void FillBuffer::execute(ExecutionContext& context, FillInfo const& fi)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._buffer = fi.buffer,
 			._buffer_range = fi.range.value(),
@@ -436,7 +436,7 @@ namespace vkl
 	void ClearImage::execute(ExecutionContext& context, ClearInfo const& ci)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		InputSynchronizationHelper synch(context);
+		SynchronizationHelper synch(context);
 		synch.addSynch(Resource{
 			._image = ci.view,
 			._begin_state = ResourceState2{
@@ -503,7 +503,7 @@ namespace vkl
 	{
 		const bool buffer_ok = ui.dst->instance().operator bool();
 		assert(buffer_ok);
-		InputSynchronizationHelper synch(ctx);
+		SynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._buffer = ui.dst,
 			._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
@@ -546,7 +546,7 @@ namespace vkl
 
 	void ComputeMips::execute(ExecutionContext& ctx, ExecInfo const& ei)
 	{
-		InputSynchronizationHelper synch(ctx);
+		SynchronizationHelper synch(ctx);
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
 		ImageViewInstance & view = *ei.target->instance();
@@ -782,7 +782,7 @@ namespace vkl
 		// now .len is .len
 		buffer_range.len = buffer_range.len - buffer_range.begin;
 
-		InputSynchronizationHelper synch(ctx);
+		SynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._buffer = ui.dst,
 			._buffer_range = buffer_range,
@@ -815,7 +815,7 @@ namespace vkl
 				}
 				sbbi.unMap();
 
-				InputSynchronizationHelper synch2(ctx);
+				SynchronizationHelper synch2(ctx);
 				synch2.addSynch(Resource{
 					._buffer = sb->buffer(),
 					._buffer_range = buffer_range,
@@ -902,7 +902,7 @@ namespace vkl
 	{
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
-		InputSynchronizationHelper synch(ctx);
+		SynchronizationHelper synch(ctx);
 		synch.addSynch(Resource{
 			._image = ui.dst,
 			._begin_state = {
@@ -923,7 +923,7 @@ namespace vkl
 				std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
 				sbbi.unMap();
 
-				InputSynchronizationHelper synch2(ctx);
+				SynchronizationHelper synch2(ctx);
 				synch2.addSynch(Resource{
 					._buffer = sb->buffer(),
 					._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },

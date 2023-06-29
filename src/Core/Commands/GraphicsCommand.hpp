@@ -31,7 +31,7 @@ namespace vkl
 
 		void createPipeline();
 
-		virtual void declareGraphicsResources(InputSynchronizationHelper & synch);
+		virtual void declareGraphicsResources(SynchronizationHelper & synch);
 
 	public:
 

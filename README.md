@@ -51,12 +51,13 @@
 	- [ ] Separate list for .exe
 	- [x] Option to build .exe
 	- [ ] Correctly import Vulkan
-- [ ] Better ResourceStateTracker
+- [x] Better ResourceStateTracker
 	- [x] Remake the interface
 	- [x] Actually store the resource state in the resource rather than in a separate map?
-	- [ ] Correctly track potentially overlapping subresources
+	- [x] Correctly track potentially overlapping subresources
 		- [x] for Buffers
-		- [ ] for Images
+		- [x] for Images
+- [ ] Fix synchronization validation errors
 - [ ] Re use descriptor sets
 	- [ ] set = 0: common set (debug, ...), managed by the executor
 	- [ ] set = 1: scene set

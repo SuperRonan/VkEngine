@@ -221,7 +221,7 @@ namespace vkl
 			execute(_render_gui);
 		}
 
-		InputSynchronizationHelper synch(_context);
+		SynchronizationHelper synch(_context);
 		Resource res{
 			._image = blit_target,
 			._begin_state = ResourceState2 {
