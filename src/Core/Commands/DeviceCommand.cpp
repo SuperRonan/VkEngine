@@ -6,51 +6,45 @@ namespace vkl
 	{
 		_resources.push_back(r);
 		const ResourceState2 next = r._begin_state;
-		const ResourceState2 prev = [&]() {
-			if (r.isImage())
-			{
-				return r._image->instance()->getState(_ctx.resourceThreadId());
-			}
-			else if (r.isBuffer())
-			{
-				return r._buffer->instance()->getState(_ctx.resourceThreadId(), r._buffer_range.value());
-			}
-			else
-			{
-				assert(false);
-				// ???
-				return ResourceState2{};
-			}
-		}();
-		if (stateTransitionRequiresSynchronization2(prev, next, r.isImage()))
+		if (r.isImage())
 		{
-			if (r.isImage())
+			assert(r._image->instance());
+			const auto prevs = r._image->instance()->getState(_ctx.resourceThreadId());
+			for (const auto& prev_state_in_range : prevs)
 			{
-				assert(r._image->instance());
-				VkImageMemoryBarrier2 barrier = {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-					.pNext = nullptr,
-					.srcStageMask = prev.stage,
-					.srcAccessMask = prev.access,
-					.dstStageMask = next.stage,
-					.dstAccessMask = next.access,
-					.oldLayout = prev.layout,
-					.newLayout = next.layout,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = *r._image->image()->instance(),
-					.subresourceRange = r._image->range(),
-				};
-				_images_barriers.push_back(barrier);
-			}
-			else if (r.isBuffer())
-			{
-				assert(r._buffer->instance());
-				Buffer::Range range = r._buffer_range.value();
-				if (range.len == 0)
+				const ResourceState2 & prev = prev_state_in_range.state;
+				const VkImageSubresourceRange & range = prev_state_in_range.range;
+				if (stateTransitionRequiresSynchronization2(prev, next, true))
 				{
-					range.len = r._buffer->instance()->createInfo().size - range.begin;
+					VkImageMemoryBarrier2 barrier = {
+						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+						.pNext = nullptr,
+						.srcStageMask = prev.stage,
+						.srcAccessMask = prev.access,
+						.dstStageMask = next.stage,
+						.dstAccessMask = next.access,
+						.oldLayout = prev.layout,
+						.newLayout = next.layout,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.image = *r._image->image()->instance(),
+						.subresourceRange = range,
+					};
+					_images_barriers.push_back(barrier);
 				}
+			}
+		}
+		else if (r.isBuffer())
+		{
+			assert(r._buffer->instance());
+			Buffer::Range range = r._buffer_range.value();
+			if (range.len == 0)
+			{
+				range.len = r._buffer->instance()->createInfo().size - range.begin;
+			}
+			const ResourceState2 prev = r._buffer->instance()->getState(_ctx.resourceThreadId(), range);
+			if(stateTransitionRequiresSynchronization2(prev, next, false))
+			{ 
 				VkBufferMemoryBarrier2 barrier = {
 					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 					.pNext = nullptr,
