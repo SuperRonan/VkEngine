@@ -173,6 +173,7 @@ namespace vkl
 			}
 		}
 
+		// Linearize
 		std::vector<StateInRange> res;
 		res.reserve(states_per_mip.size() * states_per_mip[0].size());
 		using namespace std::containers_operators;
@@ -186,6 +187,59 @@ namespace vkl
 
 	void ImageInstance::setState(size_t tid, Range const& range, ResourceState2 const& state)
 	{
+		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
+		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
+
+		for (uint32_t m = range.baseMipLevel; m < (range.baseMipLevel + range.levelCount); ++m)
+		{
+			std::vector<InternalStates::PosAndState>& layers_states = _states.at(tid).states[m];
+			for (auto it = layers_states.begin(); it != layers_states.end(); ++it)
+			{
+				const uint32_t layers_begin = it->pos;
+				const uint32_t layers_end = [&]() {
+					if ((it + 1) == layers_states.end())
+						return _ci.arrayLayers;
+					else
+						return (it + 1)->pos;
+				}();
+
+				if (range.baseArrayLayer >= layers_end) // Not yet there
+				{
+					continue;
+				}
+				if (layers_begin >= range_max_layer) // Done
+				{
+					break;
+				}
+
+				if (range.baseArrayLayer <= it->pos && range_max_layer >= layers_end) // it is a subset of range
+				{
+					it->state = state;
+				}
+				else
+				{
+					if (range.baseArrayLayer > it->pos)
+					{
+						it = layers_states.insert(it, InternalStates::PosAndState{
+							.pos = range.baseArrayLayer,
+							.state = state,
+						});
+					}
+
+					if (range_max_layer < layers_end)
+					{
+						ResourceState2 tmp_state = it->state;
+						it->state = state;
+						it = layers_states.insert(it, InternalStates::PosAndState{
+							.pos = range_max_layer,
+							.state = tmp_state,
+						});
+					}
+				}
+			}
+
+			bool reduce = false; // TODO
+		}
 
 	}
 

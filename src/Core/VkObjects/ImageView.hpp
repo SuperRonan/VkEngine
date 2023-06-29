@@ -97,7 +97,7 @@ namespace vkl
 			};
 		}
 		
-		ResourceState2 getState(size_t tid)const
+		decltype(auto) getState(size_t tid)const
 		{
 			return _image->getState(tid, _ci.subresourceRange);
 		}
