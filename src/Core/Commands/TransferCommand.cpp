@@ -58,8 +58,6 @@ namespace vkl
 			*bi.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, regions, bi.filter
 		);
-
-		synch.NotifyContext();
 	}
 
 	void BlitImage::execute(ExecutionContext& context)
@@ -148,8 +146,6 @@ namespace vkl
 			*cinfo.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, regions
 		);
-
-		synch.NotifyContext();
 	}
 
 	void CopyImage::execute(ExecutionContext& context)
@@ -237,9 +233,6 @@ namespace vkl
 			*cinfo.src->instance(), *cinfo.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, p_regions
 		);
-
-
-		synch.NotifyContext();
 	}
 
 	void CopyBufferToImage::execute(ExecutionContext& context)
@@ -316,8 +309,6 @@ namespace vkl
 			*cinfo.src->instance(), *cinfo.dst->instance(),
 			1, &region
 		);
-
-		synch.NotifyContext();
 	}
 
 	void CopyBuffer::execute(ExecutionContext& context)
@@ -391,8 +382,6 @@ namespace vkl
 		synch.record();
 
 		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.range.value().begin, fi.range.value().len, fi.value.value());
-
-		synch.NotifyContext();
 	}
 
 	void FillBuffer::execute(ExecutionContext& context)
@@ -462,8 +451,6 @@ namespace vkl
 			1, 
 			&range
 		);
-
-		synch.NotifyContext();
 	}
 
 	void ClearImage::execute(ExecutionContext& context)
@@ -515,7 +502,6 @@ namespace vkl
 		});
 		synch.record();
 		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset.value(), ui.src.size(), ui.src.data());
-		synch.NotifyContext();
 	}
 
 	void UpdateBuffer::execute(ExecutionContext& ctx)
@@ -718,10 +704,6 @@ namespace vkl
 
 			vkCmdPipelineBarrier2(cmd, &dep);
 		}
-
-
-		synch.NotifyContext();
-
 	}
 
 	void ComputeMips::execute(ExecutionContext & ctx)
@@ -825,7 +807,6 @@ namespace vkl
 					},
 				});
 				synch2.record();
-				synch2.NotifyContext();
 			}
 
 			synch.addSynch(Resource{
@@ -863,9 +844,6 @@ namespace vkl
 
 			ctx.keppAlive(sb);
 		}
-
-
-		synch.NotifyContext();
 	}
 
 	void UploadBuffer::execute(ExecutionContext& ctx)
@@ -933,7 +911,6 @@ namespace vkl
 					},
 				});
 				synch2.record();
-				synch2.NotifyContext();
 			}
 
 			synch.addSynch(Resource{
@@ -971,8 +948,6 @@ namespace vkl
 
 			ctx.keppAlive(sb);
 		}
-
-		synch.NotifyContext();
 	}
 
 

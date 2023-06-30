@@ -42,22 +42,40 @@ namespace vkl
 			{
 				range.len = r._buffer->instance()->createInfo().size - range.begin;
 			}
-			const ResourceState2 prev = r._buffer->instance()->getState(_ctx.resourceThreadId(), range);
+			const DoubleResourceState2 prev = r._buffer->instance()->getState(_ctx.resourceThreadId(), range);
+			const bool synch_to_readonly = accessIsReadonly2(r._begin_state.access);
+			
+			bool add_barrier = false;
+			ResourceState2 synch_from;
+
+			if (synch_to_readonly)
+			{
+				const bool access_already_synch = (r._begin_state.access & prev.read_only_state.access) == r._begin_state.access;
+				const bool stage_already_synch = (r._begin_state.stage & prev.read_only_state.stage) == r._begin_state.stage;
+
+				if (!access_already_synch || !stage_already_synch)
+				{
+					synch_from = prev.write_state;
+					add_barrier = true;
+				}
+			}
+			else
+			{
+				synch_from = prev.read_only_state | prev.write_state;
+				add_barrier = true;
+			}
+
 			if (r._buffer->name() == "ubo")
 			{
 				int _ = 0;
 			}
-			if (stateTransitionRequiresSynchronization2(prev, next, false))
+			if (add_barrier)
 			{
-				if (r._buffer->name() == "ubo")
-				{
-					int _ = 0;
-				}
 				VkBufferMemoryBarrier2 barrier = {
 					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
 					.pNext = nullptr,
-					.srcStageMask = prev.stage,
-					.srcAccessMask = prev.access,
+					.srcStageMask = synch_from.stage,
+					.srcAccessMask = synch_from.access,
 					.dstStageMask = next.stage,
 					.dstAccessMask = next.access,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -88,10 +106,7 @@ namespace vkl
 			};
 			vkCmdPipelineBarrier2(*_ctx.getCommandBuffer(), &dep);
 		}
-	}
-
-	void SynchronizationHelper::NotifyContext()
-	{
+		
 		for (const auto& r : _resources)
 		{
 			ResourceState2 const& s = r._end_state.value_or(r._begin_state);
@@ -111,4 +126,6 @@ namespace vkl
 			}
 		}
 	}
+
+
 } // namespace vkl

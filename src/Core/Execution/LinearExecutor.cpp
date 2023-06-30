@@ -233,7 +233,6 @@ namespace vkl
 
 		synch.addSynch(res);
 		synch.record();
-		synch.NotifyContext();
 	}
 
 	void LinearExecutor::present()

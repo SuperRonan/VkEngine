@@ -274,7 +274,6 @@ namespace vkl
 		context.keppAlive(_framebuffer->instance());
 		context.keppAlive(_render_pass);
 		context.keppAlive(_sets->instance());
-		synch.NotifyContext();
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :

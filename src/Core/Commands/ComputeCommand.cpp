@@ -50,8 +50,6 @@ namespace vkl
 		const VkExtent3D workgroups = _dispatch_threads ? getWorkgroupsDispatchSize(di.extent) : di.extent;
 		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
 
-		synch.NotifyContext();
-
 		context.keppAlive(_pipeline->instance());
 		context.keppAlive(_sets->instance());
 	}

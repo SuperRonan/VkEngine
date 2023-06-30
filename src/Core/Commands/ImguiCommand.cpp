@@ -167,7 +167,6 @@ namespace vkl
 		synch.addSynch(resources[0]);
 
 		synch.record();
-		synch.NotifyContext();
 
 		const VkExtent2D render_area = extract(*_framebuffers[index]->extent());
 

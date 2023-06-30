@@ -25,6 +25,32 @@ namespace vkl
 				(stage == o.stage)
 			;
 		}
+
+		constexpr ResourceState2 operator| (ResourceState2 const& o) const 
+		{
+			return ResourceState2 {
+				.access = access | o.access,
+				.layout = layout,
+				.stage = stage | o.stage,
+			};
+		}
+
+		constexpr ResourceState2& operator|=(ResourceState2 const& o)
+		{
+			*this = *this | o;
+			return *this;
+		}
+	};
+
+	struct DoubleResourceState2
+	{
+		ResourceState2 write_state = {};
+		ResourceState2 read_only_state = {};
+
+		constexpr bool operator==(DoubleResourceState2 const& o) const noexcept
+		{
+			return write_state == o.write_state && read_only_state == o.read_only_state;
+		}
 	};
 
 	constexpr bool accessIsWrite1(VkAccessFlags access)
@@ -119,6 +145,11 @@ namespace vkl
 	constexpr bool accessIsReadAndWrite2(VkAccessFlags2 access)
 	{
 		return accessIsRead2(access) && accessIsWrite2(access);
+	}
+
+	constexpr bool accessIsReadonly2(VkAccessFlags2 access)
+	{
+		return accessIsRead2(access) && !accessIsWrite2(access);
 	}
 
 	constexpr bool layoutTransitionRequired(ResourceState1 prev, ResourceState1 next)

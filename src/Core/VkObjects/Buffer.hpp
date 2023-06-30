@@ -36,8 +36,9 @@ namespace vkl
 		{
 			struct PosAndState
 			{
-				size_t pos;
-				ResourceState2 state;
+				size_t pos = 0;
+				ResourceState2 write_state = {};
+				ResourceState2 read_only_state = {};
 			};
 			// Sorted by pos
 			std::vector<PosAndState> states;
@@ -150,7 +151,7 @@ namespace vkl
 			return getResourceKey(Range{.begin = 0, .len = _ci.size, });
 		}
 
-		ResourceState2 getState(size_t tid, Range range)const;
+		DoubleResourceState2 getState(size_t tid, Range range)const;
 
 		void setState(size_t tid, Range range, ResourceState2 const& state);
 

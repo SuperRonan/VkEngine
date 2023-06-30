@@ -32,10 +32,6 @@ namespace vkl
 		InternalStates is;
 		is.states.push_back(InternalStates::PosAndState{
 			.pos = 0,
-			.state = ResourceState2{
-				.access = VK_ACCESS_2_NONE,
-				.stage = VK_PIPELINE_STAGE_2_NONE,
-			},
 		});
 
 		_states[0] = std::move(is);
@@ -88,7 +84,7 @@ namespace vkl
 		_data = nullptr;
 	}
 
-	ResourceState2 BufferInstance::getState(size_t tid, Range r) const
+	DoubleResourceState2 BufferInstance::getState(size_t tid, Range r) const
 	{
 		if (r.len == 0 || r.len == VK_WHOLE_SIZE)
 		{
@@ -98,10 +94,7 @@ namespace vkl
 		assert(_states.contains(tid));
 		const InternalStates & is = _states.at(tid);
 
-		ResourceState2 res{
-			.access = VK_ACCESS_2_NONE,
-			.stage = VK_PIPELINE_STAGE_2_NONE,
-		};
+		DoubleResourceState2  res;
 
 		for (size_t i = 0; i < is.states.size(); ++i)
 		{
@@ -120,9 +113,12 @@ namespace vkl
 				break;
 			}
 
+			const ResourceState2 & rw_state = is.states[i].write_state;
+			const ResourceState2 & ro_state = is.states[i].read_only_state;
+
 			// The sub range intersects with the requested range
-			res.access |= is.states[i].state.access;
-			res.stage |= is.states[i].state.stage;
+			res.write_state |= rw_state;
+			res.read_only_state |= ro_state;
 		}
 
 		return res;
@@ -130,6 +126,8 @@ namespace vkl
 
 	void BufferInstance::setState(size_t tid, Range r, ResourceState2 const& state)
 	{
+		const bool state_is_readonly = accessIsReadonly2(state.access);
+
 		if (r.len == 0 || r.len == VK_WHOLE_SIZE)
 		{
 			r.len = (_ci.size - r.begin);
@@ -159,25 +157,53 @@ namespace vkl
 
 			if (r.begin <= it->pos && range_end >= range_i_end) // range_i is a subset of r
 			{
-				it->state = state;
+				if (state_is_readonly)
+				{
+					it->read_only_state |= state;
+				}
+				else
+				{
+					it->write_state = state;
+					it->read_only_state = {};
+				}
 			}
 			else
 			{
 				if (r.begin > it->pos)
 				{
-					it = is.states.insert(it, InternalStates::PosAndState{
+					InternalStates::PosAndState new_state {
 						.pos = r.begin,
-						.state = state,
-					});
+					};
+					if (state_is_readonly)
+					{
+						new_state.read_only_state = it->read_only_state | state;
+						new_state.write_state = it->write_state;
+					}
+					else
+					{
+						new_state.write_state = state;
+					}
+					it = is.states.insert(it, new_state);
 				}
 
 				if (range_end < range_i_end)
 				{
-					ResourceState2 tmp_state = it->state;
-					it->state = state;
+					DoubleResourceState2 tmp_state {.write_state = it->write_state, .read_only_state = it->read_only_state};
+					
+					if (state_is_readonly)
+					{
+						it->read_only_state |= state;
+					}
+					else
+					{
+						it->write_state = state;
+						it->read_only_state = {};
+					}
+
 					it = is.states.insert(it, InternalStates::PosAndState {
 						.pos = range_end,
-						.state = tmp_state,
+						.write_state = tmp_state.write_state,
+						.read_only_state = tmp_state.read_only_state,
 					});
 				}
 			}
@@ -191,7 +217,7 @@ namespace vkl
 			for (auto it = is.states.begin(); (it+1) != is.states.end(); ++it)
 			{
 				const auto next = it + 1;
-				if (it->state == next->state)
+				if ((it->write_state == next->write_state) && (it->read_only_state == next->read_only_state))
 				{
 					it = is.states.erase(next);
 				}

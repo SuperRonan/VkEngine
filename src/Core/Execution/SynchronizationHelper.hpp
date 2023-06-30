@@ -24,7 +24,5 @@ namespace vkl
 		void addSynch(Resource const& r);
 
 		void record();
-
-		void NotifyContext();
 	};
 } // namespace vkl
