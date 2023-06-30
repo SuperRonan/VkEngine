@@ -11,10 +11,14 @@ namespace vkl
 		_collapsed.clear();
 	}
 
+	bool DefinitionsMap::hasDefinition(std::string const& key) const
+	{
+		return _definitions.contains(key);
+	}
+
 	const std::string& DefinitionsMap::getDefinition(std::string const& key) const
 	{
-		using namespace std::string_literals;
-		if (_definitions.contains(key))
+		if (hasDefinition(key))
 		{
 			return _definitions.at(key);
 		}

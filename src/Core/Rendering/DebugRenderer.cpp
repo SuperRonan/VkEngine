@@ -10,7 +10,14 @@ namespace vkl
 		Module(ci.exec.application(), "DebugRenderer"),
 		_exec(ci.exec),
 		_target(ci.target),
-		_depth(ci.depth)
+		_depth(ci.depth),
+		_default_glyph_size({
+			"Tiny",
+			"Small",
+			"Normal",
+			"Large",
+			"Huge",
+		}, 2)
 	{
 		//struct BufferStringMeta
 		//{
@@ -113,6 +120,12 @@ namespace vkl
 		auto& common_defs = _exec.getCommonDefinitions();
 		common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
 		common_defs.setDefinition("DEBUG_BUFFER_BINDING", "set = " + std::to_string(_desc_set) + ", binding = " + std::to_string(_first_binding));
+		common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
+		common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
+		common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
+		common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
+		common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
+
 	}
 
 	void DebugRenderer::loadFont()
@@ -179,12 +192,49 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader("GLSL Debug"))
 		{
-			const bool changed = ImGui::Checkbox("Enable", &_enable_debug);
+			auto& common_defs = _exec.getCommonDefinitions();
+			bool changed = false;
+			
+			changed = ImGui::Checkbox("Enable", &_enable_debug);
 			if (changed)
 			{
-				auto& common_defs = _exec.getCommonDefinitions();
 				common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
 			}
+			
+			changed = ImGui::SliderInt("Shader String Chunks", & _shader_string_chunks, 1, _buffer_string_capacity / 4);
+			if (changed)
+			{
+				_shader_string_capacity = 4 * _shader_string_chunks;
+				common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
+			}
+
+			changed = ImGui::SliderInt("Buffer String Chunks", &_buffer_string_chunks, 1, 32);
+			if (changed)
+			{
+				_buffer_string_capacity = 4 * _buffer_string_chunks;
+				common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
+			}
+
+			ImGui::Text("Font size: ");
+			changed = _default_glyph_size.declare();
+			if (changed)
+			{
+				common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
+			}
+
+			changed = ImGui::SliderInt("Float precision", &_default_float_precision, 1, 12);
+			if (changed)
+			{
+				common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
+			}
+
+			changed = ImGui::Checkbox("Always print +", &_default_show_plus);
+			if (changed)
+			{
+				common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
+			}
+
+
 		}
 	}
 }

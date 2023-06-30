@@ -26,6 +26,7 @@ namespace vkl
 		std::vector<uint32_t> _spv_code;
 		SpvReflectShaderModule _reflection;
 		std::vector<std::filesystem::path> _dependencies;
+		size_t _shader_string_packed_capacity = 32;
 
 		struct PreprocessingState
 		{
@@ -45,6 +46,7 @@ namespace vkl
 			std::filesystem::path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			std::vector<std::string> const& definitions = {};
+			size_t shader_string_packed_capacity = 32;
 		};
 		using CI = CreateInfo;
 
@@ -147,7 +149,7 @@ namespace vkl
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions);
+		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity);
 
 		void destroyInstance();
 

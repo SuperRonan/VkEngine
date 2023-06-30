@@ -192,8 +192,7 @@ namespace vkl
 			return false;
 		};
 
-		// TODO 
-		const size_t max_str_len = 32 - 1;
+		const size_t max_str_len = _shader_string_packed_capacity - 1;
 
 		const auto convertLiteralContentToGLSL = [&](std::string_view lt)
 		{
@@ -405,7 +404,8 @@ namespace vkl
 	ShaderInstance::ShaderInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_stage(ci.stage),
-		_reflection(std::zeroInit(_reflection))
+		_reflection(std::zeroInit(_reflection)),
+		_shader_string_packed_capacity(ci.shader_string_packed_capacity)
 	{
 		using namespace std::containers_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
@@ -484,7 +484,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions)
+	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity)
 	{
 		if (_specializations.contains(key))
 		{
@@ -500,6 +500,7 @@ namespace vkl
 				.source_path = _path,
 				.stage = _stage,
 				.definitions = definitions,
+				.shader_string_packed_capacity = string_packed_capacity,
 				});
 			_specializations[key] = _inst;
 			_instance_time = std::chrono::file_clock::now();
@@ -558,7 +559,9 @@ namespace vkl
 		
 		if (!_inst)
 		{
-			createInstance(_current_key, ctx.commonDefinitions().collapsed());
+			std::string capacity = ctx.commonDefinitions().getDefinition("SHADER_STRING_CAPACITY");
+			int packed_capcity = capacity.empty() ? 32 : std::atoi(capacity.c_str());
+			createInstance(_current_key, ctx.commonDefinitions().collapsed(), static_cast<size_t>(packed_capcity));
 			res = true;
 		}
 

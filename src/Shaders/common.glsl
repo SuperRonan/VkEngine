@@ -38,10 +38,34 @@ float sqr(float x)
 	return x*x;
 }
 
+float rcp(float f)
+{
+	return 1.0f / f;
+}
+
+vec2 rcp(vec2 v)
+{
+	return 1.0f / v;
+}
+vec3 rcp(vec3 v)
+{
+	return 1.0f / v;
+}
+vec4 rcp(vec4 v)
+{
+	return 1.0f / v;
+}
+
+
 #if SHADER_FP16_AVAILABLE
 float16_t sqr(float16_t x)
 {
 	return x*x;
+}
+
+float16_t rcp(float16_t f)
+{
+	return 1.0f / f;
 }
 #endif
 

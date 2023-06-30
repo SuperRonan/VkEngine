@@ -15,11 +15,12 @@ namespace vkl
 
 	public:
 
-		ImGuiRadioButtons(std::vector<std::string> const& labels) :
+		ImGuiRadioButtons(std::vector<std::string> const& labels, size_t default_index = 0) :
+			_index(default_index),
 			_buttons(labels)
 		{}
 
-		size_t declare()
+		bool declare()
 		{
 			size_t active_index = _index;
 			for (size_t i = 0; i < _buttons.size(); ++i)
@@ -29,7 +30,13 @@ namespace vkl
 				if (i != _buttons.size() - 1)
 					ImGui::SameLine();
 			}
+			bool changed = _index != active_index;
 			_index = active_index;
+			return changed;
+		}
+
+		constexpr size_t index()const
+		{
 			return _index;
 		}
 

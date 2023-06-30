@@ -297,6 +297,8 @@ namespace vkl
 
 				beginImGuiFrame();
 				{
+					ImGui::ShowDemoWindow();
+
 					ImGui::Text("Camera inclination: %f", glm::degrees(camera.inclination()));
 
 					debugger.declareToImGui();

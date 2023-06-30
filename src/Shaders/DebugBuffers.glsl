@@ -1,6 +1,7 @@
 #pragma once
 
 #include "String.glsl"
+#include "common.glsl"
 
 #ifndef DEBUG_BUFFER_STRING_SIZE
 #define DEBUG_BUFFER_STRING_SIZE 16384
@@ -108,7 +109,7 @@ DebugStringCaret Caret3D(vec4 pos, uint layer)
 #define GLYPH_SIZE_HUGE 4
 
 #ifndef GLYPH_SIZE
-#define GLYPH_SIZE GLYPH_SIZE_LARGE
+#define GLYPH_SIZE GLYPH_SIZE_NORMAL
 #endif
 
 float getGlyphSizeMult()
@@ -122,7 +123,7 @@ float getGlyphSizeMult()
 #elif GLYPH_SIZE == GLYPH_SIZE_LARGE
 	return 2.0f;
 #elif GLYPH_SIZE == GLYPH_SIZE_HUGE
-	return 3.0f;
+	return 4.0f;
 #endif
 }
 
@@ -133,7 +134,8 @@ vec2 debugStringDefaultGlyphSizePix()
 
 vec2 debugStringDefaultGlyphSizeUV()
 {
-	return debugStringDefaultGlyphSizePix() * vec2(1.0f/1600.0f, 1.0/900.0f);
+	const vec2 screen_res = vec2(1600, 900);
+	return debugStringDefaultGlyphSizePix() * rcp(screen_res);
 }
 
 vec2 debugStringDefaultGlyphSizeClipSpace()

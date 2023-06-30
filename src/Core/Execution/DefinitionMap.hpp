@@ -24,6 +24,8 @@ namespace vkl
 
 		void setDefinition(std::string const& key, std::string const& value);
 
+		bool hasDefinition(std::string const& key) const;
+
 		const std::string& getDefinition(std::string const& key) const;
 
 		void removeDefinition(std::string const& key);
