@@ -40,27 +40,38 @@ namespace vkl
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
 			VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
+			VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
+			VK_EXT_MESH_SHADER_EXTENSION_NAME,
 		};
 	}
 
 	void VkApplication::requestFeatures(VulkanFeatures& features)
 	{
-		features.features_13.synchronization2 = VK_TRUE;
-		features.features.geometryShader = VK_TRUE;
-		features.features.samplerAnisotropy = VK_TRUE;
+		const VkBool32 t = VK_TRUE;
+		const VkBool32 f = VK_FALSE;
+		features.features_13.synchronization2 = t;
+		features.features.geometryShader = t;
+		features.features.samplerAnisotropy = t;
 
-		features.features_12.shaderInt8 = VK_TRUE;
+		features.features_12.shaderInt8 = t;
 	
-		features.features_12.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
-		features.features_12.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-		features.features_12.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
-		features.features_12.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-		features.features_12.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
-		features.features_12.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
-		features.features_12.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+		features.features_12.descriptorBindingUniformBufferUpdateAfterBind = t;
+		features.features_12.descriptorBindingSampledImageUpdateAfterBind = t;
+		features.features_12.descriptorBindingStorageImageUpdateAfterBind = t;
+		features.features_12.descriptorBindingStorageBufferUpdateAfterBind = t;
+		features.features_12.descriptorBindingUniformTexelBufferUpdateAfterBind = t;
+		features.features_12.descriptorBindingStorageTexelBufferUpdateAfterBind = t;
+		features.features_12.descriptorBindingUpdateUnusedWhilePending = t;
 
-		features.line_raster_ext.bresenhamLines = VK_TRUE;
-		features.line_raster_ext.stippledBresenhamLines = VK_TRUE;
+		features.line_raster_ext.bresenhamLines = t;
+		features.line_raster_ext.stippledBresenhamLines = t;
+
+		features.index_uint8_ext.indexTypeUint8 = t;
+
+		features.mesh_shader_ext.meshShader = t;
+		features.mesh_shader_ext.taskShader = t;
+		features.mesh_shader_ext.multiviewMeshShader = t;
+		features.mesh_shader_ext.primitiveFragmentShadingRateMeshShader = t;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
@@ -430,12 +441,23 @@ namespace vkl
 
 		VK_CHECK(vkCreateDevice(_physical_device, &device_create_info, nullptr, &_device), "Failed to create the logical device!");
 
-		if(indices.graphics_family.has_value()) vkGetDeviceQueue(_device, indices.graphics_family.value(), 0, &_queues.graphics);
-		if(indices.present_family.has_value()) vkGetDeviceQueue(_device, indices.present_family.value(), 0, &_queues.present);
-		if(indices.transfer_family.has_value()) vkGetDeviceQueue(_device, indices.transfer_family.value(), 0, &_queues.transfer);
+		if (indices.graphics_family.has_value()) vkGetDeviceQueue(_device, indices.graphics_family.value(), 0, &_queues.graphics);
+		if (indices.present_family.has_value()) vkGetDeviceQueue(_device, indices.present_family.value(), 0, &_queues.present);
+		if (indices.transfer_family.has_value()) vkGetDeviceQueue(_device, indices.transfer_family.value(), 0, &_queues.transfer);
 		if (indices.compute_family.has_value()) vkGetDeviceQueue(_device, indices.compute_family.value(), 0, &_queues.compute);
 
+
+		loadExtFunctionsPtr();
 	}
+
+	void VkApplication::loadExtFunctionsPtr()
+	{
+		if (_available_features.mesh_shader_ext.meshShader)
+		{
+			_ext_functions._vkCmdDrawMeshTasksEXT = (PFN_vkCmdDrawMeshTasksEXT)vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksEXT");
+		}
+	}
+
 
 	void VkApplication::createCommandPools()
 	{

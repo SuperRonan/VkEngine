@@ -21,8 +21,8 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			VertexInputDescription vertex_input;
-			VkPipelineInputAssemblyStateCreateInfo input_assembly;
+			std::optional<VertexInputDescription> vertex_input;
+			std::optional<VkPipelineInputAssemblyStateCreateInfo> input_assembly;
 			std::vector<VkViewport> viewports;
 			std::vector<VkRect2D> scissors;
 			mutable VkPipelineRasterizationStateCreateInfo rasterization;
@@ -46,7 +46,8 @@ namespace vkl
 			const VkGraphicsPipelineCreateInfo & assemble() const
 			{
 				{
-					_vk_vertex_input = vertex_input.link();
+					if(vertex_input.has_value())
+						_vk_vertex_input = vertex_input->link();
 
 					uint32_t num_viewport = static_cast<uint32_t>(viewports.size());
 					uint32_t num_scissor = static_cast<uint32_t>(scissors.size());
@@ -106,8 +107,8 @@ namespace vkl
 					.flags = 0,
 					.stageCount = (uint32_t)_shaders.size(),
 					.pStages = _shaders.data(),
-					.pVertexInputState = &_vk_vertex_input,
-					.pInputAssemblyState = &input_assembly,
+					.pVertexInputState = vertex_input.has_value() ? &_vk_vertex_input : nullptr,
+					.pInputAssemblyState = input_assembly.has_value() ? &input_assembly.value() : nullptr,
 					.pViewportState = &_viewport,
 					.pRasterizationState = &rasterization,
 					.pMultisampleState = &multisampling,
@@ -305,8 +306,8 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 
-			VertexInputDescription vertex_input;
-			VkPipelineInputAssemblyStateCreateInfo input_assembly;
+			std::optional<VertexInputDescription> vertex_input;
+			std::optional<VkPipelineInputAssemblyStateCreateInfo> input_assembly;
 			std::vector<VkViewport> viewports;
 			std::vector<VkRect2D> scissors;
 

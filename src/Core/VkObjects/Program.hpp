@@ -75,14 +75,9 @@ namespace vkl
 			ParentType(app, name)
 		{}
 
-		virtual ~Program()override
-		{
-			destroyInstance();
-			for (auto& shader : _shaders)
-			{
-				shader->removeInvalidationCallbacks(this);
-			}
-		}
+		virtual ~Program()override;
+
+		void addShadersInvalidationCallbacks();
 
 		virtual void createInstance() = 0;
 
@@ -108,24 +103,53 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<ShaderInstance> _vertex = nullptr;
+		std::shared_ptr<ShaderInstance> _tess_control = nullptr;
+		std::shared_ptr<ShaderInstance> _tess_eval = nullptr;
 		std::shared_ptr<ShaderInstance> _geometry = nullptr;
+		
+		std::shared_ptr<ShaderInstance> _task = nullptr;
+		std::shared_ptr<ShaderInstance> _mesh = nullptr;
+
 		std::shared_ptr<ShaderInstance> _fragment = nullptr;
+
+		// Mesh (or task if present) local_size
+		VkExtent3D _local_size = makeZeroExtent3D();
+
+		void extractLocalSize();
 
 	public:
 
-		struct CreateInfo
+		struct CreateInfoVertex
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<ShaderInstance> vertex = nullptr;
+			std::shared_ptr<ShaderInstance> tess_control = nullptr;
+			std::shared_ptr<ShaderInstance> tess_eval = nullptr;
 			std::shared_ptr<ShaderInstance> geometry = nullptr;
 			std::shared_ptr<ShaderInstance> fragment = nullptr;
 		};
-		using CI = CreateInfo;
+		using CIV = CreateInfoVertex;
 
-		GraphicsProgramInstance(CreateInfo const& ci);
+		struct CreateInfoMesh
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ShaderInstance> task = nullptr;
+			std::shared_ptr<ShaderInstance> mesh = nullptr;
+			std::shared_ptr<ShaderInstance> fragment = nullptr;
+		};
+		using CIM = CreateInfoMesh;
+
+		GraphicsProgramInstance(CreateInfoVertex const& civ);
+		GraphicsProgramInstance(CreateInfoMesh const& cim);
 
 		virtual ~GraphicsProgramInstance() override {};
+
+		constexpr const VkExtent3D& localSize()const
+		{
+			return _local_size;
+		}
 
 	};
 
@@ -133,27 +157,45 @@ namespace vkl
 	{
 	public:
 
-		struct CreateInfo 
+		struct CreateInfoVertex
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Shader> vertex = nullptr; 
+			std::shared_ptr<Shader> tess_control = nullptr;
+			std::shared_ptr<Shader> tess_eval = nullptr;
 			std::shared_ptr<Shader> geometry = nullptr;
 			std::shared_ptr<Shader> fragment = nullptr;
 		};
-		using CI = CreateInfo;
+		using CIV = CreateInfoVertex;
+
+		struct CreateInfoMesh
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<Shader> task = nullptr;
+			std::shared_ptr<Shader> mesh = nullptr;
+			std::shared_ptr<Shader> fragment = nullptr;
+		};
 
 	protected:
 
 		std::shared_ptr<Shader> _vertex = nullptr;
+		std::shared_ptr<Shader> _tess_control = nullptr;
+		std::shared_ptr<Shader> _tess_eval = nullptr;
 		std::shared_ptr<Shader> _geometry = nullptr;
+		
+		std::shared_ptr<Shader> _task = nullptr;
+		std::shared_ptr<Shader> _mesh = nullptr;
+
 		std::shared_ptr<Shader> _fragment = nullptr;
 
 		virtual void createInstance() override;
 
 	public:
 
-		GraphicsProgram(CreateInfo const& ci);
+		GraphicsProgram(CreateInfoVertex const& ci);
+		GraphicsProgram(CreateInfoMesh const& ci);
 
 		virtual ~GraphicsProgram() override;
 

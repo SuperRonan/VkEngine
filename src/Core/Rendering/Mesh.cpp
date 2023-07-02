@@ -94,7 +94,7 @@ namespace vkl
 
 	void RigidMesh::compressIndices()
 	{
-		const bool index_uint8_t_available = false;// TODO activate the feature
+		const bool index_uint8_t_available = application()->availableFeatures().index_uint8_ext.indexTypeUint8;
 		const size_t vs = _host.vertices.size();
 		const size_t is = _host.indicesSize();
 		const bool can8 = vs <= UINT8_MAX && index_uint8_t_available;
@@ -406,7 +406,6 @@ namespace vkl
 		VkDeviceSize offset = _device.header_size;
 		vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, &offset);
 		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, _device.index_type);
-
 		vkCmdDrawIndexed(command_buffer, _device.num_indices, 1, 0, 0, 0);
 	}
 

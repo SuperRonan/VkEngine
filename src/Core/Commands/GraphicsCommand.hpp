@@ -25,7 +25,7 @@ namespace vkl
 
 		std::optional<VkLineRasterizationModeEXT> _line_raster_mode = {};
 
-		virtual void createProgramIFN() = 0;
+		virtual void createProgram() = 0;
 
 		virtual void createGraphicsResources();
 
@@ -39,8 +39,8 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			VkPrimitiveTopology topology;
-			VertexInputDescription vertex_input_description;
+			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			VertexInputDescription vertex_input_description = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
@@ -79,6 +79,8 @@ namespace vkl
 		struct ShaderPaths
 		{
 			std::filesystem::path vertex_path;
+			std::filesystem::path tess_control_path;
+			std::filesystem::path tess_eval_path;
 			std::filesystem::path geometry_path;
 			std::filesystem::path fragment_path;
 			DynamicValue<std::vector<std::string>> definitions;
@@ -88,11 +90,11 @@ namespace vkl
 
 		std::vector<std::shared_ptr<Mesh>> _meshes;
 
-		DynamicValue<uint32_t> _draw_count = false;
+		DynamicValue<uint32_t> _draw_count = 0;
 
 
 
-		virtual void createProgramIFN() override;
+		virtual void createProgram() override;
 
 	public:
 
@@ -110,6 +112,8 @@ namespace vkl
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::optional<bool> write_depth = {};
 			std::filesystem::path vertex_shader_path = {};
+			std::filesystem::path tess_control_shader_path = {};
+			std::filesystem::path tess_eval_shader_path = {};
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
 			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
@@ -141,11 +145,7 @@ namespace vkl
 
 		VertexCommand(CreateInfo const& ci);
 
-		virtual void init() override;
-
 		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
-
-		void execute(ExecutionContext& ctx, DrawInfo const& di);
 
 		virtual void execute(ExecutionContext& ctx) override;
 
@@ -162,12 +162,88 @@ namespace vkl
 	// Uses the mesh pipeline
 	class MeshCommand : public GraphicsCommand
 	{
-		// TODO
+	protected:
+		
+		struct ShaderPaths
+		{
+			std::filesystem::path task_path;
+			std::filesystem::path mesh_path;
+			std::filesystem::path fragment_path;
+			DynamicValue<std::vector<std::string>> definitions;
+		};
+
+		ShaderPaths _shaders;
+
+		DynamicValue<VkExtent3D> _dispatch_size = {};
+		bool _dispatch_threads = false;
+
+		virtual void createProgram() override;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			DynamicValue<VkExtent3D> dispatch_size = {};
+			bool dispatch_threads = false;
+			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
+			std::vector<ShaderBindingDescription> bindings = {};
+			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
+			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::optional<bool> write_depth = {};
+			std::filesystem::path task_shader_path = {};
+			std::filesystem::path mesh_shader_path = {};
+			std::filesystem::path fragment_shader_path = {};
+			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
+
+			std::optional<VkClearColorValue> clear_color = {};
+			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
+
+			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
+		};
+		using CI = CreateInfo;
+
+		MeshCommand(CreateInfo const& ci);
+
+		struct DrawInfo
+		{
+			PushConstant pc = {};
+			std::optional<VkExtent3D> dispatch_size = {};
+			std::optional<bool> dispatch_threads = false;
+			std::optional<VkViewport> viewport = {};
+		};
+		using DI = DrawInfo;
+
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data) override;
+
+		virtual void execute(ExecutionContext& ctx) override;
+
+		virtual bool updateResources(UpdateContext& ctx) override;
+
+		Executable with(DrawInfo const& di);
+
+		Executable operator()(DrawInfo const& di)
+		{
+			return with(di);
+		}
+
+		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
+		{
+			const std::shared_ptr<ComputeProgramInstance>& prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
+			return VkExtent3D{
+				.width = std::divCeil(threads.width, prog->localSize().width),
+				.height = std::divCeil(threads.height, prog->localSize().height),
+				.depth = std::divCeil(threads.depth, prog->localSize().depth),
+			};
+		}
 	};
 
 	class FragCommand : public GraphicsCommand
 	{
 	protected:
+
+		virtual void createProgram() override;
 
 	public:
 
@@ -188,7 +264,7 @@ namespace vkl
 
 		virtual void init() override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context);
+		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
 
 	};
 }

@@ -236,6 +236,27 @@ namespace vkl
 		_layout = std::make_shared<PipelineLayout>(_app, ci);
 	}
 
+	Program::~Program()
+	{
+		destroyInstance();
+		for (auto& shader : _shaders)
+		{
+			shader->removeInvalidationCallbacks(this);
+		}
+	}
+
+	void Program::addShadersInvalidationCallbacks()
+	{
+		Callback ic{
+			.callback = [this]() {this->destroyInstance();},
+			.id = this,
+		};
+		for (auto& shader : _shaders)
+		{
+			shader->addInvalidationCallback(ic);
+		}
+	}
+
 	void Program::destroyInstance()
 	{
 		if (_inst)
@@ -264,74 +285,130 @@ namespace vkl
 		return res;
 	}
 
-	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfo const& ci):
+	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoVertex const& ci):
 		ProgramInstance(ci.app, ci.name),
 		_vertex(ci.vertex),
+		_tess_control(ci.tess_control),
+		_tess_eval(ci.tess_eval),
 		_geometry(ci.geometry),
 		_fragment(ci.fragment)
 	{
-		if (_vertex)	_shaders.push_back(_vertex);
-		if (_geometry)	_shaders.push_back(_geometry);
-		if (_fragment)	_shaders.push_back(_fragment);
+		if (_vertex)		_shaders.push_back(_vertex);
+		if (_tess_control)	_shaders.push_back(_tess_control);
+		if (_tess_eval)		_shaders.push_back(_tess_eval);
+		if (_geometry)		_shaders.push_back(_geometry);
+		if (_fragment)		_shaders.push_back(_fragment);
 		
 		createLayout();
 	}
 
-	GraphicsProgram::GraphicsProgram(CreateInfo const& ci) :
-		Program(ci.app, ci.name),
-		_vertex(ci.vertex),
-		_geometry(ci.geometry),
+	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoMesh const& ci) :
+		ProgramInstance(ci.app, ci.name),
+		_task(ci.task),
+		_mesh(ci.mesh),
 		_fragment(ci.fragment)
 	{
-		Callback ic{
-			.callback = [&]() {
-				destroyInstance();
-			},
-			.id = this,
-		};
+		if(_task)			_shaders.push_back(_task);
+		if(_mesh)			_shaders.push_back(_mesh);
+		if (_fragment)		_shaders.push_back(_fragment);
 
+		createLayout();
+	}
+
+	void GraphicsProgramInstance::extractLocalSize()
+	{
+		std::shared_ptr<ShaderInstance> & shader = _task ? _task : _mesh;
+		const auto& refl = shader->reflection();
+		const auto& lcl = refl.entry_points[0].local_size;
+		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
+	}
+
+	GraphicsProgram::GraphicsProgram(CreateInfoVertex const& civ) :
+		Program(civ.app, civ.name),
+		_vertex(civ.vertex),
+		_tess_control(civ.tess_control),
+		_tess_eval(civ.tess_eval),
+		_geometry(civ.geometry),
+		_fragment(civ.fragment)
+	{
 		if (_vertex)
 		{
 			_shaders.push_back(_vertex);
-			_vertex->addInvalidationCallback(ic);
+		}
+		if (_tess_control)
+		{
+			_shaders.push_back(_tess_control);
+		}
+		if (_tess_eval)
+		{
+			_shaders.push_back(_tess_eval);
 		}
 		if (_geometry)
 		{
 			_shaders.push_back(_geometry);
-			_geometry->addInvalidationCallback(ic);
 		}
 		if (_fragment)
 		{
 			_shaders.push_back(_fragment);
-			_fragment->addInvalidationCallback(ic);
 		}
+
+		addShadersInvalidationCallbacks();
+	}
+
+	GraphicsProgram::GraphicsProgram(CreateInfoMesh const& cim) :
+		Program(cim.app, cim.name),
+		_task(cim.task),
+		_mesh(cim.mesh),
+		_fragment(cim.fragment)
+	{
+		if (_task)
+		{
+			_shaders.push_back(_task);
+		}
+		if (_mesh)
+		{
+			_shaders.push_back(_mesh);
+		}
+		if (_fragment)
+		{
+			_shaders.push_back(_fragment);
+		}
+
+		addShadersInvalidationCallbacks();
 	}
 
 	GraphicsProgram::~GraphicsProgram()
 	{
-		if (_vertex)
-		{
-			_vertex->removeInvalidationCallbacks(this);
-		}
-		if (_geometry)
-		{
-			_geometry->removeInvalidationCallbacks(this);
-		}
-		if (_fragment)
-		{
-			_fragment->removeInvalidationCallbacks(this);
-		}
+
 	}
 
 	void GraphicsProgram::createInstance()
 	{
-		_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CI{
-			.app = application(),
-			.name = name(),
-			.vertex = !!_vertex ? _vertex->instance() : nullptr,
-			.geometry = !!_geometry ?  _geometry->instance() : nullptr,
-			.fragment = !!_fragment ? _fragment->instance() : nullptr,
-		});
+		if (_vertex || _geometry)
+		{
+			assert(_vertex);
+			assert(_fragment);
+			_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIV{
+				.app = application(),
+				.name = name(),
+				.vertex = _vertex->instance(),
+				.tess_control = _tess_control ? _tess_control->instance() : nullptr,
+				.tess_eval = _tess_eval ? _tess_eval->instance() : nullptr,
+				.geometry = _geometry ?  _geometry->instance() : nullptr,
+				.fragment = _fragment->instance(),
+			});
+		}
+		else
+		{
+			assert(!!_mesh);
+			_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIM{
+				.app = application(),
+				.name = name(),
+				.task = _task ? _task->instance() : nullptr,
+				.mesh = _mesh->instance(),
+				.fragment = _fragment->instance(),
+			});
+		}
 	}
 
 	ComputeProgramInstance::ComputeProgramInstance(CreateInfo const& ci):

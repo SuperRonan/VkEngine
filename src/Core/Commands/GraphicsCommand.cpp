@@ -293,6 +293,8 @@ namespace vkl
 		}),
 		_shaders(ShaderPaths{
 			.vertex_path = ci.vertex_shader_path, 
+			.tess_control_path = ci.tess_control_shader_path,
+			.tess_eval_path = ci.tess_eval_shader_path,
 			.geometry_path = ci.geometry_shader_path, 
 			.fragment_path = ci.fragment_shader_path, 
 			.definitions = ci.definitions 
@@ -300,7 +302,7 @@ namespace vkl
 		_draw_count(ci.draw_count),
 		_meshes(ci.meshes)
 	{
-		createProgramIFN();
+		createProgram();
 		createGraphicsResources();
 		createPipeline();
 
@@ -312,9 +314,9 @@ namespace vkl
 		});
 	}
 
-	void VertexCommand::createProgramIFN()
+	void VertexCommand::createProgram()
 	{
-		std::shared_ptr<Shader> vert = nullptr, geom = nullptr, frag = nullptr;
+		std::shared_ptr<Shader> vert = nullptr, tess_control = nullptr, tess_eval = nullptr, geom = nullptr, frag = nullptr;
 		if (!_shaders.vertex_path.empty())
 		{
 			vert = std::make_shared<Shader>(Shader::CI{
@@ -323,6 +325,26 @@ namespace vkl
 				.source_path = _shaders.vertex_path,
 				.stage = VK_SHADER_STAGE_VERTEX_BIT,
 				.definitions = _shaders.definitions
+			});
+		}
+		if (!_shaders.tess_control_path.empty())
+		{
+			tess_control = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+					.name = name() + ".tess_control",
+					.source_path = _shaders.tess_control_path,
+					.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+					.definitions = _shaders.definitions
+			});
+		}
+		if (!_shaders.tess_eval_path.empty())
+		{
+			tess_eval = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+					.name = name() + ".tess_eval",
+					.source_path = _shaders.tess_eval_path,
+					.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+					.definitions = _shaders.definitions
 			});
 		}
 		if (!_shaders.geometry_path.empty())
@@ -345,19 +367,15 @@ namespace vkl
 				.definitions = _shaders.definitions
 			});
 		}
-		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfo{
+		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfoVertex{
 			.app = application(),
 			.name = name() + ".Program",
 			.vertex = vert,
+			.tess_control = tess_control,
+			.tess_eval = tess_eval,
 			.geometry = geom,
 			.fragment = frag,
 		});
-	}
-
-	void VertexCommand::init()
-	{
-		GraphicsCommand::init();
-
 	}
 
 	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data)
@@ -417,6 +435,133 @@ namespace vkl
 
 		return res;
 	}
+
+
+
+
+
+	MeshCommand::MeshCommand(CreateInfo const& ci) :
+		GraphicsCommand(GraphicsCommand::CreateInfo{
+			.app = ci.app,
+			.name = ci.name,
+			.line_raster_mode = ci.line_raster_mode,
+			.bindings = ci.bindings,
+			.targets = ci.color_attachements,
+			.depth_buffer = ci.depth_buffer,
+			.write_depth = ci.write_depth,
+			.clear_color = ci.clear_color,
+			.clear_depth_stencil = ci.clear_depth_stencil,
+			.blending = ci.blending,
+		}),
+		_shaders{
+			.task_path = ci.task_shader_path,
+			.mesh_path = ci.mesh_shader_path,
+			.fragment_path = ci.fragment_shader_path,
+			.definitions = ci.definitions,
+		},
+		_dispatch_size(ci.dispatch_size),
+		_dispatch_threads(ci.dispatch_threads)
+	{
+		
+	}
+
+	void MeshCommand::createProgram()
+	{
+		std::shared_ptr<Shader> task = nullptr, mesh = nullptr, frag = nullptr;
+		if (!_shaders.task_path.empty())
+		{
+			task = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+					.name = name() + ".task",
+					.source_path = _shaders.task_path,
+					.stage = VK_SHADER_STAGE_TASK_BIT_EXT,
+					.definitions = _shaders.definitions
+			});
+		}
+		if (!_shaders.mesh_path.empty())
+		{
+			mesh = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+					.name = name() + ".mesh",
+					.source_path = _shaders.mesh_path,
+					.stage = VK_SHADER_STAGE_MESH_BIT_EXT,
+					.definitions = _shaders.definitions
+			});
+		}
+		if (!_shaders.fragment_path.empty())
+		{
+			frag = std::make_shared<Shader>(Shader::CI{
+				.app = application(),
+					.name = name() + ".frag",
+					.source_path = _shaders.fragment_path,
+					.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+					.definitions = _shaders.definitions
+			});
+		}
+
+		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfoMesh{
+			.app = application(),
+			.name = name() + ".Program",
+			.task = task,
+			.mesh = mesh,
+			.fragment = frag,
+		});
+	}
+
+
+	void MeshCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data)
+	{
+		assert(application()->availableFeatures().mesh_shader_ext.meshShader);
+		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
+		{
+			const VkExtent3D work = di.dispatch_threads.value() ? getWorkgroupsDispatchSize(*di.dispatch_size) : *di.dispatch_size;
+			const auto & _vkCmdDrawMeshTasksEXT = application()->extFunctions()._vkCmdDrawMeshTasksEXT;
+			_vkCmdDrawMeshTasksEXT(cmd, work.width, work.height, work.depth);
+		}
+	}
+
+	void MeshCommand::execute(ExecutionContext& ctx)
+	{
+		CommandBuffer& cmd = *ctx.getCommandBuffer();
+
+		GraphicsCommand::DrawInfo gdi{
+			.pc = _pc,
+		};
+
+		DrawInfo di{
+			.dispatch_size = *_dispatch_size,
+			.dispatch_threads = _dispatch_threads,
+		};
+
+		recordCommandBuffer(cmd, ctx, gdi, &di);
+	}
+
+	Executable MeshCommand::with(DrawInfo const& di)
+	{
+		GraphicsCommand::DrawInfo gdi{
+			.pc = di.pc.hasValue() ? di.pc : _pc,
+		};
+
+		DrawInfo _di{
+			.dispatch_size = di.dispatch_size.has_value() ? di.dispatch_size : *_dispatch_size,
+			.dispatch_threads = di.dispatch_threads.value_or(_dispatch_threads),
+		};
+
+		return [this, gdi, _di](ExecutionContext& ctx)
+		{
+			recordCommandBuffer(*ctx.getCommandBuffer(), ctx, gdi, (void*)&_di);
+		};
+	}
+
+	bool MeshCommand::updateResources(UpdateContext& ctx)
+	{
+		bool res = false;
+
+		res |= GraphicsCommand::updateResources(ctx);
+
+		return res;
+	}
+
 
 	//void FragCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context)
 	//{

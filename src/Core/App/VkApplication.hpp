@@ -67,7 +67,15 @@ namespace vkl
 		//std::unique_ptr<StagingPool> _staging_pool;
 
 		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
-		
+
+		struct ExtFunctionsPtr
+		{
+			PFN_vkCmdDrawMeshTasksEXT _vkCmdDrawMeshTasksEXT = nullptr;
+		};
+
+		ExtFunctionsPtr _ext_functions;
+
+		void loadExtFunctionsPtr();
 
 		virtual std::vector<const char*> getValidLayers();
 
@@ -178,6 +186,11 @@ namespace vkl
 		constexpr bool enableValidation()const
 		{
 			return _enable_valid_layers;
+		}
+
+		const ExtFunctionsPtr& extFunctions()
+		{
+			return _ext_functions;
 		}
 	};
 

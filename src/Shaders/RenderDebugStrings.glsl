@@ -127,6 +127,55 @@ void main()
 
 #endif
 
+#if SHADER_SEMANTIC_MESH
+
+#extension GL_EXT_mesh_shader : require
+#extension GL_KHR_shader_subgroup : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+
+#define MAX_VERTICES (32 * 4)
+
+layout(location = 0) out flat uint v_string_index[MAX_VERTICES];
+layout(location = 1) out vec2 v_uv[MAX_VERTICES];
+layout(location = 2) out vec4 v_ft_color[MAX_VERTICES];
+layout(location = 3) out vec4 v_bg_color[MAX_VERTICES];
+
+layout(push_constant) uniform PushConstantBinding
+{
+	PushConstant pc;
+};
+
+layout(local_size_x = 32) in;
+layout(triangles, max_vertices = MAX_VERTICES, max_primitives = 32 * 2) out;
+
+void main()
+{
+#if GLOBAL_ENABLE_GLSL_DEBUG
+	const uint lid = gl_LocalInvocationIndex.x;
+	const uint wid = gl_WorkGroupIndex.x;
+	const uint gid = gl_GlobalInvocationIndex.x;
+
+	bool emit_string = gid < DEBUG_BUFFER_STRING_SIZE;
+
+	const uint index = vid[0];
+	const uint len = (_debug.strings[index].meta.len);
+
+
+
+	if(emit_string)
+	{
+		
+	}
+#else
+	SetMeshOutputsEXT(0, 0);
+#endif
+}
+
+#endif
+
 #if SHADER_SEMANTIC_FRAGMENT
 
 layout(set = 1, binding = 0) uniform sampler2DArray glyphs;
