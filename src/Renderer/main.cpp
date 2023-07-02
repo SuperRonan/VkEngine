@@ -24,7 +24,7 @@
 #include <chrono>
 #include <random>
 
-#include <thatlib/src/img/ImRead.h>
+#include <thatlib/src/img/ImRead.hpp>
 
 namespace vkl
 {

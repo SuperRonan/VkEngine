@@ -2,7 +2,7 @@
 
 #include "imgui.h"
 
-#include <thatlib/src/img/ImWrite.h>
+#include <thatlib/src/img/ImWrite.hpp>
 
 namespace vkl
 {
@@ -151,7 +151,7 @@ namespace vkl
 		std::shared_ptr<UploadImage> upload = std::make_shared<UploadImage>(UploadImage::CI{
 			.app = application(),
 			.name = name() + ".UploadBuffer",
-			.src = ObjectView(host_font.data(), host_font.bufferByteSize()),
+			.src = ObjectView(host_font.data(), host_font.byteSize()),
 			.dst = _font,
 		});
 

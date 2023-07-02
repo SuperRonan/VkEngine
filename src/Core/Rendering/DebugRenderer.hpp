@@ -6,7 +6,7 @@
 #include <Core/Commands/GraphicsCommand.hpp>
 #include <Core/Commands/TransferCommand.hpp>
 #include <Core/Execution/Executor.hpp>
-#include <thatlib/src/img/ImRead.h>
+#include <thatlib/src/img/ImRead.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
 
 namespace vkl

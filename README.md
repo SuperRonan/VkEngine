@@ -17,12 +17,13 @@
 - [ ] VkShaderObjectEXT? 
 - [ ] Complete Graphics command
     - [x] Bresenham line rasterization
+	- [x] Mesh Shaders command
     - [ ] MSAA
     - [ ] FragmentCommand
 - [ ] RenderPass-less rendering? 
 - [ ] Mesh
-	- [ ] Mesh interface
-		- [ ] Rigid Mesh
+	- [x] Mesh interface
+		- [x] Rigid Mesh
 		- [ ] Animated Mesh with skeleton
 		- [ ] Terrain
 		- [ ] ??? 
@@ -37,7 +38,6 @@
 	- [ ] Mesh compression?
 	- [ ] Meshlets ? 
 - [ ] Scene
-- [x] Mesh Shaders command
 - [ ] VkRayTracingKHR
 	- [ ] TLAS
 	- [ ] SBT
