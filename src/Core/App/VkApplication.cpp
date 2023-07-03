@@ -63,6 +63,8 @@ namespace vkl
 		features.features_12.descriptorBindingStorageTexelBufferUpdateAfterBind = t;
 		features.features_12.descriptorBindingUpdateUnusedWhilePending = t;
 
+		features.features_13.maintenance4 = t;
+
 		features.line_raster_ext.bresenhamLines = t;
 		features.line_raster_ext.stippledBresenhamLines = t;
 

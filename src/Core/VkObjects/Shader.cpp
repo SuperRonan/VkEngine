@@ -374,9 +374,13 @@ namespace vkl
 	}
 
 	bool ShaderInstance::compile(std::string const& code, std::string const& filename)
-	{
+	{	
+		shaderc::CompileOptions options;
+		//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
+		options.SetTargetSpirv(shaderc_spirv_version_1_6);
 		shaderc::Compiler compiler;
-		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str());
+		
+		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
 		size_t errors = res.GetNumErrors();
 
 		if (errors)

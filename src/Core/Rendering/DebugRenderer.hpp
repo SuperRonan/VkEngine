@@ -27,7 +27,8 @@ namespace vkl
 		
 		std::shared_ptr<Buffer> _string_buffer = nullptr;
 
-		std::shared_ptr<VertexCommand> _render_strings = nullptr;
+		std::shared_ptr<VertexCommand> _render_strings_with_geometry = nullptr;
+		std::shared_ptr<MeshCommand> _render_strings_with_mesh = nullptr;
 		std::shared_ptr<FillBuffer> _clear_buffer;
 
 

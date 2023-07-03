@@ -230,6 +230,7 @@ namespace vkl
 					{
 						ResourceState2 tmp_state = it->state;
 						it->state = state;
+						it->pos = range_max_layer;
 						it = layers_states.insert(it, InternalStates::PosAndState{
 							.pos = range_max_layer,
 							.state = tmp_state,

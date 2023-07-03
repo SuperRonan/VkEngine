@@ -462,7 +462,16 @@ namespace vkl
 		_dispatch_size(ci.dispatch_size),
 		_dispatch_threads(ci.dispatch_threads)
 	{
-		
+		createProgram();
+		createGraphicsResources();
+		createPipeline();
+
+		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
+			.app = application(),
+			.name = name() + ".sets",
+			.bindings = ci.bindings,
+			.program = _program,
+		});
 	}
 
 	void MeshCommand::createProgram()

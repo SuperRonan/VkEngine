@@ -95,27 +95,54 @@ namespace vkl
 			.binding = _first_binding,
 		};
 
-		_render_strings = std::make_shared<VertexCommand>(VertexCommand::CI{
-			.app = application(),
-			.name = name() + ".RenderStrings",
-			.draw_count = &_number_of_debug_strings,
-			.bindings = {
-				Binding{
-					.view = _font,
-					.sampler = _sampler,
-					.set = 1,
-					.binding = 0,
+		if (application()->availableFeatures().mesh_shader_ext.meshShader)
+		{
+			_render_strings_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
+				.app = application(),
+					.name = name() + ".RenderStrings",
+					.dispatch_size = [&](){return VkExtent3D{.width = _number_of_debug_strings, .height = 1, .depth =1};},
+					.dispatch_threads = true,
+					.bindings = {
+						Binding{
+							.view = _font,
+							.sampler = _sampler,
+							.set = 1,
+							.binding = 0,
+						},
 				},
-			},
-			.color_attachements = {_target},
-			.depth_buffer = _depth,
-			.write_depth = false,
-			.vertex_shader_path = shaders,
-			.geometry_shader_path = shaders,
-			.fragment_shader_path = shaders,
-			.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
-		});
-		_exec.declare(_render_strings);
+				.color_attachements = { _target },
+				.depth_buffer = _depth,
+				.write_depth = false,
+				.mesh_shader_path = shaders,
+				.fragment_shader_path = shaders,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+			});
+			_exec.declare(_render_strings_with_mesh);
+		}
+		else
+		{
+			_render_strings_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderStrings",
+				.draw_count = &_number_of_debug_strings,
+				.bindings = {
+					Binding{
+						.view = _font,
+						.sampler = _sampler,
+						.set = 1,
+						.binding = 0,
+					},
+				},
+				.color_attachements = {_target},
+				.depth_buffer = _depth,
+				.write_depth = false,
+				.vertex_shader_path = shaders,
+				.geometry_shader_path = shaders,
+				.fragment_shader_path = shaders,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+			});
+			_exec.declare(_render_strings_with_geometry);
+		}
 
 		auto& common_defs = _exec.getCommonDefinitions();
 		common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
@@ -180,9 +207,18 @@ namespace vkl
 				.resolution = glm::uvec3(ext.width, ext.height, 1),
 				.oo_resolution = glm::vec2(1.0 / float(ext.width), 1.0 / float(ext.height)),
 			};
-			_exec(_render_strings->with(VertexCommand::DrawInfo{
-				.pc = pc,
-			}));
+			if (_render_strings_with_mesh)
+			{
+				_exec(_render_strings_with_mesh->with(MeshCommand::DrawInfo{
+					.pc = pc,
+				}));
+			}
+			else
+			{
+				_exec(_render_strings_with_geometry->with(VertexCommand::DrawInfo{
+					.pc = pc,
+				}));
+			}
 
 			_exec(_clear_buffer);
 		}

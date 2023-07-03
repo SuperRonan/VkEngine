@@ -17,6 +17,10 @@ struct PushConstant
 	vec2 oo_resolution;
 };
 
+#ifndef USE_STRUCT_VARYING
+#define USE_STRUCT_VARYING 0
+#endif
+
 
 #if SHADER_SEMANTIC_VERTEX
 
@@ -37,6 +41,14 @@ layout(points) in;
 layout(location = 0) in uint vid[1];
 
 layout(triangle_strip, max_vertices=4) out;
+
+struct Varying
+{
+	uint string_index;
+	vec2 uv;
+	vec4 font_color;
+	vec4 back_color;
+};
 
 layout(location = 0) out flat uint v_string_index;
 layout(location = 1) out vec2 v_uv;
@@ -130,43 +142,110 @@ void main()
 #if SHADER_SEMANTIC_MESH
 
 #extension GL_EXT_mesh_shader : require
-#extension GL_KHR_shader_subgroup : require
 #extension GL_KHR_shader_subgroup_basic : require
 #extension GL_KHR_shader_subgroup_ballot : require
 #extension GL_KHR_shader_subgroup_arithmetic : require
 
+#define LOCAL_SIZE_X 32
+#define MAX_VERTICES (LOCAL_SIZE_X * 4)
+#define MAX_PRIMITIVES (LOCAL_SIZE_X * 2)
 
-#define MAX_VERTICES (32 * 4)
-
-layout(location = 0) out flat uint v_string_index[MAX_VERTICES];
-layout(location = 1) out vec2 v_uv[MAX_VERTICES];
-layout(location = 2) out vec4 v_ft_color[MAX_VERTICES];
-layout(location = 3) out vec4 v_bg_color[MAX_VERTICES];
+layout(location = 0) out flat uint v_string_index[];
+layout(location = 1) out vec2 v_uv[];
+layout(location = 2) out vec4 v_ft_color[];
+layout(location = 3) out vec4 v_bg_color[];
 
 layout(push_constant) uniform PushConstantBinding
 {
 	PushConstant pc;
 };
 
-layout(local_size_x = 32) in;
-layout(triangles, max_vertices = MAX_VERTICES, max_primitives = 32 * 2) out;
+layout(local_size_x = LOCAL_SIZE_X) in;
+layout(triangles, max_vertices = MAX_VERTICES, max_primitives = MAX_PRIMITIVES) out;
 
 void main()
 {
 #if GLOBAL_ENABLE_GLSL_DEBUG
 	const uint lid = gl_LocalInvocationIndex.x;
-	const uint wid = gl_WorkGroupIndex.x;
-	const uint gid = gl_GlobalInvocationIndex.x;
+	const uint wid = gl_WorkGroupID.x;
+	const uint gid = gl_GlobalInvocationID.x;
 
 	bool emit_string = gid < DEBUG_BUFFER_STRING_SIZE;
 
-	const uint index = vid[0];
+	const uint index = gid;
 	const uint len = (_debug.strings[index].meta.len);
 
+	emit_string = len > 0;
 
+	uint num_triangles = emit_string ? 2 : 0;
+	num_triangles = subgroupAdd(num_triangles);
+	subgroupBarrier();
+	if(subgroupElect())
+	{
+		SetMeshOutputsEXT(num_triangles * 2, num_triangles);
+	}
 
 	if(emit_string)
 	{
+		const uint subgroup_string_id = subgroupInclusiveAdd(emit_string ? 1 : 0);
+		const uint base_vert_id = subgroup_string_id * 4;
+		const uint base_primitive_id = subgroup_string_id * 2;
+		
+
+		const BufferStringMeta meta = _debug.strings[index].meta;
+		const uint coord_space_flags = meta.flags & DEBUG_SPACE_MASK;
+
+		vec4 position = meta.position;
+		vec2 gs = meta.glyph_size;
+		if(coord_space_flags == DEBUG_UV_SPACE_BIT || coord_space_flags == DEBUG_PIXEL_SPACE_BIT)
+		{
+			if(coord_space_flags == DEBUG_PIXEL_SPACE_BIT)
+			{
+				position.xy = (position.xy + 0.5f) * pc.oo_resolution;
+				gs = gs * pc.oo_resolution;
+			}
+			
+			position.xy = UVToClipSpace(position.xy);
+			gs *= 2;
+
+			// On Screen
+			position.zw = vec2(0, 1);
+		}
+
+		const vec2 tl = position.xy;
+		const vec2 tr = tl + vec2(len * gs.x, 0);
+		const vec2 br = tr + vec2(0, gs.y);
+		const vec2 bl = tl + vec2(0, gs.y);
+
+		{
+			v_string_index[base_vert_id + 0] = index;
+			v_uv[base_vert_id + 0] = vec2(0, 0);
+			v_ft_color[base_vert_id + 0] = meta.color;
+			v_bg_color[base_vert_id + 0] = meta.back_color;
+			gl_MeshVerticesEXT[base_vert_id + 0].gl_Position = vec4(tl, position.zw);
+
+			v_string_index[base_vert_id + 1] = index;
+			v_uv[base_vert_id + 1] = vec2(0, 1);
+			v_ft_color[base_vert_id + 1] = meta.color;
+			v_bg_color[base_vert_id + 1] = meta.back_color;
+			gl_MeshVerticesEXT[base_vert_id + 1].gl_Position = vec4(bl, position.zw);
+
+			v_string_index[base_vert_id + 2] = index;
+			v_uv[base_vert_id + 2] = vec2(len, 0);
+			v_ft_color[base_vert_id + 2] = meta.color;
+			v_bg_color[base_vert_id + 2] = meta.back_color;
+			gl_MeshVerticesEXT[base_vert_id + 2].gl_Position = vec4(tr, position.zw);
+
+			v_string_index[base_vert_id + 3] = index;
+			v_uv[base_vert_id + 3] = vec2(len, 1);
+			v_ft_color[base_vert_id + 3] = meta.color;
+			v_bg_color[base_vert_id + 3] = meta.back_color;
+			gl_MeshVerticesEXT[base_vert_id + 3].gl_Position = vec4(br, position.zw); 
+		}
+
+
+		gl_PrimitiveTriangleIndicesEXT[base_primitive_id + 0] = uvec3(base_vert_id + 0, base_vert_id + 1, base_vert_id + 2);
+		gl_PrimitiveTriangleIndicesEXT[base_primitive_id + 1] = uvec3(base_vert_id + 3, base_vert_id + 2, base_vert_id + 1);
 		
 	}
 #else

@@ -261,7 +261,7 @@ namespace vkl
 		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
 		assert(!cb);
 		cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
-			.name = name() + " Frame # " + std::to_string(_frame_index) + " CommandBuffer",
+			.name = name() + ".Frame_" + std::to_string(_frame_index) + ".CommandBuffer",
 			.pool = _app->pools().graphics
 			});
 		cb->begin();
@@ -320,19 +320,19 @@ namespace vkl
 
 	void LinearExecutor::submit()
 	{
-		std::shared_ptr sem_to_wait = _in_between.semaphore;
+		std::shared_ptr<Semaphore> sem_to_wait = _in_between.semaphore;
 		VkSemaphore vk_sem_to_wait = [&]() -> VkSemaphore {
 			if (_in_between.semaphore)	return *_in_between.semaphore;
 			return VK_NULL_HANDLE;
 		}();
 
 		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		std::shared_ptr<Fence> submit_fence = std::make_shared<Fence>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Fence");
+		std::shared_ptr<Fence> submit_fence = std::make_shared<Fence>(_app, name() + ".Frame_" + std::to_string(_frame_index) + ".SubmitFence");
 
 		_in_between.next_cb = _command_buffer_to_submit;
 		_in_between.fences.push_back(submit_fence);
 
-		std::shared_ptr sem_to_signal = std::make_shared<Semaphore>(_app, name() + " Frame # " + std::to_string(_frame_index) + " Submit Semaphore");
+		std::shared_ptr sem_to_signal = std::make_shared<Semaphore>(_app, name() + ".Frame_" + std::to_string(_frame_index) + ".SubmitSemaphore");
 		_context.keppAlive(sem_to_signal);
 		stackInBetween();
 
@@ -345,7 +345,8 @@ namespace vkl
 			.fences = {submit_fence},
 			.semaphore = sem_to_signal,
 		};
-		_context.keppAlive(sem_to_wait);
+		if(sem_to_wait)
+			_context.keppAlive(sem_to_wait);
 
 		VkSemaphore vk_sem_to_signal = *_in_between.semaphore;
 

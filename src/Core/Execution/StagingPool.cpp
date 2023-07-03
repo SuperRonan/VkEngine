@@ -63,6 +63,7 @@ namespace vkl
 		{
 			res = std::make_shared<Buffer>(Buffer::CI{
 				.app = _app,
+				.name = name() + ".StagingBuffer",
 				.size = size,
 				.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
 				.mem_usage = VMA_MEMORY_USAGE_CPU_TO_GPU,

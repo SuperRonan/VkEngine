@@ -200,6 +200,8 @@ namespace vkl
 						it->read_only_state = {};
 					}
 
+					it->pos = range_end;
+
 					it = is.states.insert(it, InternalStates::PosAndState {
 						.pos = range_end,
 						.write_state = tmp_state.write_state,

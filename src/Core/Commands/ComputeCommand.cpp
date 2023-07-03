@@ -43,6 +43,7 @@ namespace vkl
 	{
 		SynchronizationHelper synch(context);
 		recordBindings(cmd, context);
+		recordPushConstant(cmd, context, di.push_constant);
 
 		_sets->instance()->recordInputSynchronization(synch);
 		synch.record();
