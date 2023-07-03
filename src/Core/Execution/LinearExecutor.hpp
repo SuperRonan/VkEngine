@@ -34,6 +34,8 @@ namespace vkl
 		std::vector<std::shared_ptr<Sampler>> _registered_samplers = {};
 		std::vector<std::shared_ptr<Mesh>> _registered_meshes = {};
 
+		MountingPoints _mounting_points;
+
 		ExecutionContext _context;
 
 		struct InBetween

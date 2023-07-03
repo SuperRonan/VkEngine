@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.glsl"
 #include "interop_cpp.glsl"
 
 #ifndef I_WANT_TO_DEBUG

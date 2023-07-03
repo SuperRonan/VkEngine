@@ -3,9 +3,9 @@
 #include "common.glsl"
 
 #define I_WANT_TO_DEBUG 1
-#include "../Shaders/DebugBuffers.glsl"
 
-#include "../Shaders/random.glsl"
+#include <ShaderLib:/debugBuffers.glsl>
+#include <ShaderLib:/random.glsl>
 
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_normal;

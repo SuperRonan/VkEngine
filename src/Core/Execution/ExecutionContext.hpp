@@ -32,6 +32,8 @@ namespace vkl
 
 		StagingPool* _staging_pool = nullptr;
 
+		MountingPoints * _mounting_points = nullptr;
+
 
 		friend class LinearExecutor;
 
@@ -43,6 +45,7 @@ namespace vkl
 			std::shared_ptr<CommandBuffer> cmd = nullptr;
 			size_t resource_tid = 0;
 			StagingPool* staging_pool = nullptr;
+			MountingPoints * mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -53,7 +56,10 @@ namespace vkl
 			return _command_buffer;
 		}
 
-		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd);
+		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd)
+		{
+			_command_buffer = cmd;
+		}
 
 		void keppAlive(std::shared_ptr<VkObject> obj)
 		{
@@ -78,6 +84,16 @@ namespace vkl
 		size_t resourceThreadId()const
 		{
 			return  _resource_tid;
+		}
+
+		MountingPoints* mountingPoints()
+		{
+			return _mounting_points;
+		}
+
+		const MountingPoints* mountingPoints() const
+		{
+			return _mounting_points;
 		}
 	};
 

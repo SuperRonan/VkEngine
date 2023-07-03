@@ -103,13 +103,50 @@ namespace vkl
 			{
 
 				const size_t line_end = content.find("\n", include_begin);
-				const std::string_view line(content.data() + include_begin, line_end - include_begin);
+				const std::string_view include_line(content.data() + include_begin, line_end - include_begin);
 
-				const size_t path_begin = line.find("\"") + 1;
-				const size_t path_end = line.rfind("\"");
-				const std::string_view include_path_relative(line.data() + path_begin, path_end - path_begin);
+				std::filesystem::path path_to_include = [&]() 
+				{
+					const size_t rel_path_begin = include_line.find("\"") + 1;
+					const size_t rel_path_end = include_line.rfind("\"");
 
-				const std::filesystem::path path_to_include = folder.string() + std::string("/") + std::string(include_path_relative);
+					const size_t mp_path_begin = include_line.find("<") + 1;
+					const size_t mp_path_end = include_line.rfind(">");
+
+					if(rel_path_end != std::string::npos)
+					{
+						const std::string_view include_path_relative(include_line.data() + rel_path_begin, rel_path_end - rel_path_begin);
+
+						const std::filesystem::path path_to_include = folder.string() + (std::string("/") + std::string(include_path_relative));
+						return path_to_include;
+					}
+					else if(mp_path_end != std::string::npos)
+					{
+						assert(!!preprocessing_state.mounting_points);
+						const size_t mp_end = include_line.find(":");
+						assert(mp_end != std::string::npos);
+						const std::string_view mounting_point(include_line.data() + mp_path_begin, mp_end - mp_path_begin);
+						const MountingPoints & mps = *preprocessing_state.mounting_points;
+						const std::string mp_str = std::string(mounting_point);
+						if (mps.contains(mp_str))
+						{
+							std::string const& mp_path = mps.at(mp_str);
+							const std::string_view rel_path(include_line.data() + mp_end + 1, mp_path_end - mp_end - 1);
+							const std::filesystem::path path_to_include = mp_path + std::string(rel_path);
+							return path_to_include;
+						}
+						else
+						{
+							std::cerr << "Could not find mounting point: " << mounting_point << std::endl;
+							throw std::runtime_error("Shader #include directive parsing error");
+						}
+					}
+					else
+					{
+						std::cerr << "Could not parse include: " << include_line << std::endl;
+						throw std::runtime_error("Shader #include directive parsing error");
+					}
+				}();
 
 				oss << std::string_view(content.data() + copied_so_far, include_begin - copied_so_far);
 				
@@ -256,9 +293,11 @@ namespace vkl
 		return _res;
 	}
 
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions)
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints* mounting_points)
 	{
-		PreprocessingState preprocessing_state = {};
+		PreprocessingState preprocessing_state = {
+			.mounting_points = mounting_points,
+		};
 		std::string full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state);
 
 		std::string final_source = preprocessStrings(full_source);
@@ -439,7 +478,7 @@ namespace vkl
 				std::vector<std::string> defines = { semantic_definition };
 				defines += ci.definitions;
 
-				std::string preprocessed = preprocess(ci.source_path, defines);
+				std::string preprocessed = preprocess(ci.source_path, defines, ci.mounting_points);
 				
 				if (preprocessed == "")
 				{
@@ -488,7 +527,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity)
+	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points)
 	{
 		if (_specializations.contains(key))
 		{
@@ -505,7 +544,8 @@ namespace vkl
 				.stage = _stage,
 				.definitions = definitions,
 				.shader_string_packed_capacity = string_packed_capacity,
-				});
+				.mounting_points = mounting_points,
+			});
 			_specializations[key] = _inst;
 			_instance_time = std::chrono::file_clock::now();
 		}
@@ -565,7 +605,7 @@ namespace vkl
 		{
 			std::string capacity = ctx.commonDefinitions().getDefinition("SHADER_STRING_CAPACITY");
 			int packed_capcity = capacity.empty() ? 32 : std::atoi(capacity.c_str());
-			createInstance(_current_key, ctx.commonDefinitions().collapsed(), static_cast<size_t>(packed_capcity));
+			createInstance(_current_key, ctx.commonDefinitions().collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
 			res = true;
 		}
 

@@ -5,7 +5,7 @@
 
 #include "common.glsl"
 #include "interop_cpp.glsl"
-#include "DebugBuffers.glsl"
+#include "debugBuffers.glsl"
 
 #if SHADER_SEMANTIC_VERTEX
 

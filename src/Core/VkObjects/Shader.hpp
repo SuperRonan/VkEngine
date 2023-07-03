@@ -31,6 +31,7 @@ namespace vkl
 		struct PreprocessingState
 		{
 			std::set<std::filesystem::path> pragma_once_files = {};
+			const MountingPoints * mounting_points;
 		};
 
 		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state);
@@ -47,6 +48,7 @@ namespace vkl
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			std::vector<std::string> const& definitions = {};
 			size_t shader_string_packed_capacity = 32;
+			const MountingPoints * mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -62,7 +64,7 @@ namespace vkl
 
 
 
-		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions);
+		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints * mounting_points);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 
@@ -149,7 +151,7 @@ namespace vkl
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity);
+		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points);
 
 		void destroyInstance();
 

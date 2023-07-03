@@ -676,3 +676,8 @@ namespace std
 		}
 	};
 }
+
+namespace vkl
+{
+	using MountingPoints = std::HMap<std::string, std::string>;
+}

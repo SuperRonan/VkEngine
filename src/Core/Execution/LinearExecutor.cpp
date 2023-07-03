@@ -18,8 +18,11 @@ namespace vkl
 		_context(ExecutionContext::CI{
 			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
+			.mounting_points = &_mounting_points,
 		})
 	{
+		_mounting_points["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
+
 		if (ci.use_ImGui)
 		{
 			_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
@@ -136,6 +139,7 @@ namespace vkl
 			.check_shaders = should_check_shaders,
 			.common_definitions = _common_definitions,
 			.common_bindings = _common_bindings,
+			.mounting_points = &_mounting_points,
 		};
 
 		if (_window->updateResources(update_context))

@@ -17,6 +17,9 @@ namespace vkl
 		const ShaderBindings& _common_bindings;
 
 
+		MountingPoints* _mounting_points = nullptr;
+
+
 	public:
 
 		struct CreateInfo
@@ -24,13 +27,15 @@ namespace vkl
 			bool check_shaders = false;
 			const DefinitionsMap& common_definitions;
 			const ShaderBindings& common_bindings;
+			MountingPoints* mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
 
 		UpdateContext(CreateInfo const& ci) :
 			_check_shaders(ci.check_shaders),
 			_common_definitions(ci.common_definitions),
-			_common_bindings(ci.common_bindings)
+			_common_bindings(ci.common_bindings),
+			_mounting_points(ci.mounting_points)
 		{
 
 		}
@@ -48,6 +53,16 @@ namespace vkl
 		constexpr const ShaderBindings & commonShaderBindings()const
 		{
 			return _common_bindings;
+		}
+
+		MountingPoints* mountingPoints()
+		{
+			return _mounting_points;
+		}
+
+		const MountingPoints* mountingPoints() const
+		{
+			return _mounting_points;
 		}
 
 	};

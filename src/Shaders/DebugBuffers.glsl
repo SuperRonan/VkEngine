@@ -1,6 +1,6 @@
 #pragma once
 
-#include "String.glsl"
+#include "string.glsl"
 #include "common.glsl"
 
 #ifndef DEBUG_BUFFER_STRING_SIZE
