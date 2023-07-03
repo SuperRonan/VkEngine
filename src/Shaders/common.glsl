@@ -1,6 +1,26 @@
 #pragma once
 
 
+#ifndef COMMON_DESCRIPTOR_BINDING
+#define COMMON_DESCRIPTOR_BINDING set = 0, binding = 0
+#endif
+
+#ifndef SCENE_DESCRIPTOR_BINDING
+#define SCENE_DESCRIPTOR_BINDING set = 1, binding = 0
+#endif
+
+#ifndef MODULE_DESCRIPTOR_BINDING
+#define MODULE_DESCRIPTOR_BINDING set = 2, binding = 0
+#endif
+
+#ifndef SHADER_DESCRIPTOR_BINDING
+#define SHADER_DESCRIPTOR_BINDING set = 3, binding = 0
+#endif
+
+#ifndef PUSH_DESCRIPTOR_BINDING
+#define PUSH_DESCRIPTOR_BINDING set = 4, binding = 0
+#endif
+
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
 #if SHADER_FP16_AVAILABLE

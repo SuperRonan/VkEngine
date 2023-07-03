@@ -425,6 +425,9 @@ namespace vkl
 	{
 		const auto& refl = _shader->reflection();
 		const auto& lcl = refl.entry_points[0].local_size;
+		assert(lcl.x != 0);
+		assert(lcl.y != 0);
+		assert(lcl.z != 0);
 		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
 	}
 

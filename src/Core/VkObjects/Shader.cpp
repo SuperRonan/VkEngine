@@ -54,6 +54,17 @@ namespace vkl
 		return res;
 	}
 	
+	void writeFile(std::filesystem::path const& path, ObjectView const& view)
+	{
+		std::ofstream file(path, std::ios::ate | std::ios::binary);
+		if (!file.is_open())
+		{
+			throw std::runtime_error("Could not open file: " + path.string());
+		}
+
+		file.write((const char *)view.data(), view.size());
+		file.close();
+	}
 
 	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
 	{
@@ -428,6 +439,13 @@ namespace vkl
 			return false;
 		}
 		_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
+
+		const bool dump_spv = false;
+		if (dump_spv)
+		{
+			writeFile(ENGINE_SRC_PATH "shader.spv.bin", _spv_code);
+		}
+		
 		VkShaderModuleCreateInfo module_ci{
 			.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 			.codeSize = _spv_code.size() * sizeof(uint32_t),
