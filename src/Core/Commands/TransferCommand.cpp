@@ -28,7 +28,7 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = bi.dst,
 			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},
@@ -115,7 +115,7 @@ namespace vkl
 		synch.addSynch(Resource{
 			._image = cinfo.dst,
 			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT
 			},

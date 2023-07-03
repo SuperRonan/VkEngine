@@ -440,7 +440,7 @@ namespace vkl
 		}
 		_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
 
-		const bool dump_spv = false;
+		const bool dump_spv = _stage == VK_SHADER_STAGE_GEOMETRY_BIT;
 		if (dump_spv)
 		{
 			writeFile(ENGINE_SRC_PATH "shader.spv.bin", _spv_code);

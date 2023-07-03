@@ -30,11 +30,16 @@ namespace vkl
 			is.states[m] = {
 				InternalStates::PosAndState{
 					.pos = 0,
-					.state = ResourceState2{
+					.write_state = ResourceState2{
 						.access = VK_ACCESS_2_NONE,
 						.layout = _ci.initialLayout,
 						.stage = VK_PIPELINE_STAGE_2_NONE,
-					},		
+					},
+					.read_only_state = ResourceState2{
+						.access = VK_ACCESS_2_NONE,
+						.layout = _ci.initialLayout,
+						.stage = VK_PIPELINE_STAGE_2_NONE,
+					},
 				},
 			};
 		}
@@ -104,6 +109,8 @@ namespace vkl
 		{
 			std::vector<StateInRange>& res_states = states_per_mip[m - range.baseMipLevel];
 			const std::vector<InternalStates::PosAndState> & layers_states = _states.at(tid).states[m];
+
+			assert(layers_states[0].pos == 0);
 			
 			for (size_t i = 0; i < layers_states.size(); ++i)
 			{
@@ -127,7 +134,10 @@ namespace vkl
 				uint32_t begin = std::max(layers_begin, range.baseArrayLayer);
 				uint32_t end = std::min(layers_end, range_max_layer);
 				res_states.push_back(StateInRange{
-					.state = layers_states[i].state,
+					.state = DoubleResourceState2{
+						.write_state = layers_states[i].write_state,
+						.read_only_state = layers_states[i].read_only_state,
+					},
 					.range = Range{
 						.aspectMask = range.aspectMask,
 						.baseMipLevel = m,
@@ -187,6 +197,7 @@ namespace vkl
 
 	void ImageInstance::setState(size_t tid, Range const& range, ResourceState2 const& state)
 	{
+		const bool state_is_readonly = accessIsReadonly2(state.access);
 		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
 		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
@@ -214,26 +225,59 @@ namespace vkl
 
 				if (range.baseArrayLayer <= it->pos && range_max_layer >= layers_end) // it is a subset of range
 				{
-					it->state = state;
+					if (state_is_readonly)
+					{
+						// Take the layout of new state
+						it->read_only_state = (state | it->read_only_state);
+					}
+					else
+					{
+						it->write_state = state;
+						it->read_only_state = {.layout = it->write_state.layout};
+					}
 				}
 				else
 				{
 					if (range.baseArrayLayer > it->pos)
 					{
-						it = layers_states.insert(it, InternalStates::PosAndState{
+						InternalStates::PosAndState new_state {
 							.pos = range.baseArrayLayer,
-							.state = state,
-						});
+						};
+						if (state_is_readonly)
+						{
+							new_state.read_only_state = (state | it->read_only_state);
+							new_state.write_state = it->write_state;
+						}
+						else
+						{
+							new_state.write_state = state;
+							new_state.read_only_state.layout = new_state.write_state.layout;
+						}
+						it = layers_states.insert(it, new_state);
 					}
 
 					if (range_max_layer < layers_end)
 					{
-						ResourceState2 tmp_state = it->state;
-						it->state = state;
-						it->pos = range_max_layer;
-						it = layers_states.insert(it, InternalStates::PosAndState{
+						DoubleResourceState2 tmp_state{
+							.write_state = it->write_state,
+							.read_only_state = it->read_only_state,
+						};
+						
+						if (state_is_readonly)
+						{
+							it->read_only_state = (state | it->read_only_state);
+						}
+						else
+						{
+							it->write_state = state;
+							it->read_only_state = {};
+							it->read_only_state.layout = it->write_state.layout;
+						}
+						
+						it = layers_states.insert(it + 1, InternalStates::PosAndState{
 							.pos = range_max_layer,
-							.state = tmp_state,
+							.write_state = tmp_state.write_state,
+							.read_only_state = tmp_state.read_only_state,
 						});
 					}
 				}

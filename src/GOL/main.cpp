@@ -46,7 +46,7 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
+				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = PROJECT_NAME,
 				.w = 1024,
 				.h = 512,
@@ -128,6 +128,7 @@ namespace vkl
 			});
 
 			std::shared_ptr<ImageView> current_grid_view = std::make_shared<ImageView>(ImageView::CI{
+				.name = "Current",
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{
@@ -141,6 +142,7 @@ namespace vkl
 			exec.declare(current_grid_view);
 
 			std::shared_ptr<ImageView> prev_grid_view = std::make_shared<ImageView>(ImageView::CI{
+				.name = "Prev",
 				.image = grid_storage_image,
 				.type = VK_IMAGE_VIEW_TYPE_2D,
 				.range = VkImageSubresourceRange{

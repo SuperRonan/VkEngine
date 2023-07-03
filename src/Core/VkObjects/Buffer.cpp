@@ -95,6 +95,7 @@ namespace vkl
 		const InternalStates & is = _states.at(tid);
 
 		DoubleResourceState2  res;
+		assert(is.states[0].pos == 0);
 
 		for (size_t i = 0; i < is.states.size(); ++i)
 		{
@@ -200,9 +201,7 @@ namespace vkl
 						it->read_only_state = {};
 					}
 
-					it->pos = range_end;
-
-					it = is.states.insert(it, InternalStates::PosAndState {
+					it = is.states.insert(it + 1, InternalStates::PosAndState {
 						.pos = range_end,
 						.write_state = tmp_state.write_state,
 						.read_only_state = tmp_state.read_only_state,

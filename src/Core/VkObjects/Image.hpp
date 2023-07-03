@@ -53,8 +53,9 @@ namespace vkl
 		{
 			struct PosAndState
 			{
-				uint32_t pos;
-				ResourceState2 state;
+				uint32_t pos = 0;
+				ResourceState2 write_state = {};
+				ResourceState2 read_only_state = {};
 			};
 			// One per mip level
 			//	- Layers (similar to buffer)
@@ -130,7 +131,7 @@ namespace vkl
 
 		struct StateInRange
 		{
-			ResourceState2 state;
+			DoubleResourceState2 state;
 			Range range;
 		};
 		std::vector<StateInRange> getState(size_t tid, Range const& range)const;
