@@ -70,6 +70,23 @@ namespace vkl
 		_alloc = nullptr;
 	}
 
+	bool ImageInstance::statesAreSorted(size_t tid) const
+	{
+		assert(_states.contains(tid));
+		const auto& states = _states.at(tid).states;
+		for (size_t m = 0; m < states.size(); ++m)
+		{
+			for (size_t i = 1; i < states[m].size(); ++i)
+			{
+				if (states[m][i - 1].pos >= states[m][i].pos)
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
@@ -100,6 +117,7 @@ namespace vkl
 
 	std::vector<ImageInstance::StateInRange> ImageInstance::getState(size_t tid, Range const& range) const
 	{
+		assert(statesAreSorted(tid));
 		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
 		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
@@ -253,7 +271,7 @@ namespace vkl
 							new_state.write_state = state;
 							new_state.read_only_state.layout = new_state.write_state.layout;
 						}
-						it = layers_states.insert(it, new_state);
+						it = layers_states.insert(it + 1, new_state);
 					}
 
 					if (range_max_layer < layers_end)
@@ -282,6 +300,8 @@ namespace vkl
 					}
 				}
 			}
+
+			assert(statesAreSorted(tid));
 
 			bool reduce = false; // TODO
 		}

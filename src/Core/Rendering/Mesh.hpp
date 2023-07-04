@@ -6,15 +6,10 @@
 #include "Vertex.hpp"
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/VkObjects/CommandBuffer.hpp>
+#include <Core/Execution/Resource.hpp>
 
 namespace vkl
 {
-	struct Resources
-	{
-		std::vector<std::shared_ptr<Buffer>> buffers = {};
-		std::vector<std::shared_ptr<ImageView>> images = {};
-	};
-
 	class Mesh : public VkObject, public Geometry
 	{
 	protected:
@@ -61,7 +56,7 @@ namespace vkl
 		
 		virtual void recordBindAndDraw(CommandBuffer & cmd)const = 0;
 
-		virtual Resources getResources() = 0;
+		virtual Resources getResourcesForDraw() = 0;
 
 		virtual bool updateResources(UpdateContext & ctx) = 0;
 
@@ -291,14 +286,9 @@ namespace vkl
 
 		virtual Status getStatus() const override;
 
-		virtual void recordBindAndDraw(CommandBuffer & cmd)const override;
+		virtual Resources getResourcesForDraw() override;
 
-		virtual Resources getResources() override
-		{
-			return Resources{
-				.buffers = {_device.mesh_buffer},
-			};
-		}
+		virtual void recordBindAndDraw(CommandBuffer & cmd)const override;
 
 		virtual bool updateResources(UpdateContext & ctx) override;
 

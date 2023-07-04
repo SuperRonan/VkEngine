@@ -33,6 +33,9 @@ namespace vkl
 
 		virtual void declareGraphicsResources(SynchronizationHelper & synch);
 
+		virtual void synchronizeDrawResources(SynchronizationHelper& synch, void* user_data)
+		{}
+
 	public:
 
 		struct CreateInfo
@@ -95,6 +98,8 @@ namespace vkl
 
 
 		virtual void createProgram() override;
+
+		virtual void synchronizeDrawResources(SynchronizationHelper& synch, void* user_data) override;
 
 	public:
 

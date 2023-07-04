@@ -219,6 +219,11 @@ namespace vkl
 
 		declareGraphicsResources(synch);
 		_sets->instance()->recordInputSynchronization(synch);
+		
+		synchronizeDrawResources(synch, user_info);
+
+		
+		synch.record();
 
 		VkExtent2D render_area = extract(*_framebuffer->extent());
 
@@ -230,14 +235,14 @@ namespace vkl
 			if (_clear_color.has_value())
 			{
 				const VkClearValue cv = { .color = _clear_color.value() };
-				std::fill_n(clear_values.begin(), num_clear_values - 1, cv);
+				std::fill_n(clear_values.begin(), _framebuffer->size(), cv);
 			}
 			if (_clear_depth_stencil.has_value())
 			{
 				clear_values.back() = VkClearValue{ .depthStencil = _clear_depth_stencil.value() };
 			}
 		}
-
+		
 		VkRenderPassBeginInfo begin = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,
@@ -247,8 +252,6 @@ namespace vkl
 			.clearValueCount = static_cast<uint32_t>(num_clear_values),
 			.pClearValues = num_clear_values ? clear_values.data() : nullptr,
 		};
-
-		synch.record();
 
 		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
 		{
@@ -376,6 +379,23 @@ namespace vkl
 			.geometry = geom,
 			.fragment = frag,
 		});
+	}
+
+	void VertexCommand::synchronizeDrawResources(SynchronizationHelper& synch, void* user_data)
+	{
+		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
+
+		if (di.draw_count == 0)
+		{
+			for (auto& mesh : di.meshes)
+			{
+				const Resources & mesh_resources = mesh.mesh->getResourcesForDraw();
+				for (const auto& mr : mesh_resources)
+				{
+					synch.addSynch(mr);
+				}
+			}
+		}
 	}
 
 	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data)

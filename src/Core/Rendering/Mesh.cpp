@@ -393,10 +393,52 @@ namespace vkl
 			.app = _app,
 			.name = name() + ".mesh_buffer",
 			.size = &_device.total_buffer_size,
-			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.queues = queues,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
+	}
+
+	Resources RigidMesh::getResourcesForDraw()
+	{
+		const bool separate_resource = false;
+		if(separate_resource)
+		{
+			return Resources{
+				Resource{
+					._buffer = _device.mesh_buffer,
+					._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size},
+					._begin_state = ResourceState2{
+						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+					},
+					._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+				},
+				Resource{
+					._buffer = _device.mesh_buffer,
+					._buffer_range = Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
+					._begin_state = ResourceState2{
+						.access = VK_ACCESS_2_INDEX_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+					},
+					._buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				},
+			};
+		}
+		else
+		{
+			return Resources{
+				Resource{
+					._buffer = _device.mesh_buffer,
+					._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
+					._begin_state = ResourceState2{
+						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT | VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+					},
+					._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				},
+			};
+		}
 	}
 
 	void RigidMesh::recordBindAndDraw(CommandBuffer& command_buffer)const

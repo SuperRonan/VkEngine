@@ -37,5 +37,7 @@ namespace vkl
 		}
 	};
 
+	using Resources = std::vector<Resource>;
+
 	Resource MakeResource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
 }

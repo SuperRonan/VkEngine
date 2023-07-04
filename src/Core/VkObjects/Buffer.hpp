@@ -54,6 +54,8 @@ namespace vkl
 
 		void destroy();
 
+		bool statesAreSorted(size_t tid) const;
+
 	public:
 
 		struct CreateInfo

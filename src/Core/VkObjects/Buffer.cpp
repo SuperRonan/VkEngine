@@ -70,6 +70,20 @@ namespace vkl
 		}
 	}
 
+	bool BufferInstance::statesAreSorted(size_t tid) const
+	{
+		assert(_states.contains(tid));
+		const auto & states = _states.at(tid).states;
+		for (size_t i = 1; i < states.size(); ++i)
+		{
+			if (states[i - 1].pos >= states[i].pos)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 
 	void BufferInstance::map()
 	{
@@ -86,6 +100,8 @@ namespace vkl
 
 	DoubleResourceState2 BufferInstance::getState(size_t tid, Range r) const
 	{
+		assert(statesAreSorted(tid));
+
 		if (r.len == 0 || r.len == VK_WHOLE_SIZE)
 		{
 			r.len = (_ci.size - r.begin);
@@ -93,9 +109,9 @@ namespace vkl
 		const size_t range_end = r.begin + r.len;
 		assert(_states.contains(tid));
 		const InternalStates & is = _states.at(tid);
+		assert(is.states[0].pos == 0);
 
 		DoubleResourceState2  res;
-		assert(is.states[0].pos == 0);
 
 		for (size_t i = 0; i < is.states.size(); ++i)
 		{
@@ -139,6 +155,7 @@ namespace vkl
 
 		for (auto it = is.states.begin(); it != is.states.end(); ++it)
 		{
+			assert(is.states[0].pos == 0);
 			const size_t range_i_end = [&]()
 			{
 				if ((it+1) == is.states.end())	return _ci.size;
@@ -184,7 +201,7 @@ namespace vkl
 					{
 						new_state.write_state = state;
 					}
-					it = is.states.insert(it, new_state);
+					it = is.states.insert(it + 1, new_state);
 				}
 
 				if (range_end < range_i_end)
@@ -210,6 +227,8 @@ namespace vkl
 			}
 		}
 
+		assert(statesAreSorted(tid));
+
 		// I don't think it is always necessary, maybe do it periodically
 		bool reduce = false;
 
@@ -224,6 +243,8 @@ namespace vkl
 				}
 			}
 		}
+
+		assert(statesAreSorted(tid));
 	}
 
 

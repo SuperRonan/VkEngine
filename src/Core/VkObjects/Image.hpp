@@ -73,6 +73,8 @@ namespace vkl
 
 		void setInitialState(size_t tid);
 
+		bool statesAreSorted(size_t tid) const;
+
 	public:
 
 		ImageInstance(CreateInfo const& ci);
