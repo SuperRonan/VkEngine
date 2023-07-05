@@ -443,7 +443,7 @@ namespace vkl
 		const bool dump_spv = _stage == VK_SHADER_STAGE_GEOMETRY_BIT;
 		if (dump_spv)
 		{
-			writeFile(ENGINE_SRC_PATH "shader.spv.bin", _spv_code);
+			writeFile(ENGINE_SRC_PATH "../gen/shader.spv.bin", _spv_code);
 		}
 		
 		VkShaderModuleCreateInfo module_ci{
