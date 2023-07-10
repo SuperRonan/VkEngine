@@ -1,5 +1,5 @@
 #include "VkWindow.hpp"
-
+#include "imgui.h"
 #include <algorithm>
 
 namespace vkl
@@ -24,17 +24,40 @@ namespace vkl
 			.name = this->name() + ".Surface",
 			.window = _window,
 		});
+		_surface->queryDetails();
+
+		setupGuiObjects();
+	}
+
+	void VkWindow::setupGuiObjects()
+	{
+		const Surface::SwapchainSupportDetails & sd = _surface->getDetails();
+		std::vector<std::string> formats(sd.formats.size());
+		std::transform(sd.formats.begin(), sd.formats.end(), formats.begin(), [](VkSurfaceFormatKHR f)
+		{
+			return getVkFormatName(f.format) + ", "s + getVkColorSpaceKHRName(f.colorSpace);
+		});
+		const size_t format_index = 0;
+		_target_format.setValue(sd.formats[format_index]);
+		_gui_formats = ImGuiRadioButtons(std::move(formats), format_index);
+		
+		std::vector<std::string> present_modes(sd.present_modes.size());
+		std::transform(sd.present_modes.begin(), sd.present_modes.end(), present_modes.begin(), getVkPresentModeKHRName);
+		const size_t present_mode_index = std::find(sd.present_modes.begin(), sd.present_modes.end(), _target_present_mode.value()) - sd.present_modes.begin();
+		_gui_present_modes = ImGuiRadioButtons(std::move(present_modes), present_mode_index);
+
 	}
 
 
 	void VkWindow::createSwapchain()
 	{
 		_surface->queryDetails();
-		_swapchain = std::make_shared <Swapchain>(Swapchain::CI{
+		_swapchain = std::make_shared<Swapchain>(Swapchain::CI{
 			.app = application(),
 			.name = name() + ".swapchain",
 			.surface = _surface,
 			.min_image_count = std::max(_surface->getDetails().capabilities.minImageCount + 1, _surface->getDetails().capabilities.maxImageCount),
+			.target_format = _target_format,
 			.extent = extract(_dynamic_extent),
 			.image_usages = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			.queues = std::vector<uint32_t>(_queues_families_indices.cbegin(), _queues_families_indices.cend()),
@@ -155,9 +178,10 @@ namespace vkl
 		return _swapchain->instance()->views()[index];
 	}
 
-	VkFormat VkWindow::format()const
+
+	DynamicValue<VkFormat> VkWindow::format()const
 	{
-		return _swapchain->format();
+		return [this](){return _target_format.value().format;};
 	}
 
 	size_t VkWindow::swapchainSize()const
@@ -251,5 +275,29 @@ namespace vkl
 		updateDynSize();
 		res |= _swapchain->updateResources(ctx);
 		return res;
+	}
+
+	void VkWindow::declareImGui()
+	{
+		if (ImGui::CollapsingHeader("Window"))
+		{
+			bool changed = false;
+			const Surface::SwapchainSupportDetails& sd = _surface->getDetails();
+			ImGui::Text("Resolution: %d x %d", _width, _height);
+
+			ImGui::Text("Present Mode");
+			changed = _gui_present_modes.declare();
+			if (changed)
+			{
+				_target_present_mode.setValue(sd.present_modes[_gui_present_modes.index()]);
+			}
+
+			ImGui::Text("Format");
+			changed = _gui_formats.declare();
+			if (changed)
+			{
+				_target_format.setValue(sd.formats[_gui_formats.index()]);
+			}
+		}
 	}
 }

@@ -39,7 +39,6 @@ namespace vkl
 		if (_render_gui)
 		{
 			ImGui_ImplVulkan_DestroyFontUploadObjects();
-			ImGui_ImplVulkan_Shutdown();
 			//ImGui_ImplVulkan_DestroyDeviceObjects();
 		}
 		

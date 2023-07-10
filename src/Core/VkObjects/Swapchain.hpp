@@ -87,8 +87,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<Surface> surface = nullptr;
 			uint32_t min_image_count = 0;
-			VkFormat target_format = VK_FORMAT_MAX_ENUM;
-			VkColorSpaceKHR target_color_space = VK_COLOR_SPACE_MAX_ENUM_KHR;
+			DynamicValue<VkSurfaceFormatKHR> target_format;
 			DynamicValue<VkExtent2D> extent;
 			uint32_t layers = 1;
 			VkImageUsageFlags image_usages = 0;
@@ -108,6 +107,7 @@ namespace vkl
 		std::shared_ptr<Surface> _surface;
 		std::vector<uint32_t> _queues = {};
 		DynamicValue<VkPresentModeKHR> _target_present_mode;
+		DynamicValue<VkSurfaceFormatKHR> _target_format;
 		std::shared_ptr<SwapchainInstance> _old_swapchain = nullptr;
 
 		VkSwapchainCreateInfoKHR _ci = {};
@@ -148,9 +148,9 @@ namespace vkl
 			return _inst;
 		}
 
-		constexpr VkFormat format()const
+		const DynamicValue<VkSurfaceFormatKHR> & format()const
 		{
-			return _ci.imageFormat;
+			return _target_format;
 		}
 
 		const DynamicValue<VkExtent2D> & extent() const

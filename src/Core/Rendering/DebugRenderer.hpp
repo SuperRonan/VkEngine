@@ -57,7 +57,7 @@ namespace vkl
 
 		DebugRenderer(CreateInfo const& ci);
 
-		void declareToImGui();
+		void declareImGui();
 
 		void loadFont();
 

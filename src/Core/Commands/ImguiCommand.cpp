@@ -12,54 +12,14 @@ namespace vkl
 		_swapchain(ci.swapchain)
 	{
 		createRenderPass();
-
-		const uint32_t N = 1024;
-		std::vector<VkDescriptorPoolSize> sizes = {
-			{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	N },
-			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,				N },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,		N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,		N },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			N },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	N },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	N },
-			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
-		};
-
-		_desc_pool = std::make_shared<DescriptorPool>(_app, name() + ".DescPool");
-		VkDescriptorPoolCreateInfo desc_ci{
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-			.maxSets = N,
-			.poolSizeCount = (uint32_t)sizes.size(),
-			.pPoolSizes = sizes.data(),
-		};
-		_desc_pool->create(desc_ci);
-
-		ImGui_ImplVulkan_InitInfo ii{
-			.Instance = _app->instance(),
-			.PhysicalDevice = _app->physicalDevice(),
-			.Device = device(),
-			.QueueFamily = _app->getQueueFamilyIndices().graphics_family.value(),
-			.Queue = _app->queues().graphics,
-			.DescriptorPool = *_desc_pool,
-			.MinImageCount = static_cast<uint32_t>(2),
-			.ImageCount = static_cast<uint32_t>(8),
-			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-		};
-
-		ImGui_ImplVulkan_Init(&ii, *_render_pass);
 		
 		_swapchain->addInvalidationCallback({
 			.callback = [=]() {
 				_framebuffers.clear();
+				maybeDestroyRenderPass();
 			},
 			.id = this,
 		});
-
 	}
 
 	void ImguiCommand::createFramebuffers()
@@ -79,11 +39,12 @@ namespace vkl
 
 	void ImguiCommand::createRenderPass()
 	{
+		_render_pass_format = _swapchain->format().value().format;
 		VkAttachmentDescription2 attachement_desc{
 			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 			.pNext = nullptr,
 			.flags = 0,
-			.format = _swapchain->format(),
+			.format = _render_pass_format,
 			.samples = VK_SAMPLE_COUNT_1_BIT,// To check
 			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -134,6 +95,59 @@ namespace vkl
 			.dependencies ={ dependency },
 			.last_is_depth = false,
 		});
+
+
+		const uint32_t N = 1024;
+		std::vector<VkDescriptorPoolSize> sizes = {
+			{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,	N },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,				N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,				N },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,		N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,		N },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,			N },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,	N },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,	N },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
+		};
+
+		_desc_pool = std::make_shared<DescriptorPool>(_app, name() + ".DescPool");
+		VkDescriptorPoolCreateInfo desc_ci{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+			.maxSets = N,
+			.poolSizeCount = (uint32_t)sizes.size(),
+			.pPoolSizes = sizes.data(),
+		};
+		_desc_pool->create(desc_ci);
+
+		ImGui_ImplVulkan_InitInfo ii{
+			.Instance = _app->instance(),
+			.PhysicalDevice = _app->physicalDevice(),
+			.Device = device(),
+			.QueueFamily = _app->getQueueFamilyIndices().graphics_family.value(),
+			.Queue = _app->queues().graphics,
+			.DescriptorPool = *_desc_pool,
+			.MinImageCount = static_cast<uint32_t>(2),
+			.ImageCount = static_cast<uint32_t>(8), // Why 8?
+			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+		};
+
+		ImGui_ImplVulkan_Init(&ii, *_render_pass);
+	}
+
+	void ImguiCommand::maybeDestroyRenderPass()
+	{
+		VkFormat fmt = _swapchain->format().value().format;
+		if(fmt != _render_pass_format)
+		{
+			vkDeviceWaitIdle(device());
+			ImGui_ImplVulkan_Shutdown();
+			_desc_pool = nullptr;
+			_render_pass = nullptr;
+		}
 	}
 
 	void ImguiCommand::init()
@@ -210,6 +224,12 @@ namespace vkl
 	{
 		bool res = false;
 
+		if (!_render_pass)
+		{
+			createRenderPass();
+			res = true;
+		}
+
 		if (_framebuffers.empty())
 		{
 			createFramebuffers();
@@ -227,6 +247,12 @@ namespace vkl
 
 	ImguiCommand::~ImguiCommand()
 	{
-		
+		if (_render_pass)
+		{
+			vkDeviceWaitIdle(device());
+			ImGui_ImplVulkan_Shutdown();
+			_desc_pool = nullptr;
+			_render_pass = nullptr;
+		}
 	}
 }

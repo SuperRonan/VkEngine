@@ -2,6 +2,8 @@
 
 #include <Core/App/VkApplication.hpp>
 
+#include <Core/IO/ImGuiUtils.hpp>
+
 #include <set>
 #include <string>
 #include <vector>
@@ -51,6 +53,9 @@ namespace vkl
 		//std::vector<std::shared_ptr<Fence>> _image_in_flight_fence;
 
 		DynamicValue<VkPresentModeKHR> _target_present_mode;
+		ImGuiRadioButtons _gui_present_modes;
+		DynamicValue<VkSurfaceFormatKHR> _target_format = VkSurfaceFormatKHR{.format = VK_FORMAT_MAX_ENUM, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
+		ImGuiRadioButtons _gui_formats;
 
 		struct FrameInfo
 		{
@@ -77,6 +82,9 @@ namespace vkl
 		void cleanupSwapchain();
 
 		virtual void cleanup();
+
+
+		void setupGuiObjects();
 
 
 	public:
@@ -114,7 +122,12 @@ namespace vkl
 			return _swapchain->instance()->views();
 		}
 
-		VkFormat format()const;
+		DynamicValue<VkSurfaceFormatKHR> surfaceFormat()
+		{
+			return _target_format;
+		}
+
+		DynamicValue<VkFormat> format()const;
 
 		size_t swapchainSize()const;
 
@@ -162,7 +175,7 @@ namespace vkl
 
 		bool updateResources(UpdateContext & ctx);
 
-
+		void declareImGui();
 
 	};
 

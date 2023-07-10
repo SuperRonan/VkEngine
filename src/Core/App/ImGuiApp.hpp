@@ -24,8 +24,6 @@ namespace vkl
 		ImGuiContext* _imgui_ctx = nullptr;
 		std::vector<ImGuiWindow *> _imgui_windows = {};
 
-		VkPresentModeKHR _present_mode = VK_PRESENT_MODE_FIFO_KHR;
-
 		void beginImGuiFrame()
 		{			
 			ImGui_ImplVulkan_NewFrame();
@@ -41,7 +39,6 @@ namespace vkl
 		{
 			std::string name = {};
 			bool enable_validation = false;
-			VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 		};
 		using CI = CreateInfo;
 

@@ -11,6 +11,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <string>
 
 #include "DynamicValue.hpp"
 
@@ -54,6 +55,13 @@ namespace vkl
 
 	static constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	static constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+
+	std::string getVkPresentModeKHRName(VkPresentModeKHR);
+	std::string getVkColorSpaceKHRName(VkColorSpaceKHR);
+	std::string getVkFormatName(VkFormat);
+
+
 
 
 	struct VulkanFeatures

@@ -238,7 +238,7 @@ namespace vkl
 		int _key_downward = GLFW_KEY_LEFT_CONTROL;
 
 		float _movement_speed = 1;
-		float _mouse_sensitivity = 5e-1;
+		float _mouse_sensitivity = 5e-3;
 		float _joystick_sensitivity = 5;
 		float _fov_sensitivity = 1e-1;
 
@@ -300,9 +300,9 @@ namespace vkl
 			
 			if (_mouse)
 			{
-				if(_mouse->getButton(GLFW_MOUSE_BUTTON_RIGHT).currentlyPressed())
+				if(_mouse->getButton(GLFW_MOUSE_BUTTON_LEFT).currentlyPressed())
 				{
-					delta.angle += _mouse->getPos().delta() * dt * _mouse_sensitivity;
+					delta.angle += _mouse->getPos().delta()  * _mouse_sensitivity;
 				}
 
 				delta.fov *= exp(-_mouse->getScroll().current.y * _fov_sensitivity);

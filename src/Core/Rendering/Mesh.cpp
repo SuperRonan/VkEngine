@@ -812,6 +812,12 @@ namespace vkl
 			.compute_normals = 1,
 			.auto_compute_tangents = false,
 		});
+
+		res->_host.vertices[4].normal = vec3(0, -1, 0);
+		res->_host.vertices[6].normal = vec3(0, -1, 0);
+		res->_host.vertices[7].normal = vec3(0, -1, 0);
+		res->_host.vertices[8].normal = vec3(0, -1, 0);
+
 		return res;
 	}
 

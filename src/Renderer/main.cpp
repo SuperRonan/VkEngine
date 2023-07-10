@@ -108,7 +108,7 @@ namespace vkl
 			std::shared_ptr<VkWindow> window = std::make_shared<VkWindow>(VkWindow::CreateInfo{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = &_present_mode,
+				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = PROJECT_NAME,
 				.w = 1600,
 				.h = 900,
@@ -289,8 +289,17 @@ namespace vkl
 				}
 				window->pollEvents();
 
-				keyboard.update();
-				mouse.update();
+				const auto& imgui_io = ImGui::GetIO();
+				
+				if(!imgui_io.WantCaptureKeyboard)
+				{
+					keyboard.update();
+				}
+				if(!imgui_io.WantCaptureMouse)
+				{
+					mouse.update();
+				}
+				
 				gamepad.update();
 				process_input(input_state);
 				camera_controller.updateCamera(dt);
@@ -301,7 +310,9 @@ namespace vkl
 
 					ImGui::Text("Camera inclination: %f", glm::degrees(camera.inclination()));
 
-					debugger.declareToImGui();
+					window->declareImGui();
+
+					debugger.declareImGui();
 				}
 				ImGui::EndFrame();
 

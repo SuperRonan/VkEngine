@@ -9,6 +9,7 @@ namespace vkl
 
 	void SwapchainInstance::create()
 	{
+		std::cout << "Create VkSwapchainKHR" << std::endl;
 		assert(_swapchain == VK_NULL_HANDLE);
 		VK_CHECK(vkCreateSwapchainKHR(_app->device(), &_ci, nullptr, &_swapchain), "Failed to create a swapchain.");
 
@@ -56,13 +57,6 @@ namespace vkl
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
 				.name = name() + ".view_" + std::to_string(i),
 				.image = _images[i],
-				.range = VkImageSubresourceRange{
-					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-					.baseMipLevel = 0,
-					.levelCount = 1,
-					.baseArrayLayer = 0,
-					.layerCount = 1,
-				},
 			});
 		}
 	}
@@ -113,7 +107,7 @@ namespace vkl
 	}
 
 	void Swapchain::createInstance()
-	{
+	{	
 		_inst = std::make_shared<SwapchainInstance>(SwapchainInstance::CI{
 			.app = application(),
 			.name = name(),
@@ -144,7 +138,8 @@ namespace vkl
 		_extent(ci.extent),
 		_queues(ci.queues),
 		_surface(ci.surface),
-		_target_present_mode(ci.target_present_mode)
+		_target_present_mode(ci.target_present_mode),
+		_target_format(ci.target_format)
 	{
 		_surface->queryDetails();
 		const Surface::SwapchainSupportDetails & support = _surface->getDetails();
@@ -161,14 +156,16 @@ namespace vkl
 		_ci.minImageCount = std::min(support.capabilities.minImageCount, ci.min_image_count);
 		const VkSurfaceFormatKHR fmt = [&]()
 		{
+			const Surface::SwapchainSupportDetails& support = _surface->getDetails();
 			VkSurfaceFormatKHR res = support.formats.front();
+			const VkSurfaceFormatKHR target = *_target_format;
 			uint32_t score = 0;
 			for (size_t i = 0; i < support.formats.size(); ++i)
 			{
 				const VkSurfaceFormatKHR tmp = support.formats[i];
 				uint32_t tmp_score = 0;
-				if (tmp.format == ci.target_format) tmp_score += 1;
-				if (tmp.colorSpace == ci.target_color_space) tmp_score += 1;
+				if (tmp.format == target.format) tmp_score += 1;
+				if (tmp.colorSpace == target.colorSpace) tmp_score += 1;
 				if (tmp_score > score)
 				{
 					score = tmp_score;
@@ -225,7 +222,34 @@ namespace vkl
 				_ci.presentMode = new_present_mode;
 				destroyInstance();
 			}
-			VkExtent2D new_extent = getPossibleExtent(*_extent, support.capabilities);
+			const VkSurfaceFormatKHR new_format = *_target_format;
+			if ((new_format.format != _ci.imageFormat) || (new_format.colorSpace != _ci.imageColorSpace))
+			{
+				const VkSurfaceFormatKHR fmt = [&]()
+				{
+					const Surface::SwapchainSupportDetails& support = _surface->getDetails();
+					VkSurfaceFormatKHR res = support.formats.front();
+					const VkSurfaceFormatKHR target = *_target_format;
+					uint32_t score = 0;
+					for (size_t i = 0; i < support.formats.size(); ++i)
+					{
+						const VkSurfaceFormatKHR tmp = support.formats[i];
+						uint32_t tmp_score = 0;
+						if (tmp.format == target.format) tmp_score += 1;
+						if (tmp.colorSpace == target.colorSpace) tmp_score += 1;
+						if (tmp_score > score)
+						{
+							score = tmp_score;
+							res = tmp;
+						}
+					}
+					return res;
+				}();
+				_ci.imageFormat = fmt.format;
+				_ci.imageColorSpace = fmt.colorSpace;
+				destroyInstance();
+			}
+			const VkExtent2D new_extent = getPossibleExtent(*_extent, support.capabilities);
 			using namespace vk_operators;
 			if (new_extent != _ci.imageExtent)
 			{

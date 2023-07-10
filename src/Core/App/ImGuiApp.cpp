@@ -9,7 +9,10 @@ namespace vkl
 	{
 		_imgui_ctx = ImGui::CreateContext();
 		ImGui::SetCurrentContext(_imgui_ctx);
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable;
+		ImGui::GetIO().ConfigFlags |= 
+			ImGuiConfigFlags_DockingEnable | 
+			ImGuiConfigFlags_ViewportsEnable |
+			ImGuiConfigFlags_NavEnableKeyboard;
 		
 
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
@@ -27,7 +30,6 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = g_app,
 				.queue_families_indices = std::set({g_app->_queue_family_indices.graphics_family.value(), g_app->_queue_family_indices.present_family.value()}),
-				.target_present_mode = g_app->_present_mode,
 				.name = "",
 				.w = static_cast<uint32_t>(vp.Size.x),
 				.h = static_cast<uint32_t>(vp.Size.y),
@@ -69,8 +71,7 @@ namespace vkl
 	}
 
 	AppWithWithImGui::AppWithWithImGui(CreateInfo const& ci) :
-		VkApplication(ci.name, ci.enable_validation),
-		_present_mode(ci.present_mode)
+		VkApplication(ci.name, ci.enable_validation)
 	{
 		assert(!g_app);
 		g_app = this;
