@@ -68,6 +68,7 @@ namespace vkl
 		};
 
 		ImGui_ImplGlfw_InitForVulkan(*main_window, true);
+		//ImGui_ImplWin32_Init(glfwGetWin32Window(main_window->handle()));
 	}
 
 	AppWithWithImGui::AppWithWithImGui(CreateInfo const& ci) :

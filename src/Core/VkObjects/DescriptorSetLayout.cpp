@@ -13,12 +13,6 @@ namespace vkl
 		vkDestroyDescriptorSetLayout(_app->device(), _handle, nullptr);
 		_handle = VK_NULL_HANDLE;
 	}
-
-	DescriptorSetLayout::DescriptorSetLayout(VkApplication* app, VkDescriptorSetLayoutCreateInfo const& ci) :
-		VkObject(app)
-	{
-		create(ci);
-	}
 	
 	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),

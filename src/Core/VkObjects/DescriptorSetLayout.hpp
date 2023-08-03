@@ -40,12 +40,6 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		constexpr DescriptorSetLayout(VkApplication * app = nullptr):
-			VkObject(app)
-		{}
-
-		DescriptorSetLayout(VkApplication* app, VkDescriptorSetLayoutCreateInfo const& ci);
-
 		DescriptorSetLayout(CreateInfo const& ci);
 
 		virtual ~DescriptorSetLayout() override;

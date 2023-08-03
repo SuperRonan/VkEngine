@@ -5,6 +5,7 @@
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
+#include <imgui/backends/imgui_impl_win32.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 namespace vkl

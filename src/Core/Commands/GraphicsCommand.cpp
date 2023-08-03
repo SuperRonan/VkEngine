@@ -309,7 +309,7 @@ namespace vkl
 		createGraphicsResources();
 		createPipeline();
 
-		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
+		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
 			.app = application(),
 			.name = name() + ".sets",
 			.bindings = ci.bindings,
@@ -486,7 +486,7 @@ namespace vkl
 		createGraphicsResources();
 		createPipeline();
 
-		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
+		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
 			.app = application(),
 			.name = name() + ".sets",
 			.bindings = ci.bindings,

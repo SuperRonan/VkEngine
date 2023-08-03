@@ -22,18 +22,6 @@ namespace vkl
 		_sets->instance()->recordBindings(cmd, _pipeline->instance()->binding());
 	}
 
-	void DescriptorSetsInstance::recordInputSynchronization(SynchronizationHelper& synch)
-	{
-		for (size_t i = 0; i < _bindings.size(); ++i)
-		{
-			if (_bindings[i].isResolved() && _bindings[i].updated())
-			{
-				synch.addSynch(_bindings[i].resource());
-			}
-		}
-	}
-
-
 	bool ShaderCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;

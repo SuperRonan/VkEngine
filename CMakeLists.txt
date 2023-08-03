@@ -99,6 +99,7 @@ FILE(GLOB IMGUI_SOURCES
 
 "${IMGUI_DIR}backends/imgui_impl_vulkan.cpp"
 "${IMGUI_DIR}backends/imgui_impl_glfw.cpp"
+"${IMGUI_DIR}backends/imgui_impl_win32.cpp"
 )
 ADD_LIBRARY(imgui STATIC ${IMGUI_SOURCES})
 INCLUDE_DIRECTORIES(${IMGUI_DIR})

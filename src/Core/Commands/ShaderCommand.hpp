@@ -15,7 +15,7 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<DescriptorSetsManager> _sets;
+		std::shared_ptr<DescriptorSets> _sets;
 
 		std::shared_ptr<Pipeline> _pipeline;
 

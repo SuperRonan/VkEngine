@@ -6,6 +6,8 @@
 
 namespace vkl
 {
+	
+
 	class ResourceBinding
 	{
 	public:
@@ -14,7 +16,7 @@ namespace vkl
 		Resource _resource = {};
 		std::shared_ptr<Sampler> _sampler = {};
 		uint32_t _binding = uint32_t(-1);
-		uint32_t _set = 0;
+		DescriptorSetName _set = DescriptorSetName::MAX_ENUM;
 
 		uint32_t _resolved_set = 0, _resolved_binding = uint32_t(-1);
 		std::string _name = "";
@@ -42,7 +44,7 @@ namespace vkl
 			_resolved_binding = uint32_t(-1);
 		}
 
-		constexpr void setBinding(uint32_t s, uint32_t b)
+		constexpr void setBinding(DescriptorSetName s, uint32_t b)
 		{
 			_set = s;
 			_binding = b;
@@ -160,6 +162,7 @@ namespace vkl
 		{
 			_updated = status;
 		}
-
 	};
+
+	using ResourceBindings = std::vector<ResourceBinding>;
 }

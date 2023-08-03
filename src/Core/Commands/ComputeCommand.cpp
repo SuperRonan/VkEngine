@@ -26,7 +26,7 @@ namespace vkl
 			.name = _program->name(),
 			.program = _program,
 		});
-		_sets = std::make_shared<DescriptorSetsManager>(DescriptorSetsManager::CI{
+		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
 			.app = application(),
 			.name = name() + ".sets",
 			.bindings = ci.bindings,

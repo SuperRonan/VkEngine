@@ -12,6 +12,7 @@
 #include <Core/Rendering/Mesh.hpp>
 #include <Core/Execution/StagingPool.hpp>
 #include <Core/Execution/ResourceState.hpp>
+#include <Core/Execution/DescriptorSetsManager.hpp>
 
 #include <memory>
 #include <vector>
@@ -33,6 +34,8 @@ namespace vkl
 		StagingPool* _staging_pool = nullptr;
 
 		MountingPoints * _mounting_points = nullptr;
+
+		DescriptorSets _desc_sets;
 
 
 		friend class LinearExecutor;
