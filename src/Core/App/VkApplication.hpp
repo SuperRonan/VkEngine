@@ -9,6 +9,7 @@
 #include <Core/Utils/stl_extension.hpp>
 #include <memory>
 #include <type_traits>
+#include <Core/Commands/ShaderBindingDescriptor.hpp>
 
 namespace vkl
 {
@@ -90,6 +91,8 @@ namespace vkl
 		VulkanFeatures _requested_features = {};
 		VulkanFeatures _available_features = {};
 
+		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
+
 		virtual void requestFeatures(VulkanFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
@@ -120,6 +123,8 @@ namespace vkl
 		void createCommandPools();
 
 		void createAllocator();
+
+		void queryDescriptorBindingOptions();
 
 		void initGLFW();
 
@@ -191,6 +196,11 @@ namespace vkl
 		const ExtFunctionsPtr& extFunctions()
 		{
 			return _ext_functions;
+		}
+
+		const DescriptorSetBindingGlobalOptions& descriptorBindingGlobalOptions() const
+		{
+			return _descriptor_binding_options;
 		}
 	};
 

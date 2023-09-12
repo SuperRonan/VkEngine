@@ -72,7 +72,7 @@ namespace vkl
 		_swapchain = VK_NULL_HANDLE;
 	}
 
-	void SwapchainInstance::setName()
+	void SwapchainInstance::setVkName()
 	{
 		if (!name().empty())
 		{

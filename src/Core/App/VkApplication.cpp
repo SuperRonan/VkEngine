@@ -42,6 +42,7 @@ namespace vkl
 			VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
 			VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
 			VK_EXT_MESH_SHADER_EXTENSION_NAME,
+			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
 		};
 	}
 
@@ -478,7 +479,7 @@ namespace vkl
 			.physicalDevice = _physical_device,
 			.device = _device,
 			.instance = _instance,
-			.vulkanApiVersion = VK_API_VERSION_1_2,
+			.vulkanApiVersion = VK_API_VERSION_1_3,
 		};
 		vmaCreateAllocator(&alloc_ci, &_allocator);
 		//_staging_pool = std::make_unique<StagingPool>(this, _allocator);
@@ -491,6 +492,14 @@ namespace vkl
 		{
 			VK_CHECK(_vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
 		}
+	}
+
+	void VkApplication::queryDescriptorBindingOptions()
+	{
+		_descriptor_binding_options.use_push_descriptors = hasDeviceExtension(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+		_descriptor_binding_options.set_bindings.resize(_device_props.props.limits.maxBoundDescriptorSets);
+		std::iota(_descriptor_binding_options.set_bindings.begin(), _descriptor_binding_options.set_bindings.end(), 0);
+		_descriptor_binding_options.merge_module_and_shader = _descriptor_binding_options.set_bindings.size() <= 4;
 	}
 
 	void VkApplication::initGLFW()

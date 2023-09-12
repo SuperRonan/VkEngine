@@ -50,7 +50,7 @@ namespace vkl
 
 		void create();
 
-		void setName();
+		void setVkName();
 
 		void destroy();
 

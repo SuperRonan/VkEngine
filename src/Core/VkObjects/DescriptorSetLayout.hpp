@@ -20,12 +20,17 @@ namespace vkl
 	protected:
 
 		VkDescriptorSetLayout _handle = VK_NULL_HANDLE;
+		// Sorted
 		std::vector<VkDescriptorSetLayoutBinding> _bindings;
 		std::vector<BindingMeta> _metas;
 
 		void create(VkDescriptorSetLayoutCreateInfo const& ci);
 
+		void setVkName();
+
 		void destroy();
+
+		void sortBindings();
 
 	public:
 
@@ -73,5 +78,10 @@ namespace vkl
 		{
 			return _bindings.empty();
 		}
+	};
+
+	struct MultiDescriptorSetsLayouts
+	{
+		std::vector<std::shared_ptr<DescriptorSetLayout>> layouts;
 	};
 }

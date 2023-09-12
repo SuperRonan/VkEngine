@@ -1,11 +1,11 @@
 #include "DescriptorSetsManager.hpp"
+#include <algorithm>
 
 namespace vkl
 {
 
 	DescriptorSetAndPoolInstance::DescriptorSetAndPoolInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
-		_options(ci.options),
 		_prog(ci.progam),
 		_target_set(ci.target_set),
 		_bindings(ci.bindings)
@@ -16,6 +16,53 @@ namespace vkl
 	DescriptorSetAndPoolInstance::~DescriptorSetAndPoolInstance()
 	{
 		
+	}
+
+	size_t DescriptorSetAndPoolInstance::findBindingIndex(uint32_t b)const
+	{
+		size_t begin = 0, end = _bindings.size();
+		size_t res = end / 2;
+		while (true)
+		{
+			const uint32_t rb = _bindings[res].resolvedBinding();
+			if (rb == b)
+			{
+				break;
+			}
+			else if (b < rb)
+			{
+				end = res;
+			}
+			else
+			{
+				begin = res + 1;
+			}
+			if (begin == end)
+			{
+				res = -1;
+				break;
+			}
+			res = begin + (end - begin) / 2;
+		}
+		return res;
+	}
+
+	void DescriptorSetAndPoolInstance::sortBindings()
+	{
+		std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b){return a.resolvedBinding() < b.resolvedBinding();});
+	}
+
+	bool DescriptorSetAndPoolInstance::checkIntegrity()const
+	{
+		bool res = true;
+		for (size_t i = 0; i < _bindings.size() - 1; ++i)
+		{
+			if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
+			{
+				res = false;
+			}
+		}
+		return res;
 	}
 
 	void DescriptorSetAndPoolInstance::allocateDescriptorSet()
@@ -360,6 +407,8 @@ namespace vkl
 				}
 			}
 		}
+
+		
 	}
 
 	void DescriptorSetsInstance::recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding)
@@ -461,5 +510,49 @@ namespace vkl
 		}
 
 		return res;
+	}
+
+
+
+
+
+	DescriptorSetsManager::DescriptorSetsManager(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_cmd(ci.cmd),
+		_pipeline_binding(ci.pipeline_binding),
+		_bound_descriptor_sets(application()->deviceProperties().props.limits.maxBoundDescriptorSets, nullptr),
+		_vk_sets(_bound_descriptor_sets.size(), VK_NULL_HANDLE)
+	{
+		_bindings_ranges.reserve(_bound_descriptor_sets.size());
+	}
+
+	void DescriptorSetsManager::bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set)
+	{
+		assert(binding < _bound_descriptor_sets.size());
+
+		_bound_descriptor_sets[binding] = set;
+
+		// TODO sorted insertion + merge ranges
+		_bindings_ranges.push_back(Range32{.begin = binding, .len = 1});
+	}
+
+	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayout> const& layout)
+	{
+		std::sort(_bindings_ranges.begin(), _bindings_ranges.end(), [](Range32 const& a, Range32 const& b){return a.begin < b.begin;});
+		for (const auto r : _bindings_ranges)
+		{
+			for (uint32_t i = 0; i < r.len; ++i)
+			{
+				_vk_sets[i + r.begin] = _bound_descriptor_sets[i + r.begin]->set()->handle();
+			}
+			vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, r.begin, r.len, _vk_sets.data() + r.begin, 0, nullptr);
+		}
+		_bindings_ranges.clear();
+	}
+
+	const std::shared_ptr<DescriptorSetAndPoolInstance>& DescriptorSetsManager::getSet(uint32_t s)const
+	{
+		assert(s < _bound_descriptor_sets.size());
+		return _bound_descriptor_sets[s];
 	}
 }

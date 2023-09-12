@@ -1,4 +1,5 @@
 #include "DescriptorSetLayout.hpp"
+#include <algorithm>
 
 namespace vkl
 {
@@ -8,10 +9,43 @@ namespace vkl
 		VK_CHECK(vkCreateDescriptorSetLayout(_app->device(), &ci, nullptr, &_handle), "Failed to create a descriptor set layout.");
 	}
 
+	void DescriptorSetLayout::setVkName()
+	{
+		application()->nameObject(VkDebugUtilsObjectNameInfoEXT{
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+			.pNext = nullptr,
+			.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+			.objectHandle = reinterpret_cast<uint64_t>(_handle),
+			.pObjectName = name().c_str(),
+		});
+	}
+
 	void DescriptorSetLayout::destroy()
 	{
 		vkDestroyDescriptorSetLayout(_app->device(), _handle, nullptr);
 		_handle = VK_NULL_HANDLE;
+	}
+
+	void DescriptorSetLayout::sortBindings()
+	{
+		// TODO Optimize sometime
+		// Make a std SoA sort
+		struct Tmp {
+			VkDescriptorSetLayoutBinding binding = {};
+			BindingMeta meta = {};
+		};
+		std::vector<Tmp> tmp(_bindings.size());
+		for (size_t i = 0; i < tmp.size(); ++i)
+		{
+			tmp[i].binding = _bindings[i];
+			tmp[i].meta = _metas[i];
+		}
+		std::sort(tmp.begin(), tmp.end(), [](Tmp const& a, Tmp const& b){return a.binding.binding < b.binding.binding; });
+		for (size_t i = 0; i < tmp.size(); ++i)
+		{
+			_bindings[i] = tmp[i].binding;
+			_metas[i] = tmp[i].meta;
+		}
 	}
 	
 	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
@@ -19,6 +53,9 @@ namespace vkl
 		_metas(ci.metas),
 		_bindings(ci.bindings)
 	{
+
+		sortBindings();
+
 		VkDescriptorSetLayoutCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
@@ -91,6 +128,7 @@ namespace vkl
 			};
 		}
 		create(vk_ci);
+		setVkName();
 	}
 
 	DescriptorSetLayout::~DescriptorSetLayout()

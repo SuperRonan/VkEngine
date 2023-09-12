@@ -13,7 +13,9 @@ namespace vkl
 
 		std::shared_ptr<PipelineLayout> _layout;
 		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
-		std::vector<std::shared_ptr<DescriptorSetLayout>> _set_layouts;
+		std::vector<std::shared_ptr<DescriptorSetLayout>> _provided_sets_layouts;
+		std::vector<std::shared_ptr<DescriptorSetLayout>> _reflection_sets_layouts;
+		std::vector<std::shared_ptr<DescriptorSetLayout>> _sets_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
 		ProgramInstance(VkApplication* app, std::string const& name);
@@ -24,14 +26,11 @@ namespace vkl
 
 		bool reflect();
 
+		bool checkSetsLayoutsMatch()const;
+
 		void createLayout();
 
 		constexpr const auto& shaders()const
-		{
-			return _shaders;
-		}
-
-		constexpr auto& shaders()
 		{
 			return _shaders;
 		}
@@ -41,22 +40,22 @@ namespace vkl
 			return _layout;
 		}
 
-		constexpr const auto& setLayouts() const
+		constexpr const auto& providedSetsLayouts()const
 		{
-			return _set_layouts;
+			return _provided_sets_layouts;
 		}
 
-		constexpr auto& setLayouts()
+		constexpr const auto& reflectionSetsLayouts() const
 		{
-			return _set_layouts;
+			return _reflection_sets_layouts;
+		}
+
+		constexpr const auto& setsLayouts() const
+		{
+			return _sets_layouts;
 		}
 
 		constexpr const auto& pushConstantRanges()const
-		{
-			return _push_constants;
-		}
-
-		constexpr auto& pushConstantRanges()
 		{
 			return _push_constants;
 		}

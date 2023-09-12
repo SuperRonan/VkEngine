@@ -139,10 +139,10 @@ namespace vkl
 			return res;
 		}();
 
-		_set_layouts.resize(max_set_index + 1);
-		for (size_t s = 0; s < _set_layouts.size(); ++s)
+		_reflection_sets_layouts.resize(max_set_index + 1);
+		for (size_t s = 0; s < _sets_layouts.size(); ++s)
 		{
-			std::shared_ptr<DescriptorSetLayout> & set_layout = _set_layouts[s];
+			std::shared_ptr<DescriptorSetLayout> & set_layout = _sets_layouts[s];
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 			std::vector<DescriptorSetLayout::BindingMeta> metas;
 			if (all_bindings.contains(s))
@@ -157,10 +157,23 @@ namespace vkl
 				}
 			}
 
+			VkDescriptorSetLayoutCreateFlags flags = 0;
+
+			const bool push_desc = false;
+			if (push_desc)
+			{
+				flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+			}
+			else
+			{
+				flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+			}
+			
+
 			set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = application(),
 				.name = name() + "DescSetLayout",
-				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT ,
+				.flags = flags,
 				.bindings = bindings,
 				.metas = metas,
 				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
@@ -204,18 +217,94 @@ namespace vkl
 		return true;
 	}
 
+	bool ProgramInstance::checkSetsLayoutsMatch() const
+	{
+		bool res = true;
+		res |= _provided_sets_layouts.size() >= _reflection_sets_layouts.size();
+		if (res)
+		{
+			for (size_t s = 0; s < _reflection_sets_layouts.size(); ++s)
+			{
+				if (_reflection_sets_layouts[s])
+				{
+					res |= !!_provided_sets_layouts[s];
+					if (!!_provided_sets_layouts[s])
+					{
+						res |= _provided_sets_layouts[s]->bindings().size() >= _reflection_sets_layouts[s]->bindings().size();
+						// Check if the reflection descriptors are present at the right index in the provided one, and for the right stages
+						if (res)
+						{
+
+							size_t pi = 0;
+							for (size_t i = 0; i < _reflection_sets_layouts[s]->bindings().size(); ++s)
+							{
+								const VkDescriptorSetLayoutBinding & rb = _reflection_sets_layouts[s]->bindings()[i];
+								while (true)
+								{
+									if (_provided_sets_layouts[s]->bindings()[pi].binding == rb.binding)
+									{
+										break;
+									}
+									++pi;
+									if (pi == _provided_sets_layouts[s]->bindings().size())
+									{
+										pi = -1;
+										break;
+									}
+								}
+								if (pi == -1)
+								{
+									res = false;
+									break;
+								}
+								const VkDescriptorSetLayoutBinding & pb = _provided_sets_layouts[s]->bindings()[pi];
+
+								res |= rb.descriptorType == pb.descriptorType;
+								res |= rb.descriptorCount == pb.descriptorCount;
+								res |= (rb.stageFlags & pb.stageFlags) == rb.stageFlags;
+
+								if (!res)
+								{
+									break;
+								}
+							}
+						}
+					}
+				}
+				if (!res)
+				{
+					break;
+				}
+			}
+		}
+		return res;
+	}
+
 
 	void ProgramInstance::createLayout()
 	{
 		const bool reflection_ok = reflect();
 		assert(reflection_ok);
 
-		std::vector<VkDescriptorSetLayout> set_layouts;
-		for (size_t i = 0; i < _set_layouts.size(); ++i)
+		if (!reflection_ok)
 		{
-			if (_set_layouts[i])
+			return;
+		}
+		assert(checkSetsLayoutsMatch());
+
+		_sets_layouts.resize(_sets_layouts.size());
+		for (size_t i = 0; i < _sets_layouts.size(); ++i)
+		{
+			_sets_layouts[i] = _provided_sets_layouts[i] ? _provided_sets_layouts[i] : _reflection_sets_layouts[i];
+		}
+
+		std::vector<VkDescriptorSetLayout> set_layouts;
+		set_layouts.reserve(_sets_layouts.size());
+		for (size_t i = 0; i < _sets_layouts.size(); ++i)
+		{
+			if (_sets_layouts[i])
 			{
-				set_layouts.push_back(*_set_layouts[i]);
+				set_layouts.push_back(*_sets_layouts[i]);
 			}
 			else
 			{

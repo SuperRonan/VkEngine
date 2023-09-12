@@ -4,9 +4,22 @@
 namespace vkl
 {
 	ExecutionContext::ExecutionContext(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
 		_command_buffer(ci.cmd),
 		_resource_tid(ci.resource_tid),
 		_staging_pool(ci.staging_pool),
-		_mounting_points(ci.mounting_points)
+		_mounting_points(ci.mounting_points),
+		_graphics_bound_sets(DescriptorSetsManager::CI{
+			.app = application(),
+			.name = name() + "._gfx_bound_sets",
+		}),
+		_compute_bound_sets(DescriptorSetsManager::CI{
+		.app = application(),
+			.name = name() + "._cmp_bound_sets",
+		}),
+		_ray_tracing_bound_sets(DescriptorSetsManager::CI{
+		.app = application(),
+			.name = name() + "._rt_bound_sets",
+		})
 	{}
 }

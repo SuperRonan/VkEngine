@@ -15,7 +15,9 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<DescriptorSets> _sets;
+		MultiDescriptorSetsLayouts _provided_sets_layouts = {};
+
+		std::shared_ptr<DescriptorSetAndPool> _set;
 
 		std::shared_ptr<Pipeline> _pipeline;
 
@@ -23,9 +25,17 @@ namespace vkl
 
 	public:
 
-		template <typename StringLike = std::string>
-		ShaderCommand(VkApplication* app, StringLike&& name, std::vector<ShaderBindingDescription> const& bindings) :
-			DeviceCommand(app, std::forward<StringLike>(name))
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			std::vector<ShaderBindingDescription> bindings;
+			MultiDescriptorSetsLayouts sets_layouts = {};
+		};
+
+		ShaderCommand(CreateInfo const& ci) :
+			DeviceCommand(ci.app, ci.name),
+			_provided_sets_layouts(ci.sets_layouts)
 		{
 
 		}
@@ -35,6 +45,8 @@ namespace vkl
 		virtual void recordPushConstant(CommandBuffer& cmd, ExecutionContext& ctx, PushConstant const& pc);
 
 		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
+
+		virtual void recordBoundResourcesSynchronization(DescriptorSetsManager & bound_sets, SynchronizationHelper & synch);
 
 		template<typename T>
 		void setPushConstantsData(T && t)

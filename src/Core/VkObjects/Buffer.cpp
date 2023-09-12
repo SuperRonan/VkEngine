@@ -36,7 +36,7 @@ namespace vkl
 
 		_states[0] = std::move(is);
 
-		setName();
+		setVkName();
 	}
 
 	void BufferInstance::destroy()
@@ -55,7 +55,7 @@ namespace vkl
 		_alloc = VMA_NULL;
 	}
 
-	void BufferInstance::setName()
+	void BufferInstance::setVkName()
 	{
 		if (!name().empty())
 		{

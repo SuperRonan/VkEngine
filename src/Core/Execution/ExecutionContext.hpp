@@ -21,7 +21,7 @@
 
 namespace vkl
 {
-	class ExecutionContext
+	class ExecutionContext : public VkObject
 	{
 	protected:
 
@@ -35,7 +35,9 @@ namespace vkl
 
 		MountingPoints * _mounting_points = nullptr;
 
-		DescriptorSets _desc_sets;
+		DescriptorSetsManager _graphics_bound_sets;
+		DescriptorSetsManager _compute_bound_sets;
+		DescriptorSetsManager _ray_tracing_bound_sets;
 
 
 		friend class LinearExecutor;
@@ -45,6 +47,8 @@ namespace vkl
 
 		struct CreateInfo
 		{
+			VkApplication * app = nullptr;
+			std::string name = {};
 			std::shared_ptr<CommandBuffer> cmd = nullptr;
 			size_t resource_tid = 0;
 			StagingPool* staging_pool = nullptr;
@@ -97,6 +101,21 @@ namespace vkl
 		const MountingPoints* mountingPoints() const
 		{
 			return _mounting_points;
+		}
+
+		DescriptorSetsManager& graphicsBoundSets()
+		{
+			return _graphics_bound_sets;
+		}
+
+		DescriptorSetsManager& computeBoundSets()
+		{
+			return _compute_bound_sets;
+		}
+
+		DescriptorSetsManager& rayTracingBoundSets()
+		{
+			return _ray_tracing_bound_sets;
 		}
 	};
 

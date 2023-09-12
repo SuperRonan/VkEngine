@@ -3,7 +3,11 @@
 namespace vkl
 {
 	ComputeCommand::ComputeCommand(CreateInfo const& ci) :
-		ShaderCommand(ci.app, ci.name, ci.bindings),
+		ShaderCommand(ShaderCommand::CreateInfo{
+			.app = ci.app, 
+			.name = ci.name, 
+			.bindings = ci.bindings,
+		}),
 		_shader_path(ci.shader_path),
 		_definitions(ci.definitions),
 		_dispatch_size(ci.dispatch_size),
@@ -16,16 +20,19 @@ namespace vkl
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 			.definitions = _definitions,
 		});
+		
 		_program = std::make_shared<ComputeProgram>(ComputeProgram::CI{
 			.app = application(),
 			.name = shader->name(),
 			.shader = shader,
 		});
+
 		_pipeline = std::make_shared<Pipeline>(Pipeline::ComputeCreateInfo{
 			.app = application(),
 			.name = _program->name(),
 			.program = _program,
 		});
+
 		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
 			.app = application(),
 			.name = name() + ".sets",

@@ -29,7 +29,7 @@ namespace vkl
 
 		void destroy();
 
-		void setName();
+		void setVkName();
 
 	public:
 

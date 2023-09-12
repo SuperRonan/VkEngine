@@ -17,6 +17,7 @@ namespace vkl
 			bool dispatch_threads = false;
 			std::vector<ShaderBindingDescription> bindings = {};
 			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
+			MultiDescriptorSetsLayouts sets_layouts = {};
 		};
 		using CI = CreateInfo;
 

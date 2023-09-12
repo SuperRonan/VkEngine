@@ -15,19 +15,20 @@ namespace vkl
 	class DescriptorSetAndPoolInstance : public AbstractInstance
 	{
 	protected:
-
-		const DescriptorSetBindingOptions & _options;
-
-		VkPipelineBindPoint _bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 		
 		// Can be nullptr
 		std::shared_ptr<ProgramInstance> _prog = nullptr;
 		uint32_t _target_set = -1;
 
+		// sorted
 		ResourceBindings _bindings = {};
 
 		std::shared_ptr<DescriptorPool> _pool = nullptr;
 		std::shared_ptr<DescriptorSet> _set = nullptr;
+
+		size_t findBindingIndex(uint32_t b) const;
+
+		void sortBindings();
 
 	public:
 
@@ -35,7 +36,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			const DescriptorSetBindingOptions& options;
+			const DescriptorSetBindingGlobalOptions& options;
 			VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 			std::shared_ptr<ProgramInstance> progam = nullptr;
 			uint32_t target_set = -1;
@@ -47,6 +48,7 @@ namespace vkl
 
 		virtual ~DescriptorSetAndPoolInstance() override;
 
+		bool checkIntegrity()const;
 
 		void allocateDescriptorSet();
 
@@ -64,6 +66,29 @@ namespace vkl
 		{
 			return _set;
 		}
+
+		ResourceBindings& bindings()
+		{
+			return _bindings;
+		}
+
+		const ResourceBindings& bindings() const
+		{
+			return _bindings;
+		}
+
+		ResourceBinding* findBinding(uint32_t b)
+		{
+			const size_t index = findBindingIndex(b);
+			if (index == size_t(-1))
+			{
+				return nullptr;
+			}
+			else
+			{
+				return _bindings.data() + index;
+			}
+		}
 		
 	};
 
@@ -73,7 +98,7 @@ namespace vkl
 
 		using ParentType = InstanceHolder<DescriptorSetAndPoolInstance>;
 
-		const DescriptorSetBindingOptions& _options;
+		const DescriptorSetBindingGlobalOptions& _options;
 
 		std::shared_ptr<Program> _prog = nullptr;
 		uint32_t _target_set = -1;
@@ -86,7 +111,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			const DescriptorSetBindingOptions& options;
+			const DescriptorSetBindingGlobalOptions& options;
 			std::shared_ptr<Program> progam = nullptr;
 			uint32_t target_set = -1;
 			ShaderBindings bindings = {};
@@ -171,20 +196,36 @@ namespace vkl
 	class DescriptorSetsManager : public VkObject
 	{
 	protected:
+
+		std::shared_ptr<CommandBuffer> _cmd;
+
+		VkPipelineBindPoint _pipeline_binding;
 		
-		size_t max_bound_descriptor_sets = 8;
 		std::vector<std::shared_ptr<DescriptorSetAndPoolInstance>> _bound_descriptor_sets;
 
+		std::vector<Range32> _bindings_ranges;
+
+		std::vector<VkDescriptorSet> _vk_sets;
+
+
 	public:
+
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
+			std::shared_ptr<CommandBuffer> cmd = nullptr;
+			VkPipelineBindPoint pipeline_binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 		};
+		using CI = CreateInfo;
 
-		void bind(std::shared_ptr<DescriptorSetAndPoolInstance> const& set);
+		DescriptorSetsManager(CreateInfo const& ci);
 
-		const std::shared_ptr<DescriptorSetAndPoolInstance> & getSet(uint32_t s);
+		void bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set);
+
+		void recordBinding(std::shared_ptr<PipelineLayout> const& layout);
+
+		const std::shared_ptr<DescriptorSetAndPoolInstance> & getSet(uint32_t s) const;
 	};
 }

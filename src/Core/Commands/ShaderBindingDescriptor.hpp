@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <sstream>
+#include <array>
 #include <Core/DynamicValue.hpp>
 #include <Core/VulkanCommons.hpp>
 
@@ -12,6 +14,7 @@ namespace vkl
 	class ImageView;
 	class Sampler;
 
+
 	enum class DescriptorSetName : uint32_t
 	{
 		common = 0,
@@ -20,6 +23,14 @@ namespace vkl
 		shader = 3,
 		object = 4,
 		MAX_ENUM,
+	};
+
+	constexpr static std::string s_descriptor_set_names[] = {
+		"common",
+		"scene",
+		"module",
+		"shader",
+		"object"
 	};
 
 	struct BindingIndex
@@ -42,19 +53,19 @@ namespace vkl
 		std::shared_ptr<ImageView>	view = nullptr;
 		std::shared_ptr<Sampler>	sampler = nullptr;
 		std::string					name = {};
-		DescriptorSetName			set = DescriptorSetName::MAX_ENUM;
+		//DescriptorSetName			set = DescriptorSetName::MAX_ENUM;
 		uint32_t					binding = uint32_t(-1);
 	};
 	
 	using ShaderBindings = std::vector<ShaderBindingDescription>;
 
 
-	struct DescriptorSetBindingOptions
+	struct DescriptorSetBindingGlobalOptions
 	{
 		bool use_push_descriptors;
 		bool merge_module_and_shader;
-		std::array<BindingIndex, static_cast<size_t>(DescriptorSetName::MAX_ENUM)> set_bindings;
-	};
+		std::vector<BindingIndex> set_bindings;
+	};	
 }
 
 template<class Stream>
