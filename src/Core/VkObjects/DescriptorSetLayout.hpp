@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/App/VkApplication.hpp>
+#include <concepts>
 
 namespace vkl
 {
@@ -80,8 +81,37 @@ namespace vkl
 		}
 	};
 
-	struct MultiDescriptorSetsLayouts
+	class MultiDescriptorSetsLayouts
 	{
-		std::vector<std::shared_ptr<DescriptorSetLayout>> layouts;
+	protected:
+
+		std::vector<std::shared_ptr<DescriptorSetLayout>> _layouts;
+
+	public:
+
+		const std::shared_ptr<DescriptorSetLayout>& operator[](size_t i) const
+		{
+			if(i >= _layouts.size())	return nullptr;
+			return _layouts[i];
+		}
+
+		void setLayout(uint32_t i, std::shared_ptr<DescriptorSetLayout> const& l)
+		{
+			(*this) += {i, l};
+		}
+
+		MultiDescriptorSetsLayouts& operator+=(std::pair<uint32_t, std::shared_ptr<DescriptorSetLayout>> const& p);
+
+		MultiDescriptorSetsLayouts operator+(std::pair<uint32_t, std::shared_ptr<DescriptorSetLayout>> const& p) const
+		{
+			MultiDescriptorSetsLayouts res = *this;
+			res += p;
+			return res;
+		}
+
+		std::vector<std::shared_ptr<DescriptorSetLayout>> asVector()const
+		{
+			return _layouts;
+		}
 	};
 }

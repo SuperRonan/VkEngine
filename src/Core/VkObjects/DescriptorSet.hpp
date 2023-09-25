@@ -15,21 +15,27 @@ namespace vkl
 
         VkDescriptorSet _handle = VK_NULL_HANDLE;
 
-    public:
-
-        constexpr DescriptorSet(VkApplication * app=nullptr) noexcept :
-            VkObject(app)
-        {}
-
-        DescriptorSet(std::shared_ptr<DescriptorSetLayout> layout, std::shared_ptr<DescriptorPool> pool);
-        
-        DescriptorSet(std::shared_ptr<DescriptorSetLayout> layout, std::shared_ptr<DescriptorPool> pool, VkDescriptorSet handle);
-
-        virtual ~DescriptorSet() override;
+        void setVkName();
 
         void allocate(VkDescriptorSetAllocateInfo const& alloc);
 
         void destroy();
+
+    public:
+
+        struct CreateInfo
+        {
+            VkApplication * app = nullptr;
+            std::string name = {};
+            std::shared_ptr<DescriptorSetLayout> layout = nullptr;
+            std::shared_ptr<DescriptorPool> pool = nullptr;
+        };
+        using CI = CreateInfo;
+
+        DescriptorSet(CreateInfo const& ci);
+        
+        virtual ~DescriptorSet() override;
+
 
         constexpr operator VkDescriptorSet()const
         {

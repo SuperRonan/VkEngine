@@ -454,6 +454,8 @@ namespace vkl
 
 
 		loadExtFunctionsPtr();
+
+		queryDescriptorBindingOptions();
 	}
 
 	void VkApplication::loadExtFunctionsPtr()
@@ -498,8 +500,12 @@ namespace vkl
 	{
 		_descriptor_binding_options.use_push_descriptors = hasDeviceExtension(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 		_descriptor_binding_options.set_bindings.resize(_device_props.props.limits.maxBoundDescriptorSets);
-		std::iota(_descriptor_binding_options.set_bindings.begin(), _descriptor_binding_options.set_bindings.end(), 0);
+		for (size_t i = 0; i < _descriptor_binding_options.set_bindings.size(); ++i)
+		{
+			_descriptor_binding_options.set_bindings[i] = BindingIndex{.set = static_cast<uint32_t>(i), .binding = 0};
+		}
 		_descriptor_binding_options.merge_module_and_shader = _descriptor_binding_options.set_bindings.size() <= 4;
+		_descriptor_binding_options.shader_set = _descriptor_binding_options.set_bindings[static_cast<uint32_t>(DescriptorSetName::shader)].set;
 	}
 
 	void VkApplication::initGLFW()

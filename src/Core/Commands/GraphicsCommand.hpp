@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ShaderCommand.hpp"
+#include <Core/Rendering/Model.hpp>
 
 namespace vkl
 {
@@ -45,6 +46,7 @@ namespace vkl
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 			VertexInputDescription vertex_input_description = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
+			MultiDescriptorSetsLayouts set_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -91,7 +93,7 @@ namespace vkl
 
 		ShaderPaths _shaders;
 
-		std::vector<std::shared_ptr<Mesh>> _meshes;
+		std::vector<std::shared_ptr<Model>> _models;
 
 		DynamicValue<uint32_t> _draw_count = 0;
 
@@ -111,7 +113,8 @@ namespace vkl
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			DynamicValue<uint32_t> draw_count = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
-			std::vector<std::shared_ptr<Mesh>> meshes = {};
+			std::vector<std::shared_ptr<Model>> models = {};
+			MultiDescriptorSetsLayouts set_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -130,9 +133,9 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		struct DrawMeshInfo
+		struct DrawModelInfo
 		{
-			std::shared_ptr<Mesh> mesh;
+			std::shared_ptr<Model> model;
 			PushConstant pc;
 		};
 		
@@ -142,7 +145,7 @@ namespace vkl
 			uint32_t draw_count = 0;
 			std::optional<VkViewport> viewport = {};
 
-			std::vector<DrawMeshInfo> meshes;
+			std::vector<DrawModelInfo> meshes;
 		};
 		using DI = DrawInfo;
 
@@ -193,6 +196,7 @@ namespace vkl
 			DynamicValue<VkExtent3D> dispatch_size = {};
 			bool dispatch_threads = false;
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
+			MultiDescriptorSetsLayouts set_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;

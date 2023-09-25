@@ -65,6 +65,7 @@ namespace vkl
 		bool use_push_descriptors;
 		bool merge_module_and_shader;
 		std::vector<BindingIndex> set_bindings;
+		uint32_t shader_set;
 	};	
 }
 
@@ -72,11 +73,5 @@ template<class Stream>
 Stream& operator<<(Stream& s, vkl::BindingIndex const& b)
 {
 	s << "(set = " << b.set << ", binding = " << b.binding << ")";
-}
-
-std::string vkl::BindingIndex::asString() const
-{
-	std::stringstream ss;
-	ss << *this;
-	return ss.str();
+	return s;
 }

@@ -19,6 +19,7 @@ namespace vkl
 	{
 		const VkPipelineBindPoint bp = _pipeline->instance()->binding();
 		vkCmdBindPipeline(cmd, bp, *_pipeline->instance());
+		context.keppAlive(_pipeline->instance());
 
 		DescriptorSetsManager& bound_sets = [&]() -> DescriptorSetsManager& {
 			if(bp == VK_PIPELINE_BIND_POINT_GRAPHICS)
@@ -29,22 +30,32 @@ namespace vkl
 				return context.rayTracingBoundSets();
 		}();
 
-		bound_sets.bind(application()->descriptorBindingGlobalOptions().set_bindings[(uint32_t)DescriptorSetName::shader].set, _set->instance());
+		bound_sets.bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		bound_sets.recordBinding(_pipeline->instance()->program()->pipelineLayout(), 
+			[&context](std::shared_ptr<DescriptorSetAndPoolInstance> set_inst){ 
+				context.keppAlive(set_inst); 
+			}
+		);
 	}
 
-	void ShaderCommand::recordBoundResourcesSynchronization(DescriptorSetsManager& bound_sets, SynchronizationHelper& synch)
+	void ShaderCommand::recordBoundResourcesSynchronization(DescriptorSetsManager& bound_sets, SynchronizationHelper& synch, size_t max_set)
 	{
 		ProgramInstance & prog = *_pipeline->program()->instance();
 		
 		std::vector<std::shared_ptr<DescriptorSetLayout>> const& sets = prog.reflectionSetsLayouts();
 
-		for (size_t s = 0; s < sets.size(); ++s)
+		if (max_set == 0)
+		{
+			max_set = sets.size();
+		}
+
+		for (size_t s = 0; s < max_set; ++s)
 		{
 			if (sets[s])
 			{
 				DescriptorSetLayout const & set_layout = *sets[s];
 				const auto & bound_set = bound_sets.getSet(s);
-				assert(bound_set, "Shader binding set not bound!");
+				assertm(bound_set, "Shader binding set not bound!");
 				const auto & shader_bindings = set_layout.bindings();
 				auto & set_bindings = bound_set->bindings();
 				size_t set_it = 0;
@@ -57,19 +68,19 @@ namespace vkl
 						++set_it;
 						if (set_it == set_bindings.size())
 						{
-							assert(false, "Shader binding not found in bound set, not enough bindings!");
+							assertm(false, "Shader binding not found in bound set, not enough bindings!");
 							return;
 						}
 					}
 					ResourceBinding & resource = set_bindings[set_it];
-					assert(resource.resolvedBinding() == b, "Shader binding not found in bound set!");
+					assertm(resource.resolvedBinding() == b, "Shader binding not found in bound set!");
 
 					Resource r = resource.resource();
 					const auto & meta = set_layout.metas()[i];
 					r._begin_state = ResourceState2{
 						.access = meta.access,
 						.layout = meta.layout,
-						.stage = binding.stageFlags,
+						.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
 					};
 					if (r._end_state)
 					{
@@ -89,8 +100,6 @@ namespace vkl
 		res |= _pipeline->updateResources(ctx);
 
 		res |= _set->updateResources(ctx);
-
-		_set->instance()->writeDescriptorSets();
 
 		return res;
 	}

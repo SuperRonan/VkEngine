@@ -14,8 +14,6 @@ namespace vkl
 		bool _check_shaders = false;
 		const DefinitionsMap& _common_definitions;
 
-		const ShaderBindings& _common_bindings;
-
 
 		MountingPoints* _mounting_points = nullptr;
 
@@ -26,7 +24,6 @@ namespace vkl
 		{
 			bool check_shaders = false;
 			const DefinitionsMap& common_definitions;
-			const ShaderBindings& common_bindings;
 			MountingPoints* mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
@@ -34,7 +31,6 @@ namespace vkl
 		UpdateContext(CreateInfo const& ci) :
 			_check_shaders(ci.check_shaders),
 			_common_definitions(ci.common_definitions),
-			_common_bindings(ci.common_bindings),
 			_mounting_points(ci.mounting_points)
 		{
 
@@ -48,11 +44,6 @@ namespace vkl
 		constexpr DefinitionsMap const& commonDefinitions() const
 		{
 			return _common_definitions;
-		}
-
-		constexpr const ShaderBindings & commonShaderBindings()const
-		{
-			return _common_bindings;
 		}
 
 		MountingPoints* mountingPoints()

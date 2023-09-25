@@ -1,10 +1,12 @@
 #version 460 core
 
+#include <ShaderLib:/common.glsl>
+
 layout(local_size_x = 16, local_size_y = 16) in;
 
-layout(set = 0, binding = 0, r8ui) uniform restrict readonly uimage2D grid;
+layout(SHADER_DESCRIPTOR_BINDING + 0, r8ui) uniform restrict readonly uimage2D grid;
 
-layout(set = 1, binding = 0, rgba8) uniform restrict writeonly image2D target;
+layout(SHADER_DESCRIPTOR_BINDING + 1, rgba8) uniform restrict writeonly image2D target;
 
 layout(push_constant) uniform PushConstants
 {

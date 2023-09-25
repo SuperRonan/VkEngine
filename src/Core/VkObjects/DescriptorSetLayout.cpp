@@ -1,5 +1,6 @@
 #include "DescriptorSetLayout.hpp"
 #include <algorithm>
+#include <cassert>
 
 namespace vkl
 {
@@ -55,6 +56,31 @@ namespace vkl
 	{
 
 		sortBindings();
+
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			const VkDescriptorType type = _bindings[i].descriptorType;
+			if ( // Is image
+				type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+				type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+				type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+			)
+			{
+				if (_metas[i].layout == VK_IMAGE_LAYOUT_UNDEFINED)
+				{
+					VkImageLayout induced_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+					if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || _metas[i].access == VK_ACCESS_2_SHADER_READ_BIT)
+					{
+						induced_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					}
+					else 
+					{
+						induced_layout = VK_IMAGE_LAYOUT_GENERAL;
+					}
+					_metas[i].layout = induced_layout;
+				}
+			}
+		}
 
 		VkDescriptorSetLayoutCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -137,6 +163,18 @@ namespace vkl
 		{
 			destroy();
 		}
+	}
+	
+
+
+	MultiDescriptorSetsLayouts& MultiDescriptorSetsLayouts::operator+=(std::pair<uint32_t, std::shared_ptr<DescriptorSetLayout>> const& p)
+	{
+		if (p.first >= _layouts.size())
+		{
+			_layouts.resize(p.first + 1);
+		}
+		_layouts[p.first] = p.second;
+		return *this;
 	}
 
 }

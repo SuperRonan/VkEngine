@@ -4,8 +4,9 @@
 
 namespace vkl
 {
-	ProgramInstance::ProgramInstance(VkApplication * app, std::string const& name) : 
-		AbstractInstance(app, name)
+	ProgramInstance::ProgramInstance(CreateInfo const &ci) : 
+		AbstractInstance(ci.app, ci.name),
+		_provided_sets_layouts(ci.sets_layouts)
 	{}
 
 	ProgramInstance::~ProgramInstance()
@@ -140,9 +141,9 @@ namespace vkl
 		}();
 
 		_reflection_sets_layouts.resize(max_set_index + 1);
-		for (size_t s = 0; s < _sets_layouts.size(); ++s)
+		for (size_t s = 0; s < _reflection_sets_layouts.size(); ++s)
 		{
-			std::shared_ptr<DescriptorSetLayout> & set_layout = _sets_layouts[s];
+			std::shared_ptr<DescriptorSetLayout> & set_layout = _reflection_sets_layouts[s];
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 			std::vector<DescriptorSetLayout::BindingMeta> metas;
 			if (all_bindings.contains(s))
@@ -172,7 +173,7 @@ namespace vkl
 
 			set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = application(),
-				.name = name() + "DescSetLayout",
+				.name = name() + ".DescSetLayout",
 				.flags = flags,
 				.bindings = bindings,
 				.metas = metas,
@@ -220,61 +221,54 @@ namespace vkl
 	bool ProgramInstance::checkSetsLayoutsMatch() const
 	{
 		bool res = true;
-		res |= _provided_sets_layouts.size() >= _reflection_sets_layouts.size();
-		if (res)
+		for (size_t s = 0; s < _reflection_sets_layouts.size(); ++s)
 		{
-			for (size_t s = 0; s < _reflection_sets_layouts.size(); ++s)
+			if (!!_reflection_sets_layouts[s] && !!_provided_sets_layouts[s])
 			{
-				if (_reflection_sets_layouts[s])
+				res |= _provided_sets_layouts[s]->bindings().size() >= _reflection_sets_layouts[s]->bindings().size();
+				// Check if the reflection descriptors are present at the right index in the provided one, and for the right stages
+				if (res)
 				{
-					res |= !!_provided_sets_layouts[s];
-					if (!!_provided_sets_layouts[s])
+
+					size_t pi = 0;
+					for (size_t i = 0; i < _reflection_sets_layouts[s]->bindings().size(); ++s)
 					{
-						res |= _provided_sets_layouts[s]->bindings().size() >= _reflection_sets_layouts[s]->bindings().size();
-						// Check if the reflection descriptors are present at the right index in the provided one, and for the right stages
-						if (res)
+						const VkDescriptorSetLayoutBinding & rb = _reflection_sets_layouts[s]->bindings()[i];
+						while (true)
 						{
-
-							size_t pi = 0;
-							for (size_t i = 0; i < _reflection_sets_layouts[s]->bindings().size(); ++s)
+						// TODO _provided are now optional
+							if (_provided_sets_layouts[s]->bindings()[pi].binding == rb.binding)
 							{
-								const VkDescriptorSetLayoutBinding & rb = _reflection_sets_layouts[s]->bindings()[i];
-								while (true)
-								{
-									if (_provided_sets_layouts[s]->bindings()[pi].binding == rb.binding)
-									{
-										break;
-									}
-									++pi;
-									if (pi == _provided_sets_layouts[s]->bindings().size())
-									{
-										pi = -1;
-										break;
-									}
-								}
-								if (pi == -1)
-								{
-									res = false;
-									break;
-								}
-								const VkDescriptorSetLayoutBinding & pb = _provided_sets_layouts[s]->bindings()[pi];
-
-								res |= rb.descriptorType == pb.descriptorType;
-								res |= rb.descriptorCount == pb.descriptorCount;
-								res |= (rb.stageFlags & pb.stageFlags) == rb.stageFlags;
-
-								if (!res)
-								{
-									break;
-								}
+								break;
 							}
+							++pi;
+							if (pi == _provided_sets_layouts[s]->bindings().size())
+							{
+								pi = -1;
+								break;
+							}
+						}
+						if (pi == -1)
+						{
+							res = false;
+							break;
+						}
+						const VkDescriptorSetLayoutBinding & pb = _provided_sets_layouts[s]->bindings()[pi];
+
+						res |= rb.descriptorType == pb.descriptorType;
+						res |= rb.descriptorCount == pb.descriptorCount;
+						res |= (rb.stageFlags & pb.stageFlags) == rb.stageFlags;
+
+						if (!res)
+						{
+							break;
 						}
 					}
 				}
-				if (!res)
-				{
-					break;
-				}
+			}
+			if (!res)
+			{
+				break;
 			}
 		}
 		return res;
@@ -292,37 +286,23 @@ namespace vkl
 		}
 		assert(checkSetsLayoutsMatch());
 
-		_sets_layouts.resize(_sets_layouts.size());
+		_sets_layouts.resize(_reflection_sets_layouts.size());
 		for (size_t i = 0; i < _sets_layouts.size(); ++i)
 		{
 			_sets_layouts[i] = _provided_sets_layouts[i] ? _provided_sets_layouts[i] : _reflection_sets_layouts[i];
 		}
 
-		std::vector<VkDescriptorSetLayout> set_layouts;
-		set_layouts.reserve(_sets_layouts.size());
-		for (size_t i = 0; i < _sets_layouts.size(); ++i)
+		if(_sets_layouts.empty())
 		{
-			if (_sets_layouts[i])
-			{
-				set_layouts.push_back(*_sets_layouts[i]);
-			}
-			else
-			{
-				set_layouts.push_back(VK_NULL_HANDLE);
-			}
+			int _ = 0;
 		}
 
-		const VkPipelineLayoutCreateInfo ci = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.setLayoutCount = (uint32_t)set_layouts.size(),
-			.pSetLayouts = set_layouts.data(),
-			.pushConstantRangeCount = (uint32_t)_push_constants.size(),
-			.pPushConstantRanges = _push_constants.data(),
-		};
-
-		_layout = std::make_shared<PipelineLayout>(_app, ci);
+		_layout = std::make_shared<PipelineLayout>(PipelineLayout::CI{
+			.app = application(),
+			.name = name() + ".layout",
+			.sets = _sets_layouts,
+			.push_constants = _push_constants,
+		});
 	}
 
 	Program::~Program()
@@ -374,8 +354,12 @@ namespace vkl
 		return res;
 	}
 
-	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoVertex const& ci):
-		ProgramInstance(ci.app, ci.name),
+	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoVertex const& ci) :
+		ProgramInstance(ProgramInstance::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.sets_layouts = ci.sets_layouts,
+		}),
 		_vertex(ci.vertex),
 		_tess_control(ci.tess_control),
 		_tess_eval(ci.tess_eval),
@@ -392,7 +376,11 @@ namespace vkl
 	}
 
 	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoMesh const& ci) :
-		ProgramInstance(ci.app, ci.name),
+		ProgramInstance(ProgramInstance::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.sets_layouts = ci.sets_layouts,
+		}),
 		_task(ci.task),
 		_mesh(ci.mesh),
 		_fragment(ci.fragment)
@@ -413,7 +401,7 @@ namespace vkl
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoVertex const& civ) :
-		Program(civ.app, civ.name),
+		Program(civ.app, civ.name, civ.sets_layouts),
 		_vertex(civ.vertex),
 		_tess_control(civ.tess_control),
 		_tess_eval(civ.tess_eval),
@@ -445,7 +433,7 @@ namespace vkl
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoMesh const& cim) :
-		Program(cim.app, cim.name),
+		Program(cim.app, cim.name, cim.sets_layouts),
 		_task(cim.task),
 		_mesh(cim.mesh),
 		_fragment(cim.fragment)
@@ -480,6 +468,7 @@ namespace vkl
 			_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIV{
 				.app = application(),
 				.name = name(),
+				.sets_layouts = _provided_sets_layouts,
 				.vertex = _vertex->instance(),
 				.tess_control = _tess_control ? _tess_control->instance() : nullptr,
 				.tess_eval = _tess_eval ? _tess_eval->instance() : nullptr,
@@ -493,6 +482,7 @@ namespace vkl
 			_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIM{
 				.app = application(),
 				.name = name(),
+				.sets_layouts = _provided_sets_layouts,
 				.task = _task ? _task->instance() : nullptr,
 				.mesh = _mesh->instance(),
 				.fragment = _fragment->instance(),
@@ -501,7 +491,11 @@ namespace vkl
 	}
 
 	ComputeProgramInstance::ComputeProgramInstance(CreateInfo const& ci):
-		ProgramInstance(ci.app, ci.name),
+		ProgramInstance(ProgramInstance::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.sets_layouts = ci.sets_layouts,
+		}),
 		_shader(ci.shader)
 	{
 		_shaders = { _shader };
@@ -521,7 +515,7 @@ namespace vkl
 	}
 
 	ComputeProgram::ComputeProgram(CreateInfo const& ci) :
-		Program(ci.app, ci.name),
+		Program(ci.app, ci.name, ci.sets_layouts),
 		_shader(ci.shader)
 	{
 		_shaders = { _shader };
@@ -540,6 +534,7 @@ namespace vkl
 		_inst = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
 			.app = application(),
 			.name = name(),
+			.sets_layouts = _provided_sets_layouts,
 			.shader = _shader->instance(),
 		});
 	}

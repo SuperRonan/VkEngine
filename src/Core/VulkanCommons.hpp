@@ -14,6 +14,9 @@
 #include <string>
 
 #include "DynamicValue.hpp"
+#include <cassert>
+
+#define assertm(exp, msg) assert(((void)msg, exp))
 
 #define VK_LOG std::cout << "[Vk]: " 
 #define VK_ERROR_LOG std::cerr << "[Vk Error]: "

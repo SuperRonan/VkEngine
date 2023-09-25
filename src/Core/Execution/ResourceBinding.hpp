@@ -3,6 +3,7 @@
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/VulkanCommons.hpp>
 #include "Resource.hpp"
+#include <Core/VkObjects/Sampler.hpp>
 
 namespace vkl
 {
@@ -16,9 +17,9 @@ namespace vkl
 		Resource _resource = {};
 		std::shared_ptr<Sampler> _sampler = {};
 		uint32_t _binding = uint32_t(-1);
-		DescriptorSetName _set = DescriptorSetName::MAX_ENUM;
+		//DescriptorSetName _set = DescriptorSetName::MAX_ENUM;
 
-		uint32_t _resolved_set = 0, _resolved_binding = uint32_t(-1);
+		uint32_t _resolved_binding = uint32_t(-1);
 		std::string _name = "";
 		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
 
@@ -28,9 +29,8 @@ namespace vkl
 
 		ResourceBinding(ShaderBindingDescription const& desc);
 
-		constexpr void resolve(uint32_t s, uint32_t b)
+		constexpr void resolve(uint32_t b)
 		{
-			_resolved_set = s;
 			_resolved_binding = b;
 		}
 
@@ -44,9 +44,8 @@ namespace vkl
 			_resolved_binding = uint32_t(-1);
 		}
 
-		constexpr void setBinding(DescriptorSetName s, uint32_t b)
+		constexpr void setBinding(uint32_t b)
 		{
-			_set = s;
 			_binding = b;
 		}
 
@@ -118,11 +117,6 @@ namespace vkl
 			return (VkDescriptorType)_type;
 		}
 
-		constexpr auto set()const
-		{
-			return _set;
-		}
-
 		constexpr auto binding()const
 		{
 			return _binding;
@@ -131,11 +125,6 @@ namespace vkl
 		constexpr auto resolvedBinding()const
 		{
 			return _resolved_binding;
-		}
-
-		constexpr auto resolvedSet()const
-		{
-			return _resolved_set;
 		}
 
 		constexpr const auto& resource()const

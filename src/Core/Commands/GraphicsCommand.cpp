@@ -3,7 +3,11 @@
 namespace vkl
 {
 	GraphicsCommand::GraphicsCommand(CreateInfo const& ci) :
-		ShaderCommand(ci.app, ci.name, ci.bindings),
+		ShaderCommand(ShaderCommand::CreateInfo{
+			.app = ci.app,
+			.name = ci.name,
+			.sets_layouts = ci.set_layouts,
+		}),
 		_topology(ci.topology),
 		_vertex_input_desc(ci.vertex_input_description),
 		_attachements(ci.targets),
@@ -217,9 +221,15 @@ namespace vkl
 	{
 		SynchronizationHelper synch(context);
 
+		// Synch framebuffer
 		declareGraphicsResources(synch);
-		_sets->instance()->recordInputSynchronization(synch);
+
+		// Bind descriptor sets up to shader
+		recordBindings(cmd, context);
+		// Synch bound resources up to descriptor set
+		recordBoundResourcesSynchronization(context.computeBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
 		
+		// Synch models to draw
 		synchronizeDrawResources(synch, user_info);
 
 		
@@ -276,7 +286,6 @@ namespace vkl
 		context.keppAlive(_pipeline->instance());
 		context.keppAlive(_framebuffer->instance());
 		context.keppAlive(_render_pass);
-		context.keppAlive(_sets->instance());
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :
@@ -286,6 +295,7 @@ namespace vkl
 			.topology = ci.topology,
 			.vertex_input_description = ci.vertex_input_desc,
 			.line_raster_mode = ci.line_raster_mode,
+			.set_layouts = ci.set_layouts,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
@@ -303,17 +313,18 @@ namespace vkl
 			.definitions = ci.definitions 
 		}),
 		_draw_count(ci.draw_count),
-		_meshes(ci.meshes)
+		_models(ci.models)
 	{
 		createProgram();
 		createGraphicsResources();
 		createPipeline();
 
-		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
+		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
 			.app = application(),
-			.name = name() + ".sets",
-			.bindings = ci.bindings,
+			.name = name() + ".set",
 			.program = _program,
+			.target_set = application()->descriptorBindingGlobalOptions().shader_set,
+			.bindings = ci.bindings,
 		});
 	}
 
@@ -373,6 +384,7 @@ namespace vkl
 		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfoVertex{
 			.app = application(),
 			.name = name() + ".Program",
+			.sets_layouts = _provided_sets_layouts,
 			.vertex = vert,
 			.tess_control = tess_control,
 			.tess_eval = tess_eval,
@@ -387,14 +399,28 @@ namespace vkl
 
 		if (di.draw_count == 0)
 		{
-			for (auto& mesh : di.meshes)
-			{
-				const Resources & mesh_resources = mesh.mesh->getResourcesForDraw();
-				for (const auto& mr : mesh_resources)
+			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+				const auto & layouts = _program->instance()->setsLayouts();
+				const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+				if (set_index < layouts.size())
 				{
-					synch.addSynch(mr);
+					return layouts[set_index];
 				}
-			}
+				else
+				{
+					return nullptr;
+				}
+			}();
+			// TODO
+			// Synchronize for vertex attribute fetch and descriptor binding
+			//for (auto& mesh : di.meshes)
+			//{
+			//	const Resources & mesh_resources = mesh.mesh->getResourcesForDraw();
+			//	for (const auto& mr : mesh_resources)
+			//	{
+			//		synch.addSynch(mr);
+			//	}
+			//}
 		}
 	}
 
@@ -409,8 +435,9 @@ namespace vkl
 		{
 			for (auto& mesh : di.meshes)
 			{
-				recordPushConstant(cmd, context, mesh.pc);
-				mesh.mesh->recordBindAndDraw(cmd);
+				// TODO
+				//recordPushConstant(cmd, context, mesh.pc);
+				//mesh.mesh->recordBindAndDraw(cmd);
 			}
 		}
 	}
@@ -465,6 +492,7 @@ namespace vkl
 			.app = ci.app,
 			.name = ci.name,
 			.line_raster_mode = ci.line_raster_mode,
+			.set_layouts = ci.set_layouts,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
@@ -486,11 +514,12 @@ namespace vkl
 		createGraphicsResources();
 		createPipeline();
 
-		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
+		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
 			.app = application(),
-			.name = name() + ".sets",
-			.bindings = ci.bindings,
-			.program = _program,
+				.name = name() + ".set",
+				.program = _program,
+				.target_set = application()->descriptorBindingGlobalOptions().shader_set,
+				.bindings = ci.bindings,
 		});
 	}
 
@@ -531,6 +560,7 @@ namespace vkl
 		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfoMesh{
 			.app = application(),
 			.name = name() + ".Program",
+			.sets_layouts = _provided_sets_layouts,
 			.task = task,
 			.mesh = mesh,
 			.fragment = frag,

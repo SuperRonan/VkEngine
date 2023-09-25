@@ -328,4 +328,7 @@ namespace vkl
 	template <class T>
 	using dv_ = DynamicValue<T>;
 
+	template <class T>
+	using Dyn = DynamicValue<T>;
+
 }

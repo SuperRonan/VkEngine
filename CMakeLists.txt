@@ -180,7 +180,7 @@ if(${BUILD_PROJECTS})
 
 	# AddProject(Flotsam)
 
-	AddProject(Renderer)
+	# AddProject(Renderer)
 
 endif()
 

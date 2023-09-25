@@ -64,6 +64,7 @@
 	- [ ] set = 2: module set
 	- [ ] set = 3: shader set
 	- [ ] set = 4: push_descriptor set (shader invocation specific data)
+- [ ] Accumulate all descriptor updates in the UpdateContext
 - [ ] Multi window mode (without ImGui)
 - [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor

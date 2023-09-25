@@ -9,6 +9,7 @@
 #include <Core/VkObjects/Semaphore.hpp>
 
 #include <Core/Rendering/Camera2D.hpp>
+#include <Core/Rendering/DebugRenderer.hpp>
 
 #include <Core/IO/MouseHandler.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -109,6 +110,9 @@ namespace vkl
 				.use_ImGui = false,
 			});
 
+			MultiDescriptorSetsLayouts sets_layouts;
+			sets_layouts += {0, exec.getCommonSetLayout()};
+
 			const VkExtent2D grid_size = _world_size;
 			const DynamicValue<VkExtent3D> grid_packed_size = VkExtent3D{
 				.width = std::divCeil(grid_size.width, 8u),
@@ -163,10 +167,10 @@ namespace vkl
 				.shader_path = shaders / "init_grid.comp",
 				.dispatch_size = grid_packed_size,
 				.dispatch_threads = true,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.view = current_grid_view,
-						.set = 0,
 						.binding = 0,
 					},
 				},
@@ -179,6 +183,7 @@ namespace vkl
 				.shader_path = shaders / "update.comp",
 				.dispatch_size = grid_packed_size,
 				.dispatch_threads = true,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.view = prev_grid_view,
@@ -216,6 +221,7 @@ namespace vkl
 			});
 			exec.declare(final_view);
 
+			exec.getDebugRenderer()->setTargets(final_view);
 			
 
 			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{
@@ -224,6 +230,7 @@ namespace vkl
 				.shader_path = shaders / "render.comp",
 				.dispatch_size = _main_window->extent3D(),
 				.dispatch_threads = true,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.view = current_grid_view,

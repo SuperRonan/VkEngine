@@ -13,16 +13,25 @@ namespace vkl
 
 		std::shared_ptr<PipelineLayout> _layout;
 		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
-		std::vector<std::shared_ptr<DescriptorSetLayout>> _provided_sets_layouts;
+		MultiDescriptorSetsLayouts _provided_sets_layouts;
 		std::vector<std::shared_ptr<DescriptorSetLayout>> _reflection_sets_layouts;
 		std::vector<std::shared_ptr<DescriptorSetLayout>> _sets_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
-		ProgramInstance(VkApplication* app, std::string const& name);
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
+		};
+		using CI = CreateInfo;
+
+		ProgramInstance(CreateInfo const& ci);
 
 		virtual ~ProgramInstance() override;
 
 	public:
+
 
 		bool reflect();
 
@@ -68,10 +77,13 @@ namespace vkl
 
 		using ParentType = InstanceHolder<ProgramInstance>;
 		
+		MultiDescriptorSetsLayouts _provided_sets_layouts;
+
 		std::vector<std::shared_ptr<Shader>> _shaders;
 
-		Program(VkApplication* app, std::string const& name):
-			ParentType(app, name)
+		Program(VkApplication* app, std::string const& name, MultiDescriptorSetsLayouts const& sets_layouts):
+			ParentType(app, name),
+			_provided_sets_layouts(sets_layouts)
 		{}
 
 		virtual ~Program()override;
@@ -122,6 +134,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<ShaderInstance> vertex = nullptr;
 			std::shared_ptr<ShaderInstance> tess_control = nullptr;
 			std::shared_ptr<ShaderInstance> tess_eval = nullptr;
@@ -134,6 +147,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<ShaderInstance> task = nullptr;
 			std::shared_ptr<ShaderInstance> mesh = nullptr;
 			std::shared_ptr<ShaderInstance> fragment = nullptr;
@@ -160,6 +174,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<Shader> vertex = nullptr; 
 			std::shared_ptr<Shader> tess_control = nullptr;
 			std::shared_ptr<Shader> tess_eval = nullptr;
@@ -172,6 +187,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<Shader> task = nullptr;
 			std::shared_ptr<Shader> mesh = nullptr;
 			std::shared_ptr<Shader> fragment = nullptr;
@@ -213,6 +229,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<ShaderInstance> shader = nullptr;
 		};
 		using CI = CreateInfo;
@@ -254,6 +271,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<Shader> shader = nullptr;
 		};
 		using CI = CreateInfo;

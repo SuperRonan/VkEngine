@@ -14,6 +14,11 @@ namespace vkl
 		VkDescriptorPoolCreateFlags _flags = 0;
 		VkDescriptorPool _handle = VK_NULL_HANDLE;
 
+		void create();
+
+		void destroy();
+
+		void setVkName();
 	public:
 
 		struct CreateInfo
@@ -26,17 +31,21 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		DescriptorPool(VkApplication* app, std::string const& name = "") :
-			VkObject(app, name)
-		{}
+		struct CreateInfoRaw
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			VkDescriptorPoolCreateFlags flags = 0;
+			uint32_t max_sets = 1;
+			std::vector<VkDescriptorPoolSize> sizes = {};
+		};
 
 		DescriptorPool(CreateInfo const& ci);
 
+		DescriptorPool(CreateInfoRaw const& ci);
+
 		virtual ~DescriptorPool() override;
 
-		void create(VkDescriptorPoolCreateInfo const& ci);
-
-		void destroy();
 
 		constexpr operator VkDescriptorPool()const
 		{

@@ -29,7 +29,6 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::vector<ShaderBindingDescription> bindings;
 			MultiDescriptorSetsLayouts sets_layouts = {};
 		};
 
@@ -46,7 +45,7 @@ namespace vkl
 
 		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
 
-		virtual void recordBoundResourcesSynchronization(DescriptorSetsManager & bound_sets, SynchronizationHelper & synch);
+		virtual void recordBoundResourcesSynchronization(DescriptorSetsManager & bound_sets, SynchronizationHelper & synch, size_t max_set=0);
 
 		template<typename T>
 		void setPushConstantsData(T && t)

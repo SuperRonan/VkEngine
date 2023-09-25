@@ -6,7 +6,7 @@ namespace vkl
 		ShaderCommand(ShaderCommand::CreateInfo{
 			.app = ci.app, 
 			.name = ci.name, 
-			.bindings = ci.bindings,
+			.sets_layouts = ci.sets_layouts,
 		}),
 		_shader_path(ci.shader_path),
 		_definitions(ci.definitions),
@@ -24,6 +24,7 @@ namespace vkl
 		_program = std::make_shared<ComputeProgram>(ComputeProgram::CI{
 			.app = application(),
 			.name = shader->name(),
+			.sets_layouts = _provided_sets_layouts,
 			.shader = shader,
 		});
 
@@ -33,11 +34,12 @@ namespace vkl
 			.program = _program,
 		});
 
-		_sets = std::make_shared<DescriptorSets>(DescriptorSets::CI{
+		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
 			.app = application(),
-			.name = name() + ".sets",
-			.bindings = ci.bindings,
+			.name = name() + ".shader_set",
 			.program = _program,
+			.target_set = application()->descriptorBindingGlobalOptions().shader_set,
+			.bindings = ci.bindings,
 		});
 	}
 
@@ -52,14 +54,12 @@ namespace vkl
 		recordBindings(cmd, context);
 		recordPushConstant(cmd, context, di.push_constant);
 
-		_sets->instance()->recordInputSynchronization(synch);
+		recordBoundResourcesSynchronization(context.computeBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
+
 		synch.record();
 
 		const VkExtent3D workgroups = _dispatch_threads ? getWorkgroupsDispatchSize(di.extent) : di.extent;
 		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
-
-		context.keppAlive(_pipeline->instance());
-		context.keppAlive(_sets->instance());
 	}
 
 	void ComputeCommand::execute(ExecutionContext& context, DispatchInfo const& di)

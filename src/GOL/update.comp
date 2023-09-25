@@ -1,10 +1,12 @@
 #version 460 core
 
+#include <ShaderLib:/common.glsl>
+
 layout(local_size_x = 16, local_size_y=16) in;
 
-uniform layout(set = 0, binding = 0, r8ui) restrict readonly uimage2D prev;
+uniform layout(SHADER_DESCRIPTOR_BINDING + 0, r8ui) restrict readonly uimage2D prev;
 
-uniform layout(set = 0, binding = 1, r8ui) restrict writeonly uimage2D next;
+uniform layout(SHADER_DESCRIPTOR_BINDING + 1, r8ui) restrict writeonly uimage2D next;
 
 uint readPrev(in ivec2 coord)
 {

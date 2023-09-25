@@ -5,7 +5,6 @@
 #include <Core/VkObjects/DescriptorPool.hpp>
 #include <Core/VkObjects/DescriptorSet.hpp>
 #include <Core/VkObjects/CommandBuffer.hpp>
-#include <Core/Execution/SynchronizationHelper.hpp>
 
 namespace vkl
 {
@@ -16,9 +15,7 @@ namespace vkl
 	{
 	protected:
 		
-		// Can be nullptr
-		std::shared_ptr<ProgramInstance> _prog = nullptr;
-		uint32_t _target_set = -1;
+		std::shared_ptr<DescriptorSetLayout> _layout = nullptr;
 
 		// sorted
 		ResourceBindings _bindings = {};
@@ -30,16 +27,15 @@ namespace vkl
 
 		void sortBindings();
 
+		void installInvalidationCallbacks();
+
 	public:
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			const DescriptorSetBindingGlobalOptions& options;
-			VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-			std::shared_ptr<ProgramInstance> progam = nullptr;
-			uint32_t target_set = -1;
+			std::shared_ptr<DescriptorSetLayout> layout = nullptr;
 			ResourceBindings bindings = {};
 		};
 		using CI = CreateInfo;
@@ -52,9 +48,7 @@ namespace vkl
 
 		void allocateDescriptorSet();
 
-		void resolveBindings();
-
-		void writeDescriptorSet();
+		void writeDescriptorSet(UpdateContext * context);
 
 
 		constexpr const std::shared_ptr<DescriptorPool> & pool()const
@@ -98,12 +92,19 @@ namespace vkl
 
 		using ParentType = InstanceHolder<DescriptorSetAndPoolInstance>;
 
-		const DescriptorSetBindingGlobalOptions& _options;
+		std::shared_ptr<DescriptorSetLayout> _layout = nullptr;
+		bool _layout_from_prog = false;
 
 		std::shared_ptr<Program> _prog = nullptr;
 		uint32_t _target_set = -1;
 
 		ResourceBindings _bindings = {};
+
+		void createInstance();
+
+		void destroyInstance();
+
+		ResourceBindings resolveBindings();
 		
 	public:
 
@@ -111,87 +112,21 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			const DescriptorSetBindingGlobalOptions& options;
-			std::shared_ptr<Program> progam = nullptr;
-			uint32_t target_set = -1;
+			std::shared_ptr<DescriptorSetLayout> layout = nullptr;
+			std::shared_ptr<Program> program = nullptr;
+			uint32_t target_set = uint32_t(-1);
 			ShaderBindings bindings = {};
 		};
 		using CI = CreateInfo;
 
 		DescriptorSetAndPool(CreateInfo const& ci);
 
-		bool updateResources();
+		virtual ~DescriptorSetAndPool() override;
+
+		bool updateResources(UpdateContext & context);
 
 	};
 
-	class DescriptorSetsInstance : public AbstractInstance
-	{
-	protected:
-
-		std::shared_ptr<ProgramInstance> _prog;
-		std::vector<ResourceBinding> _bindings;
-		std::vector<std::shared_ptr<DescriptorPool>> _desc_pools;
-		
-		std::vector<std::shared_ptr<DescriptorSet>> _desc_sets;
-		std::vector<SetRange> _set_ranges;
-	
-
-	public:
-
-		struct CreateInfo
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			std::vector<ResourceBinding> bindings;
-			std::shared_ptr<ProgramInstance> program = nullptr;
-		};
-		using CI = CreateInfo;
-
-		DescriptorSetsInstance(CreateInfo const& ci);
-
-		virtual ~DescriptorSetsInstance() override;
-
-		void allocateDescriptorSets();
-
-		void resolveBindings();
-
-		void writeDescriptorSets();
-
-		void recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding);
-
-		void recordInputSynchronization(SynchronizationHelper& synch);
-
-	};
-
-	class DescriptorSets : public InstanceHolder<DescriptorSetsInstance>
-	{
-	protected:
-		using ParentType = InstanceHolder<DescriptorSetsInstance>;
-
-		std::shared_ptr<Program> _prog;
-		std::vector<ResourceBinding> _bindings;
-	
-		void createInstance(ShaderBindings const& common_bindings);
-
-		void destroyInstance();
-
-	public:
-
-		struct CreateInfo
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			std::vector<ShaderBindingDescription> bindings = {};
-			std::shared_ptr<Program> program = nullptr;
-		};
-		using CI = CreateInfo;
-
-		DescriptorSets(CreateInfo const& ci);
-
-		virtual ~DescriptorSets() override;
-
-		bool updateResources(UpdateContext & ctx);
-	};
 
 	class DescriptorSetsManager : public VkObject
 	{
@@ -224,7 +159,9 @@ namespace vkl
 
 		void bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set);
 
-		void recordBinding(std::shared_ptr<PipelineLayout> const& layout);
+		using PerBindingFunction = std::function<void(std::shared_ptr<DescriptorSetAndPoolInstance>)>;
+
+		void recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func = nullptr);
 
 		const std::shared_ptr<DescriptorSetAndPoolInstance> & getSet(uint32_t s) const;
 	};

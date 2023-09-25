@@ -15,9 +15,9 @@ namespace vkl
 			std::filesystem::path shader_path;
 			DynamicValue<VkExtent3D> dispatch_size = {};
 			bool dispatch_threads = false;
+			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
-			MultiDescriptorSetsLayouts sets_layouts = {};
 		};
 		using CI = CreateInfo;
 

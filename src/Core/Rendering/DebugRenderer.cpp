@@ -1,4 +1,5 @@
 #include "DebugRenderer.hpp"
+#include <Core/Execution/Executor.hpp>
 
 #include "imgui.h"
 
@@ -19,6 +20,87 @@ namespace vkl
 			"Huge",
 		}, 2)
 	{
+		createResources();
+		
+		declareCommonDefinitions();
+
+		if (_target)
+		{
+			createRenderShader();
+		}
+	}
+
+	void DebugRenderer::declareCommonDefinitions()
+	{
+		auto& common_defs = _exec.getCommonDefinitions();
+		common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
+		common_defs.setDefinition("DEBUG_BUFFER_BINDING", "set = " + std::to_string(_desc_set) + ", binding = " + std::to_string(_first_binding));
+		common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
+		common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
+		common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
+		common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
+		common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
+	}
+
+	void DebugRenderer::createRenderShader()
+	{
+		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
+
+		MultiDescriptorSetsLayouts set_layouts;
+		set_layouts += {0, _exec.getCommonSetLayout()};
+
+		if (application()->availableFeatures().mesh_shader_ext.meshShader)
+		{
+			_render_strings_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderStrings",
+				.dispatch_size = [&]() {return VkExtent3D{ .width = _number_of_debug_strings, .height = 1, .depth = 1 }; },
+				.dispatch_threads = true,
+				.set_layouts = set_layouts,
+				.bindings = {
+					Binding{
+						.view = _font,
+						.sampler = _sampler,
+						.binding = 0,
+					},
+				},
+				.color_attachements = { _target },
+				.depth_buffer = _depth,
+				.write_depth = false,
+				.mesh_shader_path = shaders,
+				.fragment_shader_path = shaders,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+			});
+			_exec.declare(_render_strings_with_mesh);
+		}
+		else
+		{
+			_render_strings_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderStrings",
+				.draw_count = &_number_of_debug_strings,
+				.set_layouts = set_layouts,
+				.bindings = {
+					Binding{
+						.view = _font,
+						.sampler = _sampler,
+						.binding = 0,
+					},
+				},
+				.color_attachements = { _target },
+				.depth_buffer = _depth,
+				.write_depth = false,
+				.vertex_shader_path = shaders,
+				.geometry_shader_path = shaders,
+				.fragment_shader_path = shaders,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+			});
+			_exec.declare(_render_strings_with_geometry);
+		}
+	}
+
+	void DebugRenderer::createResources()
+	{
 		//struct BufferStringMeta
 		//{
 		//	vec2 position;
@@ -30,7 +112,7 @@ namespace vkl
 		//	uint flags; 
 		//};
 		// Larger than reality to be sure
-		dv_<VkDeviceSize> buffer_size = [&]() {
+		Dyn<VkDeviceSize> buffer_size = [&]() {
 			const uint32_t meta_size = (2 + 1 + 1 + 2 + 4 + 4 + 1) * 2;
 			const VkDeviceSize full_size = _number_of_debug_strings * (meta_size + _buffer_string_capacity) * 4 + 16;
 			return _enable_debug ? full_size : 256;
@@ -71,12 +153,6 @@ namespace vkl
 		});
 		_exec.declare(_font);
 
-		//_font_for_upload = std::make_shared<ImageView>(ImageView::CI{
-		//	.image = _font->image(),
-		//	.format = VK_FORMAT_R8_UINT,
-
-		//});
-
 		_sampler = std::make_shared<Sampler>(Sampler::CI{
 			.app = application(),
 			.name = name() + ".Sampler",
@@ -84,75 +160,6 @@ namespace vkl
 			.max_anisotropy = application()->deviceProperties().props.limits.maxSamplerAnisotropy,
 		});
 		_exec.declare(_sampler);
-		
-		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
-
-		using namespace std::containers_operators;
-
-		_exec.getCommonBindings() += Binding{
-			.buffer = _string_buffer,
-			.set = _desc_set,
-			.binding = _first_binding,
-		};
-
-		if (application()->availableFeatures().mesh_shader_ext.meshShader)
-		{
-			_render_strings_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
-				.app = application(),
-					.name = name() + ".RenderStrings",
-					.dispatch_size = [&](){return VkExtent3D{.width = _number_of_debug_strings, .height = 1, .depth =1};},
-					.dispatch_threads = true,
-					.bindings = {
-						Binding{
-							.view = _font,
-							.sampler = _sampler,
-							.set = 1,
-							.binding = 0,
-						},
-				},
-				.color_attachements = { _target },
-				.depth_buffer = _depth,
-				.write_depth = false,
-				.mesh_shader_path = shaders,
-				.fragment_shader_path = shaders,
-				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
-			});
-			_exec.declare(_render_strings_with_mesh);
-		}
-		else
-		{
-			_render_strings_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
-				.app = application(),
-				.name = name() + ".RenderStrings",
-				.draw_count = &_number_of_debug_strings,
-				.bindings = {
-					Binding{
-						.view = _font,
-						.sampler = _sampler,
-						.set = 1,
-						.binding = 0,
-					},
-				},
-				.color_attachements = {_target},
-				.depth_buffer = _depth,
-				.write_depth = false,
-				.vertex_shader_path = shaders,
-				.geometry_shader_path = shaders,
-				.fragment_shader_path = shaders,
-				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
-			});
-			_exec.declare(_render_strings_with_geometry);
-		}
-
-		auto& common_defs = _exec.getCommonDefinitions();
-		common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
-		common_defs.setDefinition("DEBUG_BUFFER_BINDING", "set = " + std::to_string(_desc_set) + ", binding = " + std::to_string(_first_binding));
-		common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
-		common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
-		common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
-		common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
-		common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
-
 	}
 
 	void DebugRenderer::loadFont()
@@ -175,7 +182,7 @@ namespace vkl
 		//	img::io::write(font_with_new_layout, save_path, img::io::WriteInfo{.is_default = false, .magic_number = 2 });
 		//}
 
-		std::shared_ptr<UploadImage> upload = std::make_shared<UploadImage>(UploadImage::CI{
+		UploadImage upload(UploadImage::CI{
 			.app = application(),
 			.name = name() + ".UploadBuffer",
 			.src = ObjectView(host_font.data(), host_font.byteSize()),
@@ -185,6 +192,14 @@ namespace vkl
 		_exec(upload);
 
 		_font_loaded = true;
+	}
+
+	void DebugRenderer::setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth)
+	{
+		assert(!_target);
+		_target = target;
+		_depth = _depth;
+		createRenderShader();
 	}
 
 	void DebugRenderer::execute()
@@ -269,9 +284,18 @@ namespace vkl
 			{
 				common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
 			}
-
-
 		}
+	}
+
+	ShaderBindings DebugRenderer::getBindings()const
+	{
+		ShaderBindings res = {
+			Binding{
+				.buffer = _string_buffer,
+				.binding = 0,
+			},
+		};
+		return res;
 	}
 }
 

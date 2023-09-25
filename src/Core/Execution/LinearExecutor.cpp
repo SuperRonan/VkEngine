@@ -7,7 +7,10 @@
 namespace vkl
 {
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
-		Executor(ci.app ? ci.app : ci.window->application(), ci.name),
+		Executor(Executor::CI{
+			.app = ci.app ? ci.app : ci.window->application(), 
+			.name = ci.name,
+		}),
 		_window(ci.window),
 		_staging_pool(StagingPool::CI{
 			.app = application(),
@@ -16,6 +19,8 @@ namespace vkl
 			.exec = this,
 		}),
 		_context(ExecutionContext::CI{
+			.app = application(),
+			.name = name() + ".exec_context",
 			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
 			.mounting_points = &_mounting_points,
@@ -31,6 +36,12 @@ namespace vkl
 				.swapchain = _window->swapchain(),
 				});
 			declare(_render_gui);
+		}
+
+		buildCommonSetLayout();
+		if (_use_debug_renderer)
+		{
+			createDebugRenderer();
 		}
 	}
 
@@ -137,7 +148,6 @@ namespace vkl
 		UpdateContext update_context = UpdateContext::CI{
 			.check_shaders = should_check_shaders,
 			.common_definitions = _common_definitions,
-			.common_bindings = _common_bindings,
 			.mounting_points = &_mounting_points,
 		};
 

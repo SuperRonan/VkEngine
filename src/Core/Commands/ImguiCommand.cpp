@@ -112,16 +112,13 @@ namespace vkl
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,			N },
 		};
 
-		_desc_pool = std::make_shared<DescriptorPool>(_app, name() + ".DescPool");
-		VkDescriptorPoolCreateInfo desc_ci{
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			.pNext = nullptr,
+		_desc_pool = std::make_shared<DescriptorPool>(DescriptorPool::CreateInfoRaw{
+			.app = application(),
+			.name = name() + ".pool",
 			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-			.maxSets = N,
-			.poolSizeCount = (uint32_t)sizes.size(),
-			.pPoolSizes = sizes.data(),
-		};
-		_desc_pool->create(desc_ci);
+			.max_sets = N,
+			.sizes = sizes,
+		});
 
 		ImGui_ImplVulkan_InitInfo ii{
 			.Instance = _app->instance(),

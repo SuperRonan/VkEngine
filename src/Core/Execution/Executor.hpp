@@ -10,19 +10,41 @@ namespace vkl
 {
 	using namespace std::chrono_literals;
 
+	class DebugRenderer;
+
 	class Executor : public VkObject
 	{
 	protected:
 
 		DefinitionsMap _common_definitions;
 
-		ShaderBindings _common_bindings;
+
+		bool _use_debug_renderer = true;
+		
+		std::shared_ptr<DebugRenderer> _debug_renderer = nullptr;
+
+		std::shared_ptr<DescriptorSetLayout> _common_set_layout;
+		std::shared_ptr<DescriptorSetAndPool> _common_descriptor_set;
+
+		void buildCommonSetLayout();
+
+		void createDebugRenderer();
+
+		void createCommonSet();
 
 	public:
 
-		template <class StringLike = std::string>
-		Executor(VkApplication * app, StringLike && name):
-			VkObject(app, std::forward<StringLike>(name))
+		struct CreateInfo 
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			bool use_debug_renderer = true;
+		};
+		using CI = CreateInfo;
+
+		Executor(CreateInfo const& ci):
+			VkObject(ci.app, ci.name),
+			_use_debug_renderer(ci.use_debug_renderer)
 		{}
 
 		virtual void declare(std::shared_ptr<Command> cmd) = 0;
@@ -52,6 +74,11 @@ namespace vkl
 			execute(cmd);
 		}
 
+		void operator()(Command& cmd)
+		{
+			execute(cmd);
+		}
+
 		void operator()(Executable const& executable)
 		{
 			execute(executable);
@@ -69,14 +96,14 @@ namespace vkl
 			return _common_definitions;
 		}
 
-		ShaderBindings const& getCommonBindings() const
+		std::shared_ptr<DescriptorSetLayout> const& getCommonSetLayout()const
 		{
-			return _common_bindings;
+			return _common_set_layout;
 		}
 
-		ShaderBindings& getCommonBindings()
+		std::shared_ptr<DebugRenderer> const& getDebugRenderer() const
 		{
-			return _common_bindings;
+			return _debug_renderer;
 		}
 	};
 }

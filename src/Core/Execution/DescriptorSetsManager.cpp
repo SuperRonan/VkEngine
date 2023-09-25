@@ -6,16 +6,34 @@ namespace vkl
 
 	DescriptorSetAndPoolInstance::DescriptorSetAndPoolInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
-		_prog(ci.progam),
-		_target_set(ci.target_set),
-		_bindings(ci.bindings)
+		_bindings(ci.bindings),
+		_layout(ci.layout)
 	{
-		
+		sortBindings();
+		assert(checkIntegrity());
+		allocateDescriptorSet();
+		installInvalidationCallbacks();
 	}
 
 	DescriptorSetAndPoolInstance::~DescriptorSetAndPoolInstance()
 	{
-		
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			ResourceBinding& binding = _bindings[i];
+			if (binding.isBuffer())
+			{
+				binding.buffer()->removeInvalidationCallbacks(this);
+			}
+			else if (binding.isImage())
+			{
+				binding.image()->removeInvalidationCallbacks(this);
+			}
+			else // if(binding.isSampler())
+			{
+				binding.sampler()->removeInvalidationCallbacks(this);
+			}
+		}
+
 	}
 
 	size_t DescriptorSetAndPoolInstance::findBindingIndex(uint32_t b)const
@@ -52,11 +70,39 @@ namespace vkl
 		std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b){return a.resolvedBinding() < b.resolvedBinding();});
 	}
 
+	void DescriptorSetAndPoolInstance::installInvalidationCallbacks()
+	{
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			ResourceBinding & binding = _bindings[i];
+			Callback cb{
+				.callback = [i,  this]() {
+					_bindings[i].setUpdateStatus(false);
+				},
+				.id = this,
+			};
+			if (binding.isBuffer())
+			{
+				binding.buffer()->addInvalidationCallback(cb);
+			}
+			else if (binding.isImage())
+			{
+				binding.image()->addInvalidationCallback(cb);
+			}
+			else // if(binding.isSampler())
+			{
+				binding.sampler()->addInvalidationCallback(cb);
+			}
+		}
+	}
+
 	bool DescriptorSetAndPoolInstance::checkIntegrity()const
 	{
 		bool res = true;
 		for (size_t i = 0; i < _bindings.size() - 1; ++i)
 		{
+			assert(_bindings[i].isResolved());
+			assert(_bindings[i+1].isResolved());
 			if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
 			{
 				res = false;
@@ -67,93 +113,26 @@ namespace vkl
 
 	void DescriptorSetAndPoolInstance::allocateDescriptorSet()
 	{
-		if (!!_set)
+		if (!_set)
 		{
-			std::shared_ptr<DescriptorSetLayout> layout;
+			_pool = std::make_shared<DescriptorPool>(DescriptorPool::CI{
+				.app = application(),
+				.name = name() + ".pool",
+				.layout = _layout,
+				.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+			});
 
-			if (_prog)
-			{
-				assert(_target_set != uint32_t(-1));
-				layout = _prog->setLayouts()[_target_set];
-			}
-			else
-			{
-				
-			}
-			
-			if (!set_layouts[i]->empty())
-			{
-				_desc_pools[i] = std::make_shared<DescriptorPool>(DescriptorPool::CI{
-					.app = application(),
-						.name = name() + ".DescPool",
-						.layout = set_layouts[i],
-						.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-				});
-				_desc_sets[i] = std::make_shared<DescriptorSet>(set_layouts[i], _desc_pools[i]);
-
-				++_set_ranges.back().len;
-			}
-			else
-			{
-				if (_set_ranges.back().len != 0)
-				{
-					_set_ranges.push_back(SetRange{
-						.begin = 0,
-						.len = 0
-						});
-				}
-			}
+			_set = std::make_shared<DescriptorSet>(DescriptorSet::CI{
+				.app = application(),
+				.name = name() + ".set",
+				.layout = _layout,
+				.pool = _pool,
+			});
 		}
 	}
 
-
-	DescriptorSetAndPool::DescriptorSetAndPool(CreateInfo const& ci):
-		ParentType(ci.app, ci.name),
-		_options(ci.options)
+	void DescriptorSetAndPoolInstance::writeDescriptorSet(UpdateContext * context)
 	{
-
-	}
-
-
-
-	DescriptorSetsInstance::DescriptorSetsInstance(CreateInfo const& ci) :
-		AbstractInstance(ci.app, ci.name),
-		_prog(ci.program),
-		_bindings(ci.bindings)
-	{
-		resolveBindings();
-	}
-
-	DescriptorSetsInstance::~DescriptorSetsInstance()
-	{
-		callDestructionCallbacks();
-	}
-
-	DescriptorSets::~DescriptorSets()
-	{
-		_prog->removeInvalidationCallbacks(this);
-	}
-
-	DescriptorSets::DescriptorSets(CreateInfo const& ci):
-		ParentType(ci.app, ci.name),
-		_prog(ci.program),
-		_bindings(ci.bindings.cbegin(), ci.bindings.cend())
-	{
-		_prog->addInvalidationCallback({
-			.callback = [&]() {destroyInstance(); },
-			.id = this,
-		});
-	}
-
-	void DescriptorSetsInstance::allocateDescriptorSets()
-	{
-		
-	}
-
-	void DescriptorSetsInstance::writeDescriptorSets()
-	{
-		allocateDescriptorSets();
-
 		const size_t N = _bindings.size();
 
 		std::vector<VkDescriptorBufferInfo> buffers;
@@ -172,12 +151,13 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& b = _bindings[i];
-			if (b.isResolved() && !b.updated())
+			assert(b.isResolved());
+			if (!b.updated())
 			{
 				VkWriteDescriptorSet write{
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
-					.dstSet = *_desc_sets[b.resolvedSet()],
+					.dstSet = *_set,
 					.dstBinding = b.resolvedBinding(),
 					.dstArrayElement = 0, // TODO
 					.descriptorCount = 1,
@@ -206,7 +186,7 @@ namespace vkl
 				{
 					assert(b.resource()._buffer_range.hasValue());
 					Buffer::Range range = b.resource()._buffer_range.value();
-					if(range.len == 0) 
+					if (range.len == 0)
 					{
 						range.len = VK_WHOLE_SIZE;
 					}
@@ -214,7 +194,7 @@ namespace vkl
 						.buffer = *b.buffer()->instance(),
 						.offset = range.begin,
 						.range = range.len,
-					});
+						});
 					VkDescriptorBufferInfo& info = buffers.back();
 					write.pBufferInfo = &info;
 				}
@@ -250,6 +230,7 @@ namespace vkl
 			}
 		}
 
+		// TODO delegate the updates to the context
 		if (!writes.empty())
 		{
 			bool wait = false;
@@ -278,242 +259,170 @@ namespace vkl
 
 			vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
 		}
-
 	}
 
-	void DescriptorSetsInstance::resolveBindings()
+
+
+
+
+
+
+
+
+
+
+	DescriptorSetAndPool::DescriptorSetAndPool(CreateInfo const& ci):
+		ParentType(ci.app, ci.name),
+		_layout(ci.layout),
+		_prog(ci.program),
+		_target_set(ci.target_set)
 	{
-		if(_prog)
+		_bindings.reserve(ci.bindings.size());
+		for (size_t i = 0; i < ci.bindings.size(); ++i)
 		{
-			// Attribute the program exposed bindings to the provided resources
-			const auto& program = *_prog;
-			const auto& sets = program.setLayouts();
-			for (size_t s = 0; s < sets.size(); ++s)
+			_bindings.push_back(ci.bindings[i]);
+		}
+		if (_prog)
+		{
+			_prog->addInvalidationCallback({
+				.callback = [&]() {destroyInstance(); },
+				.id = this,
+			});
+
+			if (_target_set == uint32_t(- 1))
 			{
-				const auto& set = *sets[s];
-				const auto& bindings = set.bindings();
-				for (size_t b = 0; b < bindings.size(); ++b)
-				{
-					const VkDescriptorSetLayoutBinding& vkb = bindings[b];
-					const uint32_t set_id = (uint32_t)s;
-					const uint32_t binding_id = vkb.binding;
-					const DescriptorSetLayout::BindingMeta& meta = set.metas()[b];
-					const std::string& shader_binding_name = meta.name;
+				_target_set = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::shader)].set;
+			}
+		}
+		if (!_layout)
+		{
+			assert(!!_prog);
+			_layout_from_prog = true;
+		}
+	}
+
+	DescriptorSetAndPool::~DescriptorSetAndPool()
+	{
+		if (_prog)
+		{
+			_prog->removeInvalidationCallbacks(this);
+		}
+	}
 
 
-					size_t corresponding_resource_id = 0;
-					ResourceBinding* corresponding_resource = [&] {
-						for (size_t i = 0; i < _bindings.size(); ++i)
+
+	void DescriptorSetAndPool::createInstance()
+	{
+		assert(!_inst);
+		ResourceBindings instance_bindings = resolveBindings();
+
+		_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
+			.app = application(),
+			.name = name(),
+			.layout = _layout,
+			.bindings = instance_bindings,
+		});
+	}
+
+	void DescriptorSetAndPool::destroyInstance()
+	{
+		assert(!!_inst);
+		callInvalidationCallbacks();
+		_inst = nullptr;
+		
+	}
+
+	ResourceBindings DescriptorSetAndPool::resolveBindings()
+	{
+		ResourceBindings res = {};
+
+		if (_layout_from_prog)
+		{
+			assert(_prog);
+			for (size_t j = 0; j < _bindings.size(); ++j)
+			{
+				_bindings[j].unResolve();
+			}
+
+			_layout = _prog->instance()->setsLayouts()[_target_set];
+
+			for (size_t i = 0; i < _layout->bindings().size(); ++i)
+			{
+				const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
+				const DescriptorSetLayout::BindingMeta & meta = _layout->metas()[i];
+			
+				size_t corresponding_resource_index = [&]() {
+					for (size_t j = 0; j < _bindings.size(); ++j)
+					{
+						if (!_bindings[j].isResolved())
 						{
-							ResourceBinding& resource_binding = _bindings[i];
-							if (!resource_binding.isResolved())
+							if (_bindings[j].resolveWithName())
 							{
-								if (resource_binding.resolveWithName())
+								const std::string name = (_bindings[j].name().empty() ? _bindings[j].resource().name() : _bindings[j].name());
+								if (name == meta.name)
 								{
-									const std::string name = (resource_binding.name().empty() ? resource_binding.resource().name() : resource_binding.name());
-									if (name == shader_binding_name)
-									{
-										corresponding_resource_id = i;
-										return &resource_binding;
-									}
+									return j;
 								}
-								else
+							}
+							else
+							{
+								if (_bindings[j].binding() == vkb.binding)
 								{
-									if (set_id == (uint32_t)resource_binding.set() && binding_id == resource_binding.binding())
-									{
-										corresponding_resource_id = i;
-										return &resource_binding;
-									}
+									return j;
 								}
 							}
 						}
-						return (ResourceBinding *)nullptr;
-					}();
-
-					if (corresponding_resource)
-					{
-					
-						corresponding_resource->resolve(set_id, binding_id);
-						corresponding_resource->setType(vkb.descriptorType);
-						corresponding_resource->resource()._begin_state = ResourceState2{
-							.access = meta.access,
-							.layout = meta.layout,
-							.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
-						};
-					
-						Callback callback{
-							.callback = [=]() {
-								corresponding_resource->setUpdateStatus(false);
-							},
-							.id = this,
-						};
-						if (corresponding_resource->isBuffer())
-						{
-							corresponding_resource->buffer()->addInvalidationCallback(callback);
-						}
-						else if (corresponding_resource->isImage())
-						{
-							corresponding_resource->image()->addInvalidationCallback(callback);
-						}
-						else if (corresponding_resource->isSampler())
-						{
-							corresponding_resource->sampler()->addInvalidationCallback(callback);
-						}
-
-					
-						if (false)
-						{
-							std::cout << "Successfully resolved binding \"" << shader_binding_name << "\" to (set = " << set_id << ", binding = " << binding_id << ")\n";
-						}
 					}
-					else
-					{
-						std::cerr << "Could not resolve Binding \"" << shader_binding_name << "\", (set = " << set_id << ", binding = " << binding_id << ")\n";
-						assert(false);
-					}
+					return size_t(-1);
+				}();
+
+				if (corresponding_resource_index != size_t(-1))
+				{
+					ResourceBinding & resource = _bindings[corresponding_resource_index];
+					resource.resolve(vkb.binding);
+					resource.setType(vkb.descriptorType);
+					resource.resource()._begin_state = ResourceState2{
+						.access = meta.access,
+						.layout = meta.layout,
+						.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
+					};
+					resource.setUpdateStatus(false);
+
+					res.push_back(resource);
+				}
+				else
+				{
+					std::cerr << "Could not resolve Binding \"" << meta.name << "\", (set = " << _target_set << ", binding = " << vkb.binding << ")\n";
+					assert(false);
 				}
 			}
 		}
 		else
 		{
-			// Use all the provided resources
-			for (ResourceBinding& r : _bindings)
+			for (size_t j = 0; j < _bindings.size(); ++j)
 			{
-				r.resolve(r.set(), r.binding());
-				corresponding_resource->setType(vkb.descriptorType);
-				corresponding_resource->resource()._begin_state = ResourceState2{
-					.access = meta.access,
-					.layout = meta.layout,
-					.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
-				};
-
-				Callback callback{
-					.callback = [=]() {
-						corresponding_resource->setUpdateStatus(false);
-					},
-					.id = this,
-				};
-				if (corresponding_resource->isBuffer())
-				{
-					corresponding_resource->buffer()->addInvalidationCallback(callback);
-				}
-				else if (corresponding_resource->isImage())
-				{
-					corresponding_resource->image()->addInvalidationCallback(callback);
-				}
-				else if (corresponding_resource->isSampler())
-				{
-					corresponding_resource->sampler()->addInvalidationCallback(callback);
-				}
+				_bindings[j].resolve(_bindings[j].binding());
 			}
-		}
-
-		
-	}
-
-	void DescriptorSetsInstance::recordBindings(CommandBuffer& cmd, VkPipelineBindPoint binding)
-	{
-		if (!_desc_sets.empty())
-		{
-			std::vector<VkDescriptorSet> desc_sets;
-			desc_sets.reserve(_desc_sets.size());
-			for (const auto& range : _set_ranges)
-			{
-				desc_sets.resize(range.len);
-				for (uint32_t i = 0; i < range.len; ++i)
-				{
-					assert(_desc_sets[i + range.begin]);
-					desc_sets[i] = *_desc_sets[i + range.begin];
-				}
-				vkCmdBindDescriptorSets(
-					cmd, 
-					binding, 
-					*_prog->pipelineLayout(), 
-					range.begin, 
-					range.len, 
-					desc_sets.data(), 
-					0, 
-					nullptr
-				);
-			}
-			
-		}
-	}
-
-
-	void DescriptorSetsInstance::recordInputSynchronization(SynchronizationHelper& synch)
-	{
-		for (size_t i = 0; i < _bindings.size(); ++i)
-		{
-			if (_bindings[i].isResolved() && _bindings[i].updated())
-			{
-				synch.addSynch(_bindings[i].resource());
-			}
-		}
-	}
-
-
-	void DescriptorSets::createInstance(ShaderBindings const& common_bindings)
-	{
-		if (_inst)
-		{
-			destroyInstance();
-		}
-		using namespace std::containers_operators;
-
-		std::vector<ResourceBinding> bindings = _bindings;
-		std::vector<ResourceBinding> resources_common_bindings(common_bindings.begin(), common_bindings.end());
-		bindings += resources_common_bindings;
-
-		DescriptorSetsInstance::CreateInfo ci{
-			.app = application(),
-			.name = name(),
-			.bindings = bindings,
-			.program = _prog->instance(),
-		};
-
-		_inst = std::make_shared<DescriptorSetsInstance>(ci);
-	}
-
-	void DescriptorSets::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			for (auto& binding : _bindings)
-			{
-				if (binding.isBuffer())
-				{
-					binding.buffer()->removeInvalidationCallbacks(this);
-				}
-				else if (binding.isImage())
-				{
-					binding.image()->removeInvalidationCallbacks(this);
-				}
-				binding.unResolve();
-				binding.setUpdateStatus(false);
-			}
-			_inst = nullptr;
-		}
-	}
-
-	bool DescriptorSets::updateResources(UpdateContext & ctx)
-	{
-		bool res = false;
-
-		//res |= _prog->updateResources();
-
-		if (!_inst)
-		{
-			createInstance(ctx.commonShaderBindings());
-			res = true;
+			res = _bindings;
 		}
 
 		return res;
 	}
 
+	bool DescriptorSetAndPool::updateResources(UpdateContext& context)
+	{
+		bool res = false;
 
+		if (!_inst)
+		{
+			createInstance();
+			res = true;
+		}
 
+		_inst->writeDescriptorSet(&context);
+
+		return res;
+	}
 
 
 	DescriptorSetsManager::DescriptorSetsManager(CreateInfo const& ci):
@@ -536,7 +445,7 @@ namespace vkl
 		_bindings_ranges.push_back(Range32{.begin = binding, .len = 1});
 	}
 
-	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayout> const& layout)
+	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func)
 	{
 		std::sort(_bindings_ranges.begin(), _bindings_ranges.end(), [](Range32 const& a, Range32 const& b){return a.begin < b.begin;});
 		for (const auto r : _bindings_ranges)
@@ -544,6 +453,10 @@ namespace vkl
 			for (uint32_t i = 0; i < r.len; ++i)
 			{
 				_vk_sets[i + r.begin] = _bound_descriptor_sets[i + r.begin]->set()->handle();
+				if (func)
+				{
+					func(_bound_descriptor_sets[i + r.begin]);
+				}
 			}
 			vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, r.begin, r.len, _vk_sets.data() + r.begin, 0, nullptr);
 		}

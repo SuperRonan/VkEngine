@@ -8,7 +8,7 @@ namespace vkl
 		_push_constants(ci.push_constants)
 	{
 		std::vector<VkDescriptorSetLayout> sets_layout(_sets.size());
-		for(size_t i=0; i<_sets.size(); ++i)	sets_layout[i] = *_sets[i];
+		for(size_t i=0; i<_sets.size(); ++i)	sets_layout[i] = _sets[i] ? *_sets[i] : VK_NULL_HANDLE;
 		VkPipelineLayoutCreateInfo vk_ci {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,

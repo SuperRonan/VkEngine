@@ -1,8 +1,10 @@
 #version 460
 
-layout(set = 0, binding = 0) uniform utexture2D u_t_grid;
+#include <ShaderLib:/common.glsl>
 
-layout(set = 0, binding = 1) uniform sampler u_sampler;
+layout(SHADER_DESCRIPTOR_BINDING + 0) uniform utexture2D u_t_grid;
+
+layout(SHADER_DESCRIPTOR_BINDING + 1) uniform sampler u_sampler;
 
 
 

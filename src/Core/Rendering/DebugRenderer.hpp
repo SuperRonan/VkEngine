@@ -5,12 +5,13 @@
 #include <Core/Execution/Module.hpp>
 #include <Core/Commands/GraphicsCommand.hpp>
 #include <Core/Commands/TransferCommand.hpp>
-#include <Core/Execution/Executor.hpp>
 #include <thatlib/src/img/ImRead.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
 
 namespace vkl
 {
+	class Executor;
+
 	class DebugRenderer : public Module
 	{
 	protected:
@@ -46,22 +47,31 @@ namespace vkl
 		ImGuiRadioButtons _default_glyph_size;
 		bool _default_show_plus = false;
 
+		void declareCommonDefinitions();
+
+		void createRenderShader();
+
+		void createResources();
+
+		void loadFont();
+
 	public:
 
 		struct CreateInfo
 		{
 			Executor& exec;
-			std::shared_ptr<ImageView> target;
-			std::shared_ptr<ImageView> depth;
+			std::shared_ptr<ImageView> target = nullptr;
+			std::shared_ptr<ImageView> depth = nullptr;
 		};
 
 		DebugRenderer(CreateInfo const& ci);
 
-		void declareImGui();
+		void setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth = nullptr);
 
-		void loadFont();
+		void declareImGui();
 
 		void execute();
 
+		ShaderBindings getBindings() const;
 	};
 }
