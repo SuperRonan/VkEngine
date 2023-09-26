@@ -9,6 +9,7 @@
 #include <Core/VkObjects/Semaphore.hpp>
 
 #include <Core/Rendering/Camera2D.hpp>
+#include <Core/Rendering/DebugRenderer.hpp>
 
 #include <Core/IO/MouseHandler.hpp>
 
@@ -103,6 +104,9 @@ namespace vkl
 				.use_ImGui = false,
 			});
 
+			MultiDescriptorSetsLayouts sets_layouts;
+			sets_layouts += {0, exec.getCommonSetLayout()};
+
 			std::shared_ptr<Image> canvas = std::make_shared<Image>(Image::CI{
 				.app = this,
 				.name = "Canvas",
@@ -118,6 +122,7 @@ namespace vkl
 				.image = canvas,
 			});
 			exec.declare(canvas_view);
+			exec.getDebugRenderer()->setTargets(canvas_view);
 
 			const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
@@ -125,6 +130,7 @@ namespace vkl
 				.app = this,
 				.name = "RenderLine",
 				.draw_count = 1u,
+				.set_layouts = sets_layouts,
 				.color_attachements = {canvas_view},
 				.vertex_shader_path = shaders / "render.vert",
 				.geometry_shader_path= shaders / "render.geom",

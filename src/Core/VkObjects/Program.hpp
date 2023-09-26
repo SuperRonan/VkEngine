@@ -14,8 +14,8 @@ namespace vkl
 		std::shared_ptr<PipelineLayout> _layout;
 		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
 		MultiDescriptorSetsLayouts _provided_sets_layouts;
-		std::vector<std::shared_ptr<DescriptorSetLayout>> _reflection_sets_layouts;
-		std::vector<std::shared_ptr<DescriptorSetLayout>> _sets_layouts;
+		MultiDescriptorSetsLayouts _reflection_sets_layouts;
+		MultiDescriptorSetsLayouts _sets_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
 		struct CreateInfo

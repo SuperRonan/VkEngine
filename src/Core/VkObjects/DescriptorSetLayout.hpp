@@ -89,9 +89,35 @@ namespace vkl
 
 	public:
 
-		const std::shared_ptr<DescriptorSetLayout>& operator[](size_t i) const
+		void resize(size_t s)
 		{
-			if(i >= _layouts.size())	return nullptr;
+			_layouts.resize(s);
+		}
+
+		void clear()
+		{
+			_layouts.clear();
+		}
+
+		size_t size()const
+		{
+			return _layouts.size();
+		}
+
+		std::shared_ptr<DescriptorSetLayout> getSafe(size_t i) const
+		{
+			if (i >= _layouts.size())	return nullptr;
+			return _layouts[i];
+		}
+
+		std::shared_ptr<DescriptorSetLayout> operator[](size_t i) const
+		{
+			return getSafe(i);
+		}
+
+		std::shared_ptr<DescriptorSetLayout>& getRef(size_t i)
+		{
+			assert(i < _layouts.size());
 			return _layouts[i];
 		}
 

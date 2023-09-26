@@ -174,7 +174,7 @@ if(${BUILD_PROJECTS})
 
 	AddProject(GameOfLife "GOL")
 
-	# AddProject(Paint)
+	AddProject(Paint)
 
 	# AddProject(Particules)
 

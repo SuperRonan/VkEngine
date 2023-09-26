@@ -29,8 +29,10 @@ namespace vkl
 			else
 				return context.rayTracingBoundSets();
 		}();
-
-		bound_sets.bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		if(_set->instance()->exists())
+		{
+			bound_sets.bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		}
 		bound_sets.recordBinding(_pipeline->instance()->program()->pipelineLayout(), 
 			[&context](std::shared_ptr<DescriptorSetAndPoolInstance> set_inst){ 
 				context.keppAlive(set_inst); 
@@ -42,7 +44,7 @@ namespace vkl
 	{
 		ProgramInstance & prog = *_pipeline->program()->instance();
 		
-		std::vector<std::shared_ptr<DescriptorSetLayout>> const& sets = prog.reflectionSetsLayouts();
+		MultiDescriptorSetsLayouts const& sets = prog.reflectionSetsLayouts();
 
 		if (max_set == 0)
 		{

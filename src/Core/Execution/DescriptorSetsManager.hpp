@@ -50,6 +50,16 @@ namespace vkl
 
 		void writeDescriptorSet(UpdateContext * context);
 
+		bool exists() const
+		{
+			return !!_layout;
+		}
+
+		bool empty() const
+		{
+			return _bindings.empty();
+		}
+
 
 		constexpr const std::shared_ptr<DescriptorPool> & pool()const
 		{

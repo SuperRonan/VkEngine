@@ -119,7 +119,7 @@ namespace vkl
 
 	void DescriptorSetAndPoolInstance::allocateDescriptorSet()
 	{
-		if (!_set)
+		if (!_set && !!_layout)
 		{
 			_pool = std::make_shared<DescriptorPool>(DescriptorPool::CI{
 				.app = application(),
@@ -350,57 +350,59 @@ namespace vkl
 				_bindings[j].unResolve();
 			}
 
-			assert(_prog->instance()->setsLayouts().size() > _target_set);
 			_layout = _prog->instance()->setsLayouts()[_target_set];
-			assert(!!_layout);
-			for (size_t i = 0; i < _layout->bindings().size(); ++i)
+			if(_layout)
 			{
-				const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
-				const DescriptorSetLayout::BindingMeta & meta = _layout->metas()[i];
+
+				for (size_t i = 0; i < _layout->bindings().size(); ++i)
+				{
+					const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
+					const DescriptorSetLayout::BindingMeta & meta = _layout->metas()[i];
 			
-				size_t corresponding_resource_index = [&]() {
-					for (size_t j = 0; j < _bindings.size(); ++j)
-					{
-						if (!_bindings[j].isResolved())
+					size_t corresponding_resource_index = [&]() {
+						for (size_t j = 0; j < _bindings.size(); ++j)
 						{
-							if (_bindings[j].resolveWithName())
+							if (!_bindings[j].isResolved())
 							{
-								const std::string name = (_bindings[j].name().empty() ? _bindings[j].resource().name() : _bindings[j].name());
-								if (name == meta.name)
+								if (_bindings[j].resolveWithName())
 								{
-									return j;
+									const std::string name = (_bindings[j].name().empty() ? _bindings[j].resource().name() : _bindings[j].name());
+									if (name == meta.name)
+									{
+										return j;
+									}
 								}
-							}
-							else
-							{
-								if (_bindings[j].binding() == vkb.binding)
+								else
 								{
-									return j;
+									if (_bindings[j].binding() == vkb.binding)
+									{
+										return j;
+									}
 								}
 							}
 						}
+						return size_t(-1);
+					}();
+
+					if (corresponding_resource_index != size_t(-1))
+					{
+						ResourceBinding & resource = _bindings[corresponding_resource_index];
+						resource.resolve(vkb.binding);
+						resource.setType(vkb.descriptorType);
+						resource.resource()._begin_state = ResourceState2{
+							.access = meta.access,
+							.layout = meta.layout,
+							.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
+						};
+						resource.setUpdateStatus(false);
+
+						res.push_back(resource);
 					}
-					return size_t(-1);
-				}();
-
-				if (corresponding_resource_index != size_t(-1))
-				{
-					ResourceBinding & resource = _bindings[corresponding_resource_index];
-					resource.resolve(vkb.binding);
-					resource.setType(vkb.descriptorType);
-					resource.resource()._begin_state = ResourceState2{
-						.access = meta.access,
-						.layout = meta.layout,
-						.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
-					};
-					resource.setUpdateStatus(false);
-
-					res.push_back(resource);
-				}
-				else
-				{
-					std::cerr << "Could not resolve Binding \"" << meta.name << "\", (set = " << _target_set << ", binding = " << vkb.binding << ")\n";
-					assert(false);
+					else
+					{
+						std::cerr << "Could not resolve Binding \"" << meta.name << "\", (set = " << _target_set << ", binding = " << vkb.binding << ")\n";
+						assert(false);
+					}
 				}
 			}
 		}
@@ -457,6 +459,7 @@ namespace vkl
 	void DescriptorSetsManager::bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set)
 	{
 		assert(binding < _bound_descriptor_sets.size());
+		assert(!!set);
 
 		_bound_descriptor_sets[binding] = set;
 

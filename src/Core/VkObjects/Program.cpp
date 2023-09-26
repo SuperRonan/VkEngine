@@ -130,55 +130,63 @@ namespace vkl
 			}
 		}
 
-		uint32_t max_set_index = [&all_bindings]()
+		if (all_bindings.empty())
 		{
-			uint32_t res = 0;
-			for (const auto& [s, sb] : all_bindings)
-			{
-				res = std::max(res, s);
-			}
-			return res;
-		}();
 
-		_reflection_sets_layouts.resize(max_set_index + 1);
-		for (size_t s = 0; s < _reflection_sets_layouts.size(); ++s)
-		{
-			std::shared_ptr<DescriptorSetLayout> & set_layout = _reflection_sets_layouts[s];
-			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			std::vector<DescriptorSetLayout::BindingMeta> metas;
-			if (all_bindings.contains(s))
+		}
+		else
+		{	
+			uint32_t max_set_index = [&all_bindings]()
 			{
-				const auto& sb = all_bindings[s];
-				bindings.reserve(sb.size());
-				metas.reserve(sb.size());
-				for (const auto& [bdi, bd] : sb)
+				uint32_t res = 0;
+				for (const auto& [s, sb] : all_bindings)
 				{
-					bindings.push_back(bd.binding);
-					metas.push_back(bd.meta);
+					res = std::max(res, s);
 				}
-			}
+				return res;
+			}();
 
-			VkDescriptorSetLayoutCreateFlags flags = 0;
+			_reflection_sets_layouts.resize(max_set_index + 1);
 
-			const bool push_desc = false;
-			if (push_desc)
+			for (size_t s = 0; s < (max_set_index + 1); ++s)
 			{
-				flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-			}
-			else
-			{
-				flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-			}
+				std::shared_ptr<DescriptorSetLayout> & set_layout = _reflection_sets_layouts.getRef(s);
+				std::vector<VkDescriptorSetLayoutBinding> bindings;
+				std::vector<DescriptorSetLayout::BindingMeta> metas;
+				if (all_bindings.contains(s))
+				{
+					const auto& sb = all_bindings[s];
+					bindings.reserve(sb.size());
+					metas.reserve(sb.size());
+					for (const auto& [bdi, bd] : sb)
+					{
+						bindings.push_back(bd.binding);
+						metas.push_back(bd.meta);
+					}
+				}
+
+				VkDescriptorSetLayoutCreateFlags flags = 0;
+
+				const bool push_desc = false;
+				if (push_desc)
+				{
+					flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+				}
+				else
+				{
+					flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+				}
 			
 
-			set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
-				.app = application(),
-				.name = name() + ".DescSetLayout",
-				.flags = flags,
-				.bindings = bindings,
-				.metas = metas,
-				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
-			});
+				set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+					.app = application(),
+					.name = name() + ".DescSetLayout",
+					.flags = flags,
+					.bindings = bindings,
+					.metas = metas,
+					.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+				});
+			}
 		}
 
 		// Push constants
@@ -315,16 +323,16 @@ namespace vkl
 		}
 		assert(checkSetsLayoutsMatch(&std::cerr));
 
-		_sets_layouts.resize(_reflection_sets_layouts.size());
+		_sets_layouts.resize(std::max(_reflection_sets_layouts.size(), _provided_sets_layouts.size()));
 		for (size_t i = 0; i < _sets_layouts.size(); ++i)
 		{
-			_sets_layouts[i] = _provided_sets_layouts[i] ? _provided_sets_layouts[i] : _reflection_sets_layouts[i];
+			_sets_layouts.getRef(i) = _provided_sets_layouts.getSafe(i) ? _provided_sets_layouts.getSafe(i) : _reflection_sets_layouts.getSafe(i);
 		}
 
 		_layout = std::make_shared<PipelineLayout>(PipelineLayout::CI{
 			.app = application(),
 			.name = name() + ".layout",
-			.sets = _sets_layouts,
+			.sets = _sets_layouts.asVector(),
 			.push_constants = _push_constants,
 		});
 	}
