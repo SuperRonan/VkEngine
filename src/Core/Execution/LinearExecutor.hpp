@@ -33,6 +33,7 @@ namespace vkl
 		std::vector<std::shared_ptr<Buffer>> _registered_buffers = {};
 		std::vector<std::shared_ptr<Sampler>> _registered_samplers = {};
 		std::vector<std::shared_ptr<Mesh>> _registered_meshes = {};
+		std::vector<std::shared_ptr<DescriptorSetAndPool>> _registered_descriptor_sets = {};
 
 		MountingPoints _mounting_points;
 
@@ -83,6 +84,8 @@ namespace vkl
 		virtual void declare(std::shared_ptr<Mesh> mesh) override final;
 
 		virtual void declare(std::shared_ptr<Sampler> sampler) override final;
+
+		virtual void declare(std::shared_ptr<DescriptorSetAndPool> set) override final;
 
 		virtual void init() override final;
 

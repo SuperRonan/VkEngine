@@ -157,6 +157,8 @@ namespace vkl
 
 		DescriptorSetsManager(CreateInfo const& ci);
 
+		void setCommandBuffer(std::shared_ptr<CommandBuffer> const& cmd);
+
 		void bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set);
 
 		using PerBindingFunction = std::function<void(std::shared_ptr<DescriptorSetAndPoolInstance>)>;

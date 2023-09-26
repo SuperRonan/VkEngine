@@ -99,14 +99,20 @@ namespace vkl
 	bool DescriptorSetAndPoolInstance::checkIntegrity()const
 	{
 		bool res = true;
-		for (size_t i = 0; i < _bindings.size() - 1; ++i)
+		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			assert(_bindings[i].isResolved());
-			assert(_bindings[i+1].isResolved());
-			if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
+
+			res &= _bindings[i].vkType() != VK_DESCRIPTOR_TYPE_MAX_ENUM;
+
+			if(i != _bindings.size() -1)
 			{
-				res = false;
+				if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
+				{
+					res &= false;
+				}
 			}
+			
 		}
 		return res;
 	}
@@ -344,8 +350,9 @@ namespace vkl
 				_bindings[j].unResolve();
 			}
 
+			assert(_prog->instance()->setsLayouts().size() > _target_set);
 			_layout = _prog->instance()->setsLayouts()[_target_set];
-
+			assert(!!_layout);
 			for (size_t i = 0; i < _layout->bindings().size(); ++i)
 			{
 				const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
@@ -399,9 +406,13 @@ namespace vkl
 		}
 		else
 		{
+			assert(_bindings.size() == _layout->bindings().size());
 			for (size_t j = 0; j < _bindings.size(); ++j)
 			{
 				_bindings[j].resolve(_bindings[j].binding());
+				const auto& meta = _layout->metas()[j];
+				const auto& vkb = _layout->bindings()[j];
+				_bindings[j].setType(vkb.descriptorType);
 			}
 			res = _bindings;
 		}
@@ -433,6 +444,14 @@ namespace vkl
 		_vk_sets(_bound_descriptor_sets.size(), VK_NULL_HANDLE)
 	{
 		_bindings_ranges.reserve(_bound_descriptor_sets.size());
+	}
+
+	void DescriptorSetsManager::setCommandBuffer(std::shared_ptr<CommandBuffer> const& cmd)
+	{
+		_cmd = cmd;
+		std::fill(_bound_descriptor_sets.begin(), _bound_descriptor_sets.end(), nullptr);
+		std::fill(_vk_sets.begin(), _vk_sets.end(), VK_NULL_HANDLE);
+		_bindings_ranges.clear();
 	}
 
 	void DescriptorSetsManager::bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set)

@@ -48,7 +48,7 @@ struct BufferString
 #if BIND_DEBUG_BUFFERS
 
 #ifndef DEBUG_BUFFER_BINDING
-#define DEBUG_BUFFER_BINDING set = 0, binding = 0 
+#define DEBUG_BUFFER_BINDING COMMON_DESCRIPTOR_BINDING
 #endif
 
 #if DEBUG_BUFFER_ACCESS_readonly

@@ -257,7 +257,7 @@ void main()
 
 #if SHADER_SEMANTIC_FRAGMENT
 
-layout(set = 1, binding = 0) uniform sampler2DArray glyphs;
+layout(SHADER_DESCRIPTOR_BINDING + 0) uniform sampler2DArray glyphs;
 
 layout(location = 0) in flat uint v_string_index;
 layout(location = 1) in vec2 v_uv;

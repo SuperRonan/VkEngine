@@ -218,20 +218,26 @@ namespace vkl
 		return true;
 	}
 
-	bool ProgramInstance::checkSetsLayoutsMatch() const
+	bool ProgramInstance::checkSetsLayoutsMatch(std::ostream * stream) const
 	{
 		bool res = true;
 		for (size_t s = 0; s < _reflection_sets_layouts.size(); ++s)
 		{
 			if (!!_reflection_sets_layouts[s] && !!_provided_sets_layouts[s])
 			{
-				res |= _provided_sets_layouts[s]->bindings().size() >= _reflection_sets_layouts[s]->bindings().size();
+				const bool enough_bindings = _provided_sets_layouts[s]->bindings().size() >= _reflection_sets_layouts[s]->bindings().size();
+				res &= enough_bindings;
+				if (!enough_bindings && !!stream)
+				{
+					*stream << "checking Program " << name() << " sets layouts match error: Not enough bindings in provided set layout " << s 
+						<< ", found " << _provided_sets_layouts[s]->bindings().size() << " but expected a least " << _reflection_sets_layouts[s]->bindings().size() << "!\n";
+				}
 				// Check if the reflection descriptors are present at the right index in the provided one, and for the right stages
 				if (res)
 				{
 
 					size_t pi = 0;
-					for (size_t i = 0; i < _reflection_sets_layouts[s]->bindings().size(); ++s)
+					for (size_t i = 0; i < _reflection_sets_layouts[s]->bindings().size(); ++i)
 					{
 						const VkDescriptorSetLayoutBinding & rb = _reflection_sets_layouts[s]->bindings()[i];
 						while (true)
@@ -251,13 +257,36 @@ namespace vkl
 						if (pi == -1)
 						{
 							res = false;
+							if (!!stream)
+							{
+								*stream << "checking Program " << name() << " sets layouts match error: Could not find provided binding at (set = " 
+									<< s << ", binding = " << rb.binding << ")!\n";
+							}
 							break;
 						}
 						const VkDescriptorSetLayoutBinding & pb = _provided_sets_layouts[s]->bindings()[pi];
 
-						res |= rb.descriptorType == pb.descriptorType;
-						res |= rb.descriptorCount == pb.descriptorCount;
-						res |= (rb.stageFlags & pb.stageFlags) == rb.stageFlags;
+						const bool same_type = rb.descriptorType == pb.descriptorType;
+						const bool same_count = rb.descriptorCount == pb.descriptorCount;
+						const bool has_stages = (rb.stageFlags & pb.stageFlags) == rb.stageFlags;
+
+						res &= (same_type & same_count & has_stages);
+
+						if (!same_type && !!stream)
+						{
+							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
+								"): Descriptor type does not match, provided " << pb.descriptorType << " but expected " << rb.descriptorType << "!\n";
+						}
+						if (!same_count && !!stream)
+						{
+							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
+								"): Descriptor count does not match, provided " << pb.descriptorCount << " but expected " << rb.descriptorCount << "!\n";
+						}
+						if (!has_stages && !!stream)
+						{
+							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
+								"): Provided stages " << pb.stageFlags << " doest not contain expected stages " << rb.stageFlags << "!\n";
+						}
 
 						if (!res)
 						{
@@ -284,17 +313,12 @@ namespace vkl
 		{
 			return;
 		}
-		assert(checkSetsLayoutsMatch());
+		assert(checkSetsLayoutsMatch(&std::cerr));
 
 		_sets_layouts.resize(_reflection_sets_layouts.size());
 		for (size_t i = 0; i < _sets_layouts.size(); ++i)
 		{
 			_sets_layouts[i] = _provided_sets_layouts[i] ? _provided_sets_layouts[i] : _reflection_sets_layouts[i];
-		}
-
-		if(_sets_layouts.empty())
-		{
-			int _ = 0;
 		}
 
 		_layout = std::make_shared<PipelineLayout>(PipelineLayout::CI{

@@ -20,6 +20,7 @@ namespace vkl
 
 
 		bool _use_debug_renderer = true;
+		bool _use_rt_pipeline = false;
 		
 		std::shared_ptr<DebugRenderer> _debug_renderer = nullptr;
 
@@ -39,12 +40,14 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			bool use_debug_renderer = true;
+			bool use_ray_tracing_pipeline = false;
 		};
 		using CI = CreateInfo;
 
 		Executor(CreateInfo const& ci):
 			VkObject(ci.app, ci.name),
-			_use_debug_renderer(ci.use_debug_renderer)
+			_use_debug_renderer(ci.use_debug_renderer),
+			_use_rt_pipeline(ci.use_ray_tracing_pipeline)
 		{}
 
 		virtual void declare(std::shared_ptr<Command> cmd) = 0;
@@ -58,6 +61,8 @@ namespace vkl
 		virtual void declare(std::shared_ptr<Mesh> mesh) = 0;
 
 		virtual void declare(std::shared_ptr<Sampler> sampler) = 0;
+
+		virtual void declare(std::shared_ptr<DescriptorSetAndPool> set) = 0;
 
 		virtual void init() = 0;
 

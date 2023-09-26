@@ -104,12 +104,17 @@ namespace vkl
 
 	void LinearExecutor::declare(std::shared_ptr<Mesh> mesh)
 	{
-		_registered_meshes.emplace_back(mesh);
+		_registered_meshes.emplace_back(std::move(mesh));
 	}
 
 	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
 	{
 		_registered_samplers.emplace_back(std::move(sampler));
+	}
+
+	void LinearExecutor::declare(std::shared_ptr<DescriptorSetAndPool> set)
+	{
+		_registered_descriptor_sets.emplace_back(std::move(set));
 	}
 
 	void LinearExecutor::init()
@@ -128,6 +133,9 @@ namespace vkl
 			}
 			endCommandBufferAndSubmit();
 		}
+
+		createCommonSet();
+		declare(_common_descriptor_set);
 	}
 
 	void LinearExecutor::updateResources()
@@ -189,6 +197,11 @@ namespace vkl
 		for (auto& command : _commands)
 		{
 			const bool invalidated = command->updateResources(update_context);
+		}
+
+		for (auto& set : _registered_descriptor_sets)
+		{
+			const bool invalidated = set->updateResources(update_context);
 		}
 	}
 
@@ -279,6 +292,13 @@ namespace vkl
 			});
 		cb->begin();
 		_context.setCommandBuffer(cb);
+
+		_context.graphicsBoundSets().bind(0, _common_descriptor_set->instance());
+		_context.computeBoundSets().bind(0, _common_descriptor_set->instance());
+		if (_use_rt_pipeline)
+		{
+			_context.rayTracingBoundSets().bind(0, _common_descriptor_set->instance());
+		}
 	}
 
 	void LinearExecutor::endCommandBufferAndSubmit()

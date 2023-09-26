@@ -51,7 +51,7 @@ namespace vkl
 
 		for (size_t s = 0; s < max_set; ++s)
 		{
-			if (sets[s])
+			if (sets[s] && !sets[s]->empty())
 			{
 				DescriptorSetLayout const & set_layout = *sets[s];
 				const auto & bound_set = bound_sets.getSet(s);

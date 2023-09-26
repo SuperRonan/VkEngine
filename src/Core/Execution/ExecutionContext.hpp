@@ -66,6 +66,9 @@ namespace vkl
 		void setCommandBuffer(std::shared_ptr<CommandBuffer> cmd)
 		{
 			_command_buffer = cmd;
+			_graphics_bound_sets.setCommandBuffer(_command_buffer);
+			_compute_bound_sets.setCommandBuffer(_command_buffer);
+			_ray_tracing_bound_sets.setCommandBuffer(_command_buffer);
 		}
 
 		void keppAlive(std::shared_ptr<VkObject> obj)

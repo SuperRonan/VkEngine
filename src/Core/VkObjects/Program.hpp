@@ -35,7 +35,7 @@ namespace vkl
 
 		bool reflect();
 
-		bool checkSetsLayoutsMatch()const;
+		bool checkSetsLayoutsMatch(std::ostream * stream = nullptr)const;
 
 		void createLayout();
 
