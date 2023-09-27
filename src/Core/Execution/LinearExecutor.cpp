@@ -1,5 +1,7 @@
 #include "LinearExecutor.hpp"
 
+#include <Core/Rendering/DebugRenderer.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
@@ -10,6 +12,8 @@ namespace vkl
 		Executor(Executor::CI{
 			.app = ci.app ? ci.app : ci.window->application(), 
 			.name = ci.name,
+			.use_debug_renderer = ci.use_debug_renderer,
+			.use_ray_tracing_pipeline = ci.use_ray_tracing,
 		}),
 		_window(ci.window),
 		_staging_pool(StagingPool::CI{
@@ -125,17 +129,18 @@ namespace vkl
 		});
 		declare(_blit_to_present);
 
+		createCommonSet();
+		declare(_common_descriptor_set);
+		
 		if (_render_gui)
 		{
-			beginCommandBuffer();
+			beginCommandBuffer(false);
 			{
 				ImGui_ImplVulkan_CreateFontsTexture(*_command_buffer_to_submit);
 			}
 			endCommandBufferAndSubmit();
 		}
 
-		createCommonSet();
-		declare(_common_descriptor_set);
 	}
 
 	void LinearExecutor::updateResources()
@@ -209,11 +214,6 @@ namespace vkl
 	{
 		++_frame_index;
 
-		if ((_frame_index % 1024) == 0)
-		{
-			
-		}
-
 		//vkDeviceWaitIdle(device());
 		std::shared_ptr frame_semaphore = std::make_shared<Semaphore>(_app, name() + ".BeginFrame_" + std::to_string(_frame_index) + ".Semaphore");
 		_context.keppAlive(frame_semaphore);
@@ -229,6 +229,14 @@ namespace vkl
 		assert(_aquired.swap_index < _window->swapchainSize());
 		_context.keppAlive(prev_semaphore);
 		int _ = 0;
+	}
+
+	void LinearExecutor::renderDebugIFN()
+	{
+		if (_use_debug_renderer)
+		{
+			_debug_renderer->execute();
+		}
 	}
 
 	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui)
@@ -282,7 +290,7 @@ namespace vkl
 		executable(_context);
 	}
 
-	void LinearExecutor::beginCommandBuffer()
+	void LinearExecutor::beginCommandBuffer(bool bind_common_set)
 	{
 		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
 		assert(!cb);
@@ -293,11 +301,17 @@ namespace vkl
 		cb->begin();
 		_context.setCommandBuffer(cb);
 
-		_context.graphicsBoundSets().bind(0, _common_descriptor_set->instance());
-		_context.computeBoundSets().bind(0, _common_descriptor_set->instance());
-		if (_use_rt_pipeline)
+		if (bind_common_set)
 		{
-			_context.rayTracingBoundSets().bind(0, _common_descriptor_set->instance());
+			if (_common_descriptor_set->instance()->exists())
+			{
+				_context.graphicsBoundSets().bind(0, _common_descriptor_set->instance());
+				_context.computeBoundSets().bind(0, _common_descriptor_set->instance());
+				if (_use_rt_pipeline)
+				{
+					_context.rayTracingBoundSets().bind(0, _common_descriptor_set->instance());
+				}
+			}
 		}
 	}
 

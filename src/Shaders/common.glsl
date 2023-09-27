@@ -53,6 +53,8 @@
 
 #define lerp mix
 
+
+
 float sqr(float x)
 {
 	return x*x;
@@ -98,3 +100,15 @@ vec2 UVToClipSpace(vec2 uv)
 {
 	return (uv * 2.0f) - 1.0f;
 }
+
+
+#define PI 3.1415926535897932384626433832795
+#define HALF_PI (PI / 2.0)
+#define QUART_PI (PI / 4.0)
+#define TWO_PI (2.0 * PI)
+#define oo_PI rcp(PI)
+#define EULER_e 2.7182818284590452353602874713527
+#define SQRT_2 (sqrt(2.0))
+#define oo_SQRT_2 rcp(SQRT_2)
+#define GOLDEN_RATIO ((1.0 + sqrt(5.0)) / 2.0)
+#define PHI GOLDEN_RATIO

@@ -469,20 +469,39 @@ namespace vkl
 
 	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func)
 	{
-		std::sort(_bindings_ranges.begin(), _bindings_ranges.end(), [](Range32 const& a, Range32 const& b){return a.begin < b.begin;});
-		for (const auto r : _bindings_ranges)
+		const bool bind_all = true;
+		if (bind_all)
 		{
-			for (uint32_t i = 0; i < r.len; ++i)
+			// TODO Bind multiple at once
+			auto & sets_layouts = layout->setsLayouts();
+			for (size_t s = 0; s < sets_layouts.size(); ++s)
 			{
-				_vk_sets[i + r.begin] = _bound_descriptor_sets[i + r.begin]->set()->handle();
-				if (func)
+				if (!!sets_layouts[s] && !!_bound_descriptor_sets[s])
 				{
-					func(_bound_descriptor_sets[i + r.begin]);
+					func(_bound_descriptor_sets[s]);
+					_vk_sets[s] = _bound_descriptor_sets[s]->set()->handle();
+					vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, s, 1, _vk_sets.data() + s, 0, nullptr);
 				}
 			}
-			vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, r.begin, r.len, _vk_sets.data() + r.begin, 0, nullptr);
+			_bindings_ranges.clear();
 		}
-		_bindings_ranges.clear();
+		else
+		{
+			std::sort(_bindings_ranges.begin(), _bindings_ranges.end(), [](Range32 const& a, Range32 const& b){return a.begin < b.begin;});
+			for (const auto r : _bindings_ranges)
+			{
+				for (uint32_t i = 0; i < r.len; ++i)
+				{
+					_vk_sets[i + r.begin] = _bound_descriptor_sets[i + r.begin]->set()->handle();
+					if (func)
+					{
+						func(_bound_descriptor_sets[i + r.begin]);
+					}
+				}
+				vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, r.begin, r.len, _vk_sets.data() + r.begin, 0, nullptr);
+			}
+			_bindings_ranges.clear();
+		}
 	}
 
 	const std::shared_ptr<DescriptorSetAndPoolInstance>& DescriptorSetsManager::getSet(uint32_t s)const

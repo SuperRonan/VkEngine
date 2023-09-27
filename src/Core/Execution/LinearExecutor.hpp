@@ -65,6 +65,8 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<VkWindow> window = nullptr;
 			bool use_ImGui = false;
+			bool use_debug_renderer = true;
+			bool use_ray_tracing = false;
 		};
 
 		using CI = CreateInfo;
@@ -93,7 +95,9 @@ namespace vkl
 
 		void beginFrame();
 
-		void beginCommandBuffer();
+		void beginCommandBuffer(bool bind_common_set = true);
+
+		void renderDebugIFN();
 
 		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
 

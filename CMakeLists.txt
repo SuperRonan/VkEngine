@@ -176,7 +176,7 @@ if(${BUILD_PROJECTS})
 
 	AddProject(Paint)
 
-	# AddProject(Particules)
+	AddProject(Particules)
 
 	# AddProject(Flotsam)
 

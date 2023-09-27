@@ -34,8 +34,8 @@ namespace vkl
 	{
 		auto& common_defs = _exec.getCommonDefinitions();
 		common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
-		common_defs.setDefinition("DEBUG_BUFFER_BINDING", "set = " + std::to_string(_desc_set) + ", binding = " + std::to_string(_first_binding));
 		common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
+		common_defs.setDefinition("DEBUG_BUFFER_STRING_SIZE", std::to_string(_number_of_debug_strings));
 		common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
 		common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
 		common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
@@ -46,8 +46,8 @@ namespace vkl
 	{
 		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
 
-		MultiDescriptorSetsLayouts set_layouts;
-		set_layouts += {0, _exec.getCommonSetLayout()};
+		MultiDescriptorSetsLayouts sets_layouts;
+		sets_layouts += {0, _exec.getCommonSetLayout()};
 
 		if (application()->availableFeatures().mesh_shader_ext.meshShader)
 		{
@@ -56,7 +56,7 @@ namespace vkl
 				.name = name() + ".RenderStrings",
 				.dispatch_size = [&]() {return VkExtent3D{ .width = _number_of_debug_strings, .height = 1, .depth = 1 }; },
 				.dispatch_threads = true,
-				.set_layouts = set_layouts,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.view = _font,
@@ -79,7 +79,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".RenderStrings",
 				.draw_count = &_number_of_debug_strings,
-				.set_layouts = set_layouts,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.view = _font,

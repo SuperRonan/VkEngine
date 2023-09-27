@@ -130,7 +130,7 @@ namespace vkl
 				.app = this,
 				.name = "RenderLine",
 				.draw_count = 1u,
-				.set_layouts = sets_layouts,
+				.sets_layouts = sets_layouts,
 				.color_attachements = {canvas_view},
 				.vertex_shader_path = shaders / "render.vert",
 				.geometry_shader_path= shaders / "render.geom",

@@ -39,7 +39,10 @@ namespace vkl
 					ImGui::SameLine();
 			}
 			bool changed = _index != active_index;
-			_index = active_index;
+			if (changed)
+			{
+				_index = active_index;
+			}
 			return changed;
 		}
 

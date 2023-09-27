@@ -173,13 +173,13 @@ void main()
 	bool emit_string = gid < DEBUG_BUFFER_STRING_SIZE;
 
 	const uint index = gid;
-	const uint len = (_debug.strings[index].meta.len);
+	const uint len = emit_string ? (_debug.strings[index].meta.len) : 0;
 
-	emit_string = len > 0;
-
-	uint num_triangles = emit_string ? 2 : 0;
-	num_triangles = subgroupAdd(num_triangles);
-	subgroupBarrier();
+	emit_string = (len > 0);
+	
+	const uint emit_string_ui = emit_string ? 1 : 0;
+	const uint num_triangles = subgroupAdd(emit_string_ui) * 2;
+	//subgroupBarrier();
 	if(subgroupElect())
 	{
 		SetMeshOutputsEXT(num_triangles * 2, num_triangles);
@@ -187,7 +187,8 @@ void main()
 
 	if(emit_string)
 	{
-		const uint subgroup_string_id = subgroupInclusiveAdd(emit_string ? 1 : 0);
+		const uint subgroup_string_id = subgroupExclusiveAdd(emit_string_ui);
+		//subgroupBarrier();
 		const uint base_vert_id = subgroup_string_id * 4;
 		const uint base_primitive_id = subgroup_string_id * 2;
 		

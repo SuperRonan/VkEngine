@@ -46,7 +46,7 @@ namespace vkl
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 			VertexInputDescription vertex_input_description = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
-			MultiDescriptorSetsLayouts set_layouts = {};
+			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -114,7 +114,7 @@ namespace vkl
 			DynamicValue<uint32_t> draw_count = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			std::vector<std::shared_ptr<Model>> models = {};
-			MultiDescriptorSetsLayouts set_layouts = {};
+			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
@@ -196,7 +196,7 @@ namespace vkl
 			DynamicValue<VkExtent3D> dispatch_size = {};
 			bool dispatch_threads = false;
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
-			MultiDescriptorSetsLayouts set_layouts = {};
+			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;

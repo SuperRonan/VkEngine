@@ -37,7 +37,7 @@ namespace vkl
 		uint32_t _number_of_debug_strings = 16384;
 		int _shader_string_chunks = 8;
 		uint32_t _shader_string_capacity = 32;
-		int _buffer_string_chunks = 8;
+		int _buffer_string_chunks = 16;
 		uint32_t _buffer_string_capacity = 64;
 
 		uint32_t _desc_set = 0;

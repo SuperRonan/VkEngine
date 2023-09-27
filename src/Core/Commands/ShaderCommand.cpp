@@ -89,7 +89,7 @@ namespace vkl
 						r._end_state = r._begin_state;
 					}
 
-					synch.addSynch(resource.resource());
+					synch.addSynch(r);
 				}
 			}
 		}

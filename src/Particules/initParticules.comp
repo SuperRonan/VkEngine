@@ -1,11 +1,11 @@
 #version 460 core
 
 #include "common.glsl"
-#include "../Shaders/random.glsl"
+#include <ShaderLib:/random.glsl>
 
 layout(local_size_x = 128) in;
 
-layout(set = 0, binding = 0, std430) buffer writeonly restrict Particulesbuffer
+layout(SHADER_DESCRIPTOR_BINDING + 0, std430) buffer writeonly restrict Particulesbuffer
 {
 	Particule particules[];
 } particules;

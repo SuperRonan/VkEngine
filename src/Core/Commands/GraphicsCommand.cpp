@@ -6,7 +6,7 @@ namespace vkl
 		ShaderCommand(ShaderCommand::CreateInfo{
 			.app = ci.app,
 			.name = ci.name,
-			.sets_layouts = ci.set_layouts,
+			.sets_layouts = ci.sets_layouts,
 		}),
 		_topology(ci.topology),
 		_vertex_input_desc(ci.vertex_input_description),
@@ -227,7 +227,7 @@ namespace vkl
 		// Bind descriptor sets up to shader
 		recordBindings(cmd, context);
 		// Synch bound resources up to descriptor set
-		recordBoundResourcesSynchronization(context.computeBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
+		recordBoundResourcesSynchronization(context.graphicsBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
 		
 		// Synch models to draw
 		synchronizeDrawResources(synch, user_info);
@@ -295,7 +295,7 @@ namespace vkl
 			.topology = ci.topology,
 			.vertex_input_description = ci.vertex_input_desc,
 			.line_raster_mode = ci.line_raster_mode,
-			.set_layouts = ci.set_layouts,
+			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,
@@ -492,7 +492,7 @@ namespace vkl
 			.app = ci.app,
 			.name = ci.name,
 			.line_raster_mode = ci.line_raster_mode,
-			.set_layouts = ci.set_layouts,
+			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
 			.depth_buffer = ci.depth_buffer,

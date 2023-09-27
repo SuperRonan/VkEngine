@@ -133,9 +133,9 @@ namespace vkl
 					}
 					else if(mp_path_end != std::string::npos)
 					{
-						assert(!!preprocessing_state.mounting_points);
+						assertm(!!preprocessing_state.mounting_points, "Mounting points should be loaded!");
 						const size_t mp_end = include_line.find(":");
-						assert(mp_end != std::string::npos);
+						assertm(mp_end != std::string::npos, "Could not parse mouting point path (missing ':')");
 						const std::string_view mounting_point(include_line.data() + mp_path_begin, mp_end - mp_path_begin);
 						const MountingPoints & mps = *preprocessing_state.mounting_points;
 						const std::string mp_str = std::string(mounting_point);

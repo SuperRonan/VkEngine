@@ -102,6 +102,7 @@ namespace vkl
 		if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
 			VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
+
 			int _ = 0;
 		}
 		return VK_FALSE;

@@ -436,6 +436,11 @@ void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
 	// Never gonna show float in hex or bin
 	const uint basis = 10;
 	const bool neg = f < 0.0f;
+	if(isnan(f))
+	{
+		append(s, "nan");
+		return;
+	}
 	if(neg)
 	{
 		appendOneChar(s, CHAR_minus);
@@ -444,6 +449,13 @@ void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
 	{
 		appendOneChar(s, CHAR_plus);
 	}
+	
+	if(isinf(f))
+	{
+		append(s, "inf");
+		return;
+	}
+
 
 	const uint integral_part = uint(abs(f));
 	const float dec = abs(f - trunc(f));

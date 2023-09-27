@@ -219,7 +219,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Buffer> buffer = nullptr;
-			DynamicValue<Range_st> range = Range_st{.begin = 0, .len = VK_WHOLE_SIZE};
+			DynamicValue<Range_st> range = Range_st{.begin = 0, .len = 0};
 			uint32_t value = 0;
 		};
 		using CI = CreateInfo;

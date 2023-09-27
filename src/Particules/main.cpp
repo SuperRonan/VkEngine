@@ -2,6 +2,7 @@
 #include <Core/App/ImGuiApp.hpp>
 
 #include <Core/Rendering/Camera2D.hpp>
+#include <Core/Rendering/DebugRenderer.hpp>
 
 #include <Core/IO/MouseHandler.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
@@ -113,14 +114,14 @@ namespace vkl
 					res *= 2;
 				return res;
 			};
-			glm::vec2 world_size(4.0f, 4.0f);
-			uint32_t N_TYPES_PARTICULES = 7;
+			glm::vec2 world_size(2.0f, 2.0f);
+			uint32_t N_TYPES_PARTICULES = 3;
 			const VkBool32 use_half_storage = _available_features.features_12.shaderFloat16;
 			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
 			const uint32_t particule_props_size = 4 * storage_float_size;
 			
-			dv_<uint32_t> rule_buffer_size = dv_<uint32_t>(&N_TYPES_PARTICULES) * (particule_props_size + N_TYPES_PARTICULES * force_rule_size);
+			dv_<uint32_t> rule_buffer_size = dv_<uint32_t>(&N_TYPES_PARTICULES) * (particule_props_size + N_TYPES_PARTICULES * force_rule_size) * 10;
 			
 			uint32_t seed = 0x2fe75454a5;
 			
@@ -129,13 +130,19 @@ namespace vkl
 					std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
 				});
 			};
+
+			const bool use_ImGui = true;
 			
 			LinearExecutor exec(LinearExecutor::CI{
 				.app = this,
 				.name = "exec",
 				.window = _main_window,
-				.use_ImGui = true,
+				.use_ImGui = use_ImGui,
+				.use_debug_renderer = true,
 			});
+
+			MultiDescriptorSetsLayouts sets_layouts;
+			sets_layouts += {0, exec.getCommonSetLayout()};
 
 			exec.getCommonDefinitions().setDefinition("USE_HALF_STORAGE", std::to_string(use_half_storage));
 
@@ -161,7 +168,7 @@ namespace vkl
 				.app = this,
 				.name = "ParticulesRulesBuffer",
 			 	.size = rule_buffer_size,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 			exec.declare(particule_rules_buffer);
@@ -181,6 +188,7 @@ namespace vkl
 				.image = render_target_img,
 			});
 			exec.declare(render_target_view);
+			exec.getDebugRenderer()->setTargets(render_target_view);
 			
 			const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
@@ -190,10 +198,10 @@ namespace vkl
 				.shader_path = shaders / "initParticules.comp",
 				.dispatch_size = [&]() {return VkExtent3D{.width = *num_particules, .height = 1, .depth = 1}; } ,
 				.dispatch_threads = true,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.buffer = current_particules,
-						.set = 0,
 						.binding = 0,
 					},
 				},
@@ -216,10 +224,10 @@ namespace vkl
 				.shader_path = shaders / "initCommonRules.comp",
 				.dispatch_size = [&]() {return VkExtent3D{.width = N_TYPES_PARTICULES, .height = N_TYPES_PARTICULES, .depth = 1}; },
 				.dispatch_threads = true,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.buffer = particule_rules_buffer,
-						.set = 0,
 						.binding = 0,
 					},
 				},
@@ -234,20 +242,18 @@ namespace vkl
 				.shader_path = shaders / "update.comp",
 				.dispatch_size = init_particules->getDispatchSize(),
 				.dispatch_threads = true,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.buffer = previous_particules,
-						.set = 0,
 						.binding = 0,
 					},
 					Binding{
 						.buffer = current_particules,
-						.set = 0,
 						.binding = 1,
 					},
 					Binding{
 						.buffer = particule_rules_buffer,
-						.set = 0,
 						.binding = 2,
 					},
 				},
@@ -276,18 +282,16 @@ namespace vkl
 				.app = this,
 				.name = "Render",
 				.draw_count = num_particules,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.buffer = current_particules,
-						.set = 0,
 						.binding = 0,
 					},
 					Binding{
 						.buffer = particule_rules_buffer,
-						.set = 0,
 						.binding = 1,
 					},
-
 				},
 				.color_attachements = {render_target_view},
 				.vertex_shader_path = shaders / "render.vert",
@@ -334,8 +338,6 @@ namespace vkl
 
 			double t = glfwGetTime(), dt;
 
-			size_t current_grid_id = 0;
-
 			DynamicValue<glm::mat3> screen_coords_matrix = [&]() {return vkl::scaleMatrix<3, float>({ 1.0, float(_main_window->extent2D().value().height) / float(_main_window->extent2D().value().width) }); };
 
 			DynamicValue<glm::vec2> move_scale = [&]() {return glm::vec2(2.0 / float(_main_window->extent2D().value().width), 2.0 / float(_main_window->extent2D().value().height)); };
@@ -344,8 +346,11 @@ namespace vkl
 			DynamicValue<glm::mat3> mat_world_to_cam = [&]() {return glm::inverse(screen_coords_matrix.value() * camera.matrix()); };
 
 
+			size_t frame_counter = -1;
+
 			while (!_main_window->shouldClose())
 			{
+				frame_counter++;
 				{
 					double new_t = glfwGetTime();
 					dt = new_t - t;
@@ -361,8 +366,9 @@ namespace vkl
 					should_render = true;
 				}
 
-				beginImGuiFrame();
+				if(use_ImGui)
 				{
+					beginImGuiFrame();
 					ImGui::Begin("Control");
 					ImGui::SliderFloat("friction", &friction, 0.0, 2.0);
 					ImGui::InputInt("log2(Number of particules)", (int*)& num_particules_log2);
@@ -377,12 +383,14 @@ namespace vkl
 					ImGui::SliderFloat2("World Size", (float*)&world_size, 0.0, 10.0);
 
 					ImGui::Text("Present mode");
-					size_t present_mode = gui_present_modes.declare();
-					_present_mode = static_cast<VkPresentModeKHR>(present_mode);
+					gui_present_modes.declare();
+					_present_mode = static_cast<VkPresentModeKHR>(gui_present_modes.index());
+
+					exec.getDebugRenderer()->declareImGui();
 
 					ImGui::End();
+					ImGui::EndFrame();
 				}
-				ImGui::EndFrame();
 
 				mouse_handler.update(dt);
 				if (mouse_handler.isButtonCurrentlyPressed(GLFW_MOUSE_BUTTON_1))
@@ -408,12 +416,12 @@ namespace vkl
 					if (reset_particules)
 					{
 						exec(init_particules->with({
-								.push_constant = InitParticulesPC{
+							.push_constant = InitParticulesPC{
 								.number_of_particules = *num_particules,
 								.seed = seed,
 								.wolrd_size = world_size,
 							},
-							}));
+						}));
 						seed = std::hash<uint32_t>()(seed);
 						reset_particules = false;
 					}
@@ -430,27 +438,35 @@ namespace vkl
 						exec(copy_to_previous);
 						exec(run_simulation->with({
 							.push_constant = RunSimulationPC{
-							.number_of_particules = *num_particules,
-							.dt = static_cast<float>(dt),
-							.world_size = world_size,
-							.friction = friction,
-						},
+								.number_of_particules = *num_particules,
+								.dt = static_cast<float>(dt),
+								.world_size = world_size,
+								.friction = friction,
+							},
 						}));
 					}
 					
 					{
 						exec(render->with({
 							.pc = RenderPC{
-							.matrix = glm::mat4(mat_world_to_cam.value()),
-							.zoom = static_cast<float>(mouse_handler.getScroll()),
-						},
+								.matrix = glm::mat4(mat_world_to_cam.value()),
+								.zoom = static_cast<float>(mouse_handler.getScroll()),
+							},
 						}));
 					}
 
-					ImGui::Render();
+					exec.renderDebugIFN();
+
+					if (use_ImGui)
+					{
+						ImGui::Render();
+					}
 					exec.preparePresentation(render_target_view);
-					ImGui::UpdatePlatformWindows();
-					ImGui::RenderPlatformWindowsDefault();
+					if(use_ImGui)
+					{
+						ImGui::UpdatePlatformWindows();
+						ImGui::RenderPlatformWindowsDefault();
+					}
 					exec.endCommandBufferAndSubmit();
 					exec.present();
 

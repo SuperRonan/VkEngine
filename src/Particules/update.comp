@@ -4,17 +4,17 @@
 
 layout(local_size_x = 32) in;
 
-layout(set = 0, binding = 0, std430) buffer readonly restrict b_previous_state
+layout(SHADER_DESCRIPTOR_BINDING + 0, std430) buffer readonly restrict b_previous_state
 {
 	Particule particules[];
 } prev;
 
-layout(set = 0, binding = 1, std430) buffer writeonly restrict b_next_state
+layout(SHADER_DESCRIPTOR_BINDING + 1, std430) buffer writeonly restrict b_next_state
 {
 	Particule particules[];
 } next;
 
-layout(set = 0, binding = 2) buffer readonly restrict ub_common_rules
+layout(SHADER_DESCRIPTOR_BINDING + 2, std430) buffer readonly restrict ub_common_rules
 {
 	CommonRuleBuffer rules;
 } ubo;
@@ -47,14 +47,15 @@ void main()
 				f += computeForce(p, o, force, world_size);
 			}
 		}
-		const float friction = -8e2 * _pc.friction;
-		f += friction * p.velocity;
+		const float friction = 8e2 * _pc.friction;
+		f -= friction * p.velocity;
 		const float mass = sqr(p.radius);
 
 		Particule np = p;
 		const float force_scale = 1e-6;
 		const vec2 acc = (f * force_scale) / mass;
 		np.velocity += clamp(acc * _pc.dt, -world_size*0.5, world_size*0.5);
+		np.velocity *= 0.1;
 		np.position += np.velocity * _pc.dt;
 		np.position = modulatePosition(world_size * 0.5, world_size, np.position);
 		next.particules[gid] = np;

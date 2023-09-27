@@ -13,6 +13,10 @@
 #define BUFFER_STRING_CAPACITY 64 
 #endif
 
+#if BUFFER_STRING_CAPACITY < SHADER_STRING_CAPACITY
+#error "BUFFER_STRING_CAPACITY should be strictly bigger than SHADER_STRING_CAPACITY" 
+#endif
+
 #define BUFFER_STRING_PACKED_CAPACITY (BUFFER_STRING_CAPACITY / 4)
 
 struct BufferStringMeta
@@ -62,6 +66,9 @@ struct BufferString
 layout(DEBUG_BUFFER_BINDING) restrict DEBUG_BUFFER_ACCESS buffer DebugStringBuffer
 {
 	uint string_counter;
+	uint pad1;
+	uint pad2;
+	uint pad3;
 	BufferString strings[DEBUG_BUFFER_STRING_SIZE];
 } _debug;
 

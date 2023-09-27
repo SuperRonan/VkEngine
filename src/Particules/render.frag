@@ -7,7 +7,7 @@ layout(location = 1) in vec2 v_uv;
 
 layout(location = 0) out vec4 o_color;
 
-layout(set = 0, binding = 1) buffer readonly restrict ub_common_rules
+layout(SHADER_DESCRIPTOR_BINDING + 1, std430) buffer readonly restrict ub_common_rules
 {
 	CommonRuleBuffer rules;
 } ubo;

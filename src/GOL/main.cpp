@@ -108,6 +108,7 @@ namespace vkl
 				.name = "Executor",
 				.window = _main_window,
 				.use_ImGui = false,
+				.use_debug_renderer = false,
 			});
 
 			MultiDescriptorSetsLayouts sets_layouts;
@@ -221,7 +222,7 @@ namespace vkl
 			});
 			exec.declare(final_view);
 
-			exec.getDebugRenderer()->setTargets(final_view);
+			//exec.getDebugRenderer()->setTargets(final_view);
 			
 
 			std::shared_ptr<ComputeCommand> render_to_final = std::make_shared<ComputeCommand>(ComputeCommand::CI{

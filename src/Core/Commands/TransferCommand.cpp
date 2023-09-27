@@ -380,8 +380,12 @@ namespace vkl
 		});
 		
 		synch.record();
-
-		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.range.value().begin, fi.range.value().len, fi.value.value());
+		VkDeviceSize len = fi.range.value().len;
+		if (len == 0)
+		{
+			len = fi.buffer->instance()->createInfo().size;
+		}
+		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.range.value().begin, len, fi.value.value());
 	}
 
 	void FillBuffer::execute(ExecutionContext& context)
