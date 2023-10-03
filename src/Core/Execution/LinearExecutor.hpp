@@ -83,11 +83,12 @@ namespace vkl
 
 		virtual void release(std::shared_ptr<Buffer> buffer) override final;
 
-		virtual void declare(std::shared_ptr<Mesh> mesh) override final;
 
 		virtual void declare(std::shared_ptr<Sampler> sampler) override final;
 
 		virtual void declare(std::shared_ptr<DescriptorSetAndPool> set) override final;
+
+		virtual void declare(std::shared_ptr<ResourcesHolder> holder) override final;
 
 		virtual void init() override final;
 

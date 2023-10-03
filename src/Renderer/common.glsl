@@ -1,11 +1,13 @@
 #pragma once
 
-#ifndef RENDERER_FIRST_BINDING
-#define RENDERER_FIRST_BINDING set = 1, binding = 0
+#include <ShaderLib:/common.glsl>
+
+#ifndef RENDERER_BINDING
+#define RENDERER_BINDING SHADER_DESCRIPTOR_BINDING
 #endif
 
 #ifndef UBO_BINDING
-#define UBO_BINDING RENDERER_FIRST_BINDING
+#define UBO_BINDING RENDERER_BINDING
 #endif
 
 

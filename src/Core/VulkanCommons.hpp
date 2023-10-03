@@ -686,6 +686,12 @@ namespace std
 			return hs(h(r.begin) xor h(r.len));
 		}
 	};
+
+	template <class Uint>
+	Uint align(Uint n, Uint a)
+	{
+		return n + (a - (n % a));
+	}
 }
 
 namespace vkl

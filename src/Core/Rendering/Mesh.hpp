@@ -7,10 +7,46 @@
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/VkObjects/CommandBuffer.hpp>
 #include <Core/Execution/Resource.hpp>
+#include <Core/Execution/ResourcesHolder.hpp>
 
 namespace vkl
 {
-	class Mesh : public VkObject, public Geometry
+	
+	struct MeshHeader
+	{
+		uint32_t num_vertices = 0;
+		uint32_t num_indices = 0;
+		uint32_t num_primitives = 0;
+		uint32_t flags = 0;
+	};
+
+#define MESH_FLAG_INDEX_TYPE_UINT16 0
+#define MESH_FLAG_INDEX_TYPE_UINT32 1
+#define MESH_FLAG_INDEX_TYPE_UINT8  2
+#define MESH_FLAG_INDEX_TYPE_MASK	3
+
+	inline uint32_t meshFlags(VkIndexType index_type)
+	{
+		uint32_t res = 0;
+		switch (index_type)
+		{
+		case VK_INDEX_TYPE_UINT16:
+			res |= MESH_FLAG_INDEX_TYPE_UINT16;
+		break;
+		case VK_INDEX_TYPE_UINT32:
+			res |= MESH_FLAG_INDEX_TYPE_UINT32;
+		break;
+		case VK_INDEX_TYPE_UINT8_EXT:
+			res |= MESH_FLAG_INDEX_TYPE_UINT8;
+		break;
+		}
+		return res;
+	}
+
+	class SynchronizationHelper;
+	class Pipeline;
+
+	class Mesh : public VkObject, public Geometry, public ResourcesHolder
 	{
 	protected:
 		
@@ -53,36 +89,16 @@ namespace vkl
 		};
 
 		virtual Status getStatus()const = 0;
+
+		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) = 0;
 		
 		virtual void recordBindAndDraw(CommandBuffer & cmd)const = 0;
 
 		virtual Resources getResourcesForDraw() = 0;
 
-		virtual bool updateResources(UpdateContext & ctx) = 0;
+		virtual VertexInputDescription vertexInputDesc() const = 0;
 
-		struct ResourcesToUpload
-		{
-			struct ImageUpload
-			{
-				ObjectView src;
-				std::shared_ptr<ImageView> dst;
-			};
-
-			std::vector<ImageUpload> images;
-
-			struct BufferUpload
-			{
-				std::vector<PositionedObjectView> sources;
-				std::shared_ptr<Buffer> dst;
-			};
-			
-			std::vector<BufferUpload> buffers;
-		};
-
-		virtual ResourcesToUpload getResourcesToUpload() = 0;
-
-		virtual void notifyDeviceDataIsUpToDate() = 0;
-
+		virtual void writeBindings(ShaderBindings & bindings) = 0;
 	};
 
 	class RigidMesh : public Mesh
@@ -216,14 +232,6 @@ namespace vkl
 
 		struct DeviceData
 		{
-			struct Header
-			{
-				uint32_t num_vertices = 0;
-				uint32_t num_indices = 0;
-				uint32_t num_primitives = 0;
-				uint32_t vertices_per_primitive = 0;
-			};
-
 			uint32_t num_indices = 0;
 			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
 
@@ -257,6 +265,7 @@ namespace vkl
 			std::vector<uint> indices = {};
 			int compute_normals = 0;
 			bool auto_compute_tangents = false;
+			bool create_device_buffer = true;
 		};
 		using CI = CreateInfo;
 
@@ -290,16 +299,25 @@ namespace vkl
 
 		virtual void recordBindAndDraw(CommandBuffer & cmd)const override;
 
-		virtual bool updateResources(UpdateContext & ctx) override;
-
-		virtual void notifyDeviceDataIsUpToDate() override
+		virtual void notifyDataIsUploaded() override
 		{
 			_device.up_to_date = true;
 		}
 
+		virtual void writeBindings(ShaderBindings& bindings) override final;
+
+		virtual ResourcesToDeclare getResourcesToDeclare() override final;
+
 		virtual ResourcesToUpload getResourcesToUpload() override;
 
-		static VertexInputDescription vertexInputDesc();
+		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
+
+		virtual VertexInputDescription vertexInputDesc() const override
+		{
+			return vertexInputDescStatic();
+		}
+
+		static VertexInputDescription vertexInputDescStatic();
 
 		std::shared_ptr<Buffer> vertexIndexBuffer()const
 		{

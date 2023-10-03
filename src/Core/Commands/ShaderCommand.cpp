@@ -40,6 +40,43 @@ namespace vkl
 		);
 	}
 
+	void ShaderCommand::recordDescriptorSetSynch(SynchronizationHelper& synch, DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout)
+	{
+		const auto& shader_bindings = layout.bindings();
+		auto& set_bindings = set.bindings();
+		size_t set_it = 0;
+		for (size_t i = 0; i < shader_bindings.size(); ++i)
+		{
+			const VkDescriptorSetLayoutBinding& binding = shader_bindings[i];
+			const uint32_t b = binding.binding;
+			while (set_bindings[set_it].resolvedBinding() < b)
+			{
+				++set_it;
+				if (set_it == set_bindings.size())
+				{
+					assertm(false, "Shader binding not found in bound set, not enough bindings!");
+					return;
+				}
+			}
+			ResourceBinding& resource = set_bindings[set_it];
+			assertm(resource.resolvedBinding() == b, "Shader binding not found in bound set!");
+
+			Resource r = resource.resource();
+			const auto& meta = layout.metas()[i];
+			r._begin_state = ResourceState2{
+				.access = meta.access,
+				.layout = meta.layout,
+				.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
+			};
+			if (r._end_state)
+			{
+				r._end_state = r._begin_state;
+			}
+
+			synch.addSynch(r);
+		}
+	}
+
 	void ShaderCommand::recordBoundResourcesSynchronization(DescriptorSetsManager& bound_sets, SynchronizationHelper& synch, size_t max_set)
 	{
 		ProgramInstance & prog = *_pipeline->program()->instance();
@@ -55,42 +92,10 @@ namespace vkl
 		{
 			if (sets[s] && !sets[s]->empty())
 			{
-				DescriptorSetLayout const & set_layout = *sets[s];
-				const auto & bound_set = bound_sets.getSet(s);
+				DescriptorSetLayout const& set_layout = *sets[s];
+				const auto& bound_set = bound_sets.getSet(s);
 				assertm(bound_set, "Shader binding set not bound!");
-				const auto & shader_bindings = set_layout.bindings();
-				auto & set_bindings = bound_set->bindings();
-				size_t set_it = 0;
-				for (size_t i = 0; i < shader_bindings.size(); ++i)
-				{
-					const VkDescriptorSetLayoutBinding& binding = shader_bindings[i];
-					const uint32_t b = binding.binding;
-					while (set_bindings[set_it].resolvedBinding() < b)
-					{
-						++set_it;
-						if (set_it == set_bindings.size())
-						{
-							assertm(false, "Shader binding not found in bound set, not enough bindings!");
-							return;
-						}
-					}
-					ResourceBinding & resource = set_bindings[set_it];
-					assertm(resource.resolvedBinding() == b, "Shader binding not found in bound set!");
-
-					Resource r = resource.resource();
-					const auto & meta = set_layout.metas()[i];
-					r._begin_state = ResourceState2{
-						.access = meta.access,
-						.layout = meta.layout,
-						.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
-					};
-					if (r._end_state)
-					{
-						r._end_state = r._begin_state;
-					}
-
-					synch.addSynch(r);
-				}
+				recordDescriptorSetSynch(synch, *bound_set, set_layout);
 			}
 		}
 	}

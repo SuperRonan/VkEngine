@@ -19,6 +19,7 @@
 
 #include <Core/Rendering/DebugRenderer.hpp>
 #include <Core/Rendering/RenderObjects.hpp>
+#include <Core/Rendering/Model.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -138,6 +139,7 @@ namespace vkl
 				},
 			});
 			exec.declare(final_image);
+			
 
 
 			Renderer renderer(Renderer::CI{
@@ -147,26 +149,27 @@ namespace vkl
 				.target = final_image,
 			});
 
-			DebugRenderer debugger(DebugRenderer::CreateInfo{
-				.exec = exec,
-				.target = final_image,
-				.depth = renderer.depth(),
-			});
-
-			//std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SMI{
-			//	.app = this,
-			//	.radius = 1,
-			//	//.theta_divisions = 180,
-			//	//.phi_divisions = 360,
-			//});
-
 			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PMI{
 				.app = this,
 				.radius = 0.5,
 				.face_normal = false,
 			});
 
-			exec.declare(mesh);
+			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+				.app = this,
+				.name = "Model",
+				.mesh = mesh,
+			});
+			exec.declare(model);
+
+			std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(Model::SetLayoutOptions{.app = this});
+			const uint32_t model_set = descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
+			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
+			MultiDescriptorSetsLayouts sets_layouts;
+			sets_layouts += {0, common_layout};
+
+
+			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
 
 			struct UBO
 			{
@@ -200,11 +203,13 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
 				.name = "Render",
-				.vertex_input_desc = RigidMesh::vertexInputDesc(),
+				.vertex_input_desc = RigidMesh::vertexInputDescStatic(),
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.sets_layouts = (sets_layouts + std::pair{model_set, model_layout}),
 				.bindings = {
 					Binding{
 						.buffer = ubo_buffer,
+						.binding = 0,
 					},
 				},
 				.color_attachements = {final_image},
@@ -227,9 +232,11 @@ namespace vkl
 				.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 				.draw_count = 3,
 				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
 						.buffer = ubo_buffer,
+						.binding = 0,
 					}
 				},
 				.color_attachements = {final_image},
@@ -312,7 +319,7 @@ namespace vkl
 
 					window->declareImGui();
 
-					debugger.declareImGui();
+					exec.getDebugRenderer()->declareImGui();
 				}
 				ImGui::EndFrame();
 
@@ -331,11 +338,11 @@ namespace vkl
 
 					if (frame_index == 0)
 					{
-						UploadMesh mesh_uploader(UploadMesh::CI{
+						UploadResources mesh_uploader(UploadResources::CI{
 							.app = this,
 						});
-						exec(mesh_uploader(UploadMesh::UI{
-							.mesh = mesh,
+						exec(mesh_uploader(UploadResources::UI{
+							.holder = mesh,
 						}));
 					}
 
@@ -343,17 +350,15 @@ namespace vkl
 						exec(update_ubo);
 
 						exec(render->with(VertexCommand::DrawInfo{
-							.meshes = {
-								{.mesh = mesh, .pc = glm::mat4(1)},
+							.drawables = {
+								{.drawable = model, .pc = glm::mat4(1)},
 							},
 						}));
 
 						exec(show_3D_basis);
-
-						debugger.execute();
 					}
 
-
+					exec.renderDebugIFN();
 					ImGui::Render();
 					exec.preparePresentation(final_image);
 					

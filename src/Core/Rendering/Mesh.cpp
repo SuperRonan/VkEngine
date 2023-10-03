@@ -1,6 +1,8 @@
 #include "Mesh.hpp"
 #include <numeric>
 #include <numbers>
+#include <Core/VkObjects/Pipeline.hpp>
+#include <Core/Execution/SynchronizationHelper.hpp>
 
 namespace vkl
 {
@@ -10,7 +12,7 @@ namespace vkl
 	{}
 
 
-	VertexInputDescription RigidMesh::vertexInputDesc()
+	VertexInputDescription RigidMesh::vertexInputDescStatic()
 	{
 		VertexInputDescription res;
 		res.binding = {
@@ -83,6 +85,11 @@ namespace vkl
 		if (ci.auto_compute_tangents)
 		{
 			computeTangents();
+		}
+
+		if (ci.create_device_buffer)
+		{
+			createDeviceBuffer({});
 		}
 	}
 	
@@ -374,16 +381,19 @@ namespace vkl
 		assert(_host.loaded);
 		assert(!_device.loaded());
 
-		DeviceData::Header header{
+		MeshHeader header{
 			.num_vertices = static_cast<uint32_t>(_host.vertices.size()),
 			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
 			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
-			.vertices_per_primitive = 3,
+			.flags = meshFlags(_host.index_type),
 		};
 
-		_device.header_size = sizeof(header);
-		_device.vertices_size = header.num_vertices * sizeof(Vertex);
-		_device.indices_size = _host.indexBufferSize();
+		const size_t ssbo_align = application()->deviceProperties().props.limits.minStorageBufferOffsetAlignment;
+		const size_t ubo_align = application()->deviceProperties().props.limits.minUniformBufferOffsetAlignment;
+		
+		_device.header_size = std::align(sizeof(header), ssbo_align);
+		_device.vertices_size = std::align(header.num_vertices * sizeof(Vertex), ssbo_align);
+		_device.indices_size = std::align(_host.indexBufferSize(), ssbo_align);
 		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
 		_device.num_indices = header.num_indices;
@@ -460,32 +470,18 @@ namespace vkl
 		};
 	}
 
-	bool RigidMesh::updateResources(UpdateContext& ctx)
-	{
-		bool res = false;
-		
-		if (!_device.loaded())
-		{
-			createDeviceBuffer({});
-		}
-		
-		res |= _device.mesh_buffer->updateResource(ctx);
-
-		return res;
-	}
-
-	Mesh::ResourcesToUpload RigidMesh::getResourcesToUpload()
+	ResourcesToUpload RigidMesh::getResourcesToUpload()
 	{
 		assert(_device.loaded());
 		ResourcesToUpload res;
 
 		std::vector<PositionedObjectView> sources(3);
 		
-		DeviceData::Header header{
+		MeshHeader header{
 			.num_vertices = static_cast<uint32_t>(_host.vertices.size()),
 			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
 			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
-			.vertices_per_primitive = 3,
+			.flags = meshFlags(_host.index_type),
 		};
 
 		sources[0] = PositionedObjectView{
@@ -510,6 +506,50 @@ namespace vkl
 		return res;
 	}
 
+	void RigidMesh::writeBindings(ShaderBindings& bindings)
+	{
+		assert(!!_device.mesh_buffer);
+		using namespace std::containers_operators;
+		bindings += ShaderBindingDescription{
+			.buffer = _device.mesh_buffer,
+			.buffer_range = Range_st{.begin = 0, .len = _device.header_size},
+			.binding = 0,
+		};
+
+		bindings += ShaderBindingDescription{
+			.buffer = _device.mesh_buffer,
+			.buffer_range = Range_st{ .begin = _device.header_size, .len = _device.vertices_size },
+			.binding = 1,
+		};
+
+		bindings += ShaderBindingDescription{
+			.buffer = _device.mesh_buffer,
+			.buffer_range = Range_st{ .begin = _device.header_size + _device.vertices_size, .len = _device.indices_size },
+			.binding = 2,
+		};
+	}
+
+	ResourcesToDeclare RigidMesh::getResourcesToDeclare()
+	{
+		ResourcesToDeclare res;
+		if (_device.mesh_buffer)
+		{
+			res.buffers.push_back(_device.mesh_buffer);
+		}
+		return res;
+	}
+
+	void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
+	{
+		synch.addSynch(Resource{
+			._buffer = _device.mesh_buffer,
+			._buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
+			._begin_state = ResourceState2{
+				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
+				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+			},
+		});
+	}
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeCube(CubeMakeInfo const& cmi)
 	{

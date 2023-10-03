@@ -313,7 +313,7 @@ namespace vkl
 			.definitions = ci.definitions 
 		}),
 		_draw_count(ci.draw_count),
-		_models(ci.models)
+		_drawables(ci.drawables)
 	{
 		createProgram();
 		createGraphicsResources();
@@ -400,7 +400,7 @@ namespace vkl
 		if (di.draw_count == 0)
 		{
 			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
-				const auto & layouts = _program->instance()->setsLayouts();
+				const auto & layouts = _program->instance()->reflectionSetsLayouts();
 				const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
 				if (set_index < layouts.size())
 				{
@@ -411,16 +411,17 @@ namespace vkl
 					return nullptr;
 				}
 			}();
-			// TODO
+			
 			// Synchronize for vertex attribute fetch and descriptor binding
-			//for (auto& mesh : di.meshes)
-			//{
-			//	const Resources & mesh_resources = mesh.mesh->getResourcesForDraw();
-			//	for (const auto& mr : mesh_resources)
-			//	{
-			//		synch.addSynch(mr);
-			//	}
-			//}
+			for (auto& drawable : di.drawables)
+			{
+				if (layout)
+				{
+					recordDescriptorSetSynch(synch, *drawable.drawable->setAndPool()->instance(), *layout);
+				}
+				
+				drawable.drawable->recordSynchForDraw(synch, _pipeline);
+			}
 		}
 	}
 
@@ -433,11 +434,18 @@ namespace vkl
 		}
 		else
 		{
-			for (auto& mesh : di.meshes)
+			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+			for (auto& drawable : di.drawables)
 			{
-				// TODO
-				//recordPushConstant(cmd, context, mesh.pc);
-				//mesh.mesh->recordBindAndDraw(cmd);
+				std::shared_ptr<DescriptorSetAndPoolInstance> set = drawable.drawable->setAndPool()->instance();
+				context.keppAlive(set);
+				if (set->exists() && !set->empty())
+				{
+					context.graphicsBoundSets().bind(set_index, set);
+				}
+				context.graphicsBoundSets().recordBinding(_pipeline->program()->instance()->pipelineLayout());
+				recordPushConstant(cmd, context, drawable.pc);
+				drawable.drawable->recordBindAndDraw(context);
 			}
 		}
 	}
@@ -465,7 +473,7 @@ namespace vkl
 
 		DrawInfo _di{
 			.draw_count = di.draw_count ? di.draw_count : (_draw_count.hasValue() ? _draw_count.value() : 0),
-			.meshes = di.meshes,
+			.drawables = di.drawables,
 		};
 
 		return [this, gdi, _di](ExecutionContext& ctx)

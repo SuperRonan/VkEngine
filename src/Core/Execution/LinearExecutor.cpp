@@ -106,11 +106,6 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<Mesh> mesh)
-	{
-		_registered_meshes.emplace_back(std::move(mesh));
-	}
-
 	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
 	{
 		_registered_samplers.emplace_back(std::move(sampler));
@@ -119,6 +114,32 @@ namespace vkl
 	void LinearExecutor::declare(std::shared_ptr<DescriptorSetAndPool> set)
 	{
 		_registered_descriptor_sets.emplace_back(std::move(set));
+	}
+
+	void LinearExecutor::declare(std::shared_ptr<ResourcesHolder> holder)
+	{
+		ResourcesToDeclare res = holder->getResourcesToDeclare();
+
+		for (std::shared_ptr<ImageView>& img : res.images)
+		{
+			declare(img);
+		}
+		for (std::shared_ptr<Buffer>& buffer : res.buffers)
+		{
+			declare(buffer);
+		}
+		for (std::shared_ptr<Sampler>& sampler : res.samplers)
+		{
+			declare(sampler);
+		}
+		for (std::shared_ptr<DescriptorSetAndPool>& set : res.sets)
+		{
+			declare(set);
+		}
+		for (std::shared_ptr<Command>& cmd : res.commands)
+		{
+			declare(cmd);
+		}
 	}
 
 	void LinearExecutor::init()
@@ -167,11 +188,6 @@ namespace vkl
 		if (_window->updateResources(update_context))
 		{
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
-		}
-
-		for (auto& mesh : _registered_meshes)
-		{
-			const bool invalidated = mesh->updateResources(update_context);
 		}
 
 		for (auto& image_view : _registered_images)

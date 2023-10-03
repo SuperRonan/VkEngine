@@ -978,18 +978,18 @@ namespace vkl
 
 
 
-	UploadMesh::UploadMesh(CreateInfo const& ci) :
+	UploadResources::UploadResources(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
-		_mesh(ci.mesh)
+		_holder(ci.holder)
 	{
 
 	}
 
-	void UploadMesh::execute(ExecutionContext& ctx, UploadInfo const& ui)
+	void UploadResources::execute(ExecutionContext& ctx, UploadInfo const& ui)
 	{
-		assert(!!ui.mesh);
+		assert(!!ui.holder);
 
-		Mesh::ResourcesToUpload resources = ui.mesh->getResourcesToUpload();
+		ResourcesToUpload resources = ui.holder->getResourcesToUpload();
 
 		if (!resources.images.empty())
 		{
@@ -1024,21 +1024,21 @@ namespace vkl
 			}
 		}
 
-		ui.mesh->notifyDeviceDataIsUpToDate();
+		ui.holder->notifyDataIsUploaded();
 	}
 
-	void UploadMesh::execute(ExecutionContext& ctx)
+	void UploadResources::execute(ExecutionContext& ctx)
 	{
 		UploadInfo ui{
-			.mesh = _mesh,
+			.holder = _holder,
 		};
 		execute(ctx, ui);
 	}
 
-	Executable UploadMesh::with(UploadInfo const& ui)
+	Executable UploadResources::with(UploadInfo const& ui)
 	{
 		const UploadInfo _ui{
-			.mesh = ui.mesh ? ui.mesh : _mesh,
+			.holder = ui.holder ? ui.holder : _holder,
 		};
 		return [this, _ui](ExecutionContext & ctx)
 		{

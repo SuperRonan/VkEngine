@@ -23,6 +23,8 @@ namespace vkl
 
 		PushConstant _pc;
 
+		void recordDescriptorSetSynch(SynchronizationHelper & synch, DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout);
+
 	public:
 
 		struct CreateInfo

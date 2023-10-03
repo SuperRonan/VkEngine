@@ -5,6 +5,7 @@
 
 #include <Core/Execution/DefinitionMap.hpp>
 #include <Core/Commands/ShaderCommand.hpp>
+#include <Core/Execution/ResourcesHolder.hpp>
 
 namespace vkl
 {
@@ -58,11 +59,11 @@ namespace vkl
 
 		virtual void release(std::shared_ptr<Buffer> buffer) = 0;
 
-		virtual void declare(std::shared_ptr<Mesh> mesh) = 0;
-
 		virtual void declare(std::shared_ptr<Sampler> sampler) = 0;
 
 		virtual void declare(std::shared_ptr<DescriptorSetAndPool> set) = 0;
+
+		virtual void declare(std::shared_ptr<ResourcesHolder> holder) = 0;
 
 		virtual void init() = 0;
 

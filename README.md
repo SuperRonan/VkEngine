@@ -57,13 +57,16 @@
 	- [x] Correctly track potentially overlapping subresources
 		- [x] for Buffers
 		- [x] for Images
-- [ ] Fix synchronization validation errors
-- [ ] Re use descriptor sets
-	- [ ] set = 0: common set (debug, ...), managed by the executor
+- [x] Fix synchronization validation errors
+- [x] Re use descriptor sets
+	- [x] set = 0: common set (debug, ...), managed by the executor
 	- [ ] set = 1: scene set
 	- [ ] set = 2: module set
-	- [ ] set = 3: shader set
-	- [ ] set = 4: push_descriptor set (shader invocation specific data)
+	- [x] set = 3: shader set
+	- [x] set = 4: push_descriptor set (shader invocation specific data)
+- [ ] CmdBuffer bindings (pipeline + desc sets)
+	- [ ] Bind pipeline -> reset desc bindings?
+- [ ] DescSetLayout cache managed by the application
 - [ ] Accumulate all descriptor updates in the UpdateContext
 - [ ] Multi window mode (without ImGui)
 - [ ] Buffer / Image on recreate instance command policy (copy content)

@@ -499,7 +499,7 @@ namespace vkl
 
 	void VkApplication::queryDescriptorBindingOptions()
 	{
-		_descriptor_binding_options.use_push_descriptors = hasDeviceExtension(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
+		_descriptor_binding_options.use_push_descriptors = false;//hasDeviceExtension(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
 		_descriptor_binding_options.set_bindings.resize(_device_props.props.limits.maxBoundDescriptorSets);
 		for (size_t i = 0; i < _descriptor_binding_options.set_bindings.size(); ++i)
 		{

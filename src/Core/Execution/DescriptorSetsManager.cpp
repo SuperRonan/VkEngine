@@ -478,7 +478,10 @@ namespace vkl
 			{
 				if (!!sets_layouts[s] && !!_bound_descriptor_sets[s])
 				{
-					func(_bound_descriptor_sets[s]);
+					if (!!func)
+					{
+						func(_bound_descriptor_sets[s]);
+					}
 					_vk_sets[s] = _bound_descriptor_sets[s]->set()->handle();
 					vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, s, 1, _vk_sets.data() + s, 0, nullptr);
 				}

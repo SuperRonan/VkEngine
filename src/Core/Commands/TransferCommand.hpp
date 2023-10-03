@@ -2,7 +2,7 @@
 
 #include "DeviceCommand.hpp"
 #include <Core/DynamicValue.hpp>
-#include <Core/Rendering/Mesh.hpp>
+#include <Core/Execution/ResourcesHolder.hpp>
 
 namespace vkl
 {
@@ -465,11 +465,11 @@ namespace vkl
 	};
 
 
-	class UploadMesh : public TransferCommand
+	class UploadResources : public TransferCommand
 	{
 	protected:
 	
-		std::shared_ptr<Mesh> _mesh;
+		std::shared_ptr<ResourcesHolder> _holder;
 
 	public:
 
@@ -477,17 +477,17 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::shared_ptr<Mesh> mesh = nullptr;
+			std::shared_ptr<ResourcesHolder> holder = nullptr;
 		};
 		using CI = CreateInfo;
 
-		UploadMesh(CreateInfo const& ci);
+		UploadResources(CreateInfo const& ci);
 
-		virtual ~UploadMesh() override = default;
+		virtual ~UploadResources() override = default;
 
 		struct UploadInfo
 		{
-			std::shared_ptr<Mesh> mesh = nullptr;
+			std::shared_ptr<ResourcesHolder> holder = nullptr;
 		};
 		using UI = UploadInfo;
 

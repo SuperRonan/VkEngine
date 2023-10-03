@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ShaderCommand.hpp"
-#include <Core/Rendering/Model.hpp>
+#include <Core/Rendering/Drawable.hpp>
 
 namespace vkl
 {
@@ -93,7 +93,7 @@ namespace vkl
 
 		ShaderPaths _shaders;
 
-		std::vector<std::shared_ptr<Model>> _models;
+		std::vector<std::shared_ptr<Drawable>> _drawables;
 
 		DynamicValue<uint32_t> _draw_count = 0;
 
@@ -113,7 +113,7 @@ namespace vkl
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			DynamicValue<uint32_t> draw_count = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
-			std::vector<std::shared_ptr<Model>> models = {};
+			std::vector<std::shared_ptr<Drawable>> drawables = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
@@ -135,7 +135,7 @@ namespace vkl
 
 		struct DrawModelInfo
 		{
-			std::shared_ptr<Model> model;
+			std::shared_ptr<Drawable> drawable;
 			PushConstant pc;
 		};
 		
@@ -145,7 +145,7 @@ namespace vkl
 			uint32_t draw_count = 0;
 			std::optional<VkViewport> viewport = {};
 
-			std::vector<DrawModelInfo> meshes;
+			std::vector<DrawModelInfo> drawables = {};
 		};
 		using DI = DrawInfo;
 
