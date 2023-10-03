@@ -10,11 +10,16 @@
 #include <memory>
 #include <type_traits>
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
+#include <Core/VkObjects/GenericCache.hpp>
 
 namespace vkl
 {
 	class StagingPool;
 	class CommandPool;
+	class DescriptorSetLayout;
+	using DescriptorSetLayoutCache = GenericCache<DescriptorSetLayout>;
+	template <class Key>
+	using DescriptorSetLayoutCacheImpl = GenericCacheImpl<Key, DescriptorSetLayout>;
 
 	template <class T>
 	using SPtr = std::shared_ptr<T>;
@@ -65,7 +70,6 @@ namespace vkl
 
 		Pools _pools = {};
 
-		//std::unique_ptr<StagingPool> _staging_pool;
 
 		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
 
@@ -91,6 +95,7 @@ namespace vkl
 		VulkanFeatures _requested_features = {};
 		VulkanFeatures _available_features = {};
 
+		std::vector<std::shared_ptr<DescriptorSetLayoutCache>> _desc_set_layout_caches;
 		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
 
 		virtual void requestFeatures(VulkanFeatures & features);
@@ -201,6 +206,12 @@ namespace vkl
 		const DescriptorSetBindingGlobalOptions& descriptorBindingGlobalOptions() const
 		{
 			return _descriptor_binding_options;
+		}
+
+		std::shared_ptr<DescriptorSetLayoutCache> & getDescSetLayoutCache(uint32_t s)
+		{
+			assert(s < deviceProperties().props.limits.maxBoundDescriptorSets);
+			return _desc_set_layout_caches[s];
 		}
 	};
 

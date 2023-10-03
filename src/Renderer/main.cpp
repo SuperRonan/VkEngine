@@ -162,7 +162,7 @@ namespace vkl
 			});
 			exec.declare(model);
 
-			std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(Model::SetLayoutOptions{.app = this});
+			std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(this, Model::SetLayoutOptions{});
 			const uint32_t model_set = descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
 			MultiDescriptorSetsLayouts sets_layouts;

@@ -53,17 +53,18 @@ namespace vkl
 
 		virtual std::shared_ptr<DescriptorSetLayout> setLayout() override final;
 
+
 		struct SetLayoutOptions
 		{
-			VkApplication * app = nullptr;
-
 			constexpr bool operator==(SetLayoutOptions const& o) const
 			{
-				return app == o.app;
+				return true;
 			}
 		};
 
-		static std::shared_ptr<DescriptorSetLayout> setLayout(SetLayoutOptions const& options);
+		using ModelSetLayoutCache = DescriptorSetLayoutCacheImpl<SetLayoutOptions>;
+
+		static std::shared_ptr<DescriptorSetLayout> setLayout(VkApplication * app, SetLayoutOptions const& options);
 
 		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool();
 

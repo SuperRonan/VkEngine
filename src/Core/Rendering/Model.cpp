@@ -65,46 +65,26 @@ namespace vkl
 	{
 		if (!_set_layout)
 		{
-			_set_layout = setLayout(SetLayoutOptions{
-				.app = application(),
+			_set_layout = setLayout(application(), SetLayoutOptions{
+				
 			});
 		}
 		return _set_layout;
 	}
 
 
-	std::shared_ptr<DescriptorSetLayout> Model::setLayout(SetLayoutOptions const& options)
+	std::shared_ptr<DescriptorSetLayout> Model::setLayout(VkApplication * app, SetLayoutOptions const& options)
 	{
-		struct CachedSetLayout
+		std::shared_ptr<DescriptorSetLayoutCache> & gen_cache = app->getDescSetLayoutCache(app->descriptorBindingGlobalOptions().set_bindings[uint32_t(DescriptorSetName::object)].set);
+
+		if (!gen_cache)
 		{
-			SetLayoutOptions options;
-			std::shared_ptr<DescriptorSetLayout> layout;
-		};
+			gen_cache = std::make_shared<ModelSetLayoutCache>();
+		}
 
-		static std::vector<CachedSetLayout> _cached;
+		ModelSetLayoutCache * cache = dynamic_cast<ModelSetLayoutCache*>(gen_cache.get());
 
-		auto findSetLayoutIFP = [](SetLayoutOptions const& options) -> std::shared_ptr<DescriptorSetLayout>
-		{
-			for (size_t i = 0; i < _cached.size(); ++i)
-			{
-				if (_cached[i].options == options)
-				{
-					return _cached[i].layout;
-				}
-			}
-			return nullptr;
-		};
-
-		auto cacheSetLayout = [&findSetLayoutIFP](SetLayoutOptions const& options, std::shared_ptr<DescriptorSetLayout> layout)
-		{
-			assert(!findSetLayoutIFP(options));
-			_cached.push_back(CachedSetLayout{
-				.options = options,
-				.layout = layout,
-			});
-		};
-
-		std::shared_ptr<DescriptorSetLayout> res = findSetLayoutIFP(options);
+		std::shared_ptr<DescriptorSetLayout> res = cache->findIFP(options);
 
 		if (!res)
 		{
@@ -153,7 +133,7 @@ namespace vkl
 
 			VkDescriptorSetLayoutCreateFlags flags = 0;
 			VkDescriptorBindingFlags binding_flags = 0;
-			if (options.app->descriptorBindingGlobalOptions().use_push_descriptors)
+			if (app->descriptorBindingGlobalOptions().use_push_descriptors)
 			{
 				flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
 			}
@@ -164,14 +144,14 @@ namespace vkl
 			}
 
 			res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
-				.app = options.app, 
+				.app = app, 
 				.name = "Model::DescriptorSetLayout",
 				.flags = flags,
 				.bindings = bindings,
 				.metas = metas,
 				.binding_flags = binding_flags,
 			});
-			cacheSetLayout(options, res);
+			cache->recordValue(options, res);
 		}
 		return res;
 	}
