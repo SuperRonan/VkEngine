@@ -198,7 +198,7 @@ namespace vkl
 	{
 		assert(!_target);
 		_target = target;
-		_depth = _depth;
+		_depth = depth;
 		createRenderShader();
 	}
 

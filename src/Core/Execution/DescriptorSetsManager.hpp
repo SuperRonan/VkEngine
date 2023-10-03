@@ -145,7 +145,7 @@ namespace vkl
 		std::shared_ptr<CommandBuffer> _cmd;
 
 		VkPipelineBindPoint _pipeline_binding;
-		
+
 		std::vector<std::shared_ptr<DescriptorSetAndPoolInstance>> _bound_descriptor_sets;
 
 		std::vector<Range32> _bindings_ranges;
@@ -174,6 +174,8 @@ namespace vkl
 		using PerBindingFunction = std::function<void(std::shared_ptr<DescriptorSetAndPoolInstance>)>;
 
 		void recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func = nullptr);
+
+		void bindOneAndRecord(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set, std::shared_ptr<PipelineLayout> const& layout);
 
 		const std::shared_ptr<DescriptorSetAndPoolInstance> & getSet(uint32_t s) const;
 	};

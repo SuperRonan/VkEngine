@@ -435,15 +435,15 @@ namespace vkl
 		else
 		{
 			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+			const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
 			for (auto& drawable : di.drawables)
 			{
 				std::shared_ptr<DescriptorSetAndPoolInstance> set = drawable.drawable->setAndPool()->instance();
 				context.keppAlive(set);
 				if (set->exists() && !set->empty())
 				{
-					context.graphicsBoundSets().bind(set_index, set);
+					context.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
 				}
-				context.graphicsBoundSets().recordBinding(_pipeline->program()->instance()->pipelineLayout());
 				recordPushConstant(cmd, context, drawable.pc);
 				drawable.drawable->recordBindAndDraw(context);
 			}
