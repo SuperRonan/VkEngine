@@ -49,8 +49,12 @@ namespace vkl
 		MultiDescriptorSetsLayouts sets_layouts;
 		sets_layouts += {0, _exec.getCommonSetLayout()};
 
+		std::vector<std::string> defs;
+		using namespace std::containers_operators;
+
 		if (application()->availableFeatures().mesh_shader_ext.meshShader)
 		{
+			defs += "MESH_PIPELINE 1"s;
 			_render_strings_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderStrings",
@@ -69,12 +73,14 @@ namespace vkl
 				.write_depth = false,
 				.mesh_shader_path = shaders,
 				.fragment_shader_path = shaders,
+				.definitions = defs,
 				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			_exec.declare(_render_strings_with_mesh);
 		}
 		else
 		{
+			defs += "GEOMETRY_PIPELINE 1"s;
 			_render_strings_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderStrings",
@@ -93,6 +99,7 @@ namespace vkl
 				.vertex_shader_path = shaders,
 				.geometry_shader_path = shaders,
 				.fragment_shader_path = shaders,
+				.definitions = defs,
 				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			_exec.declare(_render_strings_with_geometry);

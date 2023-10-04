@@ -33,6 +33,12 @@ void main()
 
 #endif
 
+struct Varying
+{
+	vec2 uv;
+	vec4 ft_color;
+	vec4 bg_color;
+};
 
 #if SHADER_SEMANTIC_GEOMETRY
 
@@ -42,18 +48,9 @@ layout(location = 0) in uint vid[1];
 
 layout(triangle_strip, max_vertices=4) out;
 
-struct Varying
-{
-	uint string_index;
-	vec2 uv;
-	vec4 font_color;
-	vec4 back_color;
-};
 
-layout(location = 0) out flat uint v_string_index;
-layout(location = 1) out vec2 v_uv;
-layout(location = 2) out vec4 v_ft_color;
-layout(location = 3) out vec4 v_bg_color;
+layout(location = 0) out Varying v_out;
+layout(location = 3) out flat uint v_string_index;
 
 layout(push_constant) uniform PushConstantBinding
 {
@@ -98,36 +95,36 @@ void main()
 
 		{
 			v_string_index = index;
-			v_uv = vec2(0, 0);
-			v_ft_color = meta.color;
-			v_bg_color = meta.back_color;
+			v_out.uv = vec2(0, 0);
+			v_out.ft_color = meta.color;
+			v_out.bg_color = meta.back_color;
 			gl_Position = vec4(tl, position.zw);
 			EmitVertex();
 		}
 
 		{
 			v_string_index = index;
-			v_uv = vec2(0, 1);
-			v_ft_color = meta.color;
-			v_bg_color = meta.back_color;
+			v_out.uv = vec2(0, 1);
+			v_out.ft_color = meta.color;
+			v_out.bg_color = meta.back_color;
 			gl_Position = vec4(bl, position.zw);
 			EmitVertex();
 		}
 
 		{
 			v_string_index = index;
-			v_uv = vec2(len, 0);
-			v_ft_color = meta.color;
-			v_bg_color = meta.back_color;
+			v_out.uv = vec2(len, 0);
+			v_out.ft_color = meta.color;
+			v_out.bg_color = meta.back_color;
 			gl_Position = vec4(tr, position.zw);
 			EmitVertex();
 		}
 
 		{
 			v_string_index = index;
-			v_uv = vec2(len, 1);
-			v_ft_color = meta.color;
-			v_bg_color = meta.back_color;
+			v_out.uv = vec2(len, 1);
+			v_out.ft_color = meta.color;
+			v_out.bg_color = meta.back_color;
 			gl_Position = vec4(br, position.zw);
 			EmitVertex();
 		}
@@ -150,10 +147,8 @@ void main()
 #define MAX_VERTICES (LOCAL_SIZE_X * 4)
 #define MAX_PRIMITIVES (LOCAL_SIZE_X * 2)
 
-layout(location = 0) out flat uint v_string_index[];
-layout(location = 1) out vec2 v_uv[];
-layout(location = 2) out vec4 v_ft_color[];
-layout(location = 3) out vec4 v_bg_color[];
+layout(location = 0) out Varying v_out[];
+layout(location = 3) out perprimitiveEXT uint v_string_index[];
 
 layout(push_constant) uniform PushConstantBinding
 {
@@ -219,35 +214,36 @@ void main()
 		const vec2 bl = tl + vec2(0, gs.y);
 
 		{
-			v_string_index[base_vert_id + 0] = index;
-			v_uv[base_vert_id + 0] = vec2(0, 0);
-			v_ft_color[base_vert_id + 0] = meta.color;
-			v_bg_color[base_vert_id + 0] = meta.back_color;
+			// v_string_index[base_vert_id + 0] = index;
+			v_out[base_vert_id + 0].uv = vec2(0, 0);
+			v_out[base_vert_id + 0].ft_color = meta.color;
+			v_out[base_vert_id + 0].bg_color = meta.back_color;
 			gl_MeshVerticesEXT[base_vert_id + 0].gl_Position = vec4(tl, position.zw);
 
-			v_string_index[base_vert_id + 1] = index;
-			v_uv[base_vert_id + 1] = vec2(0, 1);
-			v_ft_color[base_vert_id + 1] = meta.color;
-			v_bg_color[base_vert_id + 1] = meta.back_color;
+			// v_string_index[base_vert_id + 1] = index;
+			v_out[base_vert_id + 1].uv = vec2(0, 1);
+			v_out[base_vert_id + 1].ft_color = meta.color;
+			v_out[base_vert_id + 1].bg_color = meta.back_color;
 			gl_MeshVerticesEXT[base_vert_id + 1].gl_Position = vec4(bl, position.zw);
 
-			v_string_index[base_vert_id + 2] = index;
-			v_uv[base_vert_id + 2] = vec2(len, 0);
-			v_ft_color[base_vert_id + 2] = meta.color;
-			v_bg_color[base_vert_id + 2] = meta.back_color;
+			// v_string_index[base_vert_id + 2] = index;
+			v_out[base_vert_id + 2].uv = vec2(len, 0);
+			v_out[base_vert_id + 2].ft_color = meta.color;
+			v_out[base_vert_id + 2].bg_color = meta.back_color;
 			gl_MeshVerticesEXT[base_vert_id + 2].gl_Position = vec4(tr, position.zw);
 
-			v_string_index[base_vert_id + 3] = index;
-			v_uv[base_vert_id + 3] = vec2(len, 1);
-			v_ft_color[base_vert_id + 3] = meta.color;
-			v_bg_color[base_vert_id + 3] = meta.back_color;
+			// v_string_index[base_vert_id + 3] = index;
+			v_out[base_vert_id + 3].uv = vec2(len, 1);
+			v_out[base_vert_id + 3].ft_color = meta.color;
+			v_out[base_vert_id + 3].bg_color = meta.back_color;
 			gl_MeshVerticesEXT[base_vert_id + 3].gl_Position = vec4(br, position.zw); 
 		}
 
 
 		gl_PrimitiveTriangleIndicesEXT[base_primitive_id + 0] = uvec3(base_vert_id + 0, base_vert_id + 1, base_vert_id + 2);
 		gl_PrimitiveTriangleIndicesEXT[base_primitive_id + 1] = uvec3(base_vert_id + 3, base_vert_id + 2, base_vert_id + 1);
-		
+		v_string_index[base_primitive_id + 0] = index;
+		v_string_index[base_primitive_id + 1] = index;
 	}
 #else
 	SetMeshOutputsEXT(0, 0);
@@ -258,19 +254,25 @@ void main()
 
 #if SHADER_SEMANTIC_FRAGMENT
 
+
 layout(SHADER_DESCRIPTOR_BINDING + 0) uniform sampler2DArray glyphs;
 
-layout(location = 0) in flat uint v_string_index;
-layout(location = 1) in vec2 v_uv;
-layout(location = 2) in vec4 v_ft_color;
-layout(location = 3) in vec4 v_bg_color;
+layout(location = 0) in Varying v_in;
+#if MESH_PIPELINE
+#extension GL_EXT_mesh_shader : require
+layout(location = 3) in perprimitiveEXT flat uint v_string_index;
+#elif GEOMETRY_PIPELINE
+layout(location = 3) in flat uint v_string_index;
+#else
+#error "Unknown pipeline"
+#endif
 
 layout(location = 0) out vec4 o_color;
 
 void main()
 {
 #if GLOBAL_ENABLE_GLSL_DEBUG
-	const vec2 uv_in_str = v_uv;
+	const vec2 uv_in_str = v_in.uv;
 	const uint char_index = uint(uv_in_str.x);
 	const uint char_chunk = _debug.strings[v_string_index].data[char_index / 4];
 	const uint ascii = getCharInChunk(char_chunk, char_index % 4);
@@ -278,7 +280,7 @@ void main()
 
 	float glyph_texel = textureLod(glyphs, vec3(uv_in_char, ascii), 0).x;
 
-	o_color = lerp(v_bg_color, v_ft_color, glyph_texel);
+	o_color = lerp(v_in.bg_color, v_in.ft_color, glyph_texel);
 #endif
 }
 
