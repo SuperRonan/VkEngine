@@ -21,6 +21,7 @@ layout(push_constant) uniform PushConstants
 {
 	mat4 matrix;
 	float zoom;
+	uint num_particules;
 } _pc;
 
 void main()

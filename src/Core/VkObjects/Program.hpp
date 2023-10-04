@@ -126,7 +126,7 @@ namespace vkl
 		// Mesh (or task if present) local_size
 		VkExtent3D _local_size = makeZeroExtent3D();
 
-		void extractLocalSize();
+		void extractLocalSizeIFP();
 
 	public:
 

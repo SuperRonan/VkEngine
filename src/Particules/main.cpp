@@ -124,6 +124,8 @@ namespace vkl
 			dv_<uint32_t> rule_buffer_size = dv_<uint32_t>(&N_TYPES_PARTICULES) * (particule_props_size + N_TYPES_PARTICULES * force_rule_size) * 10;
 			
 			uint32_t seed = 0x2fe75454a5;
+
+			
 			
 			dv_<std::vector<std::string>> definitions = [&]() {
 				return std::vector<std::string>({
@@ -278,29 +280,61 @@ namespace vkl
 			});
 			exec.declare(copy_to_previous);
 
-			std::shared_ptr<VertexCommand> render = std::make_shared<VertexCommand>(VertexCommand::CI{
-				.app = this,
-				.name = "Render",
-				.draw_count = num_particules,
-				.sets_layouts = sets_layouts,
-				.bindings = {
-					Binding{
-						.buffer = current_particules,
-						.binding = 0,
+
+			std::shared_ptr<VertexCommand> render_with_geometry;
+			std::shared_ptr<MeshCommand> render_with_mesh;
+			if(availableFeatures().mesh_shader_ext.meshShader)
+			{
+				render_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
+					.app = this,
+						.name = "RenderWithMesh",
+						.dispatch_size = [&]() {return VkExtent3D{ .width = *num_particules, .height = 1, .depth = 1 }; },
+						.dispatch_threads = true,
+						.sets_layouts = sets_layouts,
+						.bindings = {
+							Binding{
+								.buffer = current_particules,
+								.binding = 0,
+							},
+							Binding{
+								.buffer = particule_rules_buffer,
+								.binding = 1,
+							},
 					},
-					Binding{
-						.buffer = particule_rules_buffer,
-						.binding = 1,
+					.color_attachements = { render_target_view },
+					.mesh_shader_path = shaders / "render.mesh",
+					.fragment_shader_path = shaders / "render.frag",
+					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("MESH_PIPELINE 1"s); return res; },
+					.clear_color = VkClearColorValue{ .int32 = {0, 0, 0, 0} },
+				});
+				exec.declare(render_with_mesh);
+			}
+			else
+			{
+				render_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
+					.app = this,
+						.name = "RenderWithGeom",
+						.draw_count = num_particules,
+						.sets_layouts = sets_layouts,
+						.bindings = {
+							Binding{
+								.buffer = current_particules,
+								.binding = 0,
+							},
+							Binding{
+								.buffer = particule_rules_buffer,
+								.binding = 1,
+							},
 					},
-				},
-				.color_attachements = {render_target_view},
-				.vertex_shader_path = shaders / "render.vert",
-				.geometry_shader_path = shaders / "render.geom",
-				.fragment_shader_path = shaders / "render.frag",
-				.definitions = definitions,
-				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-			});
-			exec.declare(render);
+					.color_attachements = { render_target_view },
+					.vertex_shader_path = shaders / "render.vert",
+					.geometry_shader_path = shaders / "render.geom",
+					.fragment_shader_path = shaders / "render.frag",
+					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("GEOMETRY_PIPELINE 1"s); return res; },
+					.clear_color = VkClearColorValue{ .int32 = {0, 0, 0, 0} },
+				});
+				exec.declare(render_with_geometry);
+			}
 
 			float friction = 1.0;
 			bool reset_particules = true;
@@ -317,6 +351,7 @@ namespace vkl
 			{
 				glm::mat4 matrix;
 				float zoom;
+				uint32_t num_particules;
 			};
 
 			
@@ -446,12 +481,22 @@ namespace vkl
 						}));
 					}
 					
+					RenderPC render_pc = {
+						.matrix = glm::mat4(mat_world_to_cam.value()),
+						.zoom = static_cast<float>(mouse_handler.getScroll()),
+						.num_particules = num_particules.value(),
+					};
+
+					if (render_with_mesh)
 					{
-						exec(render->with({
-							.pc = RenderPC{
-								.matrix = glm::mat4(mat_world_to_cam.value()),
-								.zoom = static_cast<float>(mouse_handler.getScroll()),
-							},
+						exec(render_with_mesh->with({
+							.pc = render_pc,
+						}));
+					}
+					else if(render_with_geometry)
+					{
+						exec(render_with_geometry->with({
+							.pc = render_pc,
 						}));
 					}
 

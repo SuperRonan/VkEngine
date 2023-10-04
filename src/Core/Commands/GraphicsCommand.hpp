@@ -219,7 +219,7 @@ namespace vkl
 		{
 			PushConstant pc = {};
 			std::optional<VkExtent3D> dispatch_size = {};
-			std::optional<bool> dispatch_threads = false;
+			std::optional<bool> dispatch_threads = {};
 			std::optional<VkViewport> viewport = {};
 		};
 		using DI = DrawInfo;
@@ -239,11 +239,12 @@ namespace vkl
 
 		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
 		{
-			const std::shared_ptr<ComputeProgramInstance>& prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
+			const std::shared_ptr<GraphicsProgramInstance>& prog = std::dynamic_pointer_cast<GraphicsProgramInstance>(_program->instance());
+			const VkExtent3D lcl = prog->localSize(); 
 			return VkExtent3D{
-				.width = std::divCeil(threads.width, prog->localSize().width),
-				.height = std::divCeil(threads.height, prog->localSize().height),
-				.depth = std::divCeil(threads.depth, prog->localSize().depth),
+				.width = std::divCeil(threads.width, lcl.width),
+				.height = std::divCeil(threads.height, lcl.height),
+				.depth = std::divCeil(threads.depth, lcl.depth),
 			};
 		}
 	};

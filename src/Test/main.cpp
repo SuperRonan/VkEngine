@@ -37,6 +37,11 @@ int main(int argc, const char** argv)
 
 	std::vector e = d + "e"s;
 
+
+	Dyn<std::vector<std::string>> s = {{"a"s, "b"s}};
+	// TODO make this line work
+	//Dyn<std::vector<std::string>> t = s + "c"s;
+
 	return 0;
 }
 

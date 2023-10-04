@@ -170,7 +170,7 @@ option(BUILD_PROJECTS ON)
 
 if(${BUILD_PROJECTS})
 
-	# AddProject(Test)
+	AddProject(Test)
 
 	AddProject(GameOfLife "GOL")
 

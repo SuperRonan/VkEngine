@@ -405,6 +405,8 @@ namespace vkl
 		if (_fragment)		_shaders.push_back(_fragment);
 		
 		createLayout();
+
+		
 	}
 
 	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoMesh const& ci) :
@@ -422,14 +424,19 @@ namespace vkl
 		if (_fragment)		_shaders.push_back(_fragment);
 
 		createLayout();
+		
+		extractLocalSizeIFP();
 	}
 
-	void GraphicsProgramInstance::extractLocalSize()
+	void GraphicsProgramInstance::extractLocalSizeIFP()
 	{
 		std::shared_ptr<ShaderInstance> & shader = _task ? _task : _mesh;
-		const auto& refl = shader->reflection();
-		const auto& lcl = refl.entry_points[0].local_size;
-		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
+		if (shader)
+		{
+			const auto& refl = shader->reflection();
+			const auto& lcl = refl.entry_points[0].local_size;
+			_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
+		}
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoVertex const& civ) :
