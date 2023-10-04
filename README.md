@@ -66,9 +66,9 @@
 	- [x] set = 4: push_descriptor set (shader invocation specific data)
 - [ ] CmdBuffer bindings (pipeline + desc sets)
 	- [ ] Bind pipeline -> reset desc bindings?
-- [ ] DescSetLayout cache managed by the application
+- [x] DescSetLayout cache managed by the application
 - [ ] Accumulate all descriptor updates in the UpdateContext
-- [ ] Multi window mode (without ImGui)
+- [ ] Multi window mode (independent of ImGui)
 - [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
 
