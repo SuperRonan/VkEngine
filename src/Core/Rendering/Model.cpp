@@ -4,7 +4,9 @@ namespace vkl
 {
 
 	Model::Model(CreateInfo const& ci):
-		Drawable(ci.app, ci.name),
+		VkObject(ci.app, ci.name),
+		Drawable(),
+		ResourcesHolder(),
 		_mesh(ci.mesh)
 	{
 		createSet();
@@ -56,7 +58,7 @@ namespace vkl
 
 	VertexInputDescription Model::vertexInputDescStatic()
 	{
-		VertexInputDescription res = RigidMesh::vertexInputDescStatic();
+		VertexInputDescription res = RigidMesh::vertexInputDescFullVertex();
 
 		return res;
 	}
@@ -158,7 +160,7 @@ namespace vkl
 
 	void Model::recordBindAndDraw(ExecutionContext& ctx)
 	{
-		_mesh->recordBindAndDraw(*ctx.getCommandBuffer());
+		_mesh->recordBindAndDraw(ctx);
 	}
 
 	void Model::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)

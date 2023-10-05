@@ -12,7 +12,7 @@ namespace vkl
 	{}
 
 
-	VertexInputDescription RigidMesh::vertexInputDescStatic()
+	VertexInputDescription RigidMesh::vertexInputDescFullVertex()
 	{
 		VertexInputDescription res;
 		res.binding = {
@@ -53,6 +53,52 @@ namespace vkl
 		return res;
 	}
 
+	VertexInputDescription RigidMesh::vertexInputDescOnlyPos3D()
+	{
+		VertexInputDescription res;
+		res.binding = {
+			VkVertexInputBindingDescription{
+				.binding = 0,
+				.stride = sizeof(vec3),
+				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+			},
+		};
+
+		res.attrib = {
+			VkVertexInputAttributeDescription{
+				.location = 0,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32B32_SFLOAT,
+				.offset = 0,
+			},
+		};
+
+		return res;
+	}
+
+	VertexInputDescription RigidMesh::vertexInputDescOnlyPos2D()
+	{
+		VertexInputDescription res;
+		res.binding = {
+			VkVertexInputBindingDescription{
+				.binding = 0,
+				.stride = sizeof(vec2),
+				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+			},
+		};
+
+		res.attrib = {
+			VkVertexInputAttributeDescription{
+				.location = 0,
+				.binding = 0,
+				.format = VK_FORMAT_R32G32_SFLOAT,
+				.offset = 0,
+			},
+		};
+
+		return res;
+	}
+
 	bool RigidMesh::checkIntegrity() const
 	{
 		bool res = true;
@@ -70,21 +116,30 @@ namespace vkl
 			.name = ci.name,
 		})
 	{
+		_host.dims = ci.dims;
+		_host.positions = ci.positions;
 		_host.vertices = ci.vertices;
 		_host.indices32 = ci.indices;
+		if (_host.vertices.empty())
+		{
+			_host.use_full_vertices = false;
+		}
 		_host.index_type = VK_INDEX_TYPE_UINT32;
 		_host.loaded = true;
 
 		compressIndices();
 
-		if (ci.compute_normals != 0)
+		if(_host.use_full_vertices)
 		{
-			computeNormals(ci.compute_normals);
-		}
+			if (ci.compute_normals != 0)
+			{
+				computeNormals(ci.compute_normals);
+			}
 
-		if (ci.auto_compute_tangents)
-		{
-			computeTangents();
+			if (ci.auto_compute_tangents)
+			{
+				computeTangents();
+			}
 		}
 
 		if (ci.create_device_buffer)
@@ -102,7 +157,7 @@ namespace vkl
 	void RigidMesh::compressIndices()
 	{
 		const bool index_uint8_t_available = application()->availableFeatures().index_uint8_ext.indexTypeUint8;
-		const size_t vs = _host.vertices.size();
+		const size_t vs = _host.numVertices();
 		const size_t is = _host.indicesSize();
 		const bool can8 = vs <= UINT8_MAX && index_uint8_t_available;
 		const bool can16 = vs <= UINT16_MAX;
@@ -184,9 +239,19 @@ namespace vkl
 
 	void RigidMesh::merge(RigidMesh const& other) noexcept
 	{
-		const size_t offset = _host.vertices.size();
-		_host.vertices.resize(offset + other._host.vertices.size());
-		std::copy(other._host.vertices.begin(), other._host.vertices.end(), _host.vertices.begin() + offset);
+		assert(_host.use_full_vertices == other._host.use_full_vertices);
+		assert(_host.dims == other._host.dims);
+		const size_t offset = _host.numVertices();
+		if (_host.use_full_vertices)
+		{
+			_host.vertices.resize(offset + other._host.vertices.size());
+			std::copy(other._host.vertices.begin(), other._host.vertices.end(), _host.vertices.begin() + offset);
+		}
+		else
+		{
+			_host.positions.resize(_host.positions.size() + other._host.positions.size());
+			std::copy(other._host.positions.begin(), other._host.positions.end(), _host.positions.begin() + (offset * _host.dims));
+		}
 		
 		const size_t old_size = _host.indicesSize();
 		const size_t new_size = old_size + other._host.indicesSize();
@@ -382,7 +447,7 @@ namespace vkl
 		assert(!_device.loaded());
 
 		MeshHeader header{
-			.num_vertices = static_cast<uint32_t>(_host.vertices.size()),
+			.num_vertices = static_cast<uint32_t>(_host.numVertices()),
 			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
 			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
 			.flags = meshFlags(_host.index_type),
@@ -409,50 +474,9 @@ namespace vkl
 		});
 	}
 
-	Resources RigidMesh::getResourcesForDraw()
+	void RigidMesh::recordBindAndDraw(ExecutionContext & ctx)
 	{
-		const bool separate_resource = false;
-		if(separate_resource)
-		{
-			return Resources{
-				Resource{
-					._buffer = _device.mesh_buffer,
-					._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size},
-					._begin_state = ResourceState2{
-						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-					},
-					._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				},
-				Resource{
-					._buffer = _device.mesh_buffer,
-					._buffer_range = Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
-					._begin_state = ResourceState2{
-						.access = VK_ACCESS_2_INDEX_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-					},
-					._buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				},
-			};
-		}
-		else
-		{
-			return Resources{
-				Resource{
-					._buffer = _device.mesh_buffer,
-					._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
-					._begin_state = ResourceState2{
-						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT | VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-					},
-					._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				},
-			};
-		}
-	}
-
-	void RigidMesh::recordBindAndDraw(CommandBuffer& command_buffer)const
-	{
+		VkCommandBuffer command_buffer = ctx.getCommandBuffer()->handle();
 		assert(_device.loaded());
 		VkBuffer vb = *_device.mesh_buffer->instance();
 		VkDeviceSize offset = _device.header_size;
@@ -478,7 +502,7 @@ namespace vkl
 		std::vector<PositionedObjectView> sources(3);
 		
 		MeshHeader header{
-			.num_vertices = static_cast<uint32_t>(_host.vertices.size()),
+			.num_vertices = static_cast<uint32_t>(_host.numVertices()),
 			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
 			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
 			.flags = meshFlags(_host.index_type),
@@ -489,10 +513,20 @@ namespace vkl
 			.pos = 0,
 		};
 
-		sources[1] = PositionedObjectView{
-			.obj = _host.vertices,
-			.pos = _device.header_size,
-		};
+		if (_host.use_full_vertices)
+		{
+			sources[1] = PositionedObjectView{
+				.obj = _host.vertices,
+				.pos = _device.header_size,
+			};
+		}
+		else
+		{
+			sources[1] = PositionedObjectView{
+				.obj = _host.positions,
+				.pos = _device.header_size,
+			};
+		}
 
 		sources[2] = PositionedObjectView{
 			.obj = _host.indicesView(),
@@ -541,6 +575,45 @@ namespace vkl
 
 	void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
 	{
+		//const bool separate_resource = false;
+		//if (separate_resource)
+		//{
+		//	return Resources{
+		//		Resource{
+		//			._buffer = _device.mesh_buffer,
+		//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size},
+		//			._begin_state = ResourceState2{
+		//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+		//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+		//			},
+		//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		//		},
+		//		Resource{
+		//			._buffer = _device.mesh_buffer,
+		//			._buffer_range = Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
+		//			._begin_state = ResourceState2{
+		//				.access = VK_ACCESS_2_INDEX_READ_BIT,
+		//				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+		//			},
+		//			._buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		//		},
+		//	};
+		//}
+		//else
+		//{
+		//	return Resources{
+		//		Resource{
+		//			._buffer = _device.mesh_buffer,
+		//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
+		//			._begin_state = ResourceState2{
+		//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
+		//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT | VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+		//			},
+		//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		//		},
+		//	};
+		//}
+
 		synch.addSynch(Resource{
 			._buffer = _device.mesh_buffer,
 			._buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
@@ -549,6 +622,44 @@ namespace vkl
 				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
 			},
 		});
+	}
+
+	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square2DMakeInfo const& smi)
+	{
+		using Float = float;
+		const Float h = Float(0.5);
+
+		const Vector2 c = smi.center;
+
+		std::shared_ptr<RigidMesh> res;
+
+		if (smi.wireframe)
+		{
+			std::vector<float> positions = {
+				c.x-h,	 c.y-h,
+				c.x-h,	 c.y+h,
+				c.x+h,	 c.y+h,
+				c.x+h,	 c.y-h,
+			};
+
+			std::vector<uint> indices = {
+				0, 1,
+				1, 2,
+				2, 3, 
+				3, 0,
+			};
+
+			res = std::make_shared<RigidMesh>(RigidMesh::CI{
+				.app = smi.app,
+				.name = smi.name,
+				.dims = 2,
+				.positions = std::move(positions),
+				.indices = std::move(indices),
+				.create_device_buffer = true,
+			});
+		}
+
+		return res;
 	}
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeCube(CubeMakeInfo const& cmi)
@@ -565,7 +676,7 @@ namespace vkl
 
 		if (cmi.face_normal)
 		{
-			Vector3 X(1, 0, 0), Y(0, 1, 0), Z(0, 0, 1);
+			const Vector3 X(1, 0, 0), Y(0, 1, 0), Z(0, 0, 1);
 			const auto sign = [](Float f) {return f > 0 ? Float(1) : (f < 0 ? Float(-1) : Float(0)); };
 			const auto addVertexes = [&](Float x, Float y, Float z, Float u, Float v)
 			{

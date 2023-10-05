@@ -112,3 +112,7 @@ vec2 UVToClipSpace(vec2 uv)
 #define oo_SQRT_2 rcp(SQRT_2)
 #define GOLDEN_RATIO ((1.0 + sqrt(5.0)) / 2.0)
 #define PHI GOLDEN_RATIO
+#define EPSILON_f 1.19209e-07f
+#define EPSILON_d double(2.22045e-16)
+#define EPSILON_h float16_t(1e-3) // TODO
+#define EPSILON EPSILON_f

@@ -34,9 +34,9 @@ namespace vkl
 			const MountingPoints * mounting_points;
 		};
 
-		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state);
+		std::optional<std::string> preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state);
 
-		std::string preprocessStrings(std::string const& glsl);
+		std::optional<std::string> preprocessStrings(std::string const& glsl);
 
 	public:
 
@@ -64,7 +64,7 @@ namespace vkl
 
 
 
-		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints * mounting_points);
+		std::optional<std::string> preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints * mounting_points);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 

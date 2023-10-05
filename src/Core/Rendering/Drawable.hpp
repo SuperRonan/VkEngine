@@ -8,12 +8,11 @@
 
 namespace vkl
 {
-	class Drawable : public VkObject
+	class Drawable
 	{
 		public:
 
-			Drawable(VkApplication * app, std::string const& name):
-				VkObject(app, name)
+			Drawable()
 			{}
 
 			virtual void recordSynchForDraw(SynchronizationHelper & synch, std::shared_ptr<Pipeline> const& pipeline) = 0;

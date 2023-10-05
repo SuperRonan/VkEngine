@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class Model : public Drawable, public ResourcesHolder
+	class Model : public VkObject, public Drawable, public ResourcesHolder
 	{
 	protected:
 		

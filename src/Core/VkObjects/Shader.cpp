@@ -66,10 +66,19 @@ namespace vkl
 		file.close();
 	}
 
-	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
+	std::optional<std::string> ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
 	{
 		_dependencies.push_back(path);
-		std::string content = readFileToString(path);
+		std::string content;
+		try
+		{
+			content = readFileToString(path);
+		}
+		catch (std::exception const& e)
+		{
+			std::cerr << e.what() << std::endl;
+			return {};
+		}
 
 		std::stringstream oss;
 
@@ -163,10 +172,18 @@ namespace vkl
 				
 				if (!preprocessing_state.pragma_once_files.contains(path_to_include))
 				{
-					const std::string included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state);
-					oss << "#line 1 " << path_to_include << "\n";
-					oss << included_code;
-					oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
+					const std::optional<std::string> included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state);
+					if (included_code.has_value())
+					{
+						oss << "#line 1 " << path_to_include << "\n";
+						oss << included_code.value();
+						oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
+					}
+					else
+					{
+						std::cerr << path << " : Failed to include " << path_to_include << std::endl;
+						return {};
+					}
 				}
 				else
 				{
@@ -184,7 +201,7 @@ namespace vkl
 		return oss.str();
 	}
 	
-	std::string ShaderInstance::preprocessStrings(const std::string& glsl)
+	std::optional<std::string> ShaderInstance::preprocessStrings(const std::string& glsl)
 	{
 		std::stringstream res;
 
@@ -304,14 +321,24 @@ namespace vkl
 		return _res;
 	}
 
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints* mounting_points)
+	std::optional<std::string> ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints* mounting_points)
 	{
 		PreprocessingState preprocessing_state = {
 			.mounting_points = mounting_points,
 		};
-		std::string full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state);
+		std::optional<std::string> full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state);
 
-		std::string final_source = preprocessStrings(full_source);
+		if (!full_source.has_value())
+		{
+			std::cerr << name() << ": Failed to preprocess includes and definitions of file " << path << std::endl;
+			return {};
+		}
+
+		std::optional<std::string> final_source = preprocessStrings(full_source.value());
+		if (!final_source.has_value())
+		{
+			std::cerr << name() << ": Failed to preprocess string of file " << path << std::endl;
+		}
 		return final_source;
 	}
 
@@ -496,13 +523,19 @@ namespace vkl
 				std::vector<std::string> defines = { semantic_definition };
 				defines += ci.definitions;
 
-				std::string preprocessed = preprocess(ci.source_path, defines, ci.mounting_points);
+				std::optional<std::string> preprocessed = preprocess(ci.source_path, defines, ci.mounting_points);
+
+				if (!preprocessed.has_value())
+				{
+					compile_time = std::chrono::file_clock::now();
+					continue;
+				}
 				
-				if (preprocessed == "")
+				if (preprocessed.value() == ""s)
 				{
 					continue;
 				}
-				bool res = compile(preprocessed, ci.source_path.string());
+				bool res = compile(preprocessed.value(), ci.source_path.string());
 				compile_time = std::chrono::file_clock::now();
 				if (res)
 				{

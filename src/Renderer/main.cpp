@@ -149,7 +149,7 @@ namespace vkl
 				.target = final_image,
 			});
 
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PMI{
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PlatonMakeInfo{
 				.app = this,
 				.radius = 0.5,
 				.face_normal = false,
@@ -203,7 +203,7 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = this,
 				.name = "Render",
-				.vertex_input_desc = RigidMesh::vertexInputDescStatic(),
+				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 				.sets_layouts = (sets_layouts + std::pair{model_set, model_layout}),
 				.bindings = {

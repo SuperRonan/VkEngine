@@ -3,6 +3,7 @@
 
 #include <Core/Rendering/Camera2D.hpp>
 #include <Core/Rendering/DebugRenderer.hpp>
+#include <Core/Rendering/Mesh.hpp>
 
 #include <Core/IO/MouseHandler.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
@@ -17,7 +18,10 @@
 #include <Core/Commands/GraphicsCommand.hpp>
 #include <Core/Commands/TransferCommand.hpp>
 #include <Core/Commands/ImguiCommand.hpp>
+
 #include <Core/Execution/LinearExecutor.hpp>
+
+#include <Core/Rendering/Transforms.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -38,15 +42,16 @@ namespace vkl
 		struct Particule
 		{
 			glm::vec2 position;
-			glm::vec2 velocity;
 			unsigned int type;
+			int pad1;
+			glm::vec2 velocity;
 			float radius;
+			int pad2;
 		};
 
 		virtual std::vector<const char* > getDeviceExtensions()override
 		{
 			std::vector<const char* > res = VkApplication::getDeviceExtensions();
-			//res.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
 			res.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
 			return res;
 		}
@@ -69,7 +74,6 @@ namespace vkl
 			VkWindow::CreateInfo window_ci{
 				.app = this,
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = &_present_mode,
 				.name = PROJECT_NAME,
 				.w = 900,
 				.h = 900,
@@ -89,7 +93,6 @@ namespace vkl
 
 			static int prev_pause = glfwGetKey(window, GLFW_KEY_SPACE);
 
-
 			if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 				glfwSetWindowShouldClose(window, true);
 
@@ -106,13 +109,10 @@ namespace vkl
 		{
 			using namespace std::containers_operators;
 
-			const uint32_t particule_size = sizeof(Particule);
+			const uint32_t particule_size = 2 * 4 * 4;
 			uint32_t num_particules_log2 = 10;
 			dv_<uint32_t> num_particules = [&num_particules_log2]() {
-				uint32_t res = 1;
-				for (uint32_t i = 0; i < num_particules_log2; ++i)
-					res *= 2;
-				return res;
+				return uint32_t(1 << num_particules_log2);
 			};
 			glm::vec2 world_size(2.0f, 2.0f);
 			uint32_t N_TYPES_PARTICULES = 3;
@@ -125,11 +125,13 @@ namespace vkl
 			
 			uint32_t seed = 0x2fe75454a5;
 
+			bool symmetric_forces = false;
 			
 			
 			dv_<std::vector<std::string>> definitions = [&]() {
 				return std::vector<std::string>({
-					std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
+					"N_TYPES_OF_PARTICULES "s + std::to_string(N_TYPES_PARTICULES),
+					"SYMMETRIC_FORCES "s + (symmetric_forces ? "1" : "0"),
 				});
 			};
 
@@ -147,6 +149,7 @@ namespace vkl
 			sets_layouts += {0, exec.getCommonSetLayout()};
 
 			exec.getCommonDefinitions().setDefinition("USE_HALF_STORAGE", std::to_string(use_half_storage));
+			exec.getCommonDefinitions().setDefinition("DIMENSIONS", "2");
 
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
@@ -181,7 +184,7 @@ namespace vkl
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
 				.extent = _main_window->extent3D(),
-				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_BITS,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 
@@ -192,7 +195,7 @@ namespace vkl
 			exec.declare(render_target_view);
 			exec.getDebugRenderer()->setTargets(render_target_view);
 			
-			const std::filesystem::path shaders = PROJECT_SRC_PATH;
+			const std::filesystem::path shaders = PROJECT_SRC_PATH "/../";
 
 			std::shared_ptr<ComputeCommand> init_particules = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = this,
@@ -215,8 +218,9 @@ namespace vkl
 			{
 				uint32_t number_of_particules;
 				uint32_t seed;
-				glm::vec2 wolrd_size;
-
+				int pad1;
+				int pad2;
+				glm::vec3 world_size;
 			};
 
 
@@ -267,8 +271,9 @@ namespace vkl
 			{
 				uint32_t number_of_particules;
 				float dt;
-				glm::vec2 world_size;
 				float friction;
+				uint32_t pad;
+				glm::vec3 world_size;
 			};
 
 			
@@ -287,25 +292,24 @@ namespace vkl
 			{
 				render_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
 					.app = this,
-						.name = "RenderWithMesh",
-						.dispatch_size = [&]() {return VkExtent3D{ .width = *num_particules, .height = 1, .depth = 1 }; },
-						.dispatch_threads = true,
-						.sets_layouts = sets_layouts,
-						.bindings = {
-							Binding{
-								.buffer = current_particules,
-								.binding = 0,
-							},
-							Binding{
-								.buffer = particule_rules_buffer,
-								.binding = 1,
-							},
+					.name = "RenderWithMesh",
+					.dispatch_size = [&]() {return VkExtent3D{ .width = *num_particules, .height = 1, .depth = 1 }; },
+					.dispatch_threads = true,
+					.sets_layouts = sets_layouts,
+					.bindings = {
+						Binding{
+							.buffer = current_particules,
+							.binding = 0,
+						},
+						Binding{
+							.buffer = particule_rules_buffer,
+							.binding = 1,
+						},
 					},
 					.color_attachements = { render_target_view },
-					.mesh_shader_path = shaders / "render.mesh",
-					.fragment_shader_path = shaders / "render.frag",
+					.mesh_shader_path = shaders / "render2D.mesh",
+					.fragment_shader_path = shaders / "render2D.frag",
 					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("MESH_PIPELINE 1"s); return res; },
-					.clear_color = VkClearColorValue{ .int32 = {0, 0, 0, 0} },
 				});
 				exec.declare(render_with_mesh);
 			}
@@ -313,28 +317,56 @@ namespace vkl
 			{
 				render_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
 					.app = this,
-						.name = "RenderWithGeom",
-						.draw_count = num_particules,
-						.sets_layouts = sets_layouts,
-						.bindings = {
-							Binding{
-								.buffer = current_particules,
-								.binding = 0,
-							},
-							Binding{
-								.buffer = particule_rules_buffer,
-								.binding = 1,
-							},
+					.name = "RenderWithGeom",
+					.draw_count = num_particules,
+					.sets_layouts = sets_layouts,
+					.bindings = {
+						Binding{
+							.buffer = current_particules,
+							.binding = 0,
+						},
+						Binding{
+							.buffer = particule_rules_buffer,
+							.binding = 1,
+						},
 					},
 					.color_attachements = { render_target_view },
 					.vertex_shader_path = shaders / "render.vert",
-					.geometry_shader_path = shaders / "render.geom",
-					.fragment_shader_path = shaders / "render.frag",
+					.geometry_shader_path = shaders / "render2D.geom",
+					.fragment_shader_path = shaders / "render2D.frag",
 					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("GEOMETRY_PIPELINE 1"s); return res; },
-					.clear_color = VkClearColorValue{ .int32 = {0, 0, 0, 0} },
 				});
 				exec.declare(render_with_geometry);
 			}
+
+			std::shared_ptr<RigidMesh> border_mesh = RigidMesh::MakeSquare(RigidMesh::Square2DMakeInfo{
+				.app = this,
+				.name = "Border_Mesh",
+				.wireframe = true,
+			});
+			exec.declare(border_mesh);
+
+			std::filesystem::path shader_lib = ENGINE_SRC_PATH "/Shaders/";
+
+			std::shared_ptr<VertexCommand> render_2D_lines = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = this,
+				.name = "RenderBorder",
+				.vertex_input_desc = RigidMesh::vertexInputDescOnlyPos2D(),
+				.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.sets_layouts = sets_layouts,
+				.color_attachements = {render_target_view},
+				.vertex_shader_path = shader_lib / "Rendering/Mesh/render2D.glsl",
+				.fragment_shader_path = shader_lib / "Rendering/Mesh/render2D.glsl",
+			});
+			exec.declare(render_2D_lines);
+			struct Render2DLinesPushConstant
+			{
+				glm::mat4 matrix;
+				glm::vec4 color;
+			};
+
+			bool render_border = true;
 
 			float friction = 1.0;
 			bool reset_particules = true;
@@ -357,14 +389,6 @@ namespace vkl
 			
 
 			exec.init();
-
-			ImGuiRadioButtons gui_present_modes({
-				"Immediate",
-				"Mailbox",
-				"Fifo",
-				"Fifo relaxed",
-			});
-			
 
 			bool paused = true;
 
@@ -415,11 +439,13 @@ namespace vkl
 					ImGui::Checkbox("reset rules", &reset_rules);
 					ImGui::Checkbox("reset particules", &reset_particules);
 
-					ImGui::SliderFloat2("World Size", (float*)&world_size, 0.0, 10.0);
+					ImGui::Checkbox("symmetric forces", &symmetric_forces);
 
-					ImGui::Text("Present mode");
-					gui_present_modes.declare();
-					_present_mode = static_cast<VkPresentModeKHR>(gui_present_modes.index());
+					ImGui::SliderFloat2("World Size", (float*)&world_size, 0.0, 10.0);
+					ImGui::Checkbox("render border", &render_border);
+
+					
+					_main_window->declareImGui();
 
 					exec.getDebugRenderer()->declareImGui();
 
@@ -427,7 +453,10 @@ namespace vkl
 					ImGui::EndFrame();
 				}
 
-				mouse_handler.update(dt);
+				if(!ImGui::GetIO().WantCaptureMouse)
+				{
+					mouse_handler.update(dt);
+				}
 				if (mouse_handler.isButtonCurrentlyPressed(GLFW_MOUSE_BUTTON_1))
 				{
 					camera.move(mouse_handler.deltaPosition<float>() * move_scale.value());
@@ -454,7 +483,7 @@ namespace vkl
 							.push_constant = InitParticulesPC{
 								.number_of_particules = *num_particules,
 								.seed = seed,
-								.wolrd_size = world_size,
+								.world_size = glm::vec3(world_size, 0),
 							},
 						}));
 						seed = std::hash<uint32_t>()(seed);
@@ -475,12 +504,51 @@ namespace vkl
 							.push_constant = RunSimulationPC{
 								.number_of_particules = *num_particules,
 								.dt = static_cast<float>(dt),
-								.world_size = world_size,
 								.friction = friction,
+								.world_size = glm::vec3(world_size, 0),
 							},
 						}));
 					}
 					
+
+					ClearImage clear_image(ClearImage::CI{
+						.app = this,
+						.name = "ClearImage",
+						.view = render_target_view,
+						.value = VkClearValue{.color = VkClearColorValue{.int32 = {0, 0, 0, 0}}},
+					});
+
+					exec(clear_image);
+
+					if (render_border)
+					{
+						if(!border_mesh->getStatus().device_up_to_date)
+						{
+							UploadResources upload(UploadResources::CI{
+								.app = this,
+								.name = "Upload",
+								.holder = border_mesh,
+							});
+							exec(upload);
+						}
+
+						glm::mat3 scale_matrix = scaleMatrix<3, float>(world_size);
+						glm::mat3 translate_matrix = translateMatrix<3, float>(glm::vec2(0.5, 0.5));
+						glm::mat3 render_border_matrix = mat_world_to_cam.value() * scale_matrix * translate_matrix;
+						Render2DLinesPushConstant pc{
+							.matrix = glm::mat4(render_border_matrix),
+							.color = glm::vec4(1, 1, 1, 1),
+						};
+						exec(render_2D_lines->with({
+							.drawables = {
+								VertexCommand::DrawModelInfo{
+									.drawable = border_mesh,
+									.pc = pc,
+								},
+							}
+						}));
+					}
+
 					RenderPC render_pc = {
 						.matrix = glm::mat4(mat_world_to_cam.value()),
 						.zoom = static_cast<float>(mouse_handler.getScroll()),

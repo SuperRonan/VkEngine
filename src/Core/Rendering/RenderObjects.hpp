@@ -144,6 +144,16 @@ namespace vkl
 			return _direction;
 		}
 
+		constexpr const vec3& right()const
+		{
+			return _right;
+		}
+
+		constexpr vec3 up()const
+		{
+			return glm::cross(_right, _direction);
+		}
+
 		float inclination()const
 		{
 			return std::acos(glm::dot(_direction, _up));
@@ -258,6 +268,11 @@ namespace vkl
 			_mouse(ci.mouse),
 			_gamepad(ci.gamepad)
 		{}
+
+		int& keyUpward()
+		{
+			return _key_upward;
+		}
 
 		virtual void updateCamera(float dt) override
 		{

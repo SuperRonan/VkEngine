@@ -8,6 +8,7 @@
 #include <Core/VkObjects/CommandBuffer.hpp>
 #include <Core/Execution/Resource.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
+#include <Core/Rendering/Drawable.hpp>
 
 namespace vkl
 {
@@ -46,7 +47,7 @@ namespace vkl
 	class SynchronizationHelper;
 	class Pipeline;
 
-	class Mesh : public VkObject, public Geometry, public ResourcesHolder
+	class Mesh : public VkObject, public Geometry, public ResourcesHolder, public Drawable
 	{
 	protected:
 		
@@ -90,13 +91,15 @@ namespace vkl
 
 		virtual Status getStatus()const = 0;
 
-		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) = 0;
+		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override = 0;
 		
-		virtual void recordBindAndDraw(CommandBuffer & cmd)const = 0;
+		virtual VertexInputDescription vertexInputDesc() override = 0;
 
-		virtual Resources getResourcesForDraw() = 0;
+		virtual void recordBindAndDraw(ExecutionContext & ctx) override = 0;
 
-		virtual VertexInputDescription vertexInputDesc() const = 0;
+		virtual std::shared_ptr<DescriptorSetLayout> setLayout() override = 0;
+
+		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override = 0;
 
 		virtual void writeBindings(ShaderBindings & bindings) = 0;
 	};
@@ -105,10 +108,13 @@ namespace vkl
 	{
 	protected:
 
-
 		struct HostData
 		{
 			bool loaded = false;
+			bool use_full_vertices = true;
+			uint8_t dims = 3;
+			// Can be 2D or 3D
+			std::vector<float> positions;
 			std::vector<Vertex> vertices;
 			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
 			union {
@@ -136,6 +142,11 @@ namespace vkl
 					indices8.clear();
 					indices8.shrink_to_fit();
 				}
+			}
+
+			size_t numVertices() const
+			{
+				return use_full_vertices ? vertices.size() : (positions.size() / dims);
 			}
 
 			uint32_t getIndex(size_t i)const
@@ -261,6 +272,8 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			uint8_t dims = 3;
+			std::vector<float> positions = {};
 			std::vector<Vertex> vertices = {};
 			std::vector<uint> indices = {};
 			int compute_normals = 0;
@@ -295,9 +308,7 @@ namespace vkl
 
 		virtual Status getStatus() const override;
 
-		virtual Resources getResourcesForDraw() override;
-
-		virtual void recordBindAndDraw(CommandBuffer & cmd)const override;
+		virtual void recordBindAndDraw(ExecutionContext & ctx) override final;
 
 		virtual void notifyDataIsUploaded() override
 		{
@@ -312,27 +323,63 @@ namespace vkl
 
 		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
 
-		virtual VertexInputDescription vertexInputDesc() const override
+		virtual VertexInputDescription vertexInputDesc() override
 		{
-			return vertexInputDescStatic();
+			if (_host.use_full_vertices)
+			{
+				return vertexInputDescFullVertex();
+			}
+			else
+			{
+				if (_host.dims == 3)
+				{
+					return vertexInputDescOnlyPos3D();
+				}
+				else if (_host.dims == 2)
+				{
+					return vertexInputDescOnlyPos2D();
+				}
+			}
 		}
 
-		static VertexInputDescription vertexInputDescStatic();
+		static VertexInputDescription vertexInputDescFullVertex();
+		static VertexInputDescription vertexInputDescOnlyPos3D();
+		static VertexInputDescription vertexInputDescOnlyPos2D();
 
 		std::shared_ptr<Buffer> vertexIndexBuffer()const
 		{
 			return _device.mesh_buffer;
 		}
 
+		virtual std::shared_ptr<DescriptorSetLayout> setLayout() override
+		{
+			return nullptr;
+		}
+
+		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override
+		{
+			return nullptr;
+		}
+
+		struct Square2DMakeInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			Vector2 center = Vector2(0);
+			bool wireframe = false;
+		};
+		static std::shared_ptr<RigidMesh> MakeSquare(Square2DMakeInfo const& smi);
+
 		struct CubeMakeInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
 			Vector3 center = Vector3(0);
+
 			bool face_normal = true;
 			bool same_face = true;
 		};
-		using CMI = CubeMakeInfo;
+
 		static std::shared_ptr<RigidMesh> MakeCube(CubeMakeInfo const& cmi);
 
 		struct SphereMakeInfo
@@ -344,7 +391,7 @@ namespace vkl
 			uint theta_divisions = 16;
 			uint phi_divisions = 32;
 		};
-		using SMI = SphereMakeInfo;
+
 		static std::shared_ptr<RigidMesh> MakeSphere(SphereMakeInfo const& smi);
 
 		struct PlatonMakeInfo
@@ -356,7 +403,6 @@ namespace vkl
 			int position = 1;
 			bool face_normal = false;
 		};
-		using PMI = PlatonMakeInfo;
 
 		static std::shared_ptr<RigidMesh> MakeTetrahedron(PlatonMakeInfo const& pmi);
 		static std::shared_ptr<RigidMesh> MakeOctahedron(PlatonMakeInfo const& pmi);

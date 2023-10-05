@@ -2,6 +2,10 @@
 
 #include "./common.glsl"
 
+#define I_WANT_TO_DEBUG 1
+
+#include <ShaderLib:/debugBuffers.glsl>
+
 layout(local_size_x = 32) in;
 
 layout(SHADER_DESCRIPTOR_BINDING + 0, std430) buffer readonly restrict b_previous_state
@@ -23,19 +27,24 @@ layout(push_constant) uniform constants
 {
 	uint number_of_particules;	
 	float dt;
-	vec2 world_size;
 	float friction;
+	uint pad;
+	vec3 world_size;
 } _pc;
 
 void main()
 {
 	const uint gid = gl_GlobalInvocationID.x;
-	const vec2 world_size = _pc.world_size;
+#if DIMENSIONS == 2
+	const vecD world_size = _pc.world_size.xy;
+#elif DIMENSIONS == 3
+	const vecD world_size = _pc.world_size.xyz;
+#endif
 
 	if(gid < _pc.number_of_particules)
 	{
 		const Particule p = prev.particules[gid];
-		vec2 f = 0..xx;
+		vecD f = vecD(0);
 
 		for(uint i = 0; i < _pc.number_of_particules; ++i)
 		{
@@ -47,18 +56,30 @@ void main()
 				f += computeForce(p, o, force, world_size);
 			}
 		}
-		const float friction = 8e2 * _pc.friction;
-		f -= friction * p.velocity;
+		const float force_scale = 1e-6;
+		f *= force_scale;
+		const vecD friction_force = _pc.friction * p.velocity;
+		f -= friction_force;
 		const float mass = sqr(p.radius);
 
 		Particule np = p;
-		const float force_scale = 1e-6;
-		const vec2 acc = (f * force_scale) / mass;
-		np.velocity += clamp(acc * _pc.dt, -world_size*0.5, world_size*0.5);
-		np.velocity *= 0.1;
-		np.position += np.velocity * _pc.dt;
+		const vecD acc = f / mass;
+		vecD dv = acc * _pc.dt;
+		dv = clamp(dv, -world_size*0.5, world_size*0.5);
+		np.velocity += dv;
+		np.position += (np.velocity * _pc.dt);
 		np.position = modulatePosition(world_size * 0.5, world_size, np.position);
 		next.particules[gid] = np;
+
+		if(gid == 0)
+		{
+			Caret c = Caret2D(0..xx, 0);
+			c = pushToDebugUVLn(world_size, c);
+			c = pushToDebugUVLn(friction_force, c);
+			c = pushToDebugUVLn(_pc.dt * 1e3 , c);
+			c = pushToDebugUVLn(_pc.number_of_particules, c);
+			
+		}
 	}
 }
 

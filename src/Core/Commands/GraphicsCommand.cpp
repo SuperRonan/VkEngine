@@ -252,6 +252,8 @@ namespace vkl
 				clear_values.back() = VkClearValue{ .depthStencil = _clear_depth_stencil.value() };
 			}
 		}
+
+		const std::string pass_name = name();
 		
 		VkRenderPassBeginInfo begin = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -438,11 +440,15 @@ namespace vkl
 			const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
 			for (auto& drawable : di.drawables)
 			{
-				std::shared_ptr<DescriptorSetAndPoolInstance> set = drawable.drawable->setAndPool()->instance();
-				context.keppAlive(set);
-				if (set->exists() && !set->empty())
+				std::shared_ptr<DescriptorSetAndPool> set_desc = drawable.drawable->setAndPool();
+				if(set_desc)
 				{
-					context.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
+					std::shared_ptr<DescriptorSetAndPoolInstance> set = set_desc->instance();
+					context.keppAlive(set);
+					if (set->exists() && !set->empty())
+					{
+						context.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
+					}
 				}
 				recordPushConstant(cmd, context, drawable.pc);
 				drawable.drawable->recordBindAndDraw(context);

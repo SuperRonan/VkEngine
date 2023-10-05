@@ -103,7 +103,7 @@ namespace vkl
 		{
 			VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
 
-			int _ = 0;
+ 			int _ = 0;
 		}
 		return VK_FALSE;
 	}

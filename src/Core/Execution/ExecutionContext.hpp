@@ -9,7 +9,6 @@
 #include <Core/VkObjects/Sampler.hpp>
 #include <Core/VkObjects/RenderPass.hpp>
 #include <Core/VkObjects/Framebuffer.hpp>
-#include <Core/Rendering/Mesh.hpp>
 #include <Core/Execution/StagingPool.hpp>
 #include <Core/Execution/ResourceState.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
