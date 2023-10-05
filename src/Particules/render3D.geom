@@ -5,7 +5,7 @@
 
 #include <ShaderLib:/Rendering/Mesh/Sphere.glsl>
 
-#define I_WANT_TO_DEBUG 1
+#define I_WANT_TO_DEBUG 0
 #include <ShaderLib:/debugBuffers.glsl>
 
 layout(points) in;
@@ -20,14 +20,10 @@ layout(SHADER_DESCRIPTOR_BINDING + 0, std430) buffer readonly restrict b_state
 	Particule particules[];
 } state;
 
-layout(push_constant) uniform PushConstants
+layout(SHADER_DESCRIPTOR_BINDING + 2) uniform UBO
 {
-	mat4 world_to_proj;
-	vec3 camera_center;
-	vec3 camera_right;
-	vec3 camera_up;
-	uint num_particules;
-} _pc;
+	Uniforms3D ubo;
+};
 
 void main()
 {
@@ -36,13 +32,14 @@ void main()
 
 	const Sphere sphere = Sphere(p.position, radius);
 
-	const vec3 camera_to_sphere_world = sphere.center - _pc.camera_center;
+	const vec3 camera_to_sphere_world = sphere.center - ubo.camera_pos;
 	const float dist_camera_to_sphere_world = length(camera_to_sphere_world);
 	const vec3 dir_camera_to_sphere_world = camera_to_sphere_world / dist_camera_to_sphere_world;
 
-	const vec3 quad_center_world = _pc.camera_center - sphere.radius * dir_camera_to_sphere_world;
+	const vec3 quad_center_world = sphere.center + sphere.radius * dir_camera_to_sphere_world;
 
-	const vec4 sphere_center_proj = (_pc.world_to_proj * vec4(sphere.center, 1));
+	const vec4 sphere_center_proj = (ubo.world_to_proj * vec4(sphere.center, 1));
+	// const vec4 sphere_center_proj = (ubo.world_to_proj * vec4(quad_center_world, 1));
 	
 
 	for(int i=0; i<2; ++i)
@@ -54,8 +51,8 @@ void main()
 			
 			v_type = p.type;
 			v_out.uv = vec2(dx, dy);
-			const vec3 vertex_world = quad_center_world + dx * _pc.camera_right + dy * _pc.camera_up;
-			gl_Position = _pc.world_to_proj * vec4(vertex_world, 1);
+			const vec3 vertex_world = quad_center_world + (dx * ubo.camera_right - dy * ubo.camera_up) * radius;
+			gl_Position = ubo.world_to_proj * vec4(vertex_world, 1);
 			EmitVertex();
 		}
 	}
@@ -64,22 +61,29 @@ void main()
 #if I_WANT_TO_DEBUG
 	
 	{
-		Caret c = Caret3D(vec4(quad_center_world, 1), 0);
+		Caret c = Caret3D(sphere_center_proj, 0);
 		c = pushToDebugClipSpaceLn(id[0], c);
+		c = pushToDebugClipSpaceLn("Position", c);
 		c = pushToDebugClipSpaceLn(p.position, c);
+		c = pushToDebugClipSpaceLn("Velocity", c);
 		c = pushToDebugClipSpaceLn(p.velocity, c);
+		c = pushToDebugClipSpaceLn("Radius", c);
+		c = pushToDebugClipSpaceLn(radius, c);
+		c = pushToDebugClipSpaceLn(vec4(dir_camera_to_sphere_world, length(dir_camera_to_sphere_world)), c);
 	}
 
 	if(id[0] == 0)
 	{
 		Caret c = Caret2D(0..xx, 0);
-		c = pushToDebugUVLn("Camera center", c);
-		c = pushToDebugUVLn(_pc.camera_center, c);
-		c = pushToDebugUVLn("Camera right", c);
-		c = pushToDebugUVLn(_pc.camera_right, c);
-		c = pushToDebugUVLn("Camera up", c);
-		c = pushToDebugUVLn(_pc.camera_up, c);
+	// 	c = pushToDebugUVLn("Camera center", c);
+	// 	c = pushToDebugUVLn(ubo.camera_pos, c);
+	// 	c = pushToDebugUVLn("Camera right", c);
+	// 	c = pushToDebugUVLn(ubo.camera_right, c);
+	// 	c = pushToDebugUVLn("Camera up", c);
+	// 	c = pushToDebugUVLn(ubo.camera_up, c);
 		c = pushToDebugUVLn(quad_center_world, c);
+		c = pushToDebugUVLn(sphere_center_proj, c);
+		c = pushToDebugUVLn(vec4(camera_to_sphere_world, length(camera_to_sphere_world)), c);
 	}
 
 #endif

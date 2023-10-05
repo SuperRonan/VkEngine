@@ -102,3 +102,24 @@ vecD computeForce(const in Particule p, const in Particule q, const in ForceDesc
 	
 	return res;
 }
+
+
+
+struct Uniforms3D
+{
+	mat4 world_to_camera;
+	mat4 camera_to_proj;
+	mat4 world_to_proj;
+	mat4 proj_to_world;
+
+	vec3 camera_pos;
+	vec3 camera_right;
+	vec3 camera_up;
+	
+	vec3 light_dir;
+	float roughness;
+	vec3 light_color;
+	
+	vec3 world_size;
+	int num_particules;
+};

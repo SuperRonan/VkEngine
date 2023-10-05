@@ -668,76 +668,124 @@ namespace vkl
 		const Float h = Float(0.5);
 		const Float t = Float(1) / Float(3);
 		const Float tt = Float(2) / Float(3);
-
-		std::vector<Vertex> vertices;
-		std::vector<uint> indices;
-
 		const Vector3 center = cmi.center;
+		const Vector3 c = center;
 
-		if (cmi.face_normal)
+		std::shared_ptr<RigidMesh> res;
+
+		if (cmi.wireframe)
 		{
-			const Vector3 X(1, 0, 0), Y(0, 1, 0), Z(0, 0, 1);
-			const auto sign = [](Float f) {return f > 0 ? Float(1) : (f < 0 ? Float(-1) : Float(0)); };
-			const auto addVertexes = [&](Float x, Float y, Float z, Float u, Float v)
-			{
-				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(x) * X, .uv = Vector2{ u, v } });
-				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(y) * Y, .uv = Vector2{ u, v } });
-				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u, v } });
+			std::vector<float> positions = {
+				c.x - h, c.y - h, c.z - h,
+				c.x - h, c.y - h, c.z + h,
+				c.x - h, c.y + h, c.z + h,
+				c.x - h, c.y + h, c.z - h,
+
+				c.x + h, c.y - h, c.z - h,
+				c.x + h, c.y - h, c.z + h,
+				c.x + h, c.y + h, c.z + h,
+				c.x + h, c.y + h, c.z - h,
+			};
+			std::vector<uint> indices = {
+				0, 1,
+				1, 2,
+				2, 3, 
+				3, 0,
+
+				4, 5,
+				5, 6,
+				6, 7,
+				7, 4,
+
+				0, 4,
+				1, 5,
+				2, 6,
+				3, 7,
 			};
 
-			const auto addVertexes3 = [&](Float x, Float y, Float z, Float u0, Float v0, Float u1, Float v1, Float u2, Float v2)
-			{
-				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(x) * X, .uv = Vector2{ u0, v0 } });
-				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(y) * Y, .uv = Vector2{ u1, v1 } });
-				vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u2, v2 } });
-			};
+			res = std::make_shared<RigidMesh>(RigidMesh::CI{
+				.app = cmi.app,
+				.name = cmi.name,
+				.dims = 2,
+				.positions = std::move(positions),
+				.indices = std::move(indices),
+				.create_device_buffer = true,
+			});
+		}
+		else
+		{
+			std::vector<Vertex> vertices;
+			std::vector<uint> indices;
 
-			if (cmi.same_face)
+
+			if (cmi.face_normal)
 			{
-				addVertexes3(-h, h, -h,		0, 0, 0, 1, 1, 0); // x0
-				addVertexes3(h, h, -h,		1, 0, 1, 1, 0, 0); // x1
-				addVertexes3(h, h, h,		0, 0, 1, 0, 1, 0); // x2
-				addVertexes3(-h, h, h,		1, 0, 0, 0, 0, 0); // x3
-				addVertexes3(-h, -h, -h,	0, 1, 0, 1, 1, 1); // x4
-				addVertexes3(h, -h, -h,		1, 1, 0, 0, 0, 1); // x5
-				addVertexes3(h, -h, h,		0, 1, 1, 0, 1, 1); // x6
-				addVertexes3(-h, -h, h,		1, 1, 1, 1, 0, 1); // x7
+				const Vector3 X(1, 0, 0), Y(0, 1, 0), Z(0, 0, 1);
+				const auto sign = [](Float f) {return f > 0 ? Float(1) : (f < 0 ? Float(-1) : Float(0)); };
+				const auto addVertexes = [&](Float x, Float y, Float z, Float u, Float v)
+				{
+					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(x) * X, .uv = Vector2{ u, v } });
+					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(y) * Y, .uv = Vector2{ u, v } });
+					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u, v } });
+				};
+
+				const auto addVertexes3 = [&](Float x, Float y, Float z, Float u0, Float v0, Float u1, Float v1, Float u2, Float v2)
+				{
+					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(x) * X, .uv = Vector2{ u0, v0 } });
+					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(y) * Y, .uv = Vector2{ u1, v1 } });
+					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u2, v2 } });
+				};
+
+				if (cmi.same_face)
+				{
+					addVertexes3(-h, h, -h,		0, 0, 0, 1, 1, 0); // x0
+					addVertexes3(h, h, -h,		1, 0, 1, 1, 0, 0); // x1
+					addVertexes3(h, h, h,		0, 0, 1, 0, 1, 0); // x2
+					addVertexes3(-h, h, h,		1, 0, 0, 0, 0, 0); // x3
+					addVertexes3(-h, -h, -h,	0, 1, 0, 1, 1, 1); // x4
+					addVertexes3(h, -h, -h,		1, 1, 0, 0, 0, 1); // x5
+					addVertexes3(h, -h, h,		0, 1, 1, 0, 1, 1); // x6
+					addVertexes3(-h, -h, h,		1, 1, 1, 1, 0, 1); // x7
+				}
+				else
+				{
+
+				}
+
+				const auto id = [](uint xi, uint axis) {return xi * 3 + axis; };
+
+				const auto addFace = [&](uint v0, uint v1, uint v2, uint v3, uint axis)
+				{
+					indices.push_back(id(v0, axis));
+					indices.push_back(id(v1, axis));
+					indices.push_back(id(v2, axis));
+					indices.push_back(id(v2, axis));
+					indices.push_back(id(v3, axis));
+					indices.push_back(id(v0, axis));
+				};
+				addFace(0, 3, 2, 1, 1); // up (+y)
+				addFace(0, 1, 5, 4, 2); // back (-z)
+				addFace(0, 4, 7, 3, 0); // left (-x)
+				addFace(6, 7, 4, 5, 1); // bottom (-y)
+				addFace(6, 2, 3, 7, 2); // front (+z)
+				addFace(6, 5, 1, 2, 0); // right (+x)
 			}
 			else
 			{
 
 			}
 
-			const auto id = [](uint xi, uint axis) {return xi * 3 + axis; };
-
-			const auto addFace = [&](uint v0, uint v1, uint v2, uint v3, uint axis)
-			{
-				indices.push_back(id(v0, axis));
-				indices.push_back(id(v1, axis));
-				indices.push_back(id(v2, axis));
-				indices.push_back(id(v2, axis));
-				indices.push_back(id(v3, axis));
-				indices.push_back(id(v0, axis));
-			};
-			addFace(0, 3, 2, 1, 1); // up (+y)
-			addFace(0, 1, 5, 4, 2); // back (-z)
-			addFace(0, 4, 7, 3, 0); // left (-x)
-			addFace(6, 7, 4, 5, 1); // bottom (-y)
-			addFace(6, 2, 3, 7, 2); // front (+z)
-			addFace(6, 5, 1, 2, 0); // right (+x)
-		}
-		else
-		{
+			res = std::make_shared<RigidMesh>(CreateInfo{
+				.app = cmi.app, 
+				.name = cmi.name,
+				.vertices = std::move(vertices),
+				.indices = std::move(indices),
+				.auto_compute_tangents = true,
+			});
 
 		}
-
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
-			.app = cmi.app, 
-			.name = cmi.name,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.auto_compute_tangents = true,
-		});
+		
+		
 		return res;
 	}
 

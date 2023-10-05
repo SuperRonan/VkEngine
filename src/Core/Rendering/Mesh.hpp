@@ -376,6 +376,7 @@ namespace vkl
 			std::string name = {};
 			Vector3 center = Vector3(0);
 
+			bool wireframe = false;
 			bool face_normal = true;
 			bool same_face = true;
 		};

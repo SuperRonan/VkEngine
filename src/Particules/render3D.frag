@@ -11,7 +11,12 @@ layout(location = 0) out vec4 o_color;
 layout(SHADER_DESCRIPTOR_BINDING + 1, std430) buffer readonly restrict ub_common_rules
 {
 	CommonRuleBuffer rules;
-} ubo;
+} common_rules_ubo;
+
+layout(SHADER_DESCRIPTOR_BINDING + 2) uniform UBO
+{
+	Uniforms3D ubo;
+};
 
 // layout(push_constant) uniform FragPushConstant
 // {
@@ -20,20 +25,20 @@ layout(SHADER_DESCRIPTOR_BINDING + 1, std430) buffer readonly restrict ub_common
 
 void main()
 {
-    const vec2 v_uv = v_in.uv;
-    const float d = dot(v_uv, v_uv);
-    if(d > 0.25)
-    {
-        discard;
-        return;
-    }
-    else
-    {
-        o_color = ubo.rules.particules_properties[v_type].color;
+	const vec2 v_uv = v_in.uv;
+	const float d = dot(v_uv, v_uv);
+	if(d > 0.25)
+	{
+		discard;
+		return;
+	}
+	else
+	{
+		o_color = common_rules_ubo.rules.particules_properties[v_type].color;
 
-        if(d > 0.20)
-        {
-            o_color.xyz *= 0.5;
-        }
-    }
+		if(d > 0.20)
+		{
+			o_color.xyz *= 0.5;
+		}
+	}
 }

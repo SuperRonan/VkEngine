@@ -213,6 +213,15 @@ namespace vkl
 
 		}
 
+		void declareImGui()
+		{
+			if (ImGui::CollapsingHeader("Camera"))
+			{
+				ImGui::SliderFloat("near plane", &_near, 0, _far);
+				ImGui::SliderFloat("far plane", &_far, _near, 1e4*_near);
+			}
+		}
+
 		friend class CameraController;
 	};
 

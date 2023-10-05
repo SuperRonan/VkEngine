@@ -356,8 +356,8 @@ namespace vkl
 				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
 				.sets_layouts = sets_layouts,
 				.color_attachements = {render_target_view},
-				.vertex_shader_path = shader_lib / "Rendering/Mesh/render2D.glsl",
-				.fragment_shader_path = shader_lib / "Rendering/Mesh/render2D.glsl",
+				.vertex_shader_path = shader_lib / "Rendering/Mesh/renderOnlyPos.vert",
+				.fragment_shader_path = shader_lib / "Rendering/Mesh/renderUniColor.frag",
 			});
 			exec.declare(render_2D_lines);
 			struct Render2DLinesPushConstant
@@ -517,7 +517,6 @@ namespace vkl
 						.view = render_target_view,
 						.value = VkClearValue{.color = VkClearColorValue{.int32 = {0, 0, 0, 0}}},
 					});
-
 					exec(clear_image);
 
 					if (render_border)

@@ -23,6 +23,7 @@
 #include <Core/IO/InputListener.hpp>
 
 #include <Core/Rendering/RenderObjects.hpp>
+#include <Core/Rendering/Mesh.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -149,6 +150,44 @@ namespace vkl
 			exec.getCommonDefinitions().setDefinition("USE_HALF_STORAGE", std::to_string(use_half_storage));
 			exec.getCommonDefinitions().setDefinition("DIMENSIONS", "3");
 
+			struct UniformBuffer
+			{
+				glm::mat4 world_to_camera;
+				glm::mat4 camera_to_proj;
+				glm::mat4 world_to_proj;
+				glm::mat4 proj_to_world;
+
+				glm::vec3 camera_pos;
+				int pad0;
+				glm::vec3 camera_right;
+				int pad1;
+				glm::vec3 camera_up;
+				int pad2;
+
+				glm::vec3 light_dir;
+				float roughness;
+				glm::vec3 light_color;
+				int pad4;
+
+				glm::vec3 world_size;
+				uint32_t num_particules;
+			};
+			std::shared_ptr<Buffer> ubo = std::make_shared<Buffer>(Buffer::CI{
+				.app = this,
+				.name = "UBO",
+				.size = sizeof(UniformBuffer) + 16,
+				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			});
+			exec.declare(ubo);
+
+			UpdateBuffer update_ubo(UpdateBuffer::CI{
+				.app = this,
+				.name = "UpdateUBO",
+				.dst = ubo,
+			});
+
+
 			std::shared_ptr<Buffer> current_particules = std::make_shared<Buffer>(Buffer::CI{
 				.app = this,
 				.name = "CurrentParticulesBuffer",
@@ -182,7 +221,7 @@ namespace vkl
 				.type = VK_IMAGE_TYPE_2D,
 				.format = VK_FORMAT_R8G8B8A8_UNORM,
 				.extent = _main_window->extent3D(),
-				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_BITS,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 
@@ -303,12 +342,15 @@ namespace vkl
 								.buffer = particule_rules_buffer,
 								.binding = 1,
 							},
+							Binding{
+								.buffer = ubo,
+								.binding = 2,
+							},
 					},
 					.color_attachements = { render_target_view },
 					.mesh_shader_path = shaders / "render2D.mesh",
 					.fragment_shader_path = shaders / "render2D.frag",
 					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("MESH_PIPELINE 1"s); return res; },
-					.clear_color = VkClearColorValue{ .int32 = {0, 0, 0, 0} },
 				});
 				exec.declare(render_with_mesh);
 			}
@@ -328,16 +370,50 @@ namespace vkl
 								.buffer = particule_rules_buffer,
 								.binding = 1,
 							},
+							Binding{
+								.buffer = ubo,
+								.binding = 2,
+							},
 					},
 					.color_attachements = { render_target_view },
 					.vertex_shader_path = shaders / "render.vert",
 					.geometry_shader_path = shaders / "render3D.geom",
 					.fragment_shader_path = shaders / "render3D.frag",
 					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("GEOMETRY_PIPELINE 1"s); return res; },
-					.clear_color = VkClearColorValue{ .int32 = {0, 0, 0, 0} },
 				});
 				exec.declare(render_with_geometry);
 			}
+
+			std::shared_ptr<RigidMesh> border_mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+				.app = this,
+				.name = "Border_Mesh",
+				.wireframe = true,
+			});
+			exec.declare(border_mesh);
+
+			std::filesystem::path shader_lib = ENGINE_SRC_PATH "/Shaders/";
+
+			std::shared_ptr<VertexCommand> render_2D_lines = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = this,
+				.name = "RenderBorder",
+				.vertex_input_desc = RigidMesh::vertexInputDescOnlyPos3D(),
+				.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.sets_layouts = sets_layouts,
+				.color_attachements = { render_target_view },
+				.vertex_shader_path = shader_lib / "Rendering/Mesh/renderOnlyPos.vert",
+				.fragment_shader_path = shader_lib / "Rendering/Mesh/renderUniColor.frag",
+			});
+			exec.declare(render_2D_lines);
+			struct Render2DLinesPushConstant
+			{
+				glm::mat4 matrix;
+				glm::vec4 color;
+			};
+
+			bool render_border = true;
+
+
 
 			float friction = 1.0;
 			bool reset_particules = true;
@@ -369,13 +445,6 @@ namespace vkl
 
 			Camera camera(Camera::CreateInfo{
 				.resolution = _main_window->extent2D(),
-			});
-
-			ImGuiRadioButtons gui_present_modes({
-				"Immediate",
-				"Mailbox",
-				"Fifo",
-				"Fifo relaxed",
 			});
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
@@ -440,6 +509,9 @@ namespace vkl
 					ImGui::Checkbox("reset particules", &reset_particules);
 
 					ImGui::SliderFloat3("World Size", (float*)&world_size, 0.0, 10.0);
+					ImGui::Checkbox("render border", &render_border);
+
+					camera.declareImGui();
 
 					_main_window->declareImGui();
 
@@ -453,6 +525,25 @@ namespace vkl
 					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
+
+					UniformBuffer ub{
+						.world_to_camera = camera.getWorldToCam(),
+						.camera_to_proj = camera.getCamToProj(),
+						.world_to_proj = camera.getWorldToProj(),
+						.proj_to_world = glm::inverse(camera.getWorldToProj()),
+						.camera_pos = camera.position(),
+						.camera_right = camera.right(),
+						.camera_up = camera.up(),
+						.light_dir = glm::normalize(glm::vec3(1, 1, 1)),
+						.roughness = 0.5,
+						.light_color = glm::vec3(1, 1, 1),
+						.world_size = world_size,
+						.num_particules = num_particules.value(),
+					};
+
+					exec(update_ubo.with({
+						.src = ub,
+					}));
 					
 					if (reset_particules)
 					{
@@ -474,7 +565,7 @@ namespace vkl
 						reset_rules = false;
 					}
 
-					if (!paused)
+					if (false && !paused)
 					{
 						exec(copy_to_previous);
 						exec(run_simulation->with({
@@ -486,26 +577,51 @@ namespace vkl
 							},
 						}));
 					}
-					
-					RenderPC render_pc = {
-						.world_to_proj = camera.getWorldToProj(),
-						.camera_center = camera.position(),
-						.camera_right = camera.right(),
-						.camera_up = glm::normalize(camera.up()),
-						.num_particules = num_particules.value(),
-					};
+
+					ClearImage clear_image(ClearImage::CI{
+						.app = this,
+							.name = "ClearImage",
+							.view = render_target_view,
+							.value = VkClearValue{ .color = VkClearColorValue{.int32 = {0, 0, 0, 0}} },
+					});
+					exec(clear_image);
+
+					if (render_border)
+					{
+						if (!border_mesh->getStatus().device_up_to_date)
+						{
+							UploadResources upload(UploadResources::CI{
+								.app = this,
+									.name = "Upload",
+									.holder = border_mesh,
+							});
+							exec(upload);
+						}
+
+						glm::mat4 scale_matrix = scaleMatrix<4, float>(world_size);
+						glm::mat4 translate_matrix = translateMatrix<4, float>(glm::vec3(0.5, 0.5, 0.5));
+						glm::mat4 render_border_matrix = camera.getWorldToProj() * scale_matrix * translate_matrix;
+						Render2DLinesPushConstant pc{
+							.matrix = render_border_matrix,
+							.color = glm::vec4(1, 1, 1, 1),
+						};
+						exec(render_2D_lines->with({
+							.drawables = {
+								VertexCommand::DrawModelInfo{
+									.drawable = border_mesh,
+									.pc = pc,
+								},
+							}
+							}));
+					}
 
 					if (render_with_mesh)
 					{
-						exec(render_with_mesh->with({
-							.pc = render_pc,
-						}));
+						exec(render_with_mesh);
 					}
 					else if(render_with_geometry)
 					{
-						exec(render_with_geometry->with({
-							.pc = render_pc,
-						}));
+						exec(render_with_geometry);
 					}
 
 					exec.renderDebugIFN();
