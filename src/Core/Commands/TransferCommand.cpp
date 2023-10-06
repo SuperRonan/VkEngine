@@ -446,15 +446,32 @@ namespace vkl
 
 		const VkClearValue value = ci.value.value();
 
-		// TODO depth clear if applicable
-		vkCmdClearColorImage(
-			*cmd, 
-			*ci.view->image()->instance(), 
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-			&value.color, 
-			1, 
-			&range
-		);
+		VkImageAspectFlags aspect = ci.view->range().aspectMask;
+
+		// TODO manage other aspects
+		if (aspect & VK_IMAGE_ASPECT_COLOR_BIT)
+		{
+			vkCmdClearColorImage(
+				*cmd, 
+				*ci.view->image()->instance(), 
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+				&value.color, 
+				1, 
+				&range
+			);
+		}
+		if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+		{
+			vkCmdClearDepthStencilImage(
+				*cmd, 
+				ci.view->image()->instance()->handle(), 
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+				&value.depthStencil,
+				1, 
+				&range
+			);
+		}
+
 	}
 
 	void ClearImage::execute(ExecutionContext& context)

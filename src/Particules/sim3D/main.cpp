@@ -62,6 +62,7 @@ namespace vkl
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
 			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
 			features.features_12.shaderFloat16 = VK_TRUE;
+			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 		}
 
 
@@ -230,7 +231,31 @@ namespace vkl
 				.image = render_target_img,
 			});
 			exec.declare(render_target_view);
-			exec.getDebugRenderer()->setTargets(render_target_view);
+
+			std::shared_ptr<Image> depth_img = std::make_shared<Image>(Image::CI{
+				.app = this,
+				.name = "DepthImg",
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_D32_SFLOAT,
+				.extent = render_target_img->extent(),
+				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_BITS,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			});
+
+			std::shared_ptr<ImageView> depth_view = std::make_shared<ImageView>(ImageView::CI{
+				.name = "DepthView",
+				.image = depth_img,
+				.range = VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+			});
+			exec.declare(depth_view);
+
+			exec.getDebugRenderer()->setTargets(render_target_view, depth_view);
 			
 			const std::filesystem::path shaders = PROJECT_SRC_PATH "../";
 
@@ -376,6 +401,8 @@ namespace vkl
 							},
 					},
 					.color_attachements = { render_target_view },
+					.depth_buffer = depth_view,
+					.write_depth = true,
 					.vertex_shader_path = shaders / "render.vert",
 					.geometry_shader_path = shaders / "render3D.geom",
 					.fragment_shader_path = shaders / "render3D.frag",
@@ -401,6 +428,8 @@ namespace vkl
 				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
 				.sets_layouts = sets_layouts,
 				.color_attachements = { render_target_view },
+				.depth_buffer = depth_view,
+				.write_depth = true,
 				.vertex_shader_path = shader_lib / "Rendering/Mesh/renderOnlyPos.vert",
 				.fragment_shader_path = shader_lib / "Rendering/Mesh/renderUniColor.frag",
 			});
@@ -580,11 +609,16 @@ namespace vkl
 
 					ClearImage clear_image(ClearImage::CI{
 						.app = this,
-							.name = "ClearImage",
-							.view = render_target_view,
-							.value = VkClearValue{ .color = VkClearColorValue{.int32 = {0, 0, 0, 0}} },
+						.name = "ClearImage",
 					});
-					exec(clear_image);
+					exec(clear_image.with({
+						.view = render_target_view,
+						.value = VkClearValue{.color = VkClearColorValue{.int32 = {0, 0, 0, 0}} },
+					}));
+					exec(clear_image.with({
+						.view = depth_view,
+						.value = VkClearValue{.depthStencil = VkClearDepthStencilValue{ .depth = 1 } },
+					}));
 
 					if (render_border)
 					{
