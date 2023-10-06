@@ -122,6 +122,9 @@ namespace vkl
 			const uint32_t storage_float_size = use_half_storage ? 2 : 4;
 			const uint32_t force_rule_size = 2 * 4 * storage_float_size;
 			const uint32_t particule_props_size = 4 * storage_float_size;
+
+			ImGuiRadioButtons render_mode({"2D Like", "3D"});
+			Dyn<std::string> render_mode_def = [&](){return "RENDER_MODE "s + std::to_string(render_mode.index());};
 			
 			dv_<uint32_t> rule_buffer_size = dv_<uint32_t>(&N_TYPES_PARTICULES) * (particule_props_size + N_TYPES_PARTICULES * force_rule_size) * 10;
 			
@@ -131,7 +134,7 @@ namespace vkl
 			
 			dv_<std::vector<std::string>> definitions = [&]() {
 				return std::vector<std::string>({
-					std::string("N_TYPES_OF_PARTICULES ") + std::to_string(N_TYPES_PARTICULES),
+					"N_TYPES_OF_PARTICULES "s + std::to_string(N_TYPES_PARTICULES),
 				});
 			};
 
@@ -373,9 +376,11 @@ namespace vkl
 							},
 					},
 					.color_attachements = { render_target_view },
+					.depth_buffer = depth_view,
+					.write_depth = true,
 					.mesh_shader_path = shaders / "render2D.mesh",
 					.fragment_shader_path = shaders / "render2D.frag",
-					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("MESH_PIPELINE 1"s); return res; },
+					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("MESH_PIPELINE 1"s); res.push_back(render_mode_def.value()); return res; },
 				});
 				exec.declare(render_with_mesh);
 			}
@@ -406,7 +411,7 @@ namespace vkl
 					.vertex_shader_path = shaders / "render.vert",
 					.geometry_shader_path = shaders / "render3D.geom",
 					.fragment_shader_path = shaders / "render3D.frag",
-					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("GEOMETRY_PIPELINE 1"s); return res; },
+					.definitions = [&]() {std::vector res = definitions.value(); res.push_back("GEOMETRY_PIPELINE 1"s); res.push_back(render_mode_def.value()); return res; },
 				});
 				exec.declare(render_with_geometry);
 			}
@@ -539,6 +544,8 @@ namespace vkl
 
 					ImGui::SliderFloat3("World Size", (float*)&world_size, 0.0, 10.0);
 					ImGui::Checkbox("render border", &render_border);
+					ImGui::Text("Particules Render Mode: ");
+					render_mode.declare();
 
 					camera.declareImGui();
 

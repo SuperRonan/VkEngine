@@ -12,7 +12,7 @@ layout(points) in;
 layout(location = 0) in uint id[1];
 
 layout(triangle_strip, max_vertices=4) out;
-layout(location = 0) out flat uint v_type;
+layout(location = 0) out flat uvec2 v_type_particule_index;
 layout(location = 1) out Varying v_out;
 
 layout(SHADER_DESCRIPTOR_BINDING + 0, std430) buffer readonly restrict b_state
@@ -36,11 +36,25 @@ void main()
 	const float dist_camera_to_sphere_world = length(camera_to_sphere_world);
 	const vec3 dir_camera_to_sphere_world = camera_to_sphere_world / dist_camera_to_sphere_world;
 
-	const vec3 quad_center_world = sphere.center + sphere.radius * dir_camera_to_sphere_world;
+#if RENDER_MODE == RENDER_MODE_2D_LIKE
+	const vec3 quad_center_world = sphere.center;
+#elif RENDER_MODE == RENDER_MODE_3D
+	const vec3 quad_center_world = sphere.center - sphere.radius * dir_camera_to_sphere_world;
+#endif
 
 	const vec4 sphere_center_proj = (ubo.world_to_proj * vec4(sphere.center, 1));
 	// const vec4 sphere_center_proj = (ubo.world_to_proj * vec4(quad_center_world, 1));
-	
+#if RENDER_MODE == RENDER_MODE_2D_LIKE
+	const vec3 quad_right = ubo.camera_right;
+	const vec3 quad_up = ubo.camera_up;
+#elif RENDER_MODE == RENDER_MODE_3D
+	const vec3 quad_right = normalize(cross(dir_camera_to_sphere_world, ubo.camera_up));
+	const vec3 quad_up = -normalize(cross(dir_camera_to_sphere_world, quad_right));
+#endif
+
+// TODO 3D:
+// The current quads are conservatively big enough to view the sphere, but it can be smaller 
+// generate smaller quad since the sphere is behind is thus closer 
 
 	for(int i=0; i<2; ++i)
 	{
@@ -49,9 +63,12 @@ void main()
 		{
 			const float dy = float(j) - 0.5;
 			
-			v_type = p.type;
+			v_type_particule_index = uvec2(p.type, id[0]);
 			v_out.uv = vec2(dx, dy);
-			const vec3 vertex_world = quad_center_world + (dx * ubo.camera_right - dy * ubo.camera_up) * radius;
+			const vec3 vertex_world = quad_center_world + (dx * quad_right - dy * quad_up) * (radius * 2.0f);
+#if RENDER_MODE == RENDER_MODE_3D
+			v_out.world_pos = vertex_world;
+#endif
 			gl_Position = ubo.world_to_proj * vec4(vertex_world, 1);
 			EmitVertex();
 		}
@@ -60,6 +77,7 @@ void main()
 
 #if I_WANT_TO_DEBUG
 	
+	if(false)
 	{
 		Caret c = Caret3D(sphere_center_proj, 0);
 		c = pushToDebugClipSpaceLn(id[0], c);
@@ -81,9 +99,11 @@ void main()
 	// 	c = pushToDebugUVLn(ubo.camera_right, c);
 	// 	c = pushToDebugUVLn("Camera up", c);
 	// 	c = pushToDebugUVLn(ubo.camera_up, c);
-		c = pushToDebugUVLn(quad_center_world, c);
-		c = pushToDebugUVLn(sphere_center_proj, c);
-		c = pushToDebugUVLn(vec4(camera_to_sphere_world, length(camera_to_sphere_world)), c);
+		// c = pushToDebugUVLn(quad_center_world, c);
+		// c = pushToDebugUVLn(sphere_center_proj, c);
+		// c = pushToDebugUVLn(vec4(camera_to_sphere_world, length(camera_to_sphere_world)), c);
+		c = pushToDebugUVLn(quad_right, c);
+		c = pushToDebugUVLn(quad_up, c);
 	}
 
 #endif
