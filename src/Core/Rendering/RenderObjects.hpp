@@ -92,11 +92,15 @@ namespace vkl
 		struct CreateInfo
 		{
 			DynamicValue<VkExtent2D> resolution = {};
+			float znear = 0.001;
+			float zfar = 10;
 		};
 		using CI = CreateInfo;
 
 		Camera(CreateInfo const& ci) : 
-			_resolution_ifp(ci.resolution)
+			_resolution_ifp(ci.resolution),
+			_near(ci.znear),
+			_far(ci.zfar)
 		{
 
 		}

@@ -170,8 +170,10 @@ namespace vkl
 
 				glm::vec3 light_dir;
 				float roughness;
-				glm::vec3 light_color;
+				glm::vec3 light_intensity;
 				int pad4;
+				glm::vec3 ambient_light_intensity;
+				int pad;
 
 				glm::vec3 world_size;
 				uint32_t num_particules;
@@ -487,12 +489,18 @@ namespace vkl
 				.mouse = &mouse,
 				.gamepad = &gamepad,
 			});
-			camera_controller.keyUpward() = GLFW_KEY_LEFT_ALT;
-			
+			camera_controller.keyUpward() = GLFW_KEY_Q;
+
+			glm::vec3 ambient_color = glm::vec3(1, 1, 1);
+			float ambient_intensity = 0.2;
+			float roughness = 0.5;
 
 			bool paused = true;
 
 			double t = glfwGetTime(), dt;
+
+			float time_scale = 0;
+			float time_mult = 1;
 
 			size_t frame_counter = -1;
 
@@ -501,7 +509,7 @@ namespace vkl
 				frame_counter++;
 				{
 					double new_t = glfwGetTime();
-					dt = new_t - t;
+					dt = (new_t - t) * time_mult;
 					t = new_t;
 				}
 				bool should_render = false || true;
@@ -520,7 +528,7 @@ namespace vkl
 				}
 
 				gamepad.update();
-				camera_controller.updateCamera(dt);
+				camera_controller.updateCamera(dt / time_mult);
 
 				processInput(paused);
 				if (!paused)
@@ -532,6 +540,8 @@ namespace vkl
 				{
 					beginImGuiFrame();
 					ImGui::Begin("Control");
+					ImGui::SliderFloat("Time scale", &time_scale, -1, 1);
+					time_mult = std::pow(10, time_scale);
 					ImGui::SliderFloat("friction", &friction, 0.0, 2.0);
 					ImGui::InputInt("log2(Number of particules)", (int*)& num_particules_log2);
 					std::string str_n_particules = std::to_string(*num_particules) + " particules";
@@ -544,8 +554,20 @@ namespace vkl
 
 					ImGui::SliderFloat3("World Size", (float*)&world_size, 0.0, 10.0);
 					ImGui::Checkbox("render border", &render_border);
+
 					ImGui::Text("Particules Render Mode: ");
 					render_mode.declare();
+
+					if(render_mode.index() == 1)
+					{
+						if (ImGui::CollapsingHeader("Rendering options"))
+						{
+							ImGui::ColorPicker3("Ambient color", &ambient_color.r);
+							ImGui::SliderFloat("Ambient intensity", &ambient_intensity, 0, 1);
+							ImGui::SliderFloat("Roughness", &roughness, 0, 1);
+						}
+					}
+
 
 					camera.declareImGui();
 
@@ -571,8 +593,9 @@ namespace vkl
 						.camera_right = camera.right(),
 						.camera_up = camera.up(),
 						.light_dir = glm::normalize(glm::vec3(1, 1, 1)),
-						.roughness = 0.5,
-						.light_color = glm::vec3(1, 1, 1),
+						.roughness = roughness,
+						.light_intensity = glm::vec3(1, 1, 1),
+						.ambient_light_intensity = ambient_color * ambient_intensity,
 						.world_size = world_size,
 						.num_particules = num_particules.value(),
 					};
@@ -601,7 +624,7 @@ namespace vkl
 						reset_rules = false;
 					}
 
-					if (false && !paused)
+					if (!paused)
 					{
 						exec(copy_to_previous);
 						exec(run_simulation->with({

@@ -118,7 +118,8 @@ struct Uniforms3D
 	
 	vec3 light_dir;
 	float roughness;
-	vec3 light_color;
+	vec3 light_intensity;
+	vec3 ambient_light_intensity;
 	
 	vec3 world_size;
 	int num_particules;

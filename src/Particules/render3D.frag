@@ -38,6 +38,31 @@ layout(depth_greater) out float gl_FragDepth;
 //     layout(offset = 64) float zoom;
 // };
 
+
+vec3 shade(vec3 wi, vec3 frag_pos, vec3 normal, vec3 pcolor)
+{
+	vec3 res = 0..xxx;
+
+	res += ubo.ambient_light_intensity * pcolor;
+
+	const float cos_theta = max(dot(normal, ubo.light_dir), 0.0f);
+	res += cos_theta * ubo.light_intensity * pcolor;
+
+#if false
+	if(ubo.roughness != 1)
+	{
+		const float shininess = tan(HALF_PI * (1 - ubo.roughness));
+
+		const vec3 wo = reflect(-wi, normal);
+		const float refl_dot = max(dot(wo, ubo.light_dir), 0);
+
+		res += pow(refl_dot, shininess);// * (shininess + 1) / TWO_PI;
+	}
+#endif
+
+	return res;
+}
+
 void main()
 {
 	const uint ptype = v_type_id.x;
@@ -86,15 +111,16 @@ void main()
 	}
 
 	const vec3 sphere_point = sampleRay(ray, ray_t);
+	const vec3 wi = normalize(ubo.camera_pos - sphere_point);
 	const vec3 normal = (sphere_point - sphere.center) / sphere.radius;
 
 	vec4 sphere_point_proj = ubo.world_to_proj * vec4(sphere_point, 1);
 	gl_FragDepth = sphere_point_proj.z / sphere_point_proj.w;	
 
 
-	o_color = vec4(pcolor, 1);
+	o_color = vec4(shade(wi, sphere_point, normal, pcolor), 1);
 
-	o_color.xyz = (normal * 0.5 + 0.5);
+	//o_color.xyz *= (normal * 0.5 + 0.5);
 
 #endif
 }
