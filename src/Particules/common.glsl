@@ -56,7 +56,8 @@ vecD modulatePosition(vecD ref, vecD size, vecD p)
 	vecD res;
 	for(int i=0; i<DIMENSIONS; ++i)
 	{
-		if(diff[i] > half_size[i])  res[i] = p[i] - size[i];
+		if(half_size[i] == 0) res[i] = 0;	
+		else if(diff[i] > half_size[i])  res[i] = p[i] - size[i];
 		else if(diff[i] < -half_size[i]) res[i] = p[i] + size[i];
 		else res[i] = p[i];
 	}
