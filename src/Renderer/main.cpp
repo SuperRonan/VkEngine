@@ -20,6 +20,7 @@
 #include <Core/Rendering/DebugRenderer.hpp>
 #include <Core/Rendering/RenderObjects.hpp>
 #include <Core/Rendering/Model.hpp>
+#include <Core/Rendering/Scene.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -34,6 +35,7 @@ namespace vkl
 	protected:
 
 		Executor& _exec;
+		std::shared_ptr<Scene> _scene;
 		std::shared_ptr<ImageView> _target;
 		std::shared_ptr<ImageView> _depth;
 
@@ -43,6 +45,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			Executor& exec;
+			std::shared_ptr<Scene> scene = nullptr;
 			std::shared_ptr<ImageView> target = nullptr;
 		};
 		using CI = CreateInfo;
@@ -50,6 +53,7 @@ namespace vkl
 		Renderer(CreateInfo const& ci):
 			Module(ci.app, ci.name),
 			_exec(ci.exec),
+			_scene(ci.scene),
 			_target(ci.target)
 		{
 			_depth = std::make_shared<ImageView>(ImageView::CI{
@@ -73,6 +77,26 @@ namespace vkl
 				},
 			});
 			_exec.declare(_depth);
+		}
+
+		std::vector<VertexCommand::DrawModelInfo> generateVertexDrawList()
+		{
+			std::vector<VertexCommand::DrawModelInfo> res;
+
+			auto add_model = [&res](glm::mat4 const& matrix, Scene::Node & node)
+			{
+				if(node.visible() && node.model())
+				{
+					res.push_back(VertexCommand::DrawModelInfo{
+						.drawable = node.model(),
+						.pc = matrix,
+					});
+				}
+			};
+
+			_scene->getTree()->iterate(add_model);
+
+			return res;
 		}
 
 		std::shared_ptr<ImageView> depth() const
@@ -139,13 +163,18 @@ namespace vkl
 				},
 			});
 			exec.declare(final_image);
-			
 
+			std::shared_ptr<Scene> scene = std::make_shared<Scene>(Scene::CI{
+				.app = this,
+				.name = "scene",
+			});
+			exec.declare(scene);
 
 			Renderer renderer(Renderer::CI{
 				.app = this,
 				.name = "renderer",
 				.exec = exec,
+				.scene = scene,
 				.target = final_image,
 			});
 
@@ -162,11 +191,15 @@ namespace vkl
 			});
 			exec.declare(model);
 
+			scene->getRootNode()->model() = model;
+
 			std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(this, Model::SetLayoutOptions{});
 			const uint32_t model_set = descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
+			std::shared_ptr<DescriptorSetLayout> scene_layout = scene->setLayout();
 			MultiDescriptorSetsLayouts sets_layouts;
 			sets_layouts += {0, common_layout};
+			sets_layouts += {1, scene_layout};
 
 
 			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
@@ -315,7 +348,7 @@ namespace vkl
 				{
 					//ImGui::ShowDemoWindow();
 
-					ImGui::Text("Camera inclination: %f", glm::degrees(camera.inclination()));
+					camera.declareImGui();
 
 					window->declareImGui();
 
@@ -336,6 +369,8 @@ namespace vkl
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 
+					exec.bindSet(1, scene->set());
+
 					if (frame_index == 0)
 					{
 						UploadResources mesh_uploader(UploadResources::CI{
@@ -349,10 +384,10 @@ namespace vkl
 					{
 						exec(update_ubo);
 
+						auto draw_list = renderer.generateVertexDrawList();
+
 						exec(render->with(VertexCommand::DrawInfo{
-							.drawables = {
-								{.drawable = model, .pc = glm::mat4(1)},
-							},
+							.drawables = draw_list,
 						}));
 
 						exec(show_3D_basis);

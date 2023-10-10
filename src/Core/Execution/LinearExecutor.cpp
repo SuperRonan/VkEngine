@@ -194,6 +194,7 @@ namespace vkl
 		{
 			// The invalidation callback should be for the image, not the view...
 			// It might create some bugs later if we have certain cases of overlapping views on the same image
+			assert(!!image_view);
 			const bool invalidated = image_view->updateResource(update_context);
 			if (invalidated)
 			{
@@ -203,6 +204,7 @@ namespace vkl
 
 		for (auto& buffer : _registered_buffers)
 		{
+			assert(!!buffer);
 			const bool invalidated = buffer->updateResource(update_context);
 			if (invalidated)
 			{
@@ -212,16 +214,19 @@ namespace vkl
 
 		for (auto& sampler : _registered_samplers)
 		{
+			assert(!!sampler);
 			const bool invalidated = sampler->updateResources(update_context);
 		}
 
 		for (auto& command : _commands)
 		{
+			assert(!!command);
 			const bool invalidated = command->updateResources(update_context);
 		}
 
 		for (auto& set : _registered_descriptor_sets)
 		{
+			assert(!!set);
 			const bool invalidated = set->updateResources(update_context);
 		}
 	}
@@ -327,6 +332,25 @@ namespace vkl
 				{
 					_context.rayTracingBoundSets().bind(0, _common_descriptor_set->instance());
 				}
+			}
+		}
+	}
+
+	void LinearExecutor::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
+	{
+		if (set->instance()->exists())
+		{
+			if (bind_graphics)
+			{
+				_context.graphicsBoundSets().bind(s, set->instance());
+			}
+			if (bind_compute)
+			{
+				_context.computeBoundSets().bind(s, set->instance());
+			}
+			if (bind_rt)
+			{
+				_context.rayTracingBoundSets().bind(s, set->instance());
 			}
 		}
 	}

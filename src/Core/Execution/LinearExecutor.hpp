@@ -97,6 +97,8 @@ namespace vkl
 
 		void beginCommandBuffer(bool bind_common_set = true);
 
+		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);
+
 		void renderDebugIFN();
 
 		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
