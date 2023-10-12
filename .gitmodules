@@ -22,3 +22,6 @@
 [submodule "ext/SPIRV-Cross"]
 	path = ext/SPIRV-Cross
 	url = https://github.com/KhronosGroup/SPIRV-Cross.git
+[submodule "ext/tinyobj"]
+	path = ext/tinyobj
+	url = https://github.com/tinyobjloader/tinyobjloader.git

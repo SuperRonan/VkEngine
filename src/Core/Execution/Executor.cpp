@@ -8,22 +8,23 @@ namespace vkl
 	void Executor::buildCommonSetLayout()
 	{
 		using namespace std::containers_operators;
-		std::vector<VkDescriptorSetLayoutBinding> bindings;
-		std::vector<DescriptorSetLayout::BindingMeta> metas;
+		std::vector<DescriptorSetLayout::Binding> bindings;
 
 		if (_use_debug_renderer)
 		{
-			bindings += VkDescriptorSetLayoutBinding{
-				.binding = 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			};
-			metas += DescriptorSetLayout::BindingMeta{
-				.name = "DebugBuffer",
-				.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			bindings += { 
+				.vk_binding = VkDescriptorSetLayoutBinding{
+					.binding = 0,
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_ALL,
+					.pImmutableSamplers = nullptr,
+				},
+				.meta = DescriptorSetLayout::BindingMeta{
+					.name = "DebugBuffer",
+					.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+					.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				},
 			};
 		}
 
@@ -32,7 +33,6 @@ namespace vkl
 			.name = name() + ".common_layout",
 			.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
 			.bindings = bindings,
-			.metas = metas,
 			.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 		});
 	}

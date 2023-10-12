@@ -23,6 +23,8 @@ namespace vkl
 		std::shared_ptr<DescriptorPool> _pool = nullptr;
 		std::shared_ptr<DescriptorSet> _set = nullptr;
 
+		bool _allow_null_bindings = true;
+
 		size_t findBindingIndex(uint32_t b) const;
 
 		void sortBindings();
@@ -107,6 +109,8 @@ namespace vkl
 
 		std::shared_ptr<Program> _prog = nullptr;
 		uint32_t _target_set = -1;
+
+		bool _allow_missing_bindings = true;
 
 		ResourceBindings _bindings = {};
 

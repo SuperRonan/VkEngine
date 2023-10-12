@@ -68,15 +68,13 @@ namespace vkl
 
 		if (!res)
 		{
-			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			std::vector<DescriptorSetLayout::BindingMeta> metas;
+			std::vector<DescriptorSetLayout::Binding> bindings;
 
 			res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = app,
 				.name = "Scene::SetLayout",
 				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
 				.bindings = bindings,
-				.metas = metas,
 				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			});
 
@@ -119,6 +117,13 @@ namespace vkl
 	ResourcesToDeclare Scene::getResourcesToDeclare()
 	{
 		ResourcesToDeclare res;
+		_tree->iterate([&res](Mat4 const& matrix, Node& node)
+		{
+			if (node.model())
+			{
+				res += node.model()->getResourcesToDeclare();
+			}
+		});
 		res += _set;
 		return res;
 	}
@@ -127,11 +132,25 @@ namespace vkl
 	{
 		ResourcesToUpload res;
 
+		_tree->iterate([&res](Mat4 const& matrix, Node& node)
+		{
+			if (node.model())
+			{
+				res += node.model()->getResourcesToUpload();
+			}
+		});
+
 		return res;
 	}
 
 	void Scene::notifyDataIsUploaded()
 	{
-
+		_tree->iterate([](Mat4 const& matrix, Node& node)
+		{
+			if (node.model())
+			{
+				node.model()->notifyDataIsUploaded();
+			}
+		});
 	}
 }

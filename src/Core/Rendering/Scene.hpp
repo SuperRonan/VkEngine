@@ -37,12 +37,14 @@ namespace vkl
 			{
 				std::string name = {};
 				Mat4x3 matrix = Mat4x3(1);
+				std::shared_ptr<Model> model = nullptr;
 			};
 			using CI = CreateInfo;
 
 			Node(CreateInfo const& ci):
 				_name(ci.name),
-				_matrix(ci.matrix)
+				_matrix(ci.matrix),
+				_model(ci.model)
 			{}
 
 			constexpr const std::string& name() const
@@ -50,9 +52,9 @@ namespace vkl
 				return _name;
 			}
 
-			constexpr const Mat4& matrix4x4() const
+			constexpr Mat4 matrix4x4() const
 			{
-				return _matrix;
+				return Mat4(_matrix);
 			}
 
 			constexpr const Mat4x3& matrix4x3() const

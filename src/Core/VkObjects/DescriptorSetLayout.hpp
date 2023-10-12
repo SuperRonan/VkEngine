@@ -18,6 +18,12 @@ namespace vkl
 			VkBufferUsageFlags buffer_usage = 0;
 		};
 
+		struct Binding
+		{
+			VkDescriptorSetLayoutBinding vk_binding;
+			BindingMeta meta;
+		};
+
 	protected:
 
 		VkDescriptorSetLayout _handle = VK_NULL_HANDLE;
@@ -40,7 +46,8 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VkDescriptorSetLayoutCreateFlags flags = 0;
-			std::vector<VkDescriptorSetLayoutBinding> bindings = {};
+			std::vector<Binding> bindings = {};
+			std::vector<VkDescriptorSetLayoutBinding> vk_bindings = {};
 			std::vector<BindingMeta> metas = {};
 			VkDescriptorBindingFlags binding_flags = 0;
 		};

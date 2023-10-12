@@ -7,8 +7,10 @@ namespace vkl
 		VkObject(ci.app, ci.name),
 		Drawable(),
 		ResourcesHolder(),
-		_mesh(ci.mesh)
+		_mesh(ci.mesh),
+		_material(ci.material)
 	{
+		assert(!!_mesh xor (!ci.mesh_path.empty()));
 		createSet();
 	}
 
@@ -17,7 +19,16 @@ namespace vkl
 		using namespace std::containers_operators;
 		ShaderBindings bindings;
 
-		_mesh->writeBindings(bindings);
+		bindings += _mesh->getShaderBindings(mesh_binding_offset);
+
+		if (!!_material)
+		{
+			bindings += _material->getShaderBindings(material_binding_offset);
+		}
+		else
+		{
+
+		}
 
 		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CreateInfo{
 			.app = application(),
@@ -34,14 +45,28 @@ namespace vkl
 
 	ResourcesToDeclare Model::getResourcesToDeclare()
 	{
-		ResourcesToDeclare res = _mesh->getResourcesToDeclare();
-		res.sets.push_back(_set);
+		ResourcesToDeclare res;
+		res += _mesh->getResourcesToDeclare();
+		if (_material)
+		{
+			res += _material->getResourcesToDeclare();
+		}
+		res += _set;
 		return res;
 	}
 
 	ResourcesToUpload Model::getResourcesToUpload()
 	{
-		ResourcesToUpload res = _mesh->getResourcesToUpload();
+		ResourcesToUpload res;
+		if(_mesh->getStatus().device_up_to_date == false) 
+		{
+			res += _mesh->getResourcesToUpload();
+		}
+
+		if (_material)
+		{
+			res += _material->getResourcesToUpload();
+		}
 
 		return res;
 	}
@@ -68,7 +93,8 @@ namespace vkl
 		if (!_set_layout)
 		{
 			_set_layout = setLayout(application(), SetLayoutOptions{
-				
+				.bind_mesh = true,
+				.bind_material = !!_material,
 			});
 		}
 		return _set_layout;
@@ -91,47 +117,18 @@ namespace vkl
 		if (!res)
 		{
 			using namespace std::containers_operators;
-			std::vector<VkDescriptorSetLayoutBinding> bindings;
-			std::vector<DescriptorSetLayout::BindingMeta> metas;
 
-			bindings += VkDescriptorSetLayoutBinding{
-				.binding = 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			};
-			metas += DescriptorSetLayout::BindingMeta{
-				.name = "MeshHeader",
-				.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			};
+			std::vector<DescriptorSetLayout::Binding> bindings;
 
-			bindings += VkDescriptorSetLayoutBinding{
-				.binding = 1,
-					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_ALL,
-					.pImmutableSamplers = nullptr,
-			};
-			metas += DescriptorSetLayout::BindingMeta{
-				.name = "MeshVertices",
-					.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-					.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			};
+			if(options.bind_mesh)
+			{
+				bindings += RigidMesh::getSetLayoutBindingsStatic(mesh_binding_offset);
+			}
 
-			bindings += VkDescriptorSetLayoutBinding{
-				.binding = 2,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			};
-			metas += DescriptorSetLayout::BindingMeta{
-				.name = "MeshIndices32",
-				.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			};
+			if (options.bind_material)
+			{
+				bindings += Material::getSetLayoutBindings(Material::Type::PhysicallyBased, material_binding_offset);
+			}
 
 			VkDescriptorSetLayoutCreateFlags flags = 0;
 			VkDescriptorBindingFlags binding_flags = 0;
@@ -150,7 +147,6 @@ namespace vkl
 				.name = "Model::DescriptorSetLayout",
 				.flags = flags,
 				.bindings = bindings,
-				.metas = metas,
 				.binding_flags = binding_flags,
 			});
 			cache->recordValue(options, res);

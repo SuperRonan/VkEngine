@@ -26,6 +26,9 @@ namespace vkl
 		bool _updated = false;
 
 	public:
+		
+		ResourceBinding()
+		{}
 
 		ResourceBinding(ShaderBindingDescription const& desc);
 

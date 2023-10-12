@@ -182,7 +182,7 @@ namespace vkl
 					.app = application(),
 					.name = name() + ".DescSetLayout",
 					.flags = flags,
-					.bindings = bindings,
+					.vk_bindings = bindings,
 					.metas = metas,
 					.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 				});

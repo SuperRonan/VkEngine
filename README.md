@@ -87,3 +87,9 @@
 - [ ] HashCache based field storage + neural recontstruction?
 - [ ] ReStiR
 - [ ] Radiance guiding
+
+
+# Loose Ideas:
+There should be two types of resources, synch ones and asynch ones.
+- Synch resources (curent implementation) are intended to be "script resources", in a limited number, updated by the main thread, always loaded and ready to use
+- Asynch resources are intended to be meshes, textures, etc, in a large number, managed (loaded, updated) by asynch threads and can be not avaible yet, partially available, or complitely available

@@ -154,6 +154,16 @@ namespace vkl
 		
 	}
 
+	MeshHeader RigidMesh::getHeader() const
+	{
+		return MeshHeader{
+			.num_vertices = static_cast<uint32_t>(_host.numVertices()),
+			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
+			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
+			.flags = meshFlags(_host.index_type),
+		};
+	}
+
 	void RigidMesh::compressIndices()
 	{
 		const bool index_uint8_t_available = application()->availableFeatures().index_uint8_ext.indexTypeUint8;
@@ -446,12 +456,7 @@ namespace vkl
 		assert(_host.loaded);
 		assert(!_device.loaded());
 
-		MeshHeader header{
-			.num_vertices = static_cast<uint32_t>(_host.numVertices()),
-			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
-			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
-			.flags = meshFlags(_host.index_type),
-		};
+		const MeshHeader header = getHeader();
 
 		const size_t ssbo_align = application()->deviceProperties().props.limits.minStorageBufferOffsetAlignment;
 		const size_t ubo_align = application()->deviceProperties().props.limits.minUniformBufferOffsetAlignment;
@@ -499,68 +504,121 @@ namespace vkl
 		assert(_device.loaded());
 		ResourcesToUpload res;
 
-		std::vector<PositionedObjectView> sources(3);
+		if(!_device.up_to_date)
+		{
+			std::vector<PositionedObjectView> sources(3);
 		
-		MeshHeader header{
-			.num_vertices = static_cast<uint32_t>(_host.numVertices()),
-			.num_indices = static_cast<uint32_t>(_host.indicesSize()),
-			.num_primitives = static_cast<uint32_t>(_host.indicesSize() / 3),
-			.flags = meshFlags(_host.index_type),
-		};
+			const MeshHeader header = getHeader();
 
-		sources[0] = PositionedObjectView{
-			.obj = header,
-			.pos = 0,
-		};
-
-		if (_host.use_full_vertices)
-		{
-			sources[1] = PositionedObjectView{
-				.obj = _host.vertices,
-				.pos = _device.header_size,
+			sources[0] = PositionedObjectView{
+				.obj = header,
+				.pos = 0,
 			};
-		}
-		else
-		{
-			sources[1] = PositionedObjectView{
-				.obj = _host.positions,
-				.pos = _device.header_size,
+
+			if (_host.use_full_vertices)
+			{
+				sources[1] = PositionedObjectView{
+					.obj = _host.vertices,
+					.pos = _device.header_size,
+				};
+			}
+			else
+			{
+				sources[1] = PositionedObjectView{
+					.obj = _host.positions,
+					.pos = _device.header_size,
+				};
+			}
+
+			sources[2] = PositionedObjectView{
+				.obj = _host.indicesView(),
+				.pos = _device.header_size + _device.vertices_size,
 			};
+
+			res.buffers.push_back(ResourcesToUpload::BufferUpload{
+				.sources = sources,
+				.dst = _device.mesh_buffer,
+			});
 		}
-
-		sources[2] = PositionedObjectView{
-			.obj = _host.indicesView(),
-			.pos = _device.header_size + _device.vertices_size,
-		};
-
-		res.buffers.push_back(ResourcesToUpload::BufferUpload{
-			.sources = sources,
-			.dst = _device.mesh_buffer,
-		});
 		return res;
 	}
 
-	void RigidMesh::writeBindings(ShaderBindings& bindings)
+	std::vector<DescriptorSetLayout::Binding> RigidMesh::getSetLayoutBindingsStatic(uint32_t offset)
+	{
+		std::vector<DescriptorSetLayout::Binding> res;
+		using namespace std::containers_operators;
+
+		res += {
+			.vk_binding = VkDescriptorSetLayoutBinding{
+				.binding = offset + 0,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.descriptorCount = 1,
+				.stageFlags = VK_SHADER_STAGE_ALL,
+				.pImmutableSamplers = nullptr,
+			},
+			.meta = DescriptorSetLayout::BindingMeta{
+				.name = "MeshHeader",
+				.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			},
+		};
+
+		res += {
+			.vk_binding = VkDescriptorSetLayoutBinding{
+				.binding = offset + 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.descriptorCount = 1,
+				.stageFlags = VK_SHADER_STAGE_ALL,
+				.pImmutableSamplers = nullptr,
+			},
+			.meta = DescriptorSetLayout::BindingMeta{
+				.name = "MeshVertices",
+				.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			}
+		};
+
+		res += {
+			.vk_binding = VkDescriptorSetLayoutBinding{
+				.binding = offset + 2,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.descriptorCount = 1,
+				.stageFlags = VK_SHADER_STAGE_ALL,
+				.pImmutableSamplers = nullptr,
+			},
+			.meta = DescriptorSetLayout::BindingMeta{
+				.name = "MeshIndices32",
+				.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			},
+		};
+
+		return res;
+	}
+
+	ShaderBindings RigidMesh::getShaderBindings(uint32_t offset)
 	{
 		assert(!!_device.mesh_buffer);
 		using namespace std::containers_operators;
-		bindings += ShaderBindingDescription{
+		ShaderBindings res;
+		res += ShaderBindingDescription{
 			.buffer = _device.mesh_buffer,
 			.buffer_range = Range_st{.begin = 0, .len = _device.header_size},
-			.binding = 0,
+			.binding = offset + 0,
 		};
 
-		bindings += ShaderBindingDescription{
+		res += ShaderBindingDescription{
 			.buffer = _device.mesh_buffer,
 			.buffer_range = Range_st{ .begin = _device.header_size, .len = _device.vertices_size },
-			.binding = 1,
+			.binding = offset + 1,
 		};
 
-		bindings += ShaderBindingDescription{
+		res += ShaderBindingDescription{
 			.buffer = _device.mesh_buffer,
 			.buffer_range = Range_st{ .begin = _device.header_size + _device.vertices_size, .len = _device.indices_size },
-			.binding = 2,
+			.binding = offset + 2,
 		};
+		return res;
 	}
 
 	ResourcesToDeclare RigidMesh::getResourcesToDeclare()

@@ -101,7 +101,9 @@ namespace vkl
 
 		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override = 0;
 
-		virtual void writeBindings(ShaderBindings & bindings) = 0;
+		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
+
+		virtual ShaderBindings getShaderBindings(uint offset) = 0;
 	};
 
 	class RigidMesh : public Mesh
@@ -286,6 +288,8 @@ namespace vkl
 
 		virtual ~RigidMesh();
 
+		MeshHeader getHeader() const;
+
 		void compressIndices();
 
 		void decompressIndices();
@@ -315,7 +319,14 @@ namespace vkl
 			_device.up_to_date = true;
 		}
 
-		virtual void writeBindings(ShaderBindings& bindings) override final;
+		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
+
+		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override final
+		{
+			return getSetLayoutBindingsStatic(offset);
+		}
+
+		virtual ShaderBindings getShaderBindings(uint offset) override final;
 
 		virtual ResourcesToDeclare getResourcesToDeclare() override final;
 

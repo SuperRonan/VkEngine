@@ -126,6 +126,37 @@ namespace vkl
 
 		}
 
+		void createScene(std::shared_ptr<Scene> & scene)
+		{
+			std::shared_ptr<Scene::Node> root = scene->getRootNode();
+
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PlatonMakeInfo{
+				.app = this,
+				.radius = 0.5,
+				.face_normal = false,
+			});
+
+			std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+				.app = this,
+				.name = "DefaultMaterial",
+			});
+
+			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+				.app = this,
+				.name = "Model",
+				.mesh = mesh,
+				.material = material,
+			});
+
+
+			std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "ModelNode",
+				.model = model,
+			});
+
+			root->addChild(model_node);
+		}
+
 		virtual void run() final override
 		{
 			VkApplication::init();
@@ -168,6 +199,8 @@ namespace vkl
 				.app = this,
 				.name = "scene",
 			});
+
+			createScene(scene);
 			exec.declare(scene);
 
 			Renderer renderer(Renderer::CI{
@@ -178,20 +211,7 @@ namespace vkl
 				.target = final_image,
 			});
 
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PlatonMakeInfo{
-				.app = this,
-				.radius = 0.5,
-				.face_normal = false,
-			});
-
-			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-				.app = this,
-				.name = "Model",
-				.mesh = mesh,
-			});
-			exec.declare(model);
-
-			scene->getRootNode()->model() = model;
+			
 
 			std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(this, Model::SetLayoutOptions{});
 			const uint32_t model_set = descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
@@ -371,13 +391,13 @@ namespace vkl
 
 					exec.bindSet(1, scene->set());
 
-					if (frame_index == 0)
+					
 					{
-						UploadResources mesh_uploader(UploadResources::CI{
+						UploadResources uploader(UploadResources::CI{
 							.app = this,
 						});
-						exec(mesh_uploader(UploadResources::UI{
-							.holder = mesh,
+						exec(uploader(UploadResources::UI{
+							.holder = scene,
 						}));
 					}
 

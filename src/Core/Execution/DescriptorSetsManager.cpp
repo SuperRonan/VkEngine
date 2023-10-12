@@ -22,15 +22,40 @@ namespace vkl
 			ResourceBinding& binding = _bindings[i];
 			if (binding.isBuffer())
 			{
-				binding.buffer()->removeInvalidationCallbacks(this);
+				if (binding.buffer())
+				{
+					binding.buffer()->removeInvalidationCallbacks(this);
+				}
+				else
+				{
+					assert(_allow_null_bindings);
+				}
 			}
 			else if (binding.isImage())
 			{
-				binding.image()->removeInvalidationCallbacks(this);
+				if (binding.image())
+				{
+					binding.image()->removeInvalidationCallbacks(this);
+				}
+				else
+				{
+					assert(_allow_null_bindings);
+				}
 			}
-			else // if(binding.isSampler())
+			else if(binding.isSampler())
 			{
-				binding.sampler()->removeInvalidationCallbacks(this);
+				if (binding.sampler())
+				{
+					binding.sampler()->removeInvalidationCallbacks(this);
+				}
+				else
+				{
+					assert(_allow_null_bindings);
+				}
+			}
+			else
+			{
+				assert(false);
 			}
 		}
 
@@ -83,15 +108,51 @@ namespace vkl
 			};
 			if (binding.isBuffer())
 			{
-				binding.buffer()->addInvalidationCallback(cb);
+				if (binding.buffer())
+				{
+					binding.buffer()->addInvalidationCallback(cb);
+				}
+				else
+				{
+					assert(_allow_null_bindings);
+					binding.setUpdateStatus(true);
+				}
 			}
-			else if (binding.isImage())
+			else if(binding.isImage() || binding.isSampler())
 			{
-				binding.image()->addInvalidationCallback(cb);
+				int null_desc = 0;
+				if (binding.isImage())
+				{
+					if (binding.image())
+					{
+						binding.image()->addInvalidationCallback(cb);
+					}
+					else
+					{
+						assert(_allow_null_bindings); 
+						++ null_desc;
+					}
+				}
+				else if(binding.isSampler())
+				{
+					if (binding.sampler())
+					{
+						binding.sampler()->addInvalidationCallback(cb);
+					}
+					else
+					{
+						assert(_allow_null_bindings);
+						++ null_desc;
+					}
+				}
+				if (binding.isImage() && binding.isSampler() && null_desc == 2)
+				{
+					binding.setUpdateStatus(true);
+				}
 			}
-			else // if(binding.isSampler())
+			else
 			{
-				binding.sampler()->addInvalidationCallback(cb);
+				assert(false);
 			}
 		}
 	}
@@ -408,7 +469,69 @@ namespace vkl
 		}
 		else
 		{
-			assert(_bindings.size() == _layout->bindings().size());
+			const bool fill_missing_bindings_with_null = _allow_missing_bindings;
+
+
+			if (_bindings.size() != _layout->bindings().size())
+			{
+				if(!fill_missing_bindings_with_null)
+				{
+					assert(false);
+				}
+				// Fill missing bindings
+				if (_bindings.size() < _layout->bindings().size())
+				{
+					ResourceBindings new_bindings;
+					new_bindings.resize(_layout->bindings().size());
+
+					size_t j = 0;
+					for (size_t i = 0; i < _layout->bindings().size(); ++i)
+					{
+						const uint32_t b = _layout->bindings()[i].binding;
+						
+						const size_t b_index = [&]() -> size_t {
+							while (j != -1)
+							{
+								if (j == _bindings.size())
+								{
+									j = -1;
+									return j;
+								}
+								else if (_bindings[j].binding() == b)
+								{
+									return j;
+								}
+								else if (_bindings[j].binding() < b)
+								{
+									++j;
+								}
+								else // if(_bindings[j].binding() > b)
+								{
+									return -1;
+								}
+							}
+							return j;
+						}();
+
+						if (b_index != -1)
+						{
+							new_bindings[i] = _bindings[b_index];
+						}
+						else
+						{
+							Binding null_binding{
+								.binding = _layout->bindings()[i].binding,
+							};							
+							new_bindings[i] = null_binding;
+						}
+					}
+
+					_bindings = new_bindings;
+				}
+			}
+
+
+			
 			for (size_t j = 0; j < _bindings.size(); ++j)
 			{
 				_bindings[j].resolve(_bindings[j].binding());
@@ -416,6 +539,7 @@ namespace vkl
 				const auto& vkb = _layout->bindings()[j];
 				_bindings[j].setType(vkb.descriptorType);
 			}
+			
 			res = _bindings;
 		}
 

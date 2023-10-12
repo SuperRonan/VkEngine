@@ -31,20 +31,17 @@ namespace vkl
 	{
 		// TODO Optimize sometime
 		// Make a std SoA sort
-		struct Tmp {
-			VkDescriptorSetLayoutBinding binding = {};
-			BindingMeta meta = {};
-		};
-		std::vector<Tmp> tmp(_bindings.size());
+		
+		std::vector<Binding> tmp(_bindings.size());
 		for (size_t i = 0; i < tmp.size(); ++i)
 		{
-			tmp[i].binding = _bindings[i];
+			tmp[i].vk_binding = _bindings[i];
 			tmp[i].meta = _metas[i];
 		}
-		std::sort(tmp.begin(), tmp.end(), [](Tmp const& a, Tmp const& b){return a.binding.binding < b.binding.binding; });
+		std::sort(tmp.begin(), tmp.end(), [](Binding const& a, Binding const& b){return a.vk_binding.binding < b.vk_binding.binding; });
 		for (size_t i = 0; i < tmp.size(); ++i)
 		{
-			_bindings[i] = tmp[i].binding;
+			_bindings[i] = tmp[i].vk_binding;
 			_metas[i] = tmp[i].meta;
 		}
 	}
@@ -52,8 +49,23 @@ namespace vkl
 	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
 		_metas(ci.metas),
-		_bindings(ci.bindings)
+		_bindings(ci.vk_bindings)
 	{
+		if (ci.bindings.empty())
+		{
+			assert(_metas.size() == _bindings.size());
+		}
+		else
+		{
+			_bindings.resize(ci.bindings.size());
+			_metas.resize(ci.bindings.size());
+			for (size_t i = 0; i < ci.bindings.size(); ++i)
+			{
+				_bindings[i] = ci.bindings[i].vk_binding;
+				_metas[i] = ci.bindings[i].meta;
+			}
+		}
+
 
 		sortBindings();
 
