@@ -51,19 +51,19 @@ namespace vkl
 			_use_rt_pipeline(ci.use_ray_tracing_pipeline)
 		{}
 
-		virtual void declare(std::shared_ptr<Command> cmd) = 0;
+		virtual void declare(std::shared_ptr<Command> const& cmd) = 0;
 
-		virtual void declare(std::shared_ptr<ImageView> view) = 0;
+		virtual void declare(std::shared_ptr<ImageView> const& view) = 0;
 
-		virtual void declare(std::shared_ptr<Buffer> buffer) = 0;
+		virtual void declare(std::shared_ptr<Buffer> const& buffer) = 0;
 
-		virtual void release(std::shared_ptr<Buffer> buffer) = 0;
+		virtual void release(std::shared_ptr<Buffer> const& buffer) = 0;
 
-		virtual void declare(std::shared_ptr<Sampler> sampler) = 0;
+		virtual void declare(std::shared_ptr<Sampler> const& sampler) = 0;
 
-		virtual void declare(std::shared_ptr<DescriptorSetAndPool> set) = 0;
+		virtual void declare(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
 
-		virtual void declare(std::shared_ptr<ResourcesHolder> holder) = 0;
+		virtual void declare(std::shared_ptr<ResourcesHolder> const& holder) = 0;
 
 		virtual void init() = 0;
 

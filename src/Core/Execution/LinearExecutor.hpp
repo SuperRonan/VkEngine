@@ -27,12 +27,7 @@ namespace vkl
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::shared_ptr<ImguiCommand> _render_gui = nullptr;
 
-		std::vector<std::shared_ptr<Command>> _commands = {};
-
-		std::vector<std::shared_ptr<ImageView>> _registered_images = {};
-		std::vector<std::shared_ptr<Buffer>> _registered_buffers = {};
-		std::vector<std::shared_ptr<Sampler>> _registered_samplers = {};
-		std::vector<std::shared_ptr<DescriptorSetAndPool>> _registered_descriptor_sets = {};
+		ResourcesToDeclare _registered_resources;
 
 		MountingPoints _mounting_points;
 
@@ -74,20 +69,20 @@ namespace vkl
 
 		virtual ~LinearExecutor() override;
 
-		virtual void declare(std::shared_ptr<Command> cmd) override final;
+		virtual void declare(std::shared_ptr<Command> const& cmd) override final;
 
-		virtual void declare(std::shared_ptr<ImageView> view) override final;
+		virtual void declare(std::shared_ptr<ImageView> const& view) override final;
 
-		virtual void declare(std::shared_ptr<Buffer> buffer) override final;
+		virtual void declare(std::shared_ptr<Buffer> const& buffer) override final;
 
-		virtual void release(std::shared_ptr<Buffer> buffer) override final;
+		virtual void release(std::shared_ptr<Buffer> const& buffer) override final;
 
 
-		virtual void declare(std::shared_ptr<Sampler> sampler) override final;
+		virtual void declare(std::shared_ptr<Sampler> const& sampler) override final;
 
-		virtual void declare(std::shared_ptr<DescriptorSetAndPool> set) override final;
+		virtual void declare(std::shared_ptr<DescriptorSetAndPool> const& set) override final;
 
-		virtual void declare(std::shared_ptr<ResourcesHolder> holder) override final;
+		virtual void declare(std::shared_ptr<ResourcesHolder> const& holder) override final;
 
 		virtual void init() override final;
 

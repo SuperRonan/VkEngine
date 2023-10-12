@@ -56,67 +56,45 @@ namespace vkl
 			ImGui_ImplVulkan_DestroyFontUploadObjects();
 			//ImGui_ImplVulkan_DestroyDeviceObjects();
 		}
-		
-
-
-		if (_window->swapchain()->instance())
-		{
-			_window->swapchain()->instance()->removeDestructionCallbacks(this);
-		}
-
-		for (auto& image_view : _registered_images)
-		{
-			if (image_view->instance())
-			{
-				image_view->instance()->removeDestructionCallbacks(this);
-			}
-		}
-
-		for (auto& buffer : _registered_buffers)
-		{
-			if (buffer->instance())
-			{
-				buffer->instance()->removeDestructionCallbacks(this);
-			}
-		}
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<Command> cmd)
+	void LinearExecutor::declare(std::shared_ptr<Command> const& cmd)
 	{
 		cmd->init();
-		_commands.emplace_back(std::move(cmd));
+		_registered_resources += cmd;
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<ImageView> view)
+	void LinearExecutor::declare(std::shared_ptr<ImageView> const& view)
 	{
-		_registered_images.emplace_back(std::move(view));
+		_registered_resources += view;
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<Buffer> buffer)
+	void LinearExecutor::declare(std::shared_ptr<Buffer> const& buffer)
 	{
-		_registered_buffers.emplace_back(std::move(buffer));
+		_registered_resources += buffer;
 	}
 
-	void LinearExecutor::release(std::shared_ptr<Buffer> buffer)
+	void LinearExecutor::release(std::shared_ptr<Buffer> const& buffer)
 	{
-		auto it = std::find(_registered_buffers.begin(), _registered_buffers.end(), buffer);
-		if (it != _registered_buffers.end())
+		// Assuming the buffer is declared only once
+		auto it = std::find(_registered_resources.buffers.begin(), _registered_resources.buffers.end(), buffer);
+		if (it != _registered_resources.buffers.end())
 		{
-			_registered_buffers.erase(it);
+			_registered_resources.buffers.erase(it);
 		}
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<Sampler> sampler)
+	void LinearExecutor::declare(std::shared_ptr<Sampler> const& sampler)
 	{
-		_registered_samplers.emplace_back(std::move(sampler));
+		_registered_resources += sampler;
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<DescriptorSetAndPool> set)
+	void LinearExecutor::declare(std::shared_ptr<DescriptorSetAndPool> const& set)
 	{
-		_registered_descriptor_sets.emplace_back(std::move(set));
+		_registered_resources += set;
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<ResourcesHolder> holder)
+	void LinearExecutor::declare(std::shared_ptr<ResourcesHolder> const& holder)
 	{
 		ResourcesToDeclare res = holder->getResourcesToDeclare();
 
@@ -190,7 +168,7 @@ namespace vkl
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
 		}
 
-		for (auto& image_view : _registered_images)
+		for (auto& image_view : _registered_resources.images)
 		{
 			// The invalidation callback should be for the image, not the view...
 			// It might create some bugs later if we have certain cases of overlapping views on the same image
@@ -202,7 +180,7 @@ namespace vkl
 			}
 		}
 
-		for (auto& buffer : _registered_buffers)
+		for (auto& buffer : _registered_resources.buffers)
 		{
 			assert(!!buffer);
 			const bool invalidated = buffer->updateResource(update_context);
@@ -212,19 +190,19 @@ namespace vkl
 			}
 		}
 
-		for (auto& sampler : _registered_samplers)
+		for (auto& sampler : _registered_resources.samplers)
 		{
 			assert(!!sampler);
 			const bool invalidated = sampler->updateResources(update_context);
 		}
 
-		for (auto& command : _commands)
+		for (auto& command : _registered_resources.commands)
 		{
 			assert(!!command);
 			const bool invalidated = command->updateResources(update_context);
 		}
 
-		for (auto& set : _registered_descriptor_sets)
+		for (auto& set : _registered_resources.sets)
 		{
 			assert(!!set);
 			const bool invalidated = set->updateResources(update_context);
