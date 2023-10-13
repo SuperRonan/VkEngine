@@ -104,6 +104,7 @@ namespace vkl
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
 		virtual ShaderBindings getShaderBindings(uint offset) = 0;
+
 	};
 
 	class RigidMesh : public Mesh

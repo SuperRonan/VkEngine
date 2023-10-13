@@ -221,6 +221,7 @@ namespace vkl
 			assert(b.isResolved());
 			if (!b.updated())
 			{
+				bool do_write = false;
 				VkWriteDescriptorSet write{
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
@@ -264,6 +265,7 @@ namespace vkl
 						});
 					VkDescriptorBufferInfo& info = buffers.back();
 					write.pBufferInfo = &info;
+					do_write = true;
 				}
 				else if (b.isImage() || b.isSampler())
 				{
@@ -271,6 +273,7 @@ namespace vkl
 					if (b.sampler())
 					{
 						info.sampler = *b.sampler()->instance();
+						do_write = true;
 					}
 					else
 					{
@@ -280,19 +283,27 @@ namespace vkl
 					{
 						info.imageView = *b.image()->instance();
 						info.imageLayout = b.resource()._begin_state.layout;
+						do_write = true;
 					}
 					else
 					{
 						info.imageView = VK_NULL_HANDLE;
 					}
-					images.push_back(info);
-					write.pImageInfo = &images.back();
+					
+					if (do_write)
+					{
+						images.push_back(info);
+						write.pImageInfo = &images.back();
+					}
 				}
 				else
 				{
 					assert(false);
 				}
-				writes.push_back(write);
+				if (do_write)
+				{
+					writes.push_back(write);
+				}
 				b.setUpdateStatus(true);
 			}
 		}

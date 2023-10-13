@@ -22,6 +22,19 @@ namespace vkl
 		});
 	}
 
+	ImguiCommand::~ImguiCommand()
+	{
+		_swapchain->removeInvalidationCallbacks(this);
+
+		if (_render_pass)
+		{
+			vkDeviceWaitIdle(device());
+			ImGui_ImplVulkan_Shutdown();
+			_desc_pool = nullptr;
+			_render_pass = nullptr;
+		}
+	}
+
 	void ImguiCommand::createFramebuffers()
 	{
 		const size_t n = _swapchain->instance()->images().size();
@@ -137,6 +150,7 @@ namespace vkl
 
 	void ImguiCommand::maybeDestroyRenderPass()
 	{
+		assert(_swapchain);
 		VkFormat fmt = _swapchain->format().value().format;
 		if(fmt != _render_pass_format)
 		{
@@ -239,17 +253,5 @@ namespace vkl
 		}
 
 		return res;
-	}
-
-
-	ImguiCommand::~ImguiCommand()
-	{
-		if (_render_pass)
-		{
-			vkDeviceWaitIdle(device());
-			ImGui_ImplVulkan_Shutdown();
-			_desc_pool = nullptr;
-			_render_pass = nullptr;
-		}
 	}
 }

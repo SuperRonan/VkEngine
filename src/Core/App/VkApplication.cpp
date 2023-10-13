@@ -266,25 +266,42 @@ namespace vkl
 
 	uint32_t VkApplication::checkDeviceExtensionSupport(VkPhysicalDevice const& device)
 	{
-		const auto device_extensions = getDeviceExtensions();
+		const auto requested_extensions = getDeviceExtensions();
 
 		uint32_t extension_count;
+		std::vector<VkExtensionProperties> queried_extensions;
 		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
-		_device_extensions.resize(extension_count);
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, _device_extensions.data());
+		queried_extensions.resize(extension_count);
+		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, queried_extensions.data());
 
-		for (auto it = _device_extensions.begin(); it != _device_extensions.end(); ++it)
+		_device_extensions.clear();
+
+		uint32_t present = 0;
+		uint32_t missing = 0;
+		for (size_t i = 0; i < requested_extensions.size(); ++i)
 		{
-			if(!std::contains(device_extensions, std::string_view(it->extensionName)))
+			size_t j = [&]() {
+				for (size_t j = 0; j < queried_extensions.size(); ++j)
+				{
+					if (std::string_view(requested_extensions[i]) == std::string_view(queried_extensions[j].extensionName))
+					{
+						return j;
+					}
+				}
+				return size_t(-1);
+			}();
+			if (j != -1)
 			{
-				it = _device_extensions.erase(it);
-				--it;
+				++present;
+				_device_extensions.push_back(queried_extensions[j]);
+			}
+			else
+			{
+				++missing;
 			}
 		}
-
-		assert(_device_extensions.size() <= device_extensions.size());
 		
-		return _device_extensions.size();
+		return present;
 	}
 
 	uint32_t VkApplication::getDeviceExtVersion(std::string_view ext_name) const
@@ -379,7 +396,7 @@ namespace vkl
 		VkPhysicalDeviceProperties2 _physical_device_propeties = _device_props.link();
 		vkGetPhysicalDeviceProperties2(_physical_device, &_physical_device_propeties);
 		_device_props.props = _physical_device_propeties.properties;
-		checkDeviceExtensionSupport(_physical_device);
+		uint32_t supported_extensions = checkDeviceExtensionSupport(_physical_device);
 		_queue_family_indices = findQueueFamilies(_physical_device);
 
 		VK_LOG << "Using " << _physical_device_propeties.properties.deviceName << " as physical device.\n";

@@ -25,7 +25,7 @@ namespace vkl
 		MAX_ENUM,
 	};
 
-	constexpr static std::string s_descriptor_set_names[] = {
+	const static std::string s_descriptor_set_names[] = {
 		"common",
 		"scene",
 		"module",

@@ -57,7 +57,8 @@ IF(AUTO_LOCATE_VULKAN)
 
 	MESSAGE(STATUS "Attempting to locate Vulkan SDK using manual path......")
 	SET(VULKAN_SDK "C:/VulkanSDK")
-	SET(VULKAN_VERSION "1.3.250.0")
+	SET(VULKAN_VERSION "1.3.261.1")
+	# SET(VULKAN_VERSION "1.3.250.0")
 	# SET(VULKAN_VERSION "1.3.243.0")
 	#SET(VULKAN_VERSION "1.3.224.1")
 	SET(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
@@ -74,8 +75,11 @@ ENDIF()
 
 ADD_DEFINITIONS(-DVK_USE_PLATFORM_WIN32_KHR)
 
-#SET(VULKAN_LIBS "vulkan-1;shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;spirv-cross-core;spirv-cross-glsl;OGLCompiler;HLSL;OSDependent")
-SET(VULKAN_LIBS "vulkan-1;shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OGLCompiler;HLSL;OSDependent")
+SET(VULKAN_LIBS "vulkan-1")
+
+SET(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OGLCompiler;HLSL;OSDependent")
+SET(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OGLCompilerd;HLSLd;OSDependentd")
+
 SET(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
 SET(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
 INCLUDE_DIRECTORIES(${VULKAN_INCLUDES})
@@ -106,6 +110,12 @@ INCLUDE_DIRECTORIES(${IMGUI_DIR})
 SET(IMGUI_LIBS imgui)
 
 
+# tinyobj
+ADD_SUBDIRECTORY(ext/tinyobj)
+INCLUDE_DIRECTORIES(ext)
+SET(TINYOBJ_LIBS tinyobjloader)
+
+
 
 # SPIRV-Cross
 # ADD_SUBDIRECTORY(ext/SPIRV-Cross)
@@ -113,10 +123,11 @@ SET(IMGUI_LIBS imgui)
 # SET(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
 
 # VkEngine
-SET(ALL_EXT_LIBS ${THAT_LIB} ${GLFW_LIBS} ${GLM_LIBS} ${VMA_LIBS} ${IMGUI_LIBS})
+SET(ALL_EXT_LIBS ${THAT_LIB} ${GLFW_LIBS} ${GLM_LIBS} ${VMA_LIBS} ${IMGUI_LIBS} ${TINYOBJ_LIBS})
 
 ADD_DEFINITIONS(-DNOMINMAX)
-SET(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+ADD_COMPILE_DEFINITIONS($<IF:$<CONFIG:Debug>,_ITERATOR_DEBUG_LEVEL=2,_ITERATOR_DEBUG_LEVEL=0>)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 INCLUDE_DIRECTORIES(src)
 INCLUDE_DIRECTORIES(ext)
@@ -158,10 +169,13 @@ function(AddProject p_name)
 	FILE(GLOB ${p_name}_SOURCES src/${folder}/*)
 	ADD_EXECUTABLE(${p_name} src/${folder}/main.cpp ${${p_name}_SOURCES})
 	TARGET_INCLUDE_DIRECTORIES(${p_name} PRIVATE src/${folder})
+	
 	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_NAME=\"${p_name}\"")
 	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/${folder}/\"")
-	TARGET_LINK_LIBRARIES(${p_name} PUBLIC ${ALL_EXT_LIBS} VkEngine)
-	TARGET_LINK_LIBRARIES(${p_name} PUBLIC ${VULKAN_LIBS} VkEngine)
+
+	TARGET_LINK_LIBRARIES(${p_name} PUBLIC ${ALL_EXT_LIBS} ${VULKAN_LIBS} VkEngine)
+	TARGET_LINK_LIBRARIES(${p_name} PUBLIC $<IF:$<CONFIG:Debug>, ${VULKAN_SHADER_LIBS_DEBUG}, ${VULKAN_SHADER_LIBS_RELEASE}>)
+	
 	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # TODO don't have the warning in the first place
 	SET(EXECUTABLES ${EXECUTABLES} ${p_name})
 endfunction()

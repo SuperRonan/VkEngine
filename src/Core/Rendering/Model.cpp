@@ -1,4 +1,5 @@
 #include "Model.hpp"
+#include <tinyobj/tiny_obj_loader.h>
 
 namespace vkl
 {
@@ -162,5 +163,34 @@ namespace vkl
 	void Model::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
 	{
 		_mesh->recordSynchForDraw(synch, pipeline);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	std::shared_ptr<Model> Model::loadFromObj(std::filesystem::path const& path)
+	{
+		std::shared_ptr<Model> res;
+		std::shared_ptr<Mesh> mesh;
+		std::cout << "Loading OBJ: " << path << std::endl;
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+
+		std::string warn, err;
+
+		const bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str());
+
+		return res;
 	}
 }

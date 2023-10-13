@@ -49,8 +49,8 @@ namespace vkl
 	{
 		
 		_keys.resize(GLFW_MOUSE_BUTTON_LAST + 1);
-		_pressed_pos.reserve(_keys.size());
-		_released_pos.reserve(_keys.size());
+		_pressed_pos.resize(_keys.size());
+		_released_pos.resize(_keys.size());
 		for (int k = 0; k < _keys.size(); ++k)
 		{
 			_keys[k].key = k;

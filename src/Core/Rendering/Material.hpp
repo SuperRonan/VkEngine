@@ -72,6 +72,10 @@ namespace vkl
 		bool _should_update_props_buffer;
 		std::shared_ptr<Buffer> _props_buffer;
 
+		std::shared_ptr<Sampler> _sampler = nullptr;
+
+		std::shared_ptr<ImageView> _albedo_texture = nullptr;
+
 		Properties getProperties() const;
 
 	public:
@@ -81,6 +85,8 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			vec3 albedo = vec3(0.7);
+			std::shared_ptr<Sampler> sampler = nullptr;
+			std::shared_ptr<ImageView> albedo_texture = nullptr;
 		};
 		using CI = CreateInfo;
 		

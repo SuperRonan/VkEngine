@@ -39,6 +39,8 @@ namespace vkl
 
 		ImguiCommand(CreateInfo const& ci);
 
+		virtual ~ImguiCommand() override;
+
 		virtual void init()override;
 
 		struct ExecutionInfo
@@ -57,8 +59,6 @@ namespace vkl
 		{
 			return with(ei);
 		}
-		
-		virtual ~ImguiCommand() override;
 
 		virtual bool updateResources(UpdateContext & ctx) override;
 

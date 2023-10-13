@@ -9,7 +9,7 @@ namespace vkl
 
 	void SwapchainInstance::create()
 	{
-		std::cout << "Create VkSwapchainKHR" << std::endl;
+		std::cout << "Create VkSwapchainKHR @ " << _ci.imageExtent.width << "x" << _ci.imageExtent.height << std::endl;
 		assert(_swapchain == VK_NULL_HANDLE);
 		VK_CHECK(vkCreateSwapchainKHR(_app->device(), &_ci, nullptr, &_swapchain), "Failed to create a swapchain.");
 

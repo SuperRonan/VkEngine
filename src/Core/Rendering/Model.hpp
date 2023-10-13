@@ -84,6 +84,11 @@ namespace vkl
 
 		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool();
 
+		
+
+
+		static std::shared_ptr<Model> loadFromObj(std::filesystem::path const& path);
+
 
 	};
 }

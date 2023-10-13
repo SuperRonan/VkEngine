@@ -77,11 +77,17 @@ namespace vkl
 
 		void removeInvalidationCallbacks(const VkObject* ptr)
 		{
-			for (auto it = _invalidation_callbacks.begin(); it < _invalidation_callbacks.end(); ++it)
+			auto it = _invalidation_callbacks.begin();
+			while (it != _invalidation_callbacks.end())
 			{
 				if (it->id == ptr)
 				{
+					// erase and advance
 					it = _invalidation_callbacks.erase(it);
+				}
+				else
+				{
+					++it;
 				}
 			}
 		}

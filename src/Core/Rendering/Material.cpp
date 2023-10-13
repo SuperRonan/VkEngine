@@ -21,7 +21,9 @@ namespace vkl
 
 	PhysicallyBasedMaterial::PhysicallyBasedMaterial(CreateInfo const& ci) :
 		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased}),
-		_albedo(ci.albedo)
+		_albedo(ci.albedo),
+		_sampler(ci.sampler),
+		_albedo_texture(ci.albedo_texture)
 	{
 		_should_update_props_buffer = true;
 
@@ -37,6 +39,11 @@ namespace vkl
 	PhysicallyBasedMaterial::Properties PhysicallyBasedMaterial::getProperties() const
 	{
 		uint32_t flags = Flags::NONE;
+
+		if (!!_albedo_texture)
+		{
+			flags |= Flags::USE_ALBEDO_TEXTURE;
+		}
 		
 		return Properties{
 			.albedo = _albedo,
@@ -88,9 +95,25 @@ namespace vkl
 				.pImmutableSamplers = nullptr,
 			},
 			.meta = {
-				.name = "PropertiesBuffer",
+				.name = "MaterialPropertiesBuffer",
 				.access = VK_ACCESS_2_UNIFORM_READ_BIT,
 				.buffer_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			},
+		};
+
+		res += DescriptorSetLayout::Binding{
+			.vk_binding = {
+				.binding = offset + 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = 1,
+				.stageFlags = VK_SHADER_STAGE_ALL,
+				.pImmutableSamplers = nullptr,
+			},
+			.meta = {
+				.name = "AlbedoTexture",
+				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+				.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				.image_usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 			},
 		};
 
@@ -106,6 +129,15 @@ namespace vkl
 			.buffer = _props_buffer,
 			.binding = offset + 0,
 		};
+
+		if (_albedo_texture)
+		{
+			res += Binding{
+				.view = _albedo_texture,
+				.sampler = _sampler,
+				.binding = offset + 1,
+			};
+		}
 
 		return res;
 	}
