@@ -23,6 +23,7 @@ namespace vkl
 		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased}),
 		_albedo(ci.albedo),
 		_sampler(ci.sampler),
+		_albedo_path(ci.albedo_path),
 		_albedo_texture(ci.albedo_texture)
 	{
 		_should_update_props_buffer = true;
@@ -34,6 +35,23 @@ namespace vkl
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
+
+		if (!_albedo_texture && !_albedo_path.empty())
+		{
+			_albedo_texture = std::make_shared<ImageView>(ImageView::CI{
+				.app = application(),
+				.name = name() + ".albedoTexture",
+				.image_ci = Image::CI{
+					.app = application(),
+					.name = name() + ".albedoTexture",
+					.type = VK_IMAGE_TYPE_2D,
+					.format = VK_FORMAT_R8G8B8A8_SRGB,
+					.extent = VkExtent3D{.width = 1, .height = 1, .depth = 1},
+					.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_SAMPLED_BIT,
+					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				},
+			});
+		}
 	}
 
 	PhysicallyBasedMaterial::Properties PhysicallyBasedMaterial::getProperties() const
@@ -42,7 +60,7 @@ namespace vkl
 
 		if (!!_albedo_texture)
 		{
-			flags |= Flags::USE_ALBEDO_TEXTURE;
+			//flags |= Flags::USE_ALBEDO_TEXTURE;
 		}
 		
 		return Properties{
@@ -60,6 +78,11 @@ namespace vkl
 	{
 		ResourcesToDeclare res;
 		res += _props_buffer;
+		if (_albedo_texture)
+		{
+			res += _albedo_texture;
+			res += _sampler;
+		}
 		return res;
 	}
 

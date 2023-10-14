@@ -21,6 +21,7 @@
 #include <Core/Rendering/RenderObjects.hpp>
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Scene.hpp>
+#include <Core/Rendering/Transforms.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -130,31 +131,47 @@ namespace vkl
 		{
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
 
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PlatonMakeInfo{
-				.app = this,
-				.radius = 0.5,
-				.face_normal = false,
-			});
+			{
+				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PlatonMakeInfo{
+					.app = this,
+					.radius = 0.5,
+					.face_normal = false,
+				});
 
-			std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
-				.app = this,
-				.name = "DefaultMaterial",
-			});
+				std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+					.app = this,
+					.name = "DefaultMaterial",
+				});
 
-			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-				.app = this,
-				.name = "Model",
-				.mesh = mesh,
-				.material = material,
-			});
+				std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+					.app = this,
+					.name = "Model",
+					.mesh = mesh,
+					.material = material,
+				});
 
+				std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "ModelNode",
+					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 1, 1)) * scaleMatrix<4, float>(0.5)),
+					.model = model,
+				});
+				root->addChild(model_node);
+			}
 
-			std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-				.name = "ModelNode",
-				.model = model,
-			});
+			{
+				std::vector<std::shared_ptr<Model>> viking_models = Model::loadModelsFromObj(Model::LoadInfo{
+					.app = this,
+					.path = ENGINE_SRC_PATH "/../gen/models/viking_room.obj",
+				});
 
-			root->addChild(model_node);
+				std::shared_ptr<Scene::Node> viking_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "Viking",
+					.model = viking_models.front(),
+				});
+
+				root->addChild(viking_node);
+			}
+
 		}
 
 		virtual void run() final override

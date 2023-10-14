@@ -283,6 +283,10 @@ namespace vkl
 					{
 						info.imageView = *b.image()->instance();
 						info.imageLayout = b.resource()._begin_state.layout;
+						if (info.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+						{
+							assert(false);
+						}
 						do_write = true;
 					}
 					else
@@ -549,6 +553,7 @@ namespace vkl
 				const auto& meta = _layout->metas()[j];
 				const auto& vkb = _layout->bindings()[j];
 				_bindings[j].setType(vkb.descriptorType);
+				_bindings[j].resource()._begin_state.layout = meta.layout;
 			}
 			
 			res = _bindings;

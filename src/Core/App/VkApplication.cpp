@@ -1,6 +1,7 @@
 
 #include "VkApplication.hpp"
 #include <Core/VkObjects/CommandBuffer.hpp>
+#include <Core/Execution/SamplerLibrary.hpp>
 
 #include <exception>
 #include <set>
@@ -553,10 +554,21 @@ namespace vkl
 		createLogicalDevice();
 		createAllocator();
 		createCommandPools();
+
+		_sampler_library = new SamplerLibrary(SamplerLibrary::CI{
+			.app = this,
+			.name = "SamplerLibrary",
+		});
 	}
 
 	void VkApplication::cleanup()
 	{
+		if (_sampler_library)
+		{
+			delete _sampler_library;
+			_sampler_library = nullptr;
+		}
+
 		_pools.graphics = nullptr;
 		_pools.transfer = nullptr;
 		_pools.compute = nullptr;

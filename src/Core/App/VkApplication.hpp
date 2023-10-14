@@ -21,6 +21,8 @@ namespace vkl
 	template <class Key>
 	using DescriptorSetLayoutCacheImpl = GenericCacheImpl<Key, DescriptorSetLayout>;
 
+	class SamplerLibrary;
+
 	template <class T>
 	using SPtr = std::shared_ptr<T>;
 
@@ -97,6 +99,8 @@ namespace vkl
 
 		std::vector<std::shared_ptr<DescriptorSetLayoutCache>> _desc_set_layout_caches;
 		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
+
+		SamplerLibrary * _sampler_library = nullptr;
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -212,6 +216,11 @@ namespace vkl
 		{
 			assert(s < deviceProperties().props.limits.maxBoundDescriptorSets);
 			return _desc_set_layout_caches[s];
+		}
+
+		SamplerLibrary& getSamplerLibrary()
+		{
+			return *_sampler_library;
 		}
 	};
 

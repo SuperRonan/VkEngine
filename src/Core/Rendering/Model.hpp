@@ -85,9 +85,13 @@ namespace vkl
 		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool();
 
 		
+		struct LoadInfo
+		{
+			VkApplication * app = nullptr;
+			std::filesystem::path path = {};
+		};
 
-
-		static std::shared_ptr<Model> loadFromObj(std::filesystem::path const& path);
+		static std::vector<std::shared_ptr<Model>> loadModelsFromObj(LoadInfo const& info);
 
 
 	};

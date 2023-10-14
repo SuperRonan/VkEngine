@@ -16,7 +16,7 @@ namespace vkl
 	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(Node& node, Mat4 const& matrix, const PerNodeFunction& f)
 	{
 		Mat4 new_matrix = matrix * node.matrix4x4();
-		f(matrix, node);
+		f(new_matrix, node);
 		for (std::shared_ptr<Node> const& n : node.children())
 		{
 			assert(!!n);

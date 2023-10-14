@@ -6,6 +6,8 @@
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
 
+#include <map>
+
 namespace vkl
 {
 	class Material : public VkObject, public ResourcesHolder
@@ -74,6 +76,7 @@ namespace vkl
 
 		std::shared_ptr<Sampler> _sampler = nullptr;
 
+		std::filesystem::path _albedo_path = {};
 		std::shared_ptr<ImageView> _albedo_texture = nullptr;
 
 		Properties getProperties() const;
@@ -86,6 +89,7 @@ namespace vkl
 			std::string name = {};
 			vec3 albedo = vec3(0.7);
 			std::shared_ptr<Sampler> sampler = nullptr;
+			std::filesystem::path albedo_path = {};
 			std::shared_ptr<ImageView> albedo_texture = nullptr;
 		};
 		using CI = CreateInfo;
@@ -112,4 +116,20 @@ namespace vkl
 	};
 
 	using PBMaterial = PhysicallyBasedMaterial;
+
+
+
+
+
+
+	class MaterialLibrary
+	{
+	protected:
+		
+
+
+	public:
+
+
+	};
 }
