@@ -218,8 +218,8 @@ namespace vkl
 			const VkExtent3D extent = *cinfo.dst->image()->extent();
 			_reg = VkBufferImageCopy{
 				.bufferOffset = 0,
-				.bufferRowLength = 0,   // 0 => tightly packed
-				.bufferImageHeight = 0, // 0 => tightly packed
+				.bufferRowLength = cinfo.default_buffer_row_length,   // 0 => tightly packed
+				.bufferImageHeight = cinfo.default_buffer_image_height, // 0 => tightly packed
 				.imageSubresource = getImageLayersFromRange(cinfo.dst->instance()->createInfo().subresourceRange),
 				.imageOffset = makeZeroOffset3D(),
 				.imageExtent = extent,
@@ -255,6 +255,8 @@ namespace vkl
 				.range = info.range.len ? info.range : _range.value(),
 				.dst = info.dst ? info.dst : _dst,
 				.regions = info.regions.empty() ? _regions : info.regions,
+				.default_buffer_row_length = info.default_buffer_row_length,
+				.default_buffer_image_height = info.default_buffer_image_height,
 			};
 			return execute(context, cinfo);
 		};
@@ -948,8 +950,8 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
 				.pNext = nullptr,
 				.bufferOffset = 0,
-				.bufferRowLength = 0,   // 0 => tightly packed
-				.bufferImageHeight = 0, // 0 => tightly packed
+				.bufferRowLength = ui.buffer_row_length,   // 0 => tightly packed
+				.bufferImageHeight = ui.buffer_image_height, // 0 => tightly packed
 				.imageSubresource = getImageLayersFromRange(ui.dst->instance()->createInfo().subresourceRange),
 				.imageOffset = makeZeroOffset3D(),
 				.imageExtent = ui.dst->image()->instance()->createInfo().extent,
@@ -1019,6 +1021,8 @@ namespace vkl
 			{
 				uploader.execute(ctx, UploadImage::UI{
 					.src = image_upload.src,
+					.buffer_row_length = image_upload.buffer_row_length,
+					.buffer_image_height = image_upload.buffer_image_height,
 					.dst = image_upload.dst,
 				});
 			}

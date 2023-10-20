@@ -74,6 +74,7 @@ namespace vkl
 			}
 
 			synch.addSynch(r);
+			
 		}
 	}
 

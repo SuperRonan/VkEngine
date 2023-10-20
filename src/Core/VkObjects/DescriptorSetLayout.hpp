@@ -31,6 +31,9 @@ namespace vkl
 		std::vector<VkDescriptorSetLayoutBinding> _bindings;
 		std::vector<BindingMeta> _metas;
 
+		VkDescriptorSetLayoutCreateFlags _flags = 0;
+		VkDescriptorBindingFlags _binding_flags = 0;
+
 		void create(VkDescriptorSetLayoutCreateInfo const& ci);
 
 		void setVkName();
@@ -85,6 +88,16 @@ namespace vkl
 		constexpr bool empty()const
 		{
 			return _bindings.empty();
+		}
+
+		constexpr VkDescriptorSetLayoutCreateFlags flags()const
+		{
+			return _flags;
+		}
+
+		constexpr VkDescriptorBindingFlags bindingFlags()const
+		{
+			return _binding_flags;
 		}
 	};
 

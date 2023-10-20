@@ -215,6 +215,7 @@ namespace vkl
 		bool update_storage_buffer = false;
 		bool update_sampled_image = false;
 
+		const bool can_write_null = application()->availableFeatures().robustness2_ext.nullDescriptor;
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& b = _bindings[i];
@@ -258,42 +259,49 @@ namespace vkl
 					{
 						range.len = VK_WHOLE_SIZE;
 					}
-					buffers.emplace_back(VkDescriptorBufferInfo{
+					VkDescriptorBufferInfo info{
 						.buffer = *b.buffer()->instance(),
 						.offset = range.begin,
 						.range = range.len,
-						});
-					VkDescriptorBufferInfo& info = buffers.back();
-					write.pBufferInfo = &info;
+					};
 					do_write = true;
+					if (do_write)
+					{
+						buffers.push_back(info);
+						write.pBufferInfo = &buffers.back();
+					}
 				}
 				else if (b.isImage() || b.isSampler())
 				{
-					VkDescriptorImageInfo info;
-					if (b.sampler())
+					VkDescriptorImageInfo info{
+						.sampler = VK_NULL_HANDLE,
+						.imageView = VK_NULL_HANDLE,
+						.imageLayout = b.resource()._begin_state.layout,
+					};
+					
+					if (b.isSampler() && b.sampler())
 					{
-						info.sampler = *b.sampler()->instance();
+						info.sampler = b.sampler()->instance()->handle();
 						do_write = true;
 					}
-					else
+
+					
+					if (b.isImage() && b.image())
 					{
-						info.sampler = VK_NULL_HANDLE;
-					}
-					if (b.image())
-					{
-						info.imageView = *b.image()->instance();
-						info.imageLayout = b.resource()._begin_state.layout;
+						info.imageView = b.image()->instance()->handle();
+						do_write = true;
 						if (info.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
 						{
 							assert(false);
 						}
-						do_write = true;
 					}
-					else
+
+					do_write |= can_write_null;
+					if (b.isSampler() && info.sampler == VK_NULL_HANDLE)
 					{
-						info.imageView = VK_NULL_HANDLE;
+						// null descriptor does not work with samplers
+						do_write = false;
 					}
-					
 					if (do_write)
 					{
 						images.push_back(info);

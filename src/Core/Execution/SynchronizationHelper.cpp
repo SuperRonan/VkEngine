@@ -4,11 +4,12 @@ namespace vkl
 {
 	void SynchronizationHelper::addSynch(const Resource& r)
 	{
-		_resources.push_back(r);
+		
 		const ResourceState2 next = r._begin_state;
 		const bool synch_to_readonly = accessIsReadonly2(r._begin_state.access);
 		if (r.isImage())
 		{
+			_resources.push_back(r);
 			assert(r._image->instance());
 			const auto prevs = r._image->instance()->getState(_ctx.resourceThreadId());
 			for (const auto& prev_state_in_range : prevs)
@@ -60,6 +61,7 @@ namespace vkl
 		}
 		else if (r.isBuffer())
 		{
+			_resources.push_back(r);
 			assert(r._buffer->instance());
 			Buffer::Range range = r._buffer_range.value();
 			if (range.len == 0)
@@ -104,6 +106,10 @@ namespace vkl
 				};
 				_buffers_barriers.push_back(barrier);
 			}
+		}
+		else
+		{
+			
 		}
 	}
 

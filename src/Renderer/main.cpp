@@ -132,10 +132,9 @@ namespace vkl
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
 
 			{
-				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeOctahedron(RigidMesh::PlatonMakeInfo{
+				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
 					.app = this,
 					.radius = 0.5,
-					.face_normal = false,
 				});
 
 				std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
@@ -166,6 +165,7 @@ namespace vkl
 
 				std::shared_ptr<Scene::Node> viking_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 					.name = "Viking",
+					.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0))),
 					.model = viking_models.front(),
 				});
 

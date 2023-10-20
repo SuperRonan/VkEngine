@@ -136,6 +136,8 @@ namespace vkl
 			Range_st range;
 			std::shared_ptr<ImageView> dst = nullptr;
 			std::vector<VkBufferImageCopy> regions = {};
+			uint32_t default_buffer_row_length = 0;
+			uint32_t default_buffer_image_height = 0;
 		};
 
 		CopyBufferToImage(CreateInfo const& ci);
@@ -447,6 +449,8 @@ namespace vkl
 		struct UploadInfo
 		{
 			ObjectView src = {};
+			uint32_t buffer_row_length = 0;
+			uint32_t buffer_image_height = 0;
 			std::shared_ptr<ImageView> dst = nullptr;
 		};
 		using UI = UploadInfo;

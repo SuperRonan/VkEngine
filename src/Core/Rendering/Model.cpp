@@ -140,7 +140,7 @@ namespace vkl
 			else
 			{
 				flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-				binding_flags |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+				binding_flags |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 			}
 
 			res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
@@ -220,7 +220,7 @@ namespace vkl
 					.name = tm.name,
 					.albedo = glm::vec3(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
 					.sampler = sampler,
-					.albedo_path = tm.diffuse_texname,
+					.albedo_path = mtl_path / tm.diffuse_texname,
 				});
 			}
 

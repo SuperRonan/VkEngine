@@ -49,7 +49,8 @@ namespace vkl
 	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
 		_metas(ci.metas),
-		_bindings(ci.vk_bindings)
+		_bindings(ci.vk_bindings),
+		_flags(ci.flags)
 	{
 		if (ci.bindings.empty())
 		{
@@ -97,7 +98,7 @@ namespace vkl
 		VkDescriptorSetLayoutCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
-			.flags = ci.flags,
+			.flags = _flags,
 			.bindingCount = static_cast<uint32_t>(_bindings.size()),
 			.pBindings = _bindings.data(),
 		};
@@ -112,6 +113,12 @@ namespace vkl
 			{
 				common_bindings_flags = common_bindings_flags & ~VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
 			}
+			if (features12.descriptorBindingPartiallyBound == VK_FALSE)
+			{
+				common_bindings_flags = common_bindings_flags & ~VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+			}
+
+			_binding_flags = common_bindings_flags;
 
 			bindings_flags = std::vector<VkDescriptorBindingFlags>(_bindings.size(), 0);
 			for (size_t i = 0; i < _bindings.size(); ++i)

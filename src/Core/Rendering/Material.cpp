@@ -23,8 +23,7 @@ namespace vkl
 		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased}),
 		_albedo(ci.albedo),
 		_sampler(ci.sampler),
-		_albedo_path(ci.albedo_path),
-		_albedo_texture(ci.albedo_texture)
+		_albedo_path(ci.albedo_path)
 	{
 		_should_update_props_buffer = true;
 
@@ -36,21 +35,15 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		if (!_albedo_texture && !_albedo_path.empty())
+		if (!_albedo_path.empty())
 		{
-			_albedo_texture = std::make_shared<ImageView>(ImageView::CI{
+			_albedo_texture = std::make_unique<TextureFromFile>(TextureFromFile::CI{
 				.app = application(),
-				.name = name() + ".albedoTexture",
-				.image_ci = Image::CI{
-					.app = application(),
-					.name = name() + ".albedoTexture",
-					.type = VK_IMAGE_TYPE_2D,
-					.format = VK_FORMAT_R8G8B8A8_SRGB,
-					.extent = VkExtent3D{.width = 1, .height = 1, .depth = 1},
-					.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_SAMPLED_BIT,
-					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				},
+				.name = name() + ".albedo_texture",
+				.path = _albedo_path,
 			});
+
+			assert(!!_sampler);
 		}
 	}
 
@@ -58,9 +51,9 @@ namespace vkl
 	{
 		uint32_t flags = Flags::NONE;
 
-		if (!!_albedo_texture)
+		if (_albedo_texture && _albedo_texture->hasValue())
 		{
-			//flags |= Flags::USE_ALBEDO_TEXTURE;
+			flags |= Flags::USE_ALBEDO_TEXTURE;
 		}
 		
 		return Properties{
@@ -78,9 +71,9 @@ namespace vkl
 	{
 		ResourcesToDeclare res;
 		res += _props_buffer;
-		if (_albedo_texture)
+		if (_albedo_texture && _albedo_texture->hasValue())
 		{
-			res += _albedo_texture;
+			res += _albedo_texture->getResourcesToDeclare();
 			res += _sampler;
 		}
 		return res;
@@ -97,12 +90,20 @@ namespace vkl
 				.dst = _props_buffer,
 			};
 		}
+		if (_albedo_texture && _albedo_texture->hasValue())
+		{
+			res += _albedo_texture->getResourcesToUpload();
+		}
 		return res;
 	}
 
 	void PhysicallyBasedMaterial::notifyDataIsUploaded()
 	{
 		_should_update_props_buffer = false;
+		if (_albedo_texture)
+		{
+			_albedo_texture->notifyDataIsUploaded();
+		}
 	}
 
 	std::vector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)
@@ -153,10 +154,10 @@ namespace vkl
 			.binding = offset + 0,
 		};
 
-		if (_albedo_texture)
+		if (_albedo_texture && _albedo_texture->hasValue())
 		{
 			res += Binding{
-				.view = _albedo_texture,
+				.view = _albedo_texture->view(),
 				.sampler = _sampler,
 				.binding = offset + 1,
 			};

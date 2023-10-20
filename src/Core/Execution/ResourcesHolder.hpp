@@ -14,6 +14,9 @@ namespace vkl
 		struct ImageUpload
 		{
 			ObjectView src;
+			// 0 -> tightly packed
+			uint32_t buffer_row_length = 0;
+			uint32_t buffer_image_height = 0;
 			std::shared_ptr<ImageView> dst;
 		};
 

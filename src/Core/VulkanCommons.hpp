@@ -49,6 +49,11 @@ namespace vkl
 		{
 			return begin == o.begin && len == o.len;
 		}
+
+		constexpr bool contains(UInt i) const
+		{
+			return i >= begin && i < (begin + len);
+		}
 	};
 
 	using Range32 = Range<uint32_t>;
@@ -56,13 +61,18 @@ namespace vkl
 	using Range_st = Range<size_t>;
 
 
-	static constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-	static constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	constexpr VkImageAspectFlags VK_IMAGE_ASPECT_DEPTH_STENCIL_BITS = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
 
-	std::string getVkPresentModeKHRName(VkPresentModeKHR);
-	std::string getVkColorSpaceKHRName(VkColorSpaceKHR);
-	std::string getVkFormatName(VkFormat);
+	extern size_t getContiguousIndexFromVkFormat(VkFormat);
+	extern VkFormat getVkFormatFromContiguousIndex(size_t);
+
+	extern std::string getVkPresentModeKHRName(VkPresentModeKHR);
+	extern std::string getVkColorSpaceKHRName(VkColorSpaceKHR);
+	extern std::string getVkFormatName(VkFormat);
+	extern bool checkVkFormatIsValid(VkFormat);
 
 
 
@@ -77,6 +87,7 @@ namespace vkl
 		VkPhysicalDeviceLineRasterizationFeaturesEXT line_raster_ext = {};
 		VkPhysicalDeviceIndexTypeUint8FeaturesEXT index_uint8_ext = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_ext = {};
+		VkPhysicalDeviceRobustness2FeaturesEXT robustness2_ext = {};
 
 		VkPhysicalDeviceFeatures2 link()
 		{
@@ -87,12 +98,15 @@ namespace vkl
 			line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
 			index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
 			mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+			robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
 
 			features_11.pNext = &features_12;
 			features_12.pNext = &features_13;
 			features_13.pNext = &line_raster_ext;
 			line_raster_ext.pNext = &index_uint8_ext;
 			index_uint8_ext.pNext = &mesh_shader_ext;
+			mesh_shader_ext.pNext = &robustness2_ext;
+			robustness2_ext.pNext = nullptr;
 			return VkPhysicalDeviceFeatures2{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
 				.pNext = &features_11,
@@ -100,6 +114,8 @@ namespace vkl
 			};
 		}
 	};
+
+	extern VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available);
 
 	struct VulkanDeviceProps
 	{
@@ -110,6 +126,7 @@ namespace vkl
 
 		VkPhysicalDeviceLineRasterizationPropertiesEXT line_raster_ext = {};
 		VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_ext = {};
+		VkPhysicalDeviceRobustness2PropertiesEXT robustness2 = {};
 
 		VkPhysicalDeviceProperties2 link()
 		{
@@ -119,11 +136,14 @@ namespace vkl
 
 			line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_PROPERTIES_EXT;
 			mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
+			robustness2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
 			
 			props_11.pNext = &props_12;
 			props_12.pNext = &props_13;
 			props_13.pNext = &line_raster_ext;
 			line_raster_ext.pNext = &mesh_shader_ext;
+			mesh_shader_ext.pNext = &robustness2;
+			robustness2.pNext = nullptr;
 			return VkPhysicalDeviceProperties2{
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
 				.pNext = &props_11,
@@ -395,8 +415,6 @@ namespace vkl
 			res[i] = op(a[i], b[i]);
 		}
 	}
-
-	VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available);
 
 	namespace vk_operators
 	{

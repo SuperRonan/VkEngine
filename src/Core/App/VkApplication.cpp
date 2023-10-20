@@ -44,6 +44,7 @@ namespace vkl
 			VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
 			VK_EXT_MESH_SHADER_EXTENSION_NAME,
 			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+			VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
 		};
 	}
 
@@ -57,6 +58,7 @@ namespace vkl
 
 		features.features_12.shaderInt8 = t;
 	
+		features.features_12.descriptorBindingPartiallyBound = t;
 		features.features_12.descriptorBindingUniformBufferUpdateAfterBind = t;
 		features.features_12.descriptorBindingSampledImageUpdateAfterBind = t;
 		features.features_12.descriptorBindingStorageImageUpdateAfterBind = t;
@@ -76,6 +78,8 @@ namespace vkl
 		features.mesh_shader_ext.taskShader = t;
 		features.mesh_shader_ext.multiviewMeshShader = t;
 		features.mesh_shader_ext.primitiveFragmentShadingRateMeshShader = t;
+
+		features.robustness2_ext.nullDescriptor = t;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()

@@ -5,8 +5,8 @@
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
-
-#include <map>
+#include <Core/Execution/TextureFromFile.hpp>
+#include <Core/Execution/SamplerLibrary.hpp>
 
 namespace vkl
 {
@@ -71,13 +71,13 @@ namespace vkl
 
 		vec3 _albedo;
 		
-		bool _should_update_props_buffer;
-		std::shared_ptr<Buffer> _props_buffer;
+		bool _should_update_props_buffer = false;
+		std::shared_ptr<Buffer> _props_buffer = nullptr;
 
 		std::shared_ptr<Sampler> _sampler = nullptr;
 
 		std::filesystem::path _albedo_path = {};
-		std::shared_ptr<ImageView> _albedo_texture = nullptr;
+		std::unique_ptr<TextureFromFile> _albedo_texture = nullptr;
 
 		Properties getProperties() const;
 
@@ -90,7 +90,6 @@ namespace vkl
 			vec3 albedo = vec3(0.7);
 			std::shared_ptr<Sampler> sampler = nullptr;
 			std::filesystem::path albedo_path = {};
-			std::shared_ptr<ImageView> albedo_texture = nullptr;
 		};
 		using CI = CreateInfo;
 		
@@ -118,18 +117,4 @@ namespace vkl
 	using PBMaterial = PhysicallyBasedMaterial;
 
 
-
-
-
-
-	class MaterialLibrary
-	{
-	protected:
-		
-
-
-	public:
-
-
-	};
 }
