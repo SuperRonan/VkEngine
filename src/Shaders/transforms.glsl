@@ -129,3 +129,8 @@ mat4 rotation4XYZ(vec3 xyz)
 {
 	return mat4(rotation3XYZ(xyz));
 }
+
+mat3 directionMatrix(const in mat3 xform)
+{
+	return transpose(inverse(xform));
+}

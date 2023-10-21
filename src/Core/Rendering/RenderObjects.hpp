@@ -10,6 +10,8 @@
 
 #include <numbers>
 
+#include <Core/Rendering/Transforms.hpp>
+
 namespace vkl
 {
 	using vec2 = glm::vec2;
@@ -39,7 +41,7 @@ namespace vkl
 		return v;
 	}
 
-	vec3 rotate(vec3 v, vec3 axis, float angle)
+	inline vec3 rotate(vec3 v, vec3 axis, float angle)
 	{
 		mat4 rotation = glm::rotate(mat4(1), angle, axis);
 
@@ -361,5 +363,5 @@ namespace vkl
 			delta.angle *= fov_sensitivity;
 			_camera->update(delta);
 		}
-	};
+	};	
 }

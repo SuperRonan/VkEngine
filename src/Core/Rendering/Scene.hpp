@@ -6,6 +6,10 @@
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Rendering/Model.hpp>
 
+#include <Core/Rendering/Light.hpp>
+
+#include <unordered_map>
+
 #include <cassert>
 
 namespace vkl
@@ -28,6 +32,7 @@ namespace vkl
 			bool _visible = true;
 			
 			std::shared_ptr<Model> _model = nullptr;
+			std::shared_ptr<Light> _light = nullptr;
 
 			std::vector<std::shared_ptr<Node>> _children = {};
 
@@ -92,9 +97,14 @@ namespace vkl
 				return _model;
 			}
 
-			virtual bool isJustTransform()const
+			constexpr const std::shared_ptr<Light>& light()const
 			{
-				return !model();
+				return _light;
+			}
+
+			constexpr std::shared_ptr<Light>& light()
+			{
+				return _light;
 			}
 
 			void addChild(std::shared_ptr<Node> const& n)
@@ -115,8 +125,9 @@ namespace vkl
 		};
 		
 
-		using PerNodeFunction = std::function<void(Mat4 const&, Node&)>;
-
+		using PerNodeInstanceFunction = std::function<void(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
+		using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<Mat4x3> const&)>;
+		using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
 		
 		class DirectedAcyclicGraph
 		{
@@ -124,7 +135,9 @@ namespace vkl
 			
 			std::shared_ptr<Node> _root = nullptr;
 
-			void iterateOnNodeThenSons(Node & node, Mat4 const& matrix, const PerNodeFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat4 const& matrix, const PerNodeInstanceFunction& f);
+
+			std::unordered_map<std::shared_ptr<Node>, std::vector<Mat4x3>> _flat_dag;
 
 		public:
 
@@ -137,7 +150,14 @@ namespace vkl
 
 			bool checkIsAcyclic() const;
 
-			void iterate(const PerNodeFunction & f);
+			void flatten();
+
+			void iterateOnDag(const PerNodeInstanceFunction & f);
+
+			void iterateOnFlattenDag(const PerNodeAllInstancesFunction& f);
+			void iterateOnFlattenDag(const PerNodeInstanceFunction& f);
+
+			void iterateOnNodes(const PerNodeFunction & f);
 
 			bool empty() const
 			{
@@ -152,7 +172,26 @@ namespace vkl
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
+		struct UBO {
+			glm::vec3 ambient;
+			uint32_t num_lights;
+		};
+
+		vec3 _ambient = vec3(0.1f);
+
+
+		std::shared_ptr<Buffer> _ubo_buffer;
+
+		std::vector<LightGLSL> _lights_glsl;
+		std::shared_ptr<Buffer> _lights_buffer;
+
+		UBO getUBO() const;
+
+		void createInternalBuffers();
+
 		void createSet();
+
+		void fillLightsBuffer();
 
 	public:
 
@@ -183,6 +222,9 @@ namespace vkl
 				return true;
 			}
 		};
+
+		// Call before updating resources
+		void prepareForRendering();
 
 		static std::shared_ptr<DescriptorSetLayout> SetLayout(VkApplication * app, SetLayoutOptions const& options);
 

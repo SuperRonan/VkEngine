@@ -84,18 +84,18 @@ namespace vkl
 		{
 			std::vector<VertexCommand::DrawModelInfo> res;
 
-			auto add_model = [&res](glm::mat4 const& matrix, Scene::Node & node)
+			auto add_model = [&res](std::shared_ptr<Scene::Node> const & node, glm::mat4 const& matrix)
 			{
-				if(node.visible() && node.model())
+				if(node->visible() && node->model())
 				{
 					res.push_back(VertexCommand::DrawModelInfo{
-						.drawable = node.model(),
+						.drawable = node->model(),
 						.pc = matrix,
 					});
 				}
 			};
 
-			_scene->getTree()->iterate(add_model);
+			_scene->getTree()->iterateOnDag(add_model);
 
 			return res;
 		}
@@ -172,6 +172,22 @@ namespace vkl
 				root->addChild(viking_node);
 			}
 
+			{
+				std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "Light",
+					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 1, -1))),
+				});
+
+				//light_node->light() = std::make_shared<Light>(Light::MakePoint(glm::vec3(0), glm::vec3(1, 1, 1)));
+				light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
+					.app = this,
+					.name = "Light",
+					.direction = glm::vec3(1, 1, -1),
+					.emission = glm::vec3(1, 0.8, 0.6),
+				});
+
+				root->addChild(light_node);
+			}
 		}
 
 		virtual void run() final override
@@ -218,6 +234,7 @@ namespace vkl
 			});
 
 			createScene(scene);
+			scene->prepareForRendering();
 			exec.declare(scene);
 
 			Renderer renderer(Renderer::CI{
@@ -402,6 +419,7 @@ namespace vkl
 				ubo.world_to_proj = camera.getWorldToProj();
 
 				{
+					scene->prepareForRendering();
 					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
@@ -429,6 +447,8 @@ namespace vkl
 
 						exec(show_3D_basis);
 					}
+
+					exec.bindSet(1, nullptr);
 
 					exec.renderDebugIFN();
 					ImGui::Render();

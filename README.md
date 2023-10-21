@@ -71,6 +71,7 @@
 - [ ] Multi window mode (independent of ImGui)
 - [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
+- [ ] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib

@@ -607,7 +607,7 @@ namespace vkl
 	void DescriptorSetsManager::bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set)
 	{
 		assert(binding < _bound_descriptor_sets.size());
-		assert(!!set);
+		
 
 		_bound_descriptor_sets[binding] = set;
 

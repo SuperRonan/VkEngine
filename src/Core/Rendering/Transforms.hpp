@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include "Math.hpp"
-#include <glm/gtc/matrix_transform.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
 
 namespace vkl
 {
@@ -95,8 +95,20 @@ namespace vkl
 	}
 
 	template <class Float>
+	Matrix3<Float> directionMatrix(Matrix3<Float> const& mat)
+	{
+		return glm::transpose(glm::inverse(mat));
+	}
+	
+	template <class Float>
 	Matrix3<Float> directionMatrix(Matrix4<Float> const& mat)
 	{
-		return glm::transpose(glm::inverse(Matrix3<Float>(mat)));
+		return directionMatrix(Matrix3<Float>(mat));
+	}
+
+	template <class Float>
+	Matrix3<Float> directionMatrix(Matrix4x3<Float> const& mat)
+	{
+		return directionMatrix(Matrix3<Float>(mat));
 	}
 }
