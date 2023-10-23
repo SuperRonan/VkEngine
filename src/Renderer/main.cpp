@@ -27,85 +27,10 @@
 #include <chrono>
 #include <random>
 
-#include <thatlib/src/img/ImRead.hpp>
+#include "Renderer.hpp"
 
 namespace vkl
 {
-	class Renderer : public Module
-	{
-	protected:
-
-		Executor& _exec;
-		std::shared_ptr<Scene> _scene;
-		std::shared_ptr<ImageView> _target;
-		std::shared_ptr<ImageView> _depth;
-
-	public:
-
-		struct CreateInfo {
-			VkApplication* app = nullptr;
-			std::string name = {};
-			Executor& exec;
-			std::shared_ptr<Scene> scene = nullptr;
-			std::shared_ptr<ImageView> target = nullptr;
-		};
-		using CI = CreateInfo;
-
-		Renderer(CreateInfo const& ci):
-			Module(ci.app, ci.name),
-			_exec(ci.exec),
-			_scene(ci.scene),
-			_target(ci.target)
-		{
-			_depth = std::make_shared<ImageView>(ImageView::CI{
-				.app = application(),
-				.name = name() + ".depth",
-				.image_ci = Image::CI{
-					.app = application(),
-					.name = name() + ".depthImage",
-					.type = _target->image()->type(),
-					.format = VK_FORMAT_D32_SFLOAT,
-					.extent = _target->image()->extent(),
-					.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				},
-				.range = VkImageSubresourceRange{
-					.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-					.baseMipLevel = 0,
-					.levelCount = 1,
-					.baseArrayLayer = 0,
-					.layerCount = 1,
-				},
-			});
-			_exec.declare(_depth);
-		}
-
-		std::vector<VertexCommand::DrawModelInfo> generateVertexDrawList()
-		{
-			std::vector<VertexCommand::DrawModelInfo> res;
-
-			auto add_model = [&res](std::shared_ptr<Scene::Node> const & node, glm::mat4 const& matrix)
-			{
-				if(node->visible() && node->model())
-				{
-					res.push_back(VertexCommand::DrawModelInfo{
-						.drawable = node->model(),
-						.pc = matrix,
-					});
-				}
-			};
-
-			_scene->getTree()->iterateOnDag(add_model);
-
-			return res;
-		}
-
-		std::shared_ptr<ImageView> depth() const
-		{
-			return _depth;
-		}
-	};
-
 	class RendererApp : public AppWithWithImGui
 	{
 	protected:
@@ -237,102 +162,23 @@ namespace vkl
 			scene->prepareForRendering();
 			exec.declare(scene);
 
-			Renderer renderer(Renderer::CI{
-				.app = this,
-				.name = "renderer",
-				.exec = exec,
-				.scene = scene,
-				.target = final_image,
-			});
-
-			
-
-			std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(this, Model::SetLayoutOptions{});
-			const uint32_t model_set = descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
 			std::shared_ptr<DescriptorSetLayout> scene_layout = scene->setLayout();
 			MultiDescriptorSetsLayouts sets_layouts;
 			sets_layouts += {0, common_layout};
 			sets_layouts += {1, scene_layout};
 
+			SimpleRenderer renderer(SimpleRenderer::CI{
+				.app = this,
+				.name = "Renderer",
+				.exec = exec,
+				.sets_layouts = sets_layouts,
+				.scene = scene,
+				.target = final_image,
+			});
+
 
 			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
-
-			struct UBO
-			{
-				float time;
-				float delta_time;
-				uint32_t frame_idx;
-				
-				alignas(16) glm::mat4 world_to_camera;
-				alignas(16) glm::mat4 camera_to_proj;
-				alignas(16) glm::mat4 world_to_proj;
-			};
-			UBO ubo;
-			std::shared_ptr<Buffer> ubo_buffer = std::make_shared<Buffer>(Buffer::CI{
-				.app = this,
-				.name = "ubo",
-				.size = sizeof(UBO),
-				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-			});
-			exec.declare(ubo_buffer);
-
-			std::shared_ptr<UpdateBuffer> update_ubo = std::make_shared<UpdateBuffer>(UpdateBuffer::CI{
-				.app = this,
-				.name = "UpdateUBO",
-				.src = &ubo,
-				.dst = ubo_buffer,
-			});
-			exec.declare(update_ubo);
-			
-
-			std::shared_ptr<VertexCommand> render = std::make_shared<VertexCommand>(VertexCommand::CI{
-				.app = this,
-				.name = "Render",
-				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
-				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				.sets_layouts = (sets_layouts + std::pair{model_set, model_layout}),
-				.bindings = {
-					Binding{
-						.buffer = ubo_buffer,
-						.binding = 0,
-					},
-				},
-				.color_attachements = {final_image},
-				.depth_buffer = renderer.depth(),
-				.write_depth = true,
-				.vertex_shader_path = shaders / "render.vert",
-				.fragment_shader_path = shaders / "render.frag",
-				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
-			});
-			exec.declare(render);
-			struct RenderPC {
-				glm::mat4 object_to_world;
-			};
-
-			std::shared_ptr<VertexCommand> show_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
-				.app = this,
-				.name = "Show3DGrid",
-				.vertex_input_desc = Pipeline::VertexInputWithoutVertices(),
-				.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-				.draw_count = 3,
-				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
-				.sets_layouts = sets_layouts,
-				.bindings = {
-					Binding{
-						.buffer = ubo_buffer,
-						.binding = 0,
-					}
-				},
-				.color_attachements = {final_image},
-				.vertex_shader_path = shaders / "Show3DBasis.glsl",
-				.geometry_shader_path = shaders / "Show3DBasis.glsl",
-				.fragment_shader_path = shaders / "Show3DBasis.glsl",
-			});
-			exec.declare(show_3D_basis);
-
 			
 			exec.init();
 
@@ -410,21 +256,12 @@ namespace vkl
 				}
 				ImGui::EndFrame();
 
-				ubo.time = static_cast<float>(t);
-				ubo.delta_time = static_cast<float>(dt);
-				ubo.frame_idx = static_cast<uint32_t>(frame_index);
-
-				ubo.camera_to_proj = camera.getCamToProj();
-				ubo.world_to_camera = camera.getWorldToCam();
-				ubo.world_to_proj = camera.getWorldToProj();
-
 				{
 					scene->prepareForRendering();
 					exec.updateResources();
 					exec.beginFrame();
 					exec.beginCommandBuffer();
 
-					exec.bindSet(1, scene->set());
 
 					
 					{
@@ -436,19 +273,10 @@ namespace vkl
 						}));
 					}
 
-					{
-						exec(update_ubo);
-
-						auto draw_list = renderer.generateVertexDrawList();
-
-						exec(render->with(VertexCommand::DrawInfo{
-							.drawables = draw_list,
-						}));
-
-						exec(show_3D_basis);
-					}
-
+					exec.bindSet(1, scene->set());
+					renderer.execute(camera, t, dt, frame_index);
 					exec.bindSet(1, nullptr);
+
 
 					exec.renderDebugIFN();
 					ImGui::Render();

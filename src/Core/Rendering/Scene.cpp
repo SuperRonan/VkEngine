@@ -17,11 +17,13 @@ namespace vkl
 	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat4 const& matrix, const PerNodeInstanceFunction& f)
 	{
 		Mat4 new_matrix = matrix * node->matrix4x4();
-		f(node, new_matrix);
-		for (std::shared_ptr<Node> const& n : node->children())
+		if (f(node, new_matrix))
 		{
-			assert(!!n);
-			iterateOnNodeThenSons(n, new_matrix, f);
+			for (std::shared_ptr<Node> const& n : node->children())
+			{
+				assert(!!n);
+				iterateOnNodeThenSons(n, new_matrix, f);
+			}
 		}
 	}
 
@@ -69,6 +71,7 @@ namespace vkl
 		{
 			std::vector<Mat4x3> & matrices = _flat_dag[node];
 			matrices.push_back(Mat4x3(matrix));
+			return true;
 		};
 
 		iterateOnDag(process_node);
@@ -236,6 +239,7 @@ namespace vkl
 				LightGLSL gl = l.getAsGLSL(matrix);
 				_lights_glsl.push_back(gl);
 			}
+			return true;
 		});
 	}
 

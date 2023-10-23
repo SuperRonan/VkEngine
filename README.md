@@ -60,7 +60,7 @@
 - [x] Fix synchronization validation errors
 - [x] Re use descriptor sets
 	- [x] set = 0: common set (debug, ...), managed by the executor
-	- [ ] set = 1: scene set
+	- [x] set = 1: scene set
 	- [ ] set = 2: module set
 	- [x] set = 3: shader set
 	- [x] set = 4: push_descriptor set (shader invocation specific data)

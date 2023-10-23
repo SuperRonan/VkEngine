@@ -125,7 +125,7 @@ namespace vkl
 		};
 		
 
-		using PerNodeInstanceFunction = std::function<void(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
+		using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
 		using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<Mat4x3> const&)>;
 		using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
 		
