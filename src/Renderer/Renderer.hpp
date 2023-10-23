@@ -10,6 +10,8 @@
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/RenderObjects.hpp>
 
+#include <Core/IO/ImGuiUtils.hpp>
+
 namespace vkl
 {
 	class SimpleRenderer : public Module
@@ -22,7 +24,33 @@ namespace vkl
 		std::shared_ptr<ImageView> _target = nullptr;
 		std::shared_ptr<ImageView> _depth = nullptr;
 
+		ImGuiRadioButtons _pipeline_selection = std::vector<std::string>{"Direct V1"s, "Deferred V1"s};
 
+		struct DirectPipelineV1
+		{
+			std::shared_ptr<VertexCommand> _render_scene_direct = nullptr;
+			struct RenderSceneDirectPC
+			{
+				glm::mat4 object_to_world;
+			};
+		};
+		DirectPipelineV1 _direct_pipeline;
+
+		struct DeferredPipelineV1
+		{
+			// GBuffer layers
+			std::shared_ptr<ImageView> _albedo = nullptr;
+			std::shared_ptr<ImageView> _position = nullptr;
+			std::shared_ptr<ImageView> _normal = nullptr;
+
+			std::shared_ptr<VertexCommand> _raster_gbuffer = nullptr;
+			struct RasterGBufferPC 
+			{
+				glm::mat4 object_to_world;
+			};
+			std::shared_ptr<ComputeCommand> _shade_from_gbuffer = nullptr;
+		};
+		DeferredPipelineV1 _deferred_pipeline;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 
@@ -39,11 +67,7 @@ namespace vkl
 			alignas(16) glm::mat4 world_to_proj;
 		};
 		
-		std::shared_ptr<VertexCommand> _render_scene_direct = nullptr;
-		struct RenderSceneDirectPC
-		{
-			glm::mat4 object_to_world;
-		};
+		
 		std::shared_ptr<VertexCommand> _render_3D_basis = nullptr;
 
 		std::shared_ptr<UpdateBuffer> _update_buffer = nullptr;

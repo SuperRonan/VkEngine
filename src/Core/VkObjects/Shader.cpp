@@ -89,7 +89,7 @@ namespace vkl
 		if (!definitions.empty())
 		{
 			const size_t version_begin = content.find("#version", copied_so_far);
-			assert(version_begin < content.size());
+			assertm(version_begin < content.size(), "missing glsl version!");
 			const size_t version_end = content.find("\n", version_begin);
 
 			oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);

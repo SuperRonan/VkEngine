@@ -9,7 +9,7 @@ struct PBMaterialProperties
 };
 
 #ifndef BIND_SINGLE_MATERIAL
-#define BIND_SINGLE_MATERIAL 1
+#define BIND_SINGLE_MATERIAL 0
 #endif
 
 #if BIND_SINGLE_MATERIAL

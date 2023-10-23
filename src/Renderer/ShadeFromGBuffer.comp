@@ -1,0 +1,34 @@
+#version 460
+
+#include "common.glsl"
+
+#include "shading.glsl"
+
+layout(SHADER_DESCRIPTOR_BINDING + 0, rgba32f) uniform restrict readonly image2D AlbedoTexture;
+layout(SHADER_DESCRIPTOR_BINDING + 1, rgba32f) uniform restrict readonly image2D PositionTexture;
+layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict readonly image2D NormalTexture;
+
+layout(SHADER_DESCRIPTOR_BINDING + 4, rgba16f) uniform restrict writeonly image2D ColorOutput;
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+void main()
+{
+	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	const ivec2 dims = imageSize(AlbedoTexture);
+
+	if(all(lessThan(pixel, dims)))
+	{
+		const vec2 screen_uv = (vec2(pixel) + 0.5) / vec2(dims);
+
+		const vec3 albedo = imageLoad(AlbedoTexture, pixel).xyz;
+		const vec3 position = imageLoad(PositionTexture, pixel).xyz;
+		const vec3 normal = imageLoad(NormalTexture, pixel).xyz;
+
+		const vec3 res = shade(albedo, position, normal);
+
+		imageStore(ColorOutput, pixel, vec4(res, 0));
+	}
+
+    
+}

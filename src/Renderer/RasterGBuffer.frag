@@ -1,20 +1,17 @@
 #version 460
 
 #include "common.glsl"
-#include "shading.glsl"
 
 #define BIND_SINGLE_MATERIAL 1
 #include <ShaderLib:/Rendering/Materials/PBMaterial.glsl>
-
-#define BIND_SCENE 1
-#define LIGHTS_ACCESS readonly
-#include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
 layout(location = 0) in vec3 v_w_position;
 layout(location = 1) in vec2 v_uv;
 layout(location = 2) in vec3 v_w_normal;
 
-layout(location = 0) out vec4 o_color;
+layout(location = 0) out vec4 o_albedo;
+layout(location = 1) out vec4 o_position;
+layout(location = 2) out vec4 o_normal; 
 
 void main()
 {
@@ -24,5 +21,7 @@ void main()
 	const vec3 normal = normalize(v_w_normal);
 	const vec3 albedo = getBoundMaterialAlbedo(v_uv);
 
-	o_color = vec4(shade(albedo, position, normal), 1);
+	o_albedo = vec4(albedo, 0);
+	o_position = vec4(position, 0);
+	o_normal = vec4(normal, 0);
 }

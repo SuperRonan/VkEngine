@@ -5,7 +5,7 @@
 
 
 #ifndef BIND_SCENE
-#define BIND_SCENE 1
+#define BIND_SCENE 0
 #endif
 
 

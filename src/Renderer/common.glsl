@@ -21,4 +21,3 @@ layout(UBO_BINDING) uniform UBO
 	mat4 camera_to_proj;
 	mat4 world_to_proj;
 } ubo;
-

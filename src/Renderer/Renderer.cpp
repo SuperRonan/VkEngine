@@ -23,7 +23,7 @@ namespace vkl
 				.type = _target->image()->type(),
 				.format = VK_FORMAT_D32_SFLOAT,
 				.extent = _target->image()->extent(),
-				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			},
 			.range = VkImageSubresourceRange{
@@ -52,28 +52,125 @@ namespace vkl
 
 		std::filesystem::path shaders = PROJECT_SRC_PATH;
 
-
-		_render_scene_direct = std::make_shared<VertexCommand>(VertexCommand::CI{
-			.app = application(),
-			.name = name() + ".RenderSceneDirect",
-			.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
-			.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-			.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout}),
-			.bindings = {
-				Binding{
-					.buffer = _ubo_buffer,
-					.binding = 0,
+		{
+			_direct_pipeline._render_scene_direct = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderSceneDirect",
+				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
+				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout}),
+				.bindings = {
+					Binding{
+						.buffer = _ubo_buffer,
+						.binding = 0,
+					},
 				},
-			},
-			.color_attachements = {_target},
-			.depth_buffer = _depth,
-			.write_depth = true,
-			.vertex_shader_path = shaders / "render.vert",
-			.fragment_shader_path = shaders / "render.frag",
-			.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-			.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
+				.color_attachements = {_target},
+				.depth_buffer = _depth,
+				.write_depth = true,
+				.vertex_shader_path = shaders / "render.vert",
+				.fragment_shader_path = shaders / "render.frag",
+				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
+				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
-		_exec.declare(_render_scene_direct);
+			_exec.declare(_direct_pipeline._render_scene_direct);
+		}
+		{
+			_deferred_pipeline._albedo = std::make_shared<ImageView>(ImageView::CI{
+				.app = application(),
+				.name = name() + ".GBuffer.albedo",
+				.image_ci = Image::CI{
+					.app = application(),
+					.name = name() + ".GBuffer.albedo",
+					.type = _target->image()->type(),
+					.format = VK_FORMAT_R32G32B32A32_SFLOAT,
+					.extent = _target->image()->extent(),
+					.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				},
+			});
+			_exec.declare(_deferred_pipeline._albedo);
+
+			_deferred_pipeline._position = std::make_shared<ImageView>(ImageView::CI{
+				.app = application(),
+				.name = name() + ".GBuffer.position",
+				.image_ci = Image::CI{
+					.app = application(),
+					.name = name() + ".GBuffer.position",
+					.type = _target->image()->type(),
+					.format = VK_FORMAT_R32G32B32A32_SFLOAT,
+					.extent = _target->image()->extent(),
+					.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				},
+			});
+			_exec.declare(_deferred_pipeline._position);
+
+			_deferred_pipeline._normal = std::make_shared<ImageView>(ImageView::CI{
+				.app = application(),
+				.name = name() + ".GBuffer.normal",
+				.image_ci = Image::CI{
+					.app = application(),
+					.name = name() + ".GBuffer.normal",
+					.type = _target->image()->type(),
+					.format = VK_FORMAT_R32G32B32A32_SFLOAT,
+					.extent = _target->image()->extent(),
+					.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				},
+			});
+			_exec.declare(_deferred_pipeline._normal);
+
+			_deferred_pipeline._raster_gbuffer = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RasterGBuffer",
+				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
+				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout}),
+				.bindings = {
+					Binding{
+						.buffer = _ubo_buffer,
+						.binding = 0,
+					},
+				},
+				.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal},
+				.depth_buffer = _depth,
+				.write_depth = true,
+				.vertex_shader_path = shaders / "RasterGBuffer.vert",
+				.fragment_shader_path = shaders / "RasterGBuffer.frag",
+				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
+				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
+			});
+			_exec.declare(_deferred_pipeline._raster_gbuffer);
+
+			_deferred_pipeline._shade_from_gbuffer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = application(),
+				.name = name() + ".ShadeFromGBuffer",
+				.shader_path = shaders / "ShadeFromGBuffer.comp",
+				.dispatch_size = _target->image()->extent(),
+				.dispatch_threads = true,
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.view = _deferred_pipeline._albedo,
+						.binding = 0,
+					},
+					Binding{
+						.view = _deferred_pipeline._position,
+						.binding = 1,
+					},
+					Binding{
+						.view = _deferred_pipeline._normal,
+						.binding = 2,
+					},
+					Binding{
+						.view = _target,
+						.binding = 4,
+					},
+				},
+			});
+			_exec.declare(_deferred_pipeline._shade_from_gbuffer);
+		}
 
 
 		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -137,9 +234,20 @@ namespace vkl
 
 		std::vector<VertexCommand::DrawModelInfo> draw_list = generateVertexDrawList();
 
-		_exec(_render_scene_direct->with(VertexCommand::DrawInfo{
-			.drawables = draw_list,
-		}));
+		const size_t selected_pipeline = _pipeline_selection.index();
+		if (selected_pipeline == 0)
+		{
+			_exec(_direct_pipeline._render_scene_direct->with(VertexCommand::DrawInfo{
+				.drawables = draw_list,
+			}));
+		}
+		else
+		{
+			_exec(_deferred_pipeline._raster_gbuffer->with(VertexCommand::DrawInfo{
+				.drawables = draw_list,
+			}));
+			_exec(_deferred_pipeline._shade_from_gbuffer);
+		}
 
 
 		if (_show_world_3D_basis)
@@ -162,6 +270,7 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
+			_pipeline_selection.declare();
 			ImGui::Checkbox("show world 3D basis", &_show_world_3D_basis);
 			ImGui::Checkbox("show view 3D basis", &_show_view_3D_basis);
 		}

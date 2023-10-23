@@ -296,6 +296,11 @@ namespace vkl
 						}
 					}
 
+					if (b.vkType() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER && !b.sampler() && b.image())
+					{
+						assert(false);
+					}
+
 					do_write |= can_write_null;
 					if (b.isSampler() && info.sampler == VK_NULL_HANDLE)
 					{
