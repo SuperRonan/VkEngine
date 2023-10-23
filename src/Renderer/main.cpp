@@ -248,6 +248,8 @@ namespace vkl
 				{
 					//ImGui::ShowDemoWindow();
 
+					renderer.declareImGui();
+
 					camera.declareImGui();
 
 					window->declareImGui();

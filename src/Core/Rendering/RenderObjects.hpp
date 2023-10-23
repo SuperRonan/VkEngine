@@ -124,6 +124,15 @@ namespace vkl
 			return getCamToProj() * getWorldToCam();
 		}
 
+		mat4 getWorldRoationMatrix() const
+		{
+			mat4 res = getWorldToCam();
+			res[3][0] = 0;
+			res[3][1] = 0;
+			res[3][2] = 0;
+			return res;
+		}
+
 		void computeInternal()
 		{
 			_direction = glm::normalize(_direction);

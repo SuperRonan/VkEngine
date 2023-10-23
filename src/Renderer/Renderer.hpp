@@ -18,9 +18,11 @@ namespace vkl
 
 		Executor& _exec;
 
-		std::shared_ptr<Scene> _scene;
-		std::shared_ptr<ImageView> _target;
-		std::shared_ptr<ImageView> _depth;
+		std::shared_ptr<Scene> _scene = nullptr;
+		std::shared_ptr<ImageView> _target = nullptr;
+		std::shared_ptr<ImageView> _depth = nullptr;
+
+
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 
@@ -45,6 +47,11 @@ namespace vkl
 		std::shared_ptr<VertexCommand> _render_3D_basis = nullptr;
 
 		std::shared_ptr<UpdateBuffer> _update_buffer = nullptr;
+
+
+		bool _show_world_3D_basis = false;
+		bool _show_view_3D_basis = false;
+
 
 		std::vector<VertexCommand::DrawModelInfo> generateVertexDrawList();
 
@@ -72,5 +79,7 @@ namespace vkl
 		{
 			return _depth;
 		}
+
+		void declareImGui();
 	};
 }
