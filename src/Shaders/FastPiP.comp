@@ -1,0 +1,43 @@
+#version 460 core
+
+#include <ShaderLib:/common.glsl>
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+#ifndef IMAGE_FORMAT
+#define IMAGE_FORMAT rgba32f
+#endif
+
+layout(SHADER_DESCRIPTOR_BINDING + 0, IMAGE_FORMAT) uniform restrict image2D Image;
+
+layout(push_constant) uniform PushConstant
+{
+    float zoom;
+    float pip_size;
+    vec2 pip_position;
+} _pc;
+
+void main()
+{
+    const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	const ivec2 dims = imageSize(Image);
+
+    if(all(lessThan(pixel, dims)))
+    {
+        const vec2 screen_uv = (vec2(pixel) + 0.5) / vec2(dims);
+        const float zoomed_pip_size = _pc.pip_size;
+
+        if(all(lessThan(screen_uv, zoomed_pip_size.xx)))
+        {
+            const vec2 pic_pos = _pc.pip_position + screen_uv / _pc.zoom;
+
+            const ivec2 pic_pix = ivec2(pic_pos * dims);
+            const vec4 zoomed_value = imageLoad(Image, pic_pix);
+            imageStore(Image, pixel, zoomed_value);
+        }
+        else
+        {
+            
+        }
+    }
+}

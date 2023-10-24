@@ -50,7 +50,7 @@ namespace vkl
 		const uint32_t model_set = application()->descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
 		std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(application(), Model::SetLayoutOptions{});
 
-		std::filesystem::path shaders = PROJECT_SRC_PATH;
+		const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
 		{
 			_direct_pipeline._render_scene_direct = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -238,13 +238,13 @@ namespace vkl
 		if (selected_pipeline == 0)
 		{
 			_exec(_direct_pipeline._render_scene_direct->with(VertexCommand::DrawInfo{
-				.drawables = draw_list,
+				.draw_list = draw_list,
 			}));
 		}
 		else
 		{
 			_exec(_deferred_pipeline._raster_gbuffer->with(VertexCommand::DrawInfo{
-				.drawables = draw_list,
+				.draw_list = draw_list,
 			}));
 			_exec(_deferred_pipeline._shade_from_gbuffer);
 		}

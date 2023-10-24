@@ -28,6 +28,7 @@
 #include <random>
 
 #include "Renderer.hpp"
+#include "PicInPic.hpp"
 
 namespace vkl
 {
@@ -176,9 +177,17 @@ namespace vkl
 				.scene = scene,
 				.target = final_image,
 			});
-
-
 			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
+
+
+			PictureInPicture pip = PictureInPicture::CI{
+				.app = this,
+				.name = "PiP",
+				.exec = exec,
+				.target = final_image,
+				.sets_layouts = sets_layouts,
+			};
+
 			
 			exec.init();
 
@@ -246,7 +255,7 @@ namespace vkl
 
 				beginImGuiFrame();
 				{
-					//ImGui::ShowDemoWindow();
+					ImGui::ShowDemoWindow();
 
 					renderer.declareImGui();
 
@@ -254,9 +263,16 @@ namespace vkl
 
 					window->declareImGui();
 
+					pip.declareImGui();
+
 					exec.getDebugRenderer()->declareImGui();
 				}
 				ImGui::EndFrame();
+
+				if(mouse.getButton(1).justReleased())
+				{
+					pip.setPosition(mouse.getReleasedPos(1) / glm::vec2(window->extent2D().value().width, window->extent2D().value().height));
+				}
 
 				{
 					scene->prepareForRendering();
@@ -277,8 +293,10 @@ namespace vkl
 
 					exec.bindSet(1, scene->set());
 					renderer.execute(camera, t, dt, frame_index);
-					exec.bindSet(1, nullptr);
 
+					pip.execute();
+
+					exec.bindSet(1, nullptr);
 
 					exec.renderDebugIFN();
 					ImGui::Render();

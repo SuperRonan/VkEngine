@@ -93,11 +93,7 @@ namespace vkl
 
 		ShaderPaths _shaders;
 
-		std::vector<std::shared_ptr<Drawable>> _drawables;
-
 		DynamicValue<uint32_t> _draw_count = 0;
-
-
 
 		virtual void createProgram() override;
 
@@ -113,7 +109,6 @@ namespace vkl
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			DynamicValue<uint32_t> draw_count = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
-			std::vector<std::shared_ptr<Drawable>> drawables = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
@@ -145,7 +140,7 @@ namespace vkl
 			uint32_t draw_count = 0;
 			std::optional<VkViewport> viewport = {};
 
-			std::vector<DrawModelInfo> drawables = {};
+			std::vector<DrawModelInfo> draw_list = {};
 		};
 		using DI = DrawInfo;
 

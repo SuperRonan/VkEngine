@@ -539,7 +539,7 @@ namespace vkl
 							.color = glm::vec4(1, 1, 1, 1),
 						};
 						exec(render_2D_lines->with({
-							.drawables = {
+							.draw_list = {
 								VertexCommand::DrawModelInfo{
 									.drawable = border_mesh,
 									.pc = pc,

@@ -314,8 +314,7 @@ namespace vkl
 			.fragment_path = ci.fragment_shader_path, 
 			.definitions = ci.definitions 
 		}),
-		_draw_count(ci.draw_count),
-		_drawables(ci.drawables)
+		_draw_count(ci.draw_count)
 	{
 		createProgram();
 		createGraphicsResources();
@@ -347,20 +346,20 @@ namespace vkl
 		{
 			tess_control = std::make_shared<Shader>(Shader::CI{
 				.app = application(),
-					.name = name() + ".tess_control",
-					.source_path = _shaders.tess_control_path,
-					.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
-					.definitions = _shaders.definitions
+				.name = name() + ".tess_control",
+				.source_path = _shaders.tess_control_path,
+				.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+				.definitions = _shaders.definitions
 			});
 		}
 		if (!_shaders.tess_eval_path.empty())
 		{
 			tess_eval = std::make_shared<Shader>(Shader::CI{
 				.app = application(),
-					.name = name() + ".tess_eval",
-					.source_path = _shaders.tess_eval_path,
-					.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
-					.definitions = _shaders.definitions
+				.name = name() + ".tess_eval",
+				.source_path = _shaders.tess_eval_path,
+				.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+				.definitions = _shaders.definitions
 			});
 		}
 		if (!_shaders.geometry_path.empty())
@@ -415,7 +414,7 @@ namespace vkl
 			}();
 			
 			// Synchronize for vertex attribute fetch and descriptor binding
-			for (auto& drawable : di.drawables)
+			for (auto& drawable : di.draw_list)
 			{
 				if (layout)
 				{
@@ -438,7 +437,7 @@ namespace vkl
 		{
 			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
 			const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
-			for (auto& drawable : di.drawables)
+			for (auto& drawable : di.draw_list)
 			{
 				std::shared_ptr<DescriptorSetAndPool> set_desc = drawable.drawable->setAndPool();
 				if(set_desc)
@@ -479,7 +478,7 @@ namespace vkl
 
 		DrawInfo _di{
 			.draw_count = di.draw_count ? di.draw_count : (_draw_count.hasValue() ? _draw_count.value() : 0),
-			.drawables = di.drawables,
+			.draw_list = di.draw_list,
 		};
 
 		return [this, gdi, _di](ExecutionContext& ctx)

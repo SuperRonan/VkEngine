@@ -149,6 +149,6 @@ namespace vkl
 
 		img::FormatInfo getImgFormatInfo()const;
 
-		
+		std::string getGLSLName()const;
 	};
 }

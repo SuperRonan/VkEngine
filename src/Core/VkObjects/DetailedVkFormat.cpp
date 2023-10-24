@@ -437,4 +437,40 @@ namespace vkl
 		};
 		return res;
 	}
+
+	std::string DetailedVkFormat::getGLSLName()const
+	{
+		using namespace std::string_literals;
+		std::string res;
+		if (aspect & VK_IMAGE_ASPECT_COLOR_BIT)
+		{
+			if (vk_format == VK_FORMAT_B10G11R11_UFLOAT_PACK32)
+			{
+				res = "r11f_g11f_b10f"s;
+			}
+			else if(color.channels != 3)
+			{
+				const std::string rgba = "rgba"s;
+				res += rgba.substr(0, color.channels);
+				// Assuming all channels have the same number of bits
+				res += std::to_string(color.bits[0]);
+				switch (color.type)
+				{
+					case Type::SFLOAT:
+					res += "f"s;
+					break;
+					case Type::SNORM:
+					res += "_snorm"s;
+					break;
+					case Type::SINT:
+					res += "i"s;
+					break;
+					case Type::UINT:
+					res += "ui"s;
+					break;
+				}
+			}
+		}
+		return res;
+	}
 }
