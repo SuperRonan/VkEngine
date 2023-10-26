@@ -236,7 +236,7 @@ namespace vkl
 					.draw_list = {
 						MeshCommand::DrawCallInfo{
 							.pc = pc,
-							.dispatch_size = extent,
+							.extent = extent,
 						},
 					}
 				}));

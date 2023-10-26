@@ -22,7 +22,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".FastPiP",
 			.shader_path = common_shaders / "FastPiP.comp",
-			.dispatch_size = _target->image()->extent(),
+			.extent = _target->image()->extent(),
 			.dispatch_threads = true,
 			.sets_layouts = _sets_layouts,
 			.bindings = {
@@ -60,8 +60,8 @@ namespace vkl
 				.pip_pos = pip_pos,
 			};
 
-			_exec(_fast_pip->with(ComputeCommand::DispatchInfo{
-				.push_constant = pc,
+			_exec(_fast_pip->with(ComputeCommand::SingleDispatchInfo{
+				.pc = pc
 			}));
 
 			

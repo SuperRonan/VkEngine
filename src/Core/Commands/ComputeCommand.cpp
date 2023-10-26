@@ -10,7 +10,7 @@ namespace vkl
 		}),
 		_shader_path(ci.shader_path),
 		_definitions(ci.definitions),
-		_dispatch_size(ci.dispatch_size),
+		_extent(ci.extent),
 		_dispatch_threads(ci.dispatch_threads)
 	{
 		std::shared_ptr<Shader> shader = std::make_shared<Shader>(Shader::CI{
@@ -52,14 +52,58 @@ namespace vkl
 	{
 		SynchronizationHelper synch(context);
 		recordBindings(cmd, context);
-		recordPushConstant(cmd, context, di.push_constant);
-
 		recordBoundResourcesSynchronization(context.computeBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
+		
+		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+		const std::shared_ptr<PipelineLayout>& prog_layout = _pipeline->program()->instance()->pipelineLayout();
+
+		{
+			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+				const auto& layouts = _program->instance()->reflectionSetsLayouts();
+				if (set_index < layouts.size())
+				{
+					return layouts[set_index];
+				}
+				else
+				{
+					return nullptr;
+				}
+			}();
+			if (layout)
+			{
+				std::set<void*> already_sync;
+				for (auto& to_dispatch : di.dispatch_list)
+				{
+					if (!already_sync.contains(to_dispatch.set.get()))
+					{
+						assert(!!to_dispatch.set);
+						recordDescriptorSetSynch(synch, *to_dispatch.set->instance(), *layout);
+						already_sync.emplace(to_dispatch.set.get());
+					}
+				}
+			}
+		}
 
 		synch.record();
 
-		const VkExtent3D workgroups = _dispatch_threads ? getWorkgroupsDispatchSize(di.extent) : di.extent;
-		vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
+		for (auto& to_dispatch : di.dispatch_list)
+		{
+			if(to_dispatch.set)
+			{
+				std::shared_ptr<DescriptorSetAndPoolInstance> set = to_dispatch.set->instance();
+				if (set->exists() && !set->empty())
+				{
+					context.computeBoundSets().bindOneAndRecord(set_index, set, prog_layout);
+					context.keppAlive(set);
+				}
+			}
+			recordPushConstant(cmd, context, to_dispatch.pc);
+
+			const VkExtent3D workgroups = di.dispatch_threads ? getWorkgroupsDispatchSize(to_dispatch.extent) : to_dispatch.extent;
+			vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
+		}
+
+
 	}
 
 	void ComputeCommand::execute(ExecutionContext& context, DispatchInfo const& di)
@@ -70,11 +114,13 @@ namespace vkl
 
 	void ComputeCommand::execute(ExecutionContext& context)
 	{
-		DispatchInfo di{
-			.push_constant = _pc,
-			.extent = _dispatch_size.value(),
-		};
-		execute(context, di);
+		Executable exe = with(SingleDispatchInfo{
+			.extent = _extent.value(),
+			.dispatch_threads = _dispatch_threads,
+			.pc = _pc,
+		});
+
+		exe(context);
 	}
 
 	Executable ComputeCommand::with(DispatchInfo const& di)
@@ -82,11 +128,7 @@ namespace vkl
 		using namespace vk_operators;
 		return [this, di](ExecutionContext& ctx)
 		{
-			DispatchInfo _di{
-				.push_constant = di.push_constant.hasValue() ? di.push_constant : _pc,
-				.extent = di.extent != makeZeroExtent3D() ? di.extent : _dispatch_size.value(),
-			};
-			execute(ctx, _di);
+			execute(ctx, di);
 		};
 	}
 

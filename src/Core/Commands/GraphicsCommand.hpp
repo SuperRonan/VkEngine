@@ -12,8 +12,10 @@ namespace vkl
 		{
 			None,
 			Draw,
+			Dispatch = Draw,
 			DrawIndexed,
 			IndirectDraw,
+			IndirectDispatch = IndirectDraw,
 			IndirectDrawIndexed,
 			IndirectDrawCount,
 			IndirectDrawCountIndexed,
@@ -169,7 +171,6 @@ namespace vkl
 			std::vector<DrawCallInfo> draw_list = {};
 		};
 		using DI = DrawInfo;
-
 		
 
 		VertexCommand(CreateInfo const& ci);
@@ -185,6 +186,31 @@ namespace vkl
 		Executable operator()(DrawInfo const& di)
 		{
 			return with(di);
+		}
+
+		struct SingleDrawInfo
+		{
+			uint32_t draw_count;
+			PushConstant pc;
+			std::optional<VkViewport> viewport = {};
+		};
+		Executable with(SingleDrawInfo const& sdi)
+		{
+			DrawInfo di{
+				.draw_type = DrawType::Draw,
+				.viewport = sdi.viewport,
+				.draw_list = {
+					DrawCallInfo{
+						.draw_count = sdi.draw_count,
+						.pc = sdi.pc,
+					},
+				}
+			};
+			return with(di);
+		}
+		Executable operator()(SingleDrawInfo const& sdi)
+		{
+			return with(sdi);
 		}
 	};
 
@@ -203,7 +229,7 @@ namespace vkl
 
 		ShaderPaths _shaders;
 
-		DynamicValue<VkExtent3D> _dispatch_size = {};
+		DynamicValue<VkExtent3D> _extent = {};
 		bool _dispatch_threads = false;
 
 		virtual void createProgram() override;
@@ -216,7 +242,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			DynamicValue<VkExtent3D> dispatch_size = {};
+			DynamicValue<VkExtent3D> extent = {};
 			bool dispatch_threads = false;
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
@@ -242,7 +268,7 @@ namespace vkl
 		{
 			std::string name;
 			PushConstant pc = {};
-			VkExtent3D dispatch_size = {};
+			VkExtent3D extent = {};
 			std::shared_ptr<DescriptorSetAndPool> set;
 		};
 
@@ -265,6 +291,34 @@ namespace vkl
 		Executable operator()(DrawInfo const& di)
 		{
 			return with(di);
+		}
+
+		struct SingleDrawInfo
+		{
+			std::optional<VkExtent3D> extent;
+			std::optional<bool> dispatch_threads = false;
+			PushConstant pc = {};
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+		};
+		Executable with(SingleDrawInfo const& sdi)
+		{
+			DrawInfo di{
+				.draw_type = DrawType::Dispatch,
+				.dispatch_threads = sdi.dispatch_threads.value_or(_dispatch_threads),
+				.draw_list {
+					DrawCallInfo{
+						.pc = sdi.pc.empty() ? _pc : sdi.pc,
+						.extent = sdi.extent.value_or(_extent.value()),
+						.set = sdi.set,
+					},
+				},
+			};
+			return with(di);
+		}
+
+		Executable operator()(SingleDrawInfo const& sdi)
+		{
+			return with(sdi);
 		}
 
 		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const

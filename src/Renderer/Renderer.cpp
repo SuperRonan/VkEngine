@@ -159,7 +159,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".ShadeFromGBuffer",
 				.shader_path = shaders / "ShadeFromGBuffer.comp",
-				.dispatch_size = _target->image()->extent(),
+				.extent = _target->image()->extent(),
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,
 				.bindings = {

@@ -567,7 +567,7 @@ namespace vkl
 			.fragment_path = ci.fragment_shader_path,
 			.definitions = ci.definitions,
 		},
-		_dispatch_size(ci.dispatch_size),
+		_extent(ci.extent),
 		_dispatch_threads(ci.dispatch_threads)
 	{
 		createProgram();
@@ -646,15 +646,17 @@ namespace vkl
 			}
 		}();
 
-		// Synchronize for vertex attribute fetch and descriptor binding
-		std::set<void*> already_sync;
-		for (auto& to_draw : di.draw_list)
+		if (layout)
 		{
-			if (layout && !already_sync.contains(to_draw.set.get()))
+			std::set<void*> already_sync;
+			for (auto& to_draw : di.draw_list)
 			{
-				assert(!!to_draw.set);
-				recordDescriptorSetSynch(synch, *to_draw.set->instance(), *layout);
-				already_sync.emplace(to_draw.set.get());
+				if (!already_sync.contains(to_draw.set.get()))
+				{
+					assert(!!to_draw.set);
+					recordDescriptorSetSynch(synch, *to_draw.set->instance(), *layout);
+					already_sync.emplace(to_draw.set.get());
+				}
 			}
 		}
 	}
@@ -672,7 +674,7 @@ namespace vkl
 		
 		for (auto& to_draw : di.draw_list)
 		{
-			const VkExtent3D work = di.dispatch_threads ? getWorkgroupsDispatchSize(to_draw.dispatch_size) : to_draw.dispatch_size;
+			const VkExtent3D work = di.dispatch_threads ? getWorkgroupsDispatchSize(to_draw.extent) : to_draw.extent;
 			
 			std::shared_ptr<DescriptorSetAndPool> set_desc = to_draw.set;
 			if (set_desc)
@@ -688,7 +690,7 @@ namespace vkl
 
 			switch (di.draw_type)
 			{
-				case DrawType::Draw:
+				case DrawType::Dispatch:
 					_vkCmdDrawMeshTasksEXT(cmd, work.width, work.height, work.depth);
 				break;
 				default:

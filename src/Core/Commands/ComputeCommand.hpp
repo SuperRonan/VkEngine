@@ -13,7 +13,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::filesystem::path shader_path;
-			DynamicValue<VkExtent3D> dispatch_size = {};
+			DynamicValue<VkExtent3D> extent = {};
 			bool dispatch_threads = false;
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
@@ -21,10 +21,18 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		struct DispatchCallInfo
+		{
+			std::string name = {};
+			VkExtent3D extent = makeZeroExtent3D();
+			PushConstant pc = {};
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+		};
+
 		struct DispatchInfo
 		{
-			PushConstant push_constant = {};
-			VkExtent3D extent = makeZeroExtent3D();
+			bool dispatch_threads = false;
+			std::vector<DispatchCallInfo> dispatch_list;
 		};
 		using DI = DispatchInfo;
 
@@ -34,7 +42,7 @@ namespace vkl
 		DynamicValue<std::vector<std::string>> _definitions;
 
 		std::shared_ptr<ComputeProgram> _program = nullptr;
-		DynamicValue<VkExtent3D> _dispatch_size = {};
+		DynamicValue<VkExtent3D> _extent = {};
 		bool _dispatch_threads = false;
 
 		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di) ;
@@ -60,11 +68,38 @@ namespace vkl
 			return with(di);
 		}
 
+		struct SingleDispatchInfo {
+			std::optional<VkExtent3D> extent = {};
+			std::optional<bool> dispatch_threads = {};
+			PushConstant pc = {};
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+		};
+
+		Executable with(SingleDispatchInfo const& sdi)
+		{
+			DispatchInfo di{
+				.dispatch_threads = sdi.dispatch_threads.value_or(_dispatch_threads),
+				.dispatch_list = {
+					DispatchCallInfo{
+						.extent = sdi.extent.value_or(_extent.value()),
+						.pc = sdi.pc,
+						.set = sdi.set,
+					},
+				},
+			};
+			return with(di);
+		}
+
+		Executable operator()(SingleDispatchInfo const& sdi)
+		{
+			return with(sdi);
+		}
+
 		virtual bool updateResources(UpdateContext & ctx)override;
 
 		void setDispatchSize(DynamicValue<VkExtent3D> size)
 		{
-			_dispatch_size = size;
+			_extent = size;
 		}
 
 		constexpr void setDispatchType(bool type_is_threads)
@@ -74,7 +109,7 @@ namespace vkl
 		
 		constexpr const DynamicValue<VkExtent3D> & getDispatchSize()const
 		{
-			return _dispatch_size;
+			return _extent;
 		}
 
 		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
