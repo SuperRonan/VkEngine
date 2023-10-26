@@ -12,6 +12,9 @@
 
 #include <Core/IO/ImGuiUtils.hpp>
 
+#include <unordered_map>
+#include <map>
+
 namespace vkl
 {
 	class SimpleRenderer : public Module
@@ -26,9 +29,11 @@ namespace vkl
 
 		ImGuiRadioButtons _pipeline_selection = std::vector<std::string>{"Direct V1"s, "Deferred V1"s};
 
+		std::vector<uint32_t> _model_types;
+
 		struct DirectPipelineV1
 		{
-			std::shared_ptr<VertexCommand> _render_scene_direct = nullptr;
+			std::map<uint32_t, std::shared_ptr<VertexCommand>> _render_scene_direct;
 			struct RenderSceneDirectPC
 			{
 				glm::mat4 object_to_world;
@@ -43,7 +48,7 @@ namespace vkl
 			std::shared_ptr<ImageView> _position = nullptr;
 			std::shared_ptr<ImageView> _normal = nullptr;
 
-			std::shared_ptr<VertexCommand> _raster_gbuffer = nullptr;
+			std::map<uint32_t, std::shared_ptr<VertexCommand>> _raster_gbuffer;
 			struct RasterGBufferPC 
 			{
 				glm::mat4 object_to_world;
@@ -76,8 +81,12 @@ namespace vkl
 		bool _show_world_3D_basis = false;
 		bool _show_view_3D_basis = false;
 
+		template <class DrawCallType>
+		using MultiDrawCallLists = std::map<uint32_t, std::vector<DrawCallType>>;
 
-		std::vector<VertexCommand::DrawModelInfo> generateVertexDrawList();
+		using MultiVertexDrawCallList = MultiDrawCallLists<VertexCommand::DrawCallInfo>;
+
+		MultiVertexDrawCallList generateVertexDrawList();
 
 		void createInternalResources();
 

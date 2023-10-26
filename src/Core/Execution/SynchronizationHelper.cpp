@@ -2,7 +2,7 @@
 
 namespace vkl
 {
-	void SynchronizationHelper::addSynch(const Resource& r)
+	void SynchronizationHelperV1::addSynch(const Resource& r)
 	{
 		
 		const ResourceState2 next = r._begin_state;
@@ -113,7 +113,7 @@ namespace vkl
 		}
 	}
 
-	void SynchronizationHelper::record()
+	void SynchronizationHelperV1::record()
 	{
 		if (!_images_barriers.empty() || !_buffers_barriers.empty())
 		{
@@ -151,5 +151,13 @@ namespace vkl
 		}
 	}
 
+	void SynchronizationHelperV2::addSynch(const Resource& r)
+	{
 
+	}
+
+	void SynchronizationHelperV2::record()
+	{
+		
+	}
 } // namespace vkl

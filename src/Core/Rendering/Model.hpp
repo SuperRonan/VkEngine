@@ -10,7 +10,33 @@ namespace vkl
 {
 	class Model : public VkObject, public Drawable, public ResourcesHolder
 	{
+	public:
+
+		template <Mesh::Type mesh, Material::Type material>
+		static constexpr uint32_t MakeTypeT()
+		{
+			return static_cast<uint32_t>(mesh) | (static_cast<uint32_t>(material) << 16);
+		}
+
+		static constexpr uint32_t MakeType(Mesh::Type mesh, Material::Type material)
+		{
+			return static_cast<uint32_t>(mesh) | (static_cast<uint32_t>(material) << 16);
+		}
+
+		static constexpr Mesh::Type ExtractMeshType(uint32_t model_type)
+		{
+			return static_cast<Mesh::Type>(model_type & 0xffff);
+		}
+
+		static constexpr Material::Type ExtractMaterialType(uint32_t model_type)
+		{
+			return static_cast<Material::Type>(model_type >> 16);
+		}
+
 	protected:
+
+		// A combination of Mesh and Material type
+		uint32_t _type = 0;
 		
 		std::filesystem::path _mesh_path = {};
 		std::shared_ptr<Mesh> _mesh = nullptr;
@@ -49,7 +75,12 @@ namespace vkl
 			return _mesh;
 		}
 
-		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
+		constexpr uint32_t type()const
+		{
+			return _type;
+		}
+
+		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
 
 		virtual ResourcesToDeclare getResourcesToDeclare() override final;
 
@@ -61,19 +92,23 @@ namespace vkl
 
 		static VertexInputDescription vertexInputDescStatic();
 
-		virtual void recordBindAndDraw(ExecutionContext& ctx) override final;
+		//virtual void recordBindAndDraw(ExecutionContext& ctx) override final;
 
-		virtual std::shared_ptr<DescriptorSetLayout> setLayout() override final;
+		virtual void fillVertexDrawCallResources(VertexDrawCallResources& vr) override;
+
+		virtual std::shared_ptr<DescriptorSetLayout> setLayout();
 
 
 		struct SetLayoutOptions
 		{
+			uint32_t type = 0;
 			bool bind_mesh = true;
 			bool bind_material = true;
 
 			constexpr bool operator==(SetLayoutOptions const& o) const
 			{
-				return (bind_mesh == o.bind_mesh) 
+				return (type == o.type)
+					&& (bind_mesh == o.bind_mesh) 
 					&& (bind_material == o.bind_material);
 			}
 		};

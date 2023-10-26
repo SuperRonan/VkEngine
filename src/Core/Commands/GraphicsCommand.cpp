@@ -16,7 +16,8 @@ namespace vkl
 		_clear_color(ci.clear_color),
 		_clear_depth_stencil(ci.clear_depth_stencil),
 		_blending(ci.blending),
-		_line_raster_mode(ci.line_raster_mode)
+		_line_raster_mode(ci.line_raster_mode),
+		_draw_type(ci.draw_type)
 	{}
 
 	void GraphicsCommand::createGraphicsResources()
@@ -280,7 +281,6 @@ namespace vkl
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
 			recordBindings(cmd, context);
-			recordPushConstant(cmd, context, di.pc);
 			recordDraw(cmd, context, user_info);
 		}
 		vkCmdEndRenderPass(cmd);
@@ -305,6 +305,7 @@ namespace vkl
 			.clear_color = ci.clear_color,
 			.clear_depth_stencil = ci.clear_depth_stencil,
 			.blending = ci.blending,
+			.draw_type = ci.draw_type,
 		}),
 		_shaders(ShaderPaths{
 			.vertex_path = ci.vertex_shader_path, 
@@ -398,30 +399,52 @@ namespace vkl
 	{
 		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
 
-		if (di.draw_count == 0)
-		{
-			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
-				const auto & layouts = _program->instance()->reflectionSetsLayouts();
-				const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
-				if (set_index < layouts.size())
-				{
-					return layouts[set_index];
-				}
-				else
-				{
-					return nullptr;
-				}
-			}();
-			
-			// Synchronize for vertex attribute fetch and descriptor binding
-			for (auto& drawable : di.draw_list)
+		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+			const auto & layouts = _program->instance()->reflectionSetsLayouts();
+			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+			if (set_index < layouts.size())
 			{
-				if (layout)
-				{
-					recordDescriptorSetSynch(synch, *drawable.drawable->setAndPool()->instance(), *layout);
-				}
-				
-				drawable.drawable->recordSynchForDraw(synch, _pipeline);
+				return layouts[set_index];
+			}
+			else
+			{
+				return nullptr;
+			}
+		}();
+			
+		// Synchronize for vertex attribute fetch and descriptor binding
+		std::set<void*> already_sync;
+		for (auto& to_draw : di.draw_list)
+		{
+			if(layout && !already_sync.contains(to_draw.set.get()))
+			{
+				assert(!!to_draw.set);
+				recordDescriptorSetSynch(synch, *to_draw.set->instance(), *layout);
+				already_sync.emplace(to_draw.set.get());
+			}
+
+			if (to_draw.index_buffer)
+			{
+				synch.addSynch(Resource{
+					._buffer = to_draw.index_buffer,
+					._buffer_range = to_draw.index_buffer_range,
+					._begin_state = ResourceState2{
+						.access = VK_ACCESS_2_INDEX_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+					},
+				});
+			}
+
+			for (VertexBuffer vb : to_draw.vertex_buffers)
+			{
+				synch.addSynch(Resource{
+					._buffer = vb.buffer,
+					._buffer_range = vb.range,
+					._begin_state = ResourceState2{
+						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+					},
+				});
 			}
 		}
 	}
@@ -429,28 +452,53 @@ namespace vkl
 	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data)
 	{
 		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
-		if (di.draw_count > 0)
+		
+		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+		const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
+		std::vector<VkBuffer> vb_bind;
+		std::vector<VkDeviceSize> vb_offsets;
+		for (auto& to_draw : di.draw_list)
 		{
-			vkCmdDraw(cmd, di.draw_count, 1, 0, 0);
-		}
-		else
-		{
-			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
-			const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
-			for (auto& drawable : di.draw_list)
+			std::shared_ptr<DescriptorSetAndPool> set_desc = to_draw.set;
+			if(set_desc)
 			{
-				std::shared_ptr<DescriptorSetAndPool> set_desc = drawable.drawable->setAndPool();
-				if(set_desc)
+				std::shared_ptr<DescriptorSetAndPoolInstance> set = set_desc->instance();
+				if (set->exists() && !set->empty())
 				{
-					std::shared_ptr<DescriptorSetAndPoolInstance> set = set_desc->instance();
+					context.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
 					context.keppAlive(set);
-					if (set->exists() && !set->empty())
-					{
-						context.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
-					}
 				}
-				recordPushConstant(cmd, context, drawable.pc);
-				drawable.drawable->recordBindAndDraw(context);
+			}
+			recordPushConstant(cmd, context, to_draw.pc);
+			if (to_draw.index_buffer)
+			{
+				vkCmdBindIndexBuffer(cmd, to_draw.index_buffer->instance()->handle(), to_draw.index_buffer_range.begin, to_draw.index_type);
+				context.keppAlive(to_draw.index_buffer->instance());
+			}
+			if (!to_draw.vertex_buffers.empty())
+			{
+				vb_bind.resize(to_draw.vertex_buffers.size());
+				vb_offsets.resize(to_draw.vertex_buffers.size());
+				for (size_t i = 0; i < vb_bind.size(); ++i)
+				{
+					vb_bind[i] = to_draw.vertex_buffers[i].buffer->instance()->handle();
+					vb_offsets[i] = to_draw.vertex_buffers[i].range.begin;
+					context.keppAlive(to_draw.vertex_buffers[i].buffer->instance());
+				}
+				vkCmdBindVertexBuffers(cmd, 0, static_cast<uint32_t>(to_draw.vertex_buffers.size()), vb_bind.data(), vb_offsets.data());
+			}
+
+			switch (di.draw_type)
+			{
+				case DrawType::Draw:
+					vkCmdDraw(cmd, to_draw.draw_count, to_draw.instance_count, 0, 0);
+				break;
+				case DrawType::DrawIndexed:
+					vkCmdDrawIndexed(cmd, to_draw.draw_count, to_draw.instance_count, 0, 0, 0);
+				break;
+				default:
+					assertm(false, "Unsupported draw call type");
+				break;
 			}
 		}
 	}
@@ -459,12 +507,14 @@ namespace vkl
 	{
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
+		NOT_YET_IMPLEMENTED;
+
 		GraphicsCommand::DrawInfo gdi{
-			.pc = _pc,
+			
 		};
 
 		DrawInfo di{
-			.draw_count = _draw_count.valueOr(0),
+			
 		};
 
 		recordCommandBuffer(cmd, ctx, gdi, &di);
@@ -473,13 +523,10 @@ namespace vkl
 	Executable VertexCommand::with(DrawInfo const& di)
 	{
 		GraphicsCommand::DrawInfo gdi{
-			.pc = di.pc.hasValue() ? di.pc : _pc,
+			
 		};
 
-		DrawInfo _di{
-			.draw_count = di.draw_count ? di.draw_count : (_draw_count.hasValue() ? _draw_count.value() : 0),
-			.draw_list = di.draw_list,
-		};
+		DrawInfo _di = di;
 
 		return [this, gdi, _di](ExecutionContext& ctx)
 		{
@@ -581,14 +628,73 @@ namespace vkl
 	}
 
 
+
+	void MeshCommand::synchronizeDrawResources(SynchronizationHelper& synch, void* user_data)
+	{
+		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
+
+		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+			const auto& layouts = _program->instance()->reflectionSetsLayouts();
+			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+			if (set_index < layouts.size())
+			{
+				return layouts[set_index];
+			}
+			else
+			{
+				return nullptr;
+			}
+		}();
+
+		// Synchronize for vertex attribute fetch and descriptor binding
+		std::set<void*> already_sync;
+		for (auto& to_draw : di.draw_list)
+		{
+			if (layout && !already_sync.contains(to_draw.set.get()))
+			{
+				assert(!!to_draw.set);
+				recordDescriptorSetSynch(synch, *to_draw.set->instance(), *layout);
+				already_sync.emplace(to_draw.set.get());
+			}
+		}
+	}
+
+
 	void MeshCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data)
 	{
 		assert(application()->availableFeatures().mesh_shader_ext.meshShader);
 		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
+
+		const auto & _vkCmdDrawMeshTasksEXT = application()->extFunctions()._vkCmdDrawMeshTasksEXT;
+
+		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+		const std::shared_ptr<PipelineLayout>& layout = _pipeline->program()->instance()->pipelineLayout();
+		
+		for (auto& to_draw : di.draw_list)
 		{
-			const VkExtent3D work = di.dispatch_threads.value() ? getWorkgroupsDispatchSize(*di.dispatch_size) : *di.dispatch_size;
-			const auto & _vkCmdDrawMeshTasksEXT = application()->extFunctions()._vkCmdDrawMeshTasksEXT;
-			_vkCmdDrawMeshTasksEXT(cmd, work.width, work.height, work.depth);
+			const VkExtent3D work = di.dispatch_threads ? getWorkgroupsDispatchSize(to_draw.dispatch_size) : to_draw.dispatch_size;
+			
+			std::shared_ptr<DescriptorSetAndPool> set_desc = to_draw.set;
+			if (set_desc)
+			{
+				std::shared_ptr<DescriptorSetAndPoolInstance> set = set_desc->instance();
+				if (set->exists() && !set->empty())
+				{
+					context.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
+					context.keppAlive(set);
+				}
+			}
+			recordPushConstant(cmd, context, to_draw.pc);
+
+			switch (di.draw_type)
+			{
+				case DrawType::Draw:
+					_vkCmdDrawMeshTasksEXT(cmd, work.width, work.height, work.depth);
+				break;
+				default:
+					assertm(false, "Unsupported draw call type");
+				break;
+			}
 		}
 	}
 
@@ -597,11 +703,12 @@ namespace vkl
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
 		GraphicsCommand::DrawInfo gdi{
-			.pc = _pc,
+			
 		};
 
+		NOT_YET_IMPLEMENTED;
+
 		DrawInfo di{
-			.dispatch_size = *_dispatch_size,
 			.dispatch_threads = _dispatch_threads,
 		};
 
@@ -611,13 +718,10 @@ namespace vkl
 	Executable MeshCommand::with(DrawInfo const& di)
 	{
 		GraphicsCommand::DrawInfo gdi{
-			.pc = di.pc.hasValue() ? di.pc : _pc,
+
 		};
 
-		DrawInfo _di{
-			.dispatch_size = di.dispatch_size.has_value() ? di.dispatch_size : *_dispatch_size,
-			.dispatch_threads = di.dispatch_threads.value_or(_dispatch_threads),
-		};
+		DrawInfo _di = di;
 
 		return [this, gdi, _di](ExecutionContext& ctx)
 		{

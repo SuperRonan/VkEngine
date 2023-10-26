@@ -39,7 +39,6 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".ShowOutline",
 			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
-			.draw_count = 5,
 			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
 			.sets_layouts = _sets_layouts,
 			.color_attachements = {_target},
@@ -65,22 +64,27 @@ namespace vkl
 				.push_constant = pc,
 			}));
 
-			ShowOutlinePC show_pc{
-				.pos = pip_pos,
-				.size = Vector2f(region_size),
-				.color = Vector4f(1, 1, 1, 1),
-			};
+			
 			_exec(_show_outline->with(VertexCommand::DrawInfo{
-				.pc = show_pc,
-			}));
-
-			show_pc = {
-				.pos = Vector2f(0),
-				.size = Vector2f(_pip_size),
-				.color = Vector4f(1, 1, 1, 1),
-			};
-			_exec(_show_outline->with(VertexCommand::DrawInfo{
-				.pc = show_pc,
+				.draw_type = GraphicsCommand::DrawType::Draw,
+				.draw_list = {
+					VertexCommand::DrawCallInfo{
+						.draw_count = 5,
+						.pc = ShowOutlinePC{
+							.pos = pip_pos,
+							.size = Vector2f(region_size),
+							.color = Vector4f(1, 1, 1, 1),
+						},
+					},
+					VertexCommand::DrawCallInfo{
+						.draw_count = 5,
+						.pc = ShowOutlinePC{
+							.pos = Vector2f(0),
+							.size = Vector2f(_pip_size),
+							.color = Vector4f(1, 1, 1, 1),
+						},
+					},
+				},
 			}));
 		}
 	}

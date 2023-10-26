@@ -58,7 +58,6 @@ namespace vkl
 			_render_strings_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderStrings",
-				.dispatch_size = [&]() {return VkExtent3D{ .width = _number_of_debug_strings, .height = 1, .depth = 1 }; },
 				.dispatch_threads = true,
 				.sets_layouts = sets_layouts,
 				.bindings = {
@@ -84,7 +83,6 @@ namespace vkl
 			_render_strings_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderStrings",
-				.draw_count = &_number_of_debug_strings,
 				.sets_layouts = sets_layouts,
 				.bindings = {
 					Binding{
@@ -231,14 +229,28 @@ namespace vkl
 			};
 			if (_render_strings_with_mesh)
 			{
+				VkExtent3D extent = { .width = _number_of_debug_strings, .height = 1, .depth = 1 };
 				_exec(_render_strings_with_mesh->with(MeshCommand::DrawInfo{
-					.pc = pc,
+					.draw_type = MeshCommand::DrawType::Draw,
+					.dispatch_threads = true,
+					.draw_list = {
+						MeshCommand::DrawCallInfo{
+							.pc = pc,
+							.dispatch_size = extent,
+						},
+					}
 				}));
 			}
 			else
 			{
 				_exec(_render_strings_with_geometry->with(VertexCommand::DrawInfo{
-					.pc = pc,
+					.draw_type = GraphicsCommand::DrawType::Draw,
+					.draw_list = {
+						VertexCommand::DrawCallInfo{
+							.draw_count = _number_of_debug_strings,
+							.pc = pc,
+						},
+					},
 				}));
 			}
 

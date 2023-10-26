@@ -95,7 +95,22 @@ namespace vkl
 					.model = viking_models.front(),
 				});
 
-				root->addChild(viking_node);
+				const int N = 1;
+
+				for(int i=-N; i<= N; ++i)
+				{
+					for (int j = -N; j <= N; ++j)
+					{
+						std::shared_ptr<Scene::Node> node = std::make_shared<Scene::Node>(Scene::Node::CI{
+							.name = "translate(" + std::to_string(i) + ", " + std::to_string(j) + ")",
+							.matrix = glm::mat4x3(translateMatrix<4, float>(Vector3f(i * 2, 0, j * 2))),
+						});
+						node->addChild(viking_node);
+						root->addChild(node);
+					}
+				}
+
+				
 			}
 
 			{

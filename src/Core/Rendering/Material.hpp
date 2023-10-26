@@ -13,7 +13,7 @@ namespace vkl
 	class Material : public VkObject, public ResourcesHolder
 	{
 	public:
-		enum Type : uint32_t {
+		enum class Type : uint32_t {
 			None = 0,
 			PhysicallyBased = 1,
 		};
@@ -33,6 +33,10 @@ namespace vkl
 
 		Material(CreateInfo const& ci);
 
+		constexpr Type type()const
+		{
+			return _type;
+		}
 
 		virtual ResourcesToDeclare getResourcesToDeclare() override = 0;
 

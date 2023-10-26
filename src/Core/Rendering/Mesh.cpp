@@ -8,7 +8,8 @@ namespace vkl
 {
 	
 	Mesh::Mesh(CreateInfo const& ci):
-		VkObject(ci.app, ci.name)
+		VkObject(ci.app, ci.name),
+		_type(ci.type)
 	{}
 
 
@@ -114,6 +115,7 @@ namespace vkl
 		Mesh(Mesh::CreateInfo{
 			.app = ci.app, 
 			.name = ci.name,
+			.type = Type::Rigid,
 		})
 	{
 		_host.dims = ci.dims;
@@ -479,15 +481,31 @@ namespace vkl
 		});
 	}
 
-	void RigidMesh::recordBindAndDraw(ExecutionContext & ctx)
+	//void RigidMesh::recordBindAndDraw(ExecutionContext & ctx)
+	//{
+	//	VkCommandBuffer command_buffer = ctx.getCommandBuffer()->handle();
+	//	assert(_device.loaded());
+	//	VkBuffer vb = *_device.mesh_buffer->instance();
+	//	VkDeviceSize offset = _device.header_size;
+	//	vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, &offset);
+	//	vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, _device.index_type);
+	//	vkCmdDrawIndexed(command_buffer, _device.num_indices, 1, 0, 0, 0);
+	//}
+
+	void RigidMesh::fillVertexDrawCallResources(VertexDrawCallResources& vr)
 	{
-		VkCommandBuffer command_buffer = ctx.getCommandBuffer()->handle();
 		assert(_device.loaded());
-		VkBuffer vb = *_device.mesh_buffer->instance();
-		VkDeviceSize offset = _device.header_size;
-		vkCmdBindVertexBuffers(command_buffer, 0, 1, &vb, &offset);
-		vkCmdBindIndexBuffer(command_buffer, *_device.mesh_buffer->instance(), _device.vertices_size + _device.header_size, _device.index_type);
-		vkCmdDrawIndexed(command_buffer, _device.num_indices, 1, 0, 0, 0);
+		vr.draw_count = _device.num_indices;
+		vr.instance_count = 1;
+		vr.index_buffer = _device.mesh_buffer;
+		vr.index_buffer_range = {.begin = _device.vertices_size + _device.header_size, .len = _device.indices_size};
+		vr.index_type = _device.index_type;
+		vr.vertex_buffers = {
+			VertexBuffer{
+				.buffer = _device.mesh_buffer,
+				.range = {.begin = _device.header_size, .len = _device.vertices_size},
+			},
+		};
 	}
 
 	Mesh::Status RigidMesh::getStatus() const
@@ -631,56 +649,56 @@ namespace vkl
 		return res;
 	}
 
-	void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
-	{
-		//const bool separate_resource = false;
-		//if (separate_resource)
-		//{
-		//	return Resources{
-		//		Resource{
-		//			._buffer = _device.mesh_buffer,
-		//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size},
-		//			._begin_state = ResourceState2{
-		//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-		//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-		//			},
-		//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		//		},
-		//		Resource{
-		//			._buffer = _device.mesh_buffer,
-		//			._buffer_range = Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
-		//			._begin_state = ResourceState2{
-		//				.access = VK_ACCESS_2_INDEX_READ_BIT,
-		//				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-		//			},
-		//			._buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		//		},
-		//	};
-		//}
-		//else
-		//{
-		//	return Resources{
-		//		Resource{
-		//			._buffer = _device.mesh_buffer,
-		//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
-		//			._begin_state = ResourceState2{
-		//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
-		//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT | VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-		//			},
-		//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		//		},
-		//	};
-		//}
-
-		synch.addSynch(Resource{
-			._buffer = _device.mesh_buffer,
-			._buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
-				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-			},
-		});
-	}
+	//void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
+	//{
+	//	//const bool separate_resource = false;
+	//	//if (separate_resource)
+	//	//{
+	//	//	return Resources{
+	//	//		Resource{
+	//	//			._buffer = _device.mesh_buffer,
+	//	//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size},
+	//	//			._begin_state = ResourceState2{
+	//	//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+	//	//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+	//	//			},
+	//	//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+	//	//		},
+	//	//		Resource{
+	//	//			._buffer = _device.mesh_buffer,
+	//	//			._buffer_range = Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
+	//	//			._begin_state = ResourceState2{
+	//	//				.access = VK_ACCESS_2_INDEX_READ_BIT,
+	//	//				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+	//	//			},
+	//	//			._buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+	//	//		},
+	//	//	};
+	//	//}
+	//	//else
+	//	//{
+	//	//	return Resources{
+	//	//		Resource{
+	//	//			._buffer = _device.mesh_buffer,
+	//	//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
+	//	//			._begin_state = ResourceState2{
+	//	//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
+	//	//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT | VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+	//	//			},
+	//	//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+	//	//		},
+	//	//	};
+	//	//}
+	//
+	//	synch.addSynch(Resource{
+	//		._buffer = _device.mesh_buffer,
+	//		._buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
+	//		._begin_state = ResourceState2{
+	//			.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
+	//			.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+	//		},
+	//	});
+	//}1
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square2DMakeInfo const& smi)
 	{

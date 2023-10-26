@@ -16,6 +16,7 @@ namespace vkl
 		_material(ci.material)
 	{
 		assert(!!_mesh xor (!ci.mesh_path.empty()));
+		_type = MakeType(_mesh->type(), _material->type());
 		createSet();
 	}
 
@@ -94,6 +95,7 @@ namespace vkl
 		if (!_set_layout)
 		{
 			_set_layout = setLayout(application(), SetLayoutOptions{
+				.type = _type,
 				.bind_mesh = true,
 				.bind_material = !!_material,
 			});
@@ -123,12 +125,30 @@ namespace vkl
 
 			if(options.bind_mesh)
 			{
-				bindings += RigidMesh::getSetLayoutBindingsStatic(mesh_binding_offset);
+				Mesh::Type mesh_type = ExtractMeshType(options.type);
+				switch (mesh_type)
+				{
+					case Mesh::Type::Rigid:
+						bindings += RigidMesh::getSetLayoutBindingsStatic(mesh_binding_offset);
+					break;
+					default:
+						assert(false);
+					break;
+				}
 			}
 
 			if (options.bind_material)
 			{
-				bindings += Material::getSetLayoutBindings(Material::Type::PhysicallyBased, material_binding_offset);
+				Material::Type material_type = ExtractMaterialType(options.type);
+				switch (material_type)
+				{
+					case Material::Type::PhysicallyBased:
+						bindings += Material::getSetLayoutBindings(Material::Type::PhysicallyBased, material_binding_offset);
+					break;
+					default:
+						assert(false);
+					break;
+				}
 			}
 
 			VkDescriptorSetLayoutCreateFlags flags = 0;
@@ -155,15 +175,20 @@ namespace vkl
 		return res;
 	}
 
-	void Model::recordBindAndDraw(ExecutionContext& ctx)
+	//void Model::recordBindAndDraw(ExecutionContext& ctx)
+	//{
+	//	_mesh->recordBindAndDraw(ctx);
+	//}
+
+	void Model::fillVertexDrawCallResources(VertexDrawCallResources& vr)
 	{
-		_mesh->recordBindAndDraw(ctx);
+		_mesh->fillVertexDrawCallResources(vr);
 	}
 
-	void Model::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
-	{
-		_mesh->recordSynchForDraw(synch, pipeline);
-	}
+	//void Model::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
+	//{
+	//	_mesh->recordSynchForDraw(synch, pipeline);
+	//}
 
 
 
@@ -210,7 +235,7 @@ namespace vkl
 				const tinyobj::material_t & tm = materials[m];
 
 				std::shared_ptr<Sampler> sampler = info.app->getSamplerLibrary().getSampler({
-					.filter = VK_FILTER_NEAREST,
+					.filter = VK_FILTER_LINEAR,
 					.address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 					.max_anisotropy = info.app->deviceProperties().props.limits.maxSamplerAnisotropy,
 				});
@@ -273,6 +298,8 @@ namespace vkl
 							.normal = readVec3(attrib.normals, tiny_index.normal_index),
 							.uv = readVec2(attrib.texcoords, tiny_index.texcoord_index),
 						};
+						// .obj flips the texture
+						v.uv.y = 1.0f - v.uv.y;
 						vertices_map[tiny_index] = vertices.size();
 						vertices.push_back(v);
 					}

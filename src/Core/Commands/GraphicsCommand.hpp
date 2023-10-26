@@ -7,6 +7,19 @@ namespace vkl
 {
 	class GraphicsCommand : public ShaderCommand
 	{
+	public:
+		enum class DrawType
+		{
+			None,
+			Draw,
+			DrawIndexed,
+			IndirectDraw,
+			IndirectDrawIndexed,
+			IndirectDrawCount,
+			IndirectDrawCountIndexed,
+			MultiDraw,
+			MultiDrawIndexed,
+		};
 	protected:
 
 		VkPrimitiveTopology _topology;
@@ -25,6 +38,8 @@ namespace vkl
 		std::optional<VkPipelineColorBlendAttachmentState> _blending = {};
 
 		std::optional<VkLineRasterizationModeEXT> _line_raster_mode = {};
+
+		DrawType _draw_type = {};
 
 		virtual void createProgram() = 0;
 
@@ -54,6 +69,7 @@ namespace vkl
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
+			DrawType draw_type = {};
 		};
 
 		GraphicsCommand(CreateInfo const& ci);
@@ -62,7 +78,6 @@ namespace vkl
 		
 		struct DrawInfo
 		{
-			PushConstant pc;
 			VkViewport viewport;
 		};
 
@@ -125,22 +140,33 @@ namespace vkl
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 
 			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
+
+			DrawType draw_type = {};
 		};
 		using CI = CreateInfo;
 
-		struct DrawModelInfo
+		struct DrawCallInfo
 		{
-			std::shared_ptr<Drawable> drawable;
+			std::string name = {};
+			
+			uint32_t draw_count = 0;
+			uint32_t instance_count = 1;
+			std::shared_ptr<Buffer> index_buffer = nullptr;
+			Range_st index_buffer_range = {};
+			VkIndexType index_type = VK_INDEX_TYPE_NONE_KHR;
+			std::vector<VertexBuffer> vertex_buffers = {};
+
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
 			PushConstant pc;
 		};
+
 		
 		struct DrawInfo
 		{
-			PushConstant pc = {};
-			uint32_t draw_count = 0;
+			DrawType draw_type;	
 			std::optional<VkViewport> viewport = {};
 
-			std::vector<DrawModelInfo> draw_list = {};
+			std::vector<DrawCallInfo> draw_list = {};
 		};
 		using DI = DrawInfo;
 
@@ -182,6 +208,8 @@ namespace vkl
 
 		virtual void createProgram() override;
 
+		virtual void synchronizeDrawResources(SynchronizationHelper& synch, void* user_data) override;
+
 	public:
 
 		struct CreateInfo
@@ -210,12 +238,19 @@ namespace vkl
 
 		MeshCommand(CreateInfo const& ci);
 
+		struct DrawCallInfo
+		{
+			std::string name;
+			PushConstant pc = {};
+			VkExtent3D dispatch_size = {};
+			std::shared_ptr<DescriptorSetAndPool> set;
+		};
+
 		struct DrawInfo
 		{
-			PushConstant pc = {};
-			std::optional<VkExtent3D> dispatch_size = {};
-			std::optional<bool> dispatch_threads = {};
-			std::optional<VkViewport> viewport = {};
+			DrawType draw_type;
+			bool dispatch_threads = true;
+			std::vector<DrawCallInfo> draw_list;
 		};
 		using DI = DrawInfo;
 

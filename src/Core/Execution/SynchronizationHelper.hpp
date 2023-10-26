@@ -3,9 +3,12 @@
 #include <Core/Execution/Resource.hpp>
 #include <Core/Execution/ExecutionContext.hpp>
 
+#include <unordered_map>
+
 namespace vkl
 {
-	class SynchronizationHelper
+	// Does not handle very well synchronizing multiple times the same resource
+	class SynchronizationHelperV1
 	{
 	protected:
 
@@ -17,7 +20,7 @@ namespace vkl
 
 	public:
 
-		SynchronizationHelper(ExecutionContext& ctx) :
+		SynchronizationHelperV1(ExecutionContext& ctx) :
 			_ctx(ctx)
 		{}
 
@@ -25,4 +28,30 @@ namespace vkl
 
 		void record();
 	};
+
+	// Can synchronize correctly the same resource multiple times
+	class SynchronizationHelperV2
+	{
+	protected:
+
+		template <class K, class V>
+		using Map = std::unordered_map<K, V>;
+
+		Map<std::shared_ptr<ImageInstance>, std::vector<VkImageMemoryBarrier2>> _images;
+		Map<std::shared_ptr<BufferInstance>, std::vector<VkBufferMemoryBarrier2>> _buffers;
+
+		ExecutionContext& _ctx;
+
+	public:
+
+		SynchronizationHelperV2(ExecutionContext& ctx) :
+			_ctx(ctx)
+		{}
+
+		void addSynch(Resource const& r);
+
+		void record();
+	};
+
+	using SynchronizationHelper = SynchronizationHelperV1;
 } // namespace vkl

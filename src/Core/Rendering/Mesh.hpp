@@ -44,11 +44,16 @@ namespace vkl
 		return res;
 	}
 
-	class SynchronizationHelper;
 	class Pipeline;
 
 	class Mesh : public VkObject, public Geometry, public ResourcesHolder, public Drawable
 	{
+	public:
+		enum class Type : uint32_t
+		{
+			None = 0,
+			Rigid = 1,
+		};
 	protected:
 		
 		using u32 = uint32_t;
@@ -68,19 +73,29 @@ namespace vkl
 		using mat4 = Matrix4;
 		using mat3 = Matrix3;
 
+		Type _type = Type::None;
+
 
 	public:
+
+		
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
+			Type type = Type::None;
 		};
 		using CI = CreateInfo;
 
 		Mesh(CreateInfo const& ci);
 
 		virtual ~Mesh() = default;
+
+		constexpr Type type()const
+		{
+			return _type;
+		}
 		
 		struct Status
 		{
@@ -91,15 +106,17 @@ namespace vkl
 
 		virtual Status getStatus()const = 0;
 
-		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override = 0;
-		
 		virtual VertexInputDescription vertexInputDesc() override = 0;
+		
+		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override = 0;
 
-		virtual void recordBindAndDraw(ExecutionContext & ctx) override = 0;
+		//virtual void recordBindAndDraw(ExecutionContext & ctx) override = 0;
 
-		virtual std::shared_ptr<DescriptorSetLayout> setLayout() override = 0;
+		//virtual std::shared_ptr<DescriptorSetLayout> setLayout() override = 0;
 
-		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override = 0;
+		//virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override = 0;
+
+		virtual void fillVertexDrawCallResources(VertexDrawCallResources & vr) override = 0;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -313,12 +330,14 @@ namespace vkl
 
 		virtual Status getStatus() const override;
 
-		virtual void recordBindAndDraw(ExecutionContext & ctx) override final;
+		//virtual void recordBindAndDraw(ExecutionContext & ctx) override final;
 
 		virtual void notifyDataIsUploaded() override
 		{
 			_device.up_to_date = true;
 		}
+
+		virtual void fillVertexDrawCallResources(VertexDrawCallResources& vr) override;
 
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
 
@@ -333,7 +352,7 @@ namespace vkl
 
 		virtual ResourcesToUpload getResourcesToUpload() override;
 
-		virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
+		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
 
 		virtual VertexInputDescription vertexInputDesc() override
 		{
@@ -363,15 +382,15 @@ namespace vkl
 			return _device.mesh_buffer;
 		}
 
-		virtual std::shared_ptr<DescriptorSetLayout> setLayout() override
-		{
-			return nullptr;
-		}
+		//virtual std::shared_ptr<DescriptorSetLayout> setLayout() override
+		//{
+		//	return nullptr;
+		//}
 
-		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override
-		{
-			return nullptr;
-		}
+		//virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override
+		//{
+		//	return nullptr;
+		//}
 
 		struct Square2DMakeInfo
 		{

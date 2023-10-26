@@ -186,12 +186,12 @@ if(${BUILD_PROJECTS})
 
 	AddProject(Test)
 
-	AddProject(GameOfLife "GOL")
+	# AddProject(GameOfLife "GOL")
 
-	AddProject(Paint)
+	# AddProject(Paint)
 
-	AddProject(Particules2D "Particules/sim2D")
-	AddProject(Particules3D "Particules/sim3D")
+	# AddProject(Particules2D "Particules/sim2D")
+	# AddProject(Particules3D "Particules/sim3D")
 
 	# AddProject(Flotsam)
 

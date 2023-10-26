@@ -48,17 +48,26 @@ namespace vkl
 
 
 		const uint32_t model_set = application()->descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
-		std::shared_ptr<DescriptorSetLayout> model_layout = Model::setLayout(application(), Model::SetLayoutOptions{});
+		_model_types = {
+			Model::MakeType(Mesh::Type::Rigid, Material::Type::PhysicallyBased),
+		};
+		std::map<uint32_t, std::shared_ptr<DescriptorSetLayout>> model_layout;
+		for (uint32_t model_type : _model_types)
+		{
+			model_layout[model_type] = Model::setLayout(application(), Model::SetLayoutOptions{ .type = model_type, .bind_mesh = true, .bind_material = true, });
+		}
 
 		const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
+
+		for (uint32_t model_type : _model_types)
 		{
-			_direct_pipeline._render_scene_direct = std::make_shared<VertexCommand>(VertexCommand::CI{
+			_direct_pipeline._render_scene_direct[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderSceneDirect",
-				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
+				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(), // TODO model type dependent
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout}),
+				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 				.bindings = {
 					Binding{
 						.buffer = _ubo_buffer,
@@ -73,7 +82,7 @@ namespace vkl
 				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
-			_exec.declare(_direct_pipeline._render_scene_direct);
+			_exec.declare(_direct_pipeline._render_scene_direct[model_type]);
 		}
 		{
 			_deferred_pipeline._albedo = std::make_shared<ImageView>(ImageView::CI{
@@ -121,27 +130,30 @@ namespace vkl
 			});
 			_exec.declare(_deferred_pipeline._normal);
 
-			_deferred_pipeline._raster_gbuffer = std::make_shared<VertexCommand>(VertexCommand::CI{
-				.app = application(),
-				.name = name() + ".RasterGBuffer",
-				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
-				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout}),
-				.bindings = {
-					Binding{
-						.buffer = _ubo_buffer,
-						.binding = 0,
+			for (uint32_t model_type : _model_types)
+			{
+				_deferred_pipeline._raster_gbuffer[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
+					.app = application(),
+					.name = name() + ".RasterGBuffer",
+					.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
+					.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+					.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
+					.bindings = {
+						Binding{
+							.buffer = _ubo_buffer,
+							.binding = 0,
+						},
 					},
-				},
-				.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal},
-				.depth_buffer = _depth,
-				.write_depth = true,
-				.vertex_shader_path = shaders / "RasterGBuffer.vert",
-				.fragment_shader_path = shaders / "RasterGBuffer.frag",
-				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
-			});
-			_exec.declare(_deferred_pipeline._raster_gbuffer);
+					.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal},
+					.depth_buffer = _depth,
+					.write_depth = true,
+					.vertex_shader_path = shaders / "RasterGBuffer.vert",
+					.fragment_shader_path = shaders / "RasterGBuffer.frag",
+					.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
+					.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
+				});
+				_exec.declare(_deferred_pipeline._raster_gbuffer[model_type]);
+			}
 
 			_deferred_pipeline._shade_from_gbuffer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = application(),
@@ -175,7 +187,7 @@ namespace vkl
 
 		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
-			.name = name() + ".Show3DGrid",
+			.name = name() + ".Show3DBasis",
 			.vertex_input_desc = Pipeline::VertexInputWithoutVertices(),
 			.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 			.draw_count = 3,
@@ -195,18 +207,24 @@ namespace vkl
 		_exec.declare(_update_buffer);
 	}
 
-	std::vector<VertexCommand::DrawModelInfo> SimpleRenderer::generateVertexDrawList()
+	SimpleRenderer::MultiVertexDrawCallList SimpleRenderer::generateVertexDrawList()
 	{
-		std::vector<VertexCommand::DrawModelInfo> res;
+		MultiVertexDrawCallList res;
 
 		auto add_model = [&res](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
 			if (node->visible() && node->model())
 			{
-				res.push_back(VertexCommand::DrawModelInfo{
-					.drawable = node->model(),
-					.pc = matrix,
-				});
+				const uint32_t model_type = node->model()->type();
+				VertexCommand::DrawCallInfo draw_call;
+				Drawable::VertexDrawCallResources * vr = reinterpret_cast<Drawable::VertexDrawCallResources *>(&draw_call.draw_count);
+				assert(vr);
+				node->model()->fillVertexDrawCallResources(*vr);
+
+				draw_call.set = node->model()->setAndPool();
+				draw_call.pc = matrix,
+
+				res[model_type].push_back(draw_call);
 			}
 			return node->visible();
 		};
@@ -232,36 +250,65 @@ namespace vkl
 			.dst = _ubo_buffer,
 		}));
 
-		std::vector<VertexCommand::DrawModelInfo> draw_list = generateVertexDrawList();
+		MultiVertexDrawCallList draw_list = generateVertexDrawList();
 
-		const size_t selected_pipeline = _pipeline_selection.index();
-		if (selected_pipeline == 0)
+		if (!draw_list.empty())
 		{
-			_exec(_direct_pipeline._render_scene_direct->with(VertexCommand::DrawInfo{
-				.draw_list = draw_list,
-			}));
-		}
-		else
-		{
-			_exec(_deferred_pipeline._raster_gbuffer->with(VertexCommand::DrawInfo{
-				.draw_list = draw_list,
-			}));
-			_exec(_deferred_pipeline._shade_from_gbuffer);
+			const size_t selected_pipeline = _pipeline_selection.index();
+			if (selected_pipeline == 0)
+			{
+				for (uint32_t model_type : _model_types)
+				{
+					if (!draw_list[model_type].empty())
+					{
+						_exec(_direct_pipeline._render_scene_direct[model_type]->with(VertexCommand::DrawInfo{
+							.draw_type = VertexCommand::DrawType::DrawIndexed,
+							.draw_list = draw_list[model_type],
+						}));
+					}
+				}
+			}
+			else
+			{
+				for (uint32_t model_type : _model_types)
+				{
+					if (!draw_list[model_type].empty())
+					{
+						_exec(_deferred_pipeline._raster_gbuffer[model_type]->with(VertexCommand::DrawInfo{
+							.draw_type = VertexCommand::DrawType::DrawIndexed,
+							.draw_list = draw_list[model_type],
+						}));
+					}
+				}
+				_exec(_deferred_pipeline._shade_from_gbuffer);
+			}
 		}
 
-
-		if (_show_world_3D_basis)
 		{
-			_exec(_render_3D_basis->with(VertexCommand::DrawInfo{
-				.pc = camera.getWorldToProj(),
-			}));
-		}
-		if (_show_view_3D_basis)
-		{
-			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25)) * camera.getWorldRoationMatrix() * scaleMatrix<4, float>(0.03125);
-			_exec(_render_3D_basis->with(VertexCommand::DrawInfo{
-				.pc = view_3D_basis_matrix,
-			}));
+			std::vector<VertexCommand::DrawCallInfo> basis_draw_list;
+			using namespace std::containers_operators;
+			if (_show_world_3D_basis)
+			{
+				basis_draw_list += VertexCommand::DrawCallInfo{
+					.draw_count = 3,
+					.pc = camera.getWorldToProj(),
+				};
+			}
+			if (_show_view_3D_basis)
+			{
+				glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25)) * camera.getWorldRoationMatrix() * scaleMatrix<4, float>(0.03125);
+				basis_draw_list += VertexCommand::DrawCallInfo{
+					.draw_count = 3,
+					.pc = view_3D_basis_matrix,
+				};
+			}
+			if (!basis_draw_list.empty())
+			{
+				_exec(_render_3D_basis->with(VertexCommand::DrawInfo{
+					.draw_type = VertexCommand::DrawType::Draw,
+					.draw_list = basis_draw_list,
+				}));
+			}
 		}
 	}
 	
