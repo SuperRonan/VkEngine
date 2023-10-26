@@ -133,13 +133,14 @@ namespace vkl
 		
 		if (_render_gui)
 		{
-			beginCommandBuffer(false);
+			ExecutionThread * thread = beginCommandBuffer(false);
 			{
 				ImGui_ImplVulkan_CreateFontsTexture(*_command_buffer_to_submit);
 			}
-			endCommandBufferAndSubmit();
+			endCommandBufferAndSubmit(thread);
 		}
 
+		// TODO load debug renderer font here?
 	}
 
 	void LinearExecutor::updateResources()
@@ -230,11 +231,11 @@ namespace vkl
 		int _ = 0;
 	}
 
-	void LinearExecutor::renderDebugIFN()
+	void LinearExecutor::renderDebugIFP()
 	{
 		if (_use_debug_renderer)
 		{
-			_debug_renderer->execute();
+			_debug_renderer->execute(*_current_thread);
 		}
 	}
 
@@ -276,20 +277,20 @@ namespace vkl
 
 	void LinearExecutor::execute(Command& cmd)
 	{
-		cmd.execute(_context);
+		_current_thread->execute(cmd);
 	}
 
 	void LinearExecutor::execute(std::shared_ptr<Command> cmd)
 	{
-		cmd->execute(_context);
+		_current_thread->execute(cmd);
 	}
 
 	void LinearExecutor::execute(Executable const& executable)
 	{
-		executable(_context);
+		_current_thread->execute(executable);
 	}
 
-	void LinearExecutor::beginCommandBuffer(bool bind_common_set)
+	ExecutionThread * LinearExecutor::beginCommandBuffer(bool bind_common_set)
 	{
 		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
 		assert(!cb);
@@ -312,6 +313,15 @@ namespace vkl
 				}
 			}
 		}
+
+		assert(_current_thread == nullptr);
+		ExecutionThread* res = new ExecutionThread(ExecutionThread::CI{
+			.app = application(),
+			.name = name() + ".ExecutionThread",
+			.context = &_context,
+		});
+		_current_thread = res;
+		return res;
 	}
 
 	void LinearExecutor::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
@@ -331,8 +341,11 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::endCommandBufferAndSubmit()
+	void LinearExecutor::endCommandBufferAndSubmit(ExecutionThread * exec_thread)
 	{
+		assert(exec_thread == _current_thread);
+		delete _current_thread;
+		_current_thread = nullptr;
 		std::shared_ptr<CommandBuffer> cb = _command_buffer_to_submit;
 		_context.setCommandBuffer(nullptr);
 

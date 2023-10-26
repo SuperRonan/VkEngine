@@ -48,7 +48,7 @@ namespace vkl
 		_exec.declare(_show_outline);
 	}
 
-	void PictureInPicture::execute()
+	void PictureInPicture::execute(ExecutionThread& exec)
 	{
 		if (_enable)
 		{
@@ -60,12 +60,12 @@ namespace vkl
 				.pip_pos = pip_pos,
 			};
 
-			_exec(_fast_pip->with(ComputeCommand::SingleDispatchInfo{
+			exec(_fast_pip->with(ComputeCommand::SingleDispatchInfo{
 				.pc = pc
 			}));
 
 			
-			_exec(_show_outline->with(VertexCommand::DrawInfo{
+			exec(_show_outline->with(VertexCommand::DrawInfo{
 				.draw_type = GraphicsCommand::DrawType::Draw,
 				.draw_list = {
 					VertexCommand::DrawCallInfo{

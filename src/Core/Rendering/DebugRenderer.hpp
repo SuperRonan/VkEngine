@@ -11,6 +11,7 @@
 namespace vkl
 {
 	class Executor;
+	class ExecutionThread;
 
 	class DebugRenderer : public Module
 	{
@@ -53,7 +54,7 @@ namespace vkl
 
 		void createResources();
 
-		void loadFont();
+		void loadFont(ExecutionThread& exec);
 
 	public:
 
@@ -70,7 +71,7 @@ namespace vkl
 
 		void declareImGui();
 
-		void execute();
+		void execute(ExecutionThread & exec);
 
 		ShaderBindings getBindings() const;
 	};

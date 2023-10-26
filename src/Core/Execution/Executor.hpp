@@ -13,6 +13,49 @@ namespace vkl
 
 	class DebugRenderer;
 
+	class ExecutionThread : public VkObject
+	{
+	protected:
+		
+		ExecutionContext * _context;
+
+	public:
+
+		struct CreateInfo 
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			ExecutionContext * context;
+		};
+		using CI = CreateInfo;
+
+		ExecutionThread(CreateInfo const& ci);
+
+		virtual void execute(Command& cmd);
+
+		virtual void execute(std::shared_ptr<Command> cmd);
+
+		virtual void execute(Executable const& executable);
+
+
+
+		void operator()(std::shared_ptr<Command> cmd)
+		{
+			execute(cmd);
+		}
+
+		void operator()(Command& cmd)
+		{
+			execute(cmd);
+		}
+
+		void operator()(Executable const& executable)
+		{
+			execute(executable);
+		}
+
+	};
+
 	class Executor : public VkObject
 	{
 	protected:
@@ -68,27 +111,6 @@ namespace vkl
 		virtual void init() = 0;
 
 		virtual void updateResources() = 0;
-
-		virtual void execute(Command& cmd) = 0;
-
-		virtual void execute(std::shared_ptr<Command> cmd) = 0;
-
-		virtual void execute(Executable const& executable) = 0;
-
-		void operator()(std::shared_ptr<Command> cmd)
-		{
-			execute(cmd);
-		}
-
-		void operator()(Command& cmd)
-		{
-			execute(cmd);
-		}
-
-		void operator()(Executable const& executable)
-		{
-			execute(executable);
-		}
 
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) = 0;
 

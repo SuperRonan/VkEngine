@@ -293,33 +293,33 @@ namespace vkl
 					scene->prepareForRendering();
 					exec.updateResources();
 					exec.beginFrame();
-					exec.beginCommandBuffer();
-
+					ExecutionThread * ptr_exec_thread = exec.beginCommandBuffer();
+					ExecutionThread& exec_thread = *ptr_exec_thread;
 
 					
 					{
 						UploadResources uploader(UploadResources::CI{
 							.app = this,
 						});
-						exec(uploader(UploadResources::UI{
+						exec_thread(uploader(UploadResources::UI{
 							.holder = scene,
 						}));
 					}
 
 					exec.bindSet(1, scene->set());
-					renderer.execute(camera, t, dt, frame_index);
+					renderer.execute(exec_thread, camera, t, dt, frame_index);
 
-					pip.execute();
+					pip.execute(exec_thread);
 
 					exec.bindSet(1, nullptr);
 
-					exec.renderDebugIFN();
+					exec.renderDebugIFP();
 					ImGui::Render();
 					exec.preparePresentation(final_image);
 					
 					ImGui::UpdatePlatformWindows();
 					ImGui::RenderPlatformWindowsDefault();
-					exec.endCommandBufferAndSubmit();
+					exec.endCommandBufferAndSubmit(ptr_exec_thread);
 					exec.present();
 
 

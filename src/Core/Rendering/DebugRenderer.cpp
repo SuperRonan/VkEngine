@@ -167,7 +167,7 @@ namespace vkl
 		_exec.declare(_sampler);
 	}
 
-	void DebugRenderer::loadFont()
+	void DebugRenderer::loadFont(ExecutionThread& exec)
 	{
 		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Rendering/16x16_linear.png");
 
@@ -194,7 +194,7 @@ namespace vkl
 			.dst = _font,
 		});
 
-		_exec(upload);
+		exec(upload);
 
 		_font_loaded = true;
 	}
@@ -207,14 +207,14 @@ namespace vkl
 		createRenderShader();
 	}
 
-	void DebugRenderer::execute()
+	void DebugRenderer::execute(ExecutionThread& exec)
 	{
 		if (_enable_debug)
 		{
 
 			if (!_font_loaded)
 			{
-				loadFont();
+				loadFont(exec);
 			}
 
 			struct PC 
@@ -230,7 +230,7 @@ namespace vkl
 			if (_render_strings_with_mesh)
 			{
 				VkExtent3D extent = { .width = _number_of_debug_strings, .height = 1, .depth = 1 };
-				_exec(_render_strings_with_mesh->with(MeshCommand::DrawInfo{
+				exec(_render_strings_with_mesh->with(MeshCommand::DrawInfo{
 					.draw_type = MeshCommand::DrawType::Draw,
 					.dispatch_threads = true,
 					.draw_list = {
@@ -243,7 +243,7 @@ namespace vkl
 			}
 			else
 			{
-				_exec(_render_strings_with_geometry->with(VertexCommand::DrawInfo{
+				exec(_render_strings_with_geometry->with(VertexCommand::DrawInfo{
 					.draw_type = GraphicsCommand::DrawType::Draw,
 					.draw_list = {
 						VertexCommand::DrawCallInfo{
@@ -254,7 +254,7 @@ namespace vkl
 				}));
 			}
 
-			_exec(_clear_buffer);
+			exec(_clear_buffer);
 		}
 	}
 

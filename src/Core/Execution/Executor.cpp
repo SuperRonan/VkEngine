@@ -49,7 +49,7 @@ namespace vkl
 		ShaderBindings bindings;
 
 		using namespace std::containers_operators;
-
+		
 		if (_use_debug_renderer)
 		{
 			bindings += _debug_renderer->getBindings();
@@ -62,4 +62,29 @@ namespace vkl
 			.bindings = bindings,
 		});
 	}
+
+
+
+
+
+	ExecutionThread::ExecutionThread(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
+		_context(ci.context)
+	{}
+
+	void ExecutionThread::execute(Command& cmd)
+	{
+		cmd.execute(*_context);
+	}
+
+	void ExecutionThread::execute(std::shared_ptr<Command> cmd)
+	{
+		execute(*cmd);
+	}
+
+	void ExecutionThread::execute(Executable const& executable)
+	{
+		executable(*_context);
+	}
+
 }

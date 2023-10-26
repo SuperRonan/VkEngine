@@ -233,7 +233,7 @@ namespace vkl
 		return res;
 	}
 
-	void SimpleRenderer::execute(Camera const& camera, float time, float dt, uint32_t frame_id)
+	void SimpleRenderer::execute(ExecutionThread& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
 	{
 		UBO ubo{
 			.time = time,
@@ -245,7 +245,7 @@ namespace vkl
 			.world_to_proj = camera.getWorldToProj(),
 		};
 
-		_exec(_update_buffer->with(UpdateBuffer::UpdateInfo{
+		exec(_update_buffer->with(UpdateBuffer::UpdateInfo{
 			.src = ubo,
 			.dst = _ubo_buffer,
 		}));
@@ -261,7 +261,7 @@ namespace vkl
 				{
 					if (!draw_list[model_type].empty())
 					{
-						_exec(_direct_pipeline._render_scene_direct[model_type]->with(VertexCommand::DrawInfo{
+						exec(_direct_pipeline._render_scene_direct[model_type]->with(VertexCommand::DrawInfo{
 							.draw_type = VertexCommand::DrawType::DrawIndexed,
 							.draw_list = draw_list[model_type],
 						}));
@@ -274,13 +274,13 @@ namespace vkl
 				{
 					if (!draw_list[model_type].empty())
 					{
-						_exec(_deferred_pipeline._raster_gbuffer[model_type]->with(VertexCommand::DrawInfo{
+						exec(_deferred_pipeline._raster_gbuffer[model_type]->with(VertexCommand::DrawInfo{
 							.draw_type = VertexCommand::DrawType::DrawIndexed,
 							.draw_list = draw_list[model_type],
 						}));
 					}
 				}
-				_exec(_deferred_pipeline._shade_from_gbuffer);
+				exec(_deferred_pipeline._shade_from_gbuffer);
 			}
 		}
 
@@ -304,7 +304,7 @@ namespace vkl
 			}
 			if (!basis_draw_list.empty())
 			{
-				_exec(_render_3D_basis->with(VertexCommand::DrawInfo{
+				exec(_render_3D_basis->with(VertexCommand::DrawInfo{
 					.draw_type = VertexCommand::DrawType::Draw,
 					.draw_list = basis_draw_list,
 				}));

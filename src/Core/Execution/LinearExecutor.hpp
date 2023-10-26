@@ -33,6 +33,8 @@ namespace vkl
 
 		ExecutionContext _context;
 
+		ExecutionThread * _current_thread = nullptr;
+
 		struct InBetween
 		{
 			std::shared_ptr<CommandBuffer> prev_cb = nullptr;
@@ -90,23 +92,23 @@ namespace vkl
 
 		void beginFrame();
 
-		void beginCommandBuffer(bool bind_common_set = true);
+		ExecutionThread * beginCommandBuffer(bool bind_common_set = true);
 
 		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);
 
-		void renderDebugIFN();
+		void renderDebugIFP();
 
 		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
 
-		void endCommandBufferAndSubmit();
+		void endCommandBufferAndSubmit(ExecutionThread * exec_thread);
 
 		void present();
 
-		virtual void execute(Command & cmd) override final;
+		virtual void execute(Command & cmd);
 
-		virtual void execute(std::shared_ptr<Command> cmd) override final;
+		virtual void execute(std::shared_ptr<Command> cmd);
 
-		virtual void execute(Executable const& executable) override final;
+		virtual void execute(Executable const& executable);
 
 		void submit();
 

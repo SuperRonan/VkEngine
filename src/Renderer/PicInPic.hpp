@@ -8,6 +8,9 @@
 
 namespace vkl
 {
+	class Executor;
+	class ExecutionThread;
+
 	class PictureInPicture : public Module
 	{
 	protected:
@@ -55,7 +58,7 @@ namespace vkl
 		PictureInPicture(CreateInfo const& ci);
 
 
-		void execute();
+		void execute(ExecutionThread& exec);
 
 		void declareImGui();
 
