@@ -221,6 +221,7 @@ namespace vkl
 
 				draw_call.set = node->model()->setAndPool();
 				draw_call.pc = matrix,
+				draw_call.name = node->name();
 
 				res[model_type].push_back(draw_call);
 			}
@@ -266,6 +267,7 @@ namespace vkl
 
 	void SimpleRenderer::execute(ExecutionThread& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
 	{
+		exec.context()->pushDebugLabel(name() + ".execute()");
 		UBO ubo{
 			.time = time,
 			.delta_time = dt,
@@ -288,6 +290,7 @@ namespace vkl
 			const size_t selected_pipeline = _pipeline_selection.index();
 			if (selected_pipeline == 0)
 			{
+				exec.context()->pushDebugLabel("DirectPipeline");
 				for (uint32_t model_type : _model_types)
 				{
 					if (!draw_list[model_type].empty())
@@ -298,9 +301,11 @@ namespace vkl
 						}));
 					}
 				}
+				exec.context()->popDebugLabel();
 			}
 			else
 			{
+				exec.context()->pushDebugLabel("DeferredPipeline");
 				for (uint32_t model_type : _model_types)
 				{
 					if (!draw_list[model_type].empty())
@@ -312,6 +317,7 @@ namespace vkl
 					}
 				}
 				exec(_deferred_pipeline._shade_from_gbuffer);
+				exec.context()->popDebugLabel();
 			}
 		}
 
@@ -341,6 +347,7 @@ namespace vkl
 				}));
 			}
 		}
+		exec.context()->popDebugLabel();
 	}
 	
 

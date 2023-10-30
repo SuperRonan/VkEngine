@@ -172,12 +172,25 @@ namespace vkl
 		};
 
 		auto extensions = getInstanceExtensions();
+		// TODO check that extensions are available
 		VkInstanceCreateInfo create_info{
 			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 			.pApplicationInfo = &app_info,
 			.enabledExtensionCount = (uint32_t)extensions.size(),
 			.ppEnabledExtensionNames = extensions.data(),
 		};
+		_instance_extensions.resize(extensions.size());
+		for (size_t i = 0; i < extensions.size(); ++i)
+		{
+			// TODO automatically someday
+			if (strcmp(extensions[i], VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+			{
+				_instance_extensions.push_back(VkExtensionProperties{
+					.extensionName = VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+					.specVersion = VK_EXT_DEBUG_UTILS_SPEC_VERSION,
+				});
+			}
+		}
 
 		VkDebugUtilsMessengerCreateInfoEXT instance_debug_create_info{};
 
@@ -199,7 +212,7 @@ namespace vkl
 
 		VK_CHECK(vkCreateInstance(&create_info, nullptr, &_instance), "Failed to create the Vulkan Instance");
 
-		_vkSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT");
+		_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT"));
 
 	}
 
@@ -311,7 +324,21 @@ namespace vkl
 
 	uint32_t VkApplication::getDeviceExtVersion(std::string_view ext_name) const
 	{
+		// TODO use a map
 		for (const auto& ext : _device_extensions)
+		{
+			if (ext.extensionName == ext_name)
+			{
+				return ext.specVersion;
+			}
+		}
+		return EXT_NONE;
+	}
+
+	uint32_t VkApplication::getInstanceExtVersion(std::string_view ext_name) const
+	{
+		// TODO use a map
+		for (const auto& ext : _instance_extensions)
 		{
 			if (ext.extensionName == ext_name)
 			{
@@ -485,7 +512,14 @@ namespace vkl
 	{
 		if (_available_features.mesh_shader_ext.meshShader)
 		{
-			_ext_functions._vkCmdDrawMeshTasksEXT = (PFN_vkCmdDrawMeshTasksEXT)vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksEXT");
+			_ext_functions._vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksEXT"));
+		}
+
+		if (hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+		{
+			_ext_functions._vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT"));
+			_ext_functions._vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT"));
+			_ext_functions._vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdInsertDebugUtilsLabelEXT"));
 		}
 	}
 

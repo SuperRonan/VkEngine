@@ -78,6 +78,9 @@ namespace vkl
 		struct ExtFunctionsPtr
 		{
 			PFN_vkCmdDrawMeshTasksEXT _vkCmdDrawMeshTasksEXT = nullptr;
+			PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT = nullptr;
+			PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT = nullptr;
+			PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
 		};
 
 		ExtFunctionsPtr _ext_functions;
@@ -195,6 +198,11 @@ namespace vkl
 		bool hasDeviceExtension(std::string_view ext_name) const
 		{
 			return getDeviceExtVersion(ext_name) != EXT_NONE;
+		}
+		uint32_t getInstanceExtVersion(std::string_view ext_name)const;
+		bool hasInstanceExtension(std::string_view ext_name)const
+		{
+			return getInstanceExtVersion(ext_name) != EXT_NONE;
 		}
 
 		constexpr bool enableValidation()const

@@ -55,6 +55,7 @@ namespace vkl
 	{
 		if (_enable)
 		{
+			exec.context()->pushDebugLabel(name());
 			const float region_size = _pip_size / _zoom;
 			const Vector2f pip_pos = _pip_position - 0.5f * Vector2f(region_size);
 			FastPiPPC pc{
@@ -89,6 +90,7 @@ namespace vkl
 					},
 				},
 			}));
+			exec.context()->popDebugLabel();
 		}
 	}
 

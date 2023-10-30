@@ -37,7 +37,10 @@ namespace vkl
 
 		virtual void execute(Executable const& executable);
 
-
+		ExecutionContext* context()
+		{
+			return _context;
+		}
 
 		void operator()(std::shared_ptr<Command> cmd)
 		{

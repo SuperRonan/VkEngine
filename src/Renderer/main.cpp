@@ -304,8 +304,8 @@ namespace vkl
 
 					std::shared_ptr<UpdateContext> update_context = resources_manager.beginUpdateCycle();
 					
-					scene->updateResources(*update_context);
 					exec.updateResources(*update_context);
+					scene->updateResources(*update_context);
 					renderer.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					script_resources.update(*update_context);

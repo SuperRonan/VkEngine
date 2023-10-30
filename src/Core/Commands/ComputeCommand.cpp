@@ -50,6 +50,7 @@ namespace vkl
 
 	void ComputeCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di)
 	{
+		context.pushDebugLabel(name());
 		SynchronizationHelper synch(context);
 		recordBindings(cmd, context);
 		recordBoundResourcesSynchronization(context.computeBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
@@ -88,6 +89,10 @@ namespace vkl
 
 		for (auto& to_dispatch : di.dispatch_list)
 		{
+			if (!to_dispatch.name.empty())
+			{
+				context.pushDebugLabel(to_dispatch.name);
+			}
 			if(to_dispatch.set)
 			{
 				std::shared_ptr<DescriptorSetAndPoolInstance> set = to_dispatch.set->instance();
@@ -101,9 +106,14 @@ namespace vkl
 
 			const VkExtent3D workgroups = di.dispatch_threads ? getWorkgroupsDispatchSize(to_dispatch.extent) : to_dispatch.extent;
 			vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
+			if (!to_dispatch.name.empty())
+			{
+				context.popDebugLabel();
+			}
 		}
 
-
+		context.keppAlive(_pipeline->instance());
+		context.popDebugLabel();
 	}
 
 	void ComputeCommand::execute(ExecutionContext& context, DispatchInfo const& di)

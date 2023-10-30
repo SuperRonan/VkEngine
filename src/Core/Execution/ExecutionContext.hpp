@@ -17,6 +17,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <stack>
 
 namespace vkl
 {
@@ -25,6 +26,14 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<CommandBuffer> _command_buffer = nullptr;
+
+		using vec4 = glm::vec4;
+		struct DebugLabel {
+			std::string label;
+			vec4 color;
+		};
+		std::stack<DebugLabel> _debug_labels;
+		bool _can_push_vk_debug_label = false;
 
 		size_t _resource_tid = 0;
 
@@ -119,6 +128,16 @@ namespace vkl
 		{
 			return _ray_tracing_bound_sets;
 		}
+
+		
+
+		void pushDebugLabel(std::string const& label, vec4 const& color);
+
+		void pushDebugLabel(std::string const& label);
+
+		void popDebugLabel();
+
+		void insertDebugLabel(std::string const& label, vec4 const& color);
 	};
 
 

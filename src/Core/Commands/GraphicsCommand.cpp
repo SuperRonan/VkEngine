@@ -220,6 +220,7 @@ namespace vkl
 
 	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di, void * user_info)
 	{
+		context.pushDebugLabel(name());
 		SynchronizationHelper synch(context);
 
 		// Synch framebuffer
@@ -288,6 +289,7 @@ namespace vkl
 		context.keppAlive(_pipeline->instance());
 		context.keppAlive(_framebuffer->instance());
 		context.keppAlive(_render_pass);
+		context.popDebugLabel();
 	}
 
 	VertexCommand::VertexCommand(CreateInfo const& ci) :
@@ -459,6 +461,10 @@ namespace vkl
 		std::vector<VkDeviceSize> vb_offsets;
 		for (auto& to_draw : di.draw_list)
 		{
+			if (!to_draw.name.empty())
+			{
+				context.pushDebugLabel(to_draw.name);
+			}
 			std::shared_ptr<DescriptorSetAndPool> set_desc = to_draw.set;
 			if(set_desc)
 			{
@@ -499,6 +505,10 @@ namespace vkl
 				default:
 					assertm(false, "Unsupported draw call type");
 				break;
+			}
+			if (!to_draw.name.empty())
+			{
+				context.popDebugLabel();
 			}
 		}
 	}
