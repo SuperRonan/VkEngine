@@ -639,14 +639,12 @@ namespace vkl
 		return res;
 	}
 
-	ResourcesToDeclare RigidMesh::getResourcesToDeclare()
+	void RigidMesh::updateResources(UpdateContext& ctx)
 	{
-		ResourcesToDeclare res;
 		if (_device.mesh_buffer)
 		{
-			res.buffers.push_back(_device.mesh_buffer);
+			_device.mesh_buffer->updateResource(ctx);
 		}
-		return res;
 	}
 
 	//void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)

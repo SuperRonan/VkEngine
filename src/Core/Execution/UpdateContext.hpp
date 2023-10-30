@@ -4,49 +4,65 @@
 #include <string>
 #include "DefinitionMap.hpp"
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
+#include <Core/Execution/ResourcesLists.hpp>
 
 namespace vkl
 {
-	class UpdateContext
+	class UpdateContext : public VkObject
 	{
 	protected:
 
-		bool _check_shaders = false;
-		const DefinitionsMap& _common_definitions;
+		size_t _update_cycle;
+
+		size_t _shader_check_cycle;
+		
+		const DefinitionsMap * _common_definitions;
 
 
-		MountingPoints* _mounting_points = nullptr;
+		const MountingPoints* _mounting_points = nullptr;
+
+		ResourcesLists _resources_to_update_later;
 
 
 	public:
 
 		struct CreateInfo
 		{
-			bool check_shaders = false;
-			const DefinitionsMap& common_definitions;
+			VkApplication * app = nullptr;
+			std::string name = {};
+			size_t update_cycle = 0;
+			size_t shader_check_cycle = 0;
+			const DefinitionsMap* common_definitions;
 			MountingPoints* mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
 
 		UpdateContext(CreateInfo const& ci) :
-			_check_shaders(ci.check_shaders),
+			VkObject(ci.app, ci.name),
+			_update_cycle(ci.update_cycle),
+			_shader_check_cycle(ci.shader_check_cycle),
 			_common_definitions(ci.common_definitions),
 			_mounting_points(ci.mounting_points)
 		{
 
 		}
 
-		constexpr bool checkShaders() const 
-		{ 
-			return _check_shaders; 
+		constexpr size_t updateCycle()const
+		{
+			return _update_cycle;
 		}
 
-		constexpr DefinitionsMap const& commonDefinitions() const
+		constexpr size_t checkShadersCycle() const 
+		{ 
+			return _shader_check_cycle; 
+		}
+
+		constexpr const DefinitionsMap * commonDefinitions() const
 		{
 			return _common_definitions;
 		}
 
-		MountingPoints* mountingPoints()
+		const MountingPoints* mountingPoints()
 		{
 			return _mounting_points;
 		}
@@ -54,6 +70,11 @@ namespace vkl
 		const MountingPoints* mountingPoints() const
 		{
 			return _mounting_points;
+		}
+
+		ResourcesLists& resourcesToUpdateLater()
+		{
+			return _resources_to_update_later;
 		}
 
 	};

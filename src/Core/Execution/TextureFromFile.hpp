@@ -56,10 +56,8 @@ namespace vkl
 			return _image_view;
 		}
 
-		virtual ResourcesToDeclare getResourcesToDeclare() override;
+		virtual void updateResources(UpdateContext& ctx);
 
 		virtual ResourcesToUpload getResourcesToUpload() override;
-
-		virtual void notifyDataIsUploaded() override;
 	};
 }

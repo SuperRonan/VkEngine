@@ -82,11 +82,9 @@ namespace vkl
 
 		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
 
-		virtual ResourcesToDeclare getResourcesToDeclare() override final;
+		virtual void updateResources(UpdateContext & ctx);
 
 		virtual ResourcesToUpload getResourcesToUpload() override final;
-
-		virtual void notifyDataIsUploaded() override final;
 
 		virtual VertexInputDescription vertexInputDesc() override final;
 

@@ -7,18 +7,17 @@
 #include <Core/Commands/TransferCommand.hpp>
 #include <thatlib/src/img/ImRead.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
+#include <Core/Execution/Executor.hpp>
 
 namespace vkl
 {
-	class Executor;
-	class ExecutionThread;
-
 	class DebugRenderer : public Module
 	{
 	protected:
 
-		Executor& _exec;
-		
+		DefinitionsMap * _common_definitions = nullptr;
+		MultiDescriptorSetsLayouts _sets_layouts = {};
+
 		bool _font_loaded = false;
 		std::shared_ptr<ImageView> _font = nullptr;
 		std::shared_ptr<ImageView> _font_for_upload = nullptr;
@@ -33,6 +32,7 @@ namespace vkl
 		std::shared_ptr<MeshCommand> _render_strings_with_mesh = nullptr;
 		std::shared_ptr<FillBuffer> _clear_buffer;
 
+		glm::uvec2 _glyph_size = {16, 16};
 
 		bool _enable_debug = true;
 		uint32_t _number_of_debug_strings = 16384;
@@ -60,7 +60,10 @@ namespace vkl
 
 		struct CreateInfo
 		{
-			Executor& exec;
+			VkApplication * app = nullptr;
+			std::string name = {};
+			DefinitionsMap * common_definitions = nullptr;
+			MultiDescriptorSetsLayouts sets_layout = {};
 			std::shared_ptr<ImageView> target = nullptr;
 			std::shared_ptr<ImageView> depth = nullptr;
 		};
@@ -70,6 +73,8 @@ namespace vkl
 		void setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth = nullptr);
 
 		void declareImGui();
+
+		void updateResources(UpdateContext & context);
 
 		void execute(ExecutionThread & exec);
 

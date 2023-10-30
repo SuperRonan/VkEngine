@@ -97,14 +97,12 @@ namespace vkl
 		}
 	}
 
-	ResourcesToDeclare TextureFromFile::getResourcesToDeclare()
+	void TextureFromFile::updateResources(UpdateContext& ctx)
 	{
-		ResourcesToDeclare res;
 		if (_image_view)
 		{
-			res += _image_view;
+			_image_view->updateResource(ctx);
 		}
-		return res;
 	}
 
 	ResourcesToUpload TextureFromFile::getResourcesToUpload()
@@ -116,12 +114,9 @@ namespace vkl
 				.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
 				.dst = _image_view,
 			};
+			_should_update = false;
 		}
 		return res;
 	}
 
-	void TextureFromFile::notifyDataIsUploaded()
-	{
-		_should_update = false;
-	}
 }

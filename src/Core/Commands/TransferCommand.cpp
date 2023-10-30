@@ -1010,6 +1010,8 @@ namespace vkl
 
 		ResourcesToUpload resources = ui.holder->getResourcesToUpload();
 
+		// TODO one single barrier (assuming no aliasing in resources)
+
 		if (!resources.images.empty())
 		{
 			UploadImage uploader(UploadImage::CI{
@@ -1045,7 +1047,7 @@ namespace vkl
 			}
 		}
 
-		ui.holder->notifyDataIsUploaded();
+		
 	}
 
 	void UploadResources::execute(ExecutionContext& ctx)

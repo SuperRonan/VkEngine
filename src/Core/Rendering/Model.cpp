@@ -45,16 +45,17 @@ namespace vkl
 		return _set;
 	}
 
-	ResourcesToDeclare Model::getResourcesToDeclare()
+	void Model::updateResources(UpdateContext& ctx)
 	{
-		ResourcesToDeclare res;
-		res += _mesh->getResourcesToDeclare();
+		if (_mesh)
+		{
+			_mesh->updateResources(ctx);
+		}
 		if (_material)
 		{
-			res += _material->getResourcesToDeclare();
+			_material->updateResources(ctx);
 		}
-		res += _set;
-		return res;
+		_set->updateResources(ctx);
 	}
 
 	ResourcesToUpload Model::getResourcesToUpload()
@@ -71,11 +72,6 @@ namespace vkl
 		}
 
 		return res;
-	}
-
-	void Model::notifyDataIsUploaded()
-	{
-		_mesh->notifyDataIsUploaded();
 	}
 
 	VertexInputDescription Model::vertexInputDesc() 

@@ -1,14 +1,12 @@
 #include "StagingPool.hpp"
 #include <cassert>
 #include <iostream>
-#include "Executor.hpp"
 
 namespace vkl
 {
 	StagingPool::StagingPool(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
-		_allocator(ci.allocator),
-		_exec(ci.exec)
+		_allocator(ci.allocator)
 	{}
 
 	StagingPool::~StagingPool()
@@ -106,7 +104,7 @@ namespace vkl
 		{	
 			for (auto& b : _free_buffers)
 			{
-				_exec->release(b);
+				
 			}
 			_free_buffers.clear();
 		}

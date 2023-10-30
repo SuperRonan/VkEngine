@@ -21,8 +21,6 @@ namespace vkl
 	{
 	protected:
 
-		Executor& _exec;
-
 		std::shared_ptr<Scene> _scene = nullptr;
 		std::shared_ptr<ImageView> _target = nullptr;
 		std::shared_ptr<ImageView> _depth = nullptr;
@@ -95,7 +93,6 @@ namespace vkl
 		struct CreateInfo {
 			VkApplication* app = nullptr;
 			std::string name = {};
-			Executor& exec;
 			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<Scene> scene = nullptr;
 			std::shared_ptr<ImageView> target = nullptr;
@@ -104,7 +101,7 @@ namespace vkl
 
 		SimpleRenderer(CreateInfo const& ci);
 
-
+		void updateResources(UpdateContext & ctx);
 
 		void execute(ExecutionThread& exec, Camera const& camera, float time, float dt, uint32_t frame_id);
 

@@ -116,6 +116,8 @@ namespace vkl
 
 		//virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override = 0;
 
+		virtual void updateResources(UpdateContext & ctx) = 0;
+
 		virtual void fillVertexDrawCallResources(VertexDrawCallResources & vr) override = 0;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
@@ -332,11 +334,6 @@ namespace vkl
 
 		//virtual void recordBindAndDraw(ExecutionContext & ctx) override final;
 
-		virtual void notifyDataIsUploaded() override
-		{
-			_device.up_to_date = true;
-		}
-
 		virtual void fillVertexDrawCallResources(VertexDrawCallResources& vr) override;
 
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
@@ -348,7 +345,7 @@ namespace vkl
 
 		virtual ShaderBindings getShaderBindings(uint offset) override final;
 
-		virtual ResourcesToDeclare getResourcesToDeclare() override final;
+		virtual void updateResources(UpdateContext & ctx) override;
 
 		virtual ResourcesToUpload getResourcesToUpload() override;
 

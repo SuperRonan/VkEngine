@@ -4,7 +4,6 @@ namespace vkl
 {
 	SimpleRenderer::SimpleRenderer(CreateInfo const& ci):
 		Module(ci.app, ci.name),
-		_exec(ci.exec),
 		_sets_layouts(ci.sets_layouts),
 		_scene(ci.scene),
 		_target(ci.target)
@@ -33,8 +32,8 @@ namespace vkl
 				.baseArrayLayer = 0,
 				.layerCount = 1,
 			},
-			});
-		_exec.declare(_depth);
+		});
+
 
 
 		_ubo_buffer = std::make_shared<Buffer>(Buffer::CI{
@@ -43,8 +42,8 @@ namespace vkl
 			.size = sizeof(UBO),
 			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-			});
-		_exec.declare(_ubo_buffer);
+		});
+		
 
 
 		const uint32_t model_set = application()->descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
@@ -82,7 +81,6 @@ namespace vkl
 				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
-			_exec.declare(_direct_pipeline._render_scene_direct[model_type]);
 		}
 		{
 			_deferred_pipeline._albedo = std::make_shared<ImageView>(ImageView::CI{
@@ -98,7 +96,7 @@ namespace vkl
 					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				},
 			});
-			_exec.declare(_deferred_pipeline._albedo);
+			
 
 			_deferred_pipeline._position = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
@@ -113,7 +111,7 @@ namespace vkl
 					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				},
 			});
-			_exec.declare(_deferred_pipeline._position);
+			
 
 			_deferred_pipeline._normal = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
@@ -128,7 +126,7 @@ namespace vkl
 					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				},
 			});
-			_exec.declare(_deferred_pipeline._normal);
+			
 
 			for (uint32_t model_type : _model_types)
 			{
@@ -152,7 +150,7 @@ namespace vkl
 					.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 					.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 				});
-				_exec.declare(_deferred_pipeline._raster_gbuffer[model_type]);
+				
 			}
 
 			_deferred_pipeline._shade_from_gbuffer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
@@ -181,7 +179,7 @@ namespace vkl
 					},
 				},
 			});
-			_exec.declare(_deferred_pipeline._shade_from_gbuffer);
+			
 		}
 
 
@@ -197,14 +195,14 @@ namespace vkl
 			.vertex_shader_path = shaders / "Show3DBasis.glsl",
 			.geometry_shader_path = shaders / "Show3DBasis.glsl",
 			.fragment_shader_path = shaders / "Show3DBasis.glsl",
-			});
-		_exec.declare(_render_3D_basis);
+		});
+		
 
 		_update_buffer = std::make_shared<UpdateBuffer>(UpdateBuffer::CI{
-				.app = application(),
-				.name = "UpdateUBO",
-			});
-		_exec.declare(_update_buffer);
+			.app = application(),
+			.name = "UpdateUBO",
+		});
+
 	}
 
 	SimpleRenderer::MultiVertexDrawCallList SimpleRenderer::generateVertexDrawList()
@@ -231,6 +229,39 @@ namespace vkl
 
 		_scene->getTree()->iterateOnDag(add_model);
 		return res;
+	}
+
+	void SimpleRenderer::updateResources(UpdateContext & ctx)
+	{
+		bool update_all_anyway = false;
+		_depth->updateResource(ctx);
+
+		if (_pipeline_selection.index() == 0 || update_all_anyway)
+		{
+			for (auto& cmd : _direct_pipeline._render_scene_direct)
+			{
+				ctx.resourcesToUpdateLater() += cmd.second;
+			}
+		}
+		if (_pipeline_selection.index() == 1 || update_all_anyway)
+		{
+			_deferred_pipeline._albedo->updateResource(ctx);
+			_deferred_pipeline._position->updateResource(ctx);
+			_deferred_pipeline._normal->updateResource(ctx);
+
+			for (auto& cmd : _deferred_pipeline._raster_gbuffer)
+			{
+				ctx.resourcesToUpdateLater() += cmd.second;
+			}
+			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
+		}
+
+		_ubo_buffer->updateResource(ctx);
+
+		if (_show_view_3D_basis || _show_world_3D_basis || update_all_anyway)
+		{
+			ctx.resourcesToUpdateLater() += _render_3D_basis;
+		}
 	}
 
 	void SimpleRenderer::execute(ExecutionThread& exec, Camera const& camera, float time, float dt, uint32_t frame_id)

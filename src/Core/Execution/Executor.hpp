@@ -5,7 +5,7 @@
 
 #include <Core/Execution/DefinitionMap.hpp>
 #include <Core/Commands/ShaderCommand.hpp>
-#include <Core/Execution/ResourcesHolder.hpp>
+#include <Core/Execution/ResourcesLists.hpp>
 
 namespace vkl
 {
@@ -94,23 +94,7 @@ namespace vkl
 			_use_rt_pipeline(ci.use_ray_tracing_pipeline)
 		{}
 
-		virtual void declare(std::shared_ptr<Command> const& cmd) = 0;
-
-		virtual void declare(std::shared_ptr<ImageView> const& view) = 0;
-
-		virtual void declare(std::shared_ptr<Buffer> const& buffer) = 0;
-
-		virtual void release(std::shared_ptr<Buffer> const& buffer) = 0;
-
-		virtual void declare(std::shared_ptr<Sampler> const& sampler) = 0;
-
-		virtual void declare(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
-
-		virtual void declare(std::shared_ptr<ResourcesHolder> const& holder) = 0;
-
 		virtual void init() = 0;
-
-		virtual void updateResources() = 0;
 
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) = 0;
 

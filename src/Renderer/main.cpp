@@ -13,6 +13,7 @@
 
 #include <Core/Execution/LinearExecutor.hpp>
 #include <Core/Execution/Module.hpp>
+#include <Core/Execution/ResourcesManager.hpp>
 
 #include <Core/IO/ImGuiUtils.hpp>
 #include <Core/IO/InputListener.hpp>
@@ -148,12 +149,24 @@ namespace vkl
 
 			std::filesystem::path shaders = PROJECT_SRC_PATH;
 
+			ResourcesLists script_resources;
+			MountingPoints mounting_points;
+
 			LinearExecutor exec(LinearExecutor::CI{
 				.app = this,
 				.name = "exec",
 				.window = window,
+				.mounting_points = &mounting_points,
 				.use_ImGui = true,
 			});
+
+			ResourcesManager resources_manager = ResourcesManager::CreateInfo{
+				.app = this,
+				.name = "ResourcesManager",
+				.shader_check_period = 1s,
+				.common_definitions = &exec.getCommonDefinitions(),
+				.mounting_points = &mounting_points,
+			};
 
 			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(ImageView::CI{
 				.name = "Final Image View",
@@ -167,7 +180,7 @@ namespace vkl
 					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				},
 			});
-			exec.declare(final_image);
+			script_resources += final_image;
 
 			std::shared_ptr<Scene> scene = std::make_shared<Scene>(Scene::CI{
 				.app = this,
@@ -176,7 +189,6 @@ namespace vkl
 
 			createScene(scene);
 			scene->prepareForRendering();
-			exec.declare(scene);
 
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
 			std::shared_ptr<DescriptorSetLayout> scene_layout = scene->setLayout();
@@ -187,7 +199,6 @@ namespace vkl
 			SimpleRenderer renderer(SimpleRenderer::CI{
 				.app = this,
 				.name = "Renderer",
-				.exec = exec,
 				.sets_layouts = sets_layouts,
 				.scene = scene,
 				.target = final_image,
@@ -198,7 +209,6 @@ namespace vkl
 			PictureInPicture pip = PictureInPicture::CI{
 				.app = this,
 				.name = "PiP",
-				.exec = exec,
 				.target = final_image,
 				.sets_layouts = sets_layouts,
 			};
@@ -291,7 +301,18 @@ namespace vkl
 
 				{
 					scene->prepareForRendering();
-					exec.updateResources();
+
+					std::shared_ptr<UpdateContext> update_context = resources_manager.beginUpdateCycle();
+					
+					scene->updateResources(*update_context);
+					exec.updateResources(*update_context);
+					renderer.updateResources(*update_context);
+					pip.updateResources(*update_context);
+					script_resources.update(*update_context);
+					
+					resources_manager.finishUpdateCycle(update_context);
+				}
+				{
 					exec.beginFrame();
 					ExecutionThread * ptr_exec_thread = exec.beginCommandBuffer();
 					ExecutionThread& exec_thread = *ptr_exec_thread;

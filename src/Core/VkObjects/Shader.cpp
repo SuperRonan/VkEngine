@@ -619,14 +619,14 @@ namespace vkl
 		bool res = false;
 
 		std::vector<std::string> definitions = *_definitions;
-		definitions += ctx.commonDefinitions().collapsed();
+		definitions += ctx.commonDefinitions()->collapsed();
 		SpecializationKey new_key;
 		new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
 		{
 			return a + "\n"s + b;
 		});
 		
-		if (ctx.checkShaders())
+		if (ctx.checkShadersCycle() > _check_cycle)
 		{
 			for (const auto& dep : _dependencies)
 			{
@@ -637,6 +637,7 @@ namespace vkl
 					res = true;
 				}
 			}
+			_check_cycle = ctx.checkShadersCycle();
 		}
 		
 		const bool use_different_spec = new_key != _current_key;
@@ -654,9 +655,9 @@ namespace vkl
 		
 		if (!_inst)
 		{
-			std::string capacity = ctx.commonDefinitions().getDefinition("SHADER_STRING_CAPACITY");
+			std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
 			int packed_capcity = capacity.empty() ? 32 : std::atoi(capacity.c_str());
-			createInstance(_current_key, ctx.commonDefinitions().collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
+			createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
 			res = true;
 		}
 

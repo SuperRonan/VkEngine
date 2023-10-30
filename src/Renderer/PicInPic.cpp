@@ -7,7 +7,6 @@ namespace vkl
 	PictureInPicture::PictureInPicture(CreateInfo const& ci) :
 		Module(ci.app, ci.name),
 		_target(ci.target),
-		_exec(ci.exec),
 		_sets_layouts(ci.sets_layouts)
 	{
 		const std::filesystem::path common_shaders = ENGINE_SRC_PATH "/Shaders/";
@@ -33,7 +32,6 @@ namespace vkl
 			},
 			.definitions = _definitions,
 		});
-		_exec.declare(_fast_pip);
 
 		_show_outline = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
@@ -45,7 +43,12 @@ namespace vkl
 			.vertex_shader_path = common_shaders / "RenderRect.glsl",
 			.fragment_shader_path = common_shaders / "RenderRect.glsl",
 		});
-		_exec.declare(_show_outline);
+	}
+
+	void PictureInPicture::updateResources(UpdateContext& context)
+	{
+		context.resourcesToUpdateLater() += _fast_pip;
+		context.resourcesToUpdateLater() += _show_outline;
 	}
 
 	void PictureInPicture::execute(ExecutionThread& exec)

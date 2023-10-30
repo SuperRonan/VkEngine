@@ -8,8 +8,6 @@
 
 namespace vkl
 {
-	class Executor;
-
 	class StagingPool : public VkObject
 	{
 	public:
@@ -22,8 +20,6 @@ namespace vkl
 		
 		std::mutex _mutex;
 
-		Executor* _exec;
-
 	public:
 
 		struct CreateInfo
@@ -31,7 +27,6 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VmaAllocator allocator = nullptr;
-			Executor* exec = nullptr;
 		};
 		using CI = CreateInfo;
 

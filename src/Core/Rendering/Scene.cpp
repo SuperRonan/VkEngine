@@ -8,6 +8,14 @@
 namespace vkl
 {
 
+	void Scene::Node::updateResources(UpdateContext& ctx)
+	{
+		if (_model)
+		{
+			_model->updateResources(ctx);
+		}
+	}
+
 	bool Scene::DirectedAcyclicGraph::checkIsAcyclic()const
 	{
 		// TODO
@@ -244,24 +252,6 @@ namespace vkl
 	}
 
 
-	ResourcesToDeclare Scene::getResourcesToDeclare()
-	{
-		ResourcesToDeclare res;
-		_tree->iterateOnNodes([&res](std::shared_ptr<Node> const& node)
-		{
-			if (node->model())
-			{
-				res += node->model()->getResourcesToDeclare();
-			}
-		});
-
-		res += _ubo_buffer;
-		res += _lights_buffer;
-
-		res += _set;
-		return res;
-	}
-
 	ResourcesToUpload Scene::getResourcesToUpload()
 	{
 		ResourcesToUpload res;
@@ -300,21 +290,24 @@ namespace vkl
 		return res;
 	}
 
-	void Scene::notifyDataIsUploaded()
-	{
-		_tree->iterateOnNodes([](std::shared_ptr<Node> const& node)
-		{
-			if (node->model())
-			{
-				node->model()->notifyDataIsUploaded();
-			}
-		});
-	}
 
 
 	void Scene::prepareForRendering()
 	{
 		_tree->flatten();
 		fillLightsBuffer();
+	}
+
+	void Scene::updateResources(UpdateContext& ctx)
+	{
+		// Maybe separate between the few scene own internal resources and the lot of nodes resources (models, textures, ...)
+		_ubo_buffer->updateResource(ctx);
+		_lights_buffer->updateResource(ctx);
+		_set->updateResources(ctx);
+
+		_tree->iterateOnNodes([&](std::shared_ptr<Node> const& node)
+		{
+			node->updateResources(ctx);
+		});
 	}
 }

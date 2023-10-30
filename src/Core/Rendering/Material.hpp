@@ -38,11 +38,9 @@ namespace vkl
 			return _type;
 		}
 
-		virtual ResourcesToDeclare getResourcesToDeclare() override = 0;
+		virtual void updateResources(UpdateContext & ctx) = 0;
 
 		virtual ResourcesToUpload getResourcesToUpload() override = 0;
-
-		virtual void notifyDataIsUploaded() override = 0;
 
 		virtual void declareImGui() = 0;
 
@@ -102,11 +100,9 @@ namespace vkl
 
 		virtual void declareImGui() override;
 
-		virtual ResourcesToDeclare getResourcesToDeclare() override;
+		virtual void updateResources(UpdateContext& ctx) override;
 
 		virtual ResourcesToUpload getResourcesToUpload() override;
-
-		virtual void notifyDataIsUploaded() override;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override
 		{

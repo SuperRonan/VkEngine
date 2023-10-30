@@ -67,16 +67,17 @@ namespace vkl
 		ImGui::ColorPicker3("albedo", &_albedo.x);
 	}
 
-	ResourcesToDeclare PhysicallyBasedMaterial::getResourcesToDeclare()
+	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)
 	{
-		ResourcesToDeclare res;
-		res += _props_buffer;
+		_props_buffer->updateResource(ctx);
 		if (_albedo_texture && _albedo_texture->hasValue())
 		{
-			res += _albedo_texture->getResourcesToDeclare();
-			res += _sampler;
+			_albedo_texture->updateResources(ctx);
 		}
-		return res;
+		if (_sampler)
+		{
+			_sampler->updateResources(ctx);
+		}
 	}
 
 	ResourcesToUpload PhysicallyBasedMaterial::getResourcesToUpload()
@@ -95,15 +96,6 @@ namespace vkl
 			res += _albedo_texture->getResourcesToUpload();
 		}
 		return res;
-	}
-
-	void PhysicallyBasedMaterial::notifyDataIsUploaded()
-	{
-		_should_update_props_buffer = false;
-		if (_albedo_texture)
-		{
-			_albedo_texture->notifyDataIsUploaded();
-		}
 	}
 
 	std::vector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)

@@ -122,6 +122,8 @@ namespace vkl
 				}
 			}
 
+			virtual void updateResources(UpdateContext & ctx);
+
 		};
 		
 
@@ -226,17 +228,19 @@ namespace vkl
 		// Call before updating resources
 		void prepareForRendering();
 
+		virtual void updateResources(UpdateContext & ctx);
+
 		static std::shared_ptr<DescriptorSetLayout> SetLayout(VkApplication * app, SetLayoutOptions const& options);
 
 		virtual std::shared_ptr<DescriptorSetLayout> setLayout();
 
 		std::shared_ptr<DescriptorSetAndPool> set();
 
-		virtual ResourcesToDeclare getResourcesToDeclare();
+		//virtual ResourcesLists getResourcesToDeclare() override;
 
-		virtual ResourcesToUpload getResourcesToUpload();
+		virtual ResourcesToUpload getResourcesToUpload() override;
 
-		virtual void notifyDataIsUploaded();
+		//virtual void notifyDataIsUploaded() override;
 
 	};
 }

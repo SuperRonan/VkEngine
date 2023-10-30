@@ -5,12 +5,10 @@
 #include <Core/Commands/GraphicsCommand.hpp>
 #include <Core/VkObjects/DetailedVkFormat.hpp>
 #include <Core/Rendering/Math.hpp>
+#include <Core/Execution/Executor.hpp>
 
 namespace vkl
 {
-	class Executor;
-	class ExecutionThread;
-
 	class PictureInPicture : public Module
 	{
 	protected:
@@ -37,8 +35,6 @@ namespace vkl
 			Vector4f color;
 		};
 
-		Executor & _exec;
-
 		MultiDescriptorSetsLayouts _sets_layouts;
 
 		Dyn<std::vector<std::string>> _definitions;
@@ -49,7 +45,6 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			Executor & exec;
 			std::shared_ptr<ImageView> target = nullptr;
 			MultiDescriptorSetsLayouts sets_layouts;
 		};
@@ -57,6 +52,7 @@ namespace vkl
 
 		PictureInPicture(CreateInfo const& ci);
 
+		void updateResources(UpdateContext & context);
 
 		void execute(ExecutionThread& exec);
 

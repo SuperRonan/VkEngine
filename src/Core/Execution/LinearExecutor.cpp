@@ -20,17 +20,17 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".StagingPool",
 			.allocator = application()->allocator(),
-			.exec = this,
 		}),
+		_mounting_points(ci.mounting_points),
 		_context(ExecutionContext::CI{
 			.app = application(),
 			.name = name() + ".exec_context",
 			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
-			.mounting_points = &_mounting_points,
+			.mounting_points = _mounting_points,
 		})
 	{
-		_mounting_points["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
+		(*_mounting_points)["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
 
 		if (ci.use_ImGui)
 		{
@@ -39,7 +39,7 @@ namespace vkl
 				.name = name() + ".RenderGui",
 				.swapchain = _window->swapchain(),
 				});
-			declare(_render_gui);
+			_internal_resources += _render_gui;
 		}
 
 		buildCommonSetLayout();
@@ -58,78 +58,16 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::declare(std::shared_ptr<Command> const& cmd)
-	{
-		cmd->init();
-		_registered_resources += cmd;
-	}
-
-	void LinearExecutor::declare(std::shared_ptr<ImageView> const& view)
-	{
-		_registered_resources += view;
-	}
-
-	void LinearExecutor::declare(std::shared_ptr<Buffer> const& buffer)
-	{
-		_registered_resources += buffer;
-	}
-
-	void LinearExecutor::release(std::shared_ptr<Buffer> const& buffer)
-	{
-		// Assuming the buffer is declared only once
-		auto it = std::find(_registered_resources.buffers.begin(), _registered_resources.buffers.end(), buffer);
-		if (it != _registered_resources.buffers.end())
-		{
-			_registered_resources.buffers.erase(it);
-		}
-	}
-
-	void LinearExecutor::declare(std::shared_ptr<Sampler> const& sampler)
-	{
-		_registered_resources += sampler;
-	}
-
-	void LinearExecutor::declare(std::shared_ptr<DescriptorSetAndPool> const& set)
-	{
-		_registered_resources += set;
-	}
-
-	void LinearExecutor::declare(std::shared_ptr<ResourcesHolder> const& holder)
-	{
-		ResourcesToDeclare res = holder->getResourcesToDeclare();
-
-		for (std::shared_ptr<ImageView>& img : res.images)
-		{
-			declare(img);
-		}
-		for (std::shared_ptr<Buffer>& buffer : res.buffers)
-		{
-			declare(buffer);
-		}
-		for (std::shared_ptr<Sampler>& sampler : res.samplers)
-		{
-			declare(sampler);
-		}
-		for (std::shared_ptr<DescriptorSetAndPool>& set : res.sets)
-		{
-			declare(set);
-		}
-		for (std::shared_ptr<Command>& cmd : res.commands)
-		{
-			declare(cmd);
-		}
-	}
-
 	void LinearExecutor::init()
 	{
 		_blit_to_present = std::make_shared<BlitImage>(BlitImage::CI{
 			.app = _app,
 			.name = name() + std::string(".BlitToPresent"),
 		});
-		declare(_blit_to_present);
+		_internal_resources += _blit_to_present;
 
 		createCommonSet();
-		declare(_common_descriptor_set);
+		_internal_resources += _common_descriptor_set;
 		
 		if (_render_gui)
 		{
@@ -143,71 +81,17 @@ namespace vkl
 		// TODO load debug renderer font here?
 	}
 
-	void LinearExecutor::updateResources()
+	void LinearExecutor::updateResources(UpdateContext & context)
 	{
-		bool should_check_shaders = false;
-		{
-			std::chrono::time_point now = std::chrono::system_clock::now();
-			std::chrono::duration diff = (now - _shader_check_time);
-			if (diff > _shader_check_period)
-			{
-				should_check_shaders = true;
-				_shader_check_time = now;
-			}
-		}
-
 		_common_definitions.update();
 
-		UpdateContext update_context = UpdateContext::CI{
-			.check_shaders = should_check_shaders,
-			.common_definitions = _common_definitions,
-			.mounting_points = &_mounting_points,
-		};
-
-		if (_window->updateResources(update_context))
+		if (_window->updateResources(context))
 		{
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
 		}
 
-		for (auto& image_view : _registered_resources.images)
-		{
-			// The invalidation callback should be for the image, not the view...
-			// It might create some bugs later if we have certain cases of overlapping views on the same image
-			assert(!!image_view);
-			const bool invalidated = image_view->updateResource(update_context);
-			if (invalidated)
-			{
-				ImageInstance * img = image_view->image()->instance().get();
-			}
-		}
-
-		for (auto& buffer : _registered_resources.buffers)
-		{
-			assert(!!buffer);
-			const bool invalidated = buffer->updateResource(update_context);
-			if (invalidated)
-			{
-				BufferInstance * b = buffer->instance().get();
-			}
-		}
-
-		for (auto& sampler : _registered_resources.samplers)
-		{
-			assert(!!sampler);
-			const bool invalidated = sampler->updateResources(update_context);
-		}
-
-		for (auto& command : _registered_resources.commands)
-		{
-			assert(!!command);
-			const bool invalidated = command->updateResources(update_context);
-		}
-
-		for (auto& set : _registered_resources.sets)
-		{
-			assert(!!set);
-			const bool invalidated = set->updateResources(update_context);
-		}
+		_debug_renderer->updateResources(context);
+		_internal_resources.update(context);
 	}
 
 	void LinearExecutor::beginFrame()
