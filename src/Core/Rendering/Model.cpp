@@ -18,6 +18,19 @@ namespace vkl
 		assert(!!_mesh xor (!ci.mesh_path.empty()));
 		_type = MakeType(_mesh->type(), _material->type());
 		createSet();
+
+		if (_material)
+		{
+			_material->installResourceUpdateCallbacks(_set, material_binding_offset);
+		}
+	}
+
+	Model::~Model()
+	{
+		if (_material)
+		{
+			_material->removeResourceUpdateCallbacks(_set);
+		}
 	}
 
 	void Model::createSet()
@@ -55,6 +68,7 @@ namespace vkl
 		{
 			_material->updateResources(ctx);
 		}
+
 		_set->updateResources(ctx);
 	}
 

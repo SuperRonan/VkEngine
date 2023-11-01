@@ -17,7 +17,7 @@ namespace vkl
 		
 		std::shared_ptr<DescriptorSetLayout> _layout = nullptr;
 
-		// sorted
+		// sorted and at the size of layout.bindings -> can keep a pointer on a binding
 		ResourceBindings _bindings = {};
 
 		std::shared_ptr<DescriptorPool> _pool = nullptr;
@@ -29,6 +29,10 @@ namespace vkl
 
 		void sortBindings();
 
+		void installInvalidationCallback(ResourceBinding & binding, Callback & cb);
+
+		void removeInvalidationCallbacks(ResourceBinding & binding);
+
 		void installInvalidationCallbacks();
 
 	public:
@@ -38,7 +42,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			std::shared_ptr<DescriptorSetLayout> layout = nullptr;
-			ResourceBindings bindings = {};
+			ResourceBindings bindings = {}; // Not sorted
 		};
 		using CI = CreateInfo;
 
@@ -95,6 +99,8 @@ namespace vkl
 				return _bindings.data() + index;
 			}
 		}
+
+		void setBinding(ResourceBinding const& b);
 		
 	};
 
@@ -112,6 +118,7 @@ namespace vkl
 
 		bool _allow_missing_bindings = true;
 
+		// Not sorted
 		ResourceBindings _bindings = {};
 
 		void createInstance();
@@ -138,6 +145,8 @@ namespace vkl
 		virtual ~DescriptorSetAndPool() override;
 
 		bool updateResources(UpdateContext & context);
+
+		void setBinding(ShaderBindingDescription const& binding);
 
 	};
 

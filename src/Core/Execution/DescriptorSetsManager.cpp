@@ -15,47 +15,107 @@ namespace vkl
 		installInvalidationCallbacks();
 	}
 
+	void DescriptorSetAndPoolInstance::installInvalidationCallback(ResourceBinding& binding, Callback& cb)
+	{
+		if (binding.isBuffer())
+		{
+			if (binding.buffer())
+			{
+				binding.buffer()->addInvalidationCallback(cb);
+			}
+			else
+			{
+				assert(_allow_null_bindings);
+				binding.setUpdateStatus(true);
+			}
+		}
+		else if (binding.isImage() || binding.isSampler())
+		{
+			int null_desc = 0;
+			if (binding.isImage())
+			{
+				if (binding.image())
+				{
+					binding.image()->addInvalidationCallback(cb);
+				}
+				else
+				{
+					assert(_allow_null_bindings);
+					++null_desc;
+				}
+			}
+			else if (binding.isSampler())
+			{
+				if (binding.sampler())
+				{
+					binding.sampler()->addInvalidationCallback(cb);
+				}
+				else
+				{
+					assert(_allow_null_bindings);
+					++null_desc;
+				}
+			}
+			if (binding.isImage() && binding.isSampler() && null_desc == 2)
+			{
+				binding.setUpdateStatus(true);
+			}
+		}
+		else
+		{
+			assert(false);
+		}
+	}
+
+	void DescriptorSetAndPoolInstance::removeInvalidationCallbacks(ResourceBinding& binding)
+	{
+		if (binding.isBuffer())
+		{
+			if (binding.buffer())
+			{
+				binding.buffer()->removeInvalidationCallbacks(this);
+			}
+			else
+			{
+				assert(_allow_null_bindings);
+			}
+		}
+		else if (binding.isImage())
+		{
+			if (binding.image())
+			{
+				binding.image()->removeInvalidationCallbacks(this);
+			}
+			else
+			{
+				assert(_allow_null_bindings);
+			}
+		}
+		else if (binding.isSampler())
+		{
+			if (binding.sampler())
+			{
+				binding.sampler()->removeInvalidationCallbacks(this);
+			}
+			else
+			{
+				assert(_allow_null_bindings);
+			}
+		}
+		else
+		{
+			assert(false);
+		}
+	}
+
 	DescriptorSetAndPoolInstance::~DescriptorSetAndPoolInstance()
 	{
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& binding = _bindings[i];
-			if (binding.isBuffer())
+			if (!binding.isNull())
 			{
-				if (binding.buffer())
-				{
-					binding.buffer()->removeInvalidationCallbacks(this);
-				}
-				else
-				{
-					assert(_allow_null_bindings);
-				}
-			}
-			else if (binding.isImage())
-			{
-				if (binding.image())
-				{
-					binding.image()->removeInvalidationCallbacks(this);
-				}
-				else
-				{
-					assert(_allow_null_bindings);
-				}
-			}
-			else if(binding.isSampler())
-			{
-				if (binding.sampler())
-				{
-					binding.sampler()->removeInvalidationCallbacks(this);
-				}
-				else
-				{
-					assert(_allow_null_bindings);
-				}
-			}
-			else
-			{
-				assert(false);
+				removeInvalidationCallbacks(binding);
 			}
 		}
 
@@ -93,6 +153,47 @@ namespace vkl
 	void DescriptorSetAndPoolInstance::sortBindings()
 	{
 		std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b){return a.resolvedBinding() < b.resolvedBinding();});
+		if (_layout && _bindings.size() != _layout->bindings().size())
+		{
+			assert(false);
+			ResourceBindings tmp = _bindings;
+			_bindings.resize(_layout->bindings().size());
+			size_t j = 0;
+			for (size_t i = 0; i < _bindings.size(); ++i)
+			{
+				const uint32_t lb = _layout->bindings()[i].binding;
+				ResourceBinding * corresponding_binding = [&]() {
+					ResourceBinding* res = nullptr;
+					while (j != tmp.size())
+					{
+						const uint32_t jb = tmp[j].resolvedBinding();
+						if (jb == lb)
+						{
+							res = tmp.data() + j;
+							break;
+						}
+						else if (jb > lb)
+						{
+							break;
+						}
+						++j;
+					}
+					return res;
+				}();
+				if (corresponding_binding)
+				{
+					_bindings[i] = *corresponding_binding;
+					_bindings[i].setUpdateStatus(true);
+				}
+				else
+				{
+					_bindings[i].resolve(lb);
+					_bindings[i].setType(_layout->bindings()[i].descriptorType);
+
+					_bindings[i].setUpdateStatus(false);
+				}
+			}
+		}
 	}
 
 	void DescriptorSetAndPoolInstance::installInvalidationCallbacks()
@@ -100,59 +201,15 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding & binding = _bindings[i];
-			Callback cb{
-				.callback = [i,  this]() {
-					_bindings[i].setUpdateStatus(false);
-				},
-				.id = this,
-			};
-			if (binding.isBuffer())
+			if (!binding.isNull())
 			{
-				if (binding.buffer())
-				{
-					binding.buffer()->addInvalidationCallback(cb);
-				}
-				else
-				{
-					assert(_allow_null_bindings);
-					binding.setUpdateStatus(true);
-				}
-			}
-			else if(binding.isImage() || binding.isSampler())
-			{
-				int null_desc = 0;
-				if (binding.isImage())
-				{
-					if (binding.image())
-					{
-						binding.image()->addInvalidationCallback(cb);
-					}
-					else
-					{
-						assert(_allow_null_bindings); 
-						++ null_desc;
-					}
-				}
-				else if(binding.isSampler())
-				{
-					if (binding.sampler())
-					{
-						binding.sampler()->addInvalidationCallback(cb);
-					}
-					else
-					{
-						assert(_allow_null_bindings);
-						++ null_desc;
-					}
-				}
-				if (binding.isImage() && binding.isSampler() && null_desc == 2)
-				{
-					binding.setUpdateStatus(true);
-				}
-			}
-			else
-			{
-				assert(false);
+				Callback cb{
+					.callback = [i,  this]() {
+						_bindings[i].setUpdateStatus(false);
+					},
+					.id = this,
+				};
+				installInvalidationCallback(binding, cb);
 			}
 		}
 	}
@@ -165,12 +222,14 @@ namespace vkl
 			assert(_bindings[i].isResolved());
 
 			res &= _bindings[i].vkType() != VK_DESCRIPTOR_TYPE_MAX_ENUM;
+			assert(res);
 
 			if(i != _bindings.size() -1)
 			{
 				if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
 				{
 					res &= false;
+					assert(false);
 				}
 			}
 			
@@ -356,7 +415,77 @@ namespace vkl
 		}
 	}
 
+	void DescriptorSetAndPoolInstance::setBinding(ResourceBinding const& binding)
+	{
+		auto it = _bindings.begin();
+		while (it != _bindings.end())
+		{
+			const uint32_t b = it->resolvedBinding();
+			if (b == binding.resolvedBinding())
+			{
+				// Replace current binding
+				{
+					ResourceBinding & old = *it;
+					if (!old.isNull())
+					{
+						removeInvalidationCallbacks(old);
+					}
+				}
 
+				if (it->isBuffer())
+				{
+					it->resource()._buffer = binding.resource()._buffer;
+					it->resource()._buffer_range = binding.resource()._buffer_range;
+				}
+				else
+				{
+					if (it->isImage())
+					{
+						it->resource()._image = binding.resource()._image;
+					}
+					if (it->isSampler())
+					{
+						it->sampler() = binding.sampler();
+					}
+				}
+				break;
+			}
+			else if (b < binding.resolvedBinding())
+			{
+				++it;
+			}
+			else
+			{
+				assert(false);
+			}
+		}
+		if (it == _bindings.end())
+		{
+			assert(false);
+			//it = _bindings.insert(it, binding);
+		}
+
+		if (it->isNull())
+		{
+			it->setUpdateStatus(true);
+		}
+		else
+		{
+			size_t i = it - _bindings.begin();
+			Callback cb{
+				.callback = [i,  this]() {
+					_bindings[i].setUpdateStatus(false);
+				},
+				.id = this,
+			};
+			installInvalidationCallback(*it, cb);
+
+			it->setUpdateStatus(false);
+		}
+
+
+		assert(checkIntegrity());
+	}
 
 
 
@@ -551,6 +680,12 @@ namespace vkl
 								.binding = _layout->bindings()[i].binding,
 							};							
 							new_bindings[i] = null_binding;
+							new_bindings[i].resource()._begin_state = ResourceState2{
+								.access = _layout->metas()[i].access,
+								.layout = _layout->metas()[i].layout,
+								.stage = getPipelineStageFromShaderStage2(_layout->bindings()[i].stageFlags),
+							};
+							new_bindings[i].setType(_layout->bindings()[i].descriptorType);
 						}
 					}
 
@@ -589,6 +724,45 @@ namespace vkl
 
 		return res;
 	}
+
+
+	void DescriptorSetAndPool::setBinding(ShaderBindingDescription const& binding)
+	{
+		auto it = _bindings.begin();
+		ResourceBinding rb = binding;
+		rb.resolve(rb.binding());
+		// Bindings are not sorted !!!
+		// TODO sort when resolve
+		while (it != _bindings.end())
+		{
+			const uint32_t b = it->binding();
+			if (b == binding.binding)
+			{
+				*it = rb;
+				break;
+			}
+			else 
+			{
+				++it;
+			}
+
+		}
+
+		if (it == _bindings.end()) // Not found
+		{
+			it = _bindings.insert(it, rb);
+		}
+
+		if (_inst)
+		{
+			_inst->setBinding(*it);
+		}
+	}
+
+
+
+
+
 
 
 	DescriptorSetsManager::DescriptorSetsManager(CreateInfo const& ci):

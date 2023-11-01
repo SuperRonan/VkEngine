@@ -70,6 +70,8 @@ namespace vkl
 
 		Model(CreateInfo const& ci);
 
+		virtual ~Model() override;
+
 		std::shared_ptr<Mesh> mesh()const
 		{
 			return _mesh;

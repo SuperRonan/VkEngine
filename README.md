@@ -97,10 +97,10 @@ There should be two types of resources, synch ones and asynch ones.
 
 # Resources management / Execution refactor
 Objectives:
-- Synchronize multiple times the same resources for the same or different usages (refactor of SynchHelper)
-- Have more dynamic descriptor sets (adding or removing descriptors "on the fly")
-- Resource management: have resources be managed by their owner ifp, else by the script manager, instead of only by the executor
-- Execute host tasks in parallel (such as shader compilation, resources loading)
-- Load scene (mesh, textures) asynch
-- Refactor the Executor (and linearExecutor): issue an ExecThread to record commands in
-- Add a transfer queue to the LinearExecutor to load assets
+- [ ] Synchronize multiple times the same resources for the same or different usages (refactor of SynchHelper)
+- [x] Have more dynamic descriptor sets (adding or removing descriptors "on the fly")
+- [x] Resource management: have resources be managed by their owner ifp, else by the script manager, instead of only by the executor
+- [ ] Execute host tasks in parallel (such as shader compilation, resources loading)
+- [ ] Load scene (mesh, textures) asynch
+- [x] Refactor the Executor (and linearExecutor): issue an ExecThread to record commands in
+- [ ] Add a transfer queue to the LinearExecutor to load assets

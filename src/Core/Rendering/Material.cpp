@@ -70,7 +70,7 @@ namespace vkl
 	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)
 	{
 		_props_buffer->updateResource(ctx);
-		if (_albedo_texture && _albedo_texture->hasValue())
+		if (_albedo_texture)
 		{
 			_albedo_texture->updateResources(ctx);
 		}
@@ -156,5 +156,31 @@ namespace vkl
 		}
 
 		return res;
+	}
+
+	void PhysicallyBasedMaterial::installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset)
+	{
+		if (_albedo_texture)
+		{
+			Callback cb{
+				.callback = [set, offset, this]() {
+					set->setBinding(ShaderBindingDescription{
+						.view = _albedo_texture->view(),
+						.sampler = _sampler,
+						.binding = offset + 1,
+					});
+				},
+				.id = set.get(),
+			};
+			_albedo_texture->addResourceUpdateCallback(cb);
+		}
+	}
+
+	void PhysicallyBasedMaterial::removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set)
+	{
+		if (_albedo_texture)
+		{
+			_albedo_texture->removeResourceUpdateCallback(set.get());
+		}
 	}
 }

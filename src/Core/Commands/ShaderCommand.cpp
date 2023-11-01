@@ -107,7 +107,10 @@ namespace vkl
 
 		res |= _pipeline->updateResources(ctx);
 
-		res |= _set->updateResources(ctx);
+		if (_set)
+		{
+			res |= _set->updateResources(ctx);
+		}
 
 		return res;
 	}

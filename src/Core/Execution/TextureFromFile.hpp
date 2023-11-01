@@ -13,6 +13,8 @@ namespace vkl
 	protected:
 
 		std::filesystem::path _path = {};
+
+		bool _is_synch = true;
 		
 		bool _should_update = false;
 		img::FormatedImage _host_image = {};
@@ -26,7 +28,15 @@ namespace vkl
 		std::shared_ptr<ImageView> _image_view = nullptr;
 
 
+		std::vector<Callback> _resource_update_callback = {};
+
 		DetailedVkFormat findFormatForVkImage(DetailedVkFormat const& f);
+
+		void loadHostImage();
+
+		void createDeviceImage();
+
+		void callResourceUpdateCallbacks();
 
 	public:
 
@@ -36,6 +46,7 @@ namespace vkl
 			std::string name = {};
 			std::filesystem::path path = {};
 			std::optional<VkFormat> desired_format = {};
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 
@@ -59,5 +70,9 @@ namespace vkl
 		virtual void updateResources(UpdateContext& ctx);
 
 		virtual ResourcesToUpload getResourcesToUpload() override;
+
+		void addResourceUpdateCallback(Callback const& cb);
+
+		void removeResourceUpdateCallback(VkObject * id);
 	};
 }

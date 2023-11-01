@@ -47,8 +47,12 @@ namespace vkl
 
 	void PictureInPicture::updateResources(UpdateContext& context)
 	{
-		context.resourcesToUpdateLater() += _fast_pip;
-		context.resourcesToUpdateLater() += _show_outline;
+		const bool update_anyway = true;
+		if (_enable || update_anyway)
+		{
+			context.resourcesToUpdateLater() += _fast_pip;
+			context.resourcesToUpdateLater() += _show_outline;
+		}
 	}
 
 	void PictureInPicture::execute(ExecutionThread& exec)

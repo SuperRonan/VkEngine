@@ -93,7 +93,7 @@ namespace vkl
 				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 
-		constexpr bool isSampler()
+		constexpr bool isSampler()const
 		{
 			return
 				_type == VK_DESCRIPTOR_TYPE_SAMPLER ||
@@ -111,6 +111,11 @@ namespace vkl
 		}
 
 		constexpr auto& sampler()
+		{
+			return _sampler;
+		}
+
+		constexpr const auto& sampler()const
 		{
 			return _sampler;
 		}
@@ -153,6 +158,31 @@ namespace vkl
 		constexpr void setUpdateStatus(bool status)
 		{
 			_updated = status;
+		}
+
+		bool isNull()const
+		{
+			bool res = false;
+			if (_type == VK_DESCRIPTOR_TYPE_MAX_ENUM)
+			{
+				res = true;
+			}
+			else if (isBuffer())
+			{
+				res = !_resource._buffer;
+			}
+			else
+			{
+				if (isImage())
+				{
+					res |= !_resource._image;
+				}
+				if (isSampler())
+				{
+					res |= !_sampler;
+				}
+			}
+			return res;
 		}
 	};
 

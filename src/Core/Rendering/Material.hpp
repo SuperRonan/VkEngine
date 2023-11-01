@@ -49,6 +49,10 @@ namespace vkl
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(Type type, uint32_t offset);
 
 		virtual ShaderBindings getShaderBindings(uint32_t offset) = 0;
+
+		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) = 0;
+
+		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
 	};
 
 	class PhysicallyBasedMaterial : public Material
@@ -112,6 +116,10 @@ namespace vkl
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
 
 		virtual ShaderBindings getShaderBindings(uint32_t offset) override;
+
+		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) override;
+
+		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) override;
 	};
 
 	using PBMaterial = PhysicallyBasedMaterial;

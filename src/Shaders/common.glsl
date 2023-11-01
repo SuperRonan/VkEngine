@@ -101,6 +101,22 @@ vec2 UVToClipSpace(vec2 uv)
 	return (uv * 2.0f) - 1.0f;
 }
 
+// Generalized cross product matrix
+mat2 tilt(vec2 a, vec2 b)
+{
+	return outerProduct(a, b) - outerProduct(b, a);
+}
+
+mat3 tilt(vec3 a, vec3 b)
+{
+	return outerProduct(a, b) - outerProduct(b, a);
+}
+
+mat4 tilt(vec4 a, vec4 b)
+{
+	return outerProduct(a, b) - outerProduct(b, a);
+}
+
 
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI (PI / 2.0)
