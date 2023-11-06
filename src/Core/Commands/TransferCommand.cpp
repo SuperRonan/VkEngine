@@ -1027,9 +1027,7 @@ namespace vkl
 
 	void UploadResources::execute(ExecutionContext& ctx, UploadInfo const& ui)
 	{
-		assert(!!ui.holder);
-
-		ResourcesToUpload resources = ui.holder->getResourcesToUpload();
+		const ResourcesToUpload & resources = ui.upload_list;
 
 		// TODO one single barrier (assuming no aliasing in resources)
 
@@ -1073,20 +1071,18 @@ namespace vkl
 
 	void UploadResources::execute(ExecutionContext& ctx)
 	{
+		ResourcesToUpload list = _holder->getResourcesToUpload();
 		UploadInfo ui{
-			.holder = _holder,
+			.upload_list = std::move(list),
 		};
 		execute(ctx, ui);
 	}
 
 	Executable UploadResources::with(UploadInfo const& ui)
 	{
-		const UploadInfo _ui{
-			.holder = ui.holder ? ui.holder : _holder,
-		};
-		return [this, _ui](ExecutionContext & ctx)
+		return [this, ui](ExecutionContext & ctx)
 		{
-			execute(ctx, _ui);
+			execute(ctx, ui);
 		};
 	}
 }

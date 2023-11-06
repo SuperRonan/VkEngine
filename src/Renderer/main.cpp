@@ -299,10 +299,10 @@ namespace vkl
 					pip.setPosition(mouse.getReleasedPos(1) / glm::vec2(window->extent2D().value().width, window->extent2D().value().height));
 				}
 
+				std::shared_ptr<UpdateContext> update_context = resources_manager.beginUpdateCycle();
 				{
 					scene->prepareForRendering();
 
-					std::shared_ptr<UpdateContext> update_context = resources_manager.beginUpdateCycle();
 					
 					exec.updateResources(*update_context);
 					scene->updateResources(*update_context);
@@ -312,19 +312,20 @@ namespace vkl
 					
 					resources_manager.finishUpdateCycle(update_context);
 				}
-				{
-					ExecutionThread * ptr_exec_thread = exec.beginCommandBuffer();
-					ExecutionThread& exec_thread = *ptr_exec_thread;
-
-					
+				{	
 					{
+						ExecutionThread * upload_thread = exec.beginCommandBuffer();
 						UploadResources uploader(UploadResources::CI{
 							.app = this,
 						});
-						exec_thread(uploader(UploadResources::UI{
-							.holder = scene,
+						(*upload_thread)(uploader(UploadResources::UI{
+							.upload_list = update_context->resourcesToUpload(),
 						}));
+						exec.endCommandBuffer(upload_thread);
 					}
+					
+					ExecutionThread * ptr_exec_thread = exec.beginCommandBuffer();
+					ExecutionThread& exec_thread = *ptr_exec_thread;
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);

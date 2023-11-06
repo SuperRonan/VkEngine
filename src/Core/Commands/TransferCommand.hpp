@@ -491,7 +491,7 @@ namespace vkl
 
 		struct UploadInfo
 		{
-			std::shared_ptr<ResourcesHolder> holder = nullptr;
+			ResourcesToUpload upload_list = {};
 		};
 		using UI = UploadInfo;
 

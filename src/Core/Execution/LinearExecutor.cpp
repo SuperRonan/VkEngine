@@ -221,6 +221,35 @@ namespace vkl
 		return res;
 	}
 
+	ExecutionThread* LinearExecutor::beginTransferCommandBuffer()
+	{
+		std::shared_ptr<CommandBuffer> cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
+			.name = name() + ".TransferCommandBuffer_" + std::to_string(_cb_count),
+			.pool = _app->pools().transfer,
+		});
+		++_cb_count;
+		cb->begin();
+		_context.setCommandBuffer(cb);
+
+		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true);
+		event->cb = cb;
+		event->queue = application()->queues().transfer;
+		if (_latest_synch_cb && _latest_synch_cb->queue != event->queue) // No need to synch with a semaphore on the same queue
+		{
+			event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
+		}
+		_latest_synch_cb = event;
+
+		assert(_current_thread == nullptr);
+		ExecutionThread* res = new ExecutionThread(ExecutionThread::CI{
+			.app = application(),
+			.name = name() + ".ExecutionThread",
+			.context = &_context,
+		});
+		_current_thread = res;
+		return res;
+	}
+
 	void LinearExecutor::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
 	{
 		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;

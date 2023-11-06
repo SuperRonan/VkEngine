@@ -72,6 +72,10 @@
 - [ ] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
 - [ ] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
+- [ ] Window:
+	- [ ] Correct HDR support (also ImGui)
+	- [ ] Fullscreen
+	- [ ] Resized by the application
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib

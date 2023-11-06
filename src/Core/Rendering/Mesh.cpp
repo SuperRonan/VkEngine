@@ -540,44 +540,41 @@ namespace vkl
 		assert(_device.loaded());
 		ResourcesToUpload res;
 
-		if(!_device.up_to_date)
-		{
-			std::vector<PositionedObjectView> sources(3);
 		
-			const MeshHeader header = getHeader();
+		std::vector<PositionedObjectView> sources(3);
+		
+		const MeshHeader header = getHeader();
 
-			sources[0] = PositionedObjectView{
-				.obj = header,
-				.pos = 0,
+		sources[0] = PositionedObjectView{
+			.obj = header,
+			.pos = 0,
+		};
+
+		if (_host.use_full_vertices)
+		{
+			sources[1] = PositionedObjectView{
+				.obj = _host.vertices,
+				.pos = _device.header_size,
 			};
-
-			if (_host.use_full_vertices)
-			{
-				sources[1] = PositionedObjectView{
-					.obj = _host.vertices,
-					.pos = _device.header_size,
-				};
-			}
-			else
-			{
-				sources[1] = PositionedObjectView{
-					.obj = _host.positions,
-					.pos = _device.header_size,
-				};
-			}
-
-			sources[2] = PositionedObjectView{
-				.obj = _host.indicesView(),
-				.pos = _device.header_size + _device.vertices_size,
-			};
-
-			res.buffers.push_back(ResourcesToUpload::BufferUpload{
-				.sources = sources,
-				.dst = _device.mesh_buffer,
-			});
-			// Assuming the upload is synch
-			_device.up_to_date = true;
 		}
+		else
+		{
+			sources[1] = PositionedObjectView{
+				.obj = _host.positions,
+				.pos = _device.header_size,
+			};
+		}
+
+		sources[2] = PositionedObjectView{
+			.obj = _host.indicesView(),
+			.pos = _device.header_size + _device.vertices_size,
+		};
+
+		res.buffers.push_back(ResourcesToUpload::BufferUpload{
+			.sources = sources,
+			.dst = _device.mesh_buffer,
+		});
+
 		return res;
 	}
 
@@ -664,6 +661,15 @@ namespace vkl
 		if (_device.mesh_buffer)
 		{
 			_device.mesh_buffer->updateResource(ctx);
+
+			if (_is_synch)
+			{
+				if (!_device.up_to_date)
+				{
+					ctx.resourcesToUpload() += getResourcesToUpload();
+					_device.up_to_date = true;
+				}
+			}
 		}
 	}
 

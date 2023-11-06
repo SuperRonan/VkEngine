@@ -74,7 +74,7 @@ namespace vkl
 		using mat3 = Matrix3;
 
 		Type _type = Type::None;
-
+		bool _is_synch = true;
 
 	public:
 

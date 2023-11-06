@@ -110,9 +110,7 @@ namespace vkl
 
 		void updateResources(UpdateContext & context);
 
-		//ExecutionThread* beginTransferCommandBuffer(bool synch);
-
-		//void endTransferCommandBufferAndSubmit(ExecutionThread * thread);
+		ExecutionThread* beginTransferCommandBuffer();
 
 		ExecutionThread * beginCommandBuffer(bool bind_common_set = true);
 

@@ -78,6 +78,16 @@ namespace vkl
 		{
 			_sampler->updateResources(ctx);
 		}
+
+		if (_should_update_props_buffer)
+		{
+			const Properties props = getProperties();
+			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
+				.sources = {PositionedObjectView{.obj = props, .pos = 0}},
+				.dst = _props_buffer,
+			};
+			_should_update_props_buffer = false;
+		}
 	}
 
 	ResourcesToUpload PhysicallyBasedMaterial::getResourcesToUpload()
@@ -95,6 +105,7 @@ namespace vkl
 		{
 			res += _albedo_texture->getResourcesToUpload();
 		}
+
 		return res;
 	}
 

@@ -309,5 +309,9 @@ namespace vkl
 		{
 			node->updateResources(ctx);
 		});
+
+		{
+			ctx.resourcesToUpload() += getResourcesToUpload();
+		}
 	}
 }

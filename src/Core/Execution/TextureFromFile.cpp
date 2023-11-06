@@ -127,14 +127,14 @@ namespace vkl
 
 		if (_is_synch)
 		{
-			//if (_should_update && !!_image)
-			//{
-			//	ctx.resourcesToUpload() += ResourcesToUpload::ImageUpload{
-			//		.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-			//		.dst = _image_view,
-			//	};
-			//	_should_update = false;
-			//}
+			if (_should_update && !!_image)
+			{
+				ctx.resourcesToUpload() += ResourcesToUpload::ImageUpload{
+					.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
+					.dst = _image_view,
+				};
+				_should_update = false;
+			}
 		}
 		else
 		{
