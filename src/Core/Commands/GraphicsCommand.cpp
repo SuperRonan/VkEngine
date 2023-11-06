@@ -440,24 +440,23 @@ namespace vkl
 			}
 
 			// Hack solution to not trigger a synch validation error -> will have to rewrite the synch helper soon 
-			if (to_draw.vertex_buffers.size() == 1 && to_draw.index_buffer == to_draw.vertex_buffers[0].buffer)
+			//if (false && to_draw.vertex_buffers.size() == 1 && to_draw.index_buffer == to_draw.vertex_buffers[0].buffer)
+			//{
+			//	Buffer::Range range;
+			//	range.begin = std::min(to_draw.index_buffer_range.begin, to_draw.vertex_buffers[0].range.begin);
+			//	size_t end = std::max(to_draw.index_buffer_range.end(), to_draw.vertex_buffers[0].range.end());
+			//	range.len = end - range.begin;
+			//	synch.addSynch(Resource{
+			//		._buffer = to_draw.index_buffer,
+			//		._buffer_range = range,
+			//		._begin_state = ResourceState2{
+			//			.access = VK_ACCESS_2_INDEX_READ_BIT | VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+			//			.stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT,
+			//		},
+			//	});
+			//}
+			//else
 			{
-				Buffer::Range range;
-				range.begin = std::min(to_draw.index_buffer_range.begin, to_draw.vertex_buffers[0].range.begin);
-				size_t end = std::max(to_draw.index_buffer_range.end(), to_draw.vertex_buffers[0].range.end());
-				range.len = end - range.begin;
-				synch.addSynch(Resource{
-					._buffer = to_draw.index_buffer,
-					._buffer_range = range,
-					._begin_state = ResourceState2{
-						.access = VK_ACCESS_2_INDEX_READ_BIT | VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-					},
-				});
-			}
-			else
-			{
-
 				if (to_draw.index_buffer)
 				{
 					synch.addSynch(Resource{

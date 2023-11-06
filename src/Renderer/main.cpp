@@ -318,7 +318,7 @@ namespace vkl
 						UploadResources uploader(UploadResources::CI{
 							.app = this,
 						});
-						(*upload_thread)(uploader(UploadResources::UI{
+						(*upload_thread)(uploader.with(UploadResources::UI{
 							.upload_list = update_context->resourcesToUpload(),
 						}));
 						exec.endCommandBuffer(upload_thread);
