@@ -57,6 +57,7 @@ namespace vkl
 			execute(executable);
 		}
 
+		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);
 	};
 
 	class Executor : public VkObject

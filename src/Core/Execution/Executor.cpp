@@ -91,4 +91,21 @@ namespace vkl
 		executable(*_context);
 	}
 
+	void ExecutionThread::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
+	{
+		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;
+		if (bind_graphics)
+		{
+			_context->graphicsBoundSets().bind(s, inst);
+		}
+		if (bind_compute)
+		{
+			_context->computeBoundSets().bind(s, inst);
+		}
+		if (bind_rt)
+		{
+			_context->rayTracingBoundSets().bind(s, inst);
+		}
+	}
+
 }

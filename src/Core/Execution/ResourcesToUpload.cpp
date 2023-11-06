@@ -1,4 +1,5 @@
 #include "ResourcesToUpload.hpp"
+#include <Core/Utils/stl_extension.hpp>
 
 namespace vkl
 {

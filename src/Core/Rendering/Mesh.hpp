@@ -266,6 +266,7 @@ namespace vkl
 		struct DeviceData
 		{
 			uint32_t num_indices = 0;
+			uint32_t num_vertices = 0;
 			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
 
 			std::shared_ptr<Buffer> mesh_buffer = nullptr;

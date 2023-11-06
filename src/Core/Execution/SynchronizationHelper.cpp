@@ -61,6 +61,10 @@ namespace vkl
 		}
 		else if (r.isBuffer())
 		{
+			if (r._buffer->name() == ".mesh_buffer"s)
+			{
+				int _ = 0;
+			}
 			_resources.push_back(r);
 			assert(r._buffer->instance());
 			Buffer::Range range = r._buffer_range.value();
@@ -136,6 +140,10 @@ namespace vkl
 			ResourceState2 const& s = r._end_state.value_or(r._begin_state);
 			if (r.isBuffer())
 			{
+				if (r._buffer->name() == ".mesh_buffer"s)
+				{
+					int _ = 0;
+				}
 				r._buffer->instance()->setState(_ctx.resourceThreadId(), r._buffer_range.value(), s);
 				_ctx.keppAlive(r._buffer->instance());
 			}

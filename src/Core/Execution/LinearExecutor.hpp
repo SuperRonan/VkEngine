@@ -15,12 +15,9 @@ namespace vkl
 	protected:
 
 		size_t _frame_index = size_t(-1);
+		size_t _cb_count = 0;
 
 		std::shared_ptr<VkWindow> _window = nullptr;
-
-		VkWindow::AquireResult _aquired;
-
-		std::shared_ptr<CommandBuffer> _command_buffer_to_submit = nullptr;
 
 		StagingPool _staging_pool;
 
@@ -35,19 +32,58 @@ namespace vkl
 
 		ExecutionThread * _current_thread = nullptr;
 
-		struct InBetween
-		{
-			std::shared_ptr<CommandBuffer> prev_cb = nullptr;
-			std::shared_ptr<CommandBuffer> next_cb = nullptr;
-			std::vector<std::shared_ptr<Fence>> fences = {};
-			std::shared_ptr<Semaphore> semaphore = nullptr;
+		// Event is not a good name imo (means something else in vulkan)
+		struct Event : public VkObject
+		{	
+			enum class Type {
+				CommandBuffer,
+				SwapchainAquire,
+				Present,
+				MAX_ENUM,
+			};
+			Type type = Type::MAX_ENUM;
+			
+			std::shared_ptr<CommandBuffer> cb = nullptr;
+			VkQueue queue = VK_NULL_HANDLE;
+			
+			std::shared_ptr<SwapchainInstance> swapchain = nullptr;
+			uint32_t aquired_id = -1;
+
+			std::vector<std::shared_ptr<Semaphore>> wait_semaphores = {};
+			std::shared_ptr<Semaphore> signal_semaphore = nullptr;
+
+			//std::vector<std::shared_ptr<Fence>> wait_fences = {};
+			std::shared_ptr<Fence> signal_fence = nullptr;
+
 			std::vector<std::shared_ptr<VkObject>> dependecies = {};
+
+			uint32_t finish_counter = 4;			
+
+			Event(VkApplication* app, std::string name, Type type, bool create_synch):
+				VkObject(app, name),
+				type(type)
+			{
+				if (create_synch)
+				{
+					signal_semaphore = std::make_shared<Semaphore>(application(), this->name() + ".SignalSemaphore");
+					signal_fence = std::make_shared<Fence>(application(), this->name() + ".SignalFence");
+				}
+			}
+
+			virtual ~Event() override
+			{
+				int _ = 0;
+			}
 		};
 
-		void stackInBetween();
+		std::queue<std::shared_ptr<Event>> _previous_events = {};
 
-		std::queue<InBetween> _previous_in_betweens;
-		InBetween _in_between;
+		std::vector<std::shared_ptr<Event>> _pending_cbs = {};
+		
+		std::shared_ptr<Event> _latest_synch_cb = nullptr;
+		std::shared_ptr<Event> _latest_aquire_event = nullptr;
+
+		void recyclePreviousEvents();
 
 	public:
 
@@ -70,9 +106,13 @@ namespace vkl
 
 		virtual void init() override final;
 
+		void AquireSwapchainImage();
+
 		void updateResources(UpdateContext & context);
 
-		void beginFrame();
+		//ExecutionThread* beginTransferCommandBuffer(bool synch);
+
+		//void endTransferCommandBufferAndSubmit(ExecutionThread * thread);
 
 		ExecutionThread * beginCommandBuffer(bool bind_common_set = true);
 
@@ -82,7 +122,9 @@ namespace vkl
 
 		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
 
-		void endCommandBufferAndSubmit(ExecutionThread * exec_thread);
+		void endCommandBuffer(ExecutionThread * exec_thread, bool submit = false);
+
+		void submit();
 
 		void present();
 
@@ -92,15 +134,6 @@ namespace vkl
 
 		virtual void execute(Executable const& executable);
 
-		void submit();
-
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) override final;
-
-		void waitForCurrentCompletion(uint64_t timeout = UINT64_MAX);
-
-		std::shared_ptr<CommandBuffer> getCommandBuffer()
-		{
-			return _command_buffer_to_submit;
-		}
 	};
 }

@@ -119,18 +119,26 @@ namespace vkl
 
 	void TextureFromFile::updateResources(UpdateContext& ctx)
 	{
-		if (_is_synch)
-		{
-			
-		}
-		else
-		{
-
-		}
 
 		if (_image_view)
 		{
 			_image_view->updateResource(ctx);
+		}
+
+		if (_is_synch)
+		{
+			//if (_should_update && !!_image)
+			//{
+			//	ctx.resourcesToUpload() += ResourcesToUpload::ImageUpload{
+			//		.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
+			//		.dst = _image_view,
+			//	};
+			//	_should_update = false;
+			//}
+		}
+		else
+		{
+
 		}
 	}
 

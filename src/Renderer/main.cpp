@@ -218,7 +218,7 @@ namespace vkl
 
 			struct InputState
 			{
-
+				
 			};
 			InputState input_state;
 
@@ -313,7 +313,6 @@ namespace vkl
 					resources_manager.finishUpdateCycle(update_context);
 				}
 				{
-					exec.beginFrame();
 					ExecutionThread * ptr_exec_thread = exec.beginCommandBuffer();
 					ExecutionThread& exec_thread = *ptr_exec_thread;
 
@@ -327,20 +326,25 @@ namespace vkl
 						}));
 					}
 
-					exec.bindSet(1, scene->set());
+					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
 
 					pip.execute(exec_thread);
 
-					exec.bindSet(1, nullptr);
+					exec_thread.bindSet(1, nullptr);
 
 					exec.renderDebugIFP();
 					ImGui::Render();
+					exec.endCommandBuffer(ptr_exec_thread);
+
+					ptr_exec_thread = exec.beginCommandBuffer(false);
+					exec.AquireSwapchainImage();
 					exec.preparePresentation(final_image);
 					
 					ImGui::UpdatePlatformWindows();
 					ImGui::RenderPlatformWindowsDefault();
-					exec.endCommandBufferAndSubmit(ptr_exec_thread);
+					exec.endCommandBuffer(ptr_exec_thread);
+					exec.submit();
 					exec.present();
 
 

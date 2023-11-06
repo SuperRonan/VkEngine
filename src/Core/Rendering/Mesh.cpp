@@ -469,6 +469,7 @@ namespace vkl
 		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
 		_device.num_indices = header.num_indices;
+		_device.num_vertices = header.num_vertices;
 		_device.index_type = _host.index_type;
 		
 		_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
@@ -498,12 +499,29 @@ namespace vkl
 		vr.draw_count = _device.num_indices;
 		vr.instance_count = 1;
 		vr.index_buffer = _device.mesh_buffer;
-		vr.index_buffer_range = {.begin = _device.vertices_size + _device.header_size, .len = _device.indices_size};
+		const size_t index_size = [&]() {
+			size_t res = 0;
+			switch (_device.index_type)
+			{
+				case VK_INDEX_TYPE_UINT16:
+					res = 2;
+				break;
+				case VK_INDEX_TYPE_UINT32:
+					res = 4;
+				break;
+				case VK_INDEX_TYPE_UINT8_EXT:
+					res = 1;
+				break;
+			}
+			return res;
+		}();
+		vr.index_buffer_range = {.begin = _device.vertices_size + _device.header_size, .len = _device.num_indices * index_size};
 		vr.index_type = _device.index_type;
+		size_t vertex_size = _host.use_full_vertices ? sizeof(Vertex) : (_host.dims * sizeof(float));
 		vr.vertex_buffers = {
 			VertexBuffer{
 				.buffer = _device.mesh_buffer,
-				.range = {.begin = _device.header_size, .len = _device.vertices_size},
+				.range = {.begin = _device.header_size, .len = _device.num_vertices * vertex_size},
 			},
 		};
 	}
@@ -557,6 +575,8 @@ namespace vkl
 				.sources = sources,
 				.dst = _device.mesh_buffer,
 			});
+			// Assuming the upload is synch
+			_device.up_to_date = true;
 		}
 		return res;
 	}

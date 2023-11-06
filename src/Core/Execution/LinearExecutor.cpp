@@ -73,9 +73,9 @@ namespace vkl
 		{
 			ExecutionThread * thread = beginCommandBuffer(false);
 			{
-				ImGui_ImplVulkan_CreateFontsTexture(*_command_buffer_to_submit);
+				ImGui_ImplVulkan_CreateFontsTexture(thread->context()->getCommandBuffer()->handle());
 			}
-			endCommandBufferAndSubmit(thread);
+			endCommandBuffer(thread, true);
 		}
 
 		// TODO load debug renderer font here?
@@ -94,24 +94,34 @@ namespace vkl
 		_internal_resources.update(context);
 	}
 
-	void LinearExecutor::beginFrame()
+	//ExecutionThread* LinearExecutor::beginTransferCommandBuffer(bool synch)
+	//{
+	//	std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
+	//	assert(!cb);
+	//	cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
+	//		.name = name() + ".Frame_" + std::to_string(_frame_index) + ".TransferCommandBuffer",
+	//		.pool = _app->pools().transfer
+	//	});
+	//	cb->begin();
+	//	_context.setCommandBuffer(cb);
+
+	//	ExecutionThread * res;
+	//}
+
+	void LinearExecutor::AquireSwapchainImage()
 	{
 		++_frame_index;
 
-		//vkDeviceWaitIdle(device());
-		std::shared_ptr frame_semaphore = std::make_shared<Semaphore>(_app, name() + ".BeginFrame_" + std::to_string(_frame_index) + ".Semaphore");
-		_context.keppAlive(frame_semaphore);
-		std::shared_ptr prev_semaphore = _in_between.semaphore;
-		stackInBetween();
-		_in_between = InBetween{
-			.prev_cb = nullptr,
-			.next_cb = nullptr,
-			.fences = {std::make_shared<Fence>(_app, name() + ".BeginFrame_" + std::to_string(_frame_index) + ".Fence")},
-			.semaphore = frame_semaphore,
-		};
-		_aquired = _window->aquireNextImage(_in_between.semaphore, _in_between.fences[0]);
-		assert(_aquired.swap_index < _window->swapchainSize());
-		_context.keppAlive(prev_semaphore);
+
+		std::shared_ptr<Event> event = std::make_shared<Event>(application(), name() + ".AquireFrame_" + std::to_string(_frame_index), Event::Type::SwapchainAquire, true);
+
+		VkWindow::AquireResult aquired = _window->aquireNextImage(event->signal_semaphore, event->signal_fence);
+		event->swapchain = _window->swapchain()->instance();
+		event->aquired_id = aquired.swap_index;
+		assert(aquired.swap_index < _window->swapchainSize());
+		_latest_aquire_event = event;
+		_previous_events.push(std::move(event));
+		
 		int _ = 0;
 	}
 
@@ -125,17 +135,18 @@ namespace vkl
 
 	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui)
 	{
-		assert(!!_command_buffer_to_submit);
-		std::shared_ptr<ImageView> blit_target = _window->view(_aquired.swap_index);
+		assert(_latest_aquire_event);
+		_latest_synch_cb->wait_semaphores.push_back(_latest_aquire_event->signal_semaphore);
 
+		std::shared_ptr<ImageView> blit_target = _window->view(_latest_aquire_event->aquired_id);
 		execute((*_blit_to_present)(BlitImage::BI{
 			.src = img_to_present,
 			.dst = blit_target,
-			}));
+		}));
 
 		if (render_ImGui && _render_gui)
 		{
-			_render_gui->setIndex(_aquired.swap_index);
+			_render_gui->setIndex(_latest_aquire_event->aquired_id);
 			execute(_render_gui);
 		}
 
@@ -155,7 +166,9 @@ namespace vkl
 
 	void LinearExecutor::present()
 	{
-		VkSemaphore sem_to_wait = *_in_between.semaphore;
+		//std::cout << "Present: " << std::endl;
+		//std::cout << "Waiting on semaphore " << _latest_synch_cb->signal_semaphore->name() << std::endl;
+		VkSemaphore sem_to_wait = _latest_synch_cb->signal_semaphore->handle();
 		_window->present(1, &sem_to_wait);
 	}
 
@@ -176,28 +189,28 @@ namespace vkl
 
 	ExecutionThread * LinearExecutor::beginCommandBuffer(bool bind_common_set)
 	{
-		std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
-		assert(!cb);
-		cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
-			.name = name() + ".Frame_" + std::to_string(_frame_index) + ".CommandBuffer",
+		std::shared_ptr<CommandBuffer> cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
+			.name = name() + ".CommandBuffer_" + std::to_string(_cb_count),
 			.pool = _app->pools().graphics
-			});
+		});
+		++_cb_count;
 		cb->begin();
 		_context.setCommandBuffer(cb);
 
 		if (bind_common_set)
 		{
-			if (_common_descriptor_set->instance()->exists())
-			{
-				_context.graphicsBoundSets().bind(0, _common_descriptor_set->instance());
-				_context.computeBoundSets().bind(0, _common_descriptor_set->instance());
-				if (_use_rt_pipeline)
-				{
-					_context.rayTracingBoundSets().bind(0, _common_descriptor_set->instance());
-				}
-			}
+			bindSet(0, _common_descriptor_set, true, true, _use_rt_pipeline);
 		}
 
+		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true);
+		event->cb = cb;
+		event->queue = application()->queues().graphics;
+		if (_latest_synch_cb && _latest_synch_cb->queue != event->queue) // No need to synch with a semaphore on the same queue
+		{
+			event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
+		}
+		_latest_synch_cb = event;
+		
 		assert(_current_thread == nullptr);
 		ExecutionThread* res = new ExecutionThread(ExecutionThread::CI{
 			.app = application(),
@@ -225,128 +238,106 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::endCommandBufferAndSubmit(ExecutionThread * exec_thread)
+	void LinearExecutor::endCommandBuffer(ExecutionThread * exec_thread, bool submit)
 	{
+		std::shared_ptr<CommandBuffer> cb = _context.getCommandBuffer();
 		assert(exec_thread == _current_thread);
-		delete _current_thread;
+		delete exec_thread;
 		_current_thread = nullptr;
-		std::shared_ptr<CommandBuffer> cb = _command_buffer_to_submit;
 		_context.setCommandBuffer(nullptr);
 
 		cb->end();
 
-		submit();
+		_pending_cbs.push_back(_latest_synch_cb);
+		_latest_synch_cb->dependecies = std::move(_context.objectsToKeepAlive());
+		_context.objectsToKeepAlive().clear();
+
+		if (submit)
+		{
+			this->submit();
+		}
 	}
 
-	void LinearExecutor::stackInBetween()
+	void LinearExecutor::recyclePreviousEvents()
 	{
-		_in_between.dependecies = std::move(_context._objects_to_keep);
-		_context._objects_to_keep.clear();
-
-		// Removed finished in betweens
-		while (!_previous_in_betweens.empty())
+		// TODO Really Recycle events resources (fences, semaphores)
+		// Removed finished Events
+		while (!_previous_events.empty())
 		{
-			InBetween& inb = _previous_in_betweens.front();
-			assert(!inb.fences.empty());
-			bool all_success = true;
-			for (const auto& fence : inb.fences)
-			{
-				const VkResult res = vkGetFenceStatus(fence->device(), *fence);
-				if (res == VK_NOT_READY)
-				{
-					all_success = false;
-					break;
-				}
-				// TODO check device lost
-			}
-			if (all_success)
-			{
-				// We can remove the inb
-				inb = {};
-				_previous_in_betweens.pop();
-			}
-			else
+			std::shared_ptr<Event> event = _previous_events.front();
+			
+			const VkResult res = vkGetFenceStatus(device(), event->signal_fence->handle());
+			if (res == VK_NOT_READY)
 			{
 				break;
 			}
-		}
-		// Stack the in between
-		if (!_in_between.fences.empty())
-		{
-			_previous_in_betweens.push(_in_between);
-			_in_between = InBetween{};
+			assert(res == VK_SUCCESS);
+			// TODO check device lost
+
+			//if (event->finish_counter != 0)
+			//{
+			//	--event->finish_counter;
+			//	break;
+			//}
+
+			
+			//std::cout << "Event " << event->name() << " is Finished!" << std::endl;
+			_previous_events.pop();
+			
 		}
 	}
 
 	void LinearExecutor::submit()
 	{
-		std::shared_ptr<Semaphore> sem_to_wait = _in_between.semaphore;
-		VkSemaphore vk_sem_to_wait = [&]() -> VkSemaphore {
-			if (_in_between.semaphore)	return *_in_between.semaphore;
-			return VK_NULL_HANDLE;
-		}();
+		recyclePreviousEvents();
+		
+		std::vector<VkSemaphore> sem_to_wait;
+		std::vector<VkPipelineStageFlags> stage_to_wait;
+		for (size_t i = 0; i < _pending_cbs.size(); ++i)
+		{
+			const std::shared_ptr<Event> & pending = _pending_cbs[i];
+			//std::cout << "Submit: " <<std::endl;
+			//std::cout << "Signaling semaphore: " << pending->signal_semaphore->name() <<std::endl;
+			//std::cout << "Waiting on semaphores: ";
+			sem_to_wait.resize(pending->wait_semaphores.size());
+			stage_to_wait.resize(pending->wait_semaphores.size());
+			for (size_t s = 0; s < sem_to_wait.size(); ++s)
+			{
+				sem_to_wait[s] = pending->wait_semaphores[s]->handle();
+				stage_to_wait[s] = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				//std::cout << pending->wait_semaphores[s]->name() << ", ";
+			}
+			//std::cout << std::endl;
+			VkCommandBuffer vk_cb = pending->cb->handle();
+			VkSemaphore sem_to_signal = pending->signal_semaphore->handle();
 
-		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		std::shared_ptr<Fence> submit_fence = std::make_shared<Fence>(_app, name() + ".Frame_" + std::to_string(_frame_index) + ".SubmitFence");
+			VkSubmitInfo submission{
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.waitSemaphoreCount = static_cast<uint32_t>(sem_to_wait.size()),
+				.pWaitSemaphores = sem_to_wait.data(),
+				.pWaitDstStageMask = stage_to_wait.data(),
+				.commandBufferCount = 1,
+				.pCommandBuffers = &vk_cb,
+				.signalSemaphoreCount = 1,
+				.pSignalSemaphores = &sem_to_signal,
+			};
+			VkFence fence_to_signal = pending->signal_fence->handle();
+			assert(pending->queue);
+			VkResult res = vkQueueSubmit(pending->queue, 1, &submission, fence_to_signal);
+			VK_CHECK(res, "Failed submission");
+			_previous_events.push(pending);
+		}
+		_pending_cbs.clear();
 
-		_in_between.next_cb = _command_buffer_to_submit;
-		_in_between.fences.push_back(submit_fence);
-
-		std::shared_ptr sem_to_signal = std::make_shared<Semaphore>(_app, name() + ".Frame_" + std::to_string(_frame_index) + ".SubmitSemaphore");
-		_context.keppAlive(sem_to_signal);
-		stackInBetween();
-
-		VkCommandBuffer cb = *_command_buffer_to_submit;
-
-
-		_in_between = InBetween{
-			.prev_cb = _command_buffer_to_submit,
-			.next_cb = nullptr,
-			.fences = {submit_fence},
-			.semaphore = sem_to_signal,
-		};
-		if(sem_to_wait)
-			_context.keppAlive(sem_to_wait);
-
-		VkSemaphore vk_sem_to_signal = *_in_between.semaphore;
-
-		const bool wait_on_sem = sem_to_wait != VK_NULL_HANDLE;
-
-		VkSubmitInfo submission{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.waitSemaphoreCount = wait_on_sem ? 1u : 0u,
-			.pWaitSemaphores = wait_on_sem ? &vk_sem_to_wait : nullptr,
-			.pWaitDstStageMask = &wait_stage,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &cb,
-			.signalSemaphoreCount = 1,
-			.pSignalSemaphores = &vk_sem_to_signal,
-		};
-
-		vkQueueSubmit(_app->queues().graphics, 1, &submission, *_in_between.fences[0]);
-
-		_command_buffer_to_submit = nullptr;
 	}
 
 	void LinearExecutor::waitForAllCompletion(uint64_t timeout)
 	{
-		while (!_previous_in_betweens.empty())
+		while (!_previous_events.empty())
 		{
-			InBetween& inb = _previous_in_betweens.front();
-			for (auto& fence : inb.fences)
-			{
-				fence->wait(timeout);
-			}
-			_previous_in_betweens.pop();
-		}
-		waitForCurrentCompletion(timeout);
-	}
-
-	void LinearExecutor::waitForCurrentCompletion(uint64_t timeout)
-	{
-		if (!_in_between.fences.empty())
-		{
-			_in_between.fences.back()->wait(timeout);
+			Event& event = *_previous_events.front();
+			event.signal_fence->wait(timeout);
+			_previous_events.pop();
 		}
 	}
 }

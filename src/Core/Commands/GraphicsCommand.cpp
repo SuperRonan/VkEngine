@@ -22,6 +22,7 @@ namespace vkl
 
 	void GraphicsCommand::createGraphicsResources()
 	{
+		using namespace std::containers_operators;
 		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
 		std::vector<VkAttachmentDescription2> at_desc(n_color);
 		std::vector<VkAttachmentReference2> at_ref(n_color);
@@ -84,13 +85,15 @@ namespace vkl
 			.inputAttachmentCount = 0,
 			.pInputAttachments = nullptr,
 			.colorAttachmentCount = n_color,
-			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the data is copied
+			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the ptr is copied, assuming the data is copied later
 			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = render_depth ? (at_ref.data() + n_color) : nullptr,
+			.pDepthStencilAttachment = render_depth ? (at_ref.data() + n_color) : nullptr, // Warning this is unsafe, the ptr is copied, assuming the data is copied later
 			.preserveAttachmentCount = 0,
 			.pPreserveAttachments = nullptr,
 		};
-		VkSubpassDependency2 dependency = {
+		std::vector<VkSubpassDependency2> dependencies;
+
+		VkSubpassDependency2 color_dependency = {
 			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
 			.pNext = nullptr,
 			.srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -98,13 +101,24 @@ namespace vkl
 			.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			.srcAccessMask = VK_ACCESS_NONE,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
 		};
-		
-		//if (render_depth)
-		//{
-		//	dependency.dstAccessMask |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		//}
+		dependencies.push_back(color_dependency);
+
+		if (render_depth)
+		{
+			VkSubpassDependency2 depth_dependency = {
+				.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+				.pNext = nullptr,
+				.srcSubpass = VK_SUBPASS_EXTERNAL,
+				.dstSubpass = 0,
+				.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+				.srcAccessMask = VK_ACCESS_NONE,
+				.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, // TODO if read depth
+			};
+			dependencies.push_back(depth_dependency);
+		}
 
 		_render_pass = std::make_shared <RenderPass>(RenderPass::CI{
 			.app = application(),
@@ -112,7 +126,7 @@ namespace vkl
 			.attachement_descriptors = at_desc,
 			.attachement_ref_per_subpass = {at_ref},
 			.subpasses = {subpass},
-			.dependencies = {dependency},
+			.dependencies = dependencies,
 			.last_is_depth = render_depth,
 		});
 
@@ -133,7 +147,7 @@ namespace vkl
 			synch.addSynch(Resource{
 				._image = view,
 				._begin_state = ResourceState2{
-					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, // TODO add read bit if alpha blending 
+					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT, // TODO add read bit if alpha blending 
 					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
@@ -425,28 +439,48 @@ namespace vkl
 				already_sync.emplace(to_draw.set.get());
 			}
 
-			if (to_draw.index_buffer)
+			// Hack solution to not trigger a synch validation error -> will have to rewrite the synch helper soon 
+			if (to_draw.vertex_buffers.size() == 1 && to_draw.index_buffer == to_draw.vertex_buffers[0].buffer)
 			{
+				Buffer::Range range;
+				range.begin = std::min(to_draw.index_buffer_range.begin, to_draw.vertex_buffers[0].range.begin);
+				size_t end = std::max(to_draw.index_buffer_range.end(), to_draw.vertex_buffers[0].range.end());
+				range.len = end - range.begin;
 				synch.addSynch(Resource{
 					._buffer = to_draw.index_buffer,
-					._buffer_range = to_draw.index_buffer_range,
+					._buffer_range = range,
 					._begin_state = ResourceState2{
-						.access = VK_ACCESS_2_INDEX_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+						.access = VK_ACCESS_2_INDEX_READ_BIT | VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
 					},
 				});
 			}
-
-			for (VertexBuffer vb : to_draw.vertex_buffers)
+			else
 			{
-				synch.addSynch(Resource{
-					._buffer = vb.buffer,
-					._buffer_range = vb.range,
-					._begin_state = ResourceState2{
-						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-					},
-				});
+
+				if (to_draw.index_buffer)
+				{
+					synch.addSynch(Resource{
+						._buffer = to_draw.index_buffer,
+						._buffer_range = to_draw.index_buffer_range,
+						._begin_state = ResourceState2{
+							.access = VK_ACCESS_2_INDEX_READ_BIT,
+							.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+						},
+					});
+				}
+			
+				for (VertexBuffer vb : to_draw.vertex_buffers)
+				{
+					synch.addSynch(Resource{
+						._buffer = vb.buffer,
+						._buffer_range = vb.range,
+						._begin_state = ResourceState2{
+							.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+							.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+						},
+					});
+				}
 			}
 		}
 	}

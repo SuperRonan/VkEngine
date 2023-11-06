@@ -1,10 +1,15 @@
 #pragma once
 
-#include <Core/VkObjects/ImageView.hpp>
-#include <Core/VkObjects/Buffer.hpp>
+#include <Core/VulkanCommons.hpp>
+
+#include <vector>
 
 namespace vkl
 {
+	
+	class ImageView;
+	class Buffer;
+	
 	struct ResourcesToUpload
 	{
 		struct ImageUpload

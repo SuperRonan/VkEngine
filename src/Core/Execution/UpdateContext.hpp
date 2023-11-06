@@ -5,6 +5,7 @@
 #include "DefinitionMap.hpp"
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/Execution/ResourcesLists.hpp>
+#include <Core/Execution/ResourcesToUpload.hpp>
 
 namespace vkl
 {
@@ -23,6 +24,9 @@ namespace vkl
 
 		ResourcesLists _resources_to_update_later;
 
+		// Synchronous upload
+		ResourcesToUpload _resources_to_upload;
+		
 
 	public:
 
@@ -75,6 +79,11 @@ namespace vkl
 		ResourcesLists& resourcesToUpdateLater()
 		{
 			return _resources_to_update_later;
+		}
+
+		ResourcesToUpload& resourcesToUpload()
+		{
+			return _resources_to_upload;
 		}
 
 	};

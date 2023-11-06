@@ -777,6 +777,9 @@ namespace vkl
 			}
 			return res;
 		}();
+
+		const bool merge_synch = true;
+
 		// first consider .len as .end
 		Buffer::Range buffer_range {.begin = size_t(-1), .len = 0};
 		for (const auto& src : ui.sources)
@@ -786,16 +789,34 @@ namespace vkl
 		}
 		// now .len is .len
 		buffer_range.len = buffer_range.len - buffer_range.begin;
-
+		
 		SynchronizationHelper synch(ctx);
-		synch.addSynch(Resource{
-			._buffer = ui.dst,
-			._buffer_range = buffer_range,
-			._begin_state = {
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
-			},
-		});
+		if (merge_synch)
+		{
+			synch.addSynch(Resource{
+				._buffer = ui.dst,
+				._buffer_range = buffer_range,
+				._begin_state = {
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				},
+			});
+		}
+		else
+		{
+			for (const auto& src : ui.sources)
+			{
+				synch.addSynch(Resource{
+					._buffer = ui.dst,
+					._buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
+					._begin_state = {
+						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+					},
+				});
+			}
+		}
+		
 
 		if (use_update)
 		{
@@ -909,7 +930,7 @@ namespace vkl
 			._begin_state = {
 				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_TRANSFER_BIT,
+				.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
 			},
 		});
 

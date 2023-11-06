@@ -54,6 +54,11 @@ namespace vkl
 		{
 			return i >= begin && i < (begin + len);
 		}
+
+		constexpr UInt end()const
+		{
+			return begin + len;
+		}
 	};
 
 	using Range32 = Range<uint32_t>;

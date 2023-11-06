@@ -253,13 +253,13 @@ namespace vkl
 		{
 			const decltype(_present_time_point) now = std::chrono::system_clock::now();
 			const auto dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - _present_time_point);
-			if (dt_ms > std::chrono::milliseconds(1000))
+			const std::chrono::milliseconds period = 1000ms;
+			if (dt_ms > period)
 			{
 				const int fps = (1000 * (_current_frame - _present_frame)) / float(dt_ms.count());
 
 				std::string name_to_set = name() + " [" + std::to_string(fps) + " fps]";
 				glfwSetWindowTitle(_window, name_to_set.c_str());
-				
 				_present_time_point = now;
 				_present_frame = _current_frame;
 
