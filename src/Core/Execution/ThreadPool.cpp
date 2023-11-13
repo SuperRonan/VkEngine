@@ -26,6 +26,14 @@ namespace vkl
 		return res;
 	}
 
+	void DelayedTaskExecutor::pushTasks(const std::shared_ptr<AsynchTask>* tasks, size_t n)
+	{
+		for (size_t i = 0; i < n; ++i)
+		{
+			pushTask(tasks[i]);
+		}
+	}
+
 
 
 
@@ -56,9 +64,14 @@ namespace vkl
 					std::shared_ptr<AsynchTask> it_task = *it;
 					if (it_task->isReady())
 					{
-						it_task->run(_log_actions);
+						std::vector<std::shared_ptr<AsynchTask>> new_tasks = it_task->run(_log_actions);
 						it = _pending_tasks.erase(it);
 						
+						for (std::shared_ptr<AsynchTask> ntsk : new_tasks)
+						{
+							it = _pending_tasks.insert(it, ntsk);
+						}
+
 						none_ready = false;
 					}
 					else
@@ -127,18 +140,26 @@ namespace vkl
 			}
 			std::shared_ptr<AsynchTask> task = aquireTaskIFP(false);
 			lock.unlock();
+
+			std::vector<std::shared_ptr<AsynchTask>> new_tasks = {};
 			if (task)
 			{
 				worker->mutex.lock();
 				worker->task = task;
 				worker->mutex.unlock();
-				task->run(_log_actions);
+
+				new_tasks = task->run(_log_actions);
+				
 				worker->mutex.lock();
 				worker->task = nullptr;
 				worker->mutex.unlock();
 				_total_running_tasks_counter.fetch_sub(1);
 			}
 			transferPendingTasks(true, true);
+			if (!new_tasks.empty())
+			{
+				pushTasks(new_tasks.data(), new_tasks.size());
+			}
 			insertJustPushedTasks(true, true, true);
 		}
 	}
@@ -282,6 +303,20 @@ namespace vkl
 		_total_waiting_tasks_counter.fetch_add(1);
 		_just_pushed_tasks.push_back(task);
 		_aquire_task_condition.notify_one();
+	}
+
+	void ThreadPool::pushTasks(const std::shared_ptr<AsynchTask>* tasks, size_t n)
+	{
+		std::unique_lock lock(_just_pushed_mutex);
+		_total_waiting_tasks_counter.fetch_add(1);
+		_just_pushed_tasks.reserve(_just_pushed_tasks.size() + n);
+		// Notify one every loop, or notify all at the end
+		for (size_t i = 0; i < n; ++i)
+		{
+			std::shared_ptr<AsynchTask> ntsk = tasks[i];
+			_just_pushed_tasks.push_back(ntsk);
+			_aquire_task_condition.notify_one();
+		}
 	}
 
 	bool ThreadPool::waitAll()

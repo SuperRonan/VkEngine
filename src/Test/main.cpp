@@ -71,7 +71,7 @@ int main(int argc, const char** argv)
 
 
 	DelayedTaskExecutor* pool = DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
-		.multi_thread = false,
+		.multi_thread = true,
 		.n_threads = 0,
 	});
 
@@ -94,9 +94,24 @@ int main(int argc, const char** argv)
 		.priority = TaskPriority::ASAP(),
 		.lambda = [&]() {
 			std::this_thread::sleep_for(3s);
+			
+			std::shared_ptr<AsynchTask> t25 = std::make_shared<AsynchTask>(AsynchTask::CI{
+				.name = "Task 2.5",
+				.priority = TaskPriority{.priority = 0},
+				.lambda = [&task_value]() {
+					std::this_thread::sleep_for(2.5s);
+					task_value = 25;
+					return AsynchTask::ReturnType{
+						.success = true,
+					};
+				},
+			});
+			std::vector<std::shared_ptr<AsynchTask>> new_tasks = {t25};
+			
 			task_value = 2;
 			return AsynchTask::ReturnType{
 				.success = true,
+				.new_tasks = new_tasks,
 			};
 		},
 		.dependencies = {t1},

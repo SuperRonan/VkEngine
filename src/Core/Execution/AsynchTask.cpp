@@ -85,7 +85,7 @@ namespace vkl
 		}
 	}
 
-	void AsynchTask::run(bool verbose)
+	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(bool verbose)
 	{
 		assert(_lambda);
 		setRunning();
@@ -97,10 +97,12 @@ namespace vkl
 		if (!all_success)
 		{
 			cancel(true, verbose);
-			return;
+			return {};
 		}
 
 		bool try_run = true;
+
+		std::vector<std::shared_ptr<AsynchTask>> new_tasks = {};
 
 		while (try_run)
 		{
@@ -127,6 +129,7 @@ namespace vkl
 			if (res.success)
 			{
 				_status = Status::Success;
+				new_tasks = std::move(res.new_tasks);
 				break;
 			}
 			else
@@ -185,6 +188,7 @@ namespace vkl
 		std::unique_lock lock(_mutex);
 		assert(StatusIsFinish(_status));
 		_finish_condition.notify_all();
+		return new_tasks;
 	}
 
 	void AsynchTask::wait()

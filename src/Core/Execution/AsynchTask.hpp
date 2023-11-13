@@ -50,6 +50,7 @@ namespace vkl
 			std::function<bool(void)> auto_retry = nullptr;
 			std::string error_title = {};
 			std::string error_message = {};
+			std::vector<std::shared_ptr<AsynchTask>> new_tasks = {};
 		};
 
 		using LambdaType = std::function<ReturnType(void)>;
@@ -118,7 +119,7 @@ namespace vkl
 
 		bool isReadyOrSoonToBe()const;
 
-		void run(bool verbose);
+		std::vector<std::shared_ptr<AsynchTask>> run(bool verbose);
 
 		void wait();
 

@@ -27,6 +27,13 @@ namespace vkl
 		
 		virtual void pushTask(std::shared_ptr<AsynchTask> const& task) = 0;
 
+		virtual void pushTasks(const std::shared_ptr<AsynchTask> * tasks, size_t n);
+
+		void pushTasks(std::vector<std::shared_ptr<AsynchTask>> const& tasks)
+		{
+			pushTasks(tasks.data(), tasks.size());
+		}
+
 		// Returns true if all tasks were completed
 		// Returns false if some task could not be launched because some dependencies could not be completed
 		virtual bool waitAll() = 0;
@@ -143,6 +150,8 @@ namespace vkl
 		virtual ~ThreadPool() override;
 
 		virtual void pushTask(std::shared_ptr<AsynchTask> const& task) override;
+
+		virtual void pushTasks(const std::shared_ptr<AsynchTask> * tasks, size_t n) override;
 
 		virtual bool waitAll() override;
 
