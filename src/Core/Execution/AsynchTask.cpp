@@ -2,6 +2,8 @@
 
 #include <Core/VulkanCommons.hpp>
 
+#include <Core/Execution/MessagePopUp.hpp>
+
 #include <cassert>
 #include <algorithm>
 #include <iostream>
@@ -131,16 +133,28 @@ namespace vkl
 			{
 				if (res.can_retry)
 				{
-					MessageBeep(MB_ICONERROR);
-					int selected_option = MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_RETRYCANCEL);
-					switch (selected_option)
+					using enum MessagePopUp::Button;
+					SynchMessagePopUp popup = SynchMessagePopUp::CI{
+						.type = MessagePopUp::Type::Error,
+						.title = res.error_title,
+						.message = res.error_message,
+						.buttons = {Retry, Cancel},
+						.beep = true,
+						.log_cout = true,
+					};
+					MessagePopUp::Button selected_button = popup();
+
+					//MessageBeep(MB_ICONERROR);
+					//int selected_option = MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_RETRYCANCEL);
+					
+					switch (selected_button)
 					{
-						case IDRETRY:
+						case Retry:
 						{
 							continue;
 						}
 						break;
-						case IDCANCEL:
+						case Cancel:
 						{
 							_status = Status::AbsoluteFail;
 							try_run = false;
@@ -150,8 +164,18 @@ namespace vkl
 				}
 				else
 				{
-					MessageBeep(MB_ICONERROR);
-					MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_OK);
+					using enum MessagePopUp::Button;
+					SynchMessagePopUp popup = SynchMessagePopUp::CI{
+						.type = MessagePopUp::Type::Error,
+						.title = res.error_title,
+						.message = res.error_message,
+						.buttons = {Ok},
+						.beep = true,
+						.log_cout = true,
+					};
+					popup();
+					//MessageBeep(MB_ICONERROR);
+					//MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_OK);
 					_status = Status::AbsoluteFail;
 					try_run = false;
 				}

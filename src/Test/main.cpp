@@ -16,21 +16,6 @@ const T* f(C const& c)
 	return c.data();
 }
 
-class AsynchMessageBox
-{
-public:
-	
-protected:
-	
-	std::string _name = "Message"s;
-	std::string _content = "Caption"s;
-
-	bool _emit_beep = true;
-
-public:
-	
-};
-
 int main(int argc, const char** argv)
 {
 	using namespace vkl;
@@ -86,7 +71,7 @@ int main(int argc, const char** argv)
 
 
 	DelayedTaskExecutor* pool = DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
-		.multi_thread = true,
+		.multi_thread = false,
 		.n_threads = 0,
 	});
 
@@ -123,7 +108,7 @@ int main(int argc, const char** argv)
 		.lambda = [&]() {
 			std::this_thread::sleep_for(512ms);
 
-			if ((rand() % 3) == 0)
+			if ((rand() % 2) == 0)
 			{
 				task_value = 3;
 				return AsynchTask::ReturnType{
@@ -136,6 +121,7 @@ int main(int argc, const char** argv)
 					.success = false,
 					.can_retry = true,
 					.error_title = "Task 3",
+					.error_message = "You can retry",
 				};
 			}
 		},
