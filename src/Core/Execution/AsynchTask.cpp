@@ -1,0 +1,192 @@
+#include "AsynchTask.hpp"
+
+#include <Core/VulkanCommons.hpp>
+
+#include <cassert>
+#include <algorithm>
+#include <iostream>
+
+#include <Windows.h>
+
+namespace vkl
+{
+	
+	AsynchTask::AsynchTask(CreateInfo const& ci) :
+		_name(ci.name),
+		_priority(ci.priority),
+		_status(Status::Pending),
+		_lambda(ci.lambda),
+		_dependencies(ci.dependencies)
+	{
+
+	}
+
+	AsynchTask::~AsynchTask()
+	{
+
+	}
+
+	bool AsynchTask::isReady()const
+	{
+		std::shared_lock lock(_mutex);
+		bool res = _status == Status::Pending;
+		if (res)
+		{
+			for (const auto& dep : _dependencies)
+			{
+				Status dep_status = dep->getStatus();
+				bool dep_finish = StatusIsFinish(dep_status);
+				res &= dep_finish;
+			}
+		}
+		return res;
+	}
+
+	bool AsynchTask::isReadyOrSoonToBe()const
+	{
+		std::shared_lock lock(_mutex);
+		bool res = _status == Status::Pending;
+		if (res)
+		{
+			for (const auto& dep : _dependencies)
+			{
+				Status dep_status = dep->getStatus();
+				bool dep_finish = StatusIsFinish(dep_status) || dep_status == Status::Running;
+				res &= dep_finish;
+			}
+		}
+		return res;
+	}
+
+	void AsynchTask::cancel(bool lock_mutex, bool verbose)
+	{
+		if (lock_mutex)
+		{
+			_mutex.lock();
+		}
+		
+		if (!StatusIsFinish(_status))
+		{
+			if (verbose)
+			{
+				std::unique_lock lock(g_mutex);
+				std::cout << "Canceling task: " << name() << std::endl;
+			}
+
+			_status = Status::Canceled;
+			_finish_condition.notify_all();
+		}
+
+		if (lock_mutex)
+		{
+			_mutex.unlock();
+		}
+	}
+
+	void AsynchTask::run(bool verbose)
+	{
+		assert(_lambda);
+		setRunning();
+
+		bool all_success = std::all_of(_dependencies.begin(), _dependencies.end(), [](std::shared_ptr<AsynchTask> const& dep) {
+			return dep->getStatus() == Status::Success;
+		});
+
+		if (!all_success)
+		{
+			cancel(true, verbose);
+			return;
+		}
+
+		bool try_run = true;
+
+		while (try_run)
+		{
+			ReturnType res;
+			try
+			{
+				if (verbose)
+				{
+					std::unique_lock lock(g_mutex);
+					std::cout << "Launching task: " << name() << std::endl;
+				}
+				res = _lambda();
+			}
+			catch (std::exception const& e)
+			{
+				_status = Status::AbsoluteFail;
+				res.success = false;
+				res.can_retry = false;
+				res.error_title = _name;
+				res.error_message = "Exception: \n" + std::string(e.what());
+			}
+
+			std::unique_lock lock(_mutex);
+			if (res.success)
+			{
+				_status = Status::Success;
+				break;
+			}
+			else
+			{
+				if (res.can_retry)
+				{
+					MessageBeep(MB_ICONERROR);
+					int selected_option = MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_RETRYCANCEL);
+					switch (selected_option)
+					{
+						case IDRETRY:
+						{
+							continue;
+						}
+						break;
+						case IDCANCEL:
+						{
+							_status = Status::AbsoluteFail;
+							try_run = false;
+						}
+						break;
+					}
+				}
+				else
+				{
+					MessageBeep(MB_ICONERROR);
+					MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_OK);
+					_status = Status::AbsoluteFail;
+					try_run = false;
+				}
+			}
+		}
+
+		std::unique_lock lock(_mutex);
+		assert(StatusIsFinish(_status));
+		_finish_condition.notify_all();
+	}
+
+	void AsynchTask::wait()
+	{
+		while (true)
+		{
+			std::unique_lock lock(_mutex);
+			_finish_condition.wait(lock, [this]() -> bool {
+				return StatusIsFinish(_status);
+			});
+
+			if (StatusIsFinish(_status))
+			{
+				break;
+			}
+		}
+	}
+
+	void AsynchTask::waitIFN()
+	{
+		std::shared_lock lock(_mutex);
+
+		if (!StatusIsFinish(_status))
+		{
+			lock.unlock();
+			wait();
+		}
+	}
+}

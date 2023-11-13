@@ -3,6 +3,11 @@
 #include <Core/VulkanCommons.hpp>
 #include <Core/Utils/stl_extension.hpp>
 
+#include <chrono>
+#include <thread>
+#include <iostream>
+
+#include <Core/Execution/ThreadPool.hpp>
 
 
 template <class T, Container<T> C>
@@ -11,10 +16,26 @@ const T* f(C const& c)
 	return c.data();
 }
 
+class AsynchMessageBox
+{
+public:
+	
+protected:
+	
+	std::string _name = "Message"s;
+	std::string _content = "Caption"s;
+
+	bool _emit_beep = true;
+
+public:
+	
+};
+
 int main(int argc, const char** argv)
 {
 	using namespace vkl;
 	using namespace std::containers_operators;
+	using namespace std::string_literals;
 
 	dv_<VkExtent3D> ex = makeZeroExtent3D();
 
@@ -41,6 +62,113 @@ int main(int argc, const char** argv)
 	Dyn<std::vector<std::string>> s = {{"a"s, "b"s}};
 	// TODO make this line work
 	//Dyn<std::vector<std::string>> t = s + "c"s;
+
+	//std::chrono::time_point<std::chrono::high_resolution_clock> tic = std::chrono::high_resolution_clock::now();
+	//
+	//auto show_message = [&]()
+	//	{
+	//		MessageBeep(MB_ICONERROR);
+	//		int res = MessageBoxA(nullptr, "Message", "Caption", MB_RETRYCANCEL | MB_ICONERROR);
+	//		std::cout << res << std::endl;
+	//		return res;
+	//	};
+	//std::jthread thread = std::jthread(show_message);
+	//std::chrono::time_point<std::chrono::high_resolution_clock> toc = std::chrono::high_resolution_clock::now();	
+	//std::chrono::duration delay = toc - tic;
+	//std::this_thread::sleep_for(2s);
+	//std::cout << "Cancel thread" << std::endl;
+	//thread.request_stop();
+	//int end_res;
+	//
+	//thread.join();
+	//thread.join();
+	//std::this_thread::sleep_for(2s);
+
+
+	DelayedTaskExecutor* pool = DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
+		.multi_thread = true,
+		.n_threads = 0,
+	});
+
+	int task_value = 0;
+
+	std::shared_ptr<AsynchTask> t1 = std::make_shared<AsynchTask>(AsynchTask::CI{
+		.name = "Task 1",
+		.priority = TaskPriority::ASAP(),
+		.lambda = [&]() {
+			std::this_thread::sleep_for(2s);
+			task_value = 1;
+			return AsynchTask::ReturnType{
+				.success = true,
+			};
+		},
+	});
+
+	std::shared_ptr<AsynchTask> t2 = std::make_shared<AsynchTask>(AsynchTask::CI{
+		.name = "Task 2",
+		.priority = TaskPriority::ASAP(),
+		.lambda = [&]() {
+			std::this_thread::sleep_for(3s);
+			task_value = 2;
+			return AsynchTask::ReturnType{
+				.success = true,
+			};
+		},
+		.dependencies = {t1},
+	});
+
+	std::shared_ptr<AsynchTask> t3 = std::make_shared<AsynchTask>(AsynchTask::CI{
+		.name = "Task 3",
+		.priority = TaskPriority::ASAP(),
+		.lambda = [&]() {
+			std::this_thread::sleep_for(512ms);
+
+			if ((rand() % 3) == 0)
+			{
+				task_value = 3;
+				return AsynchTask::ReturnType{
+					.success = true,
+				};
+			}
+			else
+			{
+				return AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Task 3",
+				};
+			}
+		},
+		.dependencies = {t1},
+	});
+
+	std::shared_ptr<AsynchTask> t4 = std::make_shared<AsynchTask>(AsynchTask::CI{
+		.name = "Task 4",
+		.priority = TaskPriority::ASAP(),
+		.lambda = [&]() {
+			std::this_thread::sleep_for(4s);
+			task_value = 4;
+			return AsynchTask::ReturnType{
+				.success = true,
+			};
+		},
+		.dependencies = {t2, t3},
+	});
+
+	pool->pushTask(t3);
+	pool->pushTask(t2);
+	pool->pushTask(t1);
+	pool->pushTask(t4);
+
+	t4->wait();
+
+	std::cout << "WaitAll" << std::endl;
+	pool->waitAll();
+
+	delete pool;
+	pool = nullptr;
+
+	std::cout << task_value << std::endl;
 
 	return 0;
 }

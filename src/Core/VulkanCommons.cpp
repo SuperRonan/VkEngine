@@ -4,6 +4,9 @@
 
 namespace vkl
 {
+	std::mutex g_mutex = {};
+
+
 	using namespace std::string_literals;
 
 	VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available)

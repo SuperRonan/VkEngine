@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <utility>
 #include <string>
+#include <mutex>
 
 #include "DynamicValue.hpp"
 #include <cassert>
@@ -31,6 +32,8 @@ if (call != VK_SUCCESS) {				\
 namespace vkl
 {
 	class VkObject;
+
+	extern std::mutex g_mutex;
 	
 	struct Callback
 	{
