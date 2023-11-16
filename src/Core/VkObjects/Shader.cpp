@@ -553,6 +553,7 @@ namespace vkl
 		shaderc::CompileOptions options;
 		//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
 		options.SetTargetSpirv(shaderc_spirv_version_1_6);
+		options.SetGenerateDebugInfo(); // To link the glsl source for nsight
 		shaderc::Compiler compiler;
 		
 		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
