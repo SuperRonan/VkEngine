@@ -68,8 +68,19 @@ namespace vkl
 				.pip_pos = pip_pos,
 			};
 
+			VkExtent3D extent = _target->image()->extent().value();
+			Vector3f extent_f = Vector3f(extent.width, extent.height, extent.depth);
+			extent_f = extent_f * _pip_size;
+			extent = VkExtent3D{
+				.width = static_cast<uint32_t>(std::ceil(extent_f.x)),
+				.height = static_cast<uint32_t>(std::ceil(extent_f.y)),
+				.depth = static_cast<uint32_t>(std::ceil(extent_f.z)),
+			};
+
 			exec(_fast_pip->with(ComputeCommand::SingleDispatchInfo{
-				.pc = pc
+				.extent = extent,
+				.dispatch_threads = true,
+				.pc = pc,
 			}));
 
 			

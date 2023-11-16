@@ -17,7 +17,7 @@ namespace vkl
 
 		size_t _shader_check_cycle;
 
-		bool _update_resources_anyway = true;
+		bool _update_resources_anyway = false;
 		
 		const DefinitionsMap * _common_definitions;
 

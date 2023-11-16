@@ -76,6 +76,7 @@
 	- [ ] Correct HDR support (also ImGui)
 	- [ ] Fullscreen
 	- [ ] Resized by the application
+- [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib
