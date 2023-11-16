@@ -56,9 +56,12 @@ namespace vkl
 	}
 #endif
 
-	MessagePopUp::Button SynchMessagePopUp::operator()()const
+	MessagePopUp::Button SynchMessagePopUp::operator()(bool lock_mutex)const
 	{
-		std::unique_lock lock(g_mutex);
+		if (lock_mutex)
+		{
+			g_mutex.lock();
+		}
 		if (_beep)
 		{
 #if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
@@ -80,6 +83,10 @@ namespace vkl
 #elif MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_STANDALONE
 		NOT_YET_IMPLEMENTED;
 #endif
+		if (lock_mutex)
+		{
+			g_mutex.unlock();
+		}
 		return res;
 	}
 }

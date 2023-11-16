@@ -416,6 +416,7 @@ namespace vkl
 		PreprocessingState preprocessing_state = {
 			.mounting_points = mounting_points,
 		};
+		_dependencies.clear();
 		std::string full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0);
 
 		if (_creation_result.success == false && _creation_result.error_message.empty())
@@ -607,19 +608,6 @@ namespace vkl
 		using namespace std::containers_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
-		const std::filesystem::file_time_type update_time = [&]() {
-			std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
-			for (const auto& dep : _dependencies)
-			{
-				std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
-				res = std::max(res, ft);
-			}
-			return res;
-		}();
-
-		
-
-		_dependencies.clear();
 		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 		std::vector<std::string> defines = { semantic_definition };
 		defines += ci.definitions;
@@ -639,8 +627,22 @@ namespace vkl
 		}
 
 		
-		
-
+		if (_creation_result.success == false && _creation_result.can_retry)
+		{
+			_creation_result.auto_retry_f = [this, compile_time]() -> bool
+			{
+				const std::filesystem::file_time_type update_time = [&]() {
+					std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
+					for (const auto& dep : _dependencies)
+					{
+						std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
+						res = std::max(res, ft);
+					}
+					return res;
+				}();
+				return update_time > compile_time;
+			};
+		}
 	}
 
 	ShaderInstance::~ShaderInstance()

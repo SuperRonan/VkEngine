@@ -105,6 +105,7 @@ namespace vkl
 
 		std::vector<std::shared_ptr<AsynchTask>> new_tasks = {};
 
+		bool g_mutex_locked = false;
 		while (try_run)
 		{
 			ReturnType res;
@@ -112,8 +113,11 @@ namespace vkl
 			{
 				if (verbose)
 				{
-					std::unique_lock lock(g_mutex);
+					if(!g_mutex_locked)
+						g_mutex.lock();
 					std::cout << "Launching task: " << name() << std::endl;
+					if (!g_mutex_locked)
+						g_mutex.unlock();
 				}
 				res = _lambda();
 			}
@@ -135,8 +139,24 @@ namespace vkl
 			}
 			else
 			{
+				if (!g_mutex_locked)
+				{
+					// Lock until the problem is resolved
+					g_mutex.lock();
+					g_mutex_locked = true;
+				}
 				if (res.can_retry)
 				{
+					if (res.auto_retry_f)
+					{
+						if (res.auto_retry_f())
+						{
+							assert(g_mutex_locked);
+							g_mutex.unlock();
+							g_mutex_locked = false;
+							continue;
+						}
+					}
 					using enum MessagePopUp::Button;
 					SynchMessagePopUp popup = SynchMessagePopUp::CI{
 						.type = MessagePopUp::Type::Error,
@@ -146,7 +166,7 @@ namespace vkl
 						.beep = true,
 						.log_cout = true,
 					};
-					MessagePopUp::Button selected_button = popup();
+					MessagePopUp::Button selected_button = popup(!g_mutex_locked);
 
 					//MessageBeep(MB_ICONERROR);
 					//int selected_option = MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_RETRYCANCEL);
@@ -177,13 +197,19 @@ namespace vkl
 						.beep = true,
 						.log_cout = true,
 					};
-					popup();
+					popup(!g_mutex_locked);
 					//MessageBeep(MB_ICONERROR);
 					//MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_OK);
 					_status = Status::AbsoluteFail;
 					try_run = false;
 				}
 			}
+		}
+
+		if (g_mutex_locked)
+		{
+			g_mutex.unlock();
+			g_mutex_locked = false;
 		}
 
 		std::chrono::time_point<Clock> finish_time = Clock::now();

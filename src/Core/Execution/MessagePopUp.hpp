@@ -138,6 +138,6 @@ namespace vkl
 
 		}
 
-		Button operator()()const;
+		Button operator()(bool lock_mutex = true)const;
 	};
 }
