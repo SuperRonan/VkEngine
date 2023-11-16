@@ -234,7 +234,7 @@ namespace vkl
 
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
-		bool update_all_anyway = true;
+		bool update_all_anyway = ctx.updateAnyway();
 		_depth->updateResource(ctx);
 
 		if (_pipeline_selection.index() == 0 || update_all_anyway)

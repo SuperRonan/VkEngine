@@ -533,30 +533,16 @@ namespace vkl
 		}
 	}
 
-
-
-	void DescriptorSetAndPool::createInstance()
-	{
-		assert(!_inst);
-		ResourceBindings instance_bindings = resolveBindings();
-
-		_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
-			.app = application(),
-			.name = name(),
-			.layout = _layout,
-			.bindings = instance_bindings,
-		});
-	}
-
 	void DescriptorSetAndPool::destroyInstance()
 	{
+		waitForInstanceCreationIFN();
 		assert(!!_inst);
 		callInvalidationCallbacks();
 		_inst = nullptr;
 		
 	}
 
-	ResourceBindings DescriptorSetAndPool::resolveBindings()
+	ResourceBindings DescriptorSetAndPool::resolveBindings(AsynchTask::ReturnType & result)
 	{
 		ResourceBindings res = {};
 
@@ -571,7 +557,6 @@ namespace vkl
 			_layout = _prog->instance()->setsLayouts()[_target_set];
 			if(_layout)
 			{
-
 				for (size_t i = 0; i < _layout->bindings().size(); ++i)
 				{
 					const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
@@ -618,8 +603,14 @@ namespace vkl
 					}
 					else
 					{
-						std::cerr << "Could not resolve Binding \"" << meta.name << "\", (set = " << _target_set << ", binding = " << vkb.binding << ")\n";
-						assert(false);
+						// Unfortunatelly, we have can't retry just this task, we would have to retry from the shader compilation
+						result.success = false;
+						result.can_retry = false;
+						result.error_title = "DescriptorSet Binding Resolution Error"s;
+						result.error_message += 
+							"In DescriptorSet "s + name() + ":\n"s +
+							"Layout: "s + _layout->name() + "\n"s +
+							"Could not resolve Binding \""s + meta.name + "\", (set = "s + std::to_string(_target_set) + ", binding = "s + std::to_string(vkb.binding) + ")\n"s;
 					}
 				}
 			}
@@ -628,12 +619,20 @@ namespace vkl
 		{
 			const bool fill_missing_bindings_with_null = _allow_missing_bindings;
 
-
 			if (_bindings.size() != _layout->bindings().size())
 			{
 				if(!fill_missing_bindings_with_null)
 				{
-					assert(false);
+					result = AsynchTask::ReturnType{
+						.success = false,
+						.can_retry = false,
+						.error_title = "DescriptorSet filling missing bindings"s,
+						.error_message = 
+							"In DescriptorSet "s + name() + ":\n"s +
+							"Layout: "s + _layout->name() + "\n"s + 
+							"Not enough bindings provided ("s + std::to_string(_bindings.size()) + " vs "s + std::to_string(_layout->bindings().size()) + ")"s,
+					};
+					return {};
 				}
 				// Fill missing bindings
 				if (_bindings.size() < _layout->bindings().size())
@@ -692,8 +691,6 @@ namespace vkl
 					_bindings = new_bindings;
 				}
 			}
-
-
 			
 			for (size_t j = 0; j < _bindings.size(); ++j)
 			{
@@ -715,12 +712,54 @@ namespace vkl
 		bool res = false;
 
 		if (!_inst)
-		{
-			createInstance();
+		{	
 			res = true;
-		}
+			waitForInstanceCreationIFN();
+			std::vector<std::shared_ptr<AsynchTask>> dependencies;
 
-		_inst->writeDescriptorSet(&context);
+			if (_layout_from_prog)
+			{
+				assert(_prog);
+				if (_prog->creationTask())
+				{
+					dependencies.push_back(_prog->creationTask());
+				}
+			}
+
+			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+				.name = "Creating DescriptorSetAndPool " + name(),
+				.priority = TaskPriority::ASAP(),
+				.lambda = [this]()
+				{
+					AsynchTask::ReturnType task_res{
+						.success = true,
+					};
+					ResourceBindings instance_bindings = resolveBindings(task_res);
+
+					if (task_res.success)
+					{
+						_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
+							.app = application(),
+							.name = name(),
+							.layout = _layout,
+							.bindings = instance_bindings,
+						});
+
+						_inst->writeDescriptorSet(nullptr);
+					}
+
+
+					return task_res;
+				},
+				.dependencies = dependencies,
+			});
+			application()->threadPool().pushTask(_create_instance_task);
+		}
+		else
+		{
+			_inst->writeDescriptorSet(&context);
+		}
+		
 
 		return res;
 	}
@@ -759,6 +798,16 @@ namespace vkl
 		}
 	}
 
+
+	void DescriptorSetAndPool::waitForInstanceCreationIFN()
+	{
+		if (_create_instance_task)
+		{
+			_create_instance_task->waitIFN();
+			assert(_create_instance_task->isSuccess());
+			_create_instance_task = nullptr;
+		}
+	}
 
 
 

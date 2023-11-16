@@ -581,6 +581,12 @@ namespace vkl
 
 	void VkApplication::init()
 	{
+		_thread_pool = std::unique_ptr<DelayedTaskExecutor>(DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
+			.multi_thread = true,
+			.n_threads = 0,
+			.log_actions = true,
+		}));
+
 		initGLFW();
 		preChecks();
 
@@ -626,6 +632,18 @@ namespace vkl
 		vkDestroyInstance(_instance, nullptr);
 
 		glfwTerminate();
+		
+		{
+			if (_thread_pool->waitAll())
+			{
+
+			}
+			else
+			{
+				
+			}
+			_thread_pool = nullptr;
+		}
 	}
 
 	VkApplication::QueueFamilyIndices const& VkApplication::getQueueFamilyIndices()const

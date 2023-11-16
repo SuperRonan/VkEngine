@@ -22,11 +22,12 @@ void main()
 	const mat4 o2w = _pc.object_to_world;
 	const mat4 o2p = w2p * o2w;
 	
+	vec3 m_position = a_position;
 	
-	gl_Position = o2p * vec4(a_position, 1);
+	gl_Position = o2p * vec4(m_position, 1);
 
 	v_uv = a_uv;
 	// TODO Use the correct matrix (works as long as the scale is uniform)
 	v_w_normal = mat3(o2w) * a_normal;
-	v_w_position = (o2w * vec4(a_position, 1)).xyz;
+	v_w_position = (o2w * vec4(m_position, 1)).xyz;
 }

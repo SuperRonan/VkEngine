@@ -81,6 +81,8 @@ namespace vkl
 
 		std::vector<std::shared_ptr<Shader>> _shaders;
 
+		std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
+
 		Program(VkApplication* app, std::string const& name, MultiDescriptorSetsLayouts const& sets_layouts):
 			ParentType(app, name),
 			_provided_sets_layouts(sets_layouts)
@@ -107,6 +109,15 @@ namespace vkl
 		}
 
 		bool updateResources(UpdateContext & ctx);
+
+		void waitForInstanceCreationIFN();
+
+		std::vector<std::shared_ptr<AsynchTask>> getShadersTasksDependencies()const;
+
+		const std::shared_ptr<AsynchTask>& creationTask()const
+		{
+			return _create_instance_task;
+		}
 	};
 
 	class GraphicsProgramInstance : public ProgramInstance

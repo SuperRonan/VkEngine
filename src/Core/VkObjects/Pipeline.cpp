@@ -37,36 +37,62 @@ namespace vkl
 
 	void Pipeline::createInstance()
 	{
-		if (_binding == VK_PIPELINE_BIND_POINT_GRAPHICS)
-		{
-			PipelineInstance::GraphicsCreateInfo gci;
-			gci.app = application();
-			gci.name = name();
-			gci.vertex_input = _gci.vertex_input;
-			gci.input_assembly = _gci.input_assembly;
-			gci.viewports = _gci.viewports;
-			gci.scissors = _gci.scissors;
-			gci.rasterization = _gci.rasterization;
-			gci.line_raster = _gci.line_raster;
-			gci.multisampling = _gci.multisampling;
-			gci.depth_stencil = _gci.depth_stencil;
-			gci.attachements_blends = _gci.attachements_blends;
-			gci.render_pass = _gci.render_pass;
-			gci.dynamic = _gci.dynamic;
-			gci.program = std::dynamic_pointer_cast<GraphicsProgramInstance>(_gci.program->instance());
+		waitForInstanceCreationIFN();
 
-			_inst = std::make_shared<PipelineInstance>(gci);
-		}
-		else if (_binding == VK_PIPELINE_BIND_POINT_COMPUTE)
+		std::vector<std::shared_ptr<AsynchTask>> dependecies;
+		if (_program->creationTask())
 		{
-			PipelineInstance::ComputeCreateInfo cci{
-				.app = application(),
-				.name = name(),
-				.program = std::dynamic_pointer_cast<ComputeProgramInstance>(_cci.program->instance()),
-			};
-
-			_inst = std::make_shared<PipelineInstance>(cci);
+			dependecies.push_back(_program->creationTask());
 		}
+
+		_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+			.name = "Create Pipeline " + name(),
+			.priority = TaskPriority::ASAP(),
+			.lambda = [this]() {
+		
+				if (_binding == VK_PIPELINE_BIND_POINT_GRAPHICS)
+				{
+					PipelineInstance::GraphicsCreateInfo gci;
+					gci.app = application();
+					gci.name = name();
+					gci.vertex_input = _gci.vertex_input;
+					gci.input_assembly = _gci.input_assembly;
+					gci.viewports = _gci.viewports;
+					gci.scissors = _gci.scissors;
+					gci.rasterization = _gci.rasterization;
+					gci.line_raster = _gci.line_raster;
+					gci.multisampling = _gci.multisampling;
+					gci.depth_stencil = _gci.depth_stencil;
+					gci.attachements_blends = _gci.attachements_blends;
+					gci.render_pass = _gci.render_pass;
+					gci.dynamic = _gci.dynamic;
+					gci.program = std::dynamic_pointer_cast<GraphicsProgramInstance>(_gci.program->instance());
+
+					_inst = std::make_shared<PipelineInstance>(gci);
+				}
+				else if (_binding == VK_PIPELINE_BIND_POINT_COMPUTE)
+				{
+					PipelineInstance::ComputeCreateInfo cci{
+						.app = application(),
+						.name = name(),
+						.program = std::dynamic_pointer_cast<ComputeProgramInstance>(_cci.program->instance()),
+					};
+
+					_inst = std::make_shared<PipelineInstance>(cci);
+				}
+				else if (_binding == VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR)
+				{
+					
+				}
+
+				return AsynchTask::ReturnType{
+					.success = true,
+				};
+			},
+			.dependencies = dependecies,
+		});
+
+		application()->threadPool().pushTask(_create_instance_task);
 	}
 
 	void Pipeline::destroyInstance()
@@ -109,6 +135,7 @@ namespace vkl
 
 	Pipeline::~Pipeline()
 	{
+		waitForInstanceCreationIFN();
 		destroyInstance();
 		_program->removeInvalidationCallbacks(this);
 	}
@@ -126,5 +153,21 @@ namespace vkl
 		}
 
 		return res;
+	}
+
+	void Pipeline::waitForInstanceCreationIFN()
+	{
+		if (_create_instance_task)
+		{
+			_create_instance_task->waitIFN();
+			assert(_create_instance_task->isSuccess());
+			_create_instance_task = nullptr;
+		}
+	}
+
+	std::shared_ptr<PipelineInstance> Pipeline::getInstanceWaitIFN()
+	{
+		waitForInstanceCreationIFN();
+		return instance();
 	}
 }

@@ -20,7 +20,7 @@ namespace vkl
 		_lambda(ci.lambda),
 		_dependencies(ci.dependencies)
 	{
-
+		_creation_time = Clock::now();
 	}
 
 	AsynchTask::~AsynchTask()
@@ -89,6 +89,7 @@ namespace vkl
 	{
 		assert(_lambda);
 		setRunning();
+		_begin_time = Clock::now();
 
 		bool all_success = std::all_of(_dependencies.begin(), _dependencies.end(), [](std::shared_ptr<AsynchTask> const& dep) {
 			return dep->getStatus() == Status::Success;
@@ -185,6 +186,8 @@ namespace vkl
 			}
 		}
 
+		std::chrono::time_point<Clock> finish_time = Clock::now();
+		_duration = finish_time - _begin_time;
 		std::unique_lock lock(_mutex);
 		assert(StatusIsFinish(_status));
 		_finish_condition.notify_all();

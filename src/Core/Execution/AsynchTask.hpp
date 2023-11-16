@@ -5,6 +5,7 @@
 #include <vector>
 #include <functional>
 #include <shared_mutex>
+#include <chrono>
 
 namespace vkl
 {
@@ -25,6 +26,8 @@ namespace vkl
 	class AsynchTask
 	{
 	public:
+
+		using Clock = std::chrono::high_resolution_clock;
 		
 		enum class Status
 		{
@@ -47,7 +50,7 @@ namespace vkl
 		{
 			bool success;
 			bool can_retry;
-			std::function<bool(void)> auto_retry = nullptr;
+			std::function<bool(void)> auto_retry_f = nullptr;
 			std::string error_title = {};
 			std::string error_message = {};
 			std::vector<std::shared_ptr<AsynchTask>> new_tasks = {};
@@ -62,6 +65,11 @@ namespace vkl
 		Status _status = Status::MAX_ENUM;
 
 		 LambdaType _lambda = {};
+
+		 std::chrono::time_point<Clock> _creation_time;
+		 std::chrono::time_point<Clock> _begin_time;
+		 Clock::duration _duration;
+
 
 		// Callbacks on completion?
 
@@ -115,6 +123,11 @@ namespace vkl
 			_status = Status::Running;
 		}
 
+		bool isSuccess()const
+		{
+			return getStatus() == Status::Success;
+		}
+
 		bool isReady()const;
 
 		bool isReadyOrSoonToBe()const;
@@ -124,5 +137,10 @@ namespace vkl
 		void wait();
 
 		void waitIFN();
+
+		constexpr auto duration()const
+		{
+			return _duration;
+		}
 	};
 }

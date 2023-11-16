@@ -360,6 +360,7 @@ namespace vkl
 
 	void Program::destroyInstance()
 	{
+		waitForInstanceCreationIFN();
 		if (_inst)
 		{
 			callInvalidationCallbacks();
@@ -383,6 +384,29 @@ namespace vkl
 
 		}
 
+		return res;
+	}
+
+	void Program::waitForInstanceCreationIFN()
+	{
+		if (_create_instance_task)
+		{
+			_create_instance_task->waitIFN();
+			assert(_create_instance_task->isSuccess());
+			_create_instance_task = nullptr;
+		}
+	}
+
+	std::vector<std::shared_ptr<AsynchTask>> Program::getShadersTasksDependencies()const
+	{
+		std::vector<std::shared_ptr<AsynchTask>> res;
+		for (std::shared_ptr<Shader> const& shader : _shaders)
+		{
+			if (shader->compileTask())
+			{
+				res.push_back(shader->compileTask());
+			}
+		}
 		return res;
 	}
 
@@ -500,32 +524,58 @@ namespace vkl
 
 	void GraphicsProgram::createInstance()
 	{
+		// Maybe deduce the priority from the shaders
+		waitForInstanceCreationIFN();
+		assert(_fragment);
 		if (_vertex || _geometry)
 		{
 			assert(_vertex);
-			assert(_fragment);
-			_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIV{
-				.app = application(),
-				.name = name(),
-				.sets_layouts = _provided_sets_layouts,
-				.vertex = _vertex->instance(),
-				.tess_control = _tess_control ? _tess_control->instance() : nullptr,
-				.tess_eval = _tess_eval ? _tess_eval->instance() : nullptr,
-				.geometry = _geometry ?  _geometry->instance() : nullptr,
-				.fragment = _fragment->instance(),
+
+			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+				.name = "Creating Program " + name(),
+				.priority = TaskPriority::ASAP(),
+				.lambda = [this]() {		
+					_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIV{
+						.app = application(),
+						.name = name(),
+						.sets_layouts = _provided_sets_layouts,
+						.vertex = _vertex->instance(),
+						.tess_control = _tess_control ? _tess_control->instance() : nullptr,
+						.tess_eval = _tess_eval ? _tess_eval->instance() : nullptr,
+						.geometry = _geometry ?  _geometry->instance() : nullptr,
+						.fragment = _fragment->instance(),
+					});
+					return AsynchTask::ReturnType{
+						.success = true,
+					};
+				},
+				.dependencies = getShadersTasksDependencies(),
 			});
+			application()->threadPool().pushTask(_create_instance_task);
 		}
 		else
 		{
 			assert(!!_mesh);
-			_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIM{
-				.app = application(),
-				.name = name(),
-				.sets_layouts = _provided_sets_layouts,
-				.task = _task ? _task->instance() : nullptr,
-				.mesh = _mesh->instance(),
-				.fragment = _fragment->instance(),
+
+			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+				.name = "Creating Program " + name(),
+				.priority = TaskPriority::ASAP(),
+				.lambda = [this]() {
+					_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIM{
+						.app = application(),
+						.name = name(),
+						.sets_layouts = _provided_sets_layouts,
+						.task = _task ? _task->instance() : nullptr,
+						.mesh = _mesh->instance(),
+						.fragment = _fragment->instance(),
+					});
+					return AsynchTask::ReturnType{
+						.success = true,
+					};
+				},
+				.dependencies = getShadersTasksDependencies(),
 			});
+			application()->threadPool().pushTask(_create_instance_task);
 		}
 	}
 
@@ -570,12 +620,25 @@ namespace vkl
 
 	void ComputeProgram::createInstance()
 	{
-		_inst = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
-			.app = application(),
-			.name = name(),
-			.sets_layouts = _provided_sets_layouts,
-			.shader = _shader->instance(),
+		waitForInstanceCreationIFN();
+		assert(_shader);
+		_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+			.name = "Creating Program " + name(),
+			.priority = TaskPriority::ASAP(),
+			.lambda = [this]() {
+				_inst = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
+					.app = application(),
+					.name = name(),
+					.sets_layouts = _provided_sets_layouts,
+					.shader = _shader->instance(),
+				});
+				return AsynchTask::ReturnType{
+					.success = true,
+				};
+			},
+			.dependencies = getShadersTasksDependencies(),
 		});
+		application()->threadPool().pushTask(_create_instance_task);
 	}
 
 	ComputeProgram::~ComputeProgram()

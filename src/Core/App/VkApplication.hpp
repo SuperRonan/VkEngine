@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/VkObjects/GenericCache.hpp>
+#include <Core/Execution/ThreadPool.hpp>
 
 namespace vkl
 {
@@ -104,6 +105,8 @@ namespace vkl
 		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
 
 		SamplerLibrary * _sampler_library = nullptr;
+
+		std::unique_ptr<DelayedTaskExecutor> _thread_pool = nullptr;
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -229,6 +232,11 @@ namespace vkl
 		SamplerLibrary& getSamplerLibrary()
 		{
 			return *_sampler_library;
+		}
+
+		DelayedTaskExecutor& threadPool()
+		{
+			return *_thread_pool;
 		}
 	};
 

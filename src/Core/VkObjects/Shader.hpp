@@ -20,6 +20,8 @@ namespace vkl
 	class ShaderInstance : public AbstractInstance
 	{
 	protected:
+
+		std::filesystem::path _main_path;
 		
 		VkShaderStageFlagBits _stage;
 		VkShaderModule _module = VK_NULL_HANDLE;
@@ -28,15 +30,19 @@ namespace vkl
 		std::vector<std::filesystem::path> _dependencies;
 		size_t _shader_string_packed_capacity = 32;
 
+		std::string _preprocessed_source;
+
+		AsynchTask::ReturnType _creation_result;
+
 		struct PreprocessingState
 		{
 			std::set<std::filesystem::path> pragma_once_files = {};
 			const MountingPoints * mounting_points;
 		};
 
-		std::optional<std::string> preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state);
+		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level);
 
-		std::optional<std::string> preprocessStrings(std::string const& glsl);
+		std::string preprocessStrings(std::string const& glsl);
 
 	public:
 
@@ -64,7 +70,7 @@ namespace vkl
 
 
 
-		std::optional<std::string> preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints * mounting_points);
+		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints * mounting_points);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 
@@ -103,6 +109,11 @@ namespace vkl
 		}
 
 		VkPipelineShaderStageCreateInfo getPipelineShaderStageCreateInfo()const;
+
+		const AsynchTask::ReturnType& getCreationResult()const
+		{
+			return _creation_result;
+		}
 	};
 
 	class Shader : public InstanceHolder<ShaderInstance>
@@ -155,6 +166,8 @@ namespace vkl
 
 		void destroyInstance();
 
+		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
+
 	public:
 
 		struct CreateInfo
@@ -173,5 +186,13 @@ namespace vkl
 
 		bool updateResources(UpdateContext & ctx);
 		
+		void waitForInstanceCreationIFN();
+
+		std::shared_ptr<ShaderInstance> getInstanceWaitIFN();
+
+		const std::shared_ptr<AsynchTask>& compileTask()const
+		{
+			return _create_instance_task;
+		}
 	};
 }

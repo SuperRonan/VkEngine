@@ -16,6 +16,8 @@ namespace vkl
 		size_t _update_cycle;
 
 		size_t _shader_check_cycle;
+
+		bool _update_resources_anyway = true;
 		
 		const DefinitionsMap * _common_definitions;
 
@@ -86,5 +88,9 @@ namespace vkl
 			return _resources_to_upload;
 		}
 
+		constexpr bool updateAnyway() const
+		{
+			return _update_resources_anyway;
+		}
 	};
 }

@@ -4,10 +4,10 @@
 	- [ ] SDL Window
 	- [ ] SDL Input listeners
 	- [ ] SDL Audio
-- [ ] CPU Parallel task executions
-	- [ ] Task executor
-	- [ ] Shader compilation
-	- [ ] Pipeline creation
+- [x] CPU Parallel task executions
+	- [x] Task executor
+	- [x] Shader compilation
+	- [x] Pipeline creation
 - [x] Common Shaders Definitions
 - [x] Commong shaders bindings
 - [x] Automatic shader definitions (to progressively complete)
@@ -104,7 +104,7 @@ Objectives:
 - [ ] Synchronize multiple times the same resources for the same or different usages (refactor of SynchHelper)
 - [x] Have more dynamic descriptor sets (adding or removing descriptors "on the fly")
 - [x] Resource management: have resources be managed by their owner ifp, else by the script manager, instead of only by the executor
-- [ ] Execute host tasks in parallel (such as shader compilation, resources loading)
+- [x] Execute host tasks in parallel (such as shader compilation, resources loading)
 - [ ] Load scene (mesh, textures) asynch
 - [x] Refactor the Executor (and linearExecutor): issue an ExecThread to record commands in
 - [ ] Add a transfer queue to the LinearExecutor to load assets

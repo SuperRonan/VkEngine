@@ -17,6 +17,7 @@ namespace vkl
 
 	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
 	{
+		_pipeline->waitForInstanceCreationIFN();
 		const VkPipelineBindPoint bp = _pipeline->instance()->binding();
 		vkCmdBindPipeline(cmd, bp, *_pipeline->instance());
 		context.keppAlive(_pipeline->instance());
@@ -29,6 +30,7 @@ namespace vkl
 			else
 				return context.rayTracingBoundSets();
 		}();
+		_set->waitForInstanceCreationIFN();
 		if(_set->instance()->exists())
 		{
 			bound_sets.bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());

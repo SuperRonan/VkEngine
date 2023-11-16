@@ -47,7 +47,7 @@ namespace vkl
 
 	void PictureInPicture::updateResources(UpdateContext& context)
 	{
-		const bool update_anyway = true;
+		const bool update_anyway = context.updateAnyway();
 		if (_enable || update_anyway)
 		{
 			context.resourcesToUpdateLater() += _fast_pip;

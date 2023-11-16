@@ -121,11 +121,11 @@ namespace vkl
 		// Not sorted
 		ResourceBindings _bindings = {};
 
-		void createInstance();
+		std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
 		void destroyInstance();
 
-		ResourceBindings resolveBindings();
+		ResourceBindings resolveBindings(AsynchTask::ReturnType& result);
 		
 	public:
 
@@ -148,6 +148,7 @@ namespace vkl
 
 		void setBinding(ShaderBindingDescription const& binding);
 
+		void waitForInstanceCreationIFN();
 	};
 
 

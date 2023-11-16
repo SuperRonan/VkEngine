@@ -345,6 +345,9 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Program> _program = nullptr;
 
+		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
+
+
 		void createInstance();
 
 		void destroyInstance();
@@ -363,5 +366,9 @@ namespace vkl
 		}
 
 		bool updateResources(UpdateContext & ctx);
+
+		void waitForInstanceCreationIFN();
+
+		std::shared_ptr<PipelineInstance> getInstanceWaitIFN();
 	};
 }

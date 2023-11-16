@@ -197,10 +197,6 @@ namespace vkl
 		cb->begin();
 		_context.setCommandBuffer(cb);
 
-		if (bind_common_set)
-		{
-			bindSet(0, _common_descriptor_set, true, true, _use_rt_pipeline);
-		}
 
 		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true);
 		event->cb = cb;
@@ -218,6 +214,10 @@ namespace vkl
 			.context = &_context,
 		});
 		_current_thread = res;
+		if (bind_common_set)
+		{
+			bindSet(0, _common_descriptor_set, true, true, _use_rt_pipeline);
+		}
 		return res;
 	}
 
@@ -252,19 +252,7 @@ namespace vkl
 
 	void LinearExecutor::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
 	{
-		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;
-		if (bind_graphics)
-		{
-			_context.graphicsBoundSets().bind(s, inst);
-		}
-		if (bind_compute)
-		{
-			_context.computeBoundSets().bind(s, inst);
-		}
-		if (bind_rt)
-		{
-			_context.rayTracingBoundSets().bind(s, inst);
-		}
+		_current_thread->bindSet(s, set, bind_graphics, bind_compute, bind_rt);
 	}
 
 	void LinearExecutor::endCommandBuffer(ExecutionThread * exec_thread, bool submit)

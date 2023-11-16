@@ -33,12 +33,16 @@ namespace vkl
 		std::ifstream file = std::ifstream(path, std::ios::ate | std::ios::binary);
 		int tries = 0;
 		const int max_tries = 8;
-		while (!file.is_open() && tries != max_tries)
+		do
 		{
-			++tries;
+			if (tries)
+			{
+				std::this_thread::sleep_for(1us);
+			}
 			file = std::ifstream(path, std::ios::ate | std::ios::binary);
-			std::this_thread::sleep_for(1us);
+			++tries;
 		}
+		while (!file.is_open() && tries != max_tries);
 
 		if (!file.is_open())
 		{
@@ -66,7 +70,7 @@ namespace vkl
 		file.close();
 	}
 
-	std::optional<std::string> ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state)
+	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level)
 	{
 		_dependencies.push_back(path);
 		std::string content;
@@ -76,7 +80,8 @@ namespace vkl
 		}
 		catch (std::exception const& e)
 		{
-			std::cerr << e.what() << std::endl;
+			_creation_result.success = false;
+			// Handle the error in the caller
 			return {};
 		}
 
@@ -142,9 +147,38 @@ namespace vkl
 					}
 					else if(mp_path_end != std::string::npos)
 					{
-						assertm(!!preprocessing_state.mounting_points, "Mounting points should be loaded!");
+						if (!preprocessing_state.mounting_points)
+						{
+							_creation_result = AsynchTask::ReturnType{
+								.success = false,
+								.can_retry = false,
+								.error_title = "Shader Compilation Error: Preprocess Includes"s,
+								.error_message =
+									"Error while preprocessing shader: Inclusion error \n"s +
+									"Main Shader: "s + _main_path.string() + ":\n"s +
+									"In file "s + path.string() + ":\n"s +
+									"Mounting points are not loaded!"s,
+							};
+							return std::filesystem::path();
+						}
 						const size_t mp_end = include_line.find(":");
-						assertm(mp_end != std::string::npos, "Could not parse mouting point path (missing ':')");
+						if (mp_end == std::string::npos)
+						{
+							size_t line_index = countLines(0, line_end);
+							_creation_result = AsynchTask::ReturnType{
+								.success = false,
+								.can_retry = true,
+								.error_title = "Shader Compilation Error: Preprocess Includes"s,
+								.error_message =
+									"Error while preprocessing shader: Inclusion error \n"s +
+									"Main Shader: "s + _main_path.string() + ":\n"s +
+									"In file "s + path.string() + ":\n"s +
+									"Line "s + std::to_string(line_index) + "\n"s +
+									"Could not parse mouting point path (missing ':'?):\n"s +
+									std::string(include_line),
+							};
+							return std::filesystem::path();
+						}
 						const std::string_view mounting_point(include_line.data() + mp_path_begin, mp_end - mp_path_begin);
 						const MountingPoints & mps = *preprocessing_state.mounting_points;
 						const std::string mp_str = std::string(mounting_point);
@@ -157,14 +191,38 @@ namespace vkl
 						}
 						else
 						{
-							std::cerr << "Could not find mounting point: " << mounting_point << std::endl;
-							throw std::runtime_error("Shader #include directive parsing error");
+							size_t line_index = countLines(0, line_end);
+							_creation_result = AsynchTask::ReturnType{
+								.success = false,
+								.can_retry = true,
+								.error_title = "Shader Compilation Error: Preprocess Includes"s,
+								.error_message =
+									"Error while preprocessing shader: Inclusion error \n"s +
+									"Main Shader: "s + _main_path.string() + ":\n"s +
+									"In file "s + path.string() + ":\n"s +
+									"Line "s + std::to_string(line_index) + "\n"s +
+									std::string(include_line) + "\n"s +
+									"Could not find mounting point "s + mp_str + "\n"s,
+							};
+							return std::filesystem::path();
 						}
 					}
 					else
 					{
-						std::cerr << "Could not parse include: " << include_line << std::endl;
-						throw std::runtime_error("Shader #include directive parsing error");
+						size_t line_index = countLines(0, line_end);
+						_creation_result = AsynchTask::ReturnType{
+							.success = false,
+							.can_retry = true,
+							.error_title = "Shader Compilation Error: Preprocess Includes"s,
+							.error_message =
+								"Error while preprocessing shader: Inclusion error \n"s +
+								"Main Shader: "s + _main_path.string() + ":\n"s +
+								"In file "s + path.string() + ":\n"s +
+								"Line "s + std::to_string(line_index) + "\n"s +
+								"Could not parse #include directive:\n"s +
+								std::string(include_line),
+						};
+						return std::filesystem::path();
 					}
 				}();
 
@@ -172,17 +230,29 @@ namespace vkl
 				
 				if (!preprocessing_state.pragma_once_files.contains(path_to_include))
 				{
-					const std::optional<std::string> included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state);
-					if (included_code.has_value())
+					const std::string included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state, recursion_level + 1);
+					if (_creation_result.success == false)
 					{
-						oss << "#line 1 " << path_to_include << "\n";
-						oss << included_code.value();
-						oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
+						if (_creation_result.error_message.empty())
+						{
+							_creation_result = AsynchTask::ReturnType{
+								.success = false,
+								.can_retry = true,
+								.error_title = "Shader Compilation Error: Preprocess Includes"s,
+								.error_message =
+									"Error while preprocessing shader: Inclusion error \n"s +
+									"Main Shader: "s + _main_path.string() + ":\n"s +
+									"In file "s + path.string() + ":\n"s +
+									"Could not include "s + path_to_include.string(),
+							};
+						}
+						return {};
 					}
 					else
 					{
-						std::cerr << path << " : Failed to include " << path_to_include << std::endl;
-						return {};
+						oss << "#line 1 " << path_to_include << "\n";
+						oss << included_code;
+						oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
 					}
 				}
 				else
@@ -201,7 +271,7 @@ namespace vkl
 		return oss.str();
 	}
 	
-	std::optional<std::string> ShaderInstance::preprocessStrings(const std::string& glsl)
+	std::string ShaderInstance::preprocessStrings(const std::string& glsl)
 	{
 		std::stringstream res;
 
@@ -263,7 +333,16 @@ namespace vkl
 		{
 			if (lt.size() > max_str_len)
 			{
-				VK_LOG << "Warning: string literal \"" << lt << "\" exceeding maximum capacity of " << max_str_len << "!" << std::endl;
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: Preprocess Strings"s,
+					.error_message = 
+						"Error while preprocessing shader: \n"s 
+						"Main Shader: "s + _main_path.string() + ":\n"s +
+						"String literal \""s + std::string(lt) + "\"\n length of "s + std::to_string(lt.size()) + " exceeding maximum capacity of " + std::to_string(max_str_len),
+				};
+				return std::string();
 				lt = std::string_view(lt.data(), max_str_len); // Crop the literal
 			}
 
@@ -309,6 +388,11 @@ namespace vkl
 			const std::string_view lt_content = extractLiteralContent(lt);
 			const std::string lt_glsl = convertLiteralContentToGLSL(lt_content);
 
+			if (_creation_result.success == false)
+			{
+				return {};
+			}
+
 			const std::string_view to_copy = std::string_view(glsl.data() + copied_so_far, lt_begin - copied_so_far);
 			res << to_copy;
 			res << lt_glsl;
@@ -321,23 +405,30 @@ namespace vkl
 		return _res;
 	}
 
-	std::optional<std::string> ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints* mounting_points)
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints* mounting_points)
 	{
 		PreprocessingState preprocessing_state = {
 			.mounting_points = mounting_points,
 		};
-		std::optional<std::string> full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state);
+		std::string full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0);
 
-		if (!full_source.has_value())
+		if (_creation_result.success == false && _creation_result.error_message.empty())
 		{
-			std::cerr << name() << ": Failed to preprocess includes and definitions of file " << path << std::endl;
+			_creation_result = AsynchTask::ReturnType{
+				.success = false,
+				.can_retry = false,
+				.error_title = "Shader Compilation Error: Preprocess Includes"s,
+				.error_message =
+					"Error while preprocessing shader: \n"s +
+					"Could not read main shader: " + _main_path.string(),
+			};
 			return {};
 		}
 
-		std::optional<std::string> final_source = preprocessStrings(full_source.value());
-		if (!final_source.has_value())
+		std::string final_source = preprocessStrings(full_source);
+		if (_creation_result.success == false)
 		{
-			std::cerr << name() << ": Failed to preprocess string of file " << path << std::endl;
+			
 		}
 		return final_source;
 	}
@@ -462,7 +553,15 @@ namespace vkl
 
 		if (errors)
 		{
-			std::cerr << res.GetErrorMessage() << std::endl;
+			_creation_result = AsynchTask::ReturnType{
+				.success = false,
+				.can_retry = true,
+				.error_title = "Shader Compilation Error: "s,
+				.error_message =
+					"Error while compiling shader: \n"s +
+					"Main Shader: "s + _main_path.string() + ":\n"s +
+					res.GetErrorMessage(),
+			};
 			return false;
 		}
 		_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
@@ -491,63 +590,49 @@ namespace vkl
 
 	ShaderInstance::ShaderInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
+		_main_path(ci.source_path),
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection)),
 		_shader_string_packed_capacity(ci.shader_string_packed_capacity)
 	{
+
 		using namespace std::containers_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
-		VK_LOG << "Compiling: " << ci.source_path << "\n";
-
-		// Try to compile while it fails
-		size_t attempt = 0;
-		while (true)
-		{
-			++attempt;
-			const std::filesystem::file_time_type update_time = [&]() {
-				std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
-				for (const auto& dep : _dependencies)
-				{
-					std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
-					res = std::max(res, ft);
-				}
-				return res;
-			}();
-
-			if (update_time >= compile_time)
+		const std::filesystem::file_time_type update_time = [&]() {
+			std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
+			for (const auto& dep : _dependencies)
 			{
-				Sleep(1);
-				_dependencies.clear();
-				std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
-				std::vector<std::string> defines = { semantic_definition };
-				defines += ci.definitions;
+				std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
+				res = std::max(res, ft);
+			}
+			return res;
+		}();
 
-				std::optional<std::string> preprocessed = preprocess(ci.source_path, defines, ci.mounting_points);
+		
 
-				if (!preprocessed.has_value())
-				{
-					compile_time = std::chrono::file_clock::now();
-					continue;
-				}
-				
-				if (preprocessed.value() == ""s)
-				{
-					continue;
-				}
-				bool res = compile(preprocessed.value(), ci.source_path.string());
+		_dependencies.clear();
+		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
+		std::vector<std::string> defines = { semantic_definition };
+		defines += ci.definitions;
+
+		_preprocessed_source = preprocess(ci.source_path, defines, ci.mounting_points);
+
+		if (_creation_result.success)
+		{
+			compile_time = std::chrono::file_clock::now();
+			compile(_preprocessed_source, ci.source_path.string());
+
+			if (_creation_result.success)
+			{
 				compile_time = std::chrono::file_clock::now();
-				if (res)
-				{
-					break;
-				}
-				else
-				{
-					int _ = 0;
-				}
+				reflect();
 			}
 		}
-		reflect();
+
+		
+		
+
 	}
 
 	ShaderInstance::~ShaderInstance()
@@ -580,32 +665,53 @@ namespace vkl
 
 	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points)
 	{
+		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
 		{
 			_inst = _specializations[key];
 		}
 		else {
+
 			using namespace std::containers_operators;
 			std::vector<std::string> definitions = (*_definitions);
 			definitions += common_definitions;
-			_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
-				.app = application(),
-				.name = name(),
-				.source_path = _path,
-				.stage = _stage,
-				.definitions = definitions,
-				.shader_string_packed_capacity = string_packed_capacity,
-				.mounting_points = mounting_points,
-			});
-			_specializations[key] = _inst;
-			_instance_time = std::chrono::file_clock::now();
-		}
 
-		_dependencies = _inst->dependencies();
+			SpecializationKey lkey = key;
+			
+			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+				.name = "Compiling shader " + _path.string(),
+				.priority = TaskPriority::ASAP(),
+				.lambda = [this, definitions, mounting_points, string_packed_capacity, lkey]() {
+
+					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
+						.app = application(),
+						.name = name(),
+						.source_path = _path,
+						.stage = _stage,
+						.definitions = definitions,
+						.shader_string_packed_capacity = string_packed_capacity,
+						.mounting_points = mounting_points,
+					});
+
+					const AsynchTask::ReturnType & res = _inst->getCreationResult();
+					
+					if (res.success)
+					{
+						_specializations[lkey] = _inst;
+						_instance_time = std::chrono::file_clock::now();
+						_dependencies = _inst->dependencies();
+					}
+
+					return res;
+				},
+			});
+			application()->threadPool().pushTask(_create_instance_task);
+		}
 	}
 
 	void Shader::destroyInstance()
 	{
+		waitForInstanceCreationIFN();
 		if (_inst)
 		{
 			callInvalidationCallbacks();
@@ -621,6 +727,7 @@ namespace vkl
 		std::vector<std::string> definitions = *_definitions;
 		definitions += ctx.commonDefinitions()->collapsed();
 		SpecializationKey new_key;
+		// TODO use a string stream (probably faster)
 		new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
 		{
 			return a + "\n"s + b;
@@ -628,6 +735,7 @@ namespace vkl
 		
 		if (ctx.checkShadersCycle() > _check_cycle)
 		{
+			waitForInstanceCreationIFN();
 			for (const auto& dep : _dependencies)
 			{
 				const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
@@ -635,6 +743,7 @@ namespace vkl
 				{
 					_specializations.clear();
 					res = true;
+					break;
 				}
 			}
 			_check_cycle = ctx.checkShadersCycle();
@@ -676,5 +785,21 @@ namespace vkl
 	Shader::~Shader()
 	{
 		destroyInstance();
+	}
+
+	void Shader::waitForInstanceCreationIFN()
+	{
+		if (_create_instance_task)
+		{
+			_create_instance_task->waitIFN();
+			assert(_create_instance_task->isSuccess());
+			_create_instance_task = nullptr;
+		}
+	}
+
+	std::shared_ptr<ShaderInstance> Shader::getInstanceWaitIFN()
+	{
+		waitForInstanceCreationIFN();
+		return instance();
 	}
 }
