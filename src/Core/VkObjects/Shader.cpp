@@ -30,9 +30,9 @@ namespace vkl
 
 	std::string readFileToString(std::filesystem::path const& path)
 	{
-		std::ifstream file = std::ifstream(path, std::ios::ate | std::ios::binary);
+		std::ifstream file;
 		int tries = 0;
-		const int max_tries = 8;
+		const int max_tries = 1;
 		do
 		{
 			if (tries)
@@ -82,8 +82,9 @@ namespace vkl
 		{
 			_creation_result.success = false;
 			// Handle the error in the caller
-			return {};
+			return e.what();
 		}
+
 
 		std::stringstream oss;
 
@@ -225,6 +226,10 @@ namespace vkl
 						return std::filesystem::path();
 					}
 				}();
+				if (_creation_result.success == false)
+				{
+					return {};
+				}
 
 				oss << std::string_view(content.data() + copied_so_far, include_begin - copied_so_far);
 				
@@ -243,7 +248,8 @@ namespace vkl
 									"Error while preprocessing shader: Inclusion error \n"s +
 									"Main Shader: "s + _main_path.string() + ":\n"s +
 									"In file "s + path.string() + ":\n"s +
-									"Could not include "s + path_to_include.string(),
+									"Could not include "s + path_to_include.string() + ":\n"s +
+									included_code,
 							};
 						}
 						return {};
@@ -420,7 +426,8 @@ namespace vkl
 				.error_title = "Shader Compilation Error: Preprocess Includes"s,
 				.error_message =
 					"Error while preprocessing shader: \n"s +
-					"Could not read main shader: " + _main_path.string(),
+					"Could not read main shader: " + _main_path.string() + "\n"s +
+					full_source,
 			};
 			return {};
 		}
@@ -595,7 +602,7 @@ namespace vkl
 		_reflection(std::zeroInit(_reflection)),
 		_shader_string_packed_capacity(ci.shader_string_packed_capacity)
 	{
-
+		_creation_result.success = true;
 		using namespace std::containers_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
