@@ -11,12 +11,13 @@ namespace vkl
 		DeviceCommand(ci.app, ci.name),
 		_swapchain(ci.swapchain)
 	{
-		createRenderPass();
+		createRenderPassIFP();
+
+		initImGui();
 		
 		_swapchain->addInvalidationCallback({
-			.callback = [=]() {
+			.callback = [this]() {
 				_framebuffers.clear();
-				maybeDestroyRenderPass();
 			},
 			.id = this,
 		});
@@ -25,14 +26,11 @@ namespace vkl
 	ImguiCommand::~ImguiCommand()
 	{
 		_swapchain->removeInvalidationCallbacks(this);
-
-		if (_render_pass)
-		{
-			vkDeviceWaitIdle(device());
-			ImGui_ImplVulkan_Shutdown();
-			_desc_pool = nullptr;
-			_render_pass = nullptr;
-		}
+		
+		shutdownImGui();
+		_desc_pool = nullptr;
+		_render_pass = nullptr;
+		
 	}
 
 	void ImguiCommand::createFramebuffers()
@@ -50,66 +48,77 @@ namespace vkl
 		}
 	}
 
-	void ImguiCommand::createRenderPass()
+	void ImguiCommand::createRenderPassIFP()
 	{
-		_render_pass_format = _swapchain->format().value().format;
-		VkAttachmentDescription2 attachement_desc{
-			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-			.pNext = nullptr,
-			.flags = 0,
-			.format = _render_pass_format,
-			.samples = VK_SAMPLE_COUNT_1_BIT,// To check
-			.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			.finalLayout = VK_IMAGE_LAYOUT_GENERAL,
-		};
+		// ImGui require the ext, vk 1.3 is not enough for now (event though the ext has been promoted to core in 1.3)
+		const bool can_use_dynamic_rendering = application()->availableFeatures().features_13.dynamicRendering && application()->hasDeviceExtension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		if (false && can_use_dynamic_rendering)
+		{
+
+		}
+		else
+		{
+			RenderPass::AttachmentDescription2 attachement_desc{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+				.pNext = nullptr,
+				.flags = 0,
+				.format = [this](){return _swapchain->format().value().format;},
+				.samples = VK_SAMPLE_COUNT_1_BIT,// To check
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			};
 		
-		std::vector<VkAttachmentReference2> attachement_reference = { {
-			.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-			.pNext = nullptr,
-			.attachment = 0,
-			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		} };
+			std::vector<VkAttachmentReference2> attachement_reference = { {
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+				.pNext = nullptr,
+				.attachment = 0,
+				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			} };
 
-		VkSubpassDescription2 subpass = {
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-			.pNext = nullptr,
-			.flags = 0,
-			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
-			.colorAttachmentCount = static_cast<uint32_t>(1),
-			.pColorAttachments = attachement_reference.data(), // Warning this is dangerous, the data is copied
-			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = nullptr,
-			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
-		};
-		VkSubpassDependency2 dependency = {
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
-			.pNext = nullptr,
-			.srcSubpass = VK_SUBPASS_EXTERNAL,
-			.dstSubpass = 0,
-			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = VK_ACCESS_NONE,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-		};
+			VkSubpassDescription2 subpass = {
+				.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+				.pNext = nullptr,
+				.flags = 0,
+				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+				.inputAttachmentCount = 0,
+				.pInputAttachments = nullptr,
+				.colorAttachmentCount = static_cast<uint32_t>(1),
+				.pColorAttachments = attachement_reference.data(), // Warning this is dangerous, the data is copied
+				.pResolveAttachments = nullptr,
+				.pDepthStencilAttachment = nullptr,
+				.preserveAttachmentCount = 0,
+				.pPreserveAttachments = nullptr,
+			};
+			VkSubpassDependency2 dependency = {
+				.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+				.pNext = nullptr,
+				.srcSubpass = VK_SUBPASS_EXTERNAL,
+				.dstSubpass = 0,
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.srcAccessMask = VK_ACCESS_NONE,
+				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+			};
 
-		_render_pass = std::make_shared<RenderPass>(RenderPass::CI{
-			.app = application(),
-			.name = name() + ".RenderPass",
-			.attachement_descriptors = { attachement_desc },
-			.attachement_ref_per_subpass = { attachement_reference },
-			.subpasses = { subpass },
-			.dependencies ={ dependency },
-			.last_is_depth = false,
-		});
+			_render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+				.app = application(),
+				.name = name() + ".RenderPass",
+				.attachement_descriptors = { attachement_desc },
+				.attachement_ref_per_subpass = { attachement_reference },
+				.subpasses = { subpass },
+				.dependencies ={ dependency },
+				.last_is_depth_stencil = false,
+				.create_on_construct = true,
+			});
+		}
+	}
 
-
+	void ImguiCommand::initImGui()
+	{
 		const uint32_t N = 1024;
 		std::vector<VkDescriptorPoolSize> sizes = {
 			{ VK_DESCRIPTOR_TYPE_SAMPLER,					N },
@@ -128,8 +137,8 @@ namespace vkl
 		_desc_pool = std::make_shared<DescriptorPool>(DescriptorPool::CreateInfoRaw{
 			.app = application(),
 			.name = name() + ".pool",
-			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-			.max_sets = N,
+			.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+			.max_sets = 8,
 			.sizes = sizes,
 		});
 
@@ -141,24 +150,22 @@ namespace vkl
 			.Queue = _app->queues().graphics,
 			.DescriptorPool = *_desc_pool,
 			.MinImageCount = static_cast<uint32_t>(2),
-			.ImageCount = static_cast<uint32_t>(8), // Why 8?
+			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+			.ImageFormat = VK_FORMAT_B8G8R8A8_UNORM,
+			.UseDynamicRendering = _render_pass ? false : true,
 		};
-
-		ImGui_ImplVulkan_Init(&ii, *_render_pass);
+		
+		ImGui_ImplVulkan_Init(&ii);
+		ImGui_ImplVulkan_CreateFontsTexture();
 	}
 
-	void ImguiCommand::maybeDestroyRenderPass()
+	void ImguiCommand::shutdownImGui()
 	{
-		assert(_swapchain);
-		VkFormat fmt = _swapchain->format().value().format;
-		if(fmt != _render_pass_format)
-		{
-			vkDeviceWaitIdle(device());
-			ImGui_ImplVulkan_Shutdown();
-			_desc_pool = nullptr;
-			_render_pass = nullptr;
-		}
+		vkDeviceWaitIdle(device());
+		ImGui_ImplVulkan_DestroyFontsTexture();
+		ImGui_ImplVulkan_Shutdown();
+		_desc_pool = nullptr;
 	}
 
 	void ImguiCommand::init()
@@ -169,22 +176,22 @@ namespace vkl
 	void ImguiCommand::execute(ExecutionContext& context, ExecutionInfo const& ei)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+
+		ImGui::Render();
+
 		SynchronizationHelper synch(context);
 
 		const size_t index = ei.index;
 
+		std::shared_ptr<ImageView> target = _swapchain->instance()->views()[index];
+
 		std::array<Resource, 1> resources = {
 			Resource{
-				._image = _swapchain->instance()->views()[index],
+				._image = target,
 				._begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-				},
-				._end_state = ResourceState2{
-					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-					.layout = VK_IMAGE_LAYOUT_GENERAL,
-					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			},
@@ -193,34 +200,79 @@ namespace vkl
 
 		synch.record();
 
-		const VkExtent2D render_area = extract(*_framebuffers[index]->extent());
+		const VkExtent2D render_area = extract(target->image()->instance()->createInfo().extent);
 
-		std::vector<VkClearValue> clear_values(_framebuffers[index]->size());
-		for (size_t i = 0; i < clear_values.size(); ++i)
+		if (_render_pass)
 		{
-			clear_values[i] = VkClearValue{
-				.color = VkClearColorValue{.int32{0, 0, 0, 1}},
+			//std::vector<VkClearValue> clear_values(_framebuffers[index]->size());
+			//for (size_t i = 0; i < clear_values.size(); ++i)
+			//{
+			//	clear_values[i] = VkClearValue{
+			//		.color = VkClearColorValue{.int32{0, 0, 0, 1}},
+			//	};
+			//}
+
+			std::shared_ptr<FramebufferInstance> framebuffer = _framebuffers[index]->instance();
+			const VkRenderPassBeginInfo render_begin = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = *_render_pass->instance(),
+				.framebuffer = *framebuffer,
+				.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
+				.clearValueCount = 0,
+				.pClearValues = nullptr,
 			};
+			vkCmdBeginRenderPass(*cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
 		}
-		
-		const VkRenderPassBeginInfo render_begin = {
-			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			.pNext = nullptr,
-			.renderPass = *_render_pass,
-			.framebuffer = *_framebuffers[index]->instance(),
-			.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
-			.clearValueCount = (uint32_t)clear_values.size(),
-			.pClearValues = clear_values.data(),
-		};
-		vkCmdBeginRenderPass(*cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
+		else
+		{
+			VkRenderingAttachmentInfo attachement{
+				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+				.pNext = nullptr,
+				.imageView = target->instance()->handle(),
+				.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.resolveMode = VK_RESOLVE_MODE_NONE,
+				.resolveImageView = VK_NULL_HANDLE,
+				.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+			};
+			VkRenderingInfo render_info{
+				.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
+				.layerCount = 1,
+				.viewMask = 0,
+				.colorAttachmentCount = 1,
+				.pColorAttachments = &attachement,
+				.pDepthAttachment = nullptr,
+				.pStencilAttachment = nullptr,
+			};
+			vkCmdBeginRendering(*cmd, &render_info);
+		}
+
 		{
 			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *cmd);
 		}
-		vkCmdEndRenderPass(*cmd);
+
+		if (_render_pass)
+		{
+			vkCmdEndRenderPass(*cmd);
+		}
+		else
+		{
+			vkCmdEndRendering(*cmd);
+		}
 
 		context.keppAlive(_desc_pool);
-		context.keppAlive(_render_pass);
-		context.keppAlive(_framebuffers[index]->instance());
+		if (_render_pass)
+		{
+			context.keppAlive(_render_pass->instance());
+			context.keppAlive(_framebuffers[index]->instance());
+		}
+		
+		ImGui::RenderPlatformWindowsDefault();
 	}
 
 	void ImguiCommand::execute(ExecutionContext& ctx)
@@ -235,13 +287,12 @@ namespace vkl
 	{
 		bool res = false;
 
-		if (!_render_pass)
+		if (_render_pass)
 		{
-			createRenderPass();
-			res = true;
+			res |= _render_pass->updateResources(ctx);
 		}
 
-		if (_framebuffers.empty())
+		if (_render_pass && _framebuffers.empty())
 		{
 			createFramebuffers();
 			res = true;
@@ -250,6 +301,20 @@ namespace vkl
 		for (auto& fb : _framebuffers)
 		{
 			res |= fb->updateResources(ctx);
+		}
+
+		if (!_render_pass)
+		{
+
+		}
+
+		const VkFormat swapchain_format = _swapchain->instance()->createInfo().imageFormat;
+		if (swapchain_format != _imgui_format)
+		{
+			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
+			vkDeviceWaitIdle(device());
+			ImGui_ImplVulkan_CreateMainPipeline(vk_render_pass, swapchain_format);
+			_imgui_format = swapchain_format;
 		}
 
 		return res;

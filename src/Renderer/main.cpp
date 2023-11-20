@@ -280,7 +280,7 @@ namespace vkl
 
 				beginImGuiFrame();
 				{
-					ImGui::ShowDemoWindow();
+					//ImGui::ShowDemoWindow();
 
 					renderer.declareImGui();
 
@@ -293,6 +293,7 @@ namespace vkl
 					exec.getDebugRenderer()->declareImGui();
 				}
 				ImGui::EndFrame();
+				ImGui::UpdatePlatformWindows();
 
 				if(mouse.getButton(1).justReleased())
 				{
@@ -335,15 +336,13 @@ namespace vkl
 					exec_thread.bindSet(1, nullptr);
 
 					exec.renderDebugIFP();
-					ImGui::Render();
 					exec.endCommandBuffer(ptr_exec_thread);
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);
 					exec.AquireSwapchainImage();
 					exec.preparePresentation(final_image);
 					
-					ImGui::UpdatePlatformWindows();
-					ImGui::RenderPlatformWindowsDefault();
+					
 					exec.endCommandBuffer(ptr_exec_thread);
 					exec.submit();
 					exec.present();

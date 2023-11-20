@@ -20,7 +20,7 @@ namespace vkl
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.renderPass = *_render_pass,
+			.renderPass = *_render_pass->instance(),
 			.attachmentCount = static_cast<uint32_t>(views.size()),
 			.pAttachments = views.data(),
 			.width = extent().width,
@@ -77,20 +77,23 @@ namespace vkl
 		_depth(ci.depth),
 		_render_pass(ci.render_pass)
 	{
+		Callback cb{
+			.callback = [&]() {
+				destroyInstance();
+			},
+			.id = this,
+		};
+		_render_pass->addInvalidationCallback(cb);
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
-			_textures[i]->addInvalidationCallback({
-				.callback = [&]() {
-					destroyInstance();
-				},
-				.id = this,
-			});
+			_textures[i]->addInvalidationCallback(cb);
 		}
 	}
 
 	Framebuffer::~Framebuffer()
 	{
 		destroyInstance();
+		_render_pass->removeInvalidationCallbacks(this);
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
 			_textures[i]->removeInvalidationCallbacks(this);

@@ -111,12 +111,15 @@ namespace vkl
 		_render_pass(gci.render_pass),
 		_program(gci.program)
 	{
-		_program->addInvalidationCallback({
+		Callback cb{
 			.callback = [&]() {
 				destroyInstance();
 			},
 			.id = this,
-		});
+		};
+		_program->addInvalidationCallback(cb);
+		_gci.render_pass->addInvalidationCallback(cb);
+		
 	}
 
 	Pipeline::Pipeline(ComputeCreateInfo const& cci) :

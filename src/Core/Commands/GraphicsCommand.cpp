@@ -24,11 +24,11 @@ namespace vkl
 	{
 		using namespace std::containers_operators;
 		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
-		std::vector<VkAttachmentDescription2> at_desc(n_color);
+		std::vector<RenderPass::AttachmentDescription2> at_desc(n_color);
 		std::vector<VkAttachmentReference2> at_ref(n_color);
 		for (size_t i = 0; i < n_color; ++i)
 		{
-			at_desc[i] = VkAttachmentDescription2{
+			at_desc[i] = RenderPass::AttachmentDescription2{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
 				.flags = 0,
@@ -56,7 +56,7 @@ namespace vkl
 		{
 			const bool write_depth = _write_depth.value_or(true);
 
-			at_desc.push_back(VkAttachmentDescription2{
+			at_desc.push_back(RenderPass::AttachmentDescription2{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
 				.flags = 0,
@@ -127,7 +127,7 @@ namespace vkl
 			.attachement_ref_per_subpass = {at_ref},
 			.subpasses = {subpass},
 			.dependencies = dependencies,
-			.last_is_depth = render_depth,
+			.last_is_depth_stencil = render_depth,
 		});
 
 		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
@@ -225,6 +225,8 @@ namespace vkl
 	{
 		bool res = false;
 
+		res |= _render_pass->updateResources(ctx);
+
 		res |= ShaderCommand::updateResources(ctx);
 
 		_framebuffer->updateResources(ctx);
@@ -274,7 +276,7 @@ namespace vkl
 		VkRenderPassBeginInfo begin = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,
-			.renderPass = *_render_pass,
+			.renderPass = *_render_pass->instance(),
 			.framebuffer = *_framebuffer->instance(),
 			.renderArea = VkRect2D{.offset = makeZeroOffset2D(), .extent = render_area},
 			.clearValueCount = static_cast<uint32_t>(num_clear_values),
@@ -302,7 +304,7 @@ namespace vkl
 
 		context.keppAlive(_pipeline->instance());
 		context.keppAlive(_framebuffer->instance());
-		context.keppAlive(_render_pass);
+		context.keppAlive(_render_pass->instance());
 		context.popDebugLabel();
 	}
 

@@ -45,6 +45,7 @@ namespace vkl
 			VK_EXT_MESH_SHADER_EXTENSION_NAME,
 			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
 			VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 		};
 	}
 
@@ -80,6 +81,8 @@ namespace vkl
 		features.mesh_shader_ext.primitiveFragmentShadingRateMeshShader = t;
 
 		features.robustness2_ext.nullDescriptor = t;
+
+		features.features_13.dynamicRendering = t;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
@@ -91,7 +94,7 @@ namespace vkl
 		{
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
-
+		extensions.push_back(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
 		
 		return extensions;
 	}

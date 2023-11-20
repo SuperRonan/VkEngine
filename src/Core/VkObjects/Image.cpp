@@ -358,7 +358,7 @@ namespace vkl
 			.pNext = nullptr,
 			.flags = _flags,
 			.imageType = _type,
-			.format = _format,
+			.format = *_format,
 			.extent = *_extent,
 			.mipLevels = _mips,
 			.arrayLayers = _layers,
@@ -393,7 +393,7 @@ namespace vkl
 			_name = assos.instance->name().empty();
 
 		_type = assos.instance->createInfo().imageType;
-		_format = assos.instance->createInfo().format;
+		_format = assos.format;
 		_extent = assos.extent;
 		_mips = assos.instance->createInfo().mipLevels;
 		_layers = assos.instance->createInfo().arrayLayers; // TODO Check if the swapchain can support multi layered images (VR)
@@ -436,8 +436,17 @@ namespace vkl
 
 				if (new_extent != _inst->createInfo().extent)
 				{
-					destroyInstance();
 					res = true;
+				}
+				const VkFormat new_format = *_format;
+				if (new_format != _inst->createInfo().format)
+				{
+					res = true;
+				}
+
+				if (res)
+				{
+					destroyInstance();
 				}
 			}
 		}

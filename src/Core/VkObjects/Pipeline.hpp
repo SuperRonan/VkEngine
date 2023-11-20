@@ -116,7 +116,7 @@ namespace vkl
 					.pColorBlendState = &_blending,
 					.pDynamicState = &_dynamic_state,
 					.layout = *program->pipelineLayout(),
-					.renderPass = *render_pass,
+					.renderPass = *render_pass->instance(),
 					.subpass = 0,
 					.basePipelineHandle = VK_NULL_HANDLE,
 					.basePipelineIndex = 0,

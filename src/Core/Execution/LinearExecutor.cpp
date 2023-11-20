@@ -53,7 +53,6 @@ namespace vkl
 	{
 		if (_render_gui)
 		{
-			ImGui_ImplVulkan_DestroyFontUploadObjects();
 			//ImGui_ImplVulkan_DestroyDeviceObjects();
 		}
 	}
@@ -71,11 +70,7 @@ namespace vkl
 		
 		if (_render_gui)
 		{
-			ExecutionThread * thread = beginCommandBuffer(false);
-			{
-				ImGui_ImplVulkan_CreateFontsTexture(thread->context()->getCommandBuffer()->handle());
-			}
-			endCommandBuffer(thread, true);
+
 		}
 
 		// TODO load debug renderer font here?

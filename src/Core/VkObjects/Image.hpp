@@ -154,8 +154,8 @@ namespace vkl
 			std::string name = "";
 			VkImageCreateFlags flags = 0;
 			VkImageType type = VK_IMAGE_TYPE_MAX_ENUM;
-			VkFormat format = VK_FORMAT_MAX_ENUM;
-			DynamicValue<VkExtent3D> extent;
+			Dyn<VkFormat> format;
+			Dyn<VkExtent3D> extent;
 			uint32_t mips = 1;
 			uint32_t layers = 1;
 			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
@@ -170,7 +170,8 @@ namespace vkl
 		struct AssociateInfo
 		{
 			std::shared_ptr<ImageInstance> instance;
-			DynamicValue<VkExtent3D> extent;
+			Dyn<VkFormat> format;
+			Dyn<VkExtent3D> extent;
 		};
 
 		using CI = CreateInfo;
@@ -204,8 +205,8 @@ namespace vkl
 
 		VkImageCreateFlags _flags = 0;
 		VkImageType _type = VK_IMAGE_TYPE_MAX_ENUM;
-		VkFormat _format = VK_FORMAT_MAX_ENUM;
-		DynamicValue<VkExtent3D> _extent;
+		Dyn<VkFormat> _format;
+		Dyn<VkExtent3D> _extent;
 		uint32_t _mips = 1;
 		uint32_t _layers = 1;
 		VkSampleCountFlagBits _samples = VK_SAMPLE_COUNT_1_BIT;
@@ -242,12 +243,12 @@ namespace vkl
 			return _type;
 		}
 
-		constexpr VkFormat format()const
+		Dyn<VkFormat> format()const
 		{
 			return _format;
 		}
 
-		DynamicValue<VkExtent3D> extent()const
+		Dyn<VkExtent3D> extent()const
 		{
 			return _extent;
 		}

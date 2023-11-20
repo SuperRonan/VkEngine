@@ -63,7 +63,7 @@ namespace vkl
 		VkImageViewCreateInfo ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.viewType = _type,
-			.format = _format,
+			.format = *_format,
 			.components = _components,
 			.subresourceRange = _range,
 		};
@@ -95,7 +95,7 @@ namespace vkl
 		InstanceHolder<ImageViewInstance>((ci.app ? ci.app : (ci.image ? ci.image->application() : ci.image_ci->app)), ci.name),
 		_image(ci.image ? ci.image : std::make_shared<Image>(*ci.image_ci)),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
-		_format(ci.format == VK_FORMAT_MAX_ENUM ? _image->format() : ci.format),
+		_format(ci.format.hasValue() ? ci.format : _image->format()),
 		_components(ci.components),
 		_range(ci.range.has_value() ? ci.range.value() : _image->defaultSubresourceRange())
 	{
@@ -112,102 +112,32 @@ namespace vkl
 		}
 	}
 
-
-	//ImageView::ImageView(std::shared_ptr<Image> image, VkImageAspectFlags aspect) :
-	//	VkObject(*image),
-	//	_image(image),
-	//	_type(getDefaultViewTypeFromImageType(image->type())),
-	//	_format(image->format()),
-	//	_components(defaultComponentMapping()),
-	//	_range(VkImageSubresourceRange{
-	//		.aspectMask = aspect,
-	//		.baseMipLevel = 0,
-	//		.levelCount = image->mips(),
-	//		.baseArrayLayer = 0,
-	//		.layerCount = 1,
-	//	})
-	//	{
-	//		createView();
-	//	}
-
-	//ImageView::ImageView(Image && image, VkImageAspectFlags aspect) :
-	//	VkObject(image),
-	//	_image(std::make_shared<Image>(std::move(image))),
-	//	_type(getDefaultViewTypeFromImageType(image.type())),
-	//	_format(image.format()),
-	//	_components(defaultComponentMapping()),
-	//	_range(VkImageSubresourceRange{
-	//		.aspectMask = aspect,
-	//		.baseMipLevel = 0,
-	//		.levelCount = image.mips(),
-	//		.baseArrayLayer = 0,
-	//		.layerCount = 1,
-	//		})
-	//{
-	//	createView();
-	//}
-
-	//StagingPool::StagingBuffer* ImageView::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
-	//{
-	//	assert(_type == VK_IMAGE_TYPE_2D);
-	//	size_t size = _image->extent().width * _image->extent().height * elem_size;
-	//	StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
-	//	std::memcpy(sb->data, data, size);
-	//	return sb;
-	//}
-
-	//void ImageView::recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout)
-	//{
-	//	VkBufferImageCopy copy{
-	//		.bufferOffset = 0,
-	//		.bufferRowLength = 0,
-	//		.bufferImageHeight = 0,
-	//		.imageSubresource = VkImageSubresourceLayers{
-	//			.aspectMask = _range.aspectMask,
-	//			.mipLevel = 0,
-	//			.baseArrayLayer = 0,
-	//			.layerCount = 1,
-	//		},
-	//		.imageOffset = {0, 0, 0},
-	//		.imageExtent = _image->extent(),
-	//	};
-	//	vkCmdCopyBufferToImage(command_buffer, sb->buffer, *_image, layout, 1, &copy);
-	//}
-
-	//void ImageView::recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage)
-	//{
-	//	VkImageMemoryBarrier barrier{
-	//		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-	//		.srcAccessMask = src_access,
-	//		.dstAccessMask = dst_access,
-	//		.oldLayout = src,
-	//		.newLayout = dst,
-	//		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-	//		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-	//		.image = *_inst->image(),
-	//		.subresourceRange = _range,
-	//	};
-
-	//	vkCmdPipelineBarrier(command,
-	//		src_stage, dst_stage,
-	//		0,
-	//		0, nullptr,
-	//		0, nullptr,
-	//		1, &barrier
-	//	);
-	//}
-
 	bool ImageView::updateResource(UpdateContext & ctx)
 	{
-		const bool updated = _image->updateResource(ctx);                      
+		const bool updated = _image->updateResource(ctx);
+		bool res = updated;
 		
+		if (_inst)
+		{
+			const VkFormat new_format = *_format;
+			if (_inst->createInfo().format != new_format)
+			{
+				res = true;
+			}
+
+			if (res)
+			{
+				destroyInstance();
+			}
+		}
+
 		if (!_inst)
 		{
 			createInstance();
-			return true;
+			res = true;
 		}
 
-		return false;
+		return res;
 	}
 
 }

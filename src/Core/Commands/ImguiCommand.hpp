@@ -15,17 +15,20 @@ namespace vkl
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		std::vector<std::shared_ptr<Framebuffer>> _framebuffers = {};
 
-		VkFormat _render_pass_format;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<DescriptorPool> _desc_pool = nullptr;
 
+		VkFormat _imgui_format = VK_FORMAT_MAX_ENUM;
+
 		size_t _index = 0;
 
-		void createRenderPass();
-
-		void maybeDestroyRenderPass();
+		void createRenderPassIFP();
 
 		void createFramebuffers();
+
+		void initImGui();
+
+		void shutdownImGui();
 
 	public:
 

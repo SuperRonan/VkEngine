@@ -119,7 +119,7 @@ namespace vkl
 			std::shared_ptr<Image> image = nullptr;
 			std::optional<Image::CreateInfo> image_ci = {};
 			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
-			VkFormat format = VK_FORMAT_MAX_ENUM;
+			Dyn<VkFormat> format;
 			VkComponentMapping components = defaultComponentMapping();
 			std::optional<VkImageSubresourceRange> range = {};
 			bool create_on_construct = false;
@@ -132,7 +132,7 @@ namespace vkl
 
 		std::shared_ptr<Image> _image = nullptr;
 		VkImageViewType _type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
-		VkFormat _format = VK_FORMAT_MAX_ENUM;
+		Dyn<VkFormat> _format;
 		VkComponentMapping _components = defaultComponentMapping();
 		VkImageSubresourceRange _range = {};
 		
@@ -156,7 +156,7 @@ namespace vkl
 			return _type;
 		}
 
-		constexpr VkFormat format()const
+		Dyn<VkFormat> format()const
 		{
 			return _format;
 		}

@@ -73,7 +73,7 @@
 - [ ] MultiExecutor
 - [ ] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
 - [ ] Window:
-	- [ ] Correct HDR support (also ImGui)
+	- [x] Correct HDR support (also ImGui)
 	- [ ] Fullscreen
 	- [ ] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
