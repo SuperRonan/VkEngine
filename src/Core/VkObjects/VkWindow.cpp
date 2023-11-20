@@ -14,7 +14,9 @@ namespace vkl
 	{
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, resizeable);
-		_window = glfwCreateWindow(_width, _height, name.c_str(), nullptr, nullptr);
+		GLFWmonitor * monitor = nullptr;
+
+		_window = glfwCreateWindow(_width, _height, name.c_str(), monitor, nullptr);
 		glfwSetWindowUserPointer(_window, this); // Map _window to this
 		if (resizeable)
 			glfwSetFramebufferSizeCallback(_window, frameBufferResizeCallback);
@@ -39,12 +41,42 @@ namespace vkl
 		});
 		const size_t format_index = 0;
 		_target_format.setValue(sd.formats[format_index]);
-		_gui_formats = ImGuiRadioButtons(std::move(formats), format_index);
+		_gui_formats = ImGuiListSelection::CI{
+			.name = "Format",
+			.mode = ImGuiListSelection::Mode::Combo,
+			.labels = formats,
+			.default_index = format_index,
+		};
 		
-		std::vector<std::string> present_modes(sd.present_modes.size());
-		std::transform(sd.present_modes.begin(), sd.present_modes.end(), present_modes.begin(), getVkPresentModeKHRName);
+		std::vector<ImGuiListSelection::Option> present_modes(sd.present_modes.size());
+		for (size_t i = 0; i < present_modes.size(); ++i)
+		{
+			const VkPresentModeKHR vkp = sd.present_modes[i];
+			present_modes[i].name = getVkPresentModeKHRName(vkp);
+			switch (vkp)
+			{
+				case VK_PRESENT_MODE_IMMEDIATE_KHR:
+					present_modes[i].desc = "Fastest, Possible Frame Skip"s;
+				break;
+				case VK_PRESENT_MODE_MAILBOX_KHR:
+					present_modes[i].desc = "Fast, No Tearing, Possible Frame Skip"s;
+				break;
+				case VK_PRESENT_MODE_FIFO_KHR:
+					present_modes[i].desc = "VSync, No Tearing, No Frame Skip"s;
+				break;
+				case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+					present_modes[i].desc = "VSync, No Tearing, Possible Frame Skip"s;
+				break;
+			}
+		}
 		const size_t present_mode_index = std::find(sd.present_modes.begin(), sd.present_modes.end(), _target_present_mode.value()) - sd.present_modes.begin();
-		_gui_present_modes = ImGuiRadioButtons(std::move(present_modes), present_mode_index);
+		
+		_gui_present_modes = ImGuiListSelection::CI{
+			.name = "Present Mode",
+			.mode = ImGuiListSelection::Mode::Combo,
+			.options = present_modes,
+			.default_index = present_mode_index,
+		};
 
 	}
 
@@ -65,26 +97,53 @@ namespace vkl
 		});
 	}
 
+	void VkWindow::DetailedMonitor::query()
+	{
+		name = glfwGetMonitorName(handle);
+		glfwGetMonitorWorkarea(handle, &position.x, &position.y, &pixel_size.x, &pixel_size.y);
+		glfwGetMonitorPhysicalSize(handle, &physical_size.x, &physical_size.y);
+		glfwGetMonitorContentScale(handle, &scale.x, &scale.y);
+
+		int n_modes;
+		const GLFWvidmode * modes = glfwGetVideoModes(handle, &n_modes);
+		available_video_modes.resize(n_modes);
+		std::copy_n(modes, n_modes, available_video_modes.data());
+		video_mode = glfwGetVideoMode(handle);
+	}
+
+	void VkWindow::DetailedMonitor::setGamma(float gamma)
+	{
+		this->gamma = gamma;
+		glfwSetGamma(handle, gamma);
+	}
+
 	void VkWindow::init(CreateInfo const& ci)
 	{
 		_queues_families_indices = ci.queue_families_indices;
 		_width = ci.w;
 		_height = ci.h;
+		_desired_mode = ci.mode;
 
-		if (ci.resizeable == GLFW_FALSE)
 		{
-			_dynamic_extent = VkExtent3D{ .width = _width, .height = _height, .depth = 1 };;
+			int monitor_count;
+			GLFWmonitor ** monitors = glfwGetMonitors(&monitor_count);
+			_monitors.resize(monitor_count);
+			std::vector<std::string> monitor_names(monitor_count);
+			for (size_t i = 0; i < _monitors.size(); ++i)
+			{
+				_monitors[i].handle = monitors[i];
+				_monitors[i].query();
+			}
 		}
-		else
-		{
-			_dynamic_extent = [&]() {
-				return VkExtent3D{
-					.width = _width,
-					.height = _height,
-					.depth = 1,
-				};
+
+		_dynamic_extent = [&]() {
+			return VkExtent3D{
+				.width = _width,
+				.height = _height,
+				.depth = 1,
 			};
-		}
+		};
+		
 
 		_target_present_mode = ci.target_present_mode;
 
@@ -285,14 +344,12 @@ namespace vkl
 			const Surface::SwapchainSupportDetails& sd = _surface->getDetails();
 			ImGui::Text("Resolution: %d x %d", _width, _height);
 
-			ImGui::Text("Present Mode");
 			changed = _gui_present_modes.declare();
 			if (changed)
 			{
 				_target_present_mode.setValue(sd.present_modes[_gui_present_modes.index()]);
 			}
 
-			ImGui::Text("Format");
 			changed = _gui_formats.declare();
 			if (changed)
 			{

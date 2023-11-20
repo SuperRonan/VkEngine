@@ -45,7 +45,7 @@ namespace vkl
 		uint32_t _first_binding = 0;
 
 		int _default_float_precision = 3;
-		ImGuiRadioButtons _default_glyph_size;
+		ImGuiListSelection _default_glyph_size;
 		bool _default_show_plus = false;
 
 		void declareCommonDefinitions();

@@ -57,7 +57,7 @@ namespace vkl
 
 			std::vector<std::shared_ptr<VkObject>> dependecies = {};
 
-			uint32_t finish_counter = 4;			
+			uint32_t finish_counter = 0;			
 
 			Event(VkApplication* app, std::string name, Type type, bool create_synch):
 				VkObject(app, name),

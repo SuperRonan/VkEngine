@@ -21,23 +21,60 @@ namespace vkl
 	{
 	public:
 
+		using ivec2 = glm::ivec2;
+		using float2 = glm::vec2;
+
+		enum Mode
+		{
+			Windowed,
+			WindowedFullscreen,
+			Fullscreen,
+			ExclusiveFullscreen,
+			MAX_ENUM,
+		};
+
 		struct CreateInfo
 		{	
-			VkApplication* app;
-			std::set<uint32_t> queue_families_indices;
+			VkApplication* app = nullptr;
+			std::set<uint32_t> queue_families_indices = {};
 
 			DynamicValue<VkPresentModeKHR> target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 
-			std::string name;
+			std::string name = {};
+			Mode mode = Mode::Windowed;
 			uint32_t w, h;
-			int resizeable;
+			int resizeable = false;
 		};
 
 	protected:
 
 		uint32_t _width, _height;
+		Mode _mode = Mode::MAX_ENUM;
 		GLFWwindow* _window;
 
+		struct DetailedMonitor
+		{
+			GLFWmonitor * handle;
+			
+			std::string name;
+			ivec2 position;
+			ivec2 pixel_size;
+			ivec2 physical_size;
+			float2 scale;
+			std::vector<GLFWvidmode> available_video_modes;
+			const GLFWvidmode * video_mode;
+
+			float gamma;
+
+			void query();
+
+			void setGamma(float gamma);
+		};
+
+		std::vector<DetailedMonitor> _monitors = {};
+		size_t selected_monitor_index = 0;
+
+		Mode _desired_mode = Mode::Windowed;
 		
 		std::shared_ptr<Surface> _surface = nullptr;
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
@@ -53,9 +90,9 @@ namespace vkl
 		//std::vector<std::shared_ptr<Fence>> _image_in_flight_fence;
 
 		DynamicValue<VkPresentModeKHR> _target_present_mode;
-		ImGuiRadioButtons _gui_present_modes;
+		ImGuiListSelection _gui_present_modes;
 		DynamicValue<VkSurfaceFormatKHR> _target_format = VkSurfaceFormatKHR{.format = VK_FORMAT_MAX_ENUM, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
-		ImGuiRadioButtons _gui_formats;
+		ImGuiListSelection _gui_formats;
 
 		struct FrameInfo
 		{

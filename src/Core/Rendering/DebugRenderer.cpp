@@ -12,15 +12,22 @@ namespace vkl
 		_common_definitions(ci.common_definitions),
 		_sets_layouts(ci.sets_layout),
 		_target(ci.target),
-		_depth(ci.depth),
-		_default_glyph_size({
-			"Tiny",
-			"Small",
-			"Normal",
-			"Large",
-			"Huge",
-		}, 2)
+		_depth(ci.depth)
 	{
+
+		_default_glyph_size = ImGuiListSelection::CI{
+			.name = "Font size",
+			.mode = ImGuiListSelection::Mode::Dropdown,
+			.labels = {
+				"Tiny",
+				"Small",
+				"Normal",
+				"Large",
+				"Huge",
+			},
+			.default_index = 2,
+		};
+		
 		createResources();
 		
 		declareCommonDefinitions();
@@ -301,7 +308,7 @@ namespace vkl
 					common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
 				}
 
-				ImGui::Text("Font size: ");
+				
 				changed = _default_glyph_size.declare();
 				if (changed)
 				{

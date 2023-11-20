@@ -280,7 +280,7 @@ namespace vkl
 
 				beginImGuiFrame();
 				{
-					//ImGui::ShowDemoWindow();
+					ImGui::ShowDemoWindow();
 
 					renderer.declareImGui();
 

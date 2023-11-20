@@ -6,44 +6,80 @@
 
 namespace vkl
 {
-	class ImGuiRadioButtons
+	class ImGuiListSelection
 	{
+	public:
+		enum class Mode
+		{
+			RadioButtons,
+			Combo,
+			Dropdown = Combo,
+		};
+		
+		struct Option
+		{
+			std::string name;
+			std::string desc;
+		};
+
 	protected:
 
+		std::string _name = {};
+		
+		Mode _mode = Mode::Combo;
+
 		size_t _index = 0;
-		std::vector<std::string> _buttons = {};
+		std::vector<Option> _options = {};
+		
+		bool _same_line;
 
 	public:
 
-		ImGuiRadioButtons() = default;
-
-		ImGuiRadioButtons(std::vector<std::string> const& labels, size_t default_index = 0) :
-			_index(default_index),
-			_buttons(labels)
+		struct CreateInfo
 		{
-			if(_index > labels.size())	_index = 0;
-		}
+			std::string name = {};
+			Mode mode = Mode::Combo;
+			// labels xor options
+			std::vector<std::string> labels;
+			// labels xor options
+			std::vector<Option> options;
+			size_t default_index = 0;
+			bool same_line = false;
+		};
+		using CI = CreateInfo;
 
-		ImGuiRadioButtons & operator=(ImGuiRadioButtons const&) = default;
-		ImGuiRadioButtons & operator=(ImGuiRadioButtons &&) = default;
+		ImGuiListSelection() = default;
+
+		ImGuiListSelection(CreateInfo const& ci);
+
+		ImGuiListSelection& operator=(ImGuiListSelection const&) = default;
+		ImGuiListSelection& operator=(ImGuiListSelection&&) = default;
 		
 
-		bool declare(bool same_line = false)
+		bool declareRadioButtons(bool same_line);
+		
+		bool declareRadioButtons()
 		{
-			size_t active_index = _index;
-			for (size_t i = 0; i < _buttons.size(); ++i)
+			return declareRadioButtons(_same_line);
+		}
+
+		bool declareCombo();
+
+		bool declareDropdown()
+		{
+			return declareCombo();
+		}
+
+		bool declare()
+		{
+			if (_mode == Mode::RadioButtons)
 			{
-				bool b = ImGui::RadioButton(_buttons[i].c_str(), i == _index);
-				if (b)	active_index = i;
-				if (same_line && (i != _buttons.size() - 1))
-					ImGui::SameLine();
+				return declareRadioButtons(_same_line);
 			}
-			bool changed = _index != active_index;
-			if (changed)
+			else if (_mode == Mode::Combo)
 			{
-				_index = active_index;
+				return declareCombo();
 			}
-			return changed;
 		}
 
 		constexpr size_t index()const

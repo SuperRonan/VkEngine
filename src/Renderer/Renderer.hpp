@@ -25,7 +25,11 @@ namespace vkl
 		std::shared_ptr<ImageView> _target = nullptr;
 		std::shared_ptr<ImageView> _depth = nullptr;
 
-		ImGuiRadioButtons _pipeline_selection = std::vector<std::string>{"Direct V1"s, "Deferred V1"s};
+		ImGuiListSelection _pipeline_selection = ImGuiListSelection::CI{
+			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.labels = {"Direct V1"s, "Deferred V1"s},
+			.same_line = true,
+		};
 
 		std::vector<uint32_t> _model_types;
 
