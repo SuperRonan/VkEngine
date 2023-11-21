@@ -1,0 +1,48 @@
+#version 450
+
+#include <ShaderLib:/common.glsl>
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+#ifndef DST_FORMAT
+#error "DST_FORMAT not defined"
+#endif
+
+#ifndef USE_SEPARATE_SOURCE
+#define USE_SEPARATE_SOURCE 0
+#endif
+
+layout(SHADER_DESCRIPTOR_BINDING + 0, DST_FORMAT) uniform restrict image2D Desination;
+
+#if USE_SEPARATE_SOURCE
+layout(SHADER_DESCRIPTOR_BINDING + 1) uniform sampler2D Source;
+#endif
+
+layout(push_constant) uniform PushConstantBlock
+{
+	float gamma;
+	float scale;
+} _pc;
+
+void main()
+{
+	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	const ivec2 dims = imageSize(Desination);
+
+	if(all(lessThan(pixel, dims)))
+	{
+		const vec2 uv = (vec2(pixel) + 0.5) / vec2(dims);
+
+#if USE_SEPARATE_SOURCE
+		const vec4 src = textureLod(Source, uv, 0);
+#else
+		const vec4 src = imageLoad(Desination, pixel);
+#endif
+
+		vec4 dst = src;
+		dst.xyz = pow(src.xyz, vec3(_pc.gamma)) * _pc.scale;
+
+		imageStore(Desination, pixel, dst);
+
+	}
+}

@@ -30,6 +30,7 @@
 
 #include "Renderer.hpp"
 #include "PicInPic.hpp"
+#include "Core/Rendering/ToneMapper.hpp"
 
 namespace vkl
 {
@@ -205,6 +206,12 @@ namespace vkl
 			});
 			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
 
+			ToneMapper tonemap = ToneMapper::CI{
+				.app = this,
+				.name = "ToneMapping",
+				.dst = final_image,
+				.sets_layouts = sets_layouts,
+			};
 
 			PictureInPicture pip = PictureInPicture::CI{
 				.app = this,
@@ -281,16 +288,17 @@ namespace vkl
 				beginImGuiFrame();
 				{
 					//ImGui::ShowDemoWindow();
+					camera.declareImGui();
 
 					renderer.declareImGui();
 
-					camera.declareImGui();
-
-					window->declareImGui();
+					tonemap.declareGui();
 
 					pip.declareImGui();
 
 					exec.getDebugRenderer()->declareImGui();
+
+					window->declareImGui();
 				}
 				ImGui::EndFrame();
 				ImGui::UpdatePlatformWindows();
@@ -308,6 +316,7 @@ namespace vkl
 					exec.updateResources(*update_context);
 					scene->updateResources(*update_context);
 					renderer.updateResources(*update_context);
+					tonemap.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					script_resources.update(*update_context);
 					
@@ -330,6 +339,8 @@ namespace vkl
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
+
+					tonemap.execute(exec_thread);
 
 					pip.execute(exec_thread);
 

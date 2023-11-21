@@ -8,8 +8,7 @@ namespace vkl
 {
 	class SamplerLibrary : public VkObject
 	{
-	protected:
-
+	public:
 		struct SamplerInfo
 		{
 			VkSamplerCreateFlags flags = 0;
@@ -21,6 +20,7 @@ namespace vkl
 
 			bool operator==(SamplerInfo const& o) const;
 		};
+	protected:
 
 		struct Hasher
 		{

@@ -77,11 +77,21 @@ namespace vkl
 
 		Executable with(SingleDispatchInfo const& sdi)
 		{
+			VkExtent3D extent;
+			if (sdi.extent.has_value())
+			{
+				extent = sdi.extent.value();
+			}
+			else
+			{
+				assert(_extent.hasValue());
+				extent = _extent.value();
+			}
 			DispatchInfo di{
 				.dispatch_threads = sdi.dispatch_threads.value_or(_dispatch_threads),
 				.dispatch_list = {
 					DispatchCallInfo{
-						.extent = sdi.extent.value_or(_extent.value()),
+						.extent = extent,
 						.pc = sdi.pc,
 						.set = sdi.set,
 					},
