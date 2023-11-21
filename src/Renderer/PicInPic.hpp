@@ -54,7 +54,7 @@ namespace vkl
 
 		void updateResources(UpdateContext & context);
 
-		void execute(ExecutionThread& exec);
+		void execute(ExecutionRecorder& exec);
 
 		void declareImGui();
 

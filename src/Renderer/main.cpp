@@ -324,7 +324,7 @@ namespace vkl
 				}
 				{	
 					{
-						ExecutionThread * upload_thread = exec.beginCommandBuffer();
+						ExecutionRecorder * upload_thread = exec.beginCommandBuffer();
 						UploadResources uploader(UploadResources::CI{
 							.app = this,
 						});
@@ -334,8 +334,8 @@ namespace vkl
 						exec.endCommandBuffer(upload_thread);
 					}
 					
-					ExecutionThread * ptr_exec_thread = exec.beginCommandBuffer();
-					ExecutionThread& exec_thread = *ptr_exec_thread;
+					ExecutionRecorder * ptr_exec_thread = exec.beginCommandBuffer();
+					ExecutionRecorder& exec_thread = *ptr_exec_thread;
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);

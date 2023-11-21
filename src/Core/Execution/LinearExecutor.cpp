@@ -8,6 +8,52 @@
 
 namespace vkl
 {
+
+	ExecutionThread::ExecutionThread(CreateInfo const& ci):
+		ExecutionRecorder(ci.app, ci.name),
+		_context(ci.context)
+	{}
+
+	void ExecutionThread::record(Command& cmd)
+	{
+		cmd.execute(*_context);
+	}
+
+	void ExecutionThread::record(std::shared_ptr<Command> cmd)
+	{
+		execute(*cmd);
+	}
+
+	void ExecutionThread::record(Executable const& executable)
+	{
+		executable(*_context);
+	}
+
+	void ExecutionThread::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
+	{
+		if (set)
+		{
+			set->waitForInstanceCreationIFN();
+		}
+		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;
+		if (bind_graphics)
+		{
+			_context->graphicsBoundSets().bind(s, inst);
+		}
+		if (bind_compute)
+		{
+			_context->computeBoundSets().bind(s, inst);
+		}
+		if (bind_rt)
+		{
+			_context->rayTracingBoundSets().bind(s, inst);
+		}
+	}
+
+
+
+
+
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
 		Executor(Executor::CI{
 			.app = ci.app ? ci.app : ci.window->application(), 
@@ -89,7 +135,7 @@ namespace vkl
 		_internal_resources.update(context);
 	}
 
-	//ExecutionThread* LinearExecutor::beginTransferCommandBuffer(bool synch)
+	//ExecutionRecorder* LinearExecutor::beginTransferCommandBuffer(bool synch)
 	//{
 	//	std::shared_ptr<CommandBuffer>& cb = _command_buffer_to_submit;
 	//	assert(!cb);
@@ -100,7 +146,7 @@ namespace vkl
 	//	cb->begin();
 	//	_context.setCommandBuffer(cb);
 
-	//	ExecutionThread * res;
+	//	ExecutionRecorder * res;
 	//}
 
 	void LinearExecutor::AquireSwapchainImage()
@@ -182,7 +228,7 @@ namespace vkl
 		_current_thread->execute(executable);
 	}
 
-	ExecutionThread * LinearExecutor::beginCommandBuffer(bool bind_common_set)
+	ExecutionThread* LinearExecutor::beginCommandBuffer(bool bind_common_set)
 	{
 		std::shared_ptr<CommandBuffer> cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
 			.name = name() + ".CommandBuffer_" + std::to_string(_cb_count),
@@ -205,7 +251,7 @@ namespace vkl
 		assert(_current_thread == nullptr);
 		ExecutionThread* res = new ExecutionThread(ExecutionThread::CI{
 			.app = application(),
-			.name = name() + ".ExecutionThread",
+			.name = name() + ".ExecutionRecorder",
 			.context = &_context,
 		});
 		_current_thread = res;
@@ -216,41 +262,41 @@ namespace vkl
 		return res;
 	}
 
-	ExecutionThread* LinearExecutor::beginTransferCommandBuffer()
-	{
-		std::shared_ptr<CommandBuffer> cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
-			.name = name() + ".TransferCommandBuffer_" + std::to_string(_cb_count),
-			.pool = _app->pools().transfer,
-		});
-		++_cb_count;
-		cb->begin();
-		_context.setCommandBuffer(cb);
+	//ExecutionThread* LinearExecutor::beginTransferCommandBuffer()
+	//{
+	//	std::shared_ptr<CommandBuffer> cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
+	//		.name = name() + ".TransferCommandBuffer_" + std::to_string(_cb_count),
+	//		.pool = _app->pools().transfer,
+	//	});
+	//	++_cb_count;
+	//	cb->begin();
+	//	_context.setCommandBuffer(cb);
 
-		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true);
-		event->cb = cb;
-		event->queue = application()->queues().transfer;
-		if (_latest_synch_cb && _latest_synch_cb->queue != event->queue) // No need to synch with a semaphore on the same queue
-		{
-			event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
-		}
-		_latest_synch_cb = event;
+	//	std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true);
+	//	event->cb = cb;
+	//	event->queue = application()->queues().transfer;
+	//	if (_latest_synch_cb && _latest_synch_cb->queue != event->queue) // No need to synch with a semaphore on the same queue
+	//	{
+	//		event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
+	//	}
+	//	_latest_synch_cb = event;
 
-		assert(_current_thread == nullptr);
-		ExecutionThread* res = new ExecutionThread(ExecutionThread::CI{
-			.app = application(),
-			.name = name() + ".ExecutionThread",
-			.context = &_context,
-		});
-		_current_thread = res;
-		return res;
-	}
+	//	assert(_current_thread == nullptr);
+	//	ExecutionRecorder* res = new ExecutionRecorder(ExecutionRecorder::CI{
+	//		.app = application(),
+	//		.name = name() + ".ExecutionRecorder",
+	//		.context = &_context,
+	//	});
+	//	_current_thread = res;
+	//	return res;
+	//}
 
 	void LinearExecutor::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
 	{
 		_current_thread->bindSet(s, set, bind_graphics, bind_compute, bind_rt);
 	}
 
-	void LinearExecutor::endCommandBuffer(ExecutionThread * exec_thread, bool submit)
+	void LinearExecutor::endCommandBuffer(ExecutionThread* exec_thread, bool submit)
 	{
 		std::shared_ptr<CommandBuffer> cb = _context.getCommandBuffer();
 		assert(exec_thread == _current_thread);

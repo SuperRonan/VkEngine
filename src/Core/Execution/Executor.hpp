@@ -13,35 +13,38 @@ namespace vkl
 
 	class DebugRenderer;
 
-	class ExecutionThread : public VkObject
+	class ExecutionRecorder : public VkObject
 	{
 	protected:
 		
-		ExecutionContext * _context;
-
 	public:
 
-		struct CreateInfo 
+		ExecutionRecorder(VkApplication * app, std::string const& name);
+
+
+		virtual void record(Command& cmd) = 0;
+
+		virtual void record(std::shared_ptr<Command> cmd) = 0;
+
+		virtual void record(Executable const& executable) = 0;
+
+		
+		void execute(Command& cmd)
 		{
-			VkApplication * app = nullptr;
-			std::string name = {};
-			ExecutionContext * context;
-		};
-		using CI = CreateInfo;
-
-		ExecutionThread(CreateInfo const& ci);
-
-		virtual void execute(Command& cmd);
-
-		virtual void execute(std::shared_ptr<Command> cmd);
-
-		virtual void execute(Executable const& executable);
-
-		ExecutionContext* context()
-		{
-			return _context;
+			record(cmd);
 		}
 
+		void execute(std::shared_ptr<Command> cmd)
+		{
+			record(cmd);
+		}
+
+		void execute(Executable const& executable)
+		{
+			record(executable);
+		}
+
+		
 		void operator()(std::shared_ptr<Command> cmd)
 		{
 			execute(cmd);
@@ -57,7 +60,8 @@ namespace vkl
 			execute(executable);
 		}
 
-		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);
+		
+		virtual void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true) = 0;
 	};
 
 	class Executor : public VkObject

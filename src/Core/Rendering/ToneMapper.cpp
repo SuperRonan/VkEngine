@@ -71,7 +71,7 @@ namespace vkl
 		ctx.resourcesToUpdateLater() += _compute_tonemap;
 	}
 
-	void ToneMapper::execute(ExecutionThread& exec)
+	void ToneMapper::execute(ExecutionRecorder& exec)
 	{
 		if (_enable)
 		{

@@ -71,45 +71,7 @@ namespace vkl
 
 
 
-	ExecutionThread::ExecutionThread(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
-		_context(ci.context)
+	ExecutionRecorder::ExecutionRecorder(VkApplication * app, std::string const& name) :
+		VkObject(app, name)
 	{}
-
-	void ExecutionThread::execute(Command& cmd)
-	{
-		cmd.execute(*_context);
-	}
-
-	void ExecutionThread::execute(std::shared_ptr<Command> cmd)
-	{
-		execute(*cmd);
-	}
-
-	void ExecutionThread::execute(Executable const& executable)
-	{
-		executable(*_context);
-	}
-
-	void ExecutionThread::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
-	{
-		if (set)
-		{
-			set->waitForInstanceCreationIFN();
-		}
-		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;
-		if (bind_graphics)
-		{
-			_context->graphicsBoundSets().bind(s, inst);
-		}
-		if (bind_compute)
-		{
-			_context->computeBoundSets().bind(s, inst);
-		}
-		if (bind_rt)
-		{
-			_context->rayTracingBoundSets().bind(s, inst);
-		}
-	}
-
 }

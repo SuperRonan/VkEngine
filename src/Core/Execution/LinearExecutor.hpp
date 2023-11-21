@@ -10,6 +10,38 @@
 
 namespace vkl
 {
+	class ExecutionThread : public ExecutionRecorder
+	{
+	protected:
+
+		ExecutionContext* _context;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			ExecutionContext* context;
+		};
+		using CI = CreateInfo;
+
+		ExecutionThread(CreateInfo const& ci);
+
+		virtual void record(Command& cmd) override;
+
+		virtual void record(std::shared_ptr<Command> cmd) override;
+
+		virtual void record(Executable const& executable) override;
+
+		virtual void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true) override;
+
+		ExecutionContext* context()
+		{
+			return _context;
+		}
+	};
+	
 	class LinearExecutor : public Executor
 	{
 	protected:
@@ -30,7 +62,7 @@ namespace vkl
 
 		ExecutionContext _context;
 
-		ExecutionThread * _current_thread = nullptr;
+		ExecutionThread* _current_thread = nullptr;
 
 		// Event is not a good name imo (means something else in vulkan)
 		struct Event : public VkObject
@@ -110,9 +142,9 @@ namespace vkl
 
 		void updateResources(UpdateContext & context);
 
-		ExecutionThread* beginTransferCommandBuffer();
+		//ExecutionThread* beginTransferCommandBuffer();
 
-		ExecutionThread * beginCommandBuffer(bool bind_common_set = true);
+		ExecutionThread* beginCommandBuffer(bool bind_common_set = true);
 
 		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);
 
@@ -120,7 +152,7 @@ namespace vkl
 
 		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
 
-		void endCommandBuffer(ExecutionThread * exec_thread, bool submit = false);
+		void endCommandBuffer(ExecutionThread* exec_thread, bool submit = false);
 
 		void submit();
 

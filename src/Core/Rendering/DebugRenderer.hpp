@@ -54,7 +54,7 @@ namespace vkl
 
 		void createResources();
 
-		void loadFont(ExecutionThread& exec);
+		void loadFont(ExecutionRecorder& exec);
 
 	public:
 
@@ -76,7 +76,7 @@ namespace vkl
 
 		void updateResources(UpdateContext & context);
 
-		void execute(ExecutionThread & exec);
+		void execute(ExecutionRecorder & exec);
 
 		ShaderBindings getBindings() const;
 	};

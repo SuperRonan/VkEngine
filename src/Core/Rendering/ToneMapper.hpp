@@ -50,7 +50,7 @@ namespace vkl
 
 		void updateResources(UpdateContext & ctx);
 
-		void execute(ExecutionThread & exec);
+		void execute(ExecutionRecorder & exec);
 
 		void declareGui();
 	};

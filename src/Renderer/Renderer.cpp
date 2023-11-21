@@ -265,7 +265,7 @@ namespace vkl
 		}
 	}
 
-	void SimpleRenderer::execute(ExecutionThread& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
+	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
 	{
 		exec.context()->pushDebugLabel(name() + ".execute()");
 		UBO ubo{

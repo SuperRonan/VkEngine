@@ -55,7 +55,7 @@ namespace vkl
 		}
 	}
 
-	void PictureInPicture::execute(ExecutionThread& exec)
+	void PictureInPicture::execute(ExecutionRecorder& exec)
 	{
 		if (_enable)
 		{

@@ -172,7 +172,7 @@ namespace vkl
 		
 	}
 
-	void DebugRenderer::loadFont(ExecutionThread& exec)
+	void DebugRenderer::loadFont(ExecutionRecorder& exec)
 	{
 		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Rendering/16x16_linear.png");
 
@@ -228,7 +228,7 @@ namespace vkl
 		}
 	}
 
-	void DebugRenderer::execute(ExecutionThread& exec)
+	void DebugRenderer::execute(ExecutionRecorder& exec)
 	{
 		if (_enable_debug)
 		{
