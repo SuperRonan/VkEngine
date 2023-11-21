@@ -20,6 +20,7 @@ layout(SHADER_DESCRIPTOR_BINDING + 1) uniform sampler2D Source;
 
 layout(push_constant) uniform PushConstantBlock
 {
+	float exposure;
 	float gamma;
 	float scale;
 } _pc;
@@ -40,7 +41,7 @@ void main()
 #endif
 
 		vec4 dst = src;
-		dst.xyz = pow(src.xyz, vec3(_pc.gamma)) * _pc.scale;
+		dst.xyz = pow(src.xyz * _pc.exposure, vec3(_pc.gamma)) * _pc.scale;
 
 		imageStore(Desination, pixel, dst);
 

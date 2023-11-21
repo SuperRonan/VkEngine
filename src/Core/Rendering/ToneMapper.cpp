@@ -76,10 +76,12 @@ namespace vkl
 		if (_enable)
 		{
 			_scale = std::exp2f(_log_scale);
+			_exposure = std::exp2f(_log_exposure);
 			exec(_compute_tonemap->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _dst->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
 				.pc = ComputePC{
+					.exposure = _exposure,
 					.gamma = _gamma,
 					.scale = _scale,
 				},
@@ -94,11 +96,15 @@ namespace vkl
 			std::string enable_str = "Enable##"s + name();
 			ImGui::Checkbox(enable_str.c_str(), &_enable);
 
+			std::string exposure_str = "log2(Exposure)##"s + name();
+			ImGui::SliderFloat(exposure_str.c_str(), &_log_exposure, -10, 10);
+			ImGui::Text("Exposure: %f", _exposure);
+			
 			std::string gamma_str = "Gamma##"s + name();
 			ImGui::SliderFloat(gamma_str.c_str(), &_gamma, 0.1, 4);
 
 			std::string scale_str = "log2(Scale)##"s + name();
-			ImGui::SliderFloat(scale_str.c_str(), &_log_scale, -2, 2);
+			ImGui::SliderFloat(scale_str.c_str(), &_log_scale, -10, 10);
 			ImGui::Text("Scale: %f", _scale);
 		}
 	}

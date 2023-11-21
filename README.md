@@ -9,7 +9,7 @@
 	- [x] Shader compilation
 	- [x] Pipeline creation
 - [x] Common Shaders Definitions
-- [x] Commong shaders bindings
+- [x] Common shaders bindings
 - [x] Automatic shader definitions (to progressively complete)
 - [x] Shader pragma once
 - [x] Dynamic Shaders Definitions (keep a table)
@@ -75,7 +75,7 @@
 - [ ] Window:
 	- [x] Correct HDR support (also ImGui)
 	- [ ] Fullscreen
-	- [ ] Resized by the application
+	- [x] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
 
 - [ ] Find a better project name

@@ -19,11 +19,14 @@ namespace vkl
 		std::shared_ptr<ComputeCommand> _compute_tonemap = nullptr;
 		struct ComputePC 
 		{
+			float exposure;
 			float gamma;
 			float scale;
 		};
 
 		bool  _enable = false;
+		float _exposure = 1.0f;
+		float _log_exposure = 0.0f;
 		float _gamma = 1.0f;
 		float _scale = 1.0f;
 		float _log_scale = 0.0f;
