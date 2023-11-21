@@ -24,12 +24,12 @@ namespace vkl
 		using ivec2 = glm::ivec2;
 		using float2 = glm::vec2;
 
-		enum Mode
+		enum class Mode
 		{
-			Windowed,
-			WindowedFullscreen,
-			Fullscreen,
-			ExclusiveFullscreen,
+			Windowed = 0,
+			WindowedFullscreen = 1,
+			Fullscreen = 2,
+			ExclusiveFullscreen = 3,
 			MAX_ENUM,
 		};
 
@@ -49,8 +49,11 @@ namespace vkl
 	protected:
 
 		uint32_t _width, _height;
-		Mode _mode = Mode::MAX_ENUM;
+		Mode _window_mode = Mode::MAX_ENUM;
 		GLFWwindow* _window;
+
+		int _window_pos_x, _window_pos_y;
+		int _latest_windowed_width, _latest_windowed_height;
 
 		struct DetailedMonitor
 		{
@@ -61,6 +64,8 @@ namespace vkl
 			ivec2 pixel_size;
 			ivec2 physical_size;
 			float2 scale;
+			GLFWvidmode default_vidmode;
+			GLFWvidmode current_vidmode;
 			std::vector<GLFWvidmode> available_video_modes;
 			const GLFWvidmode * video_mode;
 
@@ -71,11 +76,11 @@ namespace vkl
 			void setGamma(float gamma);
 		};
 
-		std::vector<DetailedMonitor> _monitors = {};
-		size_t selected_monitor_index = 0;
+		int _desired_resolution[2];
 
-		Mode _desired_mode = Mode::Windowed;
-		
+		std::vector<DetailedMonitor> _monitors = {};
+		size_t _selected_monitor_index = 0;
+
 		std::shared_ptr<Surface> _surface = nullptr;
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		
@@ -83,11 +88,15 @@ namespace vkl
 		DynamicValue<VkExtent3D> _dynamic_extent;
 		std::set<uint32_t> _queues_families_indices;
 
-		bool _framebuffer_resized = false;
+		bool _glfw_resized = false;
+		bool _gui_resized = false;
 
 		size_t _current_frame = 0;
 		// Of size swapchain (One per swap image)
 		//std::vector<std::shared_ptr<Fence>> _image_in_flight_fence;
+
+		ImGuiListSelection _gui_window_mode;
+		Mode _desired_window_mode;
 
 		DynamicValue<VkPresentModeKHR> _target_present_mode;
 		ImGuiListSelection _gui_present_modes;
@@ -123,6 +132,8 @@ namespace vkl
 
 		void setupGuiObjects();
 
+		void saveWindowedAttributes();
+
 
 	public:
 
@@ -144,9 +155,7 @@ namespace vkl
 
 		void pollEvents();
 
-		bool framebufferResized();
-
-		void updateDynSize();
+		void updateWindowIFP();
 
 		void setSize(uint32_t w, uint32_t h);
 

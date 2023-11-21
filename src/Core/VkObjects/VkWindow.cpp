@@ -7,19 +7,27 @@ namespace vkl
 	void VkWindow::frameBufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		VkWindow* vk_window = reinterpret_cast<VkWindow*>(glfwGetWindowUserPointer(window));
-		vk_window->_framebuffer_resized = true;
+		vk_window->_glfw_resized = true;
 	}
 
 	void VkWindow::initGLFW(std::string const& name, int resizeable)
 	{
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, resizeable);
-		GLFWmonitor * monitor = nullptr;
 
-		_window = glfwCreateWindow(_width, _height, name.c_str(), monitor, nullptr);
+		DetailedMonitor & monitor = _monitors[_selected_monitor_index];
+		glfwWindowHint(GLFW_RED_BITS, monitor.default_vidmode.redBits);
+		glfwWindowHint(GLFW_GREEN_BITS, monitor.default_vidmode.greenBits);
+		glfwWindowHint(GLFW_BLUE_BITS, monitor.default_vidmode.blueBits);
+		glfwWindowHint(GLFW_REFRESH_RATE, monitor.default_vidmode.refreshRate);
+		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+
+		_window = glfwCreateWindow(_width, _height, name.c_str(), nullptr, nullptr);
 		glfwSetWindowUserPointer(_window, this); // Map _window to this
 		if (resizeable)
 			glfwSetFramebufferSizeCallback(_window, frameBufferResizeCallback);
+
+		saveWindowedAttributes();
 
 		_surface = std::make_shared<Surface>(Surface::CI{
 			.app = application(),
@@ -33,6 +41,36 @@ namespace vkl
 
 	void VkWindow::setupGuiObjects()
 	{
+		const std::vector<Mode> available_window_modes = {
+			Mode::Windowed,
+			Mode::WindowedFullscreen,
+			//Mode::Fullscreen,
+			//Mode::ExclusiveFullscreen,
+		};
+
+		_gui_window_mode = ImGuiListSelection::CI{
+			.name = "Window Mode##"s + name(),
+			.mode = ImGuiListSelection::Mode::Combo,
+			.options = {
+				ImGuiListSelection::Option{
+					.name = "Windowed"s,
+					.desc = ""s,
+				},
+				ImGuiListSelection::Option{
+					.name = "Windowed Full Screen"s,
+					.desc = ""s,
+				},
+				//ImGuiListSelection::Option{
+				//	.name = "Full Screen"s,
+				//	.desc = ""s,
+				//},
+				//ImGuiListSelection::Option{
+				//	.name = "Exclusive Full Screen"s,
+				//	.desc = ""s,
+				//},
+			},
+		};
+
 		const Surface::SwapchainSupportDetails & sd = _surface->getDetails();
 		std::vector<std::string> formats(sd.formats.size());
 		std::transform(sd.formats.begin(), sd.formats.end(), formats.begin(), [](VkSurfaceFormatKHR f)
@@ -42,7 +80,7 @@ namespace vkl
 		const size_t format_index = 0;
 		_target_format.setValue(sd.formats[format_index]);
 		_gui_formats = ImGuiListSelection::CI{
-			.name = "Format",
+			.name = "Format##"s + name(),
 			.mode = ImGuiListSelection::Mode::Combo,
 			.labels = formats,
 			.default_index = format_index,
@@ -72,12 +110,11 @@ namespace vkl
 		const size_t present_mode_index = std::find(sd.present_modes.begin(), sd.present_modes.end(), _target_present_mode.value()) - sd.present_modes.begin();
 		
 		_gui_present_modes = ImGuiListSelection::CI{
-			.name = "Present Mode",
+			.name = "Present Mode##"s + name(),
 			.mode = ImGuiListSelection::Mode::Combo,
 			.options = present_modes,
 			.default_index = present_mode_index,
 		};
-
 	}
 
 
@@ -104,6 +141,9 @@ namespace vkl
 		glfwGetMonitorPhysicalSize(handle, &physical_size.x, &physical_size.y);
 		glfwGetMonitorContentScale(handle, &scale.x, &scale.y);
 
+		default_vidmode = *glfwGetVideoMode(handle);
+		current_vidmode = default_vidmode;
+
 		int n_modes;
 		const GLFWvidmode * modes = glfwGetVideoModes(handle, &n_modes);
 		available_video_modes.resize(n_modes);
@@ -120,9 +160,11 @@ namespace vkl
 	void VkWindow::init(CreateInfo const& ci)
 	{
 		_queues_families_indices = ci.queue_families_indices;
+		_desired_resolution[0] = ci.w;
+		_desired_resolution[1] = ci.h;
 		_width = ci.w;
 		_height = ci.h;
-		_desired_mode = ci.mode;
+		_desired_window_mode = ci.mode;
 
 		{
 			int monitor_count;
@@ -152,32 +194,77 @@ namespace vkl
 		
 	}
 
-	void VkWindow::updateDynSize()
+	void VkWindow::saveWindowedAttributes()
 	{
-		if (_framebuffer_resized)
+		_latest_windowed_width = _width;
+		_latest_windowed_height = _height;
+		glfwGetWindowPos(_window, &_window_pos_x, &_window_pos_y);
+	}
+
+	void VkWindow::updateWindowIFP()
+	{
+		if (_desired_window_mode != _window_mode)
 		{
-			int width = 0, height = 0;
-			glfwGetFramebufferSize(_window, &width, &height);
-			while (width == 0 || height == 0)
-			{
-				glfwWaitEvents();
-				glfwGetFramebufferSize(_window, &width, &height);
-			}
-
-			// I don't think it is necessary to do it, but for now we have some validation errors if we don't
 			vkDeviceWaitIdle(_app->device());
+			if (_desired_window_mode == Mode::Windowed)
+			{
+				glfwSetWindowMonitor(_window, nullptr, _window_pos_x, _window_pos_y, _latest_windowed_width, _latest_windowed_height, 0);
+			}
+			else
+			{
+				saveWindowedAttributes();
 
-			_width = width;
-			_height = height;
-			_framebuffer_resized = false;
+				DetailedMonitor& monitor = _monitors[_selected_monitor_index];
+
+				if (_desired_window_mode == Mode::WindowedFullscreen)
+				{
+					_width = monitor.default_vidmode.width;
+					_height = monitor.default_vidmode.height;
+					glfwSetWindowMonitor(_window, nullptr, 0, 0, monitor.default_vidmode.width, monitor.default_vidmode.height, monitor.default_vidmode.refreshRate);
+					glfwSetWindowSize(_window, monitor.default_vidmode.width, monitor.default_vidmode.height);
+				}
+			}
+			_window_mode = _desired_window_mode;
+			_gui_resized = false;
+			_glfw_resized = false;
+		}
+		else
+		{
+			if (_glfw_resized)
+			{
+				int width = 0, height = 0;
+				glfwGetFramebufferSize(_window, &width, &height);
+				while (width == 0 || height == 0)
+				{
+					glfwWaitEvents();
+					glfwGetFramebufferSize(_window, &width, &height);
+				}
+
+				// I don't think it is necessary to do it, but for now we have some validation errors if we don't
+				vkDeviceWaitIdle(_app->device());
+
+				setSize(width, height);
+
+				_width = width;
+				_height = height;
+				_glfw_resized = false;
+			}
+			else if (_gui_resized)
+			{
+				vkDeviceWaitIdle(_app->device());
+				_width = static_cast<uint32_t>(_desired_resolution[0]);
+				_height = static_cast<uint32_t>(_desired_resolution[1]);
+				glfwSetWindowSize(_window, _desired_resolution[0], _desired_resolution[1]);
+				_glfw_resized = false;
+				_gui_resized = false;
+			}
 		}
 	}
 
 	void VkWindow::setSize(uint32_t w, uint32_t h)
 	{
-		glfwSetWindowSize(_window, w, h);
-		_framebuffer_resized = true;
-		updateDynSize();
+		_desired_resolution[0] = w;
+		_desired_resolution[1] = h;
 	}
 
 	void VkWindow::initSwapchain()
@@ -220,11 +307,6 @@ namespace vkl
 	void VkWindow::pollEvents()
 	{
 		glfwPollEvents();
-	}
-
-	bool VkWindow::framebufferResized()
-	{
-		return _framebuffer_resized;
 	}
 
 	std::shared_ptr<Image> VkWindow::image(uint32_t index)
@@ -331,7 +413,7 @@ namespace vkl
 	bool VkWindow::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
-		updateDynSize();
+		updateWindowIFP();
 		res |= _swapchain->updateResources(ctx);
 		return res;
 	}
@@ -341,9 +423,29 @@ namespace vkl
 		if (ImGui::CollapsingHeader("Window"))
 		{
 			bool changed = false;
-			const Surface::SwapchainSupportDetails& sd = _surface->getDetails();
-			ImGui::Text("Resolution: %d x %d", _width, _height);
 
+			changed = _gui_window_mode.declare();
+			if (changed)
+			{
+				_desired_window_mode = static_cast<Mode>(_gui_window_mode.index());
+			}
+
+			const bool can_resize = _window_mode == Mode::Windowed;
+			if (can_resize)
+			{
+				std::string resolution = "Resolution##"s + name();
+				changed = ImGui::SliderInt2(resolution.c_str(), _desired_resolution, 1, 3840);
+				if (changed)
+				{
+					_gui_resized = true;
+				}
+			}
+			else
+			{
+				ImGui::Text("Resolution: %d x %d", _width, _height);
+			}
+
+			const Surface::SwapchainSupportDetails& sd = _surface->getDetails();
 			changed = _gui_present_modes.declare();
 			if (changed)
 			{

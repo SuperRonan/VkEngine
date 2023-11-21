@@ -345,6 +345,7 @@ namespace vkl
 
 	void LinearExecutor::waitForAllCompletion(uint64_t timeout)
 	{
+		vkDeviceWaitIdle(device());
 		while (!_previous_events.empty())
 		{
 			Event& event = *_previous_events.front();
