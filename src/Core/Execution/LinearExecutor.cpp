@@ -287,7 +287,7 @@ namespace vkl
 			assert(res == VK_SUCCESS);
 			// TODO check device lost
 
-			if (event->finish_counter == 0) // For safety, it tends to create a validation error (signal semaphore destroyed while being used by a cb) it is destroyed to early, but I don't get why yet
+			if (event->finish_counter == 1) // For safety, it tends to create a validation error (signal semaphore destroyed while being used by a cb) it is destroyed to early, but I don't get why yet
 			{
 				break;
 			}
