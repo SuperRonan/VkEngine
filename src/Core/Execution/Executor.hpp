@@ -26,7 +26,7 @@ namespace vkl
 
 		virtual void record(std::shared_ptr<Command> cmd) = 0;
 
-		virtual void record(Executable const& executable) = 0;
+		virtual void record(Executable const& exec) = 0;
 
 		
 		void execute(Command& cmd)
@@ -39,9 +39,9 @@ namespace vkl
 			record(cmd);
 		}
 
-		void execute(Executable const& executable)
+		void execute(Executable const& node)
 		{
-			record(executable);
+			record(node);
 		}
 
 		
@@ -55,13 +55,23 @@ namespace vkl
 			execute(cmd);
 		}
 
-		void operator()(Executable const& executable)
+		void operator()(Executable const& node)
 		{
-			execute(executable);
+			execute(node);
 		}
 
 		
 		virtual void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true) = 0;
+
+		using vec4 = glm::vec4;
+
+		virtual void pushDebugLabel(std::string const& label, vec4 const& color) = 0;
+
+		virtual void popDebugLabel() = 0;
+
+		virtual void insertDebugLabel(std::string const& label, vec4 const& color) = 0;
+
+		void pushDebugLabel(std::string const& label);
 	};
 
 	class Executor : public VkObject

@@ -812,13 +812,36 @@ namespace vkl
 
 
 
+	DescriptorSetsTacker::DescriptorSetsTacker(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_pipeline_binding(ci.pipeline_binding),
+		_bound_descriptor_sets(application()->deviceProperties().props.limits.maxBoundDescriptorSets, nullptr)
+	{
+	
+	}
+
+	const std::shared_ptr<DescriptorSetAndPoolInstance>& DescriptorSetsTacker::getSet(uint32_t s)const
+	{
+		assert(s < _bound_descriptor_sets.size());
+		return _bound_descriptor_sets[s];
+	}
+
+	void DescriptorSetsTacker::bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set)
+	{
+		assert(binding < _bound_descriptor_sets.size());
+		_bound_descriptor_sets[binding] = set;
+	}
+
+
 
 
 	DescriptorSetsManager::DescriptorSetsManager(CreateInfo const& ci):
-		VkObject(ci.app, ci.name),
+		DescriptorSetsTacker(DescriptorSetsTacker::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.pipeline_binding = ci.pipeline_binding,
+		}),
 		_cmd(ci.cmd),
-		_pipeline_binding(ci.pipeline_binding),
-		_bound_descriptor_sets(application()->deviceProperties().props.limits.maxBoundDescriptorSets, nullptr),
 		_vk_sets(_bound_descriptor_sets.size(), VK_NULL_HANDLE)
 	{
 		_bindings_ranges.reserve(_bound_descriptor_sets.size());
@@ -834,13 +857,8 @@ namespace vkl
 
 	void DescriptorSetsManager::bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set)
 	{
-		assert(binding < _bound_descriptor_sets.size());
-		
-
-		_bound_descriptor_sets[binding] = set;
-
-		// TODO sorted insertion + merge ranges
-
+		DescriptorSetsTacker::bind(binding, set);
+		// TODO sorted insertion + merge 
 		_bindings_ranges.push_back(Range32{.begin = binding, .len = 1});
 	}
 
@@ -915,11 +933,5 @@ namespace vkl
 		_bound_descriptor_sets[binding] = set;
 		_vk_sets[binding] = set->set()->handle();
 		vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, binding, 1, _vk_sets.data() + binding, 0, nullptr);
-	}
-
-	const std::shared_ptr<DescriptorSetAndPoolInstance>& DescriptorSetsManager::getSet(uint32_t s)const
-	{
-		assert(s < _bound_descriptor_sets.size());
-		return _bound_descriptor_sets[s];
 	}
 }

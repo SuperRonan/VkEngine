@@ -31,18 +31,18 @@ struct Vertex
 #define MESH_BINDING_BASE 0
 #endif
 
-layout(INSTANCE_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 0, std430) buffer restrict MESH_ACCESS MeshHeader
+layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 0, std430) buffer restrict MESH_ACCESS MeshHeader
 {
 	MeshHeader header;
 } bound_mesh_header;
 
-layout(INSTANCE_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 1, std430) buffer restrict MESH_ACCESS MeshVertices
+layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 1, std430) buffer restrict MESH_ACCESS MeshVertices
 {
 	Vertex vertices[];
 } bound_mesh_vertices;
 
 
-layout(INSTANCE_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 2, std430) buffer restrict MESH_ACCESS MeshIndices
+layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 2, std430) buffer restrict MESH_ACCESS MeshIndices
 {
 	uint indices[];
 } bound_mesh_indices32;

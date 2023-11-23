@@ -17,8 +17,8 @@
 #define SHADER_DESCRIPTOR_BINDING set = 3, binding = 0
 #endif
 
-#ifndef INSTANCE_DESCRIPTOR_BINDING
-#define INSTANCE_DESCRIPTOR_BINDING set = 4, binding = 0
+#ifndef INVOCATION_DESCRIPTOR_BINDING
+#define INVOCATION_DESCRIPTOR_BINDING set = 4, binding = 0
 #endif
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require

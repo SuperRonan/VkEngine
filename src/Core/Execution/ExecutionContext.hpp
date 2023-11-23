@@ -21,6 +21,43 @@
 
 namespace vkl
 {
+	class RecordContext : public VkObject
+	{
+	protected:
+
+		DescriptorSetsTacker _graphics_bound_sets;
+		DescriptorSetsTacker _compute_bound_sets;
+		DescriptorSetsTacker _ray_tracing_bound_sets;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name;
+		};
+		using CI = CreateInfo;
+
+		RecordContext(CreateInfo const& ci);
+
+		DescriptorSetsTacker& graphicsBoundSets()
+		{
+			return _graphics_bound_sets;
+		}
+
+		DescriptorSetsTacker& computeBoundSets()
+		{
+			return _graphics_bound_sets;
+		}
+
+		DescriptorSetsTacker& rayTracingBoundSets()
+		{
+			return _graphics_bound_sets;
+		}
+
+		DescriptorSetsTacker& getBoundSets(VkPipelineBindPoint pipeline);
+	};
+
 	class ExecutionContext : public VkObject
 	{
 	protected:
@@ -139,28 +176,5 @@ namespace vkl
 
 		void insertDebugLabel(std::string const& label, vec4 const& color);
 	};
-
-
-
-	//class Executable
-	//{
-	//public:
-	//	using ExecutableFunction = std::function<void(ExecutionContext& ctx)>;
-	//protected:
-
-	//	ExecutableFunction _function;
-
-	//public:
-
-	//	Executable(ExecutableFunction const& f):
-	//		_function(f)
-	//	{}
-
-	//	void operator()(ExecutionContext& ctx)
-	//	{
-	//		_function(ctx);
-	//	}
-	//};
-	using Executable = std::function<void(ExecutionContext& ctx)>;
 }
 

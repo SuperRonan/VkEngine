@@ -109,6 +109,6 @@ Objectives:
 - [ ] Load scene (mesh, textures) asynch
 - [x] Refactor the Executor (and linearExecutor): issue an ExecThread to record commands in
 - [ ] Add a transfer queue to the LinearExecutor to load assets
-- [ ] Refactor command execition:
-	- [ ] Command execution issue an execution object declaring the resources on which it will interact and how, synchronization of said resources will be done externaly by the executor. This allows for ASAP synch, rather than the current mandatory ALAP
+- [x] Refactor command execition:
+	- [x] Command execution issue an execution object declaring the resources on which it will interact and how, synchronization of said resources will be done externaly by the executor. This allows for ASAP synch, rather than the current mandatory ALAP
 	- [ ] Auto Build an execution graph from these execution objects (nodes) and their resources (edges)

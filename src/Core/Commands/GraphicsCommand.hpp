@@ -49,10 +49,7 @@ namespace vkl
 
 		void createPipeline();
 
-		virtual void declareGraphicsResources(SynchronizationHelper & synch);
-
-		virtual void synchronizeDrawResources(SynchronizationHelper& synch, void* user_data)
-		{}
+		virtual Resources getFramebufferResources();
 
 	public:
 
@@ -114,7 +111,8 @@ namespace vkl
 
 		virtual void createProgram() override;
 
-		virtual void synchronizeDrawResources(SynchronizationHelper& synch, void* user_data) override;
+		struct DrawInfo;
+		Resources getPerDrawResources(DrawInfo const& di);
 
 	public:
 
@@ -175,11 +173,13 @@ namespace vkl
 
 		VertexCommand(CreateInfo const& ci);
 
+		virtual bool updateResources(UpdateContext & ctx) override;
+
 		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
 
-		virtual void execute(ExecutionContext& ctx) override;
+		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
 
-		virtual bool updateResources(UpdateContext & ctx) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, DrawInfo const& di);
 
 		Executable with(DrawInfo const& di);
 		
@@ -234,7 +234,8 @@ namespace vkl
 
 		virtual void createProgram() override;
 
-		virtual void synchronizeDrawResources(SynchronizationHelper& synch, void* user_data) override;
+		struct DrawInfo;
+		Resources getPerDrawResources(DrawInfo const& di);
 
 	public:
 
@@ -280,11 +281,13 @@ namespace vkl
 		};
 		using DI = DrawInfo;
 
+		virtual bool updateResources(UpdateContext& ctx) override;
+
 		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data) override;
 
-		virtual void execute(ExecutionContext& ctx) override;
+		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
 
-		virtual bool updateResources(UpdateContext& ctx) override;
+		ExecutionNode getExecutionNode(RecordContext& ctx, DrawInfo const& di);
 
 		Executable with(DrawInfo const& di);
 

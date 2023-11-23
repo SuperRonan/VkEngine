@@ -13,29 +13,6 @@ namespace vkl
 	void BlitImage::execute(ExecutionContext& context, BlitInfo const& bi)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		SynchronizationHelper synch(context);
-		
-		synch.addSynch(Resource{
-			._image = bi.src,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		});
-
-		synch.addSynch(Resource{
-			._image = bi.dst,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-		});
-
-		synch.record();
 
 		const VkImageBlit * regions = bi.regions.data();
 		uint32_t n_regions = static_cast<uint32_t>(bi.regions.size());
@@ -58,22 +35,52 @@ namespace vkl
 			*bi.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, regions, bi.filter
 		);
+		context.keppAlive(bi.src->instance());
+		context.keppAlive(bi.dst->instance());
 	}
 
-	void BlitImage::execute(ExecutionContext& context)
+	ExecutionNode BlitImage::getExecutionNode(RecordContext& ctx, BlitInfo const& bi)
 	{
-		BlitInfo bi{
-			.src = _src,
-			.dst = _dst,
-			.regions = _regions,
-			.filter = _filter,
+		Resources resources = {
+			Resource{
+				._image = bi.src,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			},
+			Resource{
+				._image = bi.dst,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		execute(context, bi);
+		BlitInfo bi_copy = bi;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, bi_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, bi_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode BlitImage::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultBlitInfo());
 	}
 
 	Executable BlitImage::with(BlitInfo const& bi)
 	{
-		return [&](ExecutionContext& ctx)
+		return [&](RecordContext& ctx)
 		{
 			BlitInfo _bi{
 				.src = bi.src ? bi.src : _src,
@@ -81,7 +88,7 @@ namespace vkl
 				.regions = bi.regions.empty() ? _regions : bi.regions,
 				.filter = bi.filter == VK_FILTER_MAX_ENUM ? _filter : bi.filter,
 			};
-			this->execute(ctx, _bi);
+			return getExecutionNode(ctx, _bi);
 		};
 	}
 
@@ -92,37 +99,9 @@ namespace vkl
 		_regions(ci.regions)
 	{}
 
-	void CopyImage::init()
-	{
-
-	}
-
 	void CopyImage::execute(ExecutionContext& ctx, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
-		SynchronizationHelper synch(ctx);
-
-		synch.addSynch(Resource{
-			._image = cinfo.src,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-			});
-
-		synch.addSynch(Resource{
-			._image = cinfo.dst,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-			});
-
-		synch.record();
 
 		const VkImageCopy* regions = cinfo.regions.data();
 		uint32_t n_regions = static_cast<uint32_t>(cinfo.regions.size());
@@ -146,28 +125,59 @@ namespace vkl
 			*cinfo.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, regions
 		);
+		ctx.keppAlive(cinfo.src->instance());
+		ctx.keppAlive(cinfo.dst->instance());
 	}
 
-	void CopyImage::execute(ExecutionContext& context)
+	ExecutionNode CopyImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
-		CopyInfo cinfo{
-			.src = _src,
-			.dst = _dst,
-			.regions = _regions,
+		Resources resources = {
+			Resource{
+				._image = ci.src,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+			},
+			Resource{
+				._image = ci.dst,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		execute(context, cinfo);
+		CopyInfo ci_copy = ci;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ci_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ci_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode CopyImage::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultCopyInfo());
 	}
 
 	Executable CopyImage::with(CopyInfo const& ci)
 	{
-		return [&](ExecutionContext& ctx)
+		return [this, ci](RecordContext& ctx)
 		{
 			CopyInfo cinfo{
 				.src = ci.src ? ci.src : _src,
 				.dst = ci.dst ? ci.dst : _dst,
 				.regions = ci.regions.empty() ? _regions : ci.regions,
 			};
-			execute(ctx, cinfo);
+			return getExecutionNode(ctx, cinfo);
 		};
 	}
 
@@ -180,36 +190,10 @@ namespace vkl
 		_regions(ci.regions)
 	{}
 
-	void CopyBufferToImage::init()
-	{
-	}
-
 	void CopyBufferToImage::execute(ExecutionContext& context, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		SynchronizationHelper synch(context);
-		synch.addSynch(Resource{
-			._buffer = cinfo.src,
-			._buffer_range = cinfo.range,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		});
-		synch.addSynch(Resource{
-			._image = cinfo.dst,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-		});
-
-		synch.record();
-
-
+		
 		uint32_t n_regions = static_cast<uint32_t>(cinfo.regions.size());
 		const VkBufferImageCopy* p_regions = cinfo.regions.data();
 		VkBufferImageCopy _reg;
@@ -233,22 +217,52 @@ namespace vkl
 			*cinfo.src->instance(), *cinfo.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, p_regions
 		);
+		context.keppAlive(cinfo.src->instance());
+		context.keppAlive(cinfo.dst->instance());
 	}
 
-	void CopyBufferToImage::execute(ExecutionContext& context)
+	ExecutionNode CopyBufferToImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
-		const CopyInfo cinfo{
-			.src = _src,
-			.range = _range.value(),
-			.dst = _dst,
-			.regions = _regions,
+		Resources resources = {
+			Resource{
+				._buffer = ci.src,
+				._buffer_range = ci.range,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			},
+			Resource{
+				._image = ci.dst,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		execute(context, cinfo);
+		CopyInfo ci_copy = ci;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ci_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ci_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode CopyBufferToImage::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultCopyInfo());
 	}
 
 	Executable CopyBufferToImage::with(CopyInfo const& info)
 	{
-		return [&](ExecutionContext& context)
+		return [this, info](RecordContext& context)
 		{
 			const CopyInfo cinfo{
 				.src = info.src ? info.src : _src,
@@ -258,7 +272,7 @@ namespace vkl
 				.default_buffer_row_length = info.default_buffer_row_length,
 				.default_buffer_image_height = info.default_buffer_image_height,
 			};
-			return execute(context, cinfo);
+			return getExecutionNode(context, cinfo);
 		};
 	}
 
@@ -271,34 +285,9 @@ namespace vkl
 		_size(ci.size)
 	{}
 
-	void CopyBuffer::init()
-	{
-	}
-
 	void CopyBuffer::execute(ExecutionContext& context, CopyInfo const& cinfo)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		SynchronizationHelper synch(context);
-		synch.addSynch(Resource{
-			._buffer = cinfo.src,
-			._buffer_range = Range_st{.begin = cinfo.src_offset, .len = cinfo.size},
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		});
-		synch.addSynch(Resource{
-			._buffer = cinfo.dst,
-			._buffer_range = Range_st{.begin = cinfo.dst_offset, .len = cinfo.size},
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		});
-		
-		synch.record();
 
 		size_t size = cinfo.size; 
 		VkBufferCopy region = {
@@ -311,44 +300,67 @@ namespace vkl
 			*cinfo.src->instance(), *cinfo.dst->instance(),
 			1, &region
 		);
+		context.keppAlive(cinfo.src->instance());
+		context.keppAlive(cinfo.dst->instance());
 	}
 
-	void CopyBuffer::execute(ExecutionContext& context)
+	ExecutionNode CopyBuffer::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
-		CopyInfo cinfo{
-			.src = _src,
-			.src_offset = _src_offset.value(),
-			.dst = _dst,
-			.dst_offset = _dst_offset.value(),
-			.size = _size.value(),
+		Resources resources{
+			Resource{
+				._buffer = ci.src,
+				._buffer_range = Range_st{.begin = ci.src_offset, .len = ci.size},
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			},
+			Resource{
+				._buffer = ci.dst,
+				._buffer_range = Range_st{.begin = ci.dst_offset, .len = ci.size},
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		if (cinfo.size == 0)
-		{
-			size_t src_max_size = _src->instance()->createInfo().size - cinfo.src_offset;
-			size_t dst_max_size = _dst->instance()->createInfo().size - cinfo.dst_offset;
-			cinfo.size = std::min(src_max_size, dst_max_size);
-		}
-		execute(context, cinfo);
+		CopyInfo ci_copy = ci;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ci_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ci_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode CopyBuffer::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultCopyInfo());
 	}
 
 	Executable CopyBuffer::with(CopyInfo const& cinfo)
 	{
-		CopyInfo ci{
-			.src = cinfo.src ? cinfo.src : _src,
-			.src_offset = cinfo.src_offset ? cinfo.src_offset : _src_offset.value(),
-			.dst = cinfo.dst ? cinfo.dst : _dst,
-			.dst_offset = cinfo.dst_offset ? cinfo.dst_offset : _dst_offset.value(),
-			.size = cinfo.size ? cinfo.size : _size.value(),
-		};
-		if (cinfo.size == 0)
+		return [this, cinfo](RecordContext& ctx)
 		{
-			size_t src_max_size = ci.src->instance()->createInfo().size - cinfo.src_offset;
-			size_t dst_max_size = ci.dst->instance()->createInfo().size - cinfo.dst_offset;
-			ci.size = std::min(src_max_size, dst_max_size);
-		}
-		return [this, ci](ExecutionContext& context)
-		{
-			execute(context, ci);
+			CopyInfo ci{
+				.src = cinfo.src ? cinfo.src : _src,
+				.src_offset = cinfo.src_offset ? cinfo.src_offset : _src_offset.value(),
+				.dst = cinfo.dst ? cinfo.dst : _dst,
+				.dst_offset = cinfo.dst_offset ? cinfo.dst_offset : _dst_offset.value(),
+				.size = cinfo.size ? cinfo.size : _size.value(),
+			};
+			if (cinfo.size == 0)
+			{
+				size_t src_max_size = ci.src->instance()->createInfo().size - cinfo.src_offset;
+				size_t dst_max_size = ci.dst->instance()->createInfo().size - cinfo.dst_offset;
+				ci.size = std::min(src_max_size, dst_max_size);
+			}
+			return getExecutionNode(ctx, ci);
 		};
 	}
 
@@ -362,54 +374,59 @@ namespace vkl
 
 	}
 
-	void FillBuffer::init()
-	{
-
-	}
-
 	void FillBuffer::execute(ExecutionContext& context, FillInfo const& fi)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		SynchronizationHelper synch(context);
-		synch.addSynch(Resource{
-			._buffer = fi.buffer,
-			._buffer_range = fi.range.value(),
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
-			},
-			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		});
 		
-		synch.record();
 		VkDeviceSize len = fi.range.value().len;
 		if (len == 0)
 		{
 			len = fi.buffer->instance()->createInfo().size;
 		}
 		vkCmdFillBuffer(*cmd, *fi.buffer->instance(), fi.range.value().begin, len, fi.value.value());
+		context.keppAlive(fi.buffer->instance());
 	}
 
-	void FillBuffer::execute(ExecutionContext& context)
+	ExecutionNode FillBuffer::getExecutionNode(RecordContext& ctx, FillInfo const& fi)
 	{
-		const FillInfo fi{
-			.buffer = _buffer,
-			.range = _range.value(),
-			.value = _value,
+		Resources resources = {
+			Resource{
+				._buffer = fi.buffer,
+				._buffer_range = fi.range.value(),
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+				},
+				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		execute(context, fi);
+		FillInfo fi_copy = fi;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, fi_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, fi_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode FillBuffer::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultFillInfo());
 	}
 
 	Executable FillBuffer::with(FillInfo const& fi)
 	{
-		return [&](ExecutionContext& context)
+		return [this, fi](RecordContext& context)
 		{
 			const FillInfo _fi{
 				.buffer = fi.buffer ? fi.buffer : _buffer,
 				.range = fi.range.has_value() ? fi.range.value() : _range.value(),
 				.value = fi.value.value_or(_value),
 			};
-			execute(context, _fi);
+			return getExecutionNode(context, fi);
 		};
 	}
 
@@ -423,26 +440,9 @@ namespace vkl
 
 	}
 
-	void ClearImage::init()
-	{
-
-	}
-
 	void ClearImage::execute(ExecutionContext& context, ClearInfo const& ci)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		SynchronizationHelper synch(context);
-		synch.addSynch(Resource{
-			._image = ci.view,
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-		});
-
-		synch.record();
 
 		const VkImageSubresourceRange range = ci.view->range();
 
@@ -473,29 +473,53 @@ namespace vkl
 				&range
 			);
 		}
-
+		context.keppAlive(ci.view->instance());
 	}
 
-	void ClearImage::execute(ExecutionContext& context)
+	ExecutionNode ClearImage::getExecutionNode(RecordContext& ctx, ClearInfo const& ci)
 	{
-		const ClearInfo ci{
-			.view = _view,
-			.value = _value,
+		Resources resources = {
+			Resource{
+				._image = ci.view,
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		execute(context, ci);
+		ClearInfo ci_copy = ci;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ci_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ci_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode ClearImage::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultClearInfo());
 	}
 
 	Executable ClearImage::with(ClearInfo const& ci)
 	{
-		return [&](ExecutionContext& context)
+		return [this, ci](RecordContext& context)
 		{
 			const ClearInfo cinfo{
 				.view = ci.view ? ci.view : _view,
 				.value = ci.value.value_or(_value),
 			};
-			execute(context, cinfo);
+			return getExecutionNode(context, ci);
 		};
 	}
+
+
+
 
 	UpdateBuffer::UpdateBuffer(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
@@ -513,41 +537,52 @@ namespace vkl
 	{
 		const bool buffer_ok = ui.dst->instance().operator bool();
 		assert(buffer_ok);
-		SynchronizationHelper synch(ctx);
-		synch.addSynch(Resource{
-			._buffer = ui.dst,
-			._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
-			._begin_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-			._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		});
-		synch.record();
 		vkCmdUpdateBuffer(*ctx.getCommandBuffer(), *ui.dst->instance(), ui.offset.value(), ui.src.size(), ui.src.data());
+		ctx.keppAlive(ui.dst->instance());
 	}
 
-	void UpdateBuffer::execute(ExecutionContext& ctx)
+	ExecutionNode UpdateBuffer::getExecutionNode(RecordContext& ctx, UpdateInfo const& ui)
 	{
-		UpdateInfo ui{
-			.src = _src,
-			.dst = _dst,
-			.offset = _offset.value(),
+		Resources resources = {
+			Resource{
+				._buffer = ui.dst,
+				._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			},
 		};
-		execute(ctx, ui);
+		UpdateInfo ui_copy = ui;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ui_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ui_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode UpdateBuffer::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultUpdateInfo());
 	}
 
 	Executable UpdateBuffer::with(UpdateInfo const& ui)
 	{
-		UpdateInfo _ui
+		return [this, ui](RecordContext& ctx)
 		{
-			.src = ui.src.hasValue() ? ui.src : _src,
-			.dst = ui.dst ? ui.dst : _dst,
-			.offset = ui.offset.has_value() ? ui.offset.value() : _offset.value(),
-		};
-		return [=](ExecutionContext& ctx)
-		{
-			execute(ctx, _ui);
+			UpdateInfo _ui
+			{
+				.src = ui.src.hasValue() ? ui.src : _src,
+				.dst = ui.dst ? ui.dst : _dst,
+				.offset = ui.offset.has_value() ? ui.offset.value() : _offset.value(),
+			};
+
+			return getExecutionNode(ctx, _ui);
 		};
 	}
 	
@@ -555,29 +590,10 @@ namespace vkl
 
 	void ComputeMips::execute(ExecutionContext& ctx, ExecInfo const& ei)
 	{
-		SynchronizationHelper synch(ctx);
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
 		ImageViewInstance & view = *ei.target->instance();
 		ImageInstance & img = *ei.target->image()->instance();
-
-		synch.addSynch(Resource{
-			._image = ei.target,
-			._begin_state = {
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-			},
-			._end_state = ResourceState2{
-				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
-			},
-			._image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
-		});
-
-		synch.record();
-
 
 		const uint32_t m = img.createInfo().mipLevels;
 		VkExtent3D extent = img.createInfo().extent;
@@ -727,24 +743,52 @@ namespace vkl
 
 			vkCmdPipelineBarrier2(cmd, &dep);
 		}
+
+		ctx.keppAlive(ei.target->instance());
 	}
 
-	void ComputeMips::execute(ExecutionContext & ctx)
+	ExecutionNode ComputeMips::getExecutionNode(RecordContext& ctx, ExecInfo const& ei)
 	{
-		ExecInfo ei{
-			.target = _target,
+		Resources resources{
+			Resource{
+				._image = ei.target,
+				._begin_state = {
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+				},
+				._end_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
+			},
 		};
-		execute(ctx, ei);
+		ExecInfo ei_copy = ei;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ei_copy](ExecutionContext& ctx) {
+				execute(ctx, ei_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode ComputeMips::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultExecInfo());
 	}
 
 	Executable ComputeMips::with(ExecInfo const& ei)
 	{
-		ExecInfo _ei{
-			.target = ei.target ? ei.target : _target,
-		};
-		return [=](ExecutionContext& ctx)
+		return [this, ei](RecordContext& ctx)
 		{
-			execute(ctx, _ei);
+			ExecInfo _ei{
+				.target = ei.target ? ei.target : _target,
+			};
+			return getExecutionNode(ctx, _ei);
 		};
 	}
 
@@ -758,69 +802,14 @@ namespace vkl
 		_use_update_buffer_ifp(ci.use_update_buffer_ifp)
 	{}
 
-	void UploadBuffer::execute(ExecutionContext& ctx, UploadInfo const& ui)
+	void UploadBuffer::execute(ExecutionContext& ctx, UploadInfo const& ui, bool use_update, Buffer::Range buffer_range)
 	{
 		if(ui.sources.empty())	return;
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
-
-
-		const bool use_update = [&](){
-			bool res = ui.use_update_buffer_ifp.value();
-			if (res)
-			{
-				const uint32_t max_size = 65536;
-				for (const auto& src : ui.sources)
-				{
-					res &= (src.obj.size() <= max_size);
-					res &= (src.obj.size() % 4 == 0);
-				}
-			}
-			return res;
-		}();
-
-		const bool merge_synch = true;
-
-		// first consider .len as .end
-		Buffer::Range buffer_range {.begin = size_t(-1), .len = 0};
-		for (const auto& src : ui.sources)
-		{
-			buffer_range.begin = std::min(buffer_range.begin, src.pos);
-			buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
-		}
-		// now .len is .len
-		buffer_range.len = buffer_range.len - buffer_range.begin;
-		
-		SynchronizationHelper synch(ctx);
-		if (merge_synch)
-		{
-			synch.addSynch(Resource{
-				._buffer = ui.dst,
-				._buffer_range = buffer_range,
-				._begin_state = {
-					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-				},
-			});
-		}
-		else
-		{
-			for (const auto& src : ui.sources)
-			{
-				synch.addSynch(Resource{
-					._buffer = ui.dst,
-					._buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
-					._begin_state = {
-						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-					},
-				});
-			}
-		}
 		
 
 		if (use_update)
 		{
-			synch.record();
 			for (const auto& src : ui.sources)
 			{
 				vkCmdUpdateBuffer(cmd, *ui.dst->instance(), src.pos, src.obj.size(), src.obj.data());
@@ -834,12 +823,23 @@ namespace vkl
 
 			// Copy to Staging Buffer
 			{
-				sbbi.map();
-				for (const auto& src : ui.sources)
-				{
-					std::memcpy(static_cast<uint8_t*>(sbbi.data()) + src.pos, src.obj.data(), src.obj.size());
-				}
-				sbbi.unMap();
+				//VkBufferMemoryBarrier2 sb_barrier{
+				//	.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+				//	.pNext = nullptr,
+				//	.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+				//};
+				//VkDependencyInfo dependency{
+				//	.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+				//	.pNext = nullptr,
+				//	.dependencyFlags = 0,
+				//	.memoryBarrierCount = 0,
+				//	.pMemoryBarriers = nullptr,
+				//	.bufferMemoryBarrierCount = 1,
+				//	.pBufferMemoryBarriers = &sb_barrier,
+				//	.imageMemoryBarrierCount = 0,
+				//	.pImageMemoryBarriers = nullptr,
+				//};
+				//vkCmdPipelineBarrier2(cmd, &dependency);
 
 				SynchronizationHelper synch2(ctx);
 				synch2.addSynch(Resource{
@@ -849,10 +849,22 @@ namespace vkl
 						.access = VK_ACCESS_2_HOST_WRITE_BIT,
 						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 					},
-				});
+					});
 				synch2.record();
+
+				sbbi.map();
+				for (const auto& src : ui.sources)
+				{
+					std::memcpy(static_cast<uint8_t*>(sbbi.data()) + src.pos, src.obj.data(), src.obj.size());
+				}
+				vmaFlushAllocation(sb->buffer()->instance()->allocator(), sb->buffer()->instance()->allocation(), buffer_range.begin, buffer_range.len);
+				// Flush each subrange individually?
+				sbbi.unMap();
+
+				
 			}
 
+			SynchronizationHelper synch(ctx);
 			synch.addSynch(Resource{
 				._buffer = sb->buffer(),
 				._buffer_range = buffer_range,
@@ -885,30 +897,91 @@ namespace vkl
 			};
 
 			vkCmdCopyBuffer2(cmd, &copy);
-
 			ctx.keppAlive(sb);
+			ctx.keppAlive(ui.dst->instance());
 		}
 	}
 
-	void UploadBuffer::execute(ExecutionContext& ctx)
+	ExecutionNode UploadBuffer::getExecutionNode(RecordContext& ctx, UploadInfo const& ui)
 	{
-		UploadInfo ui{
-			.sources = {PositionedObjectView{.obj = _src, .pos = _offset.valueOr(0), }},
-			.dst = _dst,
-			.use_update_buffer_ifp = _use_update_buffer_ifp,
+		const bool use_update = [&]() {
+			bool res = ui.use_update_buffer_ifp.value();
+			if (res)
+			{
+				const uint32_t max_size = 65536;
+				for (const auto& src : ui.sources)
+				{
+					res &= (src.obj.size() <= max_size);
+					res &= (src.obj.size() % 4 == 0);
+				}
+			}
+			return res;
+		}();
+		// first consider .len as .end
+		Buffer::Range buffer_range{ .begin = size_t(-1), .len = 0 };
+		for (const auto& src : ui.sources)
+		{
+			buffer_range.begin = std::min(buffer_range.begin, src.pos);
+			buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
+		}
+		// now .len is .len
+		buffer_range.len = buffer_range.len - buffer_range.begin;
+		const bool merge_synch = true;
+		Resources resources;
+		if(merge_synch)
+		{
+			resources.push_back(Resource{
+				._buffer = ui.dst,
+				._buffer_range = buffer_range,
+				._begin_state = {
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+			});
+		}
+		else
+		{
+			for (const auto& src : ui.sources)
+			{
+				resources.push_back(Resource{
+					._buffer = ui.dst,
+					._buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
+					._begin_state = {
+						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+					},
+				});
+			}
+		}
+		
+		UploadInfo ui_copy = ui;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ui_copy, use_update, buffer_range](ExecutionContext& ctx)
+			{
+				execute(ctx, ui_copy, use_update, buffer_range);
+			},
 		};
-		execute(ctx, ui);
+		return res;
 	}
+
+	ExecutionNode UploadBuffer::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultUploadInfo());
+	}
+
 
 	Executable UploadBuffer::with(UploadInfo const& ui)
 	{
-		UploadInfo _ui{
-			.sources = (!ui.sources.empty()) ? ui.sources : std::vector{PositionedObjectView{.obj = _src, .pos = _offset.valueOr(0), }},
-			.dst = ui.dst ? ui.dst : _dst,
-			.use_update_buffer_ifp = ui.use_update_buffer_ifp.value_or(_use_update_buffer_ifp),
-		};
-		return [=](ExecutionContext & ctx) {
-			execute(ctx, _ui);
+		return [this, ui](RecordContext & ctx)
+		{
+			UploadInfo _ui{
+				.sources = (!ui.sources.empty()) ? ui.sources : std::vector{PositionedObjectView{.obj = _src, .pos = _offset.valueOr(0), }},
+				.dst = ui.dst ? ui.dst : _dst,
+				.use_update_buffer_ifp = ui.use_update_buffer_ifp.value_or(_use_update_buffer_ifp),
+			};
+			return getExecutionNode(ctx, ui);
 		};
 	}
 
@@ -924,94 +997,106 @@ namespace vkl
 	{
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
-		SynchronizationHelper synch(ctx);
-		synch.addSynch(Resource{
-			._image = ui.dst,
-			._begin_state = {
-				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-			},
-		});
+		std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), ui.src.size());
+		BufferInstance& sbbi = *sb->buffer()->instance();
 
+
+		// Copy to Staging Buffer
 		{
-			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), ui.src.size());
-			BufferInstance& sbbi = *sb->buffer()->instance();
-
-
-			// Copy to Staging Buffer
-			{
-				sbbi.map();
-				std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
-				sbbi.unMap();
-
-				SynchronizationHelper synch2(ctx);
-				synch2.addSynch(Resource{
-					._buffer = sb->buffer(),
-					._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
-					._begin_state = {
-						.access = VK_ACCESS_2_HOST_WRITE_BIT,
-						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
-					},
-				});
-				synch2.record();
-			}
-
-			synch.addSynch(Resource{
+			SynchronizationHelper synch2(ctx);
+			synch2.addSynch(Resource{
 				._buffer = sb->buffer(),
 				._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 				._begin_state = {
-					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+					.access = VK_ACCESS_2_HOST_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 				},
 			});
-			synch.record();
-
-			VkBufferImageCopy2 region{
-				.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
-				.pNext = nullptr,
-				.bufferOffset = 0,
-				.bufferRowLength = ui.buffer_row_length,   // 0 => tightly packed
-				.bufferImageHeight = ui.buffer_image_height, // 0 => tightly packed
-				.imageSubresource = getImageLayersFromRange(ui.dst->instance()->createInfo().subresourceRange),
-				.imageOffset = makeZeroOffset3D(),
-				.imageExtent = ui.dst->image()->instance()->createInfo().extent,
-			};
-
-			VkCopyBufferToImageInfo2 copy{
-				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
-				.pNext = nullptr,
-				.srcBuffer = sbbi,
-				.dstImage = *ui.dst->image()->instance(),
-				.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.regionCount = 1,
-				.pRegions = &region,
-			};
-
-			vkCmdCopyBufferToImage2(cmd, &copy);
-
-			ctx.keppAlive(sb);
+			synch2.record();
+				
+			sbbi.map();
+			std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
+			vmaFlushAllocation(sb->buffer()->instance()->allocator(), sb->buffer()->instance()->allocation(), 0, ui.src.size());
+			sbbi.unMap();
 		}
+
+		SynchronizationHelper synch(ctx);
+		synch.addSynch(Resource{
+			._buffer = sb->buffer(),
+			._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
+			._begin_state = {
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+			},
+		});
+		synch.record();
+
+		VkBufferImageCopy2 region{
+			.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+			.pNext = nullptr,
+			.bufferOffset = 0,
+			.bufferRowLength = ui.buffer_row_length,   // 0 => tightly packed
+			.bufferImageHeight = ui.buffer_image_height, // 0 => tightly packed
+			.imageSubresource = getImageLayersFromRange(ui.dst->instance()->createInfo().subresourceRange),
+			.imageOffset = makeZeroOffset3D(),
+			.imageExtent = ui.dst->image()->instance()->createInfo().extent,
+		};
+
+		VkCopyBufferToImageInfo2 copy{
+			.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+			.pNext = nullptr,
+			.srcBuffer = sbbi,
+			.dstImage = *ui.dst->image()->instance(),
+			.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.regionCount = 1,
+			.pRegions = &region,
+		};
+
+		vkCmdCopyBufferToImage2(cmd, &copy);
+
+		ctx.keppAlive(sb);
+		ctx.keppAlive(ui.dst->instance());
+		
 	}
 
-
-	void UploadImage::execute(ExecutionContext& ctx)
+	ExecutionNode UploadImage::getExecutionNode(RecordContext& ctx, UploadInfo const& ui)
 	{
-		UploadInfo ui{
-			.src = _src,
-			.dst = _dst,
+		Resources resources = {
+			Resource{
+				._image = ui.dst,
+				._begin_state = {
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+			},
 		};
-		execute(ctx, ui);
+		UploadInfo ui_copy = ui;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ui_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ui_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode UploadImage::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultUploadInfo());
 	}
 
 	Executable UploadImage::with(UploadInfo const& ui)
 	{
-		UploadInfo _ui{
-			.src = ui.src.hasValue() ? ui.src : _src,
-			.dst = ui.dst ? ui.dst : _dst,
-		};
-		return [=](ExecutionContext& ctx) {
-			execute(ctx, _ui);
+		return [this, ui](RecordContext& ctx) {
+			
+			UploadInfo _ui{
+				.src = ui.src.hasValue() ? ui.src : _src,
+				.dst = ui.dst ? ui.dst : _dst,
+			};
+			return getExecutionNode(ctx, _ui);
 		};
 	}
 
@@ -1025,64 +1110,177 @@ namespace vkl
 
 	}
 
-	void UploadResources::execute(ExecutionContext& ctx, UploadInfo const& ui)
+	class CallbackHolder : public VkObject
+	{
+	public:
+
+		std::vector<Callback> callbacks;
+
+		virtual ~CallbackHolder() override
+		{
+			for (Callback& cb : callbacks)
+			{
+				cb.callback();
+			}
+		}
+	};
+
+	void UploadResources::execute(ExecutionContext& ctx, UploadInfo const& ui, std::vector<BufferUploadExtraInfo> const& extra_buffer_info)
 	{
 		const ResourcesToUpload & resources = ui.upload_list;
 
-		// TODO one single barrier (assuming no aliasing in resources)
+		UploadImage image_uploader(UploadImage::CI{
+			.app = application(),
+			.name = name() + ".ImageUploader",
+		});
 
-		if (!resources.images.empty())
+		UploadBuffer buffer_uploader(UploadBuffer::CI{
+			.app = application(),
+			.name = name() + ".BufferUploader",
+		});
+
+		std::shared_ptr<CallbackHolder> completion_callbacks;
+
+		for (size_t i = 0; i < resources.buffers.size(); ++i)
 		{
-			UploadImage uploader(UploadImage::CI{
-				.app = application(),
-				.name = name() + ".ImageUploader",
-			});
-
-			for (auto& image_upload : resources.images)
+			auto& buffer_upload = resources.buffers[i];
+			buffer_uploader.execute(ctx, UploadBuffer::UI{
+				.sources = buffer_upload.sources,
+				.dst = buffer_upload.dst,
+				.use_update_buffer_ifp = false,
+			}, extra_buffer_info[i].use_update, extra_buffer_info[i].range);
+			if (buffer_upload.completion_callback.callback)
 			{
-				uploader.execute(ctx, UploadImage::UI{
-					.src = image_upload.src,
-					.buffer_row_length = image_upload.buffer_row_length,
-					.buffer_image_height = image_upload.buffer_image_height,
-					.dst = image_upload.dst,
-				});
+				if(!completion_callbacks) completion_callbacks = std::make_shared<CallbackHolder>();
+				completion_callbacks->callbacks.push_back(buffer_upload.completion_callback);
 			}
 		}
-
-		if (!resources.buffers.empty())
-		{
-			UploadBuffer uploader(UploadBuffer::CI{
-				.app = application(),
-				.name = name() + ".BufferUploader",
-			});
-
-			for (auto& buffer_upload : resources.buffers)
-			{
-				uploader.execute(ctx, UploadBuffer::UI{
-					.sources = buffer_upload.sources,
-					.dst = buffer_upload.dst,
-					.use_update_buffer_ifp = false,
-				});
-			}
-		}
-
 		
+		for (auto& image_upload : resources.images)
+		{
+			image_uploader.execute(ctx, UploadImage::UI{
+				.src = image_upload.src,
+				.buffer_row_length = image_upload.buffer_row_length,
+				.buffer_image_height = image_upload.buffer_image_height,
+				.dst = image_upload.dst,
+			});
+			if (image_upload.completion_callback.callback)
+			{
+				if (!completion_callbacks) completion_callbacks = std::make_shared<CallbackHolder>();
+				completion_callbacks->callbacks.push_back(image_upload.completion_callback);
+			}
+		}
+
+		if (completion_callbacks.operator bool() && !completion_callbacks->callbacks.empty())
+		{
+			ctx.keppAlive(completion_callbacks);
+		}
+
 	}
 
-	void UploadResources::execute(ExecutionContext& ctx)
+	ExecutionNode UploadResources::getExecutionNode(RecordContext& ctx, UploadInfo const& ui)
 	{
-		ResourcesToUpload list = _holder->getResourcesToUpload();
-		UploadInfo ui{
-			.upload_list = std::move(list),
+		// Assuming no aliasing between resources
+		Resources resources;
+		resources.reserve(ui.upload_list.buffers.size() + ui.upload_list.images.size());
+		std::vector<BufferUploadExtraInfo> extra_buffer_info(ui.upload_list.buffers.size());
+		
+		for (size_t i = 0; i<ui.upload_list.buffers.size(); ++i)
+		{
+			const auto & buffer_upload = ui.upload_list.buffers[i];
+
+			const bool use_update = [&]() {
+				bool res = true;
+				if (res)
+				{
+					const uint32_t max_size = 65536;
+					for (const auto& src : buffer_upload.sources)
+					{
+						res &= (src.obj.size() <= max_size);
+						res &= (src.obj.size() % 4 == 0);
+					}
+				}
+				return res;
+			}();
+
+			// first consider .len as .end
+			Buffer::Range buffer_range{ .begin = size_t(-1), .len = 0 };
+			for (const auto& src : buffer_upload.sources)
+			{
+				buffer_range.begin = std::min(buffer_range.begin, src.pos);
+				buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
+			}
+			// now .len is .len
+			buffer_range.len = buffer_range.len - buffer_range.begin;
+			const bool merge_synch = true;
+
+			extra_buffer_info[i] = {
+				.use_update = use_update,
+				.range = buffer_range,
+			};
+
+			if (merge_synch)
+			{
+				resources.push_back(Resource{
+					._buffer = buffer_upload.dst,
+					._buffer_range = buffer_range,
+					._begin_state = {
+						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+					},
+				});
+			}
+			else
+			{
+				for (const auto& src : buffer_upload.sources)
+				{
+					resources.push_back(Resource{
+						._buffer = buffer_upload.dst,
+						._buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
+						._begin_state = {
+							.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+							.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+						},
+					});
+				}
+			}
+		}
+		for (const auto& image_upload : ui.upload_list.images)
+		{
+			resources.push_back(Resource{
+				._image = image_upload.dst,
+				._begin_state = {
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+			});
+		}
+		UploadInfo ui_copy = ui;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ui_copy, extra_buffer_info](ExecutionContext& ctx)
+			{
+				execute(ctx, ui_copy, extra_buffer_info);
+			},
 		};
-		execute(ctx, ui);
+		return res;
+	}
+
+	ExecutionNode UploadResources::getExecutionNode(RecordContext& ctx)
+	{
+		UploadInfo ui{
+			.upload_list = _holder->getResourcesToUpload(),
+		};
+		return getExecutionNode(ctx, ui);
 	}
 
 	Executable UploadResources::with(UploadInfo const& ui)
 	{
-		return [this, ui](ExecutionContext & ctx)
+		return [this, ui](RecordContext & ctx)
 		{
-			execute(ctx, ui);
+			return getExecutionNode(ctx, ui);
 		};
 	}
 }

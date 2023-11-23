@@ -20,7 +20,7 @@ namespace vkl
 
 		VkFormat _imgui_format = VK_FORMAT_MAX_ENUM;
 
-		size_t _index = 0;
+		Dyn<size_t> _index;
 
 		void createRenderPassIFP();
 
@@ -54,7 +54,9 @@ namespace vkl
 
 		void execute(ExecutionContext& ctx, ExecutionInfo const& ei);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, ExecutionInfo const& ei);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(ExecutionInfo const& ei);
 
@@ -64,10 +66,5 @@ namespace vkl
 		}
 
 		virtual bool updateResources(UpdateContext & ctx) override;
-
-		constexpr void setIndex(size_t index)
-		{
-			_index = index;
-		}
 	};
 }

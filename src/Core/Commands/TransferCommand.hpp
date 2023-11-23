@@ -17,6 +17,9 @@ namespace vkl
 
 		virtual ~TransferCommand() override
 		{}
+
+		virtual void init() override
+		{}
 	};
 
 	class BlitImage : public TransferCommand
@@ -51,17 +54,27 @@ namespace vkl
 
 		BlitImage(CreateInfo const& ci);
 
-		virtual void init() override {};
-
 		void execute(ExecutionContext& context, BlitInfo const& bi);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, BlitInfo const& bi);
+
+		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
 
 		Executable with(BlitInfo const& bi);
 
 		Executable operator()(BlitInfo const& bi)
 		{
 			return with(bi);
+		}
+
+		BlitInfo getDefaultBlitInfo()
+		{
+			return BlitInfo{
+				.src = _src,
+				.dst = _dst,
+				.regions = _regions,
+				.filter = _filter,
+			};
 		}
 
 	};
@@ -94,17 +107,26 @@ namespace vkl
 
 		CopyImage(CreateInfo const& ci);
 
-		virtual void init() override;
-
 		void execute(ExecutionContext& ctx, CopyInfo const& cinfo);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, CopyInfo const& ci);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
 			return with(cinfo);
+		}
+
+		CopyInfo getDefaultCopyInfo()
+		{
+			return CopyInfo{
+				.src = _src,
+				.dst = _dst,
+				.regions = _regions,
+			};
 		}
 	};
 
@@ -142,17 +164,27 @@ namespace vkl
 
 		CopyBufferToImage(CreateInfo const& ci);
 
-		virtual void init() override;
-
 		void execute(ExecutionContext& context, CopyInfo const& cinfo);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext& ctx, CopyInfo const& ci);
+
+		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
 			return with(cinfo);
+		}
+
+		CopyInfo getDefaultCopyInfo()
+		{
+			return CopyInfo {
+				.src = _src,
+				.range = _range.value(),
+				.dst = _dst,
+				.regions = _regions,
+			};
 		}
 	};
 
@@ -192,17 +224,28 @@ namespace vkl
 
 		CopyBuffer(CreateInfo const& ci);
 
-		virtual void init() override;
-
 		void execute(ExecutionContext& ctx, CopyInfo const& cinfo);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, CopyInfo const& cinfo);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
 			return with(cinfo);
+		}
+
+		CopyInfo getDefaultCopyInfo()
+		{
+			return CopyInfo{
+				.src = _src,
+				.src_offset = _src_offset.value(),
+				.dst = _dst,
+				.dst_offset = _dst_offset.value(),
+				.size = _size.value(),
+			};
 		}
 	};
 
@@ -235,17 +278,26 @@ namespace vkl
 
 		FillBuffer(CreateInfo const& ci);
 
-		virtual void init() override;
-
 		void execute(ExecutionContext& context, FillInfo const& fi);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, FillInfo const& fi);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(FillInfo const& fi);
 
 		Executable operator()(FillInfo const& fi)
 		{
 			return with(fi);
+		}
+
+		FillInfo getDefaultFillInfo()
+		{
+			return FillInfo{
+				.buffer = _buffer,
+				.range = _range.value(),
+				.value = _value,
+			};
 		}
 	};
 
@@ -275,17 +327,25 @@ namespace vkl
 
 		ClearImage(CreateInfo const& ci);
 
-		void init() override;
-
 		void execute(ExecutionContext& context, ClearInfo const& ci);
 
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, ClearInfo const& ci);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(ClearInfo const& ci);
 
 		Executable operator()(ClearInfo const& ci)
 		{
 			return with(ci);
+		}
+
+		ClearInfo getDefaultClearInfo()
+		{
+			return ClearInfo{
+				.view = _view,
+				.value = _value,
+			};
 		}
 	};
 
@@ -322,13 +382,24 @@ namespace vkl
 
 		void execute(ExecutionContext& ctx, UpdateInfo const& ui);
 
-		virtual void execute(ExecutionContext& ctx) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, UpdateInfo const& ui);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UpdateInfo const& ui);
 
 		Executable operator()(UpdateInfo const& ui)
 		{
 			return with(ui);
+		}
+
+		UpdateInfo getDefaultUpdateInfo()
+		{
+			return UpdateInfo{
+				.src = _src,
+				.dst = _dst,
+				.offset = _offset.value(),
+			};
 		}
 	};
 
@@ -364,13 +435,22 @@ namespace vkl
 
 		void execute(ExecutionContext& ctx, ExecInfo const& ei);
 
-		virtual void execute(ExecutionContext& ctx) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, ExecInfo const& ei);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(ExecInfo const& ei);
 
 		Executable operator()(ExecInfo const& ei)
 		{
 			return with(ei);
+		}
+
+		ExecInfo getDefaultExecInfo()
+		{
+			return ExecInfo{
+				.target = _target,
+			};
 		}
 	};
 
@@ -412,15 +492,26 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		void execute(ExecutionContext& ctx, UploadInfo const& ui);
+		void execute(ExecutionContext& ctx, UploadInfo const& ui, bool use_update, Buffer::Range buffer_range);
 
-		virtual void execute(ExecutionContext& ctx) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
+
+		ExecutionNode getExecutionNode(RecordContext & ctx);
 
 		Executable with(UploadInfo const& ui);
 
 		Executable operator()(UploadInfo const& ui)
 		{
 			return with(ui);
+		}
+
+		UploadInfo getDefaultUploadInfo()
+		{
+			return UploadInfo{
+				.sources = {PositionedObjectView{.obj = _src, .pos = _offset.valueOr(0), }},
+				.dst = _dst,
+				.use_update_buffer_ifp = _use_update_buffer_ifp,
+			};
 		}
 	};
 
@@ -457,7 +548,9 @@ namespace vkl
 
 		void execute(ExecutionContext& ctx, UploadInfo const& ui);
 
-		virtual void execute(ExecutionContext& ctx) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UploadInfo const& ui);
 
@@ -466,6 +559,13 @@ namespace vkl
 			return with(ui);
 		}
 
+		UploadInfo getDefaultUploadInfo()
+		{
+			return UploadInfo{
+				.src = _src,
+				.dst = _dst,
+			};
+		}
 	};
 
 
@@ -474,6 +574,12 @@ namespace vkl
 	protected:
 	
 		std::shared_ptr<ResourcesHolder> _holder;
+
+		struct BufferUploadExtraInfo
+		{
+			bool use_update = false;
+			Buffer::Range range = {};
+		};
 
 	public:
 
@@ -495,9 +601,11 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		void execute(ExecutionContext & ctx, UploadInfo const& ui);
+		void execute(ExecutionContext & ctx, UploadInfo const& ui, std::vector<BufferUploadExtraInfo> const& extra_buffer_info);
 
-		virtual void execute(ExecutionContext & ctx) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
+
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UploadInfo const& ui);
 

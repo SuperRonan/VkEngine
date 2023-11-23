@@ -152,15 +152,35 @@ namespace vkl
 	};
 
 
-	class DescriptorSetsManager : public VkObject
+	class DescriptorSetsTacker : public VkObject
+	{
+	protected:
+		VkPipelineBindPoint _pipeline_binding;
+		std::vector<std::shared_ptr<DescriptorSetAndPoolInstance>> _bound_descriptor_sets;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			VkPipelineBindPoint pipeline_binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+		};
+		using CI = CreateInfo;
+
+		DescriptorSetsTacker(CreateInfo const& ci);
+
+		void bind(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set);
+
+		const std::shared_ptr<DescriptorSetAndPoolInstance>& getSet(uint32_t s) const;
+	};
+
+
+	class DescriptorSetsManager : public DescriptorSetsTacker
 	{
 	protected:
 
 		std::shared_ptr<CommandBuffer> _cmd;
-
-		VkPipelineBindPoint _pipeline_binding;
-
-		std::vector<std::shared_ptr<DescriptorSetAndPoolInstance>> _bound_descriptor_sets;
 
 		std::vector<Range32> _bindings_ranges;
 
@@ -190,7 +210,5 @@ namespace vkl
 		void recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func = nullptr);
 
 		void bindOneAndRecord(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set, std::shared_ptr<PipelineLayout> const& layout);
-
-		const std::shared_ptr<DescriptorSetAndPoolInstance> & getSet(uint32_t s) const;
 	};
 }

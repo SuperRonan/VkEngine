@@ -23,7 +23,7 @@ namespace vkl
 
 		PushConstant _pc;
 
-		void recordDescriptorSetSynch(SynchronizationHelper & synch, DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout);
+		Resources getDescriptorSetResources(DescriptorSetAndPoolInstance & set, DescriptorSetLayout const& layout);
 
 	public:
 
@@ -47,7 +47,7 @@ namespace vkl
 
 		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
 
-		virtual void recordBoundResourcesSynchronization(DescriptorSetsManager & bound_sets, SynchronizationHelper & synch, size_t max_set=0);
+		virtual Resources getBoundResources(DescriptorSetsTacker & bound_sets, size_t max_set=0);
 
 		template<typename T>
 		void setPushConstantsData(T && t)
@@ -59,8 +59,6 @@ namespace vkl
 		{ 
 			DeviceCommand::init();
 		};
-
-		virtual void execute(ExecutionContext& context) override = 0;
 
 		virtual bool updateResources(UpdateContext & ctx) override;
 

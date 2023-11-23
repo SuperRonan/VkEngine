@@ -116,7 +116,7 @@ namespace vkl
 
 	std::shared_ptr<DescriptorSetLayout> Model::setLayout(VkApplication * app, SetLayoutOptions const& options)
 	{
-		std::shared_ptr<DescriptorSetLayoutCache> & gen_cache = app->getDescSetLayoutCache(app->descriptorBindingGlobalOptions().set_bindings[uint32_t(DescriptorSetName::object)].set);
+		std::shared_ptr<DescriptorSetLayoutCache> & gen_cache = app->getDescSetLayoutCache(app->descriptorBindingGlobalOptions().set_bindings[uint32_t(DescriptorSetName::invocation)].set);
 
 		if (!gen_cache)
 		{

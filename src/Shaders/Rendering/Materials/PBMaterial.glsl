@@ -14,12 +14,12 @@ struct PBMaterialProperties
 
 #if BIND_SINGLE_MATERIAL
 
-layout(INSTANCE_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 0, std140) uniform restrict MaterialPropertiesBuffer
+layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 0, std140) uniform restrict MaterialPropertiesBuffer
 {
 	PBMaterialProperties props;
 } material_props;
 
-layout(INSTANCE_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 1) uniform sampler2D AlbedoTexture;
+layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 1) uniform sampler2D AlbedoTexture;
 
 
 #endif

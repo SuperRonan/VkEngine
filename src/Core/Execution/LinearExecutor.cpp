@@ -11,22 +11,40 @@ namespace vkl
 
 	ExecutionThread::ExecutionThread(CreateInfo const& ci):
 		ExecutionRecorder(ci.app, ci.name),
+		_record_context(RecordContext::CI{
+			.app = ci.app,
+			.name = ci.name + ".RecordContext",
+		}),
 		_context(ci.context)
 	{}
 
+	void ExecutionThread::executeNode(ExecutionNode const& node)
+	{
+		SynchronizationHelper synch(*_context);
+		for (auto& resource : node.resources())
+		{
+			synch.addSynch(resource);
+		}
+		synch.record();
+
+		node.run(*_context);
+	}
+
 	void ExecutionThread::record(Command& cmd)
 	{
-		cmd.execute(*_context);
+		ExecutionNode node = cmd.getExecutionNode(_record_context);
+		executeNode(node);
 	}
 
 	void ExecutionThread::record(std::shared_ptr<Command> cmd)
 	{
-		execute(*cmd);
+		record(*cmd);
 	}
 
 	void ExecutionThread::record(Executable const& executable)
 	{
-		executable(*_context);
+		ExecutionNode node = executable(_record_context);
+		executeNode(node);
 	}
 
 	void ExecutionThread::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
@@ -38,20 +56,35 @@ namespace vkl
 		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;
 		if (bind_graphics)
 		{
+			_record_context.graphicsBoundSets().bind(s, inst);
 			_context->graphicsBoundSets().bind(s, inst);
 		}
 		if (bind_compute)
 		{
+			_record_context.computeBoundSets().bind(s, inst);
 			_context->computeBoundSets().bind(s, inst);
 		}
 		if (bind_rt)
 		{
+			_record_context.rayTracingBoundSets().bind(s, inst);
 			_context->rayTracingBoundSets().bind(s, inst);
 		}
 	}
 
+	void ExecutionThread::pushDebugLabel(std::string const& label, vec4 const& color)
+	{
+		_context->pushDebugLabel(label, color);
+	}
 
+	void ExecutionThread::popDebugLabel()
+	{
+		_context->popDebugLabel();
+	}
 
+	void ExecutionThread::insertDebugLabel(std::string const& label, vec4 const& color)
+	{
+		_context->insertDebugLabel(label, color);
+	}
 
 
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
@@ -187,8 +220,7 @@ namespace vkl
 
 		if (render_ImGui && _render_gui)
 		{
-			_render_gui->setIndex(_latest_aquire_event->aquired_id);
-			execute(_render_gui);
+			execute(_render_gui->with(ImguiCommand::ExecutionInfo{.index = _latest_aquire_event->aquired_id}));
 		}
 
 		SynchronizationHelper synch(_context);

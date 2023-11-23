@@ -21,7 +21,7 @@ namespace vkl
 		scene = 1,
 		module = 2,
 		shader = 3,
-		object = 4,
+		invocation = 4,
 		MAX_ENUM,
 	};
 
@@ -30,7 +30,7 @@ namespace vkl
 		"scene",
 		"module",
 		"shader",
-		"object"
+		"invocation"
 	};
 
 	struct BindingIndex

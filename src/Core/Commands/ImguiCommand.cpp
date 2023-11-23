@@ -186,15 +186,7 @@ namespace vkl
 		std::shared_ptr<ImageView> target = _swapchain->instance()->views()[index];
 
 		std::array<Resource, 1> resources = {
-			Resource{
-				._image = target,
-				._begin_state = ResourceState2{
-					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-				},
-				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-			},
+			
 		};
 		synch.addSynch(resources[0]);
 
@@ -275,12 +267,46 @@ namespace vkl
 		ImGui::RenderPlatformWindowsDefault();
 	}
 
-	void ImguiCommand::execute(ExecutionContext& ctx)
+	
+	ExecutionNode ImguiCommand::getExecutionNode(RecordContext& ctx, ExecutionInfo const& ei)
+	{
+		Resources resources{
+			Resource{
+				._image = _swapchain->instance()->views()[ei.index],
+				._begin_state = ResourceState2{
+					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
+					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+				},
+				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			},
+		};
+		ExecutionInfo ei_copy = ei;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, ei_copy](ExecutionContext& ctx)
+			{
+				execute(ctx, ei_copy);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode ImguiCommand::getExecutionNode(RecordContext& ctx)
 	{
 		ExecutionInfo ei{
-			.index = _index,
+			.index = _index.value(),
 		};
-		execute(ctx, ei);
+		return getExecutionNode(ctx, ei);
+	}
+
+	Executable ImguiCommand::with(ExecutionInfo const& ei)
+	{
+		return [this, ei](RecordContext& ctx)
+		{
+			return getExecutionNode(ctx, ei);
+		};
 	}
 
 	bool ImguiCommand::updateResources(UpdateContext & ctx)

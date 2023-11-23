@@ -19,7 +19,7 @@ namespace vkl
 			uint32_t buffer_row_length = 0;
 			uint32_t buffer_image_height = 0;
 			std::shared_ptr<ImageView> dst;
-			Callback on_complition_callback = {};
+			Callback completion_callback = {};
 		};
 
 		std::vector<ImageUpload> images;
@@ -28,7 +28,7 @@ namespace vkl
 		{
 			std::vector<PositionedObjectView> sources;
 			std::shared_ptr<Buffer> dst;
-			Callback on_complition_callback = {};
+			Callback completion_callback = {};
 		};
 
 		std::vector<BufferUpload> buffers;

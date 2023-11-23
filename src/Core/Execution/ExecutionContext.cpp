@@ -4,6 +4,41 @@
 
 namespace vkl
 {
+	RecordContext::RecordContext(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_graphics_bound_sets(DescriptorSetsTacker::CI{
+			.app = ci.app, 
+			.name = ci.name + "._gfx_bound_sets",
+			.pipeline_binding = VK_PIPELINE_BIND_POINT_GRAPHICS,
+		}),
+		_compute_bound_sets(DescriptorSetsTacker::CI{
+			.app = ci.app,
+			.name = ci.name + +"._cmp_bound_sets",
+			.pipeline_binding = VK_PIPELINE_BIND_POINT_COMPUTE,
+		}),
+		_ray_tracing_bound_sets(DescriptorSetsTacker::CI{
+			.app = ci.app,
+			.name = ci.name + +"._rtx_bound_sets",
+			.pipeline_binding = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+		})
+	{}
+
+	DescriptorSetsTacker& RecordContext::getBoundSets(VkPipelineBindPoint pipeline)
+	{
+		switch (pipeline)
+		{
+			case VK_PIPELINE_BIND_POINT_GRAPHICS:
+				return _graphics_bound_sets;
+			break;
+			case VK_PIPELINE_BIND_POINT_COMPUTE:
+				return _compute_bound_sets;
+			break;
+			default: //case VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR:
+				return _ray_tracing_bound_sets;
+			break;
+		}
+	}
+
 	ExecutionContext::ExecutionContext(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
 		_command_buffer(ci.cmd),
@@ -24,7 +59,7 @@ namespace vkl
 		}),
 		_ray_tracing_bound_sets(DescriptorSetsManager::CI{
 			.app = application(),
-			.name = name() + "._rt_bound_sets",
+			.name = name() + "._rtx_bound_sets",
 			.cmd = _command_buffer,
 			.pipeline_binding = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
 		})

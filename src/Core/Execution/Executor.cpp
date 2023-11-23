@@ -1,6 +1,7 @@
 #include "Executor.hpp"
 #include <Core/Utils/stl_extension.hpp>
 #include <Core/Rendering/DebugRenderer.hpp>
+#include <random>
 
 namespace vkl
 {
@@ -74,4 +75,19 @@ namespace vkl
 	ExecutionRecorder::ExecutionRecorder(VkApplication * app, std::string const& name) :
 		VkObject(app, name)
 	{}
+
+
+	void ExecutionRecorder::pushDebugLabel(std::string const& label)
+	{
+		std::hash<std::string> hs;
+		size_t seed = hs(label);
+		auto rng = std::mt19937_64(seed);
+		std::uniform_real_distribution<float> distrib(0, 1);
+		vec4 color;
+		color.r = distrib(rng);
+		color.g = distrib(rng);
+		color.b = distrib(rng);
+		color.a = 1;
+		pushDebugLabel(label, color);
+	}
 }

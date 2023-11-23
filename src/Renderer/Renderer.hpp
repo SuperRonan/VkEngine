@@ -107,7 +107,7 @@ namespace vkl
 
 		void updateResources(UpdateContext & ctx);
 
-		void execute(ExecutionThread& exec, Camera const& camera, float time, float dt, uint32_t frame_id);
+		void execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id);
 
 		std::shared_ptr<ImageView> depth() const
 		{

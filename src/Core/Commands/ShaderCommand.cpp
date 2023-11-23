@@ -42,8 +42,10 @@ namespace vkl
 		);
 	}
 
-	void ShaderCommand::recordDescriptorSetSynch(SynchronizationHelper& synch, DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout)
+	Resources ShaderCommand::getDescriptorSetResources(DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout)
 	{
+		Resources res;
+		res.reserve(layout.bindings().size());
 		const auto& shader_bindings = layout.bindings();
 		auto& set_bindings = set.bindings();
 		size_t set_it = 0;
@@ -57,7 +59,6 @@ namespace vkl
 				if (set_it == set_bindings.size())
 				{
 					assertm(false, "Shader binding not found in bound set, not enough bindings!");
-					return;
 				}
 			}
 			ResourceBinding& resource = set_bindings[set_it];
@@ -74,14 +75,15 @@ namespace vkl
 			{
 				r._end_state = r._begin_state;
 			}
-
-			synch.addSynch(r);
-			
+			res.push_back(r);
 		}
+		return res;
 	}
 
-	void ShaderCommand::recordBoundResourcesSynchronization(DescriptorSetsManager& bound_sets, SynchronizationHelper& synch, size_t max_set)
+	Resources ShaderCommand::getBoundResources(DescriptorSetsTacker& bound_sets, size_t max_set)
 	{
+		Resources res;
+		using namespace std::containers_operators;
 		ProgramInstance & prog = *_pipeline->program()->instance();
 		
 		MultiDescriptorSetsLayouts const& sets = prog.reflectionSetsLayouts();
@@ -97,10 +99,15 @@ namespace vkl
 			{
 				DescriptorSetLayout const& set_layout = *sets[s];
 				const auto& bound_set = bound_sets.getSet(s);
+				if (!bound_set)
+				{
+					int _ = 0;
+				}
 				assertm(bound_set, "Shader binding set not bound!");
-				recordDescriptorSetSynch(synch, *bound_set, set_layout);
+				res += getDescriptorSetResources(*bound_set, set_layout);
 			}
 		}
+		return res;
 	}
 
 	bool ShaderCommand::updateResources(UpdateContext & ctx)

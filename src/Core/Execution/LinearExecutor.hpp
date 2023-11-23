@@ -14,7 +14,10 @@ namespace vkl
 	{
 	protected:
 
+		RecordContext _record_context;
 		ExecutionContext* _context;
+
+		void executeNode(ExecutionNode const &node);
 
 	public:
 
@@ -35,6 +38,14 @@ namespace vkl
 		virtual void record(Executable const& executable) override;
 
 		virtual void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true) override;
+
+		using vec4 = glm::vec4;
+
+		virtual void pushDebugLabel(std::string const& label, vec4 const& color) override;
+
+		virtual void popDebugLabel() override;
+
+		virtual void insertDebugLabel(std::string const& label, vec4 const& color) override;
 
 		ExecutionContext* context()
 		{

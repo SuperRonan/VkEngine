@@ -56,10 +56,9 @@ namespace vkl
 
 		virtual void init() override;
 
+		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
 
-		void execute(ExecutionContext& context, DispatchInfo const& di);
-		
-		virtual void execute(ExecutionContext& context) override;
+		ExecutionNode getExecutionNode(RecordContext & ctx, DispatchInfo const& di);
 
 		Executable with(DispatchInfo const& di);
 

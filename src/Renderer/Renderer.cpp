@@ -46,7 +46,7 @@ namespace vkl
 		
 
 
-		const uint32_t model_set = application()->descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::object)].set;
+		const uint32_t model_set = application()->descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::invocation)].set;
 		_model_types = {
 			Model::MakeType(Mesh::Type::Rigid, Material::Type::PhysicallyBased),
 		};
@@ -267,7 +267,7 @@ namespace vkl
 
 	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
 	{
-		exec.context()->pushDebugLabel(name() + ".execute()");
+		exec.pushDebugLabel(name() + ".execute()");
 		UBO ubo{
 			.time = time,
 			.delta_time = dt,
@@ -290,7 +290,7 @@ namespace vkl
 			const size_t selected_pipeline = _pipeline_selection.index();
 			if (selected_pipeline == 0)
 			{
-				exec.context()->pushDebugLabel("DirectPipeline");
+				exec.pushDebugLabel("DirectPipeline");
 				for (uint32_t model_type : _model_types)
 				{
 					if (!draw_list[model_type].empty())
@@ -301,11 +301,11 @@ namespace vkl
 						}));
 					}
 				}
-				exec.context()->popDebugLabel();
+				exec.popDebugLabel();
 			}
 			else
 			{
-				exec.context()->pushDebugLabel("DeferredPipeline");
+				exec.pushDebugLabel("DeferredPipeline");
 				for (uint32_t model_type : _model_types)
 				{
 					if (!draw_list[model_type].empty())
@@ -317,7 +317,7 @@ namespace vkl
 					}
 				}
 				exec(_deferred_pipeline._shade_from_gbuffer);
-				exec.context()->popDebugLabel();
+				exec.popDebugLabel();
 			}
 		}
 
@@ -347,7 +347,7 @@ namespace vkl
 				}));
 			}
 		}
-		exec.context()->popDebugLabel();
+		exec.popDebugLabel();
 	}
 	
 

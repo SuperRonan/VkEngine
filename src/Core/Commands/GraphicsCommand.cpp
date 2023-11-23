@@ -139,12 +139,14 @@ namespace vkl
 		});
 	}
 
-	void GraphicsCommand::declareGraphicsResources(SynchronizationHelper & synch)
+	Resources GraphicsCommand::getFramebufferResources()
 	{
+		Resources res;
+		res.reserve(_framebuffer->size() + 1);
 		for (size_t i = 0; i < _framebuffer->size(); ++i)
 		{
 			std::shared_ptr<ImageView> view = _framebuffer->textures()[i];
-			synch.addSynch(Resource{
+			Resource r{
 				._image = view,
 				._begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT, // TODO add read bit if alpha blending 
@@ -152,12 +154,13 @@ namespace vkl
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-			});
+			};
+			res.push_back(r);
 		}
 		if (!!_depth)
 		{
 			const VkAccessFlags2 access2 = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT; // TODO deduce from the depth test;
-			synch.addSynch(Resource{
+			Resource r{
 				._image = _depth,
 				._begin_state = ResourceState2{
 					.access = access2,
@@ -170,8 +173,10 @@ namespace vkl
 					.stage = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
 				},
 				._image_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			});
+			};
+			res.push_back(r);
 		}
+		return res;
 	}
 
 	void GraphicsCommand::createPipeline()
@@ -237,21 +242,9 @@ namespace vkl
 	void GraphicsCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di, void * user_info)
 	{
 		context.pushDebugLabel(name());
-		SynchronizationHelper synch(context);
-
-		// Synch framebuffer
-		declareGraphicsResources(synch);
 
 		// Bind descriptor sets up to shader
 		recordBindings(cmd, context);
-		// Synch bound resources up to descriptor set
-		recordBoundResourcesSynchronization(context.graphicsBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
-		
-		// Synch models to draw
-		synchronizeDrawResources(synch, user_info);
-
-		
-		synch.record();
 
 		VkExtent2D render_area = extract(*_framebuffer->extent());
 
@@ -413,13 +406,13 @@ namespace vkl
 		});
 	}
 
-	void VertexCommand::synchronizeDrawResources(SynchronizationHelper& synch, void* user_data)
+	Resources VertexCommand::getPerDrawResources(DrawInfo const& di)
 	{
-		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
-
+		using namespace std::containers_operators;
+		Resources res;
 		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
 			const auto & layouts = _program->instance()->reflectionSetsLayouts();
-			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 			if (set_index < layouts.size())
 			{
 				return layouts[set_index];
@@ -437,7 +430,7 @@ namespace vkl
 			if(layout && !already_sync.contains(to_draw.set.get()))
 			{
 				assert(!!to_draw.set);
-				recordDescriptorSetSynch(synch, *to_draw.set->instance(), *layout);
+				res += getDescriptorSetResources(*to_draw.set->instance(), *layout);
 				already_sync.emplace(to_draw.set.get());
 			}
 
@@ -461,36 +454,37 @@ namespace vkl
 			{
 				if (to_draw.index_buffer)
 				{
-					synch.addSynch(Resource{
+					res += Resource{
 						._buffer = to_draw.index_buffer,
 						._buffer_range = to_draw.index_buffer_range,
 						._begin_state = ResourceState2{
 							.access = VK_ACCESS_2_INDEX_READ_BIT,
 							.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
 						},
-					});
+					};
 				}
 			
 				for (VertexBuffer vb : to_draw.vertex_buffers)
 				{
-					synch.addSynch(Resource{
+					res += Resource{
 						._buffer = vb.buffer,
 						._buffer_range = vb.range,
 						._begin_state = ResourceState2{
 							.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
 							.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
 						},
-					});
+					};
 				}
 			}
 		}
+		return res;
 	}
 
 	void VertexCommand::recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data)
 	{
 		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
 		
-		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 		const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
 		std::vector<VkBuffer> vb_bind;
 		std::vector<VkDeviceSize> vb_offsets;
@@ -548,34 +542,50 @@ namespace vkl
 		}
 	}
 
-	void VertexCommand::execute(ExecutionContext & ctx)
+	ExecutionNode VertexCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
 	{
-		CommandBuffer& cmd = *ctx.getCommandBuffer();
+		using namespace std::containers_operators;
+		DrawInfo di_copy = di;
+		
+		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
+		_set->waitForInstanceCreationIFN();
+		ctx.graphicsBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		Resources resources = getBoundResources(ctx.graphicsBoundSets(), shader_set_index + 1);
 
-		NOT_YET_IMPLEMENTED;
+		resources += getFramebufferResources();
+		resources += getPerDrawResources(di);
 
-		GraphicsCommand::DrawInfo gdi{
-			
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, di_copy](ExecutionContext& ctx)
+			{
+				GraphicsCommand::DrawInfo gdi{
+					
+				};
+				recordCommandBuffer(*ctx.getCommandBuffer(), ctx, gdi, (void*)(&di_copy));
+			},
 		};
+		return res;
+	}
 
+	ExecutionNode VertexCommand::getExecutionNode(RecordContext& ctx)
+	{
+		NOT_YET_IMPLEMENTED;
 		DrawInfo di{
 			
 		};
 
-		recordCommandBuffer(cmd, ctx, gdi, &di);
+		return getExecutionNode(ctx, di);
 	}
 
 	Executable VertexCommand::with(DrawInfo const& di)
 	{
-		GraphicsCommand::DrawInfo gdi{
-			
-		};
-
-		DrawInfo _di = di;
-
-		return [this, gdi, _di](ExecutionContext& ctx)
+		return [this, di](RecordContext& ctx)
 		{
-			recordCommandBuffer(*ctx.getCommandBuffer(), ctx, gdi, (void*) & _di);
+			return getExecutionNode(ctx, di);
 		};
 	}
 
@@ -674,13 +684,13 @@ namespace vkl
 
 
 
-	void MeshCommand::synchronizeDrawResources(SynchronizationHelper& synch, void* user_data)
+	Resources MeshCommand::getPerDrawResources(DrawInfo const& di)
 	{
-		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
-
+		Resources res;
+		using namespace std::containers_operators;
 		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
 			const auto& layouts = _program->instance()->reflectionSetsLayouts();
-			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 			if (set_index < layouts.size())
 			{
 				return layouts[set_index];
@@ -699,11 +709,12 @@ namespace vkl
 				if (!already_sync.contains(to_draw.set.get()))
 				{
 					assert(!!to_draw.set);
-					recordDescriptorSetSynch(synch, *to_draw.set->instance(), *layout);
+					res += getDescriptorSetResources(*to_draw.set->instance(), *layout);
 					already_sync.emplace(to_draw.set.get());
 				}
 			}
 		}
+		return res;
 	}
 
 
@@ -714,7 +725,7 @@ namespace vkl
 
 		const auto & _vkCmdDrawMeshTasksEXT = application()->extFunctions()._vkCmdDrawMeshTasksEXT;
 
-		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 		const std::shared_ptr<PipelineLayout>& layout = _pipeline->program()->instance()->pipelineLayout();
 		
 		for (auto& to_draw : di.draw_list)
@@ -745,34 +756,50 @@ namespace vkl
 		}
 	}
 
-	void MeshCommand::execute(ExecutionContext& ctx)
+	ExecutionNode MeshCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
 	{
-		CommandBuffer& cmd = *ctx.getCommandBuffer();
+		using namespace std::containers_operators;
+		DrawInfo di_copy = di;
 
-		GraphicsCommand::DrawInfo gdi{
-			
+		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
+		_set->waitForInstanceCreationIFN();
+		ctx.graphicsBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		Resources resources = getBoundResources(ctx.graphicsBoundSets(), shader_set_index + 1);
+
+		resources += getFramebufferResources();
+		resources += getPerDrawResources(di);
+
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, di_copy](ExecutionContext& ctx)
+			{
+				GraphicsCommand::DrawInfo gdi{
+
+				};
+				recordCommandBuffer(*ctx.getCommandBuffer(), ctx, gdi, (void*)(&di_copy));
+			},
 		};
+		return res;
+	}
 
+	ExecutionNode MeshCommand::getExecutionNode(RecordContext& ctx)
+	{
 		NOT_YET_IMPLEMENTED;
-
 		DrawInfo di{
-			.dispatch_threads = _dispatch_threads,
+
 		};
 
-		recordCommandBuffer(cmd, ctx, gdi, &di);
+		return getExecutionNode(ctx, di);
 	}
 
 	Executable MeshCommand::with(DrawInfo const& di)
 	{
-		GraphicsCommand::DrawInfo gdi{
-
-		};
-
-		DrawInfo _di = di;
-
-		return [this, gdi, _di](ExecutionContext& ctx)
+		return [this, di](RecordContext& ctx)
 		{
-			recordCommandBuffer(*ctx.getCommandBuffer(), ctx, gdi, (void*)&_di);
+			return getExecutionNode(ctx, di);
 		};
 	}
 

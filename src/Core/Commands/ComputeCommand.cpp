@@ -51,41 +51,11 @@ namespace vkl
 	void ComputeCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di)
 	{
 		context.pushDebugLabel(name());
-		SynchronizationHelper synch(context);
 		recordBindings(cmd, context);
-		recordBoundResourcesSynchronization(context.computeBoundSets(), synch, application()->descriptorBindingGlobalOptions().shader_set + 1);
 		
-		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::object)].set;
+		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 		const std::shared_ptr<PipelineLayout>& prog_layout = _pipeline->program()->instance()->pipelineLayout();
-
-		{
-			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
-				const auto& layouts = _program->instance()->reflectionSetsLayouts();
-				if (set_index < layouts.size())
-				{
-					return layouts[set_index];
-				}
-				else
-				{
-					return nullptr;
-				}
-			}();
-			if (layout)
-			{
-				std::set<void*> already_sync;
-				for (auto& to_dispatch : di.dispatch_list)
-				{
-					if (!already_sync.contains(to_dispatch.set.get()))
-					{
-						assert(!!to_dispatch.set);
-						recordDescriptorSetSynch(synch, *to_dispatch.set->instance(), *layout);
-						already_sync.emplace(to_dispatch.set.get());
-					}
-				}
-			}
-		}
-
-		synch.record();
 
 		for (auto& to_dispatch : di.dispatch_list)
 		{
@@ -98,7 +68,7 @@ namespace vkl
 				std::shared_ptr<DescriptorSetAndPoolInstance> set = to_dispatch.set->instance();
 				if (set->exists() && !set->empty())
 				{
-					context.computeBoundSets().bindOneAndRecord(set_index, set, prog_layout);
+					context.computeBoundSets().bindOneAndRecord(invocation_set_index, set, prog_layout);
 					context.keppAlive(set);
 				}
 			}
@@ -116,30 +86,80 @@ namespace vkl
 		context.popDebugLabel();
 	}
 
-	void ComputeCommand::execute(ExecutionContext& context, DispatchInfo const& di)
+	ExecutionNode ComputeCommand::getExecutionNode(RecordContext& ctx, DispatchInfo const& di)
 	{
-		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
-		recordCommandBuffer(*cmd, context, di);
+		using namespace std::containers_operators;
+
+		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
+		_set->waitForInstanceCreationIFN();
+		ctx.computeBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		Resources resources = getBoundResources(ctx.computeBoundSets(), shader_set_index + 1);
+
+		{
+			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+				const auto& layouts = _program->instance()->reflectionSetsLayouts();
+				if (invocation_set_index < layouts.size())
+				{
+					return layouts[invocation_set_index];
+				}
+				else
+				{
+					return nullptr;
+				}
+			}();
+			if (layout)
+			{
+				std::set<void*> already_sync;
+				for (auto& to_dispatch : di.dispatch_list)
+				{
+					if (!already_sync.contains(to_dispatch.set.get()))
+					{
+						assert(!!to_dispatch.set);
+						resources += getDescriptorSetResources(*to_dispatch.set->instance(), *layout);
+						already_sync.emplace(to_dispatch.set.get());
+					}
+				}
+			}
+		}
+
+		DispatchInfo di_copy = di;
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, di_copy](ExecutionContext& exec_context)
+			{
+				std::shared_ptr<CommandBuffer> cmd = exec_context.getCommandBuffer();
+				recordCommandBuffer(*cmd, exec_context, di_copy);
+			},
+		};
+		return res;
 	}
 
-	void ComputeCommand::execute(ExecutionContext& context)
+	ExecutionNode ComputeCommand::getExecutionNode(RecordContext& ctx)
 	{
-		Executable exe = with(SingleDispatchInfo{
-			.extent = _extent.value(),
+		DispatchInfo di{
 			.dispatch_threads = _dispatch_threads,
-			.pc = _pc,
-		});
+			.dispatch_list = {
+				DispatchCallInfo{
+					.extent = _extent.value(),
+					.pc = _pc,
+				},
+			},
+		};
 
-		exe(context);
+		return getExecutionNode(ctx, di);
 	}
 
 	Executable ComputeCommand::with(DispatchInfo const& di)
 	{
 		using namespace vk_operators;
-		return [this, di](ExecutionContext& ctx)
+		Executable res = [this, di](RecordContext& ctx) -> ExecutionNode
 		{
-			execute(ctx, di);
+			return getExecutionNode(ctx, di);
 		};
+		return res;
 	}
 
 	bool ComputeCommand::updateResources(UpdateContext & ctx)
