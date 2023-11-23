@@ -359,21 +359,24 @@ namespace vkl
 			const VkResult res = vkGetFenceStatus(device(), event->signal_fence->handle());
 			if (res == VK_NOT_READY)
 			{
-				event->finish_counter++;
 				break;
 			}
-			assert(res == VK_SUCCESS);
-			// TODO check device lost
-
-			if (event->finish_counter >= 2) // For safety, it tends to create a validation error (signal semaphore destroyed while being used by a cb) it is destroyed to early, but I don't get why yet
+			else
 			{
-				break;
-			}
+				// TODO check device lost
+				assert(res == VK_SUCCESS);
 
-			
-			//std::cout << "Event " << event->name() << " is Finished!" << std::endl;
-			_previous_events.pop();
-			
+				// For safety, it tends to create a validation error (signal semaphore destroyed while being used by a cb) it is destroyed to early, but I don't get why yet
+				if (event->finish_counter > 1)
+				{
+					_previous_events.pop();
+				}
+				else
+				{
+					event->finish_counter++;
+				}
+				//std::cout << "Event " << event->name() << " is Finished!" << std::endl;
+			}
 		}
 	}
 
