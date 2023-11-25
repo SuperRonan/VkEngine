@@ -5,7 +5,8 @@ namespace vkl
 {
 	Material::Material(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
-		_type(ci.type)
+		_type(ci.type),
+		_synch(ci.synch)
 	{}
 
 	std::vector<DescriptorSetLayout::Binding> Material::getSetLayoutBindings(Type type, uint32_t offset)
@@ -20,7 +21,7 @@ namespace vkl
 
 
 	PhysicallyBasedMaterial::PhysicallyBasedMaterial(CreateInfo const& ci) :
-		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased}),
+		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased, .synch = ci.synch}),
 		_albedo(ci.albedo),
 		_sampler(ci.sampler),
 		_albedo_path(ci.albedo_path)
@@ -41,7 +42,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".albedo_texture",
 				.path = _albedo_path,
-				.synch = false,
+				.synch = _synch,
 			});
 
 			assert(!!_sampler);
@@ -101,25 +102,6 @@ namespace vkl
 			_should_update_props_buffer = false;
 		}
 	}
-
-	//ResourcesToUpload PhysicallyBasedMaterial::getResourcesToUpload()
-	//{
-	//	ResourcesToUpload res;
-	//	if (_should_update_props_buffer)
-	//	{
-	//		const Properties props = getProperties();
-	//		res += ResourcesToUpload::BufferUpload{
-	//			.sources = {PositionedObjectView{.obj = props, .pos = 0}},
-	//			.dst = _props_buffer,
-	//		};
-	//	}
-	//	if (_albedo_texture && _albedo_texture->hasValue())
-	//	{
-	//		res += _albedo_texture->getResourcesToUpload();
-	//	}
-
-	//	return res;
-	//}
 
 	std::vector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)
 	{

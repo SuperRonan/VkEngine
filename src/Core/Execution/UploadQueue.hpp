@@ -10,12 +10,14 @@ namespace vkl
 	struct AsynchUpload
 	{
 		std::string name = {};
-		ObjectView source;
+		std::vector<PositionedObjectView> sources = {};
+		ObjectView source = {};
 		
 		std::shared_ptr<ImageView> target_view = nullptr;
+		uint32_t buffer_row_length = 0;
+		uint32_t buffer_image_height = 0;
 		
 		std::shared_ptr<Buffer> target_buffer = nullptr;
-		size_t target_buffer_offset = 0;
 
 		CompletionCallback completion_callback = {};
 

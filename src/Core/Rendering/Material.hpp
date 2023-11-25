@@ -21,6 +21,8 @@ namespace vkl
 
 		Type _type = Type::None;
 
+		bool _synch = true;
+
 	public:
 
 		struct CreateInfo
@@ -28,6 +30,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			Type type = Type::None;
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 
@@ -36,6 +39,11 @@ namespace vkl
 		constexpr Type type()const
 		{
 			return _type;
+		}
+
+		constexpr bool isSynch()const
+		{
+			return _synch;
 		}
 
 		virtual void updateResources(UpdateContext & ctx) = 0;
@@ -95,6 +103,7 @@ namespace vkl
 			vec3 albedo = vec3(0.7);
 			std::shared_ptr<Sampler> sampler = nullptr;
 			std::filesystem::path albedo_path = {};
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 		

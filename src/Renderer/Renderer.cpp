@@ -211,7 +211,7 @@ namespace vkl
 
 		auto add_model = [&res](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
-			if (node->visible() && node->model())
+			if (node->visible() && node->model() && node->model()->isReadyToDraw())
 			{
 				const uint32_t model_type = node->model()->type();
 				VertexCommand::DrawCallInfo draw_call;

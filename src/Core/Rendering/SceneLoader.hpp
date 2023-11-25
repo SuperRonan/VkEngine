@@ -17,6 +17,10 @@ namespace vkl
 
 		std::vector<std::shared_ptr<Model>> _loaded_models = {};
 
+		bool _synch = true;
+
+		void createChildrenFromLoadedModels();
+
 	public:
 
 		using Mat4 = glm::mat4;
@@ -28,6 +32,7 @@ namespace vkl
 			std::string name = {};
 			Mat4x3 matrix = Mat4x3(1);
 			std::filesystem::path path = {};
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 
@@ -36,5 +41,10 @@ namespace vkl
 		virtual ~NodeFromFile() override;
 
 		virtual void updateResources(UpdateContext & ctx) override;
+
+		constexpr bool isSynch()const
+		{
+			return _synch;
+		}
 	};
 }

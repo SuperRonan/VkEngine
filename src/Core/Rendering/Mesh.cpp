@@ -9,7 +9,8 @@ namespace vkl
 	
 	Mesh::Mesh(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
-		_type(ci.type)
+		_type(ci.type),
+		_is_synch(ci.synch)
 	{}
 
 
@@ -116,6 +117,7 @@ namespace vkl
 			.app = ci.app, 
 			.name = ci.name,
 			.type = Type::Rigid,
+			.synch = ci.synch,
 		})
 	{
 		_host.dims = ci.dims;
@@ -535,49 +537,6 @@ namespace vkl
 		};
 	}
 
-	ResourcesToUpload RigidMesh::getResourcesToUpload()
-	{
-		assert(_device.loaded());
-		ResourcesToUpload res;
-
-		
-		std::vector<PositionedObjectView> sources(3);
-		
-		const MeshHeader header = getHeader();
-
-		sources[0] = PositionedObjectView{
-			.obj = header,
-			.pos = 0,
-		};
-
-		if (_host.use_full_vertices)
-		{
-			sources[1] = PositionedObjectView{
-				.obj = _host.vertices,
-				.pos = _device.header_size,
-			};
-		}
-		else
-		{
-			sources[1] = PositionedObjectView{
-				.obj = _host.positions,
-				.pos = _device.header_size,
-			};
-		}
-
-		sources[2] = PositionedObjectView{
-			.obj = _host.indicesView(),
-			.pos = _device.header_size + _device.vertices_size,
-		};
-
-		res.buffers.push_back(ResourcesToUpload::BufferUpload{
-			.sources = sources,
-			.dst = _device.mesh_buffer,
-		});
-
-		return res;
-	}
-
 	std::vector<DescriptorSetLayout::Binding> RigidMesh::getSetLayoutBindingsStatic(uint32_t offset)
 	{
 		std::vector<DescriptorSetLayout::Binding> res;
@@ -662,15 +621,123 @@ namespace vkl
 		{
 			_device.mesh_buffer->updateResource(ctx);
 
-			if (_is_synch)
+			if (!_device.up_to_date)
 			{
-				if (!_device.up_to_date)
+				_device.up_to_date = true;
+				bool synch_upload = _is_synch;
+				if (!_is_synch && ctx.uploadQueue() == nullptr)
 				{
-					ctx.resourcesToUpload() += getResourcesToUpload();
-					_device.up_to_date = true;
+					synch_upload = true;
+				}
+
+				std::vector<PositionedObjectView> sources(3);
+				const MeshHeader header = getHeader();
+				sources[0] = PositionedObjectView{
+					.obj = header,
+					.pos = 0,
+				};
+
+				if (_host.use_full_vertices)
+				{
+					sources[1] = PositionedObjectView{
+						.obj = _host.vertices,
+						.pos = _device.header_size,
+					};
+				}
+				else
+				{
+					sources[1] = PositionedObjectView{
+						.obj = _host.positions,
+						.pos = _device.header_size,
+					};
+				}
+
+				sources[2] = PositionedObjectView{
+					.obj = _host.indicesView(),
+					.pos = _device.header_size + _device.vertices_size,
+				};
+
+				if (synch_upload)
+				{
+					ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
+						.sources = std::move(sources),
+						.dst = _device.mesh_buffer,
+					};
+					_device.uploaded = true;
+					callResourceUpdateCallbacks();
+				}
+				else
+				{
+					_device.uploaded = false;
+					_device.just_uploaded = false;
+					ctx.uploadQueue()->enqueue(AsynchUpload{
+						.name = name(),
+						.sources = std::move(sources),
+						.target_buffer = _device.mesh_buffer,
+						.completion_callback = [this](int) {
+							_device.just_uploaded = true;
+						},
+					});
+				}
+			}
+			else
+			{
+				if ( _device.just_uploaded)
+				{
+					_device.uploaded = true;
+					callResourceUpdateCallbacks();
 				}
 			}
 		}
+	}
+
+	void RigidMesh::installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset)
+	{
+		_descriptor_callbacks.push_back(Callback{
+			.callback = [this, set, offset]() {
+				set->setBinding(Binding{
+					.buffer = _device.mesh_buffer,
+					.buffer_range = Range_st{.begin = 0, .len = _device.header_size},
+					.binding = offset + 0,
+				});
+				set->setBinding(Binding{
+					.buffer = _device.mesh_buffer,
+					.buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size },
+					.binding = offset + 1,
+				});
+				set->setBinding(Binding{
+					.buffer = _device.mesh_buffer,
+					.buffer_range = Range_st{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size },
+					.binding = offset + 2,
+				});
+			},
+			.id = set.get(),
+		});
+	}
+
+	void RigidMesh::removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set)
+	{
+		for (size_t i = 0; i < _descriptor_callbacks.size(); ++i)
+		{
+			if (_descriptor_callbacks[i].id == set.get())
+			{
+				_descriptor_callbacks.erase(_descriptor_callbacks.begin() + i);
+				break;
+			}
+		}
+	}
+
+	void RigidMesh::callResourceUpdateCallbacks()
+	{
+		for (size_t i = 0; i < _descriptor_callbacks.size(); ++i)
+		{
+			_descriptor_callbacks[i].callback();
+		}
+	}
+
+	bool RigidMesh::isReadyToDraw()const
+	{
+		return _device.uploaded;
 	}
 
 	//void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)

@@ -4,7 +4,12 @@ namespace vkl
 {
 	size_t AsynchUpload::getSize() const
 	{
-		return source.size();
+		size_t res = 0;
+		for (const auto& src : sources)
+		{
+			res += src.obj.size();
+		}
+		return res;
 	}
 
 	UploadQueue::UploadQueue(CreateInfo const& ci) :
@@ -48,12 +53,7 @@ namespace vkl
 			if (aquired.target_buffer)
 			{
 				ResourcesToUpload::BufferUpload bu{
-					.sources = {
-						PositionedObjectView{
-							.obj = std::move(aquired.source),
-							.pos = aquired.target_buffer_offset,
-						},
-					},
+					.sources = std::move(aquired.sources),
 					.dst = std::move(aquired.target_buffer),
 					.completion_callback = std::move(aquired.completion_callback),
 				};
@@ -64,8 +64,8 @@ namespace vkl
 				assert(!!aquired.target_view);
 				ResourcesToUpload::ImageUpload iu{
 					.src = std::move(aquired.source),
-					.buffer_row_length = 0,
-					.buffer_image_height = 0,
+					.buffer_row_length = aquired.buffer_row_length,
+					.buffer_image_height = aquired.buffer_image_height,
 					.dst = std::move(aquired.target_view),
 					.completion_callback = std::move(aquired.completion_callback),
 				};

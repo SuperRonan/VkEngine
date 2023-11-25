@@ -12,11 +12,17 @@ namespace vkl
 		VkObject(ci.app, ci.name),
 		Drawable(),
 		_mesh(ci.mesh),
-		_material(ci.material)
+		_material(ci.material),
+		_synch(ci.synch)
 	{
 		assert(!!_mesh xor (!ci.mesh_path.empty()));
 		_type = MakeType(_mesh->type(), _material->type());
 		createSet();
+
+		if (_mesh)
+		{
+			_mesh->installResourceUpdateCallbacks(_set, mesh_binding_offset);
+		}
 
 		if (_material)
 		{
@@ -26,6 +32,10 @@ namespace vkl
 
 	Model::~Model()
 	{
+		if (_mesh)
+		{
+			_mesh->removeResourceUpdateCallbacks(_set);
+		}
 		if (_material)
 		{
 			_material->removeResourceUpdateCallbacks(_set);
@@ -168,22 +178,23 @@ namespace vkl
 		return res;
 	}
 
-	//void Model::recordBindAndDraw(ExecutionContext& ctx)
-	//{
-	//	_mesh->recordBindAndDraw(ctx);
-	//}
-
 	void Model::fillVertexDrawCallResources(VertexDrawCallResources& vr)
 	{
-		_mesh->fillVertexDrawCallResources(vr);
+		if (_mesh)
+		{
+			_mesh->fillVertexDrawCallResources(vr);
+		}
 	}
 
-	//void Model::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
-	//{
-	//	_mesh->recordSynchForDraw(synch, pipeline);
-	//}
-
-
+	bool Model::isReadyToDraw()const
+	{
+		bool res = true;
+		if (_mesh)
+		{
+			res = _mesh->isReadyToDraw();
+		}
+		return res;
+	}
 
 
 
@@ -239,6 +250,7 @@ namespace vkl
 					.albedo = glm::vec3(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
 					.sampler = sampler,
 					.albedo_path = mtl_path / tm.diffuse_texname,
+					.synch = info.synch,
 				});
 			}
 
@@ -306,6 +318,7 @@ namespace vkl
 					.vertices = vertices,
 					.indices = indices,
 					.auto_compute_tangents = true,
+					.synch = info.synch,
 				});
 				
 				std::shared_ptr<Model> model = std::make_shared<Model>(Model::CI{
@@ -313,6 +326,7 @@ namespace vkl
 					.name = shape.name,
 					.mesh = mesh,
 					.material = material,
+					.synch = info.synch,
 				});
 
 				res.push_back(model);

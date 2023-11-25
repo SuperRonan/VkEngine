@@ -46,7 +46,7 @@ namespace vkl
 
 	class Pipeline;
 
-	class Mesh : public VkObject, public Geometry, public ResourcesHolder, public Drawable
+	class Mesh : public VkObject, public Geometry, public Drawable
 	{
 	public:
 		enum class Type : uint32_t
@@ -85,6 +85,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			Type type = Type::None;
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 
@@ -95,6 +96,11 @@ namespace vkl
 		constexpr Type type()const
 		{
 			return _type;
+		}
+
+		constexpr bool isSynch()const
+		{
+			return _is_synch;
 		}
 		
 		struct Status
@@ -107,14 +113,6 @@ namespace vkl
 		virtual Status getStatus()const = 0;
 
 		virtual VertexInputDescription vertexInputDesc() override = 0;
-		
-		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override = 0;
-
-		//virtual void recordBindAndDraw(ExecutionContext & ctx) override = 0;
-
-		//virtual std::shared_ptr<DescriptorSetLayout> setLayout() override = 0;
-
-		//virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override = 0;
 
 		virtual void updateResources(UpdateContext & ctx) = 0;
 
@@ -123,6 +121,12 @@ namespace vkl
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
 		virtual ShaderBindings getShaderBindings(uint offset) = 0;
+
+		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) = 0;
+
+		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
+
+		virtual bool isReadyToDraw() const = 0;
 
 	};
 
@@ -278,7 +282,8 @@ namespace vkl
 			// vertices
 			// indices
 			bool up_to_date = false;
-
+			bool uploaded = false;
+			bool just_uploaded = false;
 
 			bool loaded()const
 			{
@@ -288,6 +293,8 @@ namespace vkl
 		} _device;
 
 		bool checkIntegrity() const;
+
+		std::vector<Callback> _descriptor_callbacks = {};
 
 	public:
 
@@ -302,6 +309,7 @@ namespace vkl
 			int compute_normals = 0;
 			bool auto_compute_tangents = false;
 			bool create_device_buffer = true;
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 
@@ -348,7 +356,15 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx) override;
 
-		virtual ResourcesToUpload getResourcesToUpload() override;
+		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) override;
+
+		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) override;
+
+		void callResourceUpdateCallbacks();
+
+		virtual bool isReadyToDraw() const override;
+
+		//virtual ResourcesToUpload getResourcesToUpload() override;
 
 		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
 

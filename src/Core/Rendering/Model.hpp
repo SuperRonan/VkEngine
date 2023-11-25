@@ -47,6 +47,8 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
+		bool _synch = true;
+
 		void createSet();
 
 
@@ -65,6 +67,8 @@ namespace vkl
 			std::shared_ptr<Mesh> mesh = nullptr;
 			
 			std::shared_ptr<Material> material = nullptr;
+
+			bool synch = true;
 		};
 		using CI = CreateInfo;
 
@@ -117,11 +121,19 @@ namespace vkl
 
 		virtual std::shared_ptr<DescriptorSetAndPool> setAndPool();
 
+		virtual bool isReadyToDraw() const;
+
+
+
+
+
+
 		
 		struct LoadInfo
 		{
 			VkApplication * app = nullptr;
 			std::filesystem::path path = {};
+			bool synch = true;
 		};
 
 		static std::vector<std::shared_ptr<Model>> loadModelsFromObj(LoadInfo const& info);

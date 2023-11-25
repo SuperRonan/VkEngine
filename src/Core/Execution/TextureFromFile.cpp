@@ -103,7 +103,7 @@ namespace vkl
 			.name = name() + ".loadHostImage()",
 			.priority = TaskPriority::WhenPossible(),
 			.lambda = [this]() {
-				std::this_thread::sleep_for(5s);
+				//std::this_thread::sleep_for(5s);
 				loadHostImage();
 				createDeviceImage();
 
