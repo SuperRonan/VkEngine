@@ -23,6 +23,7 @@
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Scene.hpp>
 #include <Core/Rendering/Transforms.hpp>
+#include <Core/Rendering/SceneLoader.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -86,15 +87,11 @@ namespace vkl
 			}
 
 			{
-				std::vector<std::shared_ptr<Model>> viking_models = Model::loadModelsFromObj(Model::LoadInfo{
+				std::shared_ptr<NodeFromFile> viking_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 					.app = this,
-					.path = ENGINE_SRC_PATH "/../gen/models/viking_room.obj",
-				});
-
-				std::shared_ptr<Scene::Node> viking_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-					.name = "Viking",
+					.name = "Vicking",
 					.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0))),
-					.model = viking_models.front(),
+					.path = ENGINE_SRC_PATH "/../gen/models/viking_room.obj",
 				});
 
 				const int N = 1;

@@ -52,6 +52,8 @@ namespace vkl
 				_model(ci.model)
 			{}
 
+			virtual ~Node() = default;
+
 			constexpr const std::string& name() const
 			{
 				return _name;

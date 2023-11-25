@@ -11,7 +11,6 @@ namespace vkl
 	Model::Model(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
 		Drawable(),
-		ResourcesHolder(),
 		_mesh(ci.mesh),
 		_material(ci.material)
 	{
@@ -70,22 +69,6 @@ namespace vkl
 		}
 
 		_set->updateResources(ctx);
-	}
-
-	ResourcesToUpload Model::getResourcesToUpload()
-	{
-		ResourcesToUpload res;
-		if(_mesh->getStatus().device_up_to_date == false) 
-		{
-			res += _mesh->getResourcesToUpload();
-		}
-
-		if (_material)
-		{
-			res += _material->getResourcesToUpload();
-		}
-
-		return res;
 	}
 
 	VertexInputDescription Model::vertexInputDesc() 

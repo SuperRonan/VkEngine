@@ -103,6 +103,7 @@ namespace vkl
 			.name = name() + ".loadHostImage()",
 			.priority = TaskPriority::WhenPossible(),
 			.lambda = [this]() {
+				std::this_thread::sleep_for(5s);
 				loadHostImage();
 				createDeviceImage();
 
@@ -117,7 +118,6 @@ namespace vkl
 
 	TextureFromFile::TextureFromFile(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
-		ResourcesHolder(),
 		_path(ci.path),
 		_is_synch(ci.synch)
 	{
@@ -215,20 +215,6 @@ namespace vkl
 				callResourceUpdateCallbacks();
 			}
 		}
-	}
-
-	ResourcesToUpload TextureFromFile::getResourcesToUpload()
-	{
-		ResourcesToUpload res;
-		if (_should_upload && !!_image)
-		{
-			res += ResourcesToUpload::ImageUpload{
-				.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-				.dst = _image_view,
-			};
-			_should_upload = false;
-		}
-		return res;
 	}
 
 	void TextureFromFile::addResourceUpdateCallback(Callback const& cb)

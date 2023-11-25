@@ -8,7 +8,7 @@
 
 namespace vkl
 {
-	class Model : public VkObject, public Drawable, public ResourcesHolder
+	class Model : public VkObject, public Drawable
 	{
 	public:
 
@@ -85,8 +85,6 @@ namespace vkl
 		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
 
 		virtual void updateResources(UpdateContext & ctx);
-
-		virtual ResourcesToUpload getResourcesToUpload() override final;
 
 		virtual VertexInputDescription vertexInputDesc() override final;
 

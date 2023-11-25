@@ -8,7 +8,7 @@
 
 namespace vkl
 {
-	class TextureFromFile : public VkObject, public ResourcesHolder
+	class TextureFromFile : public VkObject
 	{
 	protected:
 
@@ -81,8 +81,6 @@ namespace vkl
 		}
 
 		virtual void updateResources(UpdateContext& ctx);
-
-		virtual ResourcesToUpload getResourcesToUpload() override;
 
 		void addResourceUpdateCallback(Callback const& cb);
 

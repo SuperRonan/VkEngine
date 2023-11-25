@@ -10,7 +10,7 @@
 
 namespace vkl
 {
-	class Material : public VkObject, public ResourcesHolder
+	class Material : public VkObject
 	{
 	public:
 		enum class Type : uint32_t {
@@ -105,8 +105,6 @@ namespace vkl
 		virtual void declareImGui() override;
 
 		virtual void updateResources(UpdateContext& ctx) override;
-
-		//virtual ResourcesToUpload getResourcesToUpload() override;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override
 		{
