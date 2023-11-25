@@ -107,6 +107,10 @@ namespace vkl
 			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
 			.mounting_points = _mounting_points,
+		}),
+		_upload_queue(UploadQueue::CI{
+			.app = application(),
+			.name = name() + ".upload_queue",
 		})
 	{
 		(*_mounting_points)["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
@@ -194,8 +198,9 @@ namespace vkl
 		event->aquired_id = aquired.swap_index;
 		assert(aquired.swap_index < _window->swapchainSize());
 		_latest_aquire_event = event;
+		_mutex.lock();
 		_previous_events.push(std::move(event));
-		
+		_mutex.unlock();
 		int _ = 0;
 	}
 
@@ -350,6 +355,7 @@ namespace vkl
 
 	void LinearExecutor::recyclePreviousEvents()
 	{
+		_mutex.lock();
 		// TODO Really Recycle events resources (fences, semaphores)
 		// Removed finished Events
 		while (!_previous_events.empty())
@@ -378,12 +384,14 @@ namespace vkl
 				//std::cout << "Event " << event->name() << " is Finished!" << std::endl;
 			}
 		}
+		_mutex.unlock();
 	}
 
 	void LinearExecutor::submit()
 	{
 		recyclePreviousEvents();
 		
+		_mutex.lock();
 		std::vector<VkSemaphore> sem_to_wait;
 		std::vector<VkPipelineStageFlags> stage_to_wait;
 		for (size_t i = 0; i < _pending_cbs.size(); ++i)
@@ -421,11 +429,12 @@ namespace vkl
 			_previous_events.push(pending);
 		}
 		_pending_cbs.clear();
-
+		_mutex.unlock();
 	}
 
 	void LinearExecutor::waitForAllCompletion(uint64_t timeout)
 	{
+		std::unique_lock lock(_mutex);
 		vkDeviceWaitIdle(device());
 		while (!_previous_events.empty())
 		{

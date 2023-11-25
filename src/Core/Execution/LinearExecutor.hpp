@@ -75,6 +75,8 @@ namespace vkl
 
 		ExecutionThread* _current_thread = nullptr;
 
+		UploadQueue _upload_queue;
+
 		// Event is not a good name imo (means something else in vulkan)
 		struct Event : public VkObject
 		{	
@@ -128,6 +130,8 @@ namespace vkl
 
 		void recyclePreviousEvents();
 
+		std::mutex _mutex;
+
 	public:
 
 		struct CreateInfo
@@ -149,9 +153,14 @@ namespace vkl
 
 		virtual void init() override final;
 
-		void AquireSwapchainImage();
+		UploadQueue& getUploadQueue()
+		{
+			return _upload_queue;
+		}
 
 		void updateResources(UpdateContext & context);
+
+		void AquireSwapchainImage();
 
 		//ExecutionThread* beginTransferCommandBuffer();
 

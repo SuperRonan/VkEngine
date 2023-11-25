@@ -256,13 +256,14 @@ namespace vkl
 	{
 		ResourcesToUpload res;
 
-		_tree->iterateOnNodes([&res](std::shared_ptr<Node> const& node)
-		{
-			if (node->model())
-			{
-				res += node->model()->getResourcesToUpload();
-			}
-		});
+		
+		//_tree->iterateOnNodes([&res](std::shared_ptr<Node> const& node)
+		//{
+		//	if (node->model())
+		//	{
+		//		res += node->model()->getResourcesToUpload();
+		//	}
+		//});
 
 		res += ResourcesToUpload::BufferUpload{
 			.sources = {

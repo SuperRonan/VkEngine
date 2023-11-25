@@ -66,4 +66,21 @@ namespace vkl
 		res += bu;
 		return res;
 	}
+
+	size_t ResourcesToUpload::getSize() const
+	{
+		size_t res = 0;
+		for (const auto& b : buffers)
+		{
+			for (const auto& s : b.sources)
+			{
+				res += s.obj.size();
+			}
+		}
+		for (const auto& i : images)
+		{
+			res += i.src.size();
+		}
+		return res;
+	}
 }

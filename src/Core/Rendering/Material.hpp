@@ -40,8 +40,6 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx) = 0;
 
-		virtual ResourcesToUpload getResourcesToUpload() override = 0;
-
 		virtual void declareImGui() = 0;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
@@ -84,6 +82,7 @@ namespace vkl
 
 		std::filesystem::path _albedo_path = {};
 		std::unique_ptr<TextureFromFile> _albedo_texture = nullptr;
+		
 
 		Properties getProperties() const;
 
@@ -101,12 +100,13 @@ namespace vkl
 		
 		PhysicallyBasedMaterial(CreateInfo const& ci);
 
+		virtual ~PhysicallyBasedMaterial() override;
 
 		virtual void declareImGui() override;
 
 		virtual void updateResources(UpdateContext& ctx) override;
 
-		virtual ResourcesToUpload getResourcesToUpload() override;
+		//virtual ResourcesToUpload getResourcesToUpload() override;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override
 		{

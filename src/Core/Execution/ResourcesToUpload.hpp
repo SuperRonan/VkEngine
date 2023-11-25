@@ -53,5 +53,7 @@ namespace vkl
 		ResourcesToUpload operator+(ImageUpload const& iu) const;
 
 		ResourcesToUpload operator+(BufferUpload const& bu) const;
+
+		size_t getSize()const;
 	};
 }

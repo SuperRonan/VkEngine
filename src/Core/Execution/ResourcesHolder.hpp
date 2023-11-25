@@ -10,7 +10,9 @@ namespace vkl
 	{
 	public:
 
-		virtual ResourcesToUpload getResourcesToUpload() = 0;
+		virtual ResourcesToUpload getResourcesToUpload() {
+			return {};
+		};
 
 	};
 }
