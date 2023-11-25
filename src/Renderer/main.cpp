@@ -167,6 +167,7 @@ namespace vkl
 				.shader_check_period = 1s,
 				.common_definitions = &exec.getCommonDefinitions(),
 				.mounting_points = &mounting_points,
+				.upload_queue = &exec.getUploadQueue(),
 			};
 
 			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(ImageView::CI{
@@ -328,8 +329,23 @@ namespace vkl
 						UploadResources uploader(UploadResources::CI{
 							.app = this,
 						});
+						ResourcesToUpload upload_list = update_context->resourcesToUpload();
+						const size_t total_budget = 16'000'000;
+						const size_t min_asynch_budget = 1'000'000;
+						size_t synch_upload_cost = upload_list.getSize();
+						size_t asynch_budget = 0;
+						if(synch_upload_cost > (total_budget - min_asynch_budget))
+						{
+							asynch_budget = min_asynch_budget;
+						}
+						else
+						{
+							asynch_budget = total_budget - synch_upload_cost;
+						}
+						ResourcesToUpload asynch_list = exec.getUploadQueue().consume(asynch_budget);
+						upload_list += std::move(asynch_list);
 						(*upload_thread)(uploader.with(UploadResources::UI{
-							.upload_list = update_context->resourcesToUpload(),
+							.upload_list = std::move(upload_list),
 						}));
 						exec.endCommandBuffer(upload_thread);
 					}

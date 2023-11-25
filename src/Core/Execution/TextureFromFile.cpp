@@ -93,8 +93,26 @@ namespace vkl
 				.image = _image,
 			});
 
-			_should_update = true;
+			_should_upload = true;
 		}
+	}
+
+	void TextureFromFile::launchLoadTask()
+	{
+		_load_image_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+			.name = name() + ".loadHostImage()",
+			.priority = TaskPriority::WhenPossible(),
+			.lambda = [this]() {
+				loadHostImage();
+				createDeviceImage();
+
+				AsynchTask::ReturnType res{
+					.success = true,
+				};
+				return res;
+			},
+		});
+		application()->threadPool().pushTask(_load_image_task);
 	}
 
 	TextureFromFile::TextureFromFile(CreateInfo const& ci):
@@ -103,7 +121,6 @@ namespace vkl
 		_path(ci.path),
 		_is_synch(ci.synch)
 	{
-		assert(_is_synch);
 		if (ci.desired_format.has_value())
 		{
 			_desired_format = ci.desired_format.value();
@@ -115,6 +132,10 @@ namespace vkl
 			loadHostImage();
 			createDeviceImage();
 		}
+		else
+		{
+			launchLoadTask();
+		}
 	}
 
 	void TextureFromFile::updateResources(UpdateContext& ctx)
@@ -125,33 +146,79 @@ namespace vkl
 			_image_view->updateResource(ctx);
 		}
 
-		if (_is_synch)
+		
+		if (_should_upload && !!_image_view)
 		{
-			if (_should_update && !!_image)
+			_should_upload = false;
+			bool synch_upload = _is_synch;
+			if (!synch_upload && ctx.uploadQueue() == nullptr)
 			{
-				ctx.resourcesToUpload() += ResourcesToUpload::ImageUpload{
+				synch_upload = true;
+			}
+			if (synch_upload)
+			{
+				ResourcesToUpload::ImageUpload up{
 					.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
 					.dst = _image_view,
 				};
-				_should_update = false;
+				ctx.resourcesToUpload() += std::move(up);
+				_is_ready = true;
+			}
+			else
+			{
+				if (_load_image_task)
+				{
+					if (_load_image_task->StatusIsFinish(_load_image_task->getStatus()))
+					{
+						if (_load_image_task->isSuccess())
+						{
+							_upload_done = false;
+							AsynchUpload up{
+								.name = name(),
+								.source = ObjectView(_host_image.rawData(), _host_image.byteSize()),
+								.target_view = _image_view,
+								.completion_callback = [this](int ret)
+								{
+									if (ret == 0)
+									{
+										_upload_done = true;
+									}
+								},
+							};
+							ctx.uploadQueue()->enqueue(up);
+						}
+						else
+						{
+							_should_upload = false;
+							_image_view = nullptr;
+							_image = nullptr;
+						}
+						_load_image_task = nullptr;
+					}
+				}
 			}
 		}
 		else
 		{
-
+			if (!_is_synch && _upload_done)
+			{
+				_is_ready = true;
+				_upload_done = false;
+				callResourceUpdateCallbacks();
+			}
 		}
 	}
 
 	ResourcesToUpload TextureFromFile::getResourcesToUpload()
 	{
 		ResourcesToUpload res;
-		if (_should_update && !!_image)
+		if (_should_upload && !!_image)
 		{
 			res += ResourcesToUpload::ImageUpload{
 				.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
 				.dst = _image_view,
 			};
-			_should_update = false;
+			_should_upload = false;
 		}
 		return res;
 	}

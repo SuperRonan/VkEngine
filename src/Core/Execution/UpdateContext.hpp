@@ -6,6 +6,7 @@
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/Execution/ResourcesLists.hpp>
 #include <Core/Execution/ResourcesToUpload.hpp>
+#include <Core/Execution/UploadQueue.hpp>
 
 namespace vkl
 {
@@ -29,6 +30,7 @@ namespace vkl
 		// Synchronous upload
 		ResourcesToUpload _resources_to_upload;
 		
+		UploadQueue * _upload_queue;
 
 	public:
 
@@ -40,6 +42,7 @@ namespace vkl
 			size_t shader_check_cycle = 0;
 			const DefinitionsMap* common_definitions;
 			MountingPoints* mounting_points = nullptr;
+			UploadQueue * upload_queue = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -48,7 +51,8 @@ namespace vkl
 			_update_cycle(ci.update_cycle),
 			_shader_check_cycle(ci.shader_check_cycle),
 			_common_definitions(ci.common_definitions),
-			_mounting_points(ci.mounting_points)
+			_mounting_points(ci.mounting_points),
+			_upload_queue(ci.upload_queue)
 		{
 
 		}
@@ -91,6 +95,11 @@ namespace vkl
 		constexpr bool updateAnyway() const
 		{
 			return _update_resources_anyway;
+		}
+
+		constexpr UploadQueue* uploadQueue()
+		{
+			return _upload_queue;
 		}
 	};
 }

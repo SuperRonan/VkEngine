@@ -22,6 +22,15 @@ namespace vkl
 		_mutex.unlock();
 	}
 
+	void UploadQueue::enqueue(AsynchUpload && upload)
+	{
+		_mutex.lock();
+		{
+			_queue.emplace_back(std::move(upload));
+		}
+		_mutex.unlock();
+	}
+
 	ResourcesToUpload UploadQueue::consume(size_t budget)
 	{
 		size_t total = 0;

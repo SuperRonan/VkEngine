@@ -43,6 +43,7 @@ namespace vkl
 		UploadQueue(CreateInfo const& ci);
 
 		void enqueue(AsynchUpload const& upload);
+		void enqueue(AsynchUpload && upload);
 
 		ResourcesToUpload consume(size_t budget);
 	};

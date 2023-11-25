@@ -22,6 +22,8 @@ namespace vkl
 
 		MountingPoints * _mounting_points = nullptr;
 
+		UploadQueue * _upload_queue = nullptr;
+
 	public:
 
 		struct CreateInfo
@@ -31,6 +33,7 @@ namespace vkl
 			std::chrono::milliseconds shader_check_period = 1000ms;
 			const DefinitionsMap * common_definitions;
 			MountingPoints * mounting_points = nullptr;
+			UploadQueue * upload_queue = nullptr;
 		};
 
 		ResourcesManager(CreateInfo const& ci);

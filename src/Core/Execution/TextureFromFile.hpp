@@ -16,8 +16,12 @@ namespace vkl
 
 		bool _is_synch = true;
 		
-		bool _should_update = false;
+		bool _should_upload = false;
+		bool _upload_done = false;
+		bool _is_ready = false;
 		img::FormatedImage _host_image = {};
+
+		std::shared_ptr<AsynchTask> _load_image_task = nullptr;
 
 		DetailedVkFormat _desired_format;
 		DetailedVkFormat _image_format;
@@ -36,6 +40,8 @@ namespace vkl
 
 		void createDeviceImage();
 
+		void launchLoadTask();
+
 		void callResourceUpdateCallbacks();
 
 	public:
@@ -46,7 +52,7 @@ namespace vkl
 			std::string name = {};
 			std::filesystem::path path = {};
 			std::optional<VkFormat> desired_format = {};
-			bool synch = true;
+			bool synch = false;
 		};
 		using CI = CreateInfo;
 
@@ -60,6 +66,11 @@ namespace vkl
 		bool hasValue() const
 		{
 			 return _image_view.operator bool();
+		}
+
+		bool isReady() const
+	 	{
+			return _is_ready;	
 		}
 
 		const std::shared_ptr<ImageView>& view()const

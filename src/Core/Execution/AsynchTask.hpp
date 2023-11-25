@@ -21,6 +21,13 @@ namespace vkl
 				.priority = std::numeric_limits<size_t>::max(),
 			};
 		}
+
+		static constexpr TaskPriority WhenPossible()
+		{
+			return TaskPriority{
+				.priority = 0,
+			};
+		}
 	};
 
 	class AsynchTask

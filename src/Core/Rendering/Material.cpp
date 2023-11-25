@@ -41,9 +41,18 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".albedo_texture",
 				.path = _albedo_path,
+				.synch = false,
 			});
 
 			assert(!!_sampler);
+		}
+	}
+
+	PhysicallyBasedMaterial::~PhysicallyBasedMaterial()
+	{
+		if (_albedo_texture)
+		{
+			_albedo_texture->removeResourceUpdateCallback(this);
 		}
 	}
 
@@ -51,7 +60,7 @@ namespace vkl
 	{
 		uint32_t flags = Flags::NONE;
 
-		if (_albedo_texture && _albedo_texture->hasValue())
+		if (_albedo_texture && _albedo_texture->isReady())
 		{
 			flags |= Flags::USE_ALBEDO_TEXTURE;
 		}
@@ -64,7 +73,10 @@ namespace vkl
 
 	void PhysicallyBasedMaterial::declareImGui()
 	{
-		ImGui::ColorPicker3("albedo", &_albedo.x);
+		if (!_albedo_texture)
+		{
+			ImGui::ColorPicker3("albedo", &_albedo.x);
+		}
 	}
 
 	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)
@@ -90,24 +102,24 @@ namespace vkl
 		}
 	}
 
-	ResourcesToUpload PhysicallyBasedMaterial::getResourcesToUpload()
-	{
-		ResourcesToUpload res;
-		if (_should_update_props_buffer)
-		{
-			const Properties props = getProperties();
-			res += ResourcesToUpload::BufferUpload{
-				.sources = {PositionedObjectView{.obj = props, .pos = 0}},
-				.dst = _props_buffer,
-			};
-		}
-		if (_albedo_texture && _albedo_texture->hasValue())
-		{
-			res += _albedo_texture->getResourcesToUpload();
-		}
+	//ResourcesToUpload PhysicallyBasedMaterial::getResourcesToUpload()
+	//{
+	//	ResourcesToUpload res;
+	//	if (_should_update_props_buffer)
+	//	{
+	//		const Properties props = getProperties();
+	//		res += ResourcesToUpload::BufferUpload{
+	//			.sources = {PositionedObjectView{.obj = props, .pos = 0}},
+	//			.dst = _props_buffer,
+	//		};
+	//	}
+	//	if (_albedo_texture && _albedo_texture->hasValue())
+	//	{
+	//		res += _albedo_texture->getResourcesToUpload();
+	//	}
 
-		return res;
-	}
+	//	return res;
+	//}
 
 	std::vector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)
 	{
@@ -180,6 +192,7 @@ namespace vkl
 						.sampler = _sampler,
 						.binding = offset + 1,
 					});
+					_should_update_props_buffer = true;
 				},
 				.id = set.get(),
 			};
