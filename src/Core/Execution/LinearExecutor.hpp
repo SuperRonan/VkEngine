@@ -104,7 +104,7 @@ namespace vkl
 
 			uint32_t finish_counter = 0;			
 
-			Event(VkApplication* app, std::string name, Type type, bool create_synch):
+			Event(VkApplication* app, std::string const& name, Type type, bool create_synch):
 				VkObject(app, name),
 				type(type)
 			{
@@ -127,6 +127,7 @@ namespace vkl
 		
 		std::shared_ptr<Event> _latest_synch_cb = nullptr;
 		std::shared_ptr<Event> _latest_aquire_event = nullptr;
+		std::shared_ptr<Event> _latest_present_event = nullptr;
 
 		void recyclePreviousEvents();
 

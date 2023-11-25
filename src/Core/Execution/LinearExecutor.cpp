@@ -198,8 +198,10 @@ namespace vkl
 		event->aquired_id = aquired.swap_index;
 		assert(aquired.swap_index < _window->swapchainSize());
 		_latest_aquire_event = event;
+		
 		_mutex.lock();
 		_previous_events.push(std::move(event));
+
 		_mutex.unlock();
 		int _ = 0;
 	}
@@ -246,6 +248,9 @@ namespace vkl
 	{
 		//std::cout << "Present: " << std::endl;
 		//std::cout << "Waiting on semaphore " << _latest_synch_cb->signal_semaphore->name() << std::endl;
+		_latest_present_event = std::make_shared<Event>(application(), "Present"s, Event::Type::Present, false);
+		_latest_present_event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
+		_previous_events.push(_latest_present_event);
 		VkSemaphore sem_to_wait = _latest_synch_cb->signal_semaphore->handle();
 		_window->present(1, &sem_to_wait);
 	}
@@ -362,7 +367,14 @@ namespace vkl
 		{
 			std::shared_ptr<Event> event = _previous_events.front();
 			
-			const VkResult res = vkGetFenceStatus(device(), event->signal_fence->handle());
+			const VkResult res = [&](){
+				VkResult r = VK_SUCCESS;
+				if (event->signal_fence)
+				{
+					r = vkGetFenceStatus(device(), event->signal_fence->handle());
+				}
+				return r;
+			}();
 			if (res == VK_NOT_READY)
 			{
 				break;
@@ -439,7 +451,7 @@ namespace vkl
 		while (!_previous_events.empty())
 		{
 			Event& event = *_previous_events.front();
-			event.signal_fence->wait(timeout);
+			//event.signal_fence->wait(timeout);
 			_previous_events.pop();
 		}
 	}
