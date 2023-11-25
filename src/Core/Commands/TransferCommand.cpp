@@ -1114,13 +1114,15 @@ namespace vkl
 	{
 	public:
 
-		std::vector<Callback> callbacks;
+		int value = 0;
+
+		std::vector<CompletionCallback> callbacks;
 
 		virtual ~CallbackHolder() override
 		{
-			for (Callback& cb : callbacks)
+			for (CompletionCallback& cb : callbacks)
 			{
-				cb.callback();
+				cb(value);
 			}
 		}
 	};
@@ -1149,7 +1151,7 @@ namespace vkl
 				.dst = buffer_upload.dst,
 				.use_update_buffer_ifp = false,
 			}, extra_buffer_info[i].use_update, extra_buffer_info[i].range);
-			if (buffer_upload.completion_callback.callback)
+			if (buffer_upload.completion_callback)
 			{
 				if(!completion_callbacks) completion_callbacks = std::make_shared<CallbackHolder>();
 				completion_callbacks->callbacks.push_back(buffer_upload.completion_callback);
@@ -1164,7 +1166,7 @@ namespace vkl
 				.buffer_image_height = image_upload.buffer_image_height,
 				.dst = image_upload.dst,
 			});
-			if (image_upload.completion_callback.callback)
+			if (image_upload.completion_callback)
 			{
 				if (!completion_callbacks) completion_callbacks = std::make_shared<CallbackHolder>();
 				completion_callbacks->callbacks.push_back(image_upload.completion_callback);

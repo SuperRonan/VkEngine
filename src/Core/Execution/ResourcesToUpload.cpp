@@ -24,6 +24,27 @@ namespace vkl
 		return *this;
 	}
 
+	ResourcesToUpload& ResourcesToUpload::operator+=(ResourcesToUpload && o)
+	{
+		using namespace std::containers_operators;
+
+		images += std::move(o.images);
+		buffers += std::move(o.buffers);
+		return *this;
+	}
+
+	ResourcesToUpload& ResourcesToUpload::operator+=(ImageUpload && iu)
+	{
+		images.emplace_back(std::move(iu));
+		return *this;
+	}
+
+	ResourcesToUpload& ResourcesToUpload::operator+=(BufferUpload && bu)
+	{
+		buffers.emplace_back(std::move(bu));
+		return *this;
+	}
+
 
 	ResourcesToUpload ResourcesToUpload::operator+(ResourcesToUpload const& o) const
 	{
