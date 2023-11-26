@@ -286,21 +286,34 @@ namespace vkl
 
 				beginImGuiFrame();
 				{
-					//ImGui::ShowDemoWindow();
-					camera.declareImGui();
+					ImGui::ShowDemoWindow();
 
-					renderer.declareImGui();
+					if(ImGui::Begin("Rendering"))
+					{
+						camera.declareImGui();
 
-					tonemap.declareGui();
+						renderer.declareImGui();
 
-					pip.declareImGui();
+						tonemap.declareGui();
 
-					exec.getDebugRenderer()->declareImGui();
+						pip.declareImGui();
+
+						exec.getDebugRenderer()->declareImGui();
+
+						ImGui::End();
+					}
+
+					if(ImGui::Begin("Scene"))
+					{
+						scene->declareGui();
+
+						ImGui::End();
+					}
+
 
 					window->declareImGui();
 				}
-				ImGui::EndFrame();
-				ImGui::UpdatePlatformWindows();
+				endImGuiFrame();
 
 				if(mouse.getButton(1).justReleased())
 				{

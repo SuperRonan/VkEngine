@@ -259,7 +259,12 @@ namespace vkl
 
 		_ubo_buffer->updateResource(ctx);
 
-		if (_show_view_3D_basis || _show_world_3D_basis || update_all_anyway)
+		bool update_3D_basis = _show_view_3D_basis || _show_world_3D_basis || update_all_anyway;
+		if (_scene->getGuiSelectedNode().hasValue())
+		{
+			update_3D_basis = true;
+		}
+		if (update_3D_basis)
 		{
 			ctx.resourcesToUpdateLater() += _render_3D_basis;
 		}
@@ -337,6 +342,13 @@ namespace vkl
 				basis_draw_list += VertexCommand::DrawCallInfo{
 					.draw_count = 3,
 					.pc = view_3D_basis_matrix,
+				};
+			}
+			if (_scene->getGuiSelectedNode().hasValue())
+			{
+				basis_draw_list += VertexCommand::DrawCallInfo{
+					.draw_count = 3,
+					.pc = camera.getWorldToProj() * _scene->getGuiSelectedNode().node.matrix,
 				};
 			}
 			if (!basis_draw_list.empty())

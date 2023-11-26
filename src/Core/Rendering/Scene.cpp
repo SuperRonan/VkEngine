@@ -5,6 +5,8 @@
 #include <stack>
 #include <Core/Utils/stl_extension.hpp>
 
+#include <imgui/imgui.h>
+
 namespace vkl
 {
 
@@ -89,6 +91,37 @@ namespace vkl
 		_root(std::move(root))
 	{
 		
+	}
+
+	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(NodePath const& path) const
+	{
+		PositionedNode res;
+
+		std::shared_ptr<Node> n = _root;
+		Mat4 matrix = n->matrix4x4();
+		for (size_t i = 0; i < path.path.size(); ++i)
+		{
+			if (path.path[i] < n->children().size())
+			{
+				n = n->children()[i];
+				matrix *= n->matrix4x4();
+			}
+			else
+			{
+				n = nullptr;
+				break;
+			}
+		}
+
+		if (n)
+		{
+			res = PositionedNode{
+				.node = n,
+				.matrix = matrix,
+			};
+		}
+
+		return res;
 	}
 
 
@@ -251,48 +284,6 @@ namespace vkl
 		});
 	}
 
-
-	ResourcesToUpload Scene::getResourcesToUpload()
-	{
-		ResourcesToUpload res;
-
-		
-		//_tree->iterateOnNodes([&res](std::shared_ptr<Node> const& node)
-		//{
-		//	if (node->model())
-		//	{
-		//		res += node->model()->getResourcesToUpload();
-		//	}
-		//});
-
-		res += ResourcesToUpload::BufferUpload{
-			.sources = {
-				PositionedObjectView{
-					.obj = getUBO(),
-					.pos = 0,
-				},
-			},
-			.dst = _ubo_buffer,
-		};
-
-		if (!_lights_glsl.empty())
-		{
-			res += ResourcesToUpload::BufferUpload{
-				.sources = {
-					PositionedObjectView{
-						.obj = _lights_glsl,
-						.pos = 0,
-					},
-				},
-				.dst = _lights_buffer,
-			};
-		}
-
-		return res;
-	}
-
-
-
 	void Scene::prepareForRendering()
 	{
 		_tree->flatten();
@@ -312,7 +303,161 @@ namespace vkl
 		});
 
 		{
-			ctx.resourcesToUpload() += getResourcesToUpload();
+			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
+				.sources = {
+					PositionedObjectView{
+						.obj = getUBO(),
+						.pos = 0,
+					},
+				},
+				.dst = _ubo_buffer,
+			};
+
+			if (!_lights_glsl.empty())
+			{
+				ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
+					.sources = {
+						PositionedObjectView{
+							.obj = _lights_glsl,
+							.pos = 0,
+						},
+					},
+					.dst = _lights_buffer,
+				};
+			}
 		}
+	}
+
+	void Scene::declareGui()
+	{
+		ImGui::PushID(name().c_str());
+		if (ImGui::CollapsingHeader("Options"))
+		{
+			ImGui::ColorPicker3("Ambient", &_ambient.x);
+		}
+
+		if (ImGui::CollapsingHeader("Tree"))
+		{
+			DAG::NodePath path;
+			auto declare_node = [&](std::shared_ptr<Node> const& node, Mat4 const& matrix, bool is_selected_path_so_far, const auto & recurse) -> void
+			{
+				Mat4 node_matrix = matrix * node->matrix4x4();
+				std::string node_gui_name = node->name();
+
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+				if(!path.path.empty())
+				{
+					flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+				}
+				const bool is_leaf = node->children().empty();
+				if (is_leaf)
+				{
+					flags |= ImGuiTreeNodeFlags_Leaf;
+				}
+
+				bool is_selected = false;
+				if (is_selected_path_so_far)
+				{
+					if (!path.path.empty())
+					{
+						if (_gui_selected_node.path.path.size() >= path.path.size())
+						{
+							if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
+							{
+								is_selected_path_so_far = false;
+							}
+							else
+							{
+								is_selected = (_gui_selected_node.path.path.size() == path.path.size());
+							}
+						}
+						else
+						{
+							is_selected_path_so_far = false;
+						}
+					}
+				}
+
+				if (is_selected || node == _gui_selected_node.node.node)
+				{
+					flags |= ImGuiTreeNodeFlags_Selected;
+				}
+
+				const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
+				
+				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
+				{
+					std::cout << "Clicked " << node->name() << std::endl;
+					_gui_selected_node = SelectedNode{
+						.node = DAG::PositionedNode{
+							.node = node,
+							.matrix = node_matrix,
+						},
+						.path = path,
+					};
+				}
+
+				if(node_open)
+				{	
+					path.path.push_back(0);
+					for (size_t i = 0; i < node->children().size(); ++i)
+					{
+						path.path.back() = i;
+						recurse(node->children()[i], node_matrix, is_selected_path_so_far, recurse);
+					}
+					path.path.pop_back();
+
+					ImGui::TreePop();
+				}
+			};
+
+			Mat4 root_matrix = Mat4(1);
+			declare_node(_tree->root(), root_matrix, true, declare_node);
+		} // Tree
+
+
+		if (ImGui::Begin("Node Inspector"))
+		{
+			if (_gui_selected_node.node.node)
+			{
+				std::shared_ptr node = _gui_selected_node.node.node;
+				ImGui::PushID("Node Inspector");
+				ImGui::Text(node->name().c_str());
+
+				ImGui::SameLine();
+				if (ImGui::Button("Close"))
+				{
+					_gui_selected_node.clear();
+				}
+				else
+				{
+					if (ImGui::CollapsingHeader("Transform"))
+					{
+					
+					}
+
+					if (ImGui::CollapsingHeader("Model"))
+					{
+						if (node->model())
+						{
+						
+						}
+						else
+						{
+							ImGui::Text("None");
+							//ImGui::BeginDragDropTarget();
+
+							//ImGui::EndDragDropTarget();
+						}
+					}
+				}
+
+
+				ImGui::PopID();
+			}
+			ImGui::End();
+		}
+
+		ImGui::PopID();
 	}
 }

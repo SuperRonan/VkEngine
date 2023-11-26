@@ -79,6 +79,8 @@ namespace vkl
 
 	AppWithWithImGui::~AppWithWithImGui()
 	{
+		ImGui_ImplGlfw_Shutdown();
+
 		if (_imgui_ctx)
 		{
 			ImGui::DestroyContext(_imgui_ctx);

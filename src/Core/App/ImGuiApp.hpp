@@ -32,9 +32,15 @@ namespace vkl
 			ImGui::NewFrame();
 		}
 
+		void endImGuiFrame()
+		{
+			ImGui::EndFrame();
+			ImGui::UpdatePlatformWindows();
+		}
+
 	public:
 
-		void initImGui(std::shared_ptr<VkWindow> const& main_windo);
+		void initImGui(std::shared_ptr<VkWindow> const& main_window);
 
 		struct CreateInfo
 		{

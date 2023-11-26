@@ -14,7 +14,7 @@
 
 namespace vkl
 {
-	class Scene : public VkObject, public ResourcesHolder
+	class Scene : public VkObject
 	{
 	
 	public:
@@ -163,11 +163,25 @@ namespace vkl
 
 			void iterateOnNodes(const PerNodeFunction & f);
 
+			struct NodePath
+			{
+				std::vector<uint32_t> path;
+			};
+
+			struct PositionedNode
+			{
+				std::shared_ptr<Node> node = nullptr;
+				Mat4 matrix;
+			};
+
+			PositionedNode findNode(NodePath const& path) const;
+
 			bool empty() const
 			{
 				return !_root;
 			}
 		};
+		using DAG = DirectedAcyclicGraph;
 
 	protected:
 
@@ -196,6 +210,25 @@ namespace vkl
 		void createSet();
 
 		void fillLightsBuffer();
+
+		struct SelectedNode
+		{
+			DAG::PositionedNode node;
+			DAG::NodePath path;
+
+			bool hasValue()const
+			{
+				return node.node.operator bool();
+			}
+
+			void clear()
+			{
+				node.node = nullptr;
+				node.matrix = Mat4(1);
+				path.path.clear();
+			}
+		};
+		SelectedNode _gui_selected_node;
 
 	public:
 
@@ -238,11 +271,11 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetAndPool> set();
 
-		//virtual ResourcesLists getResourcesToDeclare() override;
+		void declareGui();
 
-		virtual ResourcesToUpload getResourcesToUpload() override;
-
-		//virtual void notifyDataIsUploaded() override;
-
+		const SelectedNode& getGuiSelectedNode()const
+		{
+			return _gui_selected_node;
+		}
 	};
 }
