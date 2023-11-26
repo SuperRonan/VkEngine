@@ -22,7 +22,6 @@ layout(push_constant) uniform PushConstantBlock
 {
 	float exposure;
 	float gamma;
-	float scale;
 } _pc;
 
 void main()
@@ -41,7 +40,7 @@ void main()
 #endif
 
 		vec4 dst = src;
-		dst.xyz = pow(src.xyz * _pc.exposure, vec3(_pc.gamma)) * _pc.scale;
+		dst.xyz = pow(src.xyz * _pc.exposure, vec3(_pc.gamma));
 
 		imageStore(Desination, pixel, dst);
 

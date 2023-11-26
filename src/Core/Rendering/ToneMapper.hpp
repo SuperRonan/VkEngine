@@ -22,15 +22,18 @@ namespace vkl
 		{
 			float exposure;
 			float gamma;
-			float scale;
 		};
 
 		bool  _enable = false;
 		float _exposure = 1.0f;
 		float _log_exposure = 0.0f;
 		float _gamma = 1.0f;
-		float _scale = 1.0f;
-		float _log_scale = 0.0f;
+
+		size_t _plot_samples = 100;
+		size_t _plot_min_radiance = 0;
+		size_t _plot_max_radiance = 1;
+		std::vector<float> _plot_raw_radiance;
+		std::vector<float> _plot_gamma_radiance;
 
 		void createInternalResources();
 
@@ -54,5 +57,7 @@ namespace vkl
 		void execute(ExecutionRecorder & exec);
 
 		void declareGui(GuiContext & ctx);
+
+		float computeGammaCorrection(float f)const;
 	};
 }

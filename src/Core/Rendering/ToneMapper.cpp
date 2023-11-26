@@ -75,18 +75,20 @@ namespace vkl
 	{
 		if (_enable)
 		{
-			_scale = std::exp2f(_log_scale);
-			_exposure = std::exp2f(_log_exposure);
 			exec(_compute_tonemap->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _dst->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
 				.pc = ComputePC{
 					.exposure = _exposure,
 					.gamma = _gamma,
-					.scale = _scale,
 				},
 			}));
 		}
+	}
+
+	float ToneMapper::computeGammaCorrection(float x) const
+	{
+		return std::pow(x * _exposure, _gamma);
 	}
 
 	void ToneMapper::declareGui(GuiContext & ctx)
@@ -97,21 +99,44 @@ namespace vkl
 			
 			ImGui::Checkbox("Enable", &_enable);
 
-			ImGui::SliderFloat("log2(Exposure)", &_log_exposure, -10, 10);
+			bool changed = false;
+
+			changed |= ImGui::SliderFloat("log2(Exposure)", &_log_exposure, -10, 10);
 			ImGui::Text("Exposure: %f", _exposure);
 			
-			ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
+			changed |= ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
 
 			ImGui::Text("Snap Gamma: ");
 			ImGui::SameLine();
 			bool snap_1 = ImGui::Button("1.0");
 			ImGui::SameLine();
 			bool snap_2_2 = ImGui::Button("2.2");
-			if(snap_1)	_gamma = 1.0f;
-			if(snap_2_2)	_gamma = 2.2f;
+			if(snap_1)	_gamma = 1.0f, changed = true;
+			if(snap_2_2)	_gamma = 2.2f, changed = true;
 
-			ImGui::SliderFloat("log2(Scale)", &_log_scale, -10, 10);
-			ImGui::Text("Scale: %f", _scale);
+			_exposure = std::exp2f(_log_exposure);
+
+			ImGui::Separator();
+
+			if (_plot_raw_radiance.size() != _plot_samples)
+			{
+				changed = true;
+				_plot_raw_radiance.resize(_plot_samples);
+				_plot_gamma_radiance.resize(_plot_samples);
+			}
+
+			if (changed)
+			{
+				for (size_t i = 0; i < _plot_samples; ++i)
+				{
+					float t = (float(i) + (float(i) / float(_plot_samples - 1))) / float(_plot_samples);
+					_plot_raw_radiance[i] = std::lerp(_plot_min_radiance, _plot_max_radiance, t);
+					_plot_gamma_radiance[i] = computeGammaCorrection(_plot_raw_radiance[i]);
+				}
+
+			}
+
+			ImGui::PlotLines("Gamma Correction Preview", _plot_gamma_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_gamma_radiance.back(), ImVec2(0, 200));
 			
 			ImGui::PopID();
 		}
