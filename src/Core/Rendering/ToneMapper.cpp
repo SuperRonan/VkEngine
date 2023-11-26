@@ -93,19 +93,27 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
-			std::string enable_str = "Enable##"s + name();
-			ImGui::Checkbox(enable_str.c_str(), &_enable);
+			ImGui::PushID(name().c_str());
+			
+			ImGui::Checkbox("Enable", &_enable);
 
-			std::string exposure_str = "log2(Exposure)##"s + name();
-			ImGui::SliderFloat(exposure_str.c_str(), &_log_exposure, -10, 10);
+			ImGui::SliderFloat("log2(Exposure)", &_log_exposure, -10, 10);
 			ImGui::Text("Exposure: %f", _exposure);
 			
-			std::string gamma_str = "Gamma##"s + name();
-			ImGui::SliderFloat(gamma_str.c_str(), &_gamma, 0.1, 4);
+			ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
 
-			std::string scale_str = "log2(Scale)##"s + name();
-			ImGui::SliderFloat(scale_str.c_str(), &_log_scale, -10, 10);
+			ImGui::Text("Snap Gamma: ");
+			ImGui::SameLine();
+			bool snap_1 = ImGui::Button("1.0");
+			ImGui::SameLine();
+			bool snap_2_2 = ImGui::Button("2.2");
+			if(snap_1)	_gamma = 1.0f;
+			if(snap_2_2)	_gamma = 2.2f;
+
+			ImGui::SliderFloat("log2(Scale)", &_log_scale, -10, 10);
 			ImGui::Text("Scale: %f", _scale);
+			
+			ImGui::PopID();
 		}
 	}
 }

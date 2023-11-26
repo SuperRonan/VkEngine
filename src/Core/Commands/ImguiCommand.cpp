@@ -162,6 +162,7 @@ namespace vkl
 
 	void ImguiCommand::shutdownImGui()
 	{
+		std::cout << "Shutdown ImGui Vulkan" << std::endl;
 		vkDeviceWaitIdle(device());
 		ImGui_ImplVulkan_DestroyFontsTexture();
 		ImGui_ImplVulkan_Shutdown();
