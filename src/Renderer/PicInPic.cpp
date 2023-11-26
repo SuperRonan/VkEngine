@@ -109,7 +109,7 @@ namespace vkl
 		}
 	}
 
-	void PictureInPicture::declareImGui()
+	void PictureInPicture::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{

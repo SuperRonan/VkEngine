@@ -6,6 +6,7 @@
 #include <Core/VkObjects/DetailedVkFormat.hpp>
 #include <Core/Rendering/Math.hpp>
 #include <Core/Execution/Executor.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -56,7 +57,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder& exec);
 
-		void declareImGui();
+		void declareGui(GuiContext & ctx);
 
 		void setPosition(glm::vec2 const& pos)
 		{

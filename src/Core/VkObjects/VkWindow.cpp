@@ -418,7 +418,7 @@ namespace vkl
 		return res;
 	}
 
-	void VkWindow::declareImGui()
+	void VkWindow::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader("Window"))
 		{

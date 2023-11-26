@@ -7,6 +7,7 @@
 #include <Core/Execution/ResourcesHolder.hpp>
 #include <Core/Execution/TextureFromFile.hpp>
 #include <Core/Execution/SamplerLibrary.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -48,7 +49,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx) = 0;
 
-		virtual void declareImGui() = 0;
+		virtual void declareGui(GuiContext & ctx) = 0;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -111,7 +112,7 @@ namespace vkl
 
 		virtual ~PhysicallyBasedMaterial() override;
 
-		virtual void declareImGui() override;
+		virtual void declareGui(GuiContext & ctx) override;
 
 		virtual void updateResources(UpdateContext& ctx) override;
 

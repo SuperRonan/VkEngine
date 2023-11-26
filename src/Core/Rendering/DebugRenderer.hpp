@@ -7,6 +7,7 @@
 #include <Core/Commands/TransferCommand.hpp>
 #include <thatlib/src/img/ImRead.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
+#include <Core/IO/GuiContext.hpp>
 #include <Core/Execution/Executor.hpp>
 
 namespace vkl
@@ -72,7 +73,7 @@ namespace vkl
 
 		void setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth = nullptr);
 
-		void declareImGui();
+		void declareGui(GuiContext & ctx);
 
 		void updateResources(UpdateContext & context);
 

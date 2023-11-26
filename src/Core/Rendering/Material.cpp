@@ -72,7 +72,7 @@ namespace vkl
 		};
 	}
 
-	void PhysicallyBasedMaterial::declareImGui()
+	void PhysicallyBasedMaterial::declareGui(GuiContext & ctx)
 	{
 		if (!_albedo_texture)
 		{

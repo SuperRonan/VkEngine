@@ -14,6 +14,9 @@ namespace vkl
 			ImGuiConfigFlags_ViewportsEnable |
 			ImGuiConfigFlags_NavEnableKeyboard;
 		
+		_gui_context = GuiContext::CI{
+			.imgui_context = _imgui_ctx,
+		};
 
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 		
@@ -71,7 +74,10 @@ namespace vkl
 	}
 
 	AppWithWithImGui::AppWithWithImGui(CreateInfo const& ci) :
-		VkApplication(ci.name, ci.enable_validation)
+		VkApplication(ci.name, ci.enable_validation),
+		_gui_context(GuiContext::CI{
+			.imgui_context = nullptr,
+		})
 	{
 		assert(!g_app);
 		g_app = this;

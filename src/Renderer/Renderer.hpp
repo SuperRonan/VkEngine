@@ -11,6 +11,7 @@
 #include <Core/Rendering/RenderObjects.hpp>
 
 #include <Core/IO/ImGuiUtils.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 #include <unordered_map>
 #include <map>
@@ -114,6 +115,6 @@ namespace vkl
 			return _depth;
 		}
 
-		void declareImGui();
+		void declareGui(GuiContext & ctx);
 	};
 }

@@ -3,6 +3,7 @@
 #include <Core/Execution/Module.hpp>
 #include <Core/Commands/ComputeCommand.hpp>
 #include <Core/Execution/Executor.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -52,6 +53,6 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		void declareGui();
+		void declareGui(GuiContext & ctx);
 	};
 }

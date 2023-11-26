@@ -10,6 +10,8 @@
 
 #include <unordered_map>
 
+#include <Core/IO/GuiContext.hpp>
+
 #include <cassert>
 
 namespace vkl
@@ -271,7 +273,7 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetAndPool> set();
 
-		void declareGui();
+		void declareGui(GuiContext & ctx);
 
 		const SelectedNode& getGuiSelectedNode()const
 		{

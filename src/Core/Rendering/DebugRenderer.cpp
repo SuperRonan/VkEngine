@@ -279,7 +279,7 @@ namespace vkl
 		}
 	}
 
-	void DebugRenderer::declareImGui()
+	void DebugRenderer::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader("GLSL Debug"))
 		{

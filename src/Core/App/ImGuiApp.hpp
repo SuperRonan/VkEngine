@@ -8,6 +8,9 @@
 #include <imgui/backends/imgui_impl_win32.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
+#include <Core/IO/GuiContext.hpp>
+#include <cassert>
+
 namespace vkl
 {
 	class AppWithWithImGui : public VkApplication
@@ -25,15 +28,19 @@ namespace vkl
 		ImGuiContext* _imgui_ctx = nullptr;
 		std::vector<ImGuiWindow *> _imgui_windows = {};
 
-		void beginImGuiFrame()
+		GuiContext _gui_context;
+
+		GuiContext * beginImGuiFrame()
 		{			
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
+			return &_gui_context;
 		}
 
-		void endImGuiFrame()
+		void endImGuiFrame(GuiContext * ctx)
 		{
+			assert(ctx == &_gui_context);
 			ImGui::EndFrame();
 			ImGui::UpdatePlatformWindows();
 		}

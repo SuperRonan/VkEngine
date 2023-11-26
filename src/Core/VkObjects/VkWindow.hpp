@@ -3,6 +3,7 @@
 #include <Core/App/VkApplication.hpp>
 
 #include <Core/IO/ImGuiUtils.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 #include <set>
 #include <string>
@@ -221,7 +222,7 @@ namespace vkl
 
 		bool updateResources(UpdateContext & ctx);
 
-		void declareImGui();
+		void declareGui(GuiContext & ctx);
 
 	};
 

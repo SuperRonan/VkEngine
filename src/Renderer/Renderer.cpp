@@ -363,7 +363,7 @@ namespace vkl
 	}
 	
 
-	void SimpleRenderer::declareImGui()
+	void SimpleRenderer::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{

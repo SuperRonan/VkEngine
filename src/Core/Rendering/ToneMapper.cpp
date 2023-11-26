@@ -89,7 +89,7 @@ namespace vkl
 		}
 	}
 
-	void ToneMapper::declareGui()
+	void ToneMapper::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{

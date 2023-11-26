@@ -284,36 +284,36 @@ namespace vkl
 				process_input(input_state);
 				camera_controller.updateCamera(dt);
 
-				beginImGuiFrame();
 				{
+					GuiContext * gui_ctx = beginImGuiFrame();
 					ImGui::ShowDemoWindow();
 
 					if(ImGui::Begin("Rendering"))
 					{
-						camera.declareImGui();
+						camera.declareGui(*gui_ctx);
 
-						renderer.declareImGui();
+						renderer.declareGui(*gui_ctx);
 
-						tonemap.declareGui();
+						tonemap.declareGui(*gui_ctx);
 
-						pip.declareImGui();
+						pip.declareGui(*gui_ctx);
 
-						exec.getDebugRenderer()->declareImGui();
+						exec.getDebugRenderer()->declareGui(*gui_ctx);
 
 						ImGui::End();
 					}
 
 					if(ImGui::Begin("Scene"))
 					{
-						scene->declareGui();
+						scene->declareGui(*gui_ctx);
 
 						ImGui::End();
 					}
 
 
-					window->declareImGui();
+					window->declareGui(*gui_ctx);
+					endImGuiFrame(gui_ctx);
 				}
-				endImGuiFrame();
 
 				if(mouse.getButton(1).justReleased())
 				{

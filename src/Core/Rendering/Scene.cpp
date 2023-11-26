@@ -328,7 +328,7 @@ namespace vkl
 		}
 	}
 
-	void Scene::declareGui()
+	void Scene::declareGui(GuiContext & ctx)
 	{
 		ImGui::PushID(name().c_str());
 		if (ImGui::CollapsingHeader("Options"))

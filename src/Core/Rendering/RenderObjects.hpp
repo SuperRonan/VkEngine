@@ -11,6 +11,7 @@
 #include <numbers>
 
 #include <Core/Rendering/Transforms.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -228,7 +229,7 @@ namespace vkl
 
 		}
 
-		void declareImGui()
+		void declareGui(GuiContext & ctx)
 		{
 			if (ImGui::CollapsingHeader("Camera"))
 			{
