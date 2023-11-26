@@ -196,6 +196,10 @@ namespace vkl
 		VkWindow::AquireResult aquired = _window->aquireNextImage(event->signal_semaphore, event->signal_fence);
 		event->swapchain = _window->swapchain()->instance();
 		event->aquired_id = aquired.swap_index;
+		if (_latest_present_event)
+		{
+			event->wait_semaphores.push_back(_latest_present_event->signal_semaphore); // Hopefully avoid a Validation Error that the semaphore is destroyed to early
+		}
 		assert(aquired.swap_index < _window->swapchainSize());
 		_latest_aquire_event = event;
 		
