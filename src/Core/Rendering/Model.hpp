@@ -5,6 +5,7 @@
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
 #include <Core/Rendering/Material.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -123,7 +124,7 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const;
 
-
+		virtual void declareGui(GuiContext & ctx);
 
 
 

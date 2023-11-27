@@ -490,7 +490,7 @@ namespace vkl
 					{
 						if (node->model())
 						{
-						
+							node->model()->declareGui(ctx);
 						}
 						else
 						{

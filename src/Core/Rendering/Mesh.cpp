@@ -740,6 +740,17 @@ namespace vkl
 		return _device.uploaded;
 	}
 
+	void RigidMesh::declareGui(GuiContext& ctx)
+	{
+		ImGui::PushID(name().c_str());
+
+		ImGui::Text("Name: ");
+		ImGui::SameLine();
+		ImGui::Text(name().c_str());
+
+		ImGui::PopID();
+	}
+
 	//void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
 	//{
 	//	//const bool separate_resource = false;

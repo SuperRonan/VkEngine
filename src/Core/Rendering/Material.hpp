@@ -92,8 +92,15 @@ namespace vkl
 		std::filesystem::path _albedo_path = {};
 		std::unique_ptr<TextureFromFile> _albedo_texture = nullptr;
 		
+		bool _force_albedo_prop = false;
 
 		Properties getProperties() const;
+
+		bool useAlbedoTexture()const
+		{
+			bool can_texture = _albedo_texture && _albedo_texture->isReady();
+			return can_texture && !_force_albedo_prop;
+		}
 
 	public:
 

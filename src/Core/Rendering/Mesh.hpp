@@ -9,6 +9,7 @@
 #include <Core/Execution/Resource.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
 #include <Core/Rendering/Drawable.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -128,6 +129,7 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const = 0;
 
+		virtual void declareGui(GuiContext & ctx) = 0;
 	};
 
 	class RigidMesh : public Mesh
@@ -341,8 +343,6 @@ namespace vkl
 
 		virtual Status getStatus() const override;
 
-		//virtual void recordBindAndDraw(ExecutionContext & ctx) override final;
-
 		virtual void fillVertexDrawCallResources(VertexDrawCallResources& vr) override;
 
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
@@ -364,9 +364,7 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const override;
 
-		//virtual ResourcesToUpload getResourcesToUpload() override;
-
-		//virtual void recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline) override final;
+		virtual void declareGui(GuiContext& ctx) override;
 
 		virtual VertexInputDescription vertexInputDesc() override
 		{
@@ -395,16 +393,6 @@ namespace vkl
 		{
 			return _device.mesh_buffer;
 		}
-
-		//virtual std::shared_ptr<DescriptorSetLayout> setLayout() override
-		//{
-		//	return nullptr;
-		//}
-
-		//virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() override
-		//{
-		//	return nullptr;
-		//}
 
 		struct Square2DMakeInfo
 		{

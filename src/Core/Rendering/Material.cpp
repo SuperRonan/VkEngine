@@ -61,7 +61,7 @@ namespace vkl
 	{
 		uint32_t flags = Flags::NONE;
 
-		if (_albedo_texture && _albedo_texture->isReady())
+		if (useAlbedoTexture())
 		{
 			flags |= Flags::USE_ALBEDO_TEXTURE;
 		}
@@ -74,10 +74,19 @@ namespace vkl
 
 	void PhysicallyBasedMaterial::declareGui(GuiContext & ctx)
 	{
-		if (!_albedo_texture)
+		
+		ImGui::PushID(name().c_str());
+		ImGui::Text("Name: ");
+		ImGui::SameLine();
+		ImGui::Text(name().c_str());
+		_should_update_props_buffer |= ImGui::Checkbox(" Force Albedo property", &_force_albedo_prop);
+		if (!useAlbedoTexture())
 		{
-			ImGui::ColorPicker3("albedo", &_albedo.x);
+			_should_update_props_buffer |= ImGui::ColorPicker3("albedo", &_albedo.x);
 		}
+
+
+		ImGui::PopID();
 	}
 
 	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)

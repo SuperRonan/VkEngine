@@ -196,6 +196,38 @@ namespace vkl
 		return res;
 	}
 
+	void Model::declareGui(GuiContext& ctx)
+	{
+		ImGui::PushID(name().c_str());
+		ImGui::Text(name().c_str());
+
+		if (ImGui::CollapsingHeader("Mesh"))
+		{
+			if (_mesh)
+			{
+				_mesh->declareGui(ctx);
+			}
+			else
+			{
+				ImGui::Text("None");
+			}
+		}
+
+		if (ImGui::CollapsingHeader("Material"))
+		{
+			if (_material)
+			{
+				_material->declareGui(ctx);
+			}
+			else
+			{
+				ImGui::Text("None");
+			}
+		}
+
+		ImGui::PopID();
+	}
+
 
 
 
