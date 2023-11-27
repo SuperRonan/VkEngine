@@ -61,9 +61,14 @@ namespace vkl
 	template <class T>
 	using Matrix4x3 = Matrix<3, 4, T>;
 
+	template <class T>
+	using Matrix3x4 = Matrix<4, 3, T>;
+
 	using Matrix2f = Matrix2<float>;
 	using Matrix3f = Matrix3<float>;
 	using Matrix4f = Matrix4<float>;
+	using Matrix4x3f = Matrix4x3<float>;
+	using Matrix3x4f = Matrix3x4<float>;
 
 	using Matrix2d = Matrix2<double>;
 	using Matrix3d = Matrix3<double>;

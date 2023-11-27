@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <Core/IO/GuiContext.hpp>
+#include <Core/IO/ImGuiUtils.hpp>
 
 #include <cassert>
 
@@ -67,6 +68,11 @@ namespace vkl
 			}
 
 			constexpr const Mat4x3& matrix4x3() const
+			{
+				return _matrix;
+			}
+
+			constexpr Mat4x3& matrix4x3()
 			{
 				return _matrix;
 			}
@@ -173,7 +179,7 @@ namespace vkl
 			struct PositionedNode
 			{
 				std::shared_ptr<Node> node = nullptr;
-				Mat4 matrix;
+				Mat4x3 matrix;
 			};
 
 			PositionedNode findNode(NodePath const& path) const;
@@ -228,7 +234,13 @@ namespace vkl
 				node.node = nullptr;
 				node.matrix = Mat4(1);
 				path.path.clear();
+				bindMatrices();
 			}
+
+			void bindMatrices();
+
+			ImGuiTransform3D gui_collapsed_matrix = {};
+			ImGuiTransform3D gui_node_matrix = {};
 		};
 		SelectedNode _gui_selected_node;
 
@@ -279,5 +291,7 @@ namespace vkl
 		{
 			return _gui_selected_node;
 		}
+
+		void checkSelectedNode(SelectedNode & selected_node);
 	};
 }

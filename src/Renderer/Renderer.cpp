@@ -348,7 +348,7 @@ namespace vkl
 			{
 				basis_draw_list += VertexCommand::DrawCallInfo{
 					.draw_count = 3,
-					.pc = camera.getWorldToProj() * _scene->getGuiSelectedNode().node.matrix,
+					.pc = camera.getWorldToProj() * glm::mat4(_scene->getGuiSelectedNode().node.matrix),
 				};
 			}
 			if (!basis_draw_list.empty())

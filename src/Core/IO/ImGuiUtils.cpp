@@ -1,6 +1,8 @@
 #include "ImGuiUtils.hpp"
 #include <cassert>
 
+#include <Core/Rendering/Transforms.hpp>
+
 namespace vkl
 {
 	ImGuiListSelection::ImGuiListSelection(CreateInfo const& ci) :
@@ -86,5 +88,66 @@ namespace vkl
 			_index = active_index;
 		}
 		return res;
+	}
+
+	bool ImGuiTransform3D::declare()
+	{
+		bool changed = false;
+
+		ImGui::Checkbox("Raw Matrix", &_raw_view);
+		
+		ImGui::BeginDisabled(_read_only);
+		
+		if (_raw_view)
+		{
+			Mat3x4 t = glm::transpose(*_matrix);
+		
+			for (size_t i = 0; i < 3; ++i)
+			{
+				char row_name[2];
+				row_name[0] = 'x' + i;
+				row_name[1] = 0;
+				changed |= ImGui::DragFloat4(row_name, &t[i].x, 0.1);
+			}
+
+			if (changed)
+			{
+				*_matrix = glm::transpose(t);
+			}
+		}
+		else
+		{
+			glm::vec3 & t = (*_matrix)[3];
+			changed |= ImGui::DragFloat3("Translation", &t.x, 0.1);
+
+			bool changed2 = false;
+
+			glm::vec3 scale(
+				glm::length((*_matrix)[0]),
+				glm::length((*_matrix)[1]),
+				glm::length((*_matrix)[2])
+			);
+			glm::mat3 rotation = glm::mat3(*_matrix);
+			rotation[0] /= scale[0];
+			rotation[1] /= scale[1];
+			rotation[2] /= scale[2];
+			glm::vec3 angles;
+
+			
+
+			changed2 |= ImGui::DragFloat3("Scale", &scale.x, 0.1);
+
+			if (changed2)
+			{
+				(*_matrix) = translateMatrix<4, float>(t) * scaleMatrix<4, float>(scale) * glm::mat4(rotation);
+			}
+
+			changed |= changed2;
+		}
+
+
+		ImGui::EndDisabled();
+		return changed;
+
 	}
 }

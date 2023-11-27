@@ -6,6 +6,7 @@
 #include <Core/Utils/stl_extension.hpp>
 
 #include <imgui/imgui.h>
+#include <Core/IO/ImGuiUtils.hpp>
 
 namespace vkl
 {
@@ -103,7 +104,7 @@ namespace vkl
 		{
 			if (path.path[i] < n->children().size())
 			{
-				n = n->children()[i];
+				n = n->children()[path.path[i]];
 				matrix *= n->matrix4x4();
 			}
 			else
@@ -328,6 +329,34 @@ namespace vkl
 		}
 	}
 
+	void Scene::SelectedNode::bindMatrices()
+	{
+		if (hasValue())
+		{
+			gui_collapsed_matrix.bindMatrix((const Mat4x3*)&node.matrix);
+			gui_node_matrix.bindMatrix(&node.node->matrix4x3(), false);
+		}
+		else
+		{
+			gui_collapsed_matrix.bindMatrix(nullptr);
+			gui_node_matrix.bindMatrix(nullptr);
+		}
+	}
+
+	void Scene::checkSelectedNode(SelectedNode & selected_node)
+	{
+		DAG::PositionedNode found = _tree->findNode(selected_node.path);
+		if (found.node == selected_node.node.node)
+		{
+			selected_node.node.matrix = found.matrix;
+		}
+		else
+		{
+			selected_node.node.node.reset();
+			selected_node.node.matrix = Mat4x3(1);
+		}
+	}
+
 	void Scene::declareGui(GuiContext & ctx)
 	{
 		ImGui::PushID(name().c_str());
@@ -387,14 +416,20 @@ namespace vkl
 				
 				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
 				{
-					std::cout << "Clicked " << node->name() << std::endl;
-					_gui_selected_node = SelectedNode{
-						.node = DAG::PositionedNode{
-							.node = node,
-							.matrix = node_matrix,
-						},
-						.path = path,
+					//std::cout << "Clicked " << node->name() << std::endl;
+					//_gui_selected_node = SelectedNode{
+					//	.node = DAG::PositionedNode{
+					//		.node = node,
+					//		.matrix = node_matrix,
+					//	},
+					//	.path = path,
+					//};
+					_gui_selected_node.node = DAG::PositionedNode{
+						.node = node,
+						.matrix = node_matrix,
 					};
+					_gui_selected_node.path = path;
+					_gui_selected_node.bindMatrices();
 				}
 
 				if(node_open)
@@ -418,7 +453,11 @@ namespace vkl
 
 		if (ImGui::Begin("Node Inspector"))
 		{
-			if (_gui_selected_node.node.node)
+			if (_gui_selected_node.hasValue())
+			{
+				checkSelectedNode(_gui_selected_node);
+			}
+			if (_gui_selected_node.hasValue())
 			{
 				std::shared_ptr node = _gui_selected_node.node.node;
 				ImGui::PushID("Node Inspector");
@@ -433,7 +472,18 @@ namespace vkl
 				{
 					if (ImGui::CollapsingHeader("Transform"))
 					{
-					
+						bool changed = false;
+						ImGui::PushID(1);
+						ImGui::Text("Collapsed Matrix");
+						_gui_selected_node.gui_collapsed_matrix.declare();
+						ImGui::PopID();
+
+						ImGui::Separator();
+						
+						ImGui::PushID(2);
+						ImGui::Text("Node Matrix");
+						changed = _gui_selected_node.gui_node_matrix.declare();
+						ImGui::PopID();
 					}
 
 					if (ImGui::CollapsingHeader("Model"))
