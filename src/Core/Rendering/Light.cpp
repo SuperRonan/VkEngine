@@ -55,6 +55,42 @@ namespace vkl
 		_emission(ci.emission)
 	{}
 
+	void Light::declareGui(GuiContext& ctx)
+	{
+		ImGui::PushID(name().c_str());
+
+		ImGui::Text("Name: ");
+		ImGui::SameLine();
+		ImGui::Text(name().c_str());
+
+		if (ImGui::Button("Snap to Gray average"))
+		{
+			float f = (_emission.x + _emission.y + _emission.z) / 3;
+			_emission = vec3(f);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Snap to Gray luminance"))
+		{
+			vec3 w(0.2126, 0.7152, 0.0722);
+			float f = glm::dot(w, _emission);
+			_emission = vec3(f);
+		}
+
+		float intensity = (_emission.x + _emission.y + _emission.z) / 3;
+		float old_intensity = intensity;
+		bool changed = ImGui::SliderFloat("Intensity", &intensity, 0, 10);
+
+		if (changed && old_intensity > 0.0f)
+		{
+			_emission *= (intensity / old_intensity);
+		}
+		
+		ImGui::ColorPicker3("Emission", &_emission.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR);
+
+
+		ImGui::PopID();
+	}
+
 
 	PointLight::PointLight(CreateInfo const& ci):
 		Light(Light::CI{
@@ -73,7 +109,14 @@ namespace vkl
 		return res;
 	}
 
+	void PointLight::declareGui(GuiContext& ctx)
+	{
+		Light::declareGui(ctx);
 
+		ImGui::PushID(name().c_str());
+
+		ImGui::PopID();
+	}
 
 
 	DirectionalLight::DirectionalLight(CreateInfo const& ci):
@@ -91,5 +134,14 @@ namespace vkl
 		const vec3 dir = glm::normalize(directionMatrix(xform) * _direction);
 		LightGLSL res = LightGLSL::MakeDirectional(dir, _emission);
 		return res;
+	}
+
+	void DirectionalLight::declareGui(GuiContext& ctx)
+	{
+		Light::declareGui(ctx);
+
+		ImGui::PushID(name().c_str());
+
+		ImGui::PopID();
 	}
 }

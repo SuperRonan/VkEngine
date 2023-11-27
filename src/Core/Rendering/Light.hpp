@@ -2,6 +2,7 @@
 
 #include <Core/App/VkApplication.hpp>
 #include <Core/Rendering/Transforms.hpp>
+#include <Core/IO/GuiContext.hpp>
 
 namespace vkl
 {
@@ -58,6 +59,8 @@ namespace vkl
 		}
 
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const = 0;
+
+		virtual void declareGui(GuiContext & ctx);
 	};
 
 	class PointLight : public Light
@@ -80,6 +83,8 @@ namespace vkl
 		PointLight(CreateInfo const& ci);
 
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const override;
+
+		virtual void declareGui(GuiContext& ctx) override;
 	};
 
 	class DirectionalLight : public Light
@@ -103,5 +108,6 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const override;
 
+		virtual void declareGui(GuiContext& ctx) override;
 	};
 }

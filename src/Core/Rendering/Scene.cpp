@@ -500,6 +500,18 @@ namespace vkl
 							//ImGui::EndDragDropTarget();
 						}
 					}
+
+					if (ImGui::CollapsingHeader("Light"))
+					{
+						if (node->light())
+						{
+							node->light()->declareGui(ctx);
+						}
+						else
+						{
+							ImGui::Text("None");
+						}
+					}
 				}
 
 
