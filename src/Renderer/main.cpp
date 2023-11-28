@@ -25,6 +25,7 @@
 #include <Core/Rendering/Transforms.hpp>
 #include <Core/Rendering/SceneLoader.hpp>
 #include <Core/Rendering/SceneUserInterface.hpp>
+#include <Core/Rendering/GammaCorrection.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -32,7 +33,6 @@
 
 #include "Renderer.hpp"
 #include "PicInPic.hpp"
-#include "Core/Rendering/ToneMapper.hpp"
 
 namespace vkl
 {
@@ -206,9 +206,9 @@ namespace vkl
 			});
 			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
 
-			ToneMapper tonemap = ToneMapper::CI{
+			GammaCorrection gamma_correction = GammaCorrection::CI{
 				.app = this,
-				.name = "ToneMapping",
+				.name = "GammaCorrection",
 				.dst = final_image,
 				.sets_layouts = sets_layouts,
 			};
@@ -304,7 +304,7 @@ namespace vkl
 
 						renderer.declareGui(*gui_ctx);
 
-						tonemap.declareGui(*gui_ctx);
+						gamma_correction.declareGui(*gui_ctx);
 
 						pip.declareGui(*gui_ctx);
 
@@ -338,7 +338,7 @@ namespace vkl
 					exec.updateResources(*update_context);
 					scene->updateResources(*update_context);
 					renderer.updateResources(*update_context);
-					tonemap.updateResources(*update_context);
+					gamma_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
@@ -380,7 +380,7 @@ namespace vkl
 
 					sui->execute(exec_thread, camera);
 
-					tonemap.execute(exec_thread);
+					gamma_correction.execute(exec_thread);
 
 					pip.execute(exec_thread);
 

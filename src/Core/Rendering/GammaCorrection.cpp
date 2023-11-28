@@ -1,11 +1,11 @@
-#include "ToneMapper.hpp"
+#include "GammaCorrection.hpp"
 #include <imgui/imgui.h>
 #include <Core/Execution/SamplerLibrary.hpp>
 #include <Core/VkObjects/DetailedVkFormat.hpp>
 
 namespace vkl
 {
-	ToneMapper::ToneMapper(CreateInfo const& ci):
+	GammaCorrection::GammaCorrection(CreateInfo const& ci):
 		Module(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst),
@@ -19,7 +19,7 @@ namespace vkl
 		createInternalResources();
 	}
 
-	void ToneMapper::createInternalResources()
+	void GammaCorrection::createInternalResources()
 	{
 		const bool use_separate_src = _src != _dst;
 		const std::filesystem::path folder = ENGINE_SRC_PATH "/Shaders/ToneMap/";
@@ -55,15 +55,15 @@ namespace vkl
 
 		_compute_tonemap = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
-			.name = name() + ".DirectToneMap",
-			.shader_path = folder / "ToneMap.comp",
+			.name = name() + ".shader",
+			.shader_path = folder / "GammaCorrection.comp",
 			.sets_layouts = _sets_layouts,
 			.bindings = bindings,
 			.definitions = definitions,
 		});
 	}
 
-	void ToneMapper::updateResources(UpdateContext& ctx)
+	void GammaCorrection::updateResources(UpdateContext& ctx)
 	{
 		const DetailedVkFormat dst_format = DetailedVkFormat::Find(_dst->format().value());
 		_dst_glsl_format = dst_format.getGLSLName();
@@ -71,7 +71,7 @@ namespace vkl
 		ctx.resourcesToUpdateLater() += _compute_tonemap;
 	}
 
-	void ToneMapper::execute(ExecutionRecorder& exec)
+	void GammaCorrection::execute(ExecutionRecorder& exec)
 	{
 		if (_enable)
 		{
@@ -86,12 +86,12 @@ namespace vkl
 		}
 	}
 
-	float ToneMapper::computeGammaCorrection(float x) const
+	float GammaCorrection::computeGammaCorrection(float x) const
 	{
 		return std::pow(x * _exposure, _gamma);
 	}
 
-	void ToneMapper::declareGui(GuiContext & ctx)
+	void GammaCorrection::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{

@@ -7,7 +7,7 @@
 
 namespace vkl
 {
-	class ToneMapper : public Module
+	class GammaCorrection : public Module
 	{
 	protected:
 
@@ -50,7 +50,7 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		ToneMapper(CreateInfo const& ci);
+		GammaCorrection(CreateInfo const& ci);
 
 		void updateResources(UpdateContext & ctx);
 
