@@ -10,9 +10,6 @@
 
 #include <unordered_map>
 
-#include <Core/IO/GuiContext.hpp>
-#include <Core/IO/ImGuiUtils.hpp>
-
 #include <cassert>
 
 namespace vkl
@@ -219,31 +216,6 @@ namespace vkl
 
 		void fillLightsBuffer();
 
-		struct SelectedNode
-		{
-			DAG::PositionedNode node;
-			DAG::NodePath path;
-
-			bool hasValue()const
-			{
-				return node.node.operator bool();
-			}
-
-			void clear()
-			{
-				node.node = nullptr;
-				node.matrix = Mat4(1);
-				path.path.clear();
-				bindMatrices();
-			}
-
-			void bindMatrices();
-
-			ImGuiTransform3D gui_collapsed_matrix = {};
-			ImGuiTransform3D gui_node_matrix = {};
-		};
-		SelectedNode _gui_selected_node;
-
 	public:
 
 		struct CreateInfo
@@ -285,13 +257,6 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetAndPool> set();
 
-		void declareGui(GuiContext & ctx);
-
-		const SelectedNode& getGuiSelectedNode()const
-		{
-			return _gui_selected_node;
-		}
-
-		void checkSelectedNode(SelectedNode & selected_node);
+		friend class SceneUserInterface;
 	};
 }

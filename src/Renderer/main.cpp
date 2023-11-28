@@ -19,11 +19,12 @@
 #include <Core/IO/InputListener.hpp>
 
 #include <Core/Rendering/DebugRenderer.hpp>
-#include <Core/Rendering/RenderObjects.hpp>
+#include <Core/Rendering/Camera.hpp>
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Scene.hpp>
 #include <Core/Rendering/Transforms.hpp>
 #include <Core/Rendering/SceneLoader.hpp>
+#include <Core/Rendering/SceneUserInterface.hpp>
 
 #include <iostream>
 #include <chrono>
@@ -219,6 +220,15 @@ namespace vkl
 				.sets_layouts = sets_layouts,
 			};
 
+			std::shared_ptr<SceneUserInterface> sui = std::make_shared<SceneUserInterface>(SceneUserInterface::CI{
+				.app = this,
+				.name = "SceneUserInterface",
+				.scene = scene,
+				.target = final_image,
+				.depth = nullptr,
+				.sets_layouts = sets_layouts,
+			});
+
 			
 			exec.init();
 
@@ -305,7 +315,7 @@ namespace vkl
 
 					if(ImGui::Begin("Scene"))
 					{
-						scene->declareGui(*gui_ctx);
+						sui->declareGui(*gui_ctx);
 
 						ImGui::End();
 					}
@@ -330,8 +340,9 @@ namespace vkl
 					renderer.updateResources(*update_context);
 					tonemap.updateResources(*update_context);
 					pip.updateResources(*update_context);
+					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
-					
+
 					resources_manager.finishUpdateCycle(update_context);
 				}
 				{	
@@ -366,6 +377,8 @@ namespace vkl
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
+
+					sui->execute(exec_thread, camera);
 
 					tonemap.execute(exec_thread);
 

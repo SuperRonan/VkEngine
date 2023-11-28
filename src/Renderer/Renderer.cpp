@@ -181,28 +181,6 @@ namespace vkl
 			});
 			
 		}
-
-
-		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
-			.app = application(),
-			.name = name() + ".Show3DBasis",
-			.vertex_input_desc = Pipeline::VertexInputWithoutVertices(),
-			.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-			.draw_count = 3,
-			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
-			.sets_layouts = _sets_layouts,
-			.color_attachements = {_target},
-			.vertex_shader_path = shaders / "Show3DBasis.glsl",
-			.geometry_shader_path = shaders / "Show3DBasis.glsl",
-			.fragment_shader_path = shaders / "Show3DBasis.glsl",
-		});
-		
-
-		_update_buffer = std::make_shared<UpdateBuffer>(UpdateBuffer::CI{
-			.app = application(),
-			.name = "UpdateUBO",
-		});
-
 	}
 
 	SimpleRenderer::MultiVertexDrawCallList SimpleRenderer::generateVertexDrawList()
@@ -258,16 +236,6 @@ namespace vkl
 		}
 
 		_ubo_buffer->updateResource(ctx);
-
-		bool update_3D_basis = _show_view_3D_basis || _show_world_3D_basis || update_all_anyway;
-		if (_scene->getGuiSelectedNode().hasValue())
-		{
-			update_3D_basis = true;
-		}
-		if (update_3D_basis)
-		{
-			ctx.resourcesToUpdateLater() += _render_3D_basis;
-		}
 	}
 
 	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
@@ -283,7 +251,12 @@ namespace vkl
 			.world_to_proj = camera.getWorldToProj(),
 		};
 
-		exec(_update_buffer->with(UpdateBuffer::UpdateInfo{
+		UpdateBuffer updater = UpdateBuffer::CI{
+			.app = application(),
+			.name = name() + ".UpdateUBO",
+		};
+
+		exec(updater.with(UpdateBuffer::UpdateInfo{
 			.src = ubo,
 			.dst = _ubo_buffer,
 		}));
@@ -325,40 +298,6 @@ namespace vkl
 				exec.popDebugLabel();
 			}
 		}
-
-		{
-			std::vector<VertexCommand::DrawCallInfo> basis_draw_list;
-			using namespace std::containers_operators;
-			if (_show_world_3D_basis)
-			{
-				basis_draw_list += VertexCommand::DrawCallInfo{
-					.draw_count = 3,
-					.pc = camera.getWorldToProj(),
-				};
-			}
-			if (_show_view_3D_basis)
-			{
-				glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25)) * camera.getWorldRoationMatrix() * scaleMatrix<4, float>(0.03125);
-				basis_draw_list += VertexCommand::DrawCallInfo{
-					.draw_count = 3,
-					.pc = view_3D_basis_matrix,
-				};
-			}
-			if (_scene->getGuiSelectedNode().hasValue())
-			{
-				basis_draw_list += VertexCommand::DrawCallInfo{
-					.draw_count = 3,
-					.pc = camera.getWorldToProj() * glm::mat4(_scene->getGuiSelectedNode().node.matrix),
-				};
-			}
-			if (!basis_draw_list.empty())
-			{
-				exec(_render_3D_basis->with(VertexCommand::DrawInfo{
-					.draw_type = VertexCommand::DrawType::Draw,
-					.draw_list = basis_draw_list,
-				}));
-			}
-		}
 		exec.popDebugLabel();
 	}
 	
@@ -368,8 +307,6 @@ namespace vkl
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
 			_pipeline_selection.declare();
-			ImGui::Checkbox("show world 3D basis", &_show_world_3D_basis);
-			ImGui::Checkbox("show view 3D basis", &_show_view_3D_basis);
 		}
 	}
 }

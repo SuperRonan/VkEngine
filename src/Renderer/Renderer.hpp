@@ -2,13 +2,15 @@
 
 #include <Core/Execution/Executor.hpp>
 #include <Core/Execution/Module.hpp>
-#include <Core/Rendering/Scene.hpp>
+
 #include <Core/Commands/GraphicsCommand.hpp>
 #include <Core/Commands/ComputeCommand.hpp>
 #include <Core/Commands/TransferCommand.hpp>
 
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/RenderObjects.hpp>
+#include <Core/Rendering/Scene.hpp>
+#include <Core/Rendering/Camera.hpp>
 
 #include <Core/IO/ImGuiUtils.hpp>
 #include <Core/IO/GuiContext.hpp>
@@ -74,15 +76,6 @@ namespace vkl
 			alignas(16) glm::mat4 camera_to_proj;
 			alignas(16) glm::mat4 world_to_proj;
 		};
-		
-		
-		std::shared_ptr<VertexCommand> _render_3D_basis = nullptr;
-
-		std::shared_ptr<UpdateBuffer> _update_buffer = nullptr;
-
-
-		bool _show_world_3D_basis = false;
-		bool _show_view_3D_basis = false;
 
 		template <class DrawCallType>
 		using MultiDrawCallLists = std::map<uint32_t, std::vector<DrawCallType>>;
