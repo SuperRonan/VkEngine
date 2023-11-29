@@ -8,7 +8,7 @@ namespace vkl
 		const ResourceState2 next = r._begin_state;
 		const bool synch_to_readonly = accessIsReadonly2(r._begin_state.access);
 		if (r.isImage())
-		{
+		{	
 			_resources.push_back(r);
 			assert(r._image->instance());
 			const auto prevs = r._image->instance()->getState(_ctx.resourceThreadId());
@@ -61,10 +61,6 @@ namespace vkl
 		}
 		else if (r.isBuffer())
 		{
-			if (r._buffer->name() == ".mesh_buffer"s)
-			{
-				int _ = 0;
-			}
 			_resources.push_back(r);
 			assert(r._buffer->instance());
 			Buffer::Range range = r._buffer_range.value();

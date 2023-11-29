@@ -93,25 +93,34 @@ namespace vkl
 					.app = this,
 					.name = "Vicking",
 					.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0))),
-					.path = ENGINE_SRC_PATH "/../gen/models/viking_room.obj",
+					.path = ENGINE_SRC_PATH "/../gen/models/viking_room/viking_room.obj",
 					.synch = false,
 				});
 
-				const int N = 1;
+				const int N = 0;
 
-				for(int i=-N; i<= N; ++i)
-				{
-					for (int j = -N; j <= N; ++j)
-					{
-						std::shared_ptr<Scene::Node> node = std::make_shared<Scene::Node>(Scene::Node::CI{
-							.name = "translate(" + std::to_string(i) + ", " + std::to_string(j) + ")",
-							.matrix = glm::mat4x3(translateMatrix<4, float>(Vector3f(i * 2, 0, j * 2))),
-						});
-						node->addChild(viking_node);
-						root->addChild(node);
-					}
-				}
+				//for(int i=-N; i<= N; ++i)
+				//{
+				//	for (int j = -N; j <= N; ++j)
+				//	{
+				//		std::shared_ptr<Scene::Node> node = std::make_shared<Scene::Node>(Scene::Node::CI{
+				//			.name = "translate(" + std::to_string(i) + ", " + std::to_string(j) + ")",
+				//			.matrix = glm::mat4x3(translateMatrix<4, float>(Vector3f(i * 2, 0, j * 2))),
+				//		});
+				//		node->addChild(viking_node);
+				//		root->addChild(node);
+				//	}
+				//}
 
+				std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+					.app = this,
+					.name = "Sponza",
+					.matrix = glm::mat4x3(1),
+					.path = ENGINE_SRC_PATH "/../gen/models/Sponza_3/sponza.obj",
+					.synch = false,
+				});
+
+				root->addChild(sponza_node);
 				
 			}
 

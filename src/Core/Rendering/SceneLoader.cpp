@@ -41,6 +41,7 @@ namespace vkl
 				_loaded_models = Model::loadModelsFromObj(Model::LoadInfo{
 					.app = _app,
 					.path = _path,
+					.synch = _synch,
 				});
 				createChildrenFromLoadedModels();
 				_visible = true;
@@ -57,6 +58,7 @@ namespace vkl
 						_loaded_models = Model::loadModelsFromObj(Model::LoadInfo{
 							.app = _app,
 							.path = _path,
+							.synch = _synch,
 						});
 
 						AsynchTask::ReturnType res{

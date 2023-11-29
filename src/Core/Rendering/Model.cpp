@@ -242,7 +242,7 @@ namespace vkl
 	std::vector<std::shared_ptr<Model>> Model::loadModelsFromObj(LoadInfo const& info)
 	{
 		std::vector<std::shared_ptr<Model>> res;
-		std::cout << "Loading OBJ: " << info.path << std::endl;
+
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
@@ -281,7 +281,7 @@ namespace vkl
 					.name = tm.name,
 					.albedo = glm::vec3(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
 					.sampler = sampler,
-					.albedo_path = mtl_path / tm.diffuse_texname,
+					.albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname,
 					.synch = info.synch,
 				});
 			}

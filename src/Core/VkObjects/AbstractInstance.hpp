@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/App/VkApplication.hpp>
+#include <mutex>
 
 namespace vkl
 {
@@ -51,6 +52,7 @@ namespace vkl
 	protected:
 
 		std::vector<Callback> _invalidation_callbacks = {};
+		mutable std::mutex _mutex;
 
 	public:
 
@@ -63,7 +65,8 @@ namespace vkl
 		{}
 
 		void callInvalidationCallbacks()
-		{
+		{	
+			std::unique_lock lock(_mutex);
 			for (auto& ic : _invalidation_callbacks)
 			{
 				ic.callback();
@@ -72,11 +75,14 @@ namespace vkl
 
 		void addInvalidationCallback(Callback const& ic)
 		{
+			std::unique_lock lock(_mutex);
+			assert(ic.callback.operator bool());
 			_invalidation_callbacks.push_back(ic);
 		}
 
 		void removeInvalidationCallbacks(const VkObject* ptr)
 		{
+			std::unique_lock lock(_mutex);
 			auto it = _invalidation_callbacks.begin();
 			while (it != _invalidation_callbacks.end())
 			{

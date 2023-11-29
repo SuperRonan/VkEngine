@@ -160,15 +160,6 @@ namespace vkl
 			.binding = offset + 0,
 		};
 
-		if (_albedo_texture && _albedo_texture->getView())
-		{
-			res += Binding{
-				.view = _albedo_texture->getView(),
-				.sampler = _sampler,
-				.binding = offset + 1,
-			};
-		}
-
 		return res;
 	}
 

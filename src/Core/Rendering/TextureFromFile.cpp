@@ -55,14 +55,14 @@ namespace vkl
 		{
 			_host_image = img::io::readFormatedImage(_path);
 
-			if (_desired_format.vk_format == VK_FORMAT_MAX_ENUM)
-			{
-				_desired_format = _host_image.format();
-				_desired_format.determineVkFormatFromInfo();
-			}
-
 			if (!_host_image.empty())
 			{
+				if (_desired_format.vk_format == VK_FORMAT_MAX_ENUM)
+				{
+					_desired_format = _host_image.format();
+					_desired_format.determineVkFormatFromInfo();
+				}
+
 				_image_format = findFormatForVkImage(_desired_format);
 
 				if (_image_format.vk_format != _desired_format.vk_format)
@@ -173,7 +173,7 @@ namespace vkl
 					.dst = _view,
 				};
 				ctx.resourcesToUpload() += std::move(up);
-				_is_ready = true;
+				_upload_done = true;
 			}
 			else
 			{
@@ -209,15 +209,16 @@ namespace vkl
 				}
 			}
 		}
-		else
+		
+
+		
+		if (_upload_done)
 		{
-			if (!_is_synch && _upload_done)
-			{
-				_is_ready = true;
-				_upload_done = false;
-				callResourceUpdateCallbacks();
-			}
+			_is_ready = true;
+			_upload_done = false;
+			callResourceUpdateCallbacks();
 		}
+		
 	}
 
 
