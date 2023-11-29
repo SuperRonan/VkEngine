@@ -22,10 +22,11 @@
 #include <Core/Rendering/Camera.hpp>
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Scene.hpp>
-#include <Core/Rendering/Transforms.hpp>
 #include <Core/Rendering/SceneLoader.hpp>
 #include <Core/Rendering/SceneUserInterface.hpp>
 #include <Core/Rendering/GammaCorrection.hpp>
+
+#include <Core/Maths/Transforms.hpp>
 
 #include <iostream>
 #include <chrono>

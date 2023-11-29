@@ -1,15 +1,23 @@
 #pragma once
 
 #include <Core/App/VkApplication.hpp>
+
 #include "Geometry.hpp"
-#include <vector>
 #include "Vertex.hpp"
+
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/VkObjects/CommandBuffer.hpp>
+
 #include <Core/Execution/Resource.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
+
 #include <Core/Rendering/Drawable.hpp>
+
 #include <Core/IO/GuiContext.hpp>
+
+#include <Core/Maths/AlignedAxisBoundingBox.hpp>
+
+#include <vector>
 
 namespace vkl
 {
@@ -77,6 +85,8 @@ namespace vkl
 		Type _type = Type::None;
 		bool _is_synch = true;
 
+		AABB3f _aabb;
+
 	public:
 
 		
@@ -130,6 +140,11 @@ namespace vkl
 		virtual bool isReadyToDraw() const = 0;
 
 		virtual void declareGui(GuiContext & ctx) = 0;
+
+		const AABB3f& getAABB()const
+		{
+			return _aabb;
+		}
 	};
 
 	class RigidMesh : public Mesh
@@ -337,6 +352,8 @@ namespace vkl
 
 		void computeNormals(int mode);
 
+		void computeAABB();
+
 		void flipFaces();
 
 		void createDeviceBuffer(std::vector<uint32_t> const& queues);
@@ -412,6 +429,8 @@ namespace vkl
 			bool wireframe = false;
 			bool face_normal = true;
 			bool same_face = true;
+
+			bool synch = true;
 		};
 
 		static std::shared_ptr<RigidMesh> MakeCube(CubeMakeInfo const& cmi);

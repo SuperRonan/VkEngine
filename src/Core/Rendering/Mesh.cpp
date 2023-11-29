@@ -146,6 +146,8 @@ namespace vkl
 			}
 		}
 
+		computeAABB();
+
 		if (ci.create_device_buffer)
 		{
 			createDeviceBuffer({});
@@ -435,6 +437,31 @@ namespace vkl
 		_device.up_to_date = false;
 	}
 
+	void RigidMesh::computeAABB()
+	{
+		_aabb.clear();
+		if (_host.use_full_vertices)
+		{
+			for (size_t i = 0; i < _host.vertices.size(); ++i)
+			{
+				_aabb += _host.vertices[i].position;
+			}
+		}
+		else
+		{	
+			size_t N = _host.numVertices();
+			for (size_t i = 0; i < (N * _host.dims); i += _host.dims)
+			{
+				vec3 p = vec3(0);
+				for (uint8_t d = 0; d < _host.dims; ++d)
+				{
+					p[d] = _host.positions[i + d];
+				}
+				_aabb += p;
+			}
+		}
+	}
+
 	void RigidMesh::flipFaces()
 	{
 		const size_t N = _host.indicesSize() / 3;
@@ -466,7 +493,14 @@ namespace vkl
 		const size_t ubo_align = application()->deviceProperties().props.limits.minUniformBufferOffsetAlignment;
 		
 		_device.header_size = std::align(sizeof(header), ssbo_align);
-		_device.vertices_size = std::align(header.num_vertices * sizeof(Vertex), ssbo_align);
+		if (_host.use_full_vertices)
+		{
+			_device.vertices_size = std::align(header.num_vertices * sizeof(Vertex), ssbo_align);
+		}
+		else
+		{
+			_device.vertices_size = std::align(header.num_vertices * sizeof(float) * _host.dims, ssbo_align);
+		}
 		_device.indices_size = std::align(_host.indexBufferSize(), ssbo_align);
 		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
@@ -884,10 +918,11 @@ namespace vkl
 			res = std::make_shared<RigidMesh>(RigidMesh::CI{
 				.app = cmi.app,
 				.name = cmi.name,
-				.dims = 2,
+				.dims = 3,
 				.positions = std::move(positions),
 				.indices = std::move(indices),
 				.create_device_buffer = true,
+				.synch = cmi.synch,
 			});
 		}
 		else
@@ -959,6 +994,7 @@ namespace vkl
 				.vertices = std::move(vertices),
 				.indices = std::move(indices),
 				.auto_compute_tangents = true,
+				.synch = cmi.synch,
 			});
 
 		}

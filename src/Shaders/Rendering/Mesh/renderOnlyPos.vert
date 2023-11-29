@@ -18,19 +18,21 @@ layout(location = 0) out vec4 v_color;
 
 layout(push_constant) uniform PushConstant
 {
-    mat4 matrix;
-    vec4 color;
+	mat4 matrix;
+	vec4 color;
 } _pc;
 
 void main()
 {
-    const vecD w_pos = a_pos;
+	const uint id = gl_VertexIndex;
+
+	const vecD w_pos = a_pos;
 #if DIMENSIONS == 2
-    const vec4 h_pos = vec4(w_pos, 1, 1);
+	const vec4 h_pos = vec4(w_pos, 1, 1);
 #elif DIMENSIONS == 3
-    const vec4 h_pos = vec4(w_pos, 1);
+	const vec4 h_pos = vec4(w_pos, 1);
 #endif
-    gl_Position = (_pc.matrix * h_pos);
-    v_color = _pc.color;
+	gl_Position = (_pc.matrix * h_pos);
+	v_color = _pc.color;
 }
 

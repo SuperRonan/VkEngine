@@ -32,7 +32,7 @@ namespace vkl
 
 	void SceneUserInterface::createInternalResources()
 	{
-		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/Rendering/";
+		const std::filesystem::path shader_lib = ENGINE_SRC_PATH "/Shaders/";
 		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
 			.name = name() + ".Show3DBasis",
@@ -42,9 +42,34 @@ namespace vkl
 			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
 			.sets_layouts = _sets_layouts,
 			.color_attachements = {_target},
-			.vertex_shader_path = shaders / "Show3DBasis.glsl",
-			.geometry_shader_path = shaders / "Show3DBasis.glsl",
-			.fragment_shader_path = shaders / "Show3DBasis.glsl",
+			.vertex_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
+			.geometry_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
+			.fragment_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
+		});
+
+		_box_mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+			.app = application(),
+			.name = name() + ".BoxMesh",
+			.center = glm::vec3(0.5),
+			.wireframe = true,
+		});
+		
+		std::vector<std::string> render_box_3D_defs = {
+			"DIMENSIONS 3",
+		};
+		_render_3D_box = std::make_shared<VertexCommand>(VertexCommand::CI{
+			.app = application(),
+			.name = name() + ".Render3DBox",
+			.vertex_input_desc = RigidMesh::vertexInputDescOnlyPos3D(),
+			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+			.sets_layouts = _sets_layouts,
+			.color_attachements = { _target },
+			.depth_buffer = _depth,
+			.write_depth = false,
+			.vertex_shader_path = shader_lib / "Rendering/Mesh/renderOnlyPos.vert",
+			.fragment_shader_path = shader_lib / "Rendering/Mesh/renderUniColor.frag",
+			.definitions = std::move(render_box_3D_defs),
 		});
 	}
 
@@ -65,16 +90,23 @@ namespace vkl
 
 	void SceneUserInterface::updateResources(UpdateContext& ctx)
 	{
-		bool update_3D_basis = _show_view_basis || _show_world_basis || ctx.updateAnyway() || _gui_selected_node.hasValue();
+		bool update_3D_basis = _show_view_basis || _show_world_basis || _gui_selected_node.hasValue() || ctx.updateAnyway();
 		if (update_3D_basis)
 		{
 			ctx.resourcesToUpdateLater() += _render_3D_basis;
+		}
+
+		if (_gui_selected_node.hasValue() || ctx.updateAnyway())
+		{
+			_box_mesh->updateResources(ctx);
+			ctx.resourcesToUpdateLater() += _render_3D_box;
 		}
 	}
 
 	void SceneUserInterface::execute(ExecutionRecorder& recorder, Camera & camera)
 	{
 		recorder.pushDebugLabel(name());
+		
 		std::vector<VertexCommand::DrawCallInfo> basis_draw_list;
 		using namespace std::containers_operators;
 		if (_show_world_basis)
@@ -103,9 +135,51 @@ namespace vkl
 		{
 			recorder(_render_3D_basis->with(VertexCommand::DrawInfo{
 				.draw_type = VertexCommand::DrawType::Draw,
-				.draw_list = basis_draw_list,
+				.draw_list = std::move(basis_draw_list),
 			}));
 		}
+
+		std::vector<VertexCommand::DrawCallInfo> boxes_draw_list;
+
+		if (_gui_selected_node.hasValue() && _box_mesh->isReadyToDraw())
+		{
+			const auto & model = _gui_selected_node.node.node->model();
+			if (model)
+			{
+				const auto & mesh = model->mesh();
+				if (mesh)
+				{
+					Drawable::VertexDrawCallResources vdcr;
+					_box_mesh->fillVertexDrawCallResources(vdcr);
+
+					const AABB3f & aabb = mesh->getAABB();
+					Mat4 aabb_matrix = translateMatrix<4, float>(aabb.bottom())* scaleMatrix<4, float>(aabb.diagonal());
+					
+					boxes_draw_list += VertexCommand::DrawCallInfo{
+						.name = mesh->name(),
+						.draw_count = vdcr.draw_count,
+						.instance_count = vdcr.instance_count,
+						.index_buffer = std::move(vdcr.index_buffer),
+						.index_buffer_range = vdcr.index_buffer_range,
+						.index_type = vdcr.index_type,
+						.vertex_buffers = std::move(vdcr.vertex_buffers),
+						.pc = Render3DBoxPC{
+							.matrix = camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix) * aabb_matrix,
+							.color = glm::vec4(1, 1, 1, 1),
+						},
+					};
+				}
+			}
+		}
+
+		if (!boxes_draw_list.empty())
+		{
+			recorder(_render_3D_box->with(VertexCommand::DrawInfo{
+				.draw_type = VertexCommand::DrawType::DrawIndexed,
+				.draw_list = std::move(boxes_draw_list),
+			}));
+		}
+		
 		recorder.popDebugLabel();
 	}
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Core/Rendering/Math.hpp>
+#include <Core/Maths/Types.hpp>
 #include <GLFW/glfw3.h>
 
 namespace vkl

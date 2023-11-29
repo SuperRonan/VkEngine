@@ -1,11 +1,15 @@
 #pragma once
 
 #include <Core/Execution/Module.hpp>
+#include <Core/Execution/Executor.hpp>
+
 #include <Core/Commands/ComputeCommand.hpp>
 #include <Core/Commands/GraphicsCommand.hpp>
+
 #include <Core/VkObjects/DetailedVkFormat.hpp>
-#include <Core/Rendering/Math.hpp>
-#include <Core/Execution/Executor.hpp>
+
+#include <Core/Maths/Types.hpp>
+
 #include <Core/IO/GuiContext.hpp>
 
 namespace vkl

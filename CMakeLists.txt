@@ -141,6 +141,7 @@ FILE(
 	src/Core/Commands/*
 	src/Core/Execution/*
 	src/Core/IO/*
+	src/Core/Maths/*
 	src/Core/Rendering/*
 	src/Core/VkObjects/*
 	src/Core/Utils/* 

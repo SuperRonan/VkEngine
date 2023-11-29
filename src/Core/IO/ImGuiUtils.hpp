@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include "imgui.h"
-#include <Core/Rendering/Math.hpp>
+#include <Core/Maths/Types.hpp>
 
 namespace vkl
 {

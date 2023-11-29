@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cmath>
-#include "Math.hpp"
+#include "Types.hpp"
 //#include <glm/gtc/matrix_transform.hpp>
 
 namespace vkl

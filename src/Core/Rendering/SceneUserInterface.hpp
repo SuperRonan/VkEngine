@@ -52,6 +52,18 @@ namespace vkl
 		
 
 		std::shared_ptr<VertexCommand> _render_3D_basis = nullptr;
+		struct Render3DBasisPC
+		{
+			Mat4 matrix;
+		};
+
+		std::shared_ptr<Mesh> _box_mesh = nullptr;
+		std::shared_ptr<VertexCommand> _render_3D_box = nullptr;
+		struct Render3DBoxPC
+		{
+			Mat4 matrix;
+			glm::vec4 color;
+		};
 
 		SelectedNode _gui_selected_node;
 
