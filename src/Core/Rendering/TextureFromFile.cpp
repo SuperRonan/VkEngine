@@ -87,7 +87,7 @@ namespace vkl
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 
-			_image_view = std::make_shared<ImageView>(ImageView::CI{
+			_view = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
 				.name = name(),
 				.image = _image,
@@ -117,7 +117,10 @@ namespace vkl
 	}
 
 	TextureFromFile::TextureFromFile(CreateInfo const& ci):
-		VkObject(ci.app, ci.name),
+		Texture(Texture::CI{
+			.app = ci.app,
+			.name = ci.name,
+		}),
 		_path(ci.path),
 		_is_synch(ci.synch)
 	{
@@ -149,13 +152,13 @@ namespace vkl
 	void TextureFromFile::updateResources(UpdateContext& ctx)
 	{
 
-		if (_image_view)
+		if (_view)
 		{
-			_image_view->updateResource(ctx);
+			_view->updateResource(ctx);
 		}
 
 		
-		if (_should_upload && !!_image_view)
+		if (_should_upload && !!_view)
 		{
 			_should_upload = false;
 			bool synch_upload = _is_synch;
@@ -167,7 +170,7 @@ namespace vkl
 			{
 				ResourcesToUpload::ImageUpload up{
 					.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-					.dst = _image_view,
+					.dst = _view,
 				};
 				ctx.resourcesToUpload() += std::move(up);
 				_is_ready = true;
@@ -184,7 +187,7 @@ namespace vkl
 							AsynchUpload up{
 								.name = name(),
 								.source = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-								.target_view = _image_view,
+								.target_view = _view,
 								.completion_callback = [this](int ret)
 								{
 									if (ret == 0)
@@ -198,7 +201,7 @@ namespace vkl
 						else
 						{
 							_should_upload = false;
-							_image_view = nullptr;
+							_view = nullptr;
 							_image = nullptr;
 						}
 						_load_image_task = nullptr;
@@ -217,29 +220,6 @@ namespace vkl
 		}
 	}
 
-	void TextureFromFile::addResourceUpdateCallback(Callback const& cb)
-	{
-		_resource_update_callback.push_back(cb);
-	}
 
-	void TextureFromFile::removeResourceUpdateCallback(VkObject* id)
-	{
-		for (size_t i = 0; i < _resource_update_callback.size(); ++i)
-		{
-			if (_resource_update_callback[i].id == id)
-			{
-				_resource_update_callback.erase(_resource_update_callback.begin() + i);
-				break;
-			}
-		}
-	}
-
-	void TextureFromFile::callResourceUpdateCallbacks()
-	{
-		for (size_t i = 0; i < _resource_update_callback.size(); ++i)
-		{
-			_resource_update_callback[i].callback();
-		}
-	}
 
 }

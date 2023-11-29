@@ -38,7 +38,7 @@ namespace vkl
 
 		if (!_albedo_path.empty())
 		{
-			_albedo_texture = std::make_unique<TextureFromFile>(TextureFromFile::CI{
+			_albedo_texture = Texture::MakeNew(Texture::MakeInfo{
 				.app = application(),
 				.name = name() + ".albedo_texture",
 				.path = _albedo_path,
@@ -160,10 +160,10 @@ namespace vkl
 			.binding = offset + 0,
 		};
 
-		if (_albedo_texture && _albedo_texture->hasValue())
+		if (_albedo_texture && _albedo_texture->getView())
 		{
 			res += Binding{
-				.view = _albedo_texture->view(),
+				.view = _albedo_texture->getView(),
 				.sampler = _sampler,
 				.binding = offset + 1,
 			};
@@ -179,7 +179,7 @@ namespace vkl
 			Callback cb{
 				.callback = [set, offset, this]() {
 					set->setBinding(ShaderBindingDescription{
-						.view = _albedo_texture->view(),
+						.view = _albedo_texture->getView(),
 						.sampler = _sampler,
 						.binding = offset + 1,
 					});

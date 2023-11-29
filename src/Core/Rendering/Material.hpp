@@ -5,8 +5,8 @@
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
-#include <Core/Execution/TextureFromFile.hpp>
 #include <Core/Execution/SamplerLibrary.hpp>
+#include <Core/Rendering/Texture.hpp>
 #include <Core/IO/GuiContext.hpp>
 
 namespace vkl
@@ -90,7 +90,7 @@ namespace vkl
 		std::shared_ptr<Sampler> _sampler = nullptr;
 
 		std::filesystem::path _albedo_path = {};
-		std::unique_ptr<TextureFromFile> _albedo_texture = nullptr;
+		std::shared_ptr<Texture> _albedo_texture = nullptr;
 		
 		bool _force_albedo_prop = false;
 
