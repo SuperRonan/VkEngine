@@ -64,8 +64,10 @@ namespace vkl
 		}
 	};
 
-	using Range32 = Range<uint32_t>;
-	using Range64 = Range<uint64_t>;
+	using Range32u = Range<uint32_t>;
+	using Range64u = Range<uint64_t>;
+	using Range32i = Range<int32_t>;
+	using Range64i = Range<int64_t>;
 	using Range_st = Range<size_t>;
 
 
@@ -345,6 +347,17 @@ namespace vkl
 			.mipLevel = range.baseMipLevel,
 			.baseArrayLayer = range.baseArrayLayer,
 			.layerCount = range.layerCount,
+		};
+	}
+
+	constexpr VkImageSubresourceRange MakeZeroImageSubRange()
+	{
+		return VkImageSubresourceRange{
+			.aspectMask = VK_IMAGE_ASPECT_NONE,
+			.baseMipLevel = 0,
+			.levelCount = 0,
+			.baseArrayLayer = 0,
+			.layerCount = 0,
 		};
 	}
 

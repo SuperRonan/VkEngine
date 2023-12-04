@@ -26,19 +26,19 @@ namespace vkl
 			;
 		}
 
-		constexpr ResourceState2 operator| (ResourceState2 const& o) const 
-		{
-			return ResourceState2 {
-				.access = access | o.access,
-				.layout = layout,
-				.stage = stage | o.stage,
-			};
-		}
-
 		constexpr ResourceState2& operator|=(ResourceState2 const& o)
 		{
-			*this = *this | o;
+			access |= o.access;
+			stage |= o.stage;
+			// Keep this layout
 			return *this;
+		}
+		
+		constexpr ResourceState2 operator| (ResourceState2 const& o) const 
+		{
+			ResourceState2 res = *this;
+			res |= o;
+			return res;
 		}
 	};
 
@@ -135,6 +135,13 @@ namespace vkl
 			VK_ACCESS_2_MICROMAP_READ_BIT_EXT |
 			VK_ACCESS_2_OPTICAL_FLOW_READ_BIT_NV
 		);
+	}
+
+	constexpr int getAccessNature2(VkAccessFlags2 access)
+	{
+		int r = accessIsRead2(access) ? 1 : 0;
+		int w = accessIsWrite2(access) ? 1 : 0;
+		return (r | (w << 1));
 	}
 
 	constexpr bool accessIsReadAndWrite1(VkAccessFlags access)

@@ -9,7 +9,7 @@
 namespace vkl
 {
 	using Binding = ShaderBindingDescription;
-	using SetRange = Range32;
+	using SetRange = Range32u;
 
 	class DescriptorSetAndPoolInstance : public AbstractInstance
 	{
@@ -182,7 +182,7 @@ namespace vkl
 
 		std::shared_ptr<CommandBuffer> _cmd;
 
-		std::vector<Range32> _bindings_ranges;
+		std::vector<Range32u> _bindings_ranges;
 
 		std::vector<VkDescriptorSet> _vk_sets;
 

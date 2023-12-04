@@ -22,6 +22,8 @@ namespace vkl
 
 	protected:
 
+		friend class SynchronizationHelperV2;
+
 		static std::atomic<size_t> _instance_counter;
 
 		VkBufferCreateInfo _ci;

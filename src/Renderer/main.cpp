@@ -115,7 +115,7 @@ namespace vkl
 				std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 					.app = this,
 					.name = "Sponza",
-					.matrix = glm::mat4x3(1),
+					.matrix = scaleMatrix<4, float>(0.01),
 					.path = ENGINE_SRC_PATH "/../gen/models/Sponza_3/sponza.obj",
 					.synch = false,
 				});

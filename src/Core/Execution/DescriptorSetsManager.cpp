@@ -859,7 +859,7 @@ namespace vkl
 	{
 		DescriptorSetsTacker::bind(binding, set);
 		// TODO sorted insertion + merge 
-		_bindings_ranges.push_back(Range32{.begin = binding, .len = 1});
+		_bindings_ranges.push_back(Range32u{.begin = binding, .len = 1});
 	}
 
 	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func)
@@ -909,7 +909,7 @@ namespace vkl
 		}
 		else
 		{
-			std::sort(_bindings_ranges.begin(), _bindings_ranges.end(), [](Range32 const& a, Range32 const& b){return a.begin < b.begin;});
+			std::sort(_bindings_ranges.begin(), _bindings_ranges.end(), [](Range32u const& a, Range32u const& b){return a.begin < b.begin;});
 			for (const auto r : _bindings_ranges)
 			{
 				for (uint32_t i = 0; i < r.len; ++i)
