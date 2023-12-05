@@ -51,6 +51,15 @@ namespace vkl
 		{
 			return _context;
 		}
+
+		virtual void setFramePerfCounters(FramePerfCounters* fpc) override
+		{
+			ExecutionRecorder::setFramePerfCounters(fpc);
+			if (_context)
+			{
+				_context->setFramePerfCounters(fpc);
+			}
+		}
 	};
 	
 	class LinearExecutor : public Executor

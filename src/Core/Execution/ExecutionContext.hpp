@@ -12,6 +12,7 @@
 #include <Core/Execution/StagingPool.hpp>
 #include <Core/Execution/ResourceState.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
+#include <Core/Execution/FramePerformanceCounters.hpp>
 
 #include <memory>
 #include <vector>
@@ -83,6 +84,8 @@ namespace vkl
 		DescriptorSetsManager _graphics_bound_sets;
 		DescriptorSetsManager _compute_bound_sets;
 		DescriptorSetsManager _ray_tracing_bound_sets;
+
+		FramePerfCounters * _frame_perf_counters = nullptr;
 
 
 		friend class LinearExecutor;
@@ -166,6 +169,15 @@ namespace vkl
 			return _ray_tracing_bound_sets;
 		}
 
+		void setFramePerfCounters(FramePerfCounters* fpc)
+		{
+			_frame_perf_counters = fpc;
+		}
+
+		FramePerfCounters* framePerfCounters() const
+		{
+			return _frame_perf_counters;
+		}
 		
 
 		void pushDebugLabel(std::string const& label, vec4 const& color);

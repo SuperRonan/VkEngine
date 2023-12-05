@@ -8,6 +8,8 @@
 #include <Core/Execution/ResourcesToUpload.hpp>
 #include <Core/Execution/UploadQueue.hpp>
 
+#include <Core/Utils/TickTock.hpp>
+
 namespace vkl
 {
 	class UpdateContext : public VkObject
@@ -32,6 +34,8 @@ namespace vkl
 		
 		UploadQueue * _upload_queue;
 
+		std::TickTock_hrc _tick_tock;
+
 	public:
 
 		struct CreateInfo
@@ -54,7 +58,7 @@ namespace vkl
 			_mounting_points(ci.mounting_points),
 			_upload_queue(ci.upload_queue)
 		{
-
+			_tick_tock.tick();
 		}
 
 		constexpr size_t updateCycle()const
@@ -100,6 +104,11 @@ namespace vkl
 		constexpr UploadQueue* uploadQueue()
 		{
 			return _upload_queue;
+		}
+
+		constexpr auto& tickTock()
+		{
+			return _tick_tock;
 		}
 	};
 }

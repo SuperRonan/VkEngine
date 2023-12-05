@@ -3,9 +3,10 @@
 #include <Core/Commands/Command.hpp>
 #include <string>
 
-#include <Core/Execution/DefinitionMap.hpp>
 #include <Core/Commands/ShaderCommand.hpp>
+#include <Core/Execution/DefinitionMap.hpp>
 #include <Core/Execution/ResourcesLists.hpp>
+#include <Core/Execution/FramePerformanceCounters.hpp>
 
 namespace vkl
 {
@@ -16,6 +17,8 @@ namespace vkl
 	class ExecutionRecorder : public VkObject
 	{
 	protected:
+
+		FramePerfCounters * _frame_perf_counters = nullptr;
 		
 	public:
 
@@ -72,6 +75,16 @@ namespace vkl
 		virtual void insertDebugLabel(std::string const& label, vec4 const& color) = 0;
 
 		void pushDebugLabel(std::string const& label);
+
+		FramePerfCounters* framePerfCounters()const
+		{
+			return _frame_perf_counters;
+		}
+
+		virtual void setFramePerfCounters(FramePerfCounters* fpc)
+		{
+			_frame_perf_counters = fpc;
+		}
 	};
 
 	class Executor : public VkObject

@@ -261,13 +261,20 @@ namespace vkl
 			.dst = _ubo_buffer,
 		}));
 
+		std::TickTock_hrc tick_tock;
+		tick_tock.tick();
 		MultiVertexDrawCallList draw_list = generateVertexDrawList();
+		if (exec.framePerfCounters())
+		{
+			exec.framePerfCounters()->generate_scene_draw_list = tick_tock.tockv().count();
+		}
 
 		if (!draw_list.empty())
 		{
 			const size_t selected_pipeline = _pipeline_selection.index();
 			if (selected_pipeline == 0)
 			{
+				tick_tock.tick();
 				exec.pushDebugLabel("DirectPipeline");
 				for (uint32_t model_type : _model_types)
 				{
@@ -279,10 +286,15 @@ namespace vkl
 						}));
 					}
 				}
+				if (exec.framePerfCounters())
+				{
+					exec.framePerfCounters()->render_draw_list = tick_tock.tockv().count();
+				}
 				exec.popDebugLabel();
 			}
 			else
 			{
+				tick_tock.tick();
 				exec.pushDebugLabel("DeferredPipeline");
 				for (uint32_t model_type : _model_types)
 				{
@@ -293,6 +305,10 @@ namespace vkl
 							.draw_list = draw_list[model_type],
 						}));
 					}
+				}
+				if (exec.framePerfCounters())
+				{
+					exec.framePerfCounters()->render_draw_list = tick_tock.tockv().count();
 				}
 				exec(_deferred_pipeline._shade_from_gbuffer);
 				exec.popDebugLabel();

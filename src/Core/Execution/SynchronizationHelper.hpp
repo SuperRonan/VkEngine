@@ -244,6 +244,7 @@ namespace vkl
 		virtual void record() final override;
 	};
 
+	//using SynchronizationHelper = SynchronizationHelperV1;
 	using SynchronizationHelper = ModularSynchronizationHelper;
 
 	static_assert(std::is_base_of<AbstractSynchronizationHelper, SynchronizationHelper>::value);

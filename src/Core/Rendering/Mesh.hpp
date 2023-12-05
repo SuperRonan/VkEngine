@@ -174,16 +174,19 @@ namespace vkl
 				{
 					indices32.clear();
 					indices32.shrink_to_fit();
+					indices32.~vector();
 				}
 				else if (index_type == VK_INDEX_TYPE_UINT16)
 				{
 					indices16.clear();
 					indices16.shrink_to_fit();
+					indices16.~vector();
 				}
 				else if (index_type == VK_INDEX_TYPE_UINT8_EXT)
 				{
 					indices8.clear();
 					indices8.shrink_to_fit();
+					indices8.~vector();
 				}
 			}
 
