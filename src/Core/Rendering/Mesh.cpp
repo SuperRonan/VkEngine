@@ -719,6 +719,7 @@ namespace vkl
 				if ( _device.just_uploaded)
 				{
 					_device.uploaded = true;
+					_device.just_uploaded = false;
 					callResourceUpdateCallbacks();
 				}
 			}
