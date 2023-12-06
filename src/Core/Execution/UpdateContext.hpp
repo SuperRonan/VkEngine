@@ -7,6 +7,7 @@
 #include <Core/Execution/ResourcesLists.hpp>
 #include <Core/Execution/ResourcesToUpload.hpp>
 #include <Core/Execution/UploadQueue.hpp>
+#include <Core/Execution/FramePerformanceCounters.hpp>
 
 #include <Core/Utils/TickTock.hpp>
 
@@ -35,6 +36,8 @@ namespace vkl
 		UploadQueue * _upload_queue;
 
 		std::TickTock_hrc _tick_tock;
+
+		FramePerfCounters * _frame_perf_counters = nullptr;
 
 	public:
 
@@ -109,6 +112,16 @@ namespace vkl
 		constexpr auto& tickTock()
 		{
 			return _tick_tock;
+		}
+
+		FramePerfCounters* getFramePerfCounters()const
+		{
+			return _frame_perf_counters;
+		}
+
+		void setFramePerfCounters(FramePerfCounters* pfc)
+		{
+			_frame_perf_counters = pfc;
 		}
 	};
 }

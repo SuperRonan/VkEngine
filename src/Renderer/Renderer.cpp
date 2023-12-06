@@ -266,7 +266,7 @@ namespace vkl
 		MultiVertexDrawCallList draw_list = generateVertexDrawList();
 		if (exec.framePerfCounters())
 		{
-			exec.framePerfCounters()->generate_scene_draw_list = tick_tock.tockv().count();
+			exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockv().count();
 		}
 
 		if (!draw_list.empty())
@@ -288,7 +288,7 @@ namespace vkl
 				}
 				if (exec.framePerfCounters())
 				{
-					exec.framePerfCounters()->render_draw_list = tick_tock.tockv().count();
+					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
 				}
 				exec.popDebugLabel();
 			}
@@ -308,7 +308,7 @@ namespace vkl
 				}
 				if (exec.framePerfCounters())
 				{
-					exec.framePerfCounters()->render_draw_list = tick_tock.tockv().count();
+					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
 				}
 				exec(_deferred_pipeline._shade_from_gbuffer);
 				exec.popDebugLabel();

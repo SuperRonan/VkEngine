@@ -245,55 +245,13 @@ namespace vkl
 
 			exec.init();
 
+			FramePerfCounters frame_counters;
 			StatRecords stat_records = StatRecords::CI{
 				.name = "Statistics",
 				.memory = 256,
 				.period = 1s,
 			};
-			using TimeCountClock = std::TickTock_hrc::Clock_t;
-			FramePerfCounters frame_counters;
-			const double stat_ms_scale = []()
-			{
-				using p = TimeCountClock::period;
-				using r = std::ratio_divide<p, std::milli>;
-				return double(r::num) / double(r::den);
-			}();
-			StatRecord<TimeCountClock::rep>* update_time_record = stat_records.createRecord<TimeCountClock::rep>({
-				.name = "Update Time (CPU)",
-				.scale = stat_ms_scale,
-				.provider = Dyn<size_t>(&frame_counters.update_time),
-				.unit = "ms",
-			});
-			StatRecord<TimeCountClock::rep>* prepare_scene_time_record = update_time_record->createChildRecord<TimeCountClock::rep>({
-				.name = "Prepare Scene Time",
-				.scale = stat_ms_scale,
-				.provider = Dyn<size_t>(&frame_counters.prepare_scene),
-				.unit = "ms",
-			});
-			StatRecord<TimeCountClock::rep>* update_scene_time_record = update_time_record->createChildRecord<TimeCountClock::rep>({
-				.name = "Update Scene Time",
-				.scale = stat_ms_scale,
-				.provider = Dyn<size_t>(&frame_counters.update_scene),
-				.unit = "ms",
-			});
-			StatRecord<TimeCountClock::rep>* render_time_cpu_record = stat_records.createRecord<TimeCountClock::rep>({
-				.name = "Render Time (CPU)",
-				.scale = stat_ms_scale,
-				.provider = Dyn<size_t>(&frame_counters.render_time),
-				.unit = "ms",
-			});
-			StatRecord<TimeCountClock::rep>* generate_draw_list_record = render_time_cpu_record->createChildRecord<TimeCountClock::rep>({
-				.name = "Generate Scene Draw List Time",
-				.scale = stat_ms_scale,
-				.provider = Dyn<size_t>(&frame_counters.generate_scene_draw_list),
-				.unit = "ms",
-			});
-			StatRecord<TimeCountClock::rep>* render_draw_list_record = render_time_cpu_record->createChildRecord<TimeCountClock::rep>({
-				.name = "Render Scene Draw List Time",
-				.scale = stat_ms_scale,
-				.provider = Dyn<size_t>(&frame_counters.render_draw_list),
-				.unit = "ms",
-			});
+			stat_records.createCommonRecords(frame_counters);
 
 			struct InputState
 			{
@@ -407,7 +365,7 @@ namespace vkl
 						std::TickTock_hrc prepare_scene_tt;
 						prepare_scene_tt.tick();
 						scene->prepareForRendering();
-						frame_counters.prepare_scene = prepare_scene_tt.tockv().count();
+						frame_counters.prepare_scene_time = prepare_scene_tt.tockv().count();
 					}
 
 					exec.updateResources(*update_context);
@@ -415,7 +373,7 @@ namespace vkl
 						std::TickTock_hrc update_scene_tt;
 						update_scene_tt.tick();
 						scene->updateResources(*update_context);
-						frame_counters.update_scene = update_scene_tt.tockv().count();
+						frame_counters.update_scene_time = update_scene_tt.tockv().count();
 					}
 					renderer.updateResources(*update_context);
 					gamma_correction.updateResources(*update_context);

@@ -81,6 +81,12 @@ namespace vkl
 				context.popDebugLabel();
 			}
 		}
+		
+		if (context.framePerfCounters())
+		{
+			context.framePerfCounters()->dispatch_calls += di.dispatch_list.size();
+		}
+
 
 		context.keppAlive(_pipeline->instance());
 		context.popDebugLabel();

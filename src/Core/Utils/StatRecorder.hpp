@@ -7,6 +7,7 @@
 
 #include <Core/IO/GuiContext.hpp>
 #include <Core/DynamicValue.hpp>
+#include <Core/Execution/FramePerformanceCounters.hpp>
 
 
 namespace vkl
@@ -344,5 +345,7 @@ namespace vkl
 		{
 			return _index;
 		}
+
+		void createCommonRecords(FramePerfCounters& fpc);
 	};
 }

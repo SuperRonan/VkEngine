@@ -243,9 +243,6 @@ namespace vkl
 	{
 		context.pushDebugLabel(name());
 
-		// Bind descriptor sets up to shader
-		recordBindings(cmd, context);
-
 		VkExtent2D render_area = extract(*_framebuffer->extent());
 
 		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->size() + 1) : 0;
@@ -278,7 +275,7 @@ namespace vkl
 
 		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
 		{
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, *_pipeline->instance());
+			recordBindings(cmd, context);
 			if (false)
 			{
 
@@ -290,12 +287,11 @@ namespace vkl
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
-			recordBindings(cmd, context);
 			recordDraw(cmd, context, user_info);
 		}
 		vkCmdEndRenderPass(cmd);
 
-		context.keppAlive(_pipeline->instance());
+		context.keppAlive(_pipeline->instance()); 
 		context.keppAlive(_framebuffer->instance());
 		context.keppAlive(_render_pass->instance());
 		context.popDebugLabel();
@@ -540,6 +536,11 @@ namespace vkl
 				context.popDebugLabel();
 			}
 		}
+
+		if (context.framePerfCounters())
+		{
+			context.framePerfCounters()->draw_calls += di.draw_list.size();
+		}
 	}
 
 	ExecutionNode VertexCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
@@ -753,6 +754,11 @@ namespace vkl
 					assertm(false, "Unsupported draw call type");
 				break;
 			}
+		}
+
+		if (context.framePerfCounters())
+		{
+			context.framePerfCounters()->draw_calls += di.draw_list.size();
 		}
 	}
 
