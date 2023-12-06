@@ -15,6 +15,8 @@
 #include <Core/IO/ImGuiUtils.hpp>
 #include <Core/IO/GuiContext.hpp>
 
+#include "AmbientOcclusion.hpp"
+
 #include <unordered_map>
 #include <map>
 
@@ -31,6 +33,7 @@ namespace vkl
 		ImGuiListSelection _pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
 			.labels = {"Direct V1"s, "Deferred V1"s},
+			.default_index = 1,
 			.same_line = true,
 		};
 
@@ -61,6 +64,8 @@ namespace vkl
 			std::shared_ptr<ComputeCommand> _shade_from_gbuffer = nullptr;
 		};
 		DeferredPipelineV1 _deferred_pipeline;
+
+		std::shared_ptr<AmbientOcclusion> _ambient_occlusion = nullptr;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 

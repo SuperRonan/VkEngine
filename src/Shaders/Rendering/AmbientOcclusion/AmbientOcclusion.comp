@@ -1,0 +1,120 @@
+#version 450
+
+#include <ShaderLib:/common.glsl>
+#include <ShaderLib:/random.glsl>
+
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+#ifndef OUT_FORMAT
+#error "OUT_FORMAT not set"
+#endif
+
+layout(SHADER_DESCRIPTOR_BINDING + 0, OUT_FORMAT) uniform writeonly restrict image2D ao_image;
+
+layout(SHADER_DESCRIPTOR_BINDING + 1) uniform sampler2D in_world_position; 
+layout(SHADER_DESCRIPTOR_BINDING + 2) uniform sampler2D in_world_normal; 
+
+#define USE_NORMAL_TEXTURE_BIT 0x1
+
+layout(push_constant) uniform PushConstant
+{
+	vec3 camera_position;
+	uint flags;
+	float radius;
+} _pc;
+
+#ifndef SAMPLES
+#define SAMPLES 16 * 4
+#endif
+
+float computeAO_0(inout RNGState rng, vec2 uv, vec2 ratio)
+{
+	float res = 0;
+
+	const vec3 wcenter = textureLod(in_world_position, uv, 0).xyz;
+	//const vec3 wcenter_normal = readNormal(in_world_position, world_normal, uv, use_normal_texture);
+
+	const vec3 camera_pos = _pc.camera_position;
+	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
+
+	for(int i=0; i < SAMPLES; ++i)
+	{
+		const vec2 point_on_circle = randomUniformPolar(rng);
+		
+		float pdf = 1;
+
+		const vec2 point_uv = uv + point_on_circle * ratio;
+		const vec3 point_wpos = textureLod(in_world_position, point_uv, 0).xyz;
+		const float point_dist_to_cam2 = distance2(point_wpos, camera_pos);
+
+		if(point_dist_to_cam2 >= center_dist_to_cam2)
+		{
+			res += 1.0 / pdf;
+		}
+		
+	}
+	res /= float(SAMPLES);
+	return res;
+}
+
+float computeAO_1(inout RNGState rng, vec2 uv, vec2 ratio)
+{
+	float res = 0;
+
+	const vec3 wcenter = textureLod(in_world_position, uv, 0).xyz;
+	const vec3 wcenter_normal = textureLod(in_world_normal, uv, 0).xyz;
+
+	if(length2(wcenter_normal) == 0)
+	{
+		return 0;
+	}
+
+	const vec3 camera_pos = _pc.camera_position;
+	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
+
+	for(int i=0; i < SAMPLES; ++i)
+	{
+		const vec2 point_on_circle = randomUniformPolar(rng);
+		
+		float pdf = 1;
+
+		const vec2 point_uv = uv + point_on_circle * ratio;
+		const vec3 point_wpos = textureLod(in_world_position, point_uv, 0).xyz;
+		const vec3 point_normal = textureLod(in_world_normal, point_uv, 0).xyz;
+		if(length2(point_normal) == 0)
+		{
+			res += 1.0 / pdf;
+		}
+		else
+		{
+			const float point_dist_to_cam2 = distance2(point_wpos, camera_pos);
+
+			res += max(0.0f, dot(wcenter_normal, point_normal)) / pdf;
+		}
+		
+	}
+	res /= float(SAMPLES);
+	return res;
+}
+
+void main()
+{
+	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	const ivec2 dims = imageSize(ao_image);
+	if(all(lessThan(pixel, dims)))
+	{
+		float res = 1;
+		const vec2 uv = pixelToUV(pixel, dims);
+		RNGState rng = hash(pixel);
+
+		const bool use_normal_texture = (_pc.flags & USE_NORMAL_TEXTURE_BIT) == USE_NORMAL_TEXTURE_BIT;
+
+		vec2 ratio = vec2(_pc.radius);
+		ratio.x *= float(dims.x) / float(dims.y);
+
+		res = computeAO_1(rng, uv, ratio);
+
+		imageStore(ao_image, pixel, res.xxxx);
+	}
+}

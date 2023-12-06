@@ -57,4 +57,16 @@ namespace vkl
 	{
 		_named_samplers[name] = s;
 	}
+
+	void SamplerLibrary::updateResources(UpdateContext& ctx)
+	{
+		for (auto& [si, s] : _map)
+		{
+			s->updateResources(ctx);
+		}
+		for (auto& [n, s] : _named_samplers)
+		{
+			s->updateResources(ctx);
+		}
+	}
 }

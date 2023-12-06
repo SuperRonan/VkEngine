@@ -14,7 +14,7 @@ namespace vkl
 			VkSamplerCreateFlags flags = 0;
 			VkFilter filter = VK_FILTER_NEAREST;
 			VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			float max_anisotropy = {};
+			float max_anisotropy = 1.0;
 			VkBorderColor border_color = {};
 			VkBool32 unnormalized_coordinates = false;
 
@@ -48,6 +48,6 @@ namespace vkl
 
 		void setNamedSampler(std::string const& name, std::shared_ptr<Sampler> const& s);
 		
-
+		void updateResources(UpdateContext & ctx);
 	};
 }

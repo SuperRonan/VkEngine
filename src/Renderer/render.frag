@@ -24,5 +24,8 @@ void main()
 	const vec3 normal = normalize(v_w_normal);
 	const vec3 albedo = getBoundMaterialAlbedo(v_uv);
 
-	o_color = vec4(shade(albedo, position, normal), 1);
+	vec3 res = shade(albedo, position, normal);
+	res += albedo * scene_ubo.ambient;
+
+	o_color = vec4(res, 1);
 }

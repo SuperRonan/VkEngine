@@ -152,6 +152,19 @@ namespace vkl
 				});
 				
 			}
+			
+			_ambient_occlusion = std::make_shared<AmbientOcclusion>(AmbientOcclusion::CI{
+				.app = application(),
+				.name = name() + ".AO",
+				.sets_layouts = _sets_layouts,
+				.positions = _deferred_pipeline._position,
+				.normals = _deferred_pipeline._normal,
+			});
+
+			std::shared_ptr<Sampler> bilinear_sampler = application()->getSamplerLibrary().getSampler(SamplerLibrary::SamplerInfo{
+				.filter = VK_FILTER_LINEAR,
+				.address_mode = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
+			});
 
 			_deferred_pipeline._shade_from_gbuffer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = application(),
@@ -174,11 +187,27 @@ namespace vkl
 						.binding = 2,
 					},
 					Binding{
+						.view = _ambient_occlusion->target(),
+						.sampler = bilinear_sampler,
+						.binding = 3,
+					},
+					Binding{
 						.view = _target,
 						.binding = 4,
 					},
 				},
+				.definitions = [this]()
+				{
+					std::vector<std::string> res;
+					res.push_back("USE_AO 0");
+					if (_ambient_occlusion->enable())
+					{
+						res.back().back() = '1';
+					}
+					return res;
+				},
 			});
+
 			
 		}
 	}
@@ -232,6 +261,9 @@ namespace vkl
 			{
 				ctx.resourcesToUpdateLater() += cmd.second;
 			}
+
+			_ambient_occlusion->updateResources(ctx);
+
 			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
 		}
 
@@ -310,7 +342,11 @@ namespace vkl
 				{
 					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
 				}
+
+				_ambient_occlusion->execute(exec, camera);
+
 				exec(_deferred_pipeline._shade_from_gbuffer);
+				
 				exec.popDebugLabel();
 			}
 		}
@@ -323,6 +359,14 @@ namespace vkl
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
 			_pipeline_selection.declare();
+
+			if (_pipeline_selection.index() == 1)
+			{
+				if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
+				{
+					_ambient_occlusion->declareGui(ctx);
+				}
+			}
 		}
 	}
 }

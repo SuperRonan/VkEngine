@@ -91,6 +91,40 @@ float16_t rcp(float16_t f)
 }
 #endif
 
+float length2(vec2 v)
+{
+	return dot(v, v);
+}
+
+float length2(vec3 v)
+{
+	return dot(v, v);
+}
+
+float length2(vec4 v)
+{
+	return dot(v, v);
+}
+
+float distance2(vec2 a, vec2 b)
+{
+	const vec2 d = b - a;
+	return length2(d);
+}
+
+float distance2(vec3 a, vec3 b)
+{
+	const vec3 d = b - a;
+	return length2(d);
+}
+
+float distance2(vec4 a, vec4 b)
+{
+	const vec4 d = b - a;
+	return length2(d);
+}
+
+
 vec2 clipSpaceToUV(vec2 cp)
 {
 	return (cp * 0.5f) + 0.5f;
@@ -99,6 +133,36 @@ vec2 clipSpaceToUV(vec2 cp)
 vec2 UVToClipSpace(vec2 uv)
 {
 	return (uv * 2.0f) - 1.0f;
+}
+
+float pixelToU(int p, int d)
+{
+	return (float(p) + 0.5f) / float(d);
+}
+
+float pixelToU(uint p, uint d)
+{
+	return (float(p) + 0.5f) / float(d);
+}
+
+vec2 pixelToUV(ivec2 pix, ivec2 dims)
+{
+	return (vec2(pix) + 0.5f) / vec2(dims);
+}
+
+vec2 pixelToUV(uvec2 pix, uvec2 dims)
+{
+	return (vec2(pix) + 0.5f) / vec2(dims);
+}
+
+vec3 pixelToUVW(ivec3 pix, ivec3 dims)
+{
+	return (vec3(pix) + 0.5f) / vec3(dims);
+}
+
+vec3 pixelToUVW(uvec3 pix, uvec3 dims)
+{
+	return (vec3(pix) + 0.5f) / vec3(dims);
 }
 
 // Generalized cross product matrix

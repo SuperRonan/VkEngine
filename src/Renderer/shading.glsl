@@ -9,8 +9,6 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 {
 	vec3 res = 0..xxx;
 
-	res += albedo * scene_ubo.ambient;
-
 	vec3 diffuse = 0..xxx;
 
 	for(uint l = 0; l < scene_ubo.num_lights; ++l)

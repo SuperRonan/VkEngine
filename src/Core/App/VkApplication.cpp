@@ -55,7 +55,9 @@ namespace vkl
 		const VkBool32 f = VK_FALSE;
 		features.features_13.synchronization2 = t;
 		features.features.geometryShader = t;
+		
 		features.features.samplerAnisotropy = t;
+		features.features_12.samplerMirrorClampToEdge = t;
 
 		features.features_12.shaderInt8 = t;
 	

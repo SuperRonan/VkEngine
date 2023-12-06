@@ -282,6 +282,8 @@ namespace vkl
 
 			Camera camera(Camera::CreateInfo{
 				.resolution = window->extent2D(),
+				.znear = 0.01,
+				.zfar = 100,
 			});
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
@@ -361,6 +363,7 @@ namespace vkl
 
 				std::shared_ptr<UpdateContext> update_context = resources_manager.beginUpdateCycle();
 				{
+					getSamplerLibrary().updateResources(*update_context);
 					{
 						std::TickTock_hrc prepare_scene_tt;
 						prepare_scene_tt.tick();
