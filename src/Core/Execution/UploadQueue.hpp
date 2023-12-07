@@ -40,14 +40,9 @@ namespace vkl
 			return res;
 		}
 
-		constexpr bool operator<(TransferBudget const& o)const noexcept
+		constexpr bool withinLimit(TransferBudget const& limit) const
 		{
-			return (bytes < o.bytes && instances < o.instances);
-		}
-
-		constexpr bool operator<=(TransferBudget const& o)const noexcept
-		{
-			return (bytes <= o.bytes && instances <= o.instances);
+			return (bytes < limit.bytes) && (instances < limit.instances);
 		}
 	};
 

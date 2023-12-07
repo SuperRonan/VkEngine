@@ -74,7 +74,7 @@ namespace vkl
 				res += std::move(iu);
 			}
 
-			if (b < total)
+			if (!total.withinLimit(b))
 			{
 				break;
 			}
@@ -132,7 +132,7 @@ namespace vkl
 
 			res.push_back(std::move(aquired));
 
-			if (b < total)
+			if (!total.withinLimit(b))
 			{
 				break;
 			}

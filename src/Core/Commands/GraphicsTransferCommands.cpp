@@ -128,7 +128,7 @@ namespace vkl
 			targets[i] = Target{
 				.img = ei.targets[i].target->instance()->image().get(),
 				.view = ei.targets[i].target->instance().get(),
-				.m = ei.targets[i].target->instance()->createInfo().subresourceRange.baseMipLevel,
+				.m = ei.targets[i].target->instance()->createInfo().subresourceRange.levelCount,
 				.extent = ei.targets[i].target->instance()->image()->createInfo().extent,
 			};
 			assert(targets[i].m > 1);
@@ -154,7 +154,7 @@ namespace vkl
 		std::vector<VkImageMemoryBarrier2> barriers;
 		barriers.reserve(targets.size() * 2);
 
-		for(uint32_t m=1; m < max_mip; ++m)
+		for(uint32_t m =1; m < max_mip; ++m)
 		{
 			barriers.clear();
 
@@ -166,7 +166,7 @@ namespace vkl
 					barriers.push_back(VkImageMemoryBarrier2{
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 						.pNext = nullptr,
-						.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+						.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
 						.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
 						.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
 						.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
@@ -177,7 +177,7 @@ namespace vkl
 						.image = tg.img->handle(),
 						.subresourceRange = {
 							.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
-							.baseMipLevel = tg.m,
+							.baseMipLevel = m,
 							.levelCount = 1,
 							.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
 							.layerCount = tg.view->createInfo().subresourceRange.layerCount,
@@ -200,7 +200,7 @@ namespace vkl
 							.image = tg.img->handle(),
 							.subresourceRange = {
 								.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
-								.baseMipLevel = tg.m - 1,
+								.baseMipLevel = m - 1,
 								.levelCount = 1,
 								.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
 								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
@@ -241,7 +241,7 @@ namespace vkl
 						.pNext = nullptr,
 						.srcSubresource = {
 							.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
-							.mipLevel = tg.m - 1,
+							.mipLevel = m - 1,
 							.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
 							.layerCount = tg.view->createInfo().subresourceRange.layerCount,
 						},
@@ -250,7 +250,7 @@ namespace vkl
 						},
 						.dstSubresource = {
 							.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
-							.mipLevel = tg.m,
+							.mipLevel = m,
 							.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
 							.layerCount = tg.view->createInfo().subresourceRange.layerCount,
 						},
@@ -327,11 +327,6 @@ namespace vkl
 			resources[i] = Resource{
 				._image = ei.targets[i].target,
 				._begin_state = {
-					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-				},
-				._end_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,

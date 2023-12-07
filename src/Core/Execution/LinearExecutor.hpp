@@ -85,8 +85,6 @@ namespace vkl
 
 		ExecutionThread* _current_thread = nullptr;
 
-		UploadQueue _upload_queue;
-
 		// Event is not a good name imo (means something else in vulkan)
 		struct Event : public VkObject
 		{	
@@ -163,11 +161,6 @@ namespace vkl
 		virtual ~LinearExecutor() override;
 
 		virtual void init() override final;
-
-		UploadQueue& getUploadQueue()
-		{
-			return _upload_queue;
-		}
 
 		void updateResources(UpdateContext & context);
 

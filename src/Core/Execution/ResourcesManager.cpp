@@ -8,7 +8,14 @@ namespace vkl
 		_shader_check_period(ci.shader_check_period),
 		_common_definitions(ci.common_definitions),
 		_mounting_points(ci.mounting_points),
-		_upload_queue(ci.upload_queue)
+		_upload_queue(UploadQueue::CI{
+			.app = application(),
+			.name = name() + ".uploadQueue",
+		}),
+		_mips_queue(MipMapComputeQueue::CI{
+			.app = application(),
+			.name = name() + ".MipMapQueue",
+		})
 	{
 		_last_shader_check = _shader_clock_t::now() - 2 * _shader_check_period;
 	}
@@ -34,7 +41,8 @@ namespace vkl
 			.shader_check_cycle = _shader_check_cycle,
 			.common_definitions = _common_definitions,
 			.mounting_points = _mounting_points,
-			.upload_queue = _upload_queue,
+			.upload_queue = &_upload_queue,
+			.mips_queue = &_mips_queue,
 		});
 		return res;
 	}

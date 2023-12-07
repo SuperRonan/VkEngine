@@ -180,7 +180,6 @@ namespace vkl
 				.shader_check_period = 1s,
 				.common_definitions = &exec.getCommonDefinitions(),
 				.mounting_points = &mounting_points,
-				.upload_queue = &exec.getUploadQueue(),
 			};
 
 			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(ImageView::CI{
@@ -412,7 +411,7 @@ namespace vkl
 						{
 							asynch_upload_budget.bytes = total_budget_bytes - synch_upload_cost;
 						}
-						ResourcesToUpload asynch_list = exec.getUploadQueue().consume(asynch_upload_budget);
+						ResourcesToUpload asynch_list = resources_manager.uploadQueue().consume(asynch_upload_budget);
 						upload_list += std::move(asynch_list);
 						(*upload_thread)(uploader.with(UploadResources::UI{
 							.upload_list = std::move(upload_list),
@@ -423,6 +422,24 @@ namespace vkl
 					ExecutionThread* ptr_exec_thread = exec.beginCommandBuffer();
 					ExecutionThread& exec_thread = *ptr_exec_thread;
 					exec_thread.setFramePerfCounters(&frame_counters);
+
+					{
+						auto mips_list = resources_manager.mipMapQueue().consume(TransferBudget{
+							.bytes = 64'000'000,
+							.instances = 128,
+						});
+
+						if(!mips_list.empty())
+						{
+							ComputeMips compute_mips = ComputeMips::CI{
+								.app = this,
+								.name = "ComputeMipMaps",
+							};
+							exec_thread.execute(compute_mips.with(ComputeMips::ExecInfo{
+								.targets = mips_list,
+							}));
+						}
+					}
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);

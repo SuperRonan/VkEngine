@@ -243,8 +243,31 @@ namespace vkl
 			_is_ready = true;
 			_upload_done = false;
 			callResourceUpdateCallbacks();
+
+			if (_image->instance()->createInfo().mipLevels > 1)
+			{
+				_mips_done = false;
+				ctx.mipsQueue()->enqueue(AsynchMipsCompute{
+					.target = _all_mips_view,
+					.completion_callback = [this](int ret)
+					{
+						if (ret == 0)
+						{
+							_mips_done = true;
+						}
+					},
+				});
+			}
 		}
 		
+
+		if (_mips_done)
+		{
+			_view = _all_mips_view;
+			_is_ready = true;
+			_mips_done = false;
+			callResourceUpdateCallbacks();
+		}
 	}
 
 

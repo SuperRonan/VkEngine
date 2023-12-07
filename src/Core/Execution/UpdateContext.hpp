@@ -33,7 +33,8 @@ namespace vkl
 		// Synchronous upload
 		ResourcesToUpload _resources_to_upload;
 		
-		UploadQueue * _upload_queue;
+		UploadQueue * _upload_queue = nullptr;
+		MipMapComputeQueue * _mips_queue = nullptr;
 
 		std::TickTock_hrc _tick_tock;
 
@@ -50,6 +51,7 @@ namespace vkl
 			const DefinitionsMap* common_definitions;
 			MountingPoints* mounting_points = nullptr;
 			UploadQueue * upload_queue = nullptr;
+			MipMapComputeQueue * mips_queue = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -59,7 +61,8 @@ namespace vkl
 			_shader_check_cycle(ci.shader_check_cycle),
 			_common_definitions(ci.common_definitions),
 			_mounting_points(ci.mounting_points),
-			_upload_queue(ci.upload_queue)
+			_upload_queue(ci.upload_queue),
+			_mips_queue(ci.mips_queue)
 		{
 			_tick_tock.tick();
 		}
@@ -107,6 +110,11 @@ namespace vkl
 		constexpr UploadQueue* uploadQueue()
 		{
 			return _upload_queue;
+		}
+
+		constexpr MipMapComputeQueue* mipsQueue()
+		{
+			return _mips_queue;
 		}
 
 		constexpr auto& tickTock()

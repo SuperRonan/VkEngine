@@ -2,6 +2,8 @@
 
 #include "Material.glsl"
 
+#include <ShaderLib:/random.glsl>
+
 struct PBMaterialProperties
 {
 	vec3 albedo;
@@ -30,6 +32,10 @@ vec3 getBoundMaterialAlbedo(vec2 uv)
 	const uint flags = material_props.props.flags;
 	if((flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0)
 	{
+		// See texture LOD	
+		// const vec2 lod = textureQueryLod(AlbedoTexture, uv);
+		// RNGState rng = hash(int(lod.y));
+		// return randomRGB(rng);
 		return texture(AlbedoTexture, uv).rgb;
 	}
 	else

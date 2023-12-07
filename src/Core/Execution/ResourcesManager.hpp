@@ -22,7 +22,8 @@ namespace vkl
 
 		MountingPoints * _mounting_points = nullptr;
 
-		UploadQueue * _upload_queue = nullptr;
+		UploadQueue _upload_queue;
+		MipMapComputeQueue _mips_queue;
 
 	public:
 
@@ -33,7 +34,6 @@ namespace vkl
 			std::chrono::milliseconds shader_check_period = 1000ms;
 			const DefinitionsMap * common_definitions;
 			MountingPoints * mounting_points = nullptr;
-			UploadQueue * upload_queue = nullptr;
 		};
 
 		ResourcesManager(CreateInfo const& ci);
@@ -43,5 +43,15 @@ namespace vkl
 
 		void finishUpdateCycle(std::shared_ptr<UpdateContext> context);
 
+
+		UploadQueue& uploadQueue()
+		{
+			return _upload_queue;
+		}
+
+		MipMapComputeQueue& mipMapQueue()
+		{
+			return _mips_queue;
+		}
 	};
 }

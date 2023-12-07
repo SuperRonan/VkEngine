@@ -107,10 +107,6 @@ namespace vkl
 			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
 			.mounting_points = _mounting_points,
-		}),
-		_upload_queue(UploadQueue::CI{
-			.app = application(),
-			.name = name() + ".upload_queue",
 		})
 	{
 		(*_mounting_points)["ShaderLib"] = ENGINE_SRC_PATH "shaders/";

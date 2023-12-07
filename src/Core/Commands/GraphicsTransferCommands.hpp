@@ -91,6 +91,7 @@ namespace vkl
 			std::string name = {};
 			std::vector<std::shared_ptr<ImageView>> targets;
 		};
+		using CI = CreateInfo;
 
 		ComputeMips(CreateInfo const& ci) :
 			GraphicsTransferCommand(ci.app, ci.name),

@@ -18,6 +18,7 @@ namespace vkl
 		
 		bool _should_upload = false;
 		bool _upload_done = false;
+		bool _mips_done = false;
 		
 		img::FormatedImage _host_image = {};
 
