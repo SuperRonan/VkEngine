@@ -1,5 +1,6 @@
 #include "GraphicsTransferCommands.hpp"
 
+
 namespace vkl
 {
 	BlitImage::BlitImage(CreateInfo const& ci) :
@@ -103,7 +104,7 @@ namespace vkl
 			std::set<ImageView*> set_views;
 			for (auto& t : ei.targets)
 			{
-				set_views.insert(t.get());
+				set_views.insert(t.target.get());
 			}
 			res = set_views.size() == ei.targets.size();
 			return res;
@@ -119,18 +120,36 @@ namespace vkl
 		std::vector<Target> targets(ei.targets.size());
 		
 		uint32_t max_mip = 1;
+
+		std::shared_ptr<CallbackHolder> completion_callbacks;
+
 		for (size_t i = 0; i < ei.targets.size(); ++i)
 		{
 			targets[i] = Target{
-				.img = ei.targets[i]->instance()->image().get(),
-				.view = ei.targets[i]->instance().get(),
-				.m = ei.targets[i]->instance()->createInfo().subresourceRange.baseMipLevel,
-				.extent = ei.targets[i]->instance()->image()->createInfo().extent,
+				.img = ei.targets[i].target->instance()->image().get(),
+				.view = ei.targets[i].target->instance().get(),
+				.m = ei.targets[i].target->instance()->createInfo().subresourceRange.baseMipLevel,
+				.extent = ei.targets[i].target->instance()->image()->createInfo().extent,
 			};
 			assert(targets[i].m > 1);
 			max_mip = std::max(max_mip, targets[i].m);
+
+
+
+			if (ei.targets[i].completion_callback.operator bool())
+			{
+				if (!completion_callbacks)
+				{
+					completion_callbacks = std::make_shared<CallbackHolder>();
+				}
+				completion_callbacks->callbacks.push_back(ei.targets[i].completion_callback);
+			}
 		}
 
+		if (completion_callbacks)
+		{
+			ctx.keppAlive(std::move(completion_callbacks));
+		}
 
 		std::vector<VkImageMemoryBarrier2> barriers;
 		barriers.reserve(targets.size() * 2);
@@ -306,7 +325,7 @@ namespace vkl
 		for (size_t i = 0; i < resources.size(); ++i)
 		{
 			resources[i] = Resource{
-				._image = ei.targets[i],
+				._image = ei.targets[i].target,
 				._begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,

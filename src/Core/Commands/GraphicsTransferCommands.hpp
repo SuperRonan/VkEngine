@@ -2,6 +2,8 @@
 
 #include "DeviceCommand.hpp"
 #include <Core/VkObjects/ImageView.hpp>
+#include <Core/Execution/CompletionCallback.hpp>
+#include <Core/Execution/ResourcesToUpload.hpp>
 
 namespace vkl
 {
@@ -99,9 +101,11 @@ namespace vkl
 
 		virtual ~ComputeMips() override {};
 
+		using MipsInfo = AsynchMipsCompute;
+
 		struct ExecInfo
 		{
-			std::vector<std::shared_ptr<ImageView>> targets;
+			std::vector<MipsInfo> targets;
 		};
 		using EI = ExecInfo;
 
@@ -125,7 +129,9 @@ namespace vkl
 			res.targets.resize(_targets.size());
 			for (size_t i = 0; i < res.targets.size(); ++i)
 			{
-				res.targets[i] = _targets[i];//->instance();
+				res.targets[i] = {
+					.target = _targets[i],
+				};
 			}
 			return res;
 		}

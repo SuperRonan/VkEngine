@@ -1,5 +1,7 @@
 #include "UploadQueue.hpp"
 
+#include <Core/VkObjects/ImageView.hpp>
+
 namespace vkl
 {
 	size_t AsynchUpload::getSize() const
@@ -36,9 +38,9 @@ namespace vkl
 		_mutex.unlock();
 	}
 
-	ResourcesToUpload UploadQueue::consume(size_t budget)
+	ResourcesToUpload UploadQueue::consume(Budget const& b)
 	{
-		size_t total = 0;
+		Budget total;
 		ResourcesToUpload res;
 
 		_mutex.lock();
@@ -72,7 +74,7 @@ namespace vkl
 				res += std::move(iu);
 			}
 
-			if (total >= budget)
+			if (b < total)
 			{
 				break;
 			}
@@ -80,6 +82,61 @@ namespace vkl
 
 		_mutex.unlock();
 
+		return res;
+	}
+
+
+
+	size_t AsynchMipsCompute::getSize()const
+	{
+		size_t res = 0;
+
+		const VkExtent3D & ext = target->instance()->image()->createInfo().extent;
+		const size_t l = target->instance()->createInfo().subresourceRange.layerCount;
+
+		res = ext.width * ext.height * ext.depth * l;
+		// TODO include the format size
+		return res;
+	}
+
+
+	MipMapComputeQueue::MipMapComputeQueue(CreateInfo const& ci):
+		VkObject(ci.app, ci.name)
+	{}
+
+	void MipMapComputeQueue::enqueue(AsynchMipsCompute const& mc)
+	{
+		std::unique_lock lock(_mutex);
+		_queue.push_back(mc);
+	}
+
+	void MipMapComputeQueue::enqueue(AsynchMipsCompute && mc)
+	{
+		std::unique_lock lock(_mutex);
+		_queue.push_back(std::move(mc));
+	}
+
+	std::vector<AsynchMipsCompute> MipMapComputeQueue::consume(Budget const& b)
+	{
+		std::vector<AsynchMipsCompute> res;
+		std::unique_lock lock(_mutex);
+
+		Budget total;
+
+		while (!_queue.empty())
+		{
+			AsynchMipsCompute aquired = std::move(_queue.front());
+			_queue.pop_front();
+
+			total += aquired.getSize();
+
+			res.push_back(std::move(aquired));
+
+			if (b < total)
+			{
+				break;
+			}
+		}
 		return res;
 	}
 }

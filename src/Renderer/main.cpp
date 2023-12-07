@@ -398,19 +398,21 @@ namespace vkl
 							.app = this,
 						});
 						ResourcesToUpload upload_list = update_context->resourcesToUpload();
-						const size_t total_budget = 16'000'000;
-						const size_t min_asynch_budget = 1'000'000;
+						const size_t total_budget_bytes = 16'000'000;
+						const size_t min_asynch_budget_bytes = 1'000'000;
 						size_t synch_upload_cost = upload_list.getSize();
-						size_t asynch_budget = 0;
-						if(synch_upload_cost > (total_budget - min_asynch_budget))
+						TransferBudget asynch_upload_budget{
+							.instances = 128,
+						};
+						if(synch_upload_cost > (total_budget_bytes - min_asynch_budget_bytes))
 						{
-							asynch_budget = min_asynch_budget;
+							asynch_upload_budget.bytes = min_asynch_budget_bytes;
 						}
 						else
 						{
-							asynch_budget = total_budget - synch_upload_cost;
+							asynch_upload_budget.bytes = total_budget_bytes - synch_upload_cost;
 						}
-						ResourcesToUpload asynch_list = exec.getUploadQueue().consume(asynch_budget);
+						ResourcesToUpload asynch_list = exec.getUploadQueue().consume(asynch_upload_budget);
 						upload_list += std::move(asynch_list);
 						(*upload_thread)(uploader.with(UploadResources::UI{
 							.upload_list = std::move(upload_list),

@@ -820,23 +820,6 @@ namespace vkl
 
 	}
 
-	class CallbackHolder : public VkObject
-	{
-	public:
-
-		int value = 0;
-
-		std::vector<CompletionCallback> callbacks;
-
-		virtual ~CallbackHolder() override
-		{
-			for (CompletionCallback& cb : callbacks)
-			{
-				cb(value);
-			}
-		}
-	};
-
 	void UploadResources::execute(ExecutionContext& ctx, UploadInfo const& ui, std::vector<BufferUploadExtraInfo> const& extra_buffer_info)
 	{
 		const ResourcesToUpload & resources = ui.upload_list;

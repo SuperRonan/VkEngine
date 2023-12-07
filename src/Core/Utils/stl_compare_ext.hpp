@@ -1,0 +1,6 @@
+#include <compare>
+
+namespace std
+{
+
+}

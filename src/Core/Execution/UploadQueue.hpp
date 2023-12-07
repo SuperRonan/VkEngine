@@ -2,10 +2,54 @@
 
 #include <Core/App/VkApplication.hpp>
 #include <Core/Execution/ResourcesToUpload.hpp>
+
 #include <mutex>
 
 namespace vkl
 {
+	struct TransferBudget
+	{
+		size_t bytes = 0;
+		size_t instances = 0;
+		
+		constexpr TransferBudget& operator+=(TransferBudget const& o) noexcept
+		{
+			bytes += o.bytes;
+			instances += o.instances;
+			return *this;
+		}
+
+		constexpr TransferBudget& operator+=(size_t bytes) noexcept
+		{
+			this->bytes += bytes;
+			++instances;
+			return *this;
+		}
+
+		constexpr TransferBudget operator+(TransferBudget const& o) const noexcept
+		{
+			TransferBudget res = *this;
+			res += o;
+			return res;
+		}
+
+		constexpr TransferBudget operator+(size_t bytes) const noexcept
+		{
+			TransferBudget res = *this;
+			res += bytes;
+			return res;
+		}
+
+		constexpr bool operator<(TransferBudget const& o)const noexcept
+		{
+			return (bytes < o.bytes && instances < o.instances);
+		}
+
+		constexpr bool operator<=(TransferBudget const& o)const noexcept
+		{
+			return (bytes <= o.bytes && instances <= o.instances);
+		}
+	};
 
 	struct AsynchUpload
 	{
@@ -47,6 +91,45 @@ namespace vkl
 		void enqueue(AsynchUpload const& upload);
 		void enqueue(AsynchUpload && upload);
 
-		ResourcesToUpload consume(size_t budget);
+		using Budget = TransferBudget;
+
+		ResourcesToUpload consume(Budget const& b);
+	};
+
+	struct AsynchMipsCompute
+	{
+		std::shared_ptr<ImageView> target = nullptr;
+		CompletionCallback completion_callback = {};
+
+		size_t getSize()const;
+	};
+
+	struct MipMapComputeQueue : public VkObject
+	{
+	public:
+
+	protected:
+
+		std::mutex _mutex;
+		std::deque<AsynchMipsCompute> _queue;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+		
+		MipMapComputeQueue(CreateInfo const& ci);
+
+		void enqueue(AsynchMipsCompute const& mc);
+		void enqueue(AsynchMipsCompute && mc);
+
+		
+		using Budget = TransferBudget;
+
+		std::vector<AsynchMipsCompute> consume(Budget const& b);
 	};
 }

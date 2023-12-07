@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Core/VulkanCommons.hpp>
-
+#include <Core/Execution/CompletionCallback.hpp>
 #include <vector>
 
 namespace vkl
@@ -9,8 +9,6 @@ namespace vkl
 	
 	class ImageView;
 	class Buffer;
-
-	using CompletionCallback = std::function<void(int)>;
 	
 	struct ResourcesToUpload
 	{
