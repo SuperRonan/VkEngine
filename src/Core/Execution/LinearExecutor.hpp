@@ -5,6 +5,7 @@
 #include <Core/VkObjects/VkWindow.hpp>
 #include <queue>
 #include <Core/Commands/TransferCommand.hpp>
+#include <Core/Commands/GraphicsTransferCommands.hpp>
 #include <Core/Commands/ImguiCommand.hpp>
 #include "StagingPool.hpp"
 
