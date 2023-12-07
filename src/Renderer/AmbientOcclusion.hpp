@@ -25,6 +25,7 @@ namespace vkl
 		bool _enable = true;
 		int _ao_samples = 16;
 		float _radius = 0.02;
+		int _downscale = 2;
 
 		MultiDescriptorSetsLayouts _sets_layouts = {};
 

@@ -20,6 +20,16 @@ namespace vkl
 		_format = VK_FORMAT_R16_SNORM;
 		_format_glsl = DetailedVkFormat::Find(_format).getGLSLName();
 
+		Dyn<VkExtent3D> target_extent = [this]()
+		{
+			VkExtent3D ref = _positions->image()->extent().value();
+			return VkExtent3D{
+				.width = ref.width / _downscale,
+				.height = ref.height / _downscale,
+				.depth = ref.depth,
+			};
+		};
+
 		_target = std::make_shared<ImageView>(ImageView::CI{
 			.app = application(),
 			.name = name() + ".target",
@@ -28,7 +38,7 @@ namespace vkl
 				.name = name() + ".target",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = &_format,
-				.extent = _positions->image()->extent(),
+				.extent = target_extent,
 				.layers = _positions->image()->layers(),
 				.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
