@@ -23,7 +23,7 @@ namespace vkl
 	protected:
 
 		bool _enable = true;
-
+		int _ao_samples = 16;
 		float _radius = 0.02;
 
 		MultiDescriptorSetsLayouts _sets_layouts = {};

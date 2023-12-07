@@ -24,8 +24,8 @@ layout(push_constant) uniform PushConstant
 	float radius;
 } _pc;
 
-#ifndef SAMPLES
-#define SAMPLES 16 * 4
+#ifndef AO_SAMPLES
+#define AO_SAMPLES 16 * 4
 #endif
 
 float computeAO_0(inout RNGState rng, vec2 uv, vec2 ratio)
@@ -38,7 +38,7 @@ float computeAO_0(inout RNGState rng, vec2 uv, vec2 ratio)
 	const vec3 camera_pos = _pc.camera_position;
 	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
 
-	for(int i=0; i < SAMPLES; ++i)
+	for(int i=0; i < AO_SAMPLES; ++i)
 	{
 		const vec2 point_on_circle = randomUniformPolar(rng);
 		
@@ -54,7 +54,7 @@ float computeAO_0(inout RNGState rng, vec2 uv, vec2 ratio)
 		}
 		
 	}
-	res /= float(SAMPLES);
+	res /= float(AO_SAMPLES);
 	return res;
 }
 
@@ -73,7 +73,7 @@ float computeAO_1(inout RNGState rng, vec2 uv, vec2 ratio)
 	const vec3 camera_pos = _pc.camera_position;
 	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
 
-	for(int i=0; i < SAMPLES; ++i)
+	for(int i=0; i < AO_SAMPLES; ++i)
 	{
 		const vec2 point_on_circle = randomUniformPolar(rng);
 		
@@ -94,7 +94,7 @@ float computeAO_1(inout RNGState rng, vec2 uv, vec2 ratio)
 		}
 		
 	}
-	res /= float(SAMPLES);
+	res /= float(AO_SAMPLES);
 	return res;
 }
 

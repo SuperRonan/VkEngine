@@ -48,6 +48,7 @@ namespace vkl
 		{
 			std::vector<std::string> res;
 			res.push_back("OUT_FORMAT "s + _format_glsl);
+			res.push_back("AO_SAMPLES "s + std::to_string(_ao_samples));
 			return res;
 		};
 
@@ -127,7 +128,7 @@ namespace vkl
 		ImGui::PushID(name().c_str());
 
 		ImGui::Checkbox("Enable", &_enable);
-
+		ImGui::InputInt("Samples", &_ao_samples);
 		ImGui::SliderFloat("Radius", &_radius, 0, 0.2);
 
 		ImGui::PopID();
