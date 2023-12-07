@@ -10,6 +10,8 @@ namespace vkl
 	{
 	protected:
 
+		size_t _latest_update_cycle = 0;
+
 		std::filesystem::path _path = {};
 
 		bool _is_synch = true;
@@ -27,6 +29,8 @@ namespace vkl
 		VkImageUsageFlags _image_usages = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 		std::shared_ptr<Image> _image = nullptr;
+		std::shared_ptr<ImageView> _top_mip_view = nullptr;
+		std::shared_ptr<ImageView> _all_mips_view = nullptr;
 
 		DetailedVkFormat findFormatForVkImage(DetailedVkFormat const& f);
 

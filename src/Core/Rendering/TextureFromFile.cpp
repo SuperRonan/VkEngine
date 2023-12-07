@@ -83,14 +83,28 @@ namespace vkl
 				.type = VK_IMAGE_TYPE_2D,
 				.format = _image_format.vk_format,
 				.extent = VkExtent3D{.width = static_cast<uint32_t>(_host_image.width()), .height = static_cast<uint32_t>(_host_image.height()), .depth = 1},
+				.mips = Image::ALL_MIPS,
 				.usage = _image_usages,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 
-			_view = std::make_shared<ImageView>(ImageView::CI{
+			_all_mips_view = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
-				.name = name(),
+				.name = name() + "_top_mip"s,
 				.image = _image,
+			});
+
+			_top_mip_view = std::make_shared<ImageView>(ImageView::CI{
+				.app = application(),
+				.name = name() + "_all_mips"s,
+				.image = _image,
+				.range = VkImageSubresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = _image->layers(),
+				},
 			});
 
 			_should_upload = true;
@@ -151,14 +165,23 @@ namespace vkl
 
 	void TextureFromFile::updateResources(UpdateContext& ctx)
 	{
-
-		if (_view)
+		
+		if (ctx.updateCycle() <= _latest_update_cycle)
 		{
-			_view->updateResource(ctx);
+			return;
+		}
+
+		_latest_update_cycle = ctx.updateCycle();
+
+		if (_image)
+		{
+			_image->updateResource(ctx);
+			_top_mip_view->updateResource(ctx);
+			_all_mips_view->updateResource(ctx);
 		}
 
 		
-		if (_should_upload && !!_view)
+		if (_should_upload)
 		{
 			_should_upload = false;
 			bool synch_upload = _is_synch;
@@ -170,7 +193,7 @@ namespace vkl
 			{
 				ResourcesToUpload::ImageUpload up{
 					.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-					.dst = _view,
+					.dst = _top_mip_view,
 				};
 				ctx.resourcesToUpload() += std::move(up);
 				_upload_done = true;
@@ -187,7 +210,7 @@ namespace vkl
 							AsynchUpload up{
 								.name = name(),
 								.source = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-								.target_view = _view,
+								.target_view = _top_mip_view,
 								.completion_callback = [this](int ret)
 								{
 									if (ret == 0)
@@ -203,6 +226,8 @@ namespace vkl
 							_should_upload = false;
 							_view = nullptr;
 							_image = nullptr;
+							_top_mip_view = nullptr;
+							_all_mips_view = nullptr;
 						}
 						_load_image_task = nullptr;
 					}
@@ -214,6 +239,7 @@ namespace vkl
 		
 		if (_upload_done)
 		{
+			_view = _top_mip_view;
 			_is_ready = true;
 			_upload_done = false;
 			callResourceUpdateCallbacks();
