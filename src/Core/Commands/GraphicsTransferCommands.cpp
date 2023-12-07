@@ -97,60 +97,100 @@ namespace vkl
 	{
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
-		ImageViewInstance& view = *ei.target->instance();
-		ImageInstance& img = *ei.target->image()->instance();
-
-		const uint32_t m = img.createInfo().mipLevels;
-		VkExtent3D extent = img.createInfo().extent;
-
-		for (uint32_t i = 1; i < m; ++i)
+		assert([&]() -> bool
 		{
-			std::array<VkImageMemoryBarrier2, 2> barriers;
-			barriers[0] = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-				.pNext = nullptr,
-				.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
-				.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
-				.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = img,
-				.subresourceRange = {
-					.aspectMask = view.createInfo().subresourceRange.aspectMask,
-					.baseMipLevel = i,
-					.levelCount = 1,
-					.baseArrayLayer = view.createInfo().subresourceRange.baseArrayLayer,
-					.layerCount = view.createInfo().subresourceRange.layerCount,
-				},
-			};
-			uint32_t num_barriers = 1;
-			if (i > 1)
+			bool res = true;
+			std::set<ImageView*> set_views;
+			for (auto& t : ei.targets)
 			{
-				num_barriers = 2;
-				barriers[1] = {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-					.pNext = nullptr,
-					.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
-					.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
-					.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = img,
-					.subresourceRange = {
-						.aspectMask = view.createInfo().subresourceRange.aspectMask,
-						.baseMipLevel = i - 1,
-						.levelCount = 1,
-						.baseArrayLayer = view.createInfo().subresourceRange.baseArrayLayer,
-						.layerCount = view.createInfo().subresourceRange.layerCount,
-					},
-				};
+				set_views.insert(t.get());
 			}
+			res = set_views.size() == ei.targets.size();
+			return res;
+		}());
+
+		struct Target
+		{
+			ImageInstance * img;
+			ImageViewInstance * view;
+			uint32_t m;
+			VkExtent3D extent;
+		};
+		std::vector<Target> targets(ei.targets.size());
+		
+		uint32_t max_mip = 1;
+		for (size_t i = 0; i < ei.targets.size(); ++i)
+		{
+			targets[i] = Target{
+				.img = ei.targets[i]->instance()->image().get(),
+				.view = ei.targets[i]->instance().get(),
+				.m = ei.targets[i]->instance()->createInfo().subresourceRange.baseMipLevel,
+				.extent = ei.targets[i]->instance()->image()->createInfo().extent,
+			};
+			assert(targets[i].m > 1);
+			max_mip = std::max(max_mip, targets[i].m);
+		}
+
+
+		std::vector<VkImageMemoryBarrier2> barriers;
+		barriers.reserve(targets.size() * 2);
+
+		for(uint32_t m=1; m < max_mip; ++m)
+		{
+			barriers.clear();
+
+			for (size_t i = 0; i < targets.size(); ++i)
+			{
+				Target & tg = targets[i];
+				if (tg.m > m)
+				{
+					barriers.push_back(VkImageMemoryBarrier2{
+						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+						.pNext = nullptr,
+						.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
+						.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+						.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+						.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+						.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.image = tg.img->handle(),
+						.subresourceRange = {
+							.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
+							.baseMipLevel = tg.m,
+							.levelCount = 1,
+							.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
+							.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+						},
+					});
+
+					if (m > 1)
+					{
+						barriers.push_back(VkImageMemoryBarrier2{
+							.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+							.pNext = nullptr,
+							.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+							.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+							.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
+							.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+							.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+							.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+							.image = tg.img->handle(),
+							.subresourceRange = {
+								.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
+								.baseMipLevel = tg.m - 1,
+								.levelCount = 1,
+								.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
+								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+							},
+						});
+					}
+				}
+			}
+			
 			VkDependencyInfo dep = {
 				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
 				.pNext = nullptr,
@@ -159,61 +199,72 @@ namespace vkl
 				.pMemoryBarriers = nullptr,
 				.bufferMemoryBarrierCount = 0,
 				.pBufferMemoryBarriers = nullptr,
-				.imageMemoryBarrierCount = num_barriers,
+				.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()),
 				.pImageMemoryBarriers = barriers.data(),
 			};
 
 			vkCmdPipelineBarrier2(cmd, &dep);
 
-			VkExtent3D smaller_extent = {
-				.width = std::max(1u, extent.width / 2),
-				.height = std::max(1u, extent.height / 2),
-				.depth = std::max(1u, extent.depth / 2),
-			};
 
-			VkImageBlit2 region = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
-				.pNext = nullptr,
-				.srcSubresource = {
-					.aspectMask = view.createInfo().subresourceRange.aspectMask,
-					.mipLevel = i - 1,
-					.baseArrayLayer = view.createInfo().subresourceRange.baseArrayLayer,
-					.layerCount = view.createInfo().subresourceRange.layerCount,
-				},
-				.srcOffsets = {
-					makeZeroOffset3D(), convert(extent),
-				},
-				.dstSubresource = {
-					.aspectMask = view.createInfo().subresourceRange.aspectMask,
-					.mipLevel = i,
-					.baseArrayLayer = view.createInfo().subresourceRange.baseArrayLayer,
-					.layerCount = view.createInfo().subresourceRange.layerCount,
-				},
-				.dstOffsets = {
-					makeZeroOffset3D(), convert(smaller_extent),
-				},
-			};
+			for (size_t i = 0; i < targets.size(); ++i)
+			{
+				Target& tg = targets[i];
+				if (tg.m > m)
+				{
+					VkExtent3D smaller_extent = {
+						.width = std::max(1u, tg.extent.width / 2),
+						.height = std::max(1u, tg.extent.height / 2),
+						.depth = std::max(1u, tg.extent.depth / 2),
+					};
+					
+					VkImageBlit2 region = {
+						.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+						.pNext = nullptr,
+						.srcSubresource = {
+							.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
+							.mipLevel = tg.m - 1,
+							.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
+							.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+						},
+						.srcOffsets = {
+							makeZeroOffset3D(), convert(tg.extent),
+						},
+						.dstSubresource = {
+							.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
+							.mipLevel = tg.m,
+							.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
+							.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+						},
+						.dstOffsets = {
+							makeZeroOffset3D(), convert(smaller_extent),
+						},
+					};
 
-			VkBlitImageInfo2 blit{
-				.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
-				.pNext = nullptr,
-				.srcImage = img,
-				.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				.dstImage = img,
-				.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.regionCount = 1,
-				.pRegions = &region,
-				.filter = VK_FILTER_LINEAR,
-			};
+					VkBlitImageInfo2 blit{
+						.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
+						.pNext = nullptr,
+						.srcImage = tg.img->handle(),
+						.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						.dstImage = tg.img->handle(),
+						.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						.regionCount = 1,
+						.pRegions = &region,
+						.filter = VK_FILTER_LINEAR,
+					};
 
-			vkCmdBlitImage2(cmd, &blit);
+					vkCmdBlitImage2(cmd, &blit);
 
-			extent = smaller_extent;
+					tg.extent = smaller_extent;
+				}
+			}			
 		}
 
-		// One last barrier
+		// One last barriers
+		barriers.resize(targets.size());
+		for (size_t i = 0; i < targets.size(); ++i)
 		{
-			VkImageMemoryBarrier2 barrier{
+			Target& tg = targets[i];
+			barriers[i] = VkImageMemoryBarrier2{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 				.pNext = nullptr,
 				.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT,
@@ -224,39 +275,38 @@ namespace vkl
 				.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = img,
+				.image = tg.img->handle(),
 				.subresourceRange = {
-					.aspectMask = view.createInfo().subresourceRange.aspectMask,
-					.baseMipLevel = m - 1,
+					.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
+					.baseMipLevel = tg.m - 1,
 					.levelCount = 1,
-					.baseArrayLayer = view.createInfo().subresourceRange.baseArrayLayer,
-					.layerCount = view.createInfo().subresourceRange.layerCount,
+					.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
+					.layerCount = tg.view->createInfo().subresourceRange.layerCount,
 				},
 			};
-
-			VkDependencyInfo dep = {
-				.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-				.pNext = nullptr,
-				.dependencyFlags = 0,
-				.memoryBarrierCount = 0,
-				.pMemoryBarriers = nullptr,
-				.bufferMemoryBarrierCount = 0,
-				.pBufferMemoryBarriers = nullptr,
-				.imageMemoryBarrierCount = 1,
-				.pImageMemoryBarriers = &barrier,
-			};
-
-			vkCmdPipelineBarrier2(cmd, &dep);
 		}
-
-		ctx.keppAlive(ei.target->instance());
+		VkDependencyInfo dep = {
+			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+			.pNext = nullptr,
+			.dependencyFlags = 0,
+			.memoryBarrierCount = 0,
+			.pMemoryBarriers = nullptr,
+			.bufferMemoryBarrierCount = 0,
+			.pBufferMemoryBarriers = nullptr,
+			.imageMemoryBarrierCount = static_cast<uint32_t>(barriers.size()),
+			.pImageMemoryBarriers = barriers.data(),
+		};
+		vkCmdPipelineBarrier2(cmd, &dep);
 	}
 
 	ExecutionNode ComputeMips::getExecutionNode(RecordContext& ctx, ExecInfo const& ei)
 	{
-		Resources resources{
-			Resource{
-				._image = ei.target,
+		Resources resources;
+		resources.resize(ei.targets.size());
+		for (size_t i = 0; i < resources.size(); ++i)
+		{
+			resources[i] = Resource{
+				._image = ei.targets[i],
 				._begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -268,8 +318,8 @@ namespace vkl
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
 				},
 				._image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
-			},
-		};
+			};
+		}
 		ExecInfo ei_copy = ei;
 		ExecutionNode res = ExecutionNode::CI{
 			.name = name(),
@@ -289,11 +339,8 @@ namespace vkl
 	Executable ComputeMips::with(ExecInfo const& ei)
 	{
 		return [this, ei](RecordContext& ctx)
-			{
-				ExecInfo _ei{
-					.target = ei.target ? ei.target : _target,
-				};
-				return getExecutionNode(ctx, _ei);
-			};
+		{
+			return getExecutionNode(ctx, ei);
+		};
 	}
 }

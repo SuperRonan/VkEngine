@@ -79,7 +79,7 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<ImageView> _target;
+		std::vector<std::shared_ptr<ImageView>> _targets;
 
 	public:
 
@@ -87,12 +87,12 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::shared_ptr<ImageView> target;
+			std::vector<std::shared_ptr<ImageView>> targets;
 		};
 
 		ComputeMips(CreateInfo const& ci) :
 			GraphicsTransferCommand(ci.app, ci.name),
-			_target(ci.target)
+			_targets(ci.targets)
 		{
 
 		}
@@ -101,7 +101,7 @@ namespace vkl
 
 		struct ExecInfo
 		{
-			std::shared_ptr<ImageView> target;
+			std::vector<std::shared_ptr<ImageView>> targets;
 		};
 		using EI = ExecInfo;
 
@@ -120,9 +120,14 @@ namespace vkl
 
 		ExecInfo getDefaultExecInfo()
 		{
-			return ExecInfo{
-				.target = _target,
+			ExecInfo res{
 			};
+			res.targets.resize(_targets.size());
+			for (size_t i = 0; i < res.targets.size(); ++i)
+			{
+				res.targets[i] = _targets[i];//->instance();
+			}
+			return res;
 		}
 	};
 
