@@ -3,12 +3,51 @@
 #include <Core/VkObjects/CommandBuffer.hpp>
 #include <Core/Execution/SamplerLibrary.hpp>
 
+#include <argparse/argparse.hpp>
+
 #include <exception>
 #include <set>
 #include <limits>
 
 namespace vkl
 {
+
+	void VkApplication::FillArgs(argparse::ArgumentParser& args)
+	{
+		args.add_argument("--name")
+			.help("Name of the Application")
+		;
+
+		int default_validation = 0;
+		int default_name_vk_objects = 0;
+		int default_cmd_labels = 0;
+
+#if _DEBUG
+		default_validation = 1;
+		default_name_vk_objects = 1;
+		default_cmd_labels = 1;
+#endif
+
+		args.add_argument("--validation")
+			.help("Enable Vulkan Validation Layers")
+			.default_value(default_validation)
+			.scan<'d', int>()
+		;
+
+		args.add_argument("--name_vk_objects")
+			.help("Name Vulkan Objects")
+			.default_value(default_name_vk_objects)
+			.scan<'d', int>()
+		;
+
+		args.add_argument("--cmd_labels")
+			.help("Set Labels in the CommandBuffer")
+			.default_value(default_cmd_labels)
+			.scan<'d', int>()
+		;
+	}
+
+
 	VkResult VkApplication::CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 	{
 		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -92,7 +131,7 @@ namespace vkl
 		uint32_t glfw_ext_count = 0;
 		const char** glfw_exts = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
 		std::vector<const char*> extensions(glfw_exts, glfw_exts + glfw_ext_count);
-		if (_options.enable_validation)
+		if (_options.enable_validation || _options.enable_object_naming || _options.enable_command_buffer_labels)
 		{
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
@@ -216,13 +255,6 @@ namespace vkl
 		}
 
 		VK_CHECK(vkCreateInstance(&create_info, nullptr, &_instance), "Failed to create the Vulkan Instance");
-
-		if (_options.enable_object_naming)
-		{
-			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT"));
-		}
-
-
 	}
 
 	void VkApplication::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info)const
@@ -524,9 +556,23 @@ namespace vkl
 			_ext_functions._vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksEXT"));
 		}
 
+		const bool has_debug_utils_ext = hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+		if (_options.enable_object_naming)
+		{
+			if (has_debug_utils_ext)
+			{
+				_ext_functions._vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT"));
+			}
+			else
+			{
+				_options.enable_object_naming = false;
+			}
+		}
+
 		if (_options.enable_command_buffer_labels)
 		{
-			if (hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+			if (has_debug_utils_ext)
 			{
 				_ext_functions._vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT"));
 				_ext_functions._vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT"));
@@ -564,8 +610,8 @@ namespace vkl
 	{
 		if (_options.enable_object_naming)
 		{
-			assertm(_vkSetDebugUtilsObjectNameEXT != nullptr, "VkFunction not loaded!");
-			VK_CHECK(_vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
+			assertm(_ext_functions._vkSetDebugUtilsObjectNameEXT != nullptr, "VkFunction not loaded!");
+			VK_CHECK(_ext_functions._vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
 		}
 	}
 
@@ -600,13 +646,24 @@ namespace vkl
 		glfwInit();
 	}
 
-	VkApplication::VkApplication(std::string const& name, bool validation) :
+	VkApplication::VkApplication(std::string const& name, argparse::ArgumentParser & args) :
 		_name(name)
 	{
+		if(args.is_used("--name"))
+		{
+			std::string args_name = args.get<std::string>("--name");	
+			_name = std::move(args_name);
+		}
+
+		auto intToBool = [](int i)
+		{
+			return i != 0;
+		};
+
 		_options = Options{
-			.enable_validation = validation,
-			.enable_object_naming = validation,
-			.enable_command_buffer_labels = validation,
+			.enable_validation = intToBool(args.get<int>("--validation")),
+			.enable_object_naming = intToBool(args.get<int>("--name_vk_objects")),
+			.enable_command_buffer_labels = intToBool(args.get<int>("--cmd_labels")),
 		};
 	}
 

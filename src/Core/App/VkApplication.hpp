@@ -13,6 +13,11 @@
 #include <Core/VkObjects/GenericCache.hpp>
 #include <Core/Execution/ThreadPool.hpp>
 
+namespace argparse
+{
+	class ArgumentParser;
+}
+
 namespace vkl
 {
 	class StagingPool;
@@ -23,6 +28,8 @@ namespace vkl
 	using DescriptorSetLayoutCacheImpl = GenericCacheImpl<Key, DescriptorSetLayout>;
 
 	class SamplerLibrary;
+
+
 
 	template <class T>
 	using SPtr = std::shared_ptr<T>;
@@ -37,6 +44,8 @@ namespace vkl
 			bool enable_object_naming = false;
 			bool enable_command_buffer_labels = false;
 		};
+
+		static void FillArgs(argparse::ArgumentParser & args_parser);
 		
 		struct QueueFamilyIndices
 		{
@@ -83,11 +92,14 @@ namespace vkl
 		Pools _pools = {};
 
 
-		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
+		
 
 		struct ExtFunctionsPtr
 		{
 			PFN_vkCmdDrawMeshTasksEXT _vkCmdDrawMeshTasksEXT = nullptr;
+			
+			PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
+			
 			PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT = nullptr;
 			PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT = nullptr;
 			PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
@@ -157,7 +169,7 @@ namespace vkl
 
 	public:
 
-		VkApplication(std::string const& name, bool enable_validation_layers=false);
+		VkApplication(std::string const& name, argparse::ArgumentParser & args);
 
 		virtual ~VkApplication();
 

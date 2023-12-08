@@ -3,6 +3,14 @@
 
 namespace vkl
 {
+	
+	void AppWithWithImGui::FillArgs(argparse::ArgumentParser& args)
+	{
+		VkApplication::FillArgs(args);
+	}
+
+
+	
 	AppWithWithImGui * AppWithWithImGui::g_app;
 
 	void AppWithWithImGui::initImGui(std::shared_ptr<VkWindow> const& main_window)
@@ -73,8 +81,8 @@ namespace vkl
 		//ImGui_ImplWin32_Init(glfwGetWin32Window(main_window->handle()));
 	}
 
-	AppWithWithImGui::AppWithWithImGui(CreateInfo const& ci) :
-		VkApplication(ci.name, ci.enable_validation),
+	AppWithWithImGui::AppWithWithImGui(std::string const& name, argparse::ArgumentParser& args) :
+		VkApplication(name, args),
 		_gui_context(GuiContext::CI{
 			.imgui_context = nullptr,
 		})

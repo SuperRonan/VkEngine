@@ -22,10 +22,24 @@
 #define VK_LOG std::cout << "[Vk]: " 
 #define VK_ERROR_LOG std::cerr << "[Vk Error]: "
 
+//#define VK_CHECK(call, msg)				\
+//if (call != VK_SUCCESS) {				\
+//	throw std::runtime_error(msg);		\
+//}										
+
+#if _DEBUG
+
 #define VK_CHECK(call, msg)				\
 if (call != VK_SUCCESS) {				\
-	throw std::runtime_error(msg);		\
-}										\
+	assertm(false, msg);				\
+}										
+
+#else
+
+#define VK_CHECK(call, msg)				\
+call
+
+#endif
 
 #define NOT_YET_IMPLEMENTED assert(false)
 

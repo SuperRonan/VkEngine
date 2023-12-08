@@ -32,6 +32,8 @@
 
 #include <Core/Maths/Transforms.hpp>
 
+#include <argparse/argparse.hpp>
+
 #include <iostream>
 #include <chrono>
 #include <random>
@@ -43,6 +45,19 @@ namespace vkl
 {
 	class RendererApp : public AppWithWithImGui
 	{
+	public:
+
+		static void FillArgs(argparse::ArgumentParser& args_parser)
+		{
+			AppWithWithImGui::FillArgs(args_parser);
+
+			args_parser.add_argument("--resolution")
+				.help("Set the resolution of the main window")
+				.nargs(2)
+				.scan<'d', unsigned int>()
+			;
+		}
+
 	protected:
 
 		virtual void requestFeatures(VulkanFeatures& features) override
@@ -51,15 +66,19 @@ namespace vkl
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 		}
 
+		glm::uvec2 _desired_resolution = glm::uvec2(1600, 900);
+
 	public:
 
-		RendererApp(bool enable_validation):
-			AppWithWithImGui(AppWithWithImGui::CI{
-				.name = PROJECT_NAME,
-				.enable_validation = enable_validation
-			})
+		RendererApp(std::string const& name, argparse::ArgumentParser & args):
+			AppWithWithImGui(name, args)
 		{
-
+			if (args.is_used("--resolution"))
+			{
+				auto args_resolution = args.get<std::vector<unsigned int>>("--resolution");
+				_desired_resolution[0] = args_resolution[0];
+				_desired_resolution[1] = args_resolution[1];
+			}
 		}
 
 		void createScene(std::shared_ptr<Scene> & scene)
@@ -155,8 +174,8 @@ namespace vkl
 				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
 				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
 				.name = PROJECT_NAME,
-				.w = 1600,
-				.h = 900,
+				.w = _desired_resolution.x,
+				.h = _desired_resolution.y,
 				.resizeable = GLFW_TRUE,
 			});
 			initImGui(window);
@@ -486,13 +505,28 @@ namespace vkl
 
 int main(int argc, char** argv)
 {
+	std::stringstream ss;
+	size_t m = 12;
+	ss << m;
+
+
 	try
 	{
-		bool vl = true;
-#ifdef NDEBUG
-		vl = false;
-#endif
-		vkl::RendererApp app(vl);
+		argparse::ArgumentParser args;
+		vkl::RendererApp::FillArgs(args);
+		
+		try 
+		{
+			args.parse_args(argc, argv);
+		}
+		catch (std::exception const& e)
+		{
+			std::cerr << e.what() << std::endl;
+			std::cerr << args << std::endl;
+			return -1;
+		}
+
+		vkl::RendererApp app(PROJECT_NAME, args);
 		app.run();
 	}
 	catch (std::exception const& e)

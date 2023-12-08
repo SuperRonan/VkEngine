@@ -25,3 +25,6 @@
 [submodule "ext/tinyobj"]
 	path = ext/tinyobj
 	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "ext/argparse"]
+	path = ext/argparse
+	url = https://github.com/p-ranav/argparse.git

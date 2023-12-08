@@ -117,6 +117,11 @@ SET(TINYOBJ_LIBS tinyobjloader)
 
 
 
+# ArgParse
+ADD_SUBDIRECTORY(ext/argparse)
+INCLUDE_DIRECTORIES(ext/argparse/include)
+
+
 # SPIRV-Cross
 # ADD_SUBDIRECTORY(ext/SPIRV-Cross)
 # INCLUDE_DIRECTORIES(ext/SPIRV-Cross)

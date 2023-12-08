@@ -15,7 +15,13 @@ namespace vkl
 {
 	class AppWithWithImGui : public VkApplication
 	{
+	public:
+		
+		static void FillArgs(argparse::ArgumentParser & args_parser);
+
 	protected:
+
+		Options _options = {};
 
 		static AppWithWithImGui* g_app;
 
@@ -49,16 +55,8 @@ namespace vkl
 
 		void initImGui(std::shared_ptr<VkWindow> const& main_window);
 
-		struct CreateInfo
-		{
-			std::string name = {};
-			bool enable_validation = false;
-		};
-		using CI = CreateInfo;
-
-		AppWithWithImGui(CreateInfo const& ci);
+		AppWithWithImGui(std::string const& name, argparse::ArgumentParser & args);
 
 		virtual ~AppWithWithImGui() override;
-
 	};
 }
