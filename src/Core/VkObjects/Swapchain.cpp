@@ -84,7 +84,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_swapchain,
 				.pObjectName = name().data(),
 			};
-			_app->nameObject(object_name);
+			_app->nameVkObjectIFP(object_name);
 		}
 	}
 

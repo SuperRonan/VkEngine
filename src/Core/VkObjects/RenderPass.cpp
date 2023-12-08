@@ -22,7 +22,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_handle,
 				.pObjectName = name().c_str(),
 			};
-			_app->nameObject(vk_name);
+			_app->nameVkObjectIFP(vk_name);
 		}
 	}
 

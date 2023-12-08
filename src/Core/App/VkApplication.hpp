@@ -30,6 +30,13 @@ namespace vkl
 	class VkApplication
 	{
 	public:
+
+		struct Options
+		{
+			bool enable_validation = false;
+			bool enable_object_naming = false;
+			bool enable_command_buffer_labels = false;
+		};
 		
 		struct QueueFamilyIndices
 		{
@@ -56,6 +63,8 @@ namespace vkl
 		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 
 		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
+
+		Options _options = {};
 
 		VkInstance _instance = VK_NULL_HANDLE;
 		std::vector<VkExtensionProperties> _instance_extensions = {};
@@ -93,8 +102,6 @@ namespace vkl
 		virtual std::vector<const char*> getDeviceExtensions(); 
 
 		virtual std::vector<const char*> getInstanceExtensions();
-
-		bool _enable_valid_layers = false;
 
 		std::string _name = {};
 
@@ -184,7 +191,9 @@ namespace vkl
 
 		//StagingPool& stagingPool();
 
-		void nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
+		void nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
+
+		void nameVkObjectIFP(VkObjectType type, uint64_t handle, std::string_view const& name);
 
 		constexpr const VulkanFeatures& availableFeatures() const
 		{
@@ -206,11 +215,6 @@ namespace vkl
 		bool hasInstanceExtension(std::string_view ext_name)const
 		{
 			return getInstanceExtVersion(ext_name) != EXT_NONE;
-		}
-
-		constexpr bool enableValidation()const
-		{
-			return _enable_valid_layers;
 		}
 
 		const ExtFunctionsPtr& extFunctions()
@@ -237,6 +241,11 @@ namespace vkl
 		DelayedTaskExecutor& threadPool()
 		{
 			return *_thread_pool;
+		}
+
+		const Options& options()const
+		{
+			return _options;
 		}
 	};
 

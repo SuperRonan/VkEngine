@@ -66,7 +66,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_buffer,
 				.pObjectName = name().c_str(),
 			};
-			_app->nameObject(buffer_name);
+			_app->nameVkObjectIFP(buffer_name);
 		}
 	}
 

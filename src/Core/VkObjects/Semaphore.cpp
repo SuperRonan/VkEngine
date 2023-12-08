@@ -35,7 +35,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_handle,
 				.pObjectName = name().data(),
 			};
-			_app->nameObject(sem_name);
+			_app->nameVkObjectIFP(sem_name);
 		}
 	}
 

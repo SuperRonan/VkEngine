@@ -64,7 +64,7 @@ namespace vkl
 			.pipeline_binding = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
 		})
 	{
-		_can_push_vk_debug_label = application()->hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		_can_push_vk_debug_label = application()->options().enable_command_buffer_labels;
 	}
 
 	void ExecutionContext::pushDebugLabel(std::string const& label, vec4 const& color)

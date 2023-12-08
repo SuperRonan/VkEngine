@@ -68,7 +68,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_handle,
 				.pObjectName = name().c_str(),
 			};
-			_app->nameObject(cb_name);
+			_app->nameVkObjectIFP(cb_name);
 		}
 	}
 

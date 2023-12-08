@@ -15,7 +15,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_image,
 				.pObjectName = _name.data(),
 			};
-			_app->nameObject(object_name);
+			_app->nameVkObjectIFP(object_name);
 		}
 	}
 

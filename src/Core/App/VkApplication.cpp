@@ -92,7 +92,7 @@ namespace vkl
 		uint32_t glfw_ext_count = 0;
 		const char** glfw_exts = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
 		std::vector<const char*> extensions(glfw_exts, glfw_exts + glfw_ext_count);
-		if (_enable_valid_layers)
+		if (_options.enable_validation)
 		{
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
@@ -154,7 +154,7 @@ namespace vkl
 		}
 
 
-		if (_enable_valid_layers)
+		if (_options.enable_validation)
 		{
 			if (!checkValidLayerSupport())
 			{
@@ -201,7 +201,7 @@ namespace vkl
 
 		const auto valid_layers = getValidLayers();
 
-		if (_enable_valid_layers)
+		if (_options.enable_validation)
 		{
 			create_info.enabledLayerCount = valid_layers.size();
 			create_info.ppEnabledLayerNames = valid_layers.data();
@@ -217,7 +217,11 @@ namespace vkl
 
 		VK_CHECK(vkCreateInstance(&create_info, nullptr, &_instance), "Failed to create the Vulkan Instance");
 
-		_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT"));
+		if (_options.enable_object_naming)
+		{
+			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(_instance, "vkSetDebugUtilsObjectNameEXT"));
+		}
+
 
 	}
 
@@ -233,7 +237,7 @@ namespace vkl
 
 	void VkApplication::initValidLayers()
 	{
-		if (_enable_valid_layers)
+		if (_options.enable_validation)
 		{
 			VkDebugUtilsMessengerCreateInfoEXT debug_create_info;
 			populateDebugMessengerCreateInfo(debug_create_info);
@@ -490,7 +494,7 @@ namespace vkl
 		device_create_info.ppEnabledExtensionNames = device_extensions.data();
 
 		const auto valid_layers = getValidLayers();
-		if (_enable_valid_layers)
+		if (_options.enable_validation)
 		{
 			device_create_info.enabledLayerCount = valid_layers.size();
 			device_create_info.ppEnabledLayerNames = valid_layers.data();
@@ -520,11 +524,18 @@ namespace vkl
 			_ext_functions._vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksEXT"));
 		}
 
-		if (hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+		if (_options.enable_command_buffer_labels)
 		{
-			_ext_functions._vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT"));
-			_ext_functions._vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT"));
-			_ext_functions._vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdInsertDebugUtilsLabelEXT"));
+			if (hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+			{
+				_ext_functions._vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdBeginDebugUtilsLabelEXT"));
+				_ext_functions._vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdEndDebugUtilsLabelEXT"));
+				_ext_functions._vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetInstanceProcAddr(_instance, "vkCmdInsertDebugUtilsLabelEXT"));
+			}
+			else
+			{
+				_options.enable_command_buffer_labels = false;
+			}
 		}
 	}
 
@@ -549,13 +560,25 @@ namespace vkl
 		//_staging_pool = std::make_unique<StagingPool>(this, _allocator);
 	}
 
-	void VkApplication::nameObject(VkDebugUtilsObjectNameInfoEXT const& object_to_name)
+	void VkApplication::nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT const& object_to_name)
 	{
-		//std::cout << "nameObject: not yet implemented (" << std::hex << object_to_name.object << std::dec << " -> " << object_to_name.pObjectName << ")\n";
-		if (_enable_valid_layers)
+		if (_options.enable_object_naming)
 		{
+			assertm(_vkSetDebugUtilsObjectNameEXT != nullptr, "VkFunction not loaded!");
 			VK_CHECK(_vkSetDebugUtilsObjectNameEXT(_device, &object_to_name), "Failed to name an object.");
 		}
+	}
+
+	void VkApplication::nameVkObjectIFP(VkObjectType type, uint64_t handle, std::string_view const& name)
+	{
+		VkDebugUtilsObjectNameInfoEXT doni{
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+			.pNext = nullptr,
+			.objectType = type,
+			.objectHandle = handle, 
+			.pObjectName = name.data(),
+		};
+		nameVkObjectIFP(doni);
 	}
 
 	void VkApplication::queryDescriptorBindingOptions()
@@ -578,10 +601,13 @@ namespace vkl
 	}
 
 	VkApplication::VkApplication(std::string const& name, bool validation) :
-		_enable_valid_layers(validation),
 		_name(name)
 	{
-
+		_options = Options{
+			.enable_validation = validation,
+			.enable_object_naming = validation,
+			.enable_command_buffer_labels = validation,
+		};
 	}
 
 	void VkApplication::init()
@@ -629,7 +655,7 @@ namespace vkl
 
 		vkDestroyDevice(_device, nullptr);
 
-		if (_enable_valid_layers)
+		if (_options.enable_validation)
 		{
 			DestroyDebugUtilsMessengerEXT(_instance, _debug_messenger, nullptr);
 		}

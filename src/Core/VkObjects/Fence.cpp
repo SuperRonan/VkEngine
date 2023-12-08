@@ -33,7 +33,7 @@ namespace vkl
 				.objectHandle = (uint64_t)_handle,
 				.pObjectName = name().data(),
 			};
-			_app->nameObject(fence_name);
+			_app->nameVkObjectIFP(fence_name);
 		}
 	}
 

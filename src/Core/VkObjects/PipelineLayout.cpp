@@ -37,7 +37,7 @@ namespace vkl
 
 	void PipelineLayout::setVkName()
 	{
-		application()->nameObject(VkDebugUtilsObjectNameInfoEXT{
+		application()->nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT{
 			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 			.pNext = nullptr,
 			.objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
