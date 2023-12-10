@@ -45,6 +45,11 @@ namespace vkl
 			.default_value(default_cmd_labels)
 			.scan<'d', int>()
 		;
+
+		args.add_argument("--helper_threads")
+			.help("Set the number of helper threads, 'all' to use all available threads, 'none' to run single thread, -n to use all threads minus n")
+			.default_value("all"s)
+		;
 	}
 
 
@@ -646,12 +651,12 @@ namespace vkl
 		glfwInit();
 	}
 
-	VkApplication::VkApplication(std::string const& name, argparse::ArgumentParser & args) :
-		_name(name)
+	VkApplication::VkApplication(CreateInfo const& ci) :
+		_name(ci.name)
 	{
-		if(args.is_used("--name"))
+		if(ci.args.is_used("--name"))
 		{
-			std::string args_name = args.get<std::string>("--name");	
+			std::string args_name = ci.args.get<std::string>("--name");	
 			_name = std::move(args_name);
 		}
 
@@ -661,20 +666,43 @@ namespace vkl
 		};
 
 		_options = Options{
-			.enable_validation = intToBool(args.get<int>("--validation")),
-			.enable_object_naming = intToBool(args.get<int>("--name_vk_objects")),
-			.enable_command_buffer_labels = intToBool(args.get<int>("--cmd_labels")),
+			.enable_validation = intToBool(ci.args.get<int>("--validation")),
+			.enable_object_naming = intToBool(ci.args.get<int>("--name_vk_objects")),
+			.enable_command_buffer_labels = intToBool(ci.args.get<int>("--cmd_labels")),
 		};
+
+		bool mt = true;
+		size_t n_threads = 0;
+		bool log = true;
+
+		std::string arg_helper_threads = ci.args.get<std::string>("--helper_threads");
+		if (arg_helper_threads == "all")
+		{
+			n_threads = std::thread::hardware_concurrency();
+		}
+		else if (arg_helper_threads == "none")
+		{
+			mt = false;
+		}
+		else
+		{
+			int n = std::atoi(arg_helper_threads.c_str());
+			if (n < 0)
+			{
+				n = std::thread::hardware_concurrency() - n;
+			}
+			n_threads = n;
+		}
+
+		_thread_pool = std::unique_ptr<DelayedTaskExecutor>(DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
+			.multi_thread = mt,
+			.n_threads = n_threads,
+			.log_actions = log,
+		}));
 	}
 
 	void VkApplication::init()
 	{
-		_thread_pool = std::unique_ptr<DelayedTaskExecutor>(DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
-			.multi_thread = true,
-			.n_threads = 0,
-			.log_actions = true,
-		}));
-
 		initGLFW();
 		preChecks();
 

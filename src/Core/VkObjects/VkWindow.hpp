@@ -37,21 +37,35 @@ namespace vkl
 		struct CreateInfo
 		{	
 			VkApplication* app = nullptr;
-			std::set<uint32_t> queue_families_indices = {};
-
-			DynamicValue<VkPresentModeKHR> target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-
 			std::string name = {};
+
+			std::set<uint32_t> queue_families_indices = {};
+			
+			glm::ivec2 resolution = {};
+			Dyn<glm::ivec2> dynamic_resolution = {};
+			
+			VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			Dyn<VkPresentModeKHR> dynamic_present_mode = {};
+			
+			//VkSurfaceFormatKHR target_format = VkSurfaceFormatKHR{
+			//	.format = VK_FORMAT_MAX_ENUM,
+			//	.colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR,
+			//};
+			Dyn<VkSurfaceFormatKHR> dynamic_target_format = {};
+
 			Mode mode = Mode::Windowed;
-			uint32_t w, h;
+			
 			int resizeable = false;
 		};
+		using CI = CreateInfo;
 
 	protected:
 
 		uint32_t _width, _height;
 		Mode _window_mode = Mode::MAX_ENUM;
 		GLFWwindow* _window;
+
+		bool _resizeable = false;
 
 		int _window_pos_x, _window_pos_y;
 		int _latest_windowed_width, _latest_windowed_height;
@@ -77,7 +91,6 @@ namespace vkl
 			void setGamma(float gamma);
 		};
 
-		int _desired_resolution[2];
 
 		std::vector<DetailedMonitor> _monitors = {};
 		size_t _selected_monitor_index = 0;
@@ -85,8 +98,12 @@ namespace vkl
 		std::shared_ptr<Surface> _surface = nullptr;
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		
+
+		Dyn<glm::ivec2> _extern_resolution = {};
+		glm::ivec2 _desired_resolution = {};
+		Dyn<VkExtent3D> _dynamic_extent = {};
 		
-		DynamicValue<VkExtent3D> _dynamic_extent;
+
 		std::set<uint32_t> _queues_families_indices;
 
 		bool _glfw_resized = false;
@@ -99,9 +116,15 @@ namespace vkl
 		ImGuiListSelection _gui_window_mode;
 		Mode _desired_window_mode;
 
-		DynamicValue<VkPresentModeKHR> _target_present_mode;
+		Dyn<VkPresentModeKHR> _extern_present_mode = {};
+		VkPresentModeKHR _target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 		ImGuiListSelection _gui_present_modes;
-		DynamicValue<VkSurfaceFormatKHR> _target_format = VkSurfaceFormatKHR{.format = VK_FORMAT_MAX_ENUM, .colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR};
+
+		Dyn<VkSurfaceFormatKHR> _extern_target_format = {};
+		VkSurfaceFormatKHR _target_format = VkSurfaceFormatKHR{
+			.format = VK_FORMAT_MAX_ENUM,
+			.colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR,
+		};
 		ImGuiListSelection _gui_formats;
 
 		struct FrameInfo
@@ -171,7 +194,7 @@ namespace vkl
 
 		DynamicValue<VkSurfaceFormatKHR> surfaceFormat()
 		{
-			return _target_format;
+			return &_target_format;
 		}
 
 		DynamicValue<VkFormat> format()const;
@@ -207,9 +230,6 @@ namespace vkl
 		{
 			VkBool32 success;
 			uint32_t swap_index;
-			//uint32_t in_flight_index;
-			//std::shared_ptr<Semaphore> semaphore;
-			//std::shared_ptr<Fence> fence;
 
 			AquireResult();
 

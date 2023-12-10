@@ -43,42 +43,38 @@
 
 namespace vkl
 {
-	class RendererApp : public AppWithWithImGui
+	class RendererApp : public AppWithImGui
 	{
 	public:
 
 		static void FillArgs(argparse::ArgumentParser& args_parser)
 		{
-			AppWithWithImGui::FillArgs(args_parser);
-
-			args_parser.add_argument("--resolution")
-				.help("Set the resolution of the main window")
-				.nargs(2)
-				.scan<'d', unsigned int>()
-			;
+			AppWithImGui::FillArgs(args_parser);
 		}
 
 	protected:
 
 		virtual void requestFeatures(VulkanFeatures& features) override
 		{
-			AppWithWithImGui::requestFeatures(features);
+			AppWithImGui::requestFeatures(features);
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 		}
 
-		glm::uvec2 _desired_resolution = glm::uvec2(1600, 900);
-
 	public:
 
-		RendererApp(std::string const& name, argparse::ArgumentParser & args):
-			AppWithWithImGui(name, args)
+		struct CreateInfo
 		{
-			if (args.is_used("--resolution"))
-			{
-				auto args_resolution = args.get<std::vector<unsigned int>>("--resolution");
-				_desired_resolution[0] = args_resolution[0];
-				_desired_resolution[1] = args_resolution[1];
-			}
+
+		};
+		using CI = CreateInfo;
+		
+		RendererApp(std::string const& name, argparse::ArgumentParser & args):
+			AppWithImGui(AppWithImGui::CI{
+				.name = name,
+				.args = args,
+			})
+		{
+
 		}
 
 		void createScene(std::shared_ptr<Scene> & scene)
@@ -169,16 +165,11 @@ namespace vkl
 		{
 			VkApplication::init();
 
-			std::shared_ptr<VkWindow> window = std::make_shared<VkWindow>(VkWindow::CreateInfo{
-				.app = this,
-				.queue_families_indices = std::set({_queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value()}),
-				.target_present_mode = VK_PRESENT_MODE_FIFO_KHR,
-				.name = PROJECT_NAME,
-				.w = _desired_resolution.x,
-				.h = _desired_resolution.y,
-				.resizeable = GLFW_TRUE,
-			});
-			initImGui(window);
+			_desired_window_options.name = PROJECT_NAME;
+			_desired_window_options.queue_families_indices = std::set({ _queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value() });
+			_desired_window_options.resizeable = true;
+			createMainWindow();
+			initImGui();
 
 			std::filesystem::path shaders = PROJECT_SRC_PATH;
 
@@ -188,7 +179,7 @@ namespace vkl
 			LinearExecutor exec(LinearExecutor::CI{
 				.app = this,
 				.name = "exec",
-				.window = window,
+				.window = _main_window,
 				.mounting_points = &mounting_points,
 				.use_ImGui = true,
 			});
@@ -208,7 +199,7 @@ namespace vkl
 					.name = "Final Image",
 					.type = VK_IMAGE_TYPE_2D,
 					.format = VK_FORMAT_R16G16B16A16_SFLOAT,
-					.extent = window->extent3D(),
+					.extent = _main_window->extent3D(),
 					.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 				},
@@ -285,21 +276,21 @@ namespace vkl
 				}
 			}
 
-			KeyboardListener keyboard(*window);
-			MouseListener mouse(*window);
-			GamepadListener gamepad(*window, 0);
+			KeyboardListener keyboard(*_main_window);
+			MouseListener mouse(*_main_window);
+			GamepadListener gamepad(*_main_window, 0);
 
 			const auto process_input = [&](InputState& state)
 			{
-				if (glfwGetKey(*window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-					glfwSetWindowShouldClose(*window, true);
+				if (glfwGetKey(*_main_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+					glfwSetWindowShouldClose(*_main_window, true);
 			};
 
 			double t = glfwGetTime(), dt = 0.0;
 			size_t frame_index = 0;
 
 			Camera camera(Camera::CreateInfo{
-				.resolution = window->extent2D(),
+				.resolution = _main_window->extent2D(),
 				.znear = 0.01,
 				.zfar = 100,
 			});
@@ -311,14 +302,14 @@ namespace vkl
 				.gamepad = &gamepad,
 			});
 
-			while (!window->shouldClose())
+			while (!_main_window->shouldClose())
 			{
 				{
 					double new_t = glfwGetTime();
 					dt = new_t - t;
 					t = new_t;
 				}
-				window->pollEvents();
+				_main_window->pollEvents();
 
 				const auto& imgui_io = ImGui::GetIO();
 				
@@ -368,13 +359,13 @@ namespace vkl
 					}
 
 
-					window->declareGui(*gui_ctx);
+					_main_window->declareGui(*gui_ctx);
 					endImGuiFrame(gui_ctx);
 				}
 
 				if(mouse.getButton(1).justReleased())
 				{
-					pip.setPosition(mouse.getReleasedPos(1) / glm::vec2(window->extent2D().value().width, window->extent2D().value().height));
+					pip.setPosition(mouse.getReleasedPos(1) / glm::vec2(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
 				}
 
 				frame_counters.reset();

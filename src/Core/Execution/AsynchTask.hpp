@@ -77,6 +77,7 @@ namespace vkl
 		 std::chrono::time_point<Clock> _begin_time;
 		 Clock::duration _duration;
 
+		 bool _cancel_while_running = false;
 
 		// Callbacks on completion?
 
@@ -122,6 +123,12 @@ namespace vkl
 		void cancel(bool verbose)
 		{
 			cancel(true, verbose);
+		}
+
+		bool isCanceled()
+		{
+			std::shared_lock lock(_mutex);
+			return _status == Status::Canceled;
 		}
 
 		void setRunning()

@@ -280,13 +280,24 @@ namespace vkl
 			_ready_mutex.lock();
 		}
 		std::shared_ptr<AsynchTask> res;
-		if (!_ready_tasks.empty())
+		while(!_ready_tasks.empty())
 		{
-			res = _ready_tasks.front();
+			res = std::move(_ready_tasks.front());
 			_ready_tasks.pop_front();
+			if (res->isCanceled())
+			{
+				res = nullptr;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		if(res)
+		{
 			_total_running_tasks_counter.fetch_add(1);
 			_total_waiting_tasks_counter.fetch_sub(1);
-			res->setRunning();
 		}
 		
 		if (can_lock_ready)

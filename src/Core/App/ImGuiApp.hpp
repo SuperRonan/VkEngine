@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Core/App/VkApplication.hpp>
+#include <Core/App/MainWindowApp.hpp>
 #include <Core/VkObjects/VkWindow.hpp>
 
 #include <imgui/imgui.h>
@@ -13,7 +13,7 @@
 
 namespace vkl
 {
-	class AppWithWithImGui : public VkApplication
+	class AppWithImGui : public MainWindowApp
 	{
 	public:
 		
@@ -23,7 +23,7 @@ namespace vkl
 
 		Options _options = {};
 
-		static AppWithWithImGui* g_app;
+		static AppWithImGui* g_app;
 
 		struct ImGuiWindow
 		{
@@ -53,10 +53,17 @@ namespace vkl
 
 	public:
 
-		void initImGui(std::shared_ptr<VkWindow> const& main_window);
+		void initImGui();
 
-		AppWithWithImGui(std::string const& name, argparse::ArgumentParser & args);
+		struct CreateInfo
+		{
+			std::string name = {};
+			argparse::ArgumentParser & args;
+		};
+		using CI = CreateInfo;
 
-		virtual ~AppWithWithImGui() override;
+		AppWithImGui(CreateInfo const& ci);
+
+		virtual ~AppWithImGui() override;
 	};
 }

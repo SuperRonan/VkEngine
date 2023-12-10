@@ -159,6 +159,7 @@ namespace vkl
 	{
 		if (_load_image_task)
 		{
+			_load_image_task->cancel(false);
 			_load_image_task->wait();
 		}
 	}

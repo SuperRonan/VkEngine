@@ -87,14 +87,14 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<Surface> surface = nullptr;
 			uint32_t min_image_count = 0;
-			DynamicValue<VkSurfaceFormatKHR> target_format;
-			DynamicValue<VkExtent2D> extent;
+			Dyn<VkSurfaceFormatKHR> target_format = {};
+			Dyn<VkExtent2D> extent = {};
 			uint32_t layers = 1;
 			VkImageUsageFlags image_usages = 0;
 			std::vector<uint32_t> queues = {};
 			VkSurfaceTransformFlagBitsKHR pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 			VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-			DynamicValue<VkPresentModeKHR> target_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+			Dyn<VkPresentModeKHR> target_present_mode = {};
 			bool clipped = true;
 			std::shared_ptr<Swapchain> old_swapchain = nullptr;
 		};
@@ -103,11 +103,11 @@ namespace vkl
 	protected:
 
 
-		DynamicValue<VkExtent2D> _extent;
+		Dyn<VkExtent2D> _extent;
 		std::shared_ptr<Surface> _surface;
 		std::vector<uint32_t> _queues = {};
-		DynamicValue<VkPresentModeKHR> _target_present_mode;
-		DynamicValue<VkSurfaceFormatKHR> _target_format;
+		Dyn<VkPresentModeKHR> _target_present_mode;
+		Dyn<VkSurfaceFormatKHR> _target_format;
 		std::shared_ptr<SwapchainInstance> _old_swapchain = nullptr;
 
 		VkSwapchainCreateInfoKHR _ci = {};
@@ -123,10 +123,6 @@ namespace vkl
 		Swapchain(Swapchain const&) = delete;
 
 		Swapchain& operator=(Swapchain const&) = delete;
-
-		Swapchain(Swapchain&& other);
-
-		Swapchain& operator=(Swapchain&&);
 		
 		virtual ~Swapchain() override;
 
@@ -148,14 +144,19 @@ namespace vkl
 			return _inst;
 		}
 
-		const DynamicValue<VkSurfaceFormatKHR> & format()const
+		const Dyn<VkSurfaceFormatKHR> & format()const
 		{
 			return _target_format;
 		}
 
-		const DynamicValue<VkExtent2D> & extent() const
+		const Dyn<VkExtent2D> & extent() const
 		{
 			return _extent;
+		}
+
+		const Dyn<VkPresentModeKHR>& presentMode()const
+		{
+			return _target_present_mode;
 		}
 		
 	};

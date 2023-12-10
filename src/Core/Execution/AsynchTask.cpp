@@ -62,12 +62,22 @@ namespace vkl
 
 	void AsynchTask::cancel(bool lock_mutex, bool verbose)
 	{
+		if (_name == "Texture1.albedo_texture.loadHostImage()")
+		{
+			int _ = 0;
+		}
 		if (lock_mutex)
 		{
 			_mutex.lock();
 		}
-		
-		if (!StatusIsFinish(_status))
+
+
+
+		if (_status == Status::Running)
+		{
+			_cancel_while_running = true;
+		}
+		else if (!StatusIsFinish(_status))
 		{
 			if (verbose)
 			{
@@ -88,6 +98,7 @@ namespace vkl
 	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(bool verbose)
 	{
 		assert(_lambda);
+		Status prev_satus = _status;
 		setRunning();
 		_begin_time = Clock::now();
 
@@ -95,9 +106,18 @@ namespace vkl
 			return dep->getStatus() == Status::Success;
 		});
 
-		if (!all_success)
+		if (!all_success || isCanceled())
 		{
-			cancel(true, verbose);
+			std::unique_lock lock(_mutex);
+			// Cancel
+			if (verbose)
+			{
+				std::unique_lock lock(g_mutex);
+				std::cout << "Canceling task: " << name() << std::endl;
+			}
+
+			_status = Status::Canceled;
+			_finish_condition.notify_all();
 			return {};
 		}
 
@@ -108,6 +128,12 @@ namespace vkl
 		bool g_mutex_locked = false;
 		while (try_run)
 		{
+			if (_status == Status::Canceled || _cancel_while_running)
+			{
+				std::unique_lock lock(_mutex);
+				_status = Status::Canceled;
+				break;
+			}
 			ReturnType res;
 			try
 			{

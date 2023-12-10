@@ -4,16 +4,16 @@
 namespace vkl
 {
 	
-	void AppWithWithImGui::FillArgs(argparse::ArgumentParser& args)
+	void AppWithImGui::FillArgs(argparse::ArgumentParser& args)
 	{
-		VkApplication::FillArgs(args);
+		MainWindowApp::FillArgs(args);
 	}
 
 
 	
-	AppWithWithImGui * AppWithWithImGui::g_app;
+	AppWithImGui* AppWithImGui::g_app;
 
-	void AppWithWithImGui::initImGui(std::shared_ptr<VkWindow> const& main_window)
+	void AppWithImGui::initImGui()
 	{
 		_imgui_ctx = ImGui::CreateContext();
 		ImGui::SetCurrentContext(_imgui_ctx);
@@ -76,13 +76,16 @@ namespace vkl
 		//	
 		//	w->_window->setSize(static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y));
 		//};
-
-		ImGui_ImplGlfw_InitForVulkan(*main_window, true);
+		assert(!!_main_window);
+		ImGui_ImplGlfw_InitForVulkan(_main_window->handle(), true);
 		//ImGui_ImplWin32_Init(glfwGetWin32Window(main_window->handle()));
 	}
 
-	AppWithWithImGui::AppWithWithImGui(std::string const& name, argparse::ArgumentParser& args) :
-		VkApplication(name, args),
+	AppWithImGui::AppWithImGui(CreateInfo const& ci) :
+		MainWindowApp(MainWindowApp::CI{
+			.name = ci.name,
+			.args = ci.args,
+		}),
 		_gui_context(GuiContext::CI{
 			.imgui_context = nullptr,
 		})
@@ -91,7 +94,7 @@ namespace vkl
 		g_app = this;
 	}
 
-	AppWithWithImGui::~AppWithWithImGui()
+	AppWithImGui::~AppWithImGui()
 	{
 		ImGui_ImplGlfw_Shutdown();
 

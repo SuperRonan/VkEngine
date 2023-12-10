@@ -169,7 +169,14 @@ namespace vkl
 
 	public:
 
-		VkApplication(std::string const& name, argparse::ArgumentParser & args);
+		struct CreateInfo
+		{
+			std::string name = {};
+			argparse::ArgumentParser& args;
+		};
+		using CI = CreateInfo;
+
+		VkApplication(CreateInfo const& ci);
 
 		virtual ~VkApplication();
 
