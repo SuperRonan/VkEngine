@@ -151,21 +151,18 @@ namespace vkl
 
 	std::shared_ptr<DescriptorSetLayout> Scene::SetLayout(VkApplication* app, SetLayoutOptions const& options)
 	{
-		std::shared_ptr<DescriptorSetLayoutCache>& gen_cache = app->getDescSetLayoutCache(static_cast<uint32_t>(DescriptorSetName::scene));
-		if (!gen_cache)
+		std::shared_ptr<DescriptorSetLayoutCache> gen_cache = app->getDescSetLayoutCacheOrEmplace(static_cast<uint32_t>(DescriptorSetName::scene), []()
 		{
-			gen_cache = std::make_shared< DescriptorSetLayoutCacheImpl<SetLayoutOptions>>();
-		}
+			return std::make_shared< DescriptorSetLayoutCacheImpl<SetLayoutOptions>>();
+		});
 		std::shared_ptr<DescriptorSetLayoutCacheImpl<SetLayoutOptions>> cache = std::dynamic_pointer_cast<DescriptorSetLayoutCacheImpl<SetLayoutOptions>>(gen_cache);
 		assert(!!cache);
 
-		std::shared_ptr<DescriptorSetLayout> res = cache->findIFP(options);
+		std::shared_ptr<DescriptorSetLayout> res = cache->findOrEmplace(options, [app]() {
 
-		if (!res)
-		{
 			std::vector<DescriptorSetLayout::Binding> bindings;
 			using namespace std::containers_operators;
-			
+
 			bindings += DescriptorSetLayout::Binding{
 				.vk_binding = VkDescriptorSetLayoutBinding{
 					.binding = 0,
@@ -197,16 +194,15 @@ namespace vkl
 			};
 
 
-			res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+			std::shared_ptr<DescriptorSetLayout> res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = app,
 				.name = "Scene::SetLayout",
 				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
 				.bindings = bindings,
 				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			});
-
-			cache->recordValue(options, res);
-		}
+			return res;
+		});
 
 		return res;
 	}

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <Core/VkObjects/Sampler.hpp>
+
 #include <unordered_map>
 #include <atomic>
+#include <shared_mutex>
 
 namespace vkl
 {
@@ -26,6 +28,8 @@ namespace vkl
 		{
 			size_t operator()(SamplerInfo const& si) const;
 		};
+
+		mutable std::shared_mutex _mutex;
 		
 		std::atomic<size_t> _sampler_count = 0;
 		std::unordered_map<SamplerInfo, std::shared_ptr<Sampler>, Hasher> _map;

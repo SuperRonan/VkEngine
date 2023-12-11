@@ -28,6 +28,7 @@ namespace vkl
 
 	std::shared_ptr<Sampler> SamplerLibrary::getSampler(SamplerInfo const& si)
 	{
+		std::unique_lock lock(_mutex);
 		if (!_map.contains(si))
 		{
 			const size_t i = _sampler_count.fetch_add(1);
@@ -49,17 +50,20 @@ namespace vkl
 
 	std::shared_ptr<Sampler> SamplerLibrary::getNamedSampler(std::string const& name) const
 	{
+		std::unique_lock lock(_mutex);
 		assert(_named_samplers.contains(name));
 		return _named_samplers.at(name);
 	}
 
 	void SamplerLibrary::setNamedSampler(std::string const& name, std::shared_ptr<Sampler> const& s)
 	{
+		std::unique_lock lock(_mutex);
 		_named_samplers[name] = s;
 	}
 
 	void SamplerLibrary::updateResources(UpdateContext& ctx)
 	{
+		std::unique_lock lock(_mutex);
 		for (auto& [si, s] : _map)
 		{
 			s->updateResources(ctx);

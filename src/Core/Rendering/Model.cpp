@@ -109,33 +109,29 @@ namespace vkl
 
 	std::shared_ptr<DescriptorSetLayout> Model::setLayout(VkApplication * app, SetLayoutOptions const& options)
 	{
-		std::shared_ptr<DescriptorSetLayoutCache> & gen_cache = app->getDescSetLayoutCache(app->descriptorBindingGlobalOptions().set_bindings[uint32_t(DescriptorSetName::invocation)].set);
-
-		if (!gen_cache)
+		std::shared_ptr<DescriptorSetLayoutCache> gen_cache = app->getDescSetLayoutCacheOrEmplace(app->descriptorBindingGlobalOptions().set_bindings[uint32_t(DescriptorSetName::invocation)].set, []()
 		{
-			gen_cache = std::make_shared<ModelSetLayoutCache>();
-		}
-
+			return std::make_shared<ModelSetLayoutCache>();
+		});
 		ModelSetLayoutCache * cache = dynamic_cast<ModelSetLayoutCache*>(gen_cache.get());
+		assert(!!cache);
 
-		std::shared_ptr<DescriptorSetLayout> res = cache->findIFP(options);
-
-		if (!res)
+		std::shared_ptr<DescriptorSetLayout> res = cache->findOrEmplace(options, [app, &options]()
 		{
 			using namespace std::containers_operators;
 
 			std::vector<DescriptorSetLayout::Binding> bindings;
 
-			if(options.bind_mesh)
+			if (options.bind_mesh)
 			{
 				Mesh::Type mesh_type = ExtractMeshType(options.type);
 				switch (mesh_type)
 				{
-					case Mesh::Type::Rigid:
-						bindings += RigidMesh::getSetLayoutBindingsStatic(mesh_binding_offset);
+				case Mesh::Type::Rigid:
+					bindings += RigidMesh::getSetLayoutBindingsStatic(mesh_binding_offset);
 					break;
-					default:
-						assert(false);
+				default:
+					assert(false);
 					break;
 				}
 			}
@@ -145,11 +141,11 @@ namespace vkl
 				Material::Type material_type = ExtractMaterialType(options.type);
 				switch (material_type)
 				{
-					case Material::Type::PhysicallyBased:
-						bindings += Material::getSetLayoutBindings(Material::Type::PhysicallyBased, material_binding_offset);
+				case Material::Type::PhysicallyBased:
+					bindings += Material::getSetLayoutBindings(Material::Type::PhysicallyBased, material_binding_offset);
 					break;
-					default:
-						assert(false);
+				default:
+					assert(false);
 					break;
 				}
 			}
@@ -166,15 +162,16 @@ namespace vkl
 				binding_flags |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 			}
 
-			res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
-				.app = app, 
+			std::shared_ptr<DescriptorSetLayout> res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+				.app = app,
 				.name = "Model::DescriptorSetLayout",
 				.flags = flags,
 				.bindings = bindings,
 				.binding_flags = binding_flags,
 			});
-			cache->recordValue(options, res);
-		}
+			return res;
+		});
+
 		return res;
 	}
 

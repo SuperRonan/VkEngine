@@ -1,17 +1,25 @@
 #pragma once
 
 #include <Core/VulkanCommons.hpp>
+
 #include <iostream>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <optional>
-#include <Core/Utils/stl_extension.hpp>
 #include <memory>
 #include <type_traits>
+#include <shared_mutex>
+
+#include <Core/Utils/stl_extension.hpp>
+
+
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
+
 #include <Core/VkObjects/GenericCache.hpp>
+
 #include <Core/Execution/ThreadPool.hpp>
+
 
 namespace argparse
 {
@@ -120,6 +128,7 @@ namespace vkl
 		VulkanFeatures _requested_features = {};
 		VulkanFeatures _available_features = {};
 
+		mutable std::shared_mutex _mutex;
 		std::vector<std::shared_ptr<DescriptorSetLayoutCache>> _desc_set_layout_caches;
 		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
 
@@ -250,6 +259,19 @@ namespace vkl
 		{
 			assert(s < deviceProperties().props.limits.maxBoundDescriptorSets);
 			return _desc_set_layout_caches[s];
+		}
+
+		template <class MakeCacheFunction>
+		std::shared_ptr<DescriptorSetLayoutCache> getDescSetLayoutCacheOrEmplace(uint32_t s, MakeCacheFunction const& make_cache_function)
+		{
+			assert(s < deviceProperties().props.limits.maxBoundDescriptorSets);
+			std::unique_lock lock(_mutex);
+			std::shared_ptr<DescriptorSetLayoutCache> & res = _desc_set_layout_caches[s];
+			if (!res)
+			{
+				res = make_cache_function();
+			}
+			return res;
 		}
 
 		SamplerLibrary& getSamplerLibrary()
