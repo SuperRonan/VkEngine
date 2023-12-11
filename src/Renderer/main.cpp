@@ -182,6 +182,7 @@ namespace vkl
 				.window = _main_window,
 				.mounting_points = &mounting_points,
 				.use_ImGui = true,
+				.use_debug_renderer = true,
 			});
 
 			ResourcesManager resources_manager = ResourcesManager::CreateInfo{
@@ -227,7 +228,10 @@ namespace vkl
 				.scene = scene,
 				.target = final_image,
 			});
-			exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
+			if (exec.getDebugRenderer())
+			{
+				exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
+			}
 
 			GammaCorrection gamma_correction = GammaCorrection::CI{
 				.app = this,
@@ -340,7 +344,10 @@ namespace vkl
 
 						pip.declareGui(*gui_ctx);
 
-						exec.getDebugRenderer()->declareGui(*gui_ctx);
+						if (exec.getDebugRenderer())
+						{
+							exec.getDebugRenderer()->declareGui(*gui_ctx);
+						}
 
 						ImGui::End();
 					}

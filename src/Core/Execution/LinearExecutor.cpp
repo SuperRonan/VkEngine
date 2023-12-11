@@ -164,7 +164,10 @@ namespace vkl
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
 		}
 
-		_debug_renderer->updateResources(context);
+		if (_debug_renderer)
+		{
+			_debug_renderer->updateResources(context);
+		}
 		_internal_resources.update(context);
 	}
 
