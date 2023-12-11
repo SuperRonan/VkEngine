@@ -25,6 +25,7 @@ namespace vkl
 	protected:
 
 		VkPrimitiveTopology _topology;
+		VkCullModeFlags _cull_mode;
 		VertexInputDescription _vertex_input_desc;
 		std::shared_ptr<GraphicsProgram> _program;
 		std::vector<std::shared_ptr<ImageView>> _attachements = {};
@@ -58,6 +59,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+			VkCullModeFlags cull_mode = VK_CULL_MODE_NONE;
 			VertexInputDescription vertex_input_description = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
@@ -122,6 +124,7 @@ namespace vkl
 			std::string name = {};
 			VertexInputDescription vertex_input_desc = {};
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			VkCullModeFlags cull_mode = VK_CULL_MODE_NONE;
 			DynamicValue<uint32_t> draw_count = {};
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
@@ -243,6 +246,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			VkCullModeFlags cull_mode = VK_CULL_MODE_NONE;
 			DynamicValue<VkExtent3D> extent = {};
 			bool dispatch_threads = false;
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};

@@ -9,6 +9,7 @@ namespace vkl
 			.sets_layouts = ci.sets_layouts,
 		}),
 		_topology(ci.topology),
+		_cull_mode(ci.cull_mode),
 		_vertex_input_desc(ci.vertex_input_description),
 		_attachements(ci.targets),
 		_depth(ci.depth_buffer),
@@ -186,7 +187,7 @@ namespace vkl
 		gci.name = name() + ".Pipeline";
 		gci.vertex_input = _vertex_input_desc;
 		gci.input_assembly = Pipeline::InputAssemblyDefault(_topology);
-		gci.rasterization = Pipeline::RasterizationDefault(VK_CULL_MODE_BACK_BIT);
+		gci.rasterization = Pipeline::RasterizationDefault(_cull_mode);
 		
 		if (_line_raster_mode.has_value())
 		{
@@ -302,6 +303,7 @@ namespace vkl
 			.app = ci.app,
 			.name = ci.name,
 			.topology = ci.topology,
+			.cull_mode = ci.cull_mode,
 			.vertex_input_description = ci.vertex_input_desc,
 			.line_raster_mode = ci.line_raster_mode,
 			.sets_layouts = ci.sets_layouts,
@@ -607,6 +609,7 @@ namespace vkl
 		GraphicsCommand(GraphicsCommand::CreateInfo{
 			.app = ci.app,
 			.name = ci.name,
+			.cull_mode = ci.cull_mode,
 			.line_raster_mode = ci.line_raster_mode,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
