@@ -11,9 +11,9 @@ namespace vkl
 	{
 	protected:
 
-		size_t _update_cycle = 0;
+		size_t _update_tick = 0;
 
-		size_t _shader_check_cycle = 0;
+		size_t _shader_check_tick = 0;
 		using _shader_clock_t = std::chrono::system_clock;
 		std::chrono::time_point<_shader_clock_t> _last_shader_check;
 		std::chrono::milliseconds _shader_check_period;

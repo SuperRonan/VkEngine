@@ -743,7 +743,7 @@ namespace vkl
 			return a + "\n"s + b;
 		});
 		
-		if (ctx.checkShadersCycle() > _check_cycle)
+		if (ctx.checkShadersTick() > _check_tick)
 		{
 			waitForInstanceCreationIFN();
 			for (const auto& dep : _dependencies)
@@ -756,7 +756,7 @@ namespace vkl
 					break;
 				}
 			}
-			_check_cycle = ctx.checkShadersCycle();
+			_check_tick = ctx.checkShadersTick();
 		}
 		
 		const bool use_different_spec = new_key != _current_key;

@@ -10,7 +10,7 @@ namespace vkl
 	{
 	protected:
 
-		size_t _latest_update_cycle = 0;
+		size_t _latest_update_tick = 0;
 
 		std::filesystem::path _path = {};
 

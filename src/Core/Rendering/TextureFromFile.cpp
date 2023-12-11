@@ -167,12 +167,12 @@ namespace vkl
 	void TextureFromFile::updateResources(UpdateContext& ctx)
 	{
 		
-		if (ctx.updateCycle() <= _latest_update_cycle)
+		if (ctx.updateTick() <= _latest_update_tick)
 		{
 			return;
 		}
 
-		_latest_update_cycle = ctx.updateCycle();
+		_latest_update_tick = ctx.updateTick();
 
 		if (_image)
 		{

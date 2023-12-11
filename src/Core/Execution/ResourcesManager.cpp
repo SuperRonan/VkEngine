@@ -23,13 +23,13 @@ namespace vkl
 
 	std::shared_ptr<UpdateContext> ResourcesManager::beginUpdateCycle()
 	{
-		++_update_cycle;
+		++_update_tick;
 
 		{
 			std::chrono::time_point<_shader_clock_t> now = _shader_clock_t::now();
 			if ((now - _last_shader_check) > _shader_check_period)
 			{
-				++_shader_check_cycle;
+				++_shader_check_tick;
 				_last_shader_check = now;
 			}
 		}
@@ -37,8 +37,8 @@ namespace vkl
 		std::shared_ptr<UpdateContext> res = std::make_shared<UpdateContext>(UpdateContext::CI{
 			.app = application(),
 			.name = name() + ".update_context",
-			.update_cycle = _update_cycle,
-			.shader_check_cycle = _shader_check_cycle,
+			.update_tick = _update_tick,
+			.shader_check_tick = _shader_check_tick,
 			.common_definitions = _common_definitions,
 			.mounting_points = _mounting_points,
 			.upload_queue = &_upload_queue,

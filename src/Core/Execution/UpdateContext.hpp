@@ -17,9 +17,9 @@ namespace vkl
 	{
 	protected:
 
-		size_t _update_cycle;
+		size_t _update_tick;
 
-		size_t _shader_check_cycle;
+		size_t _shader_check_tick;
 
 		bool _update_resources_anyway = false;
 		
@@ -46,8 +46,8 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			size_t update_cycle = 0;
-			size_t shader_check_cycle = 0;
+			size_t update_tick = 0;
+			size_t shader_check_tick = 0;
 			const DefinitionsMap* common_definitions;
 			MountingPoints* mounting_points = nullptr;
 			UploadQueue * upload_queue = nullptr;
@@ -57,8 +57,8 @@ namespace vkl
 
 		UpdateContext(CreateInfo const& ci) :
 			VkObject(ci.app, ci.name),
-			_update_cycle(ci.update_cycle),
-			_shader_check_cycle(ci.shader_check_cycle),
+			_update_tick(ci.update_tick),
+			_shader_check_tick(ci.shader_check_tick),
 			_common_definitions(ci.common_definitions),
 			_mounting_points(ci.mounting_points),
 			_upload_queue(ci.upload_queue),
@@ -67,14 +67,14 @@ namespace vkl
 			_tick_tock.tick();
 		}
 
-		constexpr size_t updateCycle()const
+		constexpr size_t updateTick()const
 		{
-			return _update_cycle;
+			return _update_tick;
 		}
 
-		constexpr size_t checkShadersCycle() const 
+		constexpr size_t checkShadersTick() const 
 		{ 
-			return _shader_check_cycle; 
+			return _shader_check_tick; 
 		}
 
 		constexpr const DefinitionsMap * commonDefinitions() const
