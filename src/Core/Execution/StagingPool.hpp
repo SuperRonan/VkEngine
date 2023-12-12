@@ -14,9 +14,14 @@ namespace vkl
 		
 	protected:
 
+		VmaMemoryUsage _usage;
+
 		VmaAllocator _allocator = nullptr;
 
-		std::vector<std::shared_ptr<Buffer>> _free_buffers, _used_buffers;
+		// Sorted from smallest to largest
+		std::deque<std::shared_ptr<BufferInstance>> _free_buffers;
+		//// Not Sorted
+		//std::deque<std::shared_ptr<BufferInstance>> _used_buffers;
 		
 		std::mutex _mutex;
 
@@ -27,6 +32,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VmaAllocator allocator = nullptr;
+			VmaMemoryUsage usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
 		};
 		using CI = CreateInfo;
 
@@ -34,9 +40,9 @@ namespace vkl
 
 		virtual ~StagingPool() override;
 
-		std::shared_ptr<Buffer> getStagingBuffer(size_t size);
+		std::shared_ptr<BufferInstance> getStagingBuffer(size_t size);
 
-		void releaseStagingBuffer(std::shared_ptr<Buffer> staging_buffer);
+		void releaseStagingBuffer(std::shared_ptr<BufferInstance> staging_buffer);
 
 		void clearFreeBuffers();
 
@@ -47,7 +53,7 @@ namespace vkl
 	protected:
 
 		StagingPool* _pool;
-		std::shared_ptr<Buffer> _buffer;
+		std::shared_ptr<BufferInstance> _buffer;
 
 	public:
 
@@ -59,7 +65,7 @@ namespace vkl
 			_buffer = _pool->getStagingBuffer(size);
 		}
 
-		StagingBuffer(StagingPool* pool, std::shared_ptr<Buffer> buffer) :
+		StagingBuffer(StagingPool* pool, std::shared_ptr<BufferInstance> buffer) :
 			VkObject(pool->application(), ""s),
 			_pool(pool),
 			_buffer(buffer)
@@ -70,7 +76,7 @@ namespace vkl
 			_pool->releaseStagingBuffer(_buffer);
 		}
 
-		std::shared_ptr<Buffer> const& buffer()const
+		std::shared_ptr<BufferInstance> const& buffer()const
 		{
 			return _buffer;
 		}

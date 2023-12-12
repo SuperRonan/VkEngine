@@ -6,6 +6,7 @@ namespace vkl
 {
 	StagingPool::StagingPool(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
+		_usage(ci.usage),
 		_allocator(ci.allocator)
 	{}
 
@@ -14,88 +15,83 @@ namespace vkl
 		clearFreeBuffers();
 
 
-		_mutex.lock();
-		if (_used_buffers.size() > 0)
-		{
-			std::cerr << "Destroying in use staging buffers!" << std::endl;
-			for (std::shared_ptr<Buffer>& sb : _used_buffers)
-			{
-				if (*sb->size())
-				{
-					sb = nullptr;
-				}
-			}
-		}
-		_mutex.unlock();
+		//_mutex.lock();
+		//if (_used_buffers.size() > 0)
+		//{
+		//	std::cerr << "Destroying in use staging buffers!" << std::endl; // Outdated
+		//	for (std::shared_ptr<BufferInstance>& sb : _used_buffers)
+		//	{
+		//		if (sb->createInfo().size)
+		//		{
+		//			sb = nullptr;
+		//		}
+		//	}
+		//}
+		//_mutex.unlock();
 	}
 
-	std::shared_ptr<Buffer> StagingPool::getStagingBuffer(size_t size)
+	std::shared_ptr<BufferInstance> StagingPool::getStagingBuffer(size_t size)
 	{
-		_mutex.lock();
+		std::unique_lock lock(_mutex);
 		
 		// Find the smallest big enough free buffer
-		std::shared_ptr<Buffer> res = nullptr;
-		auto it = _free_buffers.begin(), end = _free_buffers.end(), found_it = end;
+		// TODO start from the end if closer to it
+		auto it = _free_buffers.begin(), end = _free_buffers.end();
 		while (it != end)
 		{
-			if (*(*it)->size() >= size)
+			if ((*it)->createInfo().size >= size)
 			{
-				if (res)
-				{
-					if (*res->size() > *(*it)->size())
-					{
-						found_it = it;
-						res = *it;
-					}
-				}
-				else
-				{
-					found_it = it;
-					res = *it;
-				}
+				break;
 			}
 			++it;
 		}
 
-		if (res == nullptr) // Did not find any: allocate a new one (Maybe re allocate a too small one if available)
+		std::shared_ptr<BufferInstance> res;
+
+		if (it == end) // Did not find any: allocate a new one (Maybe re allocate a too small one if available)
 		{
-			res = std::make_shared<Buffer>(Buffer::CI{
+			size_t buffer_size = std::align(size, size_t(1024));
+			VkBufferCreateInfo ci{
+				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.size = buffer_size,
+				.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
+			};
+			VmaAllocationCreateInfo aci{
+				.usage = _usage,
+			};
+			res = std::make_shared<BufferInstance>(BufferInstance::CI{
 				.app = _app,
 				.name = name() + ".StagingBuffer",
-				.size = size,
-				.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
-				.mem_usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
-				.allocator = _allocator,
-				.create_on_construct = true,
+				.ci = ci,
+				.aci = aci,
+				.allocator = application()->allocator(),
 			});
-			res->createInstance();
-			BufferInstance * inst = res->instance().get();
-
-			_free_buffers.push_back(res);
-			found_it = _free_buffers.end() - 1;
 		}
-		
-		_free_buffers.erase(found_it);
-
-		_used_buffers.push_back(res);
-
-		_mutex.unlock();
+		else
+		{
+			res = *it;
+			_free_buffers.erase(it);
+		}
 		return res;
 	}
 
-	void StagingPool::releaseStagingBuffer(std::shared_ptr<Buffer> staging_buffer)
+	void StagingPool::releaseStagingBuffer(std::shared_ptr<BufferInstance> staging_buffer)
 	{
-		_mutex.lock();
-
-		auto it = std::find_if(_used_buffers.begin(), _used_buffers.end(), [&staging_buffer](std::shared_ptr<Buffer> const& other)
+		std::unique_lock lock(_mutex);
+		auto it = _free_buffers.begin(), end = _free_buffers.end();
+		// TODO faster insertion
+		while (it != end)
 		{
-			return staging_buffer.get() == other.get();
-		});
-		assert(it != _used_buffers.end());
-		_used_buffers.erase(it);
-		_free_buffers.push_back(staging_buffer);
+			if (staging_buffer->createInfo().size <= (*it)->createInfo().size)
+			{
+				break;
+			}
+			++it;
+		}
 
-		_mutex.unlock();
+		_free_buffers.insert(it, staging_buffer);
 	}
 
 	void StagingPool::clearFreeBuffers()

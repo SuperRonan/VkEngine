@@ -528,7 +528,7 @@ namespace vkl
 		else // Use Staging Buffer
 		{
 			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), buffer_range.len);
-			BufferInstance& sbbi = *sb->buffer()->instance();
+			BufferInstance& sbbi = *sb->buffer();
 			
 
 			// Copy to Staging Buffer
@@ -553,7 +553,7 @@ namespace vkl
 
 				SynchronizationHelper synch2(ctx);
 				synch2.addSynch(ResourceInstance{
-					.buffer = sb->buffer()->instance(),
+					.buffer = sb->buffer(),
 					.buffer_range = buffer_range,
 					.begin_state = {
 						.access = VK_ACCESS_2_HOST_WRITE_BIT,
@@ -567,7 +567,7 @@ namespace vkl
 				{
 					std::memcpy(static_cast<uint8_t*>(sbbi.data()) + src.pos, src.obj.data(), src.obj.size());
 				}
-				vmaFlushAllocation(sb->buffer()->instance()->allocator(), sb->buffer()->instance()->allocation(), buffer_range.begin, buffer_range.len);
+				vmaFlushAllocation(sb->buffer()->allocator(), sb->buffer()->allocation(), buffer_range.begin, buffer_range.len);
 				// Flush each subrange individually?
 				sbbi.unMap();
 
@@ -576,7 +576,7 @@ namespace vkl
 
 			SynchronizationHelper synch(ctx);
 			synch.addSynch(ResourceInstance{
-				.buffer = sb->buffer()->instance(),
+				.buffer = sb->buffer(),
 				.buffer_range = buffer_range,
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
@@ -708,14 +708,14 @@ namespace vkl
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
 		std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), ui.src.size());
-		BufferInstance& sbbi = *sb->buffer()->instance();
+		BufferInstance& sbbi = *sb->buffer();
 
 
 		// Copy to Staging Buffer
 		{
 			SynchronizationHelper synch2(ctx);
 			synch2.addSynch(ResourceInstance{
-				.buffer = sb->buffer()->instance(),
+				.buffer = sb->buffer(),
 				.buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 				.begin_state = {
 					.access = VK_ACCESS_2_HOST_WRITE_BIT,
@@ -726,13 +726,13 @@ namespace vkl
 				
 			sbbi.map();
 			std::memcpy(sbbi.data(), ui.src.data(), ui.src.size());
-			vmaFlushAllocation(sb->buffer()->instance()->allocator(), sb->buffer()->instance()->allocation(), 0, ui.src.size());
+			vmaFlushAllocation(sb->buffer()->allocator(), sb->buffer()->allocation(), 0, ui.src.size());
 			sbbi.unMap();
 		}
 
 		SynchronizationHelper synch(ctx);
 		synch.addSynch(ResourceInstance{
-			.buffer = sb->buffer()->instance(),
+			.buffer = sb->buffer(),
 			.buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
 			.begin_state = {
 				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
