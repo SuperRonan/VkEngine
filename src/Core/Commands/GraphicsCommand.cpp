@@ -140,40 +140,40 @@ namespace vkl
 		});
 	}
 
-	Resources GraphicsCommand::getFramebufferResources()
+	ResourcesInstances GraphicsCommand::getFramebufferResources()
 	{
-		Resources res;
+		ResourcesInstances res;
 		res.reserve(_framebuffer->size() + 1);
 		for (size_t i = 0; i < _framebuffer->size(); ++i)
 		{
 			std::shared_ptr<ImageView> view = _framebuffer->textures()[i];
-			Resource r{
-				._image = view,
-				._begin_state = ResourceState2{
+			ResourceInstance r{
+				.image_view = view->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT, // TODO add read bit if alpha blending 
 					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
-				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+				.image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			};
 			res.push_back(r);
 		}
 		if (!!_depth)
 		{
 			const VkAccessFlags2 access2 = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT; // TODO deduce from the depth test;
-			Resource r{
-				._image = _depth,
-				._begin_state = ResourceState2{
+			ResourceInstance r{
+				.image_view = _depth->instance(),
+				.begin_state = ResourceState2{
 					.access = access2,
 					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
 				},
-				._end_state = ResourceState2{
+				.end_state = ResourceState2{
 					.access = access2,
 					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
 				},
-				._image_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.image_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			};
 			res.push_back(r);
 		}
@@ -404,10 +404,10 @@ namespace vkl
 		});
 	}
 
-	Resources VertexCommand::getPerDrawResources(DrawInfo const& di)
+	ResourcesInstances VertexCommand::getPerDrawResources(DrawInfo const& di)
 	{
 		using namespace std::containers_operators;
-		Resources res;
+		ResourcesInstances res;
 		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
 			const auto & layouts = _program->instance()->reflectionSetsLayouts();
 			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
@@ -452,10 +452,10 @@ namespace vkl
 			{
 				if (to_draw.index_buffer)
 				{
-					res += Resource{
-						._buffer = to_draw.index_buffer,
-						._buffer_range = to_draw.index_buffer_range,
-						._begin_state = ResourceState2{
+					res += ResourceInstance{
+						.buffer = to_draw.index_buffer->instance(),
+						.buffer_range = to_draw.index_buffer_range,
+						.begin_state = ResourceState2{
 							.access = VK_ACCESS_2_INDEX_READ_BIT,
 							.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
 						},
@@ -464,10 +464,10 @@ namespace vkl
 			
 				for (VertexBuffer vb : to_draw.vertex_buffers)
 				{
-					res += Resource{
-						._buffer = vb.buffer,
-						._buffer_range = vb.range,
-						._begin_state = ResourceState2{
+					res += ResourceInstance{
+						.buffer = vb.buffer->instance(),
+						.buffer_range = vb.range,
+						.begin_state = ResourceState2{
 							.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
 							.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
 						},
@@ -555,7 +555,7 @@ namespace vkl
 		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
 		_set->waitForInstanceCreationIFN();
 		ctx.graphicsBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
-		Resources resources = getBoundResources(ctx.graphicsBoundSets(), shader_set_index + 1);
+		ResourcesInstances resources = getBoundResources(ctx.graphicsBoundSets(), shader_set_index + 1);
 
 		resources += getFramebufferResources();
 		resources += getPerDrawResources(di);
@@ -688,9 +688,9 @@ namespace vkl
 
 
 
-	Resources MeshCommand::getPerDrawResources(DrawInfo const& di)
+	ResourcesInstances MeshCommand::getPerDrawResources(DrawInfo const& di)
 	{
-		Resources res;
+		ResourcesInstances res;
 		using namespace std::containers_operators;
 		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
 			const auto& layouts = _program->instance()->reflectionSetsLayouts();
@@ -775,7 +775,7 @@ namespace vkl
 		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
 		_set->waitForInstanceCreationIFN();
 		ctx.graphicsBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
-		Resources resources = getBoundResources(ctx.graphicsBoundSets(), shader_set_index + 1);
+		ResourcesInstances resources = getBoundResources(ctx.graphicsBoundSets(), shader_set_index + 1);
 
 		resources += getFramebufferResources();
 		resources += getPerDrawResources(di);

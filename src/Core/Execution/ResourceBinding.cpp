@@ -3,21 +3,16 @@
 namespace vkl
 {
 	ResourceBinding::ResourceBinding(ShaderBindingDescription const& desc) :
-		_resource(MakeResource(desc.buffer, desc.view)),
+		_resource(Resource{
+			.buffer = desc.buffer,
+			.buffer_range = desc.buffer_range,
+			.image_view = desc.view,
+		}),
 		_binding(desc.binding),
 		//_set(desc.set),
 		_name(desc.name)
 	{
-		if (!desc.buffer_range.hasValue())
-		{
-			_resource._buffer_range = desc.buffer->fullRange();
-		}
-		else
-		{
-			_resource._buffer_range = desc.buffer_range;
-		}
-
-		if (!!desc.sampler)
+		if (desc.sampler)
 			_sampler = desc.sampler;
 	}
 }

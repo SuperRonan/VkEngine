@@ -50,7 +50,7 @@ namespace vkl
 
 		void createPipeline();
 
-		virtual Resources getFramebufferResources();
+		virtual ResourcesInstances getFramebufferResources();
 
 	public:
 
@@ -114,7 +114,7 @@ namespace vkl
 		virtual void createProgram() override;
 
 		struct DrawInfo;
-		Resources getPerDrawResources(DrawInfo const& di);
+		ResourcesInstances getPerDrawResources(DrawInfo const& di);
 
 	public:
 
@@ -238,7 +238,7 @@ namespace vkl
 		virtual void createProgram() override;
 
 		struct DrawInfo;
-		Resources getPerDrawResources(DrawInfo const& di);
+		ResourcesInstances getPerDrawResources(DrawInfo const& di);
 
 	public:
 

@@ -43,24 +43,24 @@ namespace vkl
 
 	ExecutionNode CopyImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
-		Resources resources = {
-			Resource{
-				._image = ci.src,
-				._begin_state = ResourceState2{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.image_view = ci.src->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			},
-			Resource{
-				._image = ci.dst,
-				._begin_state = ResourceState2{
+			ResourceInstance{
+				.image_view = ci.dst->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		CopyInfo ci_copy = ci;
@@ -135,24 +135,24 @@ namespace vkl
 
 	ExecutionNode CopyBufferToImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
-		Resources resources = {
-			Resource{
-				._buffer = ci.src,
-				._buffer_range = ci.range,
-				._begin_state = ResourceState2{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.buffer = ci.src->instance(),
+				.buffer_range = ci.range,
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			},
-			Resource{
-				._image = ci.dst,
-				._begin_state = ResourceState2{
+			ResourceInstance{
+				.image_view = ci.dst->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		CopyInfo ci_copy = ci;
@@ -218,24 +218,24 @@ namespace vkl
 
 	ExecutionNode CopyBuffer::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
-		Resources resources{
-			Resource{
-				._buffer = ci.src,
-				._buffer_range = Range_st{.begin = ci.src_offset, .len = ci.size},
-				._begin_state = ResourceState2{
+		ResourcesInstances resources{
+			ResourceInstance{
+				.buffer = ci.src->instance(),
+				.buffer_range = Range_st{.begin = ci.src_offset, .len = ci.size},
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			},
-			Resource{
-				._buffer = ci.dst,
-				._buffer_range = Range_st{.begin = ci.dst_offset, .len = ci.size},
-				._begin_state = ResourceState2{
+			ResourceInstance{
+				.buffer = ci.dst->instance(),
+				.buffer_range = Range_st{.begin = ci.dst_offset, .len = ci.size},
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		CopyInfo ci_copy = ci;
@@ -301,15 +301,15 @@ namespace vkl
 
 	ExecutionNode FillBuffer::getExecutionNode(RecordContext& ctx, FillInfo const& fi)
 	{
-		Resources resources = {
-			Resource{
-				._buffer = fi.buffer,
-				._buffer_range = fi.range.value(),
-				._begin_state = ResourceState2{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.buffer = fi.buffer->instance(),
+				.buffer_range = fi.range.value(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
 				},
-				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		FillInfo fi_copy = fi;
@@ -390,15 +390,15 @@ namespace vkl
 
 	ExecutionNode ClearImage::getExecutionNode(RecordContext& ctx, ClearInfo const& ci)
 	{
-		Resources resources = {
-			Resource{
-				._image = ci.view,
-				._begin_state = ResourceState2{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.image_view = ci.view->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		ClearInfo ci_copy = ci;
@@ -455,15 +455,15 @@ namespace vkl
 
 	ExecutionNode UpdateBuffer::getExecutionNode(RecordContext& ctx, UpdateInfo const& ui)
 	{
-		Resources resources = {
-			Resource{
-				._buffer = ui.dst,
-				._buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
-				._begin_state = ResourceState2{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.buffer = ui.dst->instance(),
+				.buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				._buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		UpdateInfo ui_copy = ui;
@@ -552,14 +552,14 @@ namespace vkl
 				//vkCmdPipelineBarrier2(cmd, &dependency);
 
 				SynchronizationHelper synch2(ctx);
-				synch2.addSynch(Resource{
-					._buffer = sb->buffer(),
-					._buffer_range = buffer_range,
-					._begin_state = {
+				synch2.addSynch(ResourceInstance{
+					.buffer = sb->buffer()->instance(),
+					.buffer_range = buffer_range,
+					.begin_state = {
 						.access = VK_ACCESS_2_HOST_WRITE_BIT,
 						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 					},
-					});
+				});
 				synch2.record();
 
 				sbbi.map();
@@ -575,10 +575,10 @@ namespace vkl
 			}
 
 			SynchronizationHelper synch(ctx);
-			synch.addSynch(Resource{
-				._buffer = sb->buffer(),
-				._buffer_range = buffer_range,
-				._begin_state = {
+			synch.addSynch(ResourceInstance{
+				.buffer = sb->buffer()->instance(),
+				.buffer_range = buffer_range,
+				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
@@ -637,13 +637,13 @@ namespace vkl
 		// now .len is .len
 		buffer_range.len = buffer_range.len - buffer_range.begin;
 		const bool merge_synch = true;
-		Resources resources;
+		ResourcesInstances resources;
 		if(merge_synch)
 		{
-			resources.push_back(Resource{
-				._buffer = ui.dst,
-				._buffer_range = buffer_range,
-				._begin_state = {
+			resources.push_back(ResourceInstance{
+				.buffer = ui.dst->instance(),
+				.buffer_range = buffer_range,
+				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
@@ -653,10 +653,10 @@ namespace vkl
 		{
 			for (const auto& src : ui.sources)
 			{
-				resources.push_back(Resource{
-					._buffer = ui.dst,
-					._buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
-					._begin_state = {
+				resources.push_back(ResourceInstance{
+					.buffer = ui.dst->instance(),
+					.buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
+					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
@@ -714,10 +714,10 @@ namespace vkl
 		// Copy to Staging Buffer
 		{
 			SynchronizationHelper synch2(ctx);
-			synch2.addSynch(Resource{
-				._buffer = sb->buffer(),
-				._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
-				._begin_state = {
+			synch2.addSynch(ResourceInstance{
+				.buffer = sb->buffer()->instance(),
+				.buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
+				.begin_state = {
 					.access = VK_ACCESS_2_HOST_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 				},
@@ -731,10 +731,10 @@ namespace vkl
 		}
 
 		SynchronizationHelper synch(ctx);
-		synch.addSynch(Resource{
-			._buffer = sb->buffer(),
-			._buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
-			._begin_state = {
+		synch.addSynch(ResourceInstance{
+			.buffer = sb->buffer()->instance(),
+			.buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
+			.begin_state = {
 				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 			},
@@ -771,10 +771,10 @@ namespace vkl
 
 	ExecutionNode UploadImage::getExecutionNode(RecordContext& ctx, UploadInfo const& ui)
 	{
-		Resources resources = {
-			Resource{
-				._image = ui.dst,
-				._begin_state = {
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.image_view = ui.dst->instance(),
+				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
@@ -836,6 +836,8 @@ namespace vkl
 
 		std::shared_ptr<CallbackHolder> completion_callbacks;
 
+		// TODO use a single staging buffer maybe? 
+
 		for (size_t i = 0; i < resources.buffers.size(); ++i)
 		{
 			auto& buffer_upload = resources.buffers[i];
@@ -876,7 +878,7 @@ namespace vkl
 	ExecutionNode UploadResources::getExecutionNode(RecordContext& ctx, UploadInfo const& ui)
 	{
 		// Assuming no aliasing between resources
-		Resources resources;
+		ResourcesInstances resources;
 		resources.reserve(ui.upload_list.buffers.size() + ui.upload_list.images.size());
 		std::vector<BufferUploadExtraInfo> extra_buffer_info(ui.upload_list.buffers.size());
 		
@@ -916,10 +918,10 @@ namespace vkl
 
 			if (merge_synch)
 			{
-				resources.push_back(Resource{
-					._buffer = buffer_upload.dst,
-					._buffer_range = buffer_range,
-					._begin_state = {
+				resources.push_back(ResourceInstance{
+					.buffer = buffer_upload.dst->instance(),
+					.buffer_range = buffer_range,
+					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
@@ -929,10 +931,10 @@ namespace vkl
 			{
 				for (const auto& src : buffer_upload.sources)
 				{
-					resources.push_back(Resource{
-						._buffer = buffer_upload.dst,
-						._buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
-						._begin_state = {
+					resources.push_back(ResourceInstance{
+						.buffer = buffer_upload.dst->instance(),
+						.buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
+						.begin_state = {
 							.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 							.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 						},
@@ -942,9 +944,9 @@ namespace vkl
 		}
 		for (const auto& image_upload : ui.upload_list.images)
 		{
-			resources.push_back(Resource{
-				._image = image_upload.dst,
-				._begin_state = {
+			resources.push_back(ResourceInstance{
+				.image_view = image_upload.dst->instance(),
+				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,

@@ -112,6 +112,6 @@ Objectives:
 - [x] Refactor command execition:
 	- [x] Command execution issue an execution object declaring the resources on which it will interact and how, synchronization of said resources will be done externaly by the executor. This allows for ASAP synch, rather than the current mandatory ALAP
 	- [ ] Auto Build an execution graph from these execution objects (nodes) and their resources (edges)
-- [ ] Explicitely instancify Resources
+- [x] Explicitely instancify Resources
 - [ ] ExecutionNodes are Command's instances, as such, they should only reference resources instances. 
 - [ ] Have a separate render thread

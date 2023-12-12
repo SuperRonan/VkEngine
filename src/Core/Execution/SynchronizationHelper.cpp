@@ -2,16 +2,16 @@
 
 namespace vkl
 {
-	void SynchronizationHelperV1::addSynch(const Resource& r)
+	void SynchronizationHelperV1::addSynch(const ResourceInstance& r)
 	{
 		
-		const ResourceState2 next = r._begin_state;
-		const bool synch_to_readonly = accessIsReadonly2(r._begin_state.access);
+		const ResourceState2 next = r.begin_state;
+		const bool synch_to_readonly = accessIsReadonly2(r.begin_state.access);
 		if (r.isImage())
 		{	
 			_resources.push_back(r);
-			assert(r._image->instance());
-			const auto prevs = r._image->instance()->getState(_ctx.resourceThreadId());
+			assert(r.image_view);
+			const auto prevs = r.image_view->getState(_ctx.resourceThreadId());
 			for (const auto& prev_state_in_range : prevs)
 			{
 				bool add_barrier = false;
@@ -22,9 +22,9 @@ namespace vkl
 
 				if (synch_to_readonly)
 				{
-					const bool access_already_synch = (r._begin_state.access & prev.read_only_state.access) == r._begin_state.access;
-					const bool stage_already_synch = (r._begin_state.stage & prev.read_only_state.stage) == r._begin_state.stage;
-					const bool same_layout = r._begin_state.layout == prev.read_only_state.layout;
+					const bool access_already_synch = (r.begin_state.access & prev.read_only_state.access) == r.begin_state.access;
+					const bool stage_already_synch = (r.begin_state.stage & prev.read_only_state.stage) == r.begin_state.stage;
+					const bool same_layout = r.begin_state.layout == prev.read_only_state.layout;
 
 					if (!access_already_synch || !stage_already_synch || !same_layout)
 					{
@@ -52,7 +52,7 @@ namespace vkl
 						.newLayout = next.layout,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = *r._image->image()->instance(),
+						.image = *r.image_view->image(),
 						.subresourceRange = range,
 					};
 					_images_barriers.push_back(barrier);
@@ -62,21 +62,21 @@ namespace vkl
 		else if (r.isBuffer())
 		{
 			_resources.push_back(r);
-			assert(r._buffer->instance());
-			Buffer::Range range = r._buffer_range.value();
+			assert(r.buffer);
+			Buffer::Range range = r.buffer_range;
 			if (range.len == 0)
 			{
-				range.len = r._buffer->instance()->createInfo().size - range.begin;
+				range.len = r.buffer->createInfo().size - range.begin;
 			}
-			const DoubleResourceState2 prev = r._buffer->instance()->getState(_ctx.resourceThreadId(), range);
+			const DoubleResourceState2 prev = r.buffer->getState(_ctx.resourceThreadId(), range);
 			
 			bool add_barrier = false;
 			ResourceState2 synch_from;
 
 			if (synch_to_readonly)
 			{
-				const bool access_already_synch = (r._begin_state.access & prev.read_only_state.access) == r._begin_state.access;
-				const bool stage_already_synch = (r._begin_state.stage & prev.read_only_state.stage) == r._begin_state.stage;
+				const bool access_already_synch = (r.begin_state.access & prev.read_only_state.access) == r.begin_state.access;
+				const bool stage_already_synch = (r.begin_state.stage & prev.read_only_state.stage) == r.begin_state.stage;
 
 				if (!access_already_synch || !stage_already_synch)
 				{
@@ -100,7 +100,7 @@ namespace vkl
 					.dstAccessMask = next.access,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = *r._buffer->instance(),
+					.buffer = *r.buffer,
 					.offset = range.begin,
 					.size = range.len,
 				};
@@ -133,16 +133,16 @@ namespace vkl
 		
 		for (const auto& r : _resources)
 		{
-			ResourceState2 const& s = r._end_state.value_or(r._begin_state);
+			ResourceState2 const& s = r.end_state.value_or(r.begin_state);
 			if (r.isBuffer())
 			{
-				r._buffer->instance()->setState(_ctx.resourceThreadId(), r._buffer_range.value(), s);
-				_ctx.keppAlive(r._buffer->instance());
+				r.buffer->setState(_ctx.resourceThreadId(), r.buffer_range, s);
+				_ctx.keppAlive(r.buffer);
 			}
 			else if (r.isImage())
 			{
-				r._image->instance()->setState(_ctx.resourceThreadId(), s);
-				_ctx.keppAlive(r._image->instance());
+				r.image_view->setState(_ctx.resourceThreadId(), s);
+				_ctx.keppAlive(r.image_view);
 			}
 			else
 			{
@@ -672,16 +672,16 @@ namespace vkl
 		}
 	}
 
-	void ModularSynchronizationHelper::addSynch(Resource const& r)
+	void ModularSynchronizationHelper::addSynch(ResourceInstance const& r)
 	{
 		if (r.isBuffer())
 		{
-			const std::shared_ptr<BufferInstance> & bi = r._buffer->instance();
-			Buffer::Range range = r._buffer_range.value(); // TODO remove the dyn here
+			const std::shared_ptr<BufferInstance> & bi = r.buffer;
+			Buffer::Range range = r.buffer_range;
 			assert(!!bi);
 			if (_policy >= BarrierMergePolicy::AsMuchAsPossible)
 			{
-				_fully_merged_buffers.add(bi, range, r._begin_state, r._end_state);
+				_fully_merged_buffers.add(bi, range, r.begin_state, r.end_state);
 			}
 			else
 			{
@@ -690,11 +690,11 @@ namespace vkl
 		}
 		else if (r.isImage())
 		{
-			const std::shared_ptr<ImageViewInstance> & ivi = r._image->instance();
+			const std::shared_ptr<ImageViewInstance> & ivi = r.image_view;
 			assert(!!ivi);
 			if (_policy >= BarrierMergePolicy::Always)
 			{
-				_fully_merged_images.addv(ivi, r._begin_state, r._end_state);
+				_fully_merged_images.addv(ivi, r.begin_state, r.end_state);
 			}
 			else
 			{

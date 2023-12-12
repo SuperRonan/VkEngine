@@ -312,8 +312,7 @@ namespace vkl
 				}
 				if (b.isBuffer())
 				{
-					assert(b.resource()._buffer_range.hasValue());
-					Buffer::Range range = b.resource()._buffer_range.value();
+					Buffer::Range range = b.resource().buffer_range.valueOr(Buffer::Range{});
 					if (range.len == 0)
 					{
 						range.len = VK_WHOLE_SIZE;
@@ -335,7 +334,7 @@ namespace vkl
 					VkDescriptorImageInfo info{
 						.sampler = VK_NULL_HANDLE,
 						.imageView = VK_NULL_HANDLE,
-						.imageLayout = b.resource()._begin_state.layout,
+						.imageLayout = b.resource().begin_state.layout,
 					};
 					
 					if (b.isSampler() && b.sampler())
@@ -434,14 +433,14 @@ namespace vkl
 
 				if (it->isBuffer())
 				{
-					it->resource()._buffer = binding.resource()._buffer;
-					it->resource()._buffer_range = binding.resource()._buffer_range;
+					it->resource().buffer = binding.resource().buffer;
+					it->resource().buffer_range = binding.resource().buffer_range;
 				}
 				else
 				{
 					if (it->isImage())
 					{
-						it->resource()._image = binding.resource()._image;
+						it->resource().image_view = binding.resource().image_view;
 					}
 					if (it->isSampler())
 					{
@@ -592,7 +591,7 @@ namespace vkl
 						ResourceBinding & resource = _bindings[corresponding_resource_index];
 						resource.resolve(vkb.binding);
 						resource.setType(vkb.descriptorType);
-						resource.resource()._begin_state = ResourceState2{
+						resource.resource().begin_state = ResourceState2{
 							.access = meta.access,
 							.layout = meta.layout,
 							.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
@@ -679,7 +678,7 @@ namespace vkl
 								.binding = _layout->bindings()[i].binding,
 							};							
 							new_bindings[i] = null_binding;
-							new_bindings[i].resource()._begin_state = ResourceState2{
+							new_bindings[i].resource().begin_state = ResourceState2{
 								.access = _layout->metas()[i].access,
 								.layout = _layout->metas()[i].layout,
 								.stage = getPipelineStageFromShaderStage2(_layout->bindings()[i].stageFlags),
@@ -698,7 +697,7 @@ namespace vkl
 				const auto& meta = _layout->metas()[j];
 				const auto& vkb = _layout->bindings()[j];
 				_bindings[j].setType(vkb.descriptorType);
-				_bindings[j].resource()._begin_state.layout = meta.layout;
+				_bindings[j].resource().begin_state.layout = meta.layout;
 			}
 			
 			res = _bindings;

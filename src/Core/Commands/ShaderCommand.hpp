@@ -23,7 +23,7 @@ namespace vkl
 
 		PushConstant _pc;
 
-		Resources getDescriptorSetResources(DescriptorSetAndPoolInstance & set, DescriptorSetLayout const& layout);
+		ResourcesInstances getDescriptorSetResources(DescriptorSetAndPoolInstance & set, DescriptorSetLayout const& layout);
 
 	public:
 
@@ -47,7 +47,7 @@ namespace vkl
 
 		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
 
-		virtual Resources getBoundResources(DescriptorSetsTacker & bound_sets, size_t max_set=0);
+		virtual ResourcesInstances getBoundResources(DescriptorSetsTacker & bound_sets, size_t max_set=0);
 
 		template<typename T>
 		void setPushConstantsData(T && t)

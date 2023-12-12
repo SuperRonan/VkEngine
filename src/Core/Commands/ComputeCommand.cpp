@@ -101,7 +101,7 @@ namespace vkl
 		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
 		_set->waitForInstanceCreationIFN();
 		ctx.computeBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
-		Resources resources = getBoundResources(ctx.computeBoundSets(), shader_set_index + 1);
+		ResourcesInstances resources = getBoundResources(ctx.computeBoundSets(), shader_set_index + 1);
 
 		{
 			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {

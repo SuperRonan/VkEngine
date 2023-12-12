@@ -102,12 +102,12 @@ namespace vkl
 
 		constexpr auto& buffer()
 		{
-			return _resource._buffer;
+			return _resource.buffer;
 		}
 
 		constexpr auto& image()
 		{
-			return _resource._image;
+			return _resource.image_view;
 		}
 
 		constexpr auto& sampler()
@@ -169,13 +169,13 @@ namespace vkl
 			}
 			else if (isBuffer())
 			{
-				res = !_resource._buffer;
+				res = !_resource.buffer;
 			}
 			else
 			{
 				if (isImage())
 				{
-					res |= !_resource._image;
+					res |= !_resource.image_view;
 				}
 				if (isSampler())
 				{

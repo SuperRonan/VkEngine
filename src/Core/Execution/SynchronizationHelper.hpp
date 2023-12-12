@@ -29,13 +29,9 @@ namespace vkl
 			std::optional<ResourceState2> end_state = {};
 		};
 
-		
-
-		
-
 	public:
 		
-		virtual void addSynch(Resource const& r) = 0;
+		virtual void addSynch(ResourceInstance const& r) = 0;
 
 		template <class ResourceIt, class ResourceIt2 = ResourceIt>
 		void addSynch(ResourceIt it, ResourceIt2 const& end)
@@ -55,7 +51,7 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<Resource> _resources;
+		std::vector<ResourceInstance> _resources;
 		std::vector<VkImageMemoryBarrier2> _images_barriers;
 		std::vector<VkBufferMemoryBarrier2> _buffers_barriers;
 
@@ -67,7 +63,7 @@ namespace vkl
 			_ctx(ctx)
 		{}
 
-		virtual void addSynch(Resource const& r) final override;
+		virtual void addSynch(ResourceInstance const& r) final override;
 
 		virtual void record() final override;
 	};
@@ -239,7 +235,7 @@ namespace vkl
 
 		~ModularSynchronizationHelper();
 		
-		virtual void addSynch(Resource const& r) final override;
+		virtual void addSynch(ResourceInstance const& r) final override;
 
 		virtual void record() final override;
 	};

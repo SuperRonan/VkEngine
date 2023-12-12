@@ -42,9 +42,9 @@ namespace vkl
 		);
 	}
 
-	Resources ShaderCommand::getDescriptorSetResources(DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout)
+	ResourcesInstances ShaderCommand::getDescriptorSetResources(DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout)
 	{
-		Resources res;
+		ResourcesInstances res;
 		res.reserve(layout.bindings().size());
 		const auto& shader_bindings = layout.bindings();
 		auto& set_bindings = set.bindings();
@@ -64,25 +64,25 @@ namespace vkl
 			ResourceBinding& resource = set_bindings[set_it];
 			assertm(resource.resolvedBinding() == b, "Shader binding not found in bound set!");
 
-			Resource r = resource.resource();
+			ResourceInstance r = resource.resource().getInstance();
 			const auto& meta = layout.metas()[i];
-			r._begin_state = ResourceState2{
+			r.begin_state = ResourceState2{
 				.access = meta.access,
 				.layout = meta.layout,
 				.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
 			};
-			if (r._end_state)
+			if (r.end_state)
 			{
-				r._end_state = r._begin_state;
+				r.end_state = r.begin_state;
 			}
 			res.push_back(r);
 		}
 		return res;
 	}
 
-	Resources ShaderCommand::getBoundResources(DescriptorSetsTacker& bound_sets, size_t max_set)
+	ResourcesInstances ShaderCommand::getBoundResources(DescriptorSetsTacker& bound_sets, size_t max_set)
 	{
-		Resources res;
+		ResourcesInstances res;
 		using namespace std::containers_operators;
 		ProgramInstance & prog = *_pipeline->program()->instance();
 		

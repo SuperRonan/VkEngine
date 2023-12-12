@@ -179,19 +179,9 @@ namespace vkl
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 
 		ImGui::Render();
-
-		SynchronizationHelper synch(context);
-
 		const size_t index = ei.index;
 
 		std::shared_ptr<ImageView> target = _swapchain->instance()->views()[index];
-
-		std::array<Resource, 1> resources = {
-			
-		};
-		synch.addSynch(resources[0]);
-
-		synch.record();
 
 		const VkExtent2D render_area = extract(target->image()->instance()->createInfo().extent);
 
@@ -271,15 +261,15 @@ namespace vkl
 	
 	ExecutionNode ImguiCommand::getExecutionNode(RecordContext& ctx, ExecutionInfo const& ei)
 	{
-		Resources resources{
-			Resource{
-				._image = _swapchain->instance()->views()[ei.index],
-				._begin_state = ResourceState2{
+		ResourcesInstances resources{
+			ResourceInstance{
+				.image_view = _swapchain->instance()->views()[ei.index]->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 				},
-				._image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+				.image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			},
 		};
 		ExecutionInfo ei_copy = ei;

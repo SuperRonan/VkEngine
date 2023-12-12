@@ -42,24 +42,24 @@ namespace vkl
 
 	ExecutionNode BlitImage::getExecutionNode(RecordContext& ctx, BlitInfo const& bi)
 	{
-		Resources resources = {
-			Resource{
-				._image = bi.src,
-				._begin_state = ResourceState2{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.image_view = bi.src->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			},
-			Resource{
-				._image = bi.dst,
-				._begin_state = ResourceState2{
+			ResourceInstance{
+				.image_view = bi.dst->instance(),
+				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		BlitInfo bi_copy = bi;
@@ -320,18 +320,18 @@ namespace vkl
 
 	ExecutionNode ComputeMips::getExecutionNode(RecordContext& ctx, ExecInfo const& ei)
 	{
-		Resources resources;
+		ResourcesInstances resources;
 		resources.resize(ei.targets.size());
 		for (size_t i = 0; i < resources.size(); ++i)
 		{
-			resources[i] = Resource{
-				._image = ei.targets[i].target,
-				._begin_state = {
+			resources[i] = ResourceInstance{
+				.image_view = ei.targets[i].target->instance(),
+				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
 				},
-				._image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
 			};
 		}
 		ExecInfo ei_copy = ei;
