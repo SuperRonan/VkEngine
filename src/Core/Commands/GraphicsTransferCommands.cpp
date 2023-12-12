@@ -11,20 +11,23 @@ namespace vkl
 		_filter(ci.filter)
 	{}
 
-	void BlitImage::execute(ExecutionContext& context, BlitInfo const& bi)
+	void BlitImage::execute(ExecutionContext& context, BlitInfoInstance const& bi)
 	{
 		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
 
 		const VkImageBlit* regions = bi.regions.data();
 		uint32_t n_regions = static_cast<uint32_t>(bi.regions.size());
 		VkImageBlit _region;
+		
+		// Multi mip blit?
+
 		if (bi.regions.empty())
 		{
 			_region = VkImageBlit{
-				.srcSubresource = getImageLayersFromRange(bi.src->range()),
-				.srcOffsets = {makeZeroOffset3D(), convert(*bi.src->image()->extent())},
-				.dstSubresource = getImageLayersFromRange(bi.dst->range()),
-				.dstOffsets = {makeZeroOffset3D(), convert(*bi.dst->image()->extent())},
+				.srcSubresource = getImageLayersFromRange(bi.src->createInfo().subresourceRange),
+				.srcOffsets = {makeZeroOffset3D(), convert(bi.src->image()->createInfo().extent)},
+				.dstSubresource = getImageLayersFromRange(bi.dst->createInfo().subresourceRange),
+				.dstOffsets = {makeZeroOffset3D(), convert(bi.dst->image()->createInfo().extent)},
 			};
 			regions = &_region;
 			n_regions = 1;
@@ -32,12 +35,10 @@ namespace vkl
 
 
 		vkCmdBlitImage(*cmd,
-			*bi.src->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			*bi.dst->image()->instance(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			*bi.src->image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			*bi.dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			n_regions, regions, bi.filter
 		);
-		context.keppAlive(bi.src->instance());
-		context.keppAlive(bi.dst->instance());
 	}
 
 	ExecutionNode BlitImage::getExecutionNode(RecordContext& ctx, BlitInfo const& bi)
@@ -62,13 +63,18 @@ namespace vkl
 				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
-		BlitInfo bi_copy = bi;
+		BlitInfoInstance bii{
+			.src = bi.src->instance(),
+			.dst = bi.dst->instance(),
+			.regions = bi.regions,
+			.filter = bi.filter,
+		};
 		ExecutionNode res = ExecutionNode::CI{
 			.name = name(),
 			.resources = resources,
-			.exec_fn = [this, bi_copy](ExecutionContext& ctx)
+			.exec_fn = [this, bii](ExecutionContext& ctx)
 			{
-				execute(ctx, bi_copy);
+				execute(ctx, bii);
 			},
 		};
 		return res;
@@ -94,6 +100,11 @@ namespace vkl
 	}
 
 
+
+
+
+
+
 	void ComputeMips::execute(ExecutionContext& ctx, ExecInfo const& ei)
 	{
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
@@ -101,7 +112,7 @@ namespace vkl
 		assert([&]() -> bool
 		{
 			bool res = true;
-			std::set<ImageView*> set_views;
+			std::set<ImageViewInstance*> set_views;
 			for (auto& t : ei.targets)
 			{
 				set_views.insert(t.target.get());
@@ -126,10 +137,10 @@ namespace vkl
 		for (size_t i = 0; i < ei.targets.size(); ++i)
 		{
 			targets[i] = Target{
-				.img = ei.targets[i].target->instance()->image().get(),
-				.view = ei.targets[i].target->instance().get(),
-				.m = ei.targets[i].target->instance()->createInfo().subresourceRange.levelCount,
-				.extent = ei.targets[i].target->instance()->image()->createInfo().extent,
+				.img = ei.targets[i].target->image().get(),
+				.view = ei.targets[i].target.get(),
+				.m = ei.targets[i].target->createInfo().subresourceRange.levelCount,
+				.extent = ei.targets[i].target->image()->createInfo().extent,
 			};
 			assert(targets[i].m > 1);
 			max_mip = std::max(max_mip, targets[i].m);
@@ -325,7 +336,7 @@ namespace vkl
 		for (size_t i = 0; i < resources.size(); ++i)
 		{
 			resources[i] = ResourceInstance{
-				.image_view = ei.targets[i].target->instance(),
+				.image_view = ei.targets[i].target,
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -356,5 +367,102 @@ namespace vkl
 		{
 			return getExecutionNode(ctx, ei);
 		};
+	}
+
+
+
+
+
+
+
+
+
+
+	ClearImage::ClearImage(CreateInfo const& ci) :
+		GraphicsTransferCommand(ci.app, ci.name),
+		_view(ci.view),
+		_value(ci.value)
+	{
+
+	}
+
+	void ClearImage::execute(ExecutionContext& context, ClearInfoInstance const& ci)
+	{
+		std::shared_ptr<CommandBuffer> cmd = context.getCommandBuffer();
+
+		const VkImageSubresourceRange & range = ci.view->createInfo().subresourceRange;
+
+		const VkClearValue value = ci.value;
+
+		VkImageAspectFlags aspect = range.aspectMask;
+
+		// TODO manage other aspects
+		if (aspect & VK_IMAGE_ASPECT_COLOR_BIT)
+		{
+			vkCmdClearColorImage(
+				*cmd,
+				ci.view->image()->handle(),
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				&value.color,
+				1,
+				&range
+			);
+		}
+		if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+		{
+			vkCmdClearDepthStencilImage(
+				*cmd,
+				ci.view->image()->handle(),
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				&value.depthStencil,
+				1,
+				&range
+			);
+		}
+	}
+
+	ExecutionNode ClearImage::getExecutionNode(RecordContext& ctx, ClearInfo const& ci)
+	{
+		ResourcesInstances resources = {
+			ResourceInstance{
+				.image_view = ci.view->instance(),
+				.begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+				},
+				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			},
+		};
+		ClearInfoInstance cii{
+			.view = ci.view->instance(),
+			.value = ci.value.value_or(_value),
+		};
+		ExecutionNode res = ExecutionNode::CI{
+			.name = name(),
+			.resources = resources,
+			.exec_fn = [this, cii](ExecutionContext& ctx)
+			{
+				execute(ctx, cii);
+			},
+		};
+		return res;
+	}
+
+	ExecutionNode ClearImage::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultClearInfo());
+	}
+
+	Executable ClearImage::with(ClearInfo const& ci)
+	{
+		return [this, ci](RecordContext& context)
+			{
+				const ClearInfo cinfo{
+					.view = ci.view ? ci.view : _view,
+					.value = ci.value.value_or(_value),
+				};
+				return getExecutionNode(context, ci);
+			};
 	}
 }

@@ -91,8 +91,8 @@ namespace vkl
 	{
 		size_t res = 0;
 
-		const VkExtent3D & ext = target->instance()->image()->createInfo().extent;
-		const size_t l = target->instance()->createInfo().subresourceRange.layerCount;
+		const VkExtent3D & ext = target->image()->createInfo().extent;
+		const size_t l = target->createInfo().subresourceRange.layerCount;
 
 		res = ext.width * ext.height * ext.depth * l;
 		// TODO include the format size

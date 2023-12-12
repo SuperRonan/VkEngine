@@ -29,6 +29,7 @@ namespace vkl
 		std::shared_ptr<ImageView> _src, _dst;
 		std::vector<VkImageCopy> _regions;
 
+
 	public:
 
 		struct CreateInfo 
@@ -40,6 +41,13 @@ namespace vkl
 			std::vector<VkImageCopy> regions = {};
 		};
 		using CI = CreateInfo;
+		
+		struct CopyInfoInstance
+		{
+			std::shared_ptr<ImageViewInstance> src = nullptr;
+			std::shared_ptr<ImageViewInstance> dst = nullptr;
+			std::vector<VkImageCopy> regions = {};
+		};
 
 		struct CopyInfo
 		{
@@ -50,7 +58,7 @@ namespace vkl
 
 		CopyImage(CreateInfo const& ci);
 
-		void execute(ExecutionContext& ctx, CopyInfo const& cinfo);
+		void execute(ExecutionContext& ctx, CopyInfoInstance const& cinfo);
 
 		ExecutionNode getExecutionNode(RecordContext & ctx, CopyInfo const& ci);
 
@@ -95,6 +103,16 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		struct CopyInfoInstance
+		{
+			std::shared_ptr<BufferInstance> src = nullptr;
+			Range_st range;
+			std::shared_ptr<ImageViewInstance> dst = nullptr;
+			std::vector<VkBufferImageCopy> regions = {};
+			uint32_t default_buffer_row_length = 0;
+			uint32_t default_buffer_image_height = 0;
+		};
+
 		struct CopyInfo
 		{
 			std::shared_ptr<Buffer> src = nullptr;
@@ -107,7 +125,7 @@ namespace vkl
 
 		CopyBufferToImage(CreateInfo const& ci);
 
-		void execute(ExecutionContext& context, CopyInfo const& cinfo);
+		void execute(ExecutionContext& context, CopyInfoInstance const& cinfo);
 
 		ExecutionNode getExecutionNode(RecordContext& ctx, CopyInfo const& ci);
 
@@ -159,15 +177,20 @@ namespace vkl
 		struct CopyInfo
 		{
 			std::shared_ptr<Buffer> src = nullptr;
-			size_t src_offset = 0;
 			std::shared_ptr<Buffer> dst = nullptr;
-			size_t dst_offset = 0;
-			size_t size = 0;
+			std::vector<VkBufferCopy2> regions = {};
+		};
+
+		struct CopyInfoInstance
+		{
+			std::shared_ptr<BufferInstance> src = nullptr;
+			std::shared_ptr<BufferInstance> dst = nullptr;
+			std::vector<VkBufferCopy2> regions = {};
 		};
 
 		CopyBuffer(CreateInfo const& ci);
 
-		void execute(ExecutionContext& ctx, CopyInfo const& cinfo);
+		void execute(ExecutionContext& ctx, CopyInfoInstance const& cinfo);
 
 		ExecutionNode getExecutionNode(RecordContext & ctx, CopyInfo const& cinfo);
 
@@ -184,10 +207,16 @@ namespace vkl
 		{
 			return CopyInfo{
 				.src = _src,
-				.src_offset = _src_offset.value(),
 				.dst = _dst,
-				.dst_offset = _dst_offset.value(),
-				.size = _size.value(),
+				.regions = {
+					VkBufferCopy2{
+						.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+						.pNext = nullptr,
+						.srcOffset = _src_offset.valueOr(0),
+						.dstOffset = _dst_offset.valueOr(0),
+						.size = _size.valueOr(0),
+					},
+				},
 			};
 		}
 	};
@@ -219,9 +248,16 @@ namespace vkl
 			std::optional<uint32_t> value = {};
 		};
 
+		struct FillInfoInstance
+		{
+			std::shared_ptr<BufferInstance> buffer = nullptr;
+			Range_st range = {};
+			uint32_t value = {};
+		};
+
 		FillBuffer(CreateInfo const& ci);
 
-		void execute(ExecutionContext& context, FillInfo const& fi);
+		void execute(ExecutionContext& context, FillInfoInstance const& fi);
 
 		ExecutionNode getExecutionNode(RecordContext & ctx, FillInfo const& fi);
 
@@ -244,53 +280,8 @@ namespace vkl
 		}
 	};
 
-	class ClearImage : public TransferCommand
-	{
-	protected:
 
-		std::shared_ptr<ImageView> _view;
-		VkClearValue _value;
 
-	public:
-
-		struct CreateInfo
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			std::shared_ptr<ImageView> view = nullptr;
-			VkClearValue value = VkClearValue{ .color = VkClearColorValue{.int32{0, 0, 0, 0}} };
-		};
-		using CI = CreateInfo;
-
-		struct ClearInfo
-		{
-			std::shared_ptr<ImageView> view = nullptr;
-			std::optional<VkClearValue> value = {};
-		};
-
-		ClearImage(CreateInfo const& ci);
-
-		void execute(ExecutionContext& context, ClearInfo const& ci);
-
-		ExecutionNode getExecutionNode(RecordContext & ctx, ClearInfo const& ci);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
-
-		Executable with(ClearInfo const& ci);
-
-		Executable operator()(ClearInfo const& ci)
-		{
-			return with(ci);
-		}
-
-		ClearInfo getDefaultClearInfo()
-		{
-			return ClearInfo{
-				.view = _view,
-				.value = _value,
-			};
-		}
-	};
 
 	class UpdateBuffer : public TransferCommand
 	{
@@ -322,6 +313,13 @@ namespace vkl
 			std::optional<size_t> offset = {};
 		};
 		using UI = UpdateInfo;
+
+		struct UpdateInfoInstance
+		{
+			ObjectView src;
+			std::shared_ptr<BufferInstance> dst;
+			size_t offset;
+		};
 
 		void execute(ExecutionContext& ctx, UpdateInfo const& ui);
 
@@ -383,7 +381,17 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		void execute(ExecutionContext& ctx, UploadInfo const& ui, bool use_update, Buffer::Range buffer_range);
+		struct UploadInfoInstance
+		{
+			std::vector<PositionedObjectView> sources = {};
+			std::shared_ptr<BufferInstance> dst;
+			bool use_update;
+			// Optional
+			std::shared_ptr<StagingBuffer> staging_buffer = {};
+			Buffer::Range buffer_range; // Merged range of all sources
+		};
+
+		void execute(ExecutionContext& ctx, UploadInfoInstance const& ui);
 
 		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
 
@@ -437,7 +445,16 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		void execute(ExecutionContext& ctx, UploadInfo const& ui);
+		struct UploadInfoInstance
+		{
+			ObjectView src = {};
+			uint32_t buffer_row_length = 0;
+			uint32_t buffer_image_height = 0;
+			std::shared_ptr<ImageViewInstance> dst = nullptr;
+			std::shared_ptr<StagingBuffer> staging_buffer = nullptr;
+		};
+
+		void execute(ExecutionContext& ctx, UploadInfoInstance const& ui);
 
 		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
 
@@ -492,7 +509,7 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		void execute(ExecutionContext & ctx, UploadInfo const& ui, std::vector<BufferUploadExtraInfo> const& extra_buffer_info);
+		void execute(ExecutionContext & ctx, UploadInfo const& ui, std::vector<std::shared_ptr<StagingBuffer>> const& staging_buffers, std::vector<BufferUploadExtraInfo> const& extra_buffer_info);
 
 		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
 

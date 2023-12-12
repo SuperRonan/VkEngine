@@ -307,7 +307,7 @@ namespace vkl
 						.pos = 0,
 					},
 				},
-				.dst = _ubo_buffer,
+				.dst = _ubo_buffer->instance(),
 			};
 
 			if (!_lights_glsl.empty())
@@ -319,7 +319,7 @@ namespace vkl
 							.pos = 0,
 						},
 					},
-					.dst = _lights_buffer,
+					.dst = _lights_buffer->instance(),
 				};
 			}
 		}

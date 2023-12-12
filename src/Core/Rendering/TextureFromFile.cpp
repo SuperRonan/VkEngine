@@ -194,7 +194,7 @@ namespace vkl
 			{
 				ResourcesToUpload::ImageUpload up{
 					.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-					.dst = _top_mip_view,
+					.dst = _top_mip_view->instance(),
 				};
 				ctx.resourcesToUpload() += std::move(up);
 				_upload_done = true;
@@ -211,7 +211,7 @@ namespace vkl
 							AsynchUpload up{
 								.name = name(),
 								.source = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-								.target_view = _top_mip_view,
+								.target_view = _top_mip_view->instance(),
 								.completion_callback = [this](int ret)
 								{
 									if (ret == 0)
@@ -249,7 +249,7 @@ namespace vkl
 			{
 				_mips_done = false;
 				ctx.mipsQueue()->enqueue(AsynchMipsCompute{
-					.target = _all_mips_view,
+					.target = _all_mips_view->instance(),
 					.completion_callback = [this](int ret)
 					{
 						if (ret == 0)

@@ -30,12 +30,15 @@ namespace vkl
 		DescriptorSetsTacker _compute_bound_sets;
 		DescriptorSetsTacker _ray_tracing_bound_sets;
 
+		StagingPool * _staging_pool = nullptr;
+
 	public:
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name;
+			StagingPool * staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -57,6 +60,11 @@ namespace vkl
 		}
 
 		DescriptorSetsTacker& getBoundSets(VkPipelineBindPoint pipeline);
+
+		StagingPool* stagingPool()const
+		{
+			return _staging_pool;
+		}
 	};
 
 	class ExecutionContext : public VkObject

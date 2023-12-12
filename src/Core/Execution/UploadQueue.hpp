@@ -52,11 +52,11 @@ namespace vkl
 		std::vector<PositionedObjectView> sources = {};
 		ObjectView source = {};
 		
-		std::shared_ptr<ImageView> target_view = nullptr;
+		std::shared_ptr<ImageViewInstance> target_view = nullptr;
 		uint32_t buffer_row_length = 0;
 		uint32_t buffer_image_height = 0;
 		
-		std::shared_ptr<Buffer> target_buffer = nullptr;
+		std::shared_ptr<BufferInstance> target_buffer = nullptr;
 
 		CompletionCallback completion_callback = {};
 
@@ -93,7 +93,7 @@ namespace vkl
 
 	struct AsynchMipsCompute
 	{
-		std::shared_ptr<ImageView> target = nullptr;
+		std::shared_ptr<ImageViewInstance> target = nullptr;
 		CompletionCallback completion_callback = {};
 
 		size_t getSize()const;

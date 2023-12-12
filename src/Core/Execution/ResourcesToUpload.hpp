@@ -7,8 +7,8 @@
 namespace vkl
 {
 	
-	class ImageView;
-	class Buffer;
+	class ImageViewInstance;
+	class BufferInstance;
 	
 	struct ResourcesToUpload
 	{
@@ -18,7 +18,7 @@ namespace vkl
 			// 0 -> tightly packed
 			uint32_t buffer_row_length = 0;
 			uint32_t buffer_image_height = 0;
-			std::shared_ptr<ImageView> dst;
+			std::shared_ptr<ImageViewInstance> dst;
 			CompletionCallback completion_callback = {};
 		};
 
@@ -27,7 +27,7 @@ namespace vkl
 		struct BufferUpload
 		{
 			std::vector<PositionedObjectView> sources;
-			std::shared_ptr<Buffer> dst;
+			std::shared_ptr<BufferInstance> dst;
 			CompletionCallback completion_callback = {};
 		};
 

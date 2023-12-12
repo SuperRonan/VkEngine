@@ -106,7 +106,7 @@ namespace vkl
 			const Properties props = getProperties();
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
 				.sources = {PositionedObjectView{.obj = props, .pos = 0}},
-				.dst = _props_buffer,
+				.dst = _props_buffer->instance(),
 			};
 			_should_update_props_buffer = false;
 		}
