@@ -28,4 +28,13 @@ layout(SCENE_BINDING + 1) restrict LIGHTS_ACCESS buffer LightsBufferBinding
 	Light lights[];
 } lights_buffer;
 
+
+// #ifndef SCENE_MAX_TEXTURE_BINDING
+// #define SCENE_MAX_TEXTURE_BINDING
+// #endif
+
+// layout(SCENE_BINDING + 4) uniform sampler2D SceneTextures[];
+// layout(SCENE_BINDING + 5) uniform sampler2D SceneTextures2[];
+
+
 #endif

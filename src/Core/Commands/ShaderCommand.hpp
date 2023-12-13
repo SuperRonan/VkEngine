@@ -23,7 +23,7 @@ namespace vkl
 
 		PushConstant _pc;
 
-		ResourcesInstances getDescriptorSetResources(DescriptorSetAndPoolInstance & set, DescriptorSetLayout const& layout);
+		ResourcesInstances getDescriptorSetResources(DescriptorSetAndPoolInstance & set, DescriptorSetLayoutInstance const& layout);
 
 	public:
 

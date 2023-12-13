@@ -517,7 +517,15 @@ namespace vkl
 				_target_set = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::shader)].set;
 			}
 		}
-		if (!_layout)
+
+		if (_layout)
+		{
+			_layout->addInvalidationCallback({
+				.callback = [&]() {destroyInstance(); },
+				.id = this,
+			});
+		}
+		else
 		{
 			assert(!!_prog);
 			_layout_from_prog = true;
@@ -529,6 +537,10 @@ namespace vkl
 		if (_prog)
 		{
 			_prog->removeInvalidationCallbacks(this);
+		}
+		if (!_layout_from_prog)
+		{
+			_layout->removeInvalidationCallbacks(this);
 		}
 	}
 
@@ -553,13 +565,14 @@ namespace vkl
 				_bindings[j].unResolve();
 			}
 
-			_layout = _prog->instance()->setsLayouts()[_target_set];
-			if(_layout)
+			//_layout = _prog->instance()->setsLayouts()[_target_set];
+			std::shared_ptr<DescriptorSetLayoutInstance> layout = _prog->instance()->setsLayouts()[_target_set];
+			if(layout)
 			{
-				for (size_t i = 0; i < _layout->bindings().size(); ++i)
+				for (size_t i = 0; i < layout->bindings().size(); ++i)
 				{
-					const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
-					const DescriptorSetLayout::BindingMeta & meta = _layout->metas()[i];
+					const VkDescriptorSetLayoutBinding & vkb = layout->bindings()[i];
+					const DescriptorSetLayoutInstance::BindingMeta & meta = layout->metas()[i];
 			
 					size_t corresponding_resource_index = [&]() {
 						for (size_t j = 0; j < _bindings.size(); ++j)
@@ -617,8 +630,9 @@ namespace vkl
 		else
 		{
 			const bool fill_missing_bindings_with_null = _allow_missing_bindings;
-
-			if (_bindings.size() != _layout->bindings().size())
+			assert(!!_layout->instance());
+			DescriptorSetLayoutInstance & layout = *_layout->instance();
+			if (_bindings.size() != layout.bindings().size())
 			{
 				if(!fill_missing_bindings_with_null)
 				{
@@ -628,21 +642,21 @@ namespace vkl
 						.error_title = "DescriptorSet filling missing bindings"s,
 						.error_message = 
 							"In DescriptorSet "s + name() + ":\n"s +
-							"Layout: "s + _layout->name() + "\n"s + 
-							"Not enough bindings provided ("s + std::to_string(_bindings.size()) + " vs "s + std::to_string(_layout->bindings().size()) + ")"s,
+							"Layout: "s + layout.name() + "\n"s + 
+							"Not enough bindings provided ("s + std::to_string(_bindings.size()) + " vs "s + std::to_string(layout.bindings().size()) + ")"s,
 					};
 					return {};
 				}
 				// Fill missing bindings
-				if (_bindings.size() < _layout->bindings().size())
+				if (_bindings.size() < layout.bindings().size())
 				{
 					ResourceBindings new_bindings;
-					new_bindings.resize(_layout->bindings().size());
+					new_bindings.resize(layout.bindings().size());
 
 					size_t j = 0;
-					for (size_t i = 0; i < _layout->bindings().size(); ++i)
+					for (size_t i = 0; i < layout.bindings().size(); ++i)
 					{
-						const uint32_t b = _layout->bindings()[i].binding;
+						const uint32_t b = layout.bindings()[i].binding;
 						
 						const size_t b_index = [&]() -> size_t {
 							while (j != -1)
@@ -675,15 +689,15 @@ namespace vkl
 						else
 						{
 							Binding null_binding{
-								.binding = _layout->bindings()[i].binding,
+								.binding = layout.bindings()[i].binding,
 							};							
 							new_bindings[i] = null_binding;
 							new_bindings[i].resource().begin_state = ResourceState2{
-								.access = _layout->metas()[i].access,
-								.layout = _layout->metas()[i].layout,
-								.stage = getPipelineStageFromShaderStage2(_layout->bindings()[i].stageFlags),
+								.access = layout.metas()[i].access,
+								.layout = layout.metas()[i].layout,
+								.stage = getPipelineStageFromShaderStage2(layout.bindings()[i].stageFlags),
 							};
-							new_bindings[i].setType(_layout->bindings()[i].descriptorType);
+							new_bindings[i].setType(layout.bindings()[i].descriptorType);
 						}
 					}
 
@@ -694,8 +708,8 @@ namespace vkl
 			for (size_t j = 0; j < _bindings.size(); ++j)
 			{
 				_bindings[j].resolve(_bindings[j].binding());
-				const auto& meta = _layout->metas()[j];
-				const auto& vkb = _layout->bindings()[j];
+				const auto& meta = layout.metas()[j];
+				const auto& vkb = layout.bindings()[j];
 				_bindings[j].setType(vkb.descriptorType);
 				_bindings[j].resource().begin_state.layout = meta.layout;
 			}
@@ -737,10 +751,11 @@ namespace vkl
 
 					if (task_res.success)
 					{
+						std::shared_ptr layout = _layout_from_prog ? _prog->instance()->setsLayouts()[_target_set] : _layout->instance();
 						_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
 							.app = application(),
 							.name = name(),
-							.layout = _layout,
+							.layout = layout,
 							.bindings = instance_bindings,
 						});
 
@@ -861,7 +876,7 @@ namespace vkl
 		_bindings_ranges.push_back(Range32u{.begin = binding, .len = 1});
 	}
 
-	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func)
+	void DescriptorSetsManager::recordBinding(std::shared_ptr<PipelineLayoutInstance> const& layout, PerBindingFunction const& func)
 	{
 		const bool bind_all = true;
 		if (bind_all)
@@ -871,7 +886,7 @@ namespace vkl
 			uint32_t bind_len = 0;
 			auto vk_bind = [&]()
 			{
-				vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, bind_begin, bind_len, _vk_sets.data() + bind_begin, 0, nullptr);
+				vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, layout->handle(), bind_begin, bind_len, _vk_sets.data() + bind_begin, 0, nullptr);
 			};
 			for (size_t s = 0; s < sets_layouts.size(); ++s)
 			{
@@ -919,18 +934,18 @@ namespace vkl
 						func(_bound_descriptor_sets[i + r.begin]);
 					}
 				}
-				vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, r.begin, r.len, _vk_sets.data() + r.begin, 0, nullptr);
+				vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, layout->handle(), r.begin, r.len, _vk_sets.data() + r.begin, 0, nullptr);
 			}
 			_bindings_ranges.clear();
 		}
 	}
 
-	void DescriptorSetsManager::bindOneAndRecord(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set, std::shared_ptr<PipelineLayout> const& layout)
+	void DescriptorSetsManager::bindOneAndRecord(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set, std::shared_ptr<PipelineLayoutInstance> const& layout)
 	{
 		assert(binding < _bound_descriptor_sets.size());
 		assert(!!set);
 		_bound_descriptor_sets[binding] = set;
 		_vk_sets[binding] = set->set()->handle();
-		vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, *layout, binding, 1, _vk_sets.data() + binding, 0, nullptr);
+		vkCmdBindDescriptorSets(*_cmd, _pipeline_binding, layout->handle(), binding, 1, _vk_sets.data() + binding, 0, nullptr);
 	}
 }

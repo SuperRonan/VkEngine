@@ -164,33 +164,23 @@ namespace vkl
 			using namespace std::containers_operators;
 
 			bindings += DescriptorSetLayout::Binding{
-				.vk_binding = VkDescriptorSetLayoutBinding{
-					.binding = 0,
-					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_ALL,
-					.pImmutableSamplers = nullptr,
-				},
-				.meta = DescriptorSetLayout::BindingMeta{
-					.name = "SceneUBOBinding",
-					.access = VK_ACCESS_2_UNIFORM_READ_BIT,
-					.buffer_usage = VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT_KHR,
-				},
+				.name = "SceneUBOBinding",
+				.binding = 0,
+				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_UNIFORM_READ_BIT,
+				.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			};
 
 			bindings += DescriptorSetLayout::Binding{
-				.vk_binding = VkDescriptorSetLayoutBinding{
-					.binding = 1,
-					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_ALL,
-					.pImmutableSamplers = nullptr,
-				},
-				.meta = DescriptorSetLayout::BindingMeta{
-					.name = "LightsBufferBinding",
-					.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
-					.buffer_usage = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT_KHR,
-				},
+				.name = "LightsBufferBinding",
+				.binding = 1,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
 

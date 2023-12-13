@@ -110,6 +110,8 @@ namespace vkl
 		
 	public:
 
+		using InstanceType = Instance;
+
 		template <class StringLike = std::string>
 		constexpr InstanceHolder(VkApplication* app, StringLike&& name = {}) :
 			AbstractInstanceHolder(app, std::forward<StringLike>(name))

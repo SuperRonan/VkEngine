@@ -13,19 +13,14 @@ namespace vkl
 
 		if (_use_debug_renderer)
 		{
-			bindings += { 
-				.vk_binding = VkDescriptorSetLayoutBinding{
-					.binding = 0,
-					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-					.descriptorCount = 1,
-					.stageFlags = VK_SHADER_STAGE_ALL,
-					.pImmutableSamplers = nullptr,
-				},
-				.meta = DescriptorSetLayout::BindingMeta{
-					.name = "DebugBuffer",
-					.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-					.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-				},
+			bindings += DescriptorSetLayout::Binding{
+				.name = "DebugBuffer",
+				.binding = 0,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 		}
 

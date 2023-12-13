@@ -2,8 +2,8 @@
 
 namespace vkl
 {
-	PipelineLayout::PipelineLayout(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+	PipelineLayoutInstance::PipelineLayoutInstance(CreateInfo const& ci) :
+		AbstractInstance(ci.app, ci.name),
 		_sets(ci.sets),
 		_push_constants(ci.push_constants)
 	{
@@ -22,7 +22,7 @@ namespace vkl
 		setVkName();
 	}
 
-	PipelineLayout::~PipelineLayout()
+	PipelineLayoutInstance::~PipelineLayoutInstance()
 	{
 		if (_layout != VK_NULL_HANDLE)
 		{
@@ -30,12 +30,12 @@ namespace vkl
 		}
 	}
 
-	void PipelineLayout::create(VkPipelineLayoutCreateInfo const& ci)
+	void PipelineLayoutInstance::create(VkPipelineLayoutCreateInfo const& ci)
 	{
 		VK_CHECK(vkCreatePipelineLayout(_app->device(), &ci, nullptr, &_layout), "Failed to create a pipeline layout.");
 	}
 
-	void PipelineLayout::setVkName()
+	void PipelineLayoutInstance::setVkName()
 	{
 		application()->nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT{
 			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -46,9 +46,110 @@ namespace vkl
 		});
 	}
 
-	void PipelineLayout::destroy()
+	void PipelineLayoutInstance::destroy()
 	{
 		vkDestroyPipelineLayout(_app->device(), _layout, nullptr);
 		_layout = VK_NULL_HANDLE;
+	}
+
+
+
+
+
+
+
+	PipelineLayout::PipelineLayout(CreateInfo const& ci) :
+		ParentType(ci.app, ci.name),
+		_sets(ci.sets),
+		_push_constants(ci.push_constants)
+	{
+		_is_dynamic = true;
+		for (size_t i = 0; i < _sets.size(); ++i)
+		{
+			if (_sets[i])
+			{
+				if (_sets[i]->isDynamic())
+				{
+					_sets[i]->addInvalidationCallback(Callback{
+						.callback = [this]()
+						{
+							destroyInstance();
+						},
+						.id = this,
+					});
+				}
+				else
+				{
+					_is_dynamic = false;
+				}
+			}
+		}
+	}
+
+	PipelineLayout::~PipelineLayout()
+	{
+		for (size_t i = 0; i < _sets.size(); ++i)
+		{
+			if (_sets[i] && _sets[i]->isDynamic())
+			{
+				_sets[i]->removeInvalidationCallbacks(this);
+			}
+		}
+
+		destroyInstance();	
+	}
+
+	void PipelineLayout::createInstance()
+	{
+		std::vector<std::shared_ptr<DescriptorSetLayoutInstance>> sets(_sets.size());
+		for (size_t i = 0; i < _sets.size(); ++i)
+		{
+			if(_sets[i])
+				sets[i] = _sets[i]->instance();
+		}
+		_inst = std::make_shared<PipelineLayoutInstance>(PipelineLayoutInstance::CI{
+			.app = application(),
+			.name = name(),
+			.sets = std::move(sets),
+			.push_constants = _push_constants,
+		});
+	}
+
+	void PipelineLayout::destroyInstance()
+	{
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
+	}
+
+	bool PipelineLayout::updateResources(UpdateContext& ctx)
+	{
+		bool res = false;
+		if (isDynamic())
+		{
+			if (ctx.updateTick() > _update_tick)
+			{
+				_update_tick = ctx.updateTick();
+				for (size_t i = 0; i < _sets.size(); ++i)
+				{
+					if (_sets[i])
+					{
+						res |= _sets[i]->updateResources(ctx);
+					}
+				}
+			}
+
+			if (!_inst)
+			{
+				createInstance();
+				res = true;
+			}
+		}
+
+		assert(!!_inst);
+
+		return res;
 	}
 }

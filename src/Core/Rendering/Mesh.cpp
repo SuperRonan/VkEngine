@@ -576,49 +576,34 @@ namespace vkl
 		std::vector<DescriptorSetLayout::Binding> res;
 		using namespace std::containers_operators;
 
-		res += {
-			.vk_binding = VkDescriptorSetLayoutBinding{
-				.binding = offset + 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			},
-			.meta = DescriptorSetLayout::BindingMeta{
-				.name = "MeshHeader",
-				.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			},
+		res += DescriptorSetLayout::Binding{
+			.name = "MeshHeader",
+			.binding = offset + 0,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		};
 
-		res += {
-			.vk_binding = VkDescriptorSetLayoutBinding{
-				.binding = offset + 1,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			},
-			.meta = DescriptorSetLayout::BindingMeta{
-				.name = "MeshVertices",
-				.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			}
+		res += DescriptorSetLayout::Binding{
+			.name = "MeshVertices",
+			.binding = offset + 1,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		};
 
-		res += {
-			.vk_binding = VkDescriptorSetLayoutBinding{
-				.binding = offset + 2,
-				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			},
-			.meta = DescriptorSetLayout::BindingMeta{
-				.name = "MeshIndices32",
-				.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			},
+		res += DescriptorSetLayout::Binding{
+			.name = "MeshIndices32",
+			.binding = offset + 2,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		};
 
 		return res;

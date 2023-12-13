@@ -6,21 +6,24 @@ namespace vkl
 	{
 		if (pc.hasValue())
 		{
+			PipelineLayoutInstance & pipeline_layout = *_pipeline->program()->instance()->pipelineLayout();
 			VkShaderStageFlags pc_stages = 0;
 			for (const auto& pc_range : _pipeline->program()->instance()->pushConstantRanges())
 			{
 				pc_stages |= pc_range.stageFlags;
 			}
-			vkCmdPushConstants(cmd, *_pipeline->program()->instance()->pipelineLayout(), pc_stages, 0, (uint32_t)pc.size(), pc.data());
+			vkCmdPushConstants(cmd, pipeline_layout.handle(), pc_stages, 0, (uint32_t)pc.size(), pc.data());
 		}
 	}
 
 	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
 	{
 		_pipeline->waitForInstanceCreationIFN();
+		std::shared_ptr<PipelineInstance> pipeline = _pipeline->instance();
+		std::shared_ptr<PipelineLayoutInstance> pipeline_layout = pipeline->program()->pipelineLayout();
 		const VkPipelineBindPoint bp = _pipeline->instance()->binding();
 		vkCmdBindPipeline(cmd, bp, *_pipeline->instance());
-		context.keppAlive(_pipeline->instance());
+		context.keppAlive(pipeline);
 
 		DescriptorSetsManager& bound_sets = [&]() -> DescriptorSetsManager& {
 			if(bp == VK_PIPELINE_BIND_POINT_GRAPHICS)
@@ -42,7 +45,7 @@ namespace vkl
 		);
 	}
 
-	ResourcesInstances ShaderCommand::getDescriptorSetResources(DescriptorSetAndPoolInstance& set, DescriptorSetLayout const& layout)
+	ResourcesInstances ShaderCommand::getDescriptorSetResources(DescriptorSetAndPoolInstance& set, DescriptorSetLayoutInstance const& layout)
 	{
 		ResourcesInstances res;
 		res.reserve(layout.bindings().size());
@@ -86,7 +89,7 @@ namespace vkl
 		using namespace std::containers_operators;
 		ProgramInstance & prog = *_pipeline->program()->instance();
 		
-		MultiDescriptorSetsLayouts const& sets = prog.reflectionSetsLayouts();
+		MultiDescriptorSetsLayoutsInstances const& sets = prog.reflectionSetsLayouts();
 
 		if (max_set == 0)
 		{
@@ -97,7 +100,7 @@ namespace vkl
 		{
 			if (sets[s] && !sets[s]->empty())
 			{
-				DescriptorSetLayout const& set_layout = *sets[s];
+				DescriptorSetLayoutInstance const& set_layout = *sets[s];
 				const auto& bound_set = bound_sets.getSet(s);
 				if (!bound_set)
 				{

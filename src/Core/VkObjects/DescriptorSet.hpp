@@ -10,7 +10,7 @@ namespace vkl
     {
     protected:
 
-        std::shared_ptr<DescriptorSetLayout> _layout = nullptr;
+        std::shared_ptr<DescriptorSetLayoutInstance> _layout = nullptr;
         std::shared_ptr<DescriptorPool> _pool = nullptr;
 
         VkDescriptorSet _handle = VK_NULL_HANDLE;
@@ -27,7 +27,7 @@ namespace vkl
         {
             VkApplication * app = nullptr;
             std::string name = {};
-            std::shared_ptr<DescriptorSetLayout> layout = nullptr;
+            std::shared_ptr<DescriptorSetLayoutInstance> layout = nullptr;
             std::shared_ptr<DescriptorPool> pool = nullptr;
         };
         using CI = CreateInfo;

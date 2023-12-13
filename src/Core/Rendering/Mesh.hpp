@@ -403,6 +403,7 @@ namespace vkl
 					return vertexInputDescOnlyPos2D();
 				}
 			}
+			return {};
 		}
 
 		static VertexInputDescription vertexInputDescFullVertex();

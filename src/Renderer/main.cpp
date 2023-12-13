@@ -108,13 +108,13 @@ namespace vkl
 			}
 
 			{
-				std::shared_ptr<NodeFromFile> viking_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
-					.app = this,
-					.name = "Vicking",
-					.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0))),
-					.path = ENGINE_SRC_PATH "/../gen/models/viking_room/viking_room.obj",
-					.synch = false,
-				});
+				//std::shared_ptr<NodeFromFile> viking_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+				//	.app = this,
+				//	.name = "Vicking",
+				//	.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0))),
+				//	.path = ENGINE_SRC_PATH "/../gen/models/viking_room/viking_room.obj",
+				//	.synch = false,
+				//});
 
 				const int N = 1;
 

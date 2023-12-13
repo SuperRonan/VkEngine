@@ -117,34 +117,24 @@ namespace vkl
 		std::vector<DescriptorSetLayout::Binding> res;
 		using namespace std::containers_operators;
 		res += DescriptorSetLayout::Binding{
-			.vk_binding = {
-				.binding = offset + 0,
-				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			},
-			.meta = {
-				.name = "MaterialPropertiesBuffer",
-				.access = VK_ACCESS_2_UNIFORM_READ_BIT,
-				.buffer_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			},
+			.name = "MaterialPropertiesBuffer",
+			.binding = offset + 0,
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_2_UNIFORM_READ_BIT,
+			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 		};
 
 		res += DescriptorSetLayout::Binding{
-			.vk_binding = {
-				.binding = offset + 1,
-				.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.descriptorCount = 1,
-				.stageFlags = VK_SHADER_STAGE_ALL,
-				.pImmutableSamplers = nullptr,
-			},
-			.meta = {
-				.name = "AlbedoTexture",
-				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				.image_usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-			},
+			.name = "AlbedoTexture",
+			.binding = offset + 1,
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+			.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		};
 
 		return res;

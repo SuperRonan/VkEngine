@@ -17,12 +17,54 @@ namespace vkl
 	bool ProgramInstance::reflect()
 	{
 		// all_bindings[set][binding]
-		struct BindingWithMeta
+		struct BindingInfo 
 		{
-			VkDescriptorSetLayoutBinding binding;
-			DescriptorSetLayout::BindingMeta meta;
+			std::string name = {};
+			uint32_t binding = 0;
+			VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+			uint32_t count = 0;
+			VkShaderStageFlags stages = 0;
+			//std::vector<std::shared_ptr<Sampler>> immutable_samplers = {}; // TODO
+			VkAccessFlagBits2 access = VK_ACCESS_2_NONE;
+			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+			VkFlags usage = 0;
+
+			DescriptorSetLayout::Binding asDSLBinding() const
+			{
+				return DescriptorSetLayout::Binding{
+					.name = name,
+					.binding = binding,
+					.type = type,
+					.count = count,
+					.stages = stages,
+					.access = access,
+					.layout = layout,
+					.usage = usage,
+				};
+			}
+
+			VkDescriptorSetLayoutBinding getVkBinding()const
+			{
+				return VkDescriptorSetLayoutBinding{
+					.binding = binding,
+					.descriptorType = type,
+					.descriptorCount = count,
+					.stageFlags = stages,
+					.pImmutableSamplers = nullptr,
+				};
+			}
+
+			DescriptorSetLayoutInstance::BindingMeta getMeta()const
+			{
+				return DescriptorSetLayoutInstance::BindingMeta{
+					.name = name,
+					.access = access,
+					.layout = layout,
+					.usage = usage,
+				};
+			}
 		};
-		std::map<uint32_t, std::map<uint32_t, BindingWithMeta>> all_bindings;
+		std::map<uint32_t, std::map<uint32_t, BindingInfo>> all_bindings;
 
 		const bool keep_unused_bindings = false;
 
@@ -33,23 +75,22 @@ namespace vkl
 			for (size_t s = 0; s < refl.descriptor_set_count; ++s)
 			{
 				const auto& set = refl.descriptor_sets[s];
-				std::map<uint32_t, BindingWithMeta>& set_bindings = all_bindings[set.set];
+				std::map<uint32_t, BindingInfo>& set_bindings = all_bindings[set.set];
 				for (size_t b = 0; b < set.binding_count; ++b)
 				{
 					const auto& binding = *set.bindings[b];
 					if (keep_unused_bindings || binding.accessed)
 					{
-						VkDescriptorSetLayoutBinding vkb = {
+						BindingInfo binding_info{
+							.name = binding.name,
 							.binding = binding.binding,
-							.descriptorType = (VkDescriptorType)binding.descriptor_type,
-							.descriptorCount = binding.count,
-							.stageFlags = (VkShaderStageFlags)shader.stage(),
+							.type = (VkDescriptorType)binding.descriptor_type,
+							.count = binding.count,
+							.stages = (VkShaderStageFlags)shader.stage(),
 						};
-						DescriptorSetLayout::BindingMeta meta;
-						meta.name = binding.name;
-						meta.access = [&]()
+						binding_info.access = [&]()
 						{
-							const VkDescriptorType type = vkb.descriptorType;
+							const VkDescriptorType type = binding_info.type;
 							VkAccessFlags res = VK_ACCESS_2_NONE_KHR;
 							if (
 								type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
@@ -86,10 +127,10 @@ namespace vkl
 							}
 							return res;
 						}();
-						meta.layout = [&]()
+						binding_info.layout = [&]()
 						{
 							VkImageLayout res = VK_IMAGE_LAYOUT_MAX_ENUM;
-							VkDescriptorType type = vkb.descriptorType;
+							VkDescriptorType type = binding_info.type;
 							if ( // Is image
 								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
 								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
@@ -99,7 +140,7 @@ namespace vkl
 									res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 								else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 								{
-									if (meta.access == VK_ACCESS_2_SHADER_READ_BIT)
+									if (binding_info.access == VK_ACCESS_2_SHADER_READ_BIT)
 										res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 									else
 										res = VK_IMAGE_LAYOUT_GENERAL;
@@ -109,17 +150,16 @@ namespace vkl
 						}();
 						if (set_bindings.contains(binding.binding))
 						{
-							BindingWithMeta& already = set_bindings[binding.binding];
-							already.binding.stageFlags |= shader.stage();
-							const bool same_count = (already.binding.descriptorCount == vkb.descriptorCount);
-							const bool same_type = (already.binding.descriptorType == vkb.descriptorType);
+							BindingInfo& already = set_bindings[binding.binding];
+							already.stages |= shader.stage();
+							const bool same_count = (already.count == binding_info.count);
+							const bool same_type = (already.type == binding_info.type);
 							assert(same_count && same_type);
 							if (!(same_count && same_type))	return false;
 						}
 						else
 						{
-							set_bindings[binding.binding].binding = vkb;
-							set_bindings[binding.binding].meta = meta;
+							set_bindings[binding.binding] = binding_info;
 						}
 					}
 					else
@@ -150,18 +190,18 @@ namespace vkl
 
 			for (size_t s = 0; s < (max_set_index + 1); ++s)
 			{
-				std::shared_ptr<DescriptorSetLayout> & set_layout = _reflection_sets_layouts.getRef(s);
-				std::vector<VkDescriptorSetLayoutBinding> bindings;
-				std::vector<DescriptorSetLayout::BindingMeta> metas;
+				std::shared_ptr<DescriptorSetLayoutInstance> & set_layout = _reflection_sets_layouts.getRef(s);
+				std::vector<VkDescriptorSetLayoutBinding> vk_bindings;
+				std::vector<DescriptorSetLayoutInstance::BindingMeta> metas;
 				if (all_bindings.contains(s))
 				{
 					const auto& sb = all_bindings[s];
-					bindings.reserve(sb.size());
+					vk_bindings.reserve(sb.size());
 					metas.reserve(sb.size());
 					for (const auto& [bdi, bd] : sb)
 					{
-						bindings.push_back(bd.binding);
-						metas.push_back(bd.meta);
+						vk_bindings.push_back(bd.getVkBinding());
+						metas.push_back(bd.getMeta());
 					}
 				}
 
@@ -178,12 +218,12 @@ namespace vkl
 				}
 			
 
-				set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+				set_layout = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
 					.app = application(),
 					.name = name() + ".DescSetLayout",
 					.flags = flags,
-					.vk_bindings = bindings,
-					.metas = metas,
+					.vk_bindings = std::move(vk_bindings),
+					.metas = std::move(metas),
 					.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 				});
 			}
@@ -233,30 +273,32 @@ namespace vkl
 		{
 			if (!!_reflection_sets_layouts[s] && !!_provided_sets_layouts[s])
 			{
-				const bool enough_bindings = _provided_sets_layouts[s]->bindings().size() >= _reflection_sets_layouts[s]->bindings().size();
+				DescriptorSetLayoutInstance & refl_layout = *_reflection_sets_layouts[s];
+				DescriptorSetLayoutInstance & provided_layout = *_provided_sets_layouts[s];
+				const bool enough_bindings = provided_layout.bindings().size() >= refl_layout.bindings().size();
 				res &= enough_bindings;
 				if (!enough_bindings && !!stream)
 				{
 					*stream << "checking Program " << name() << " sets layouts match error: Not enough bindings in provided set layout " << s 
-						<< ", found " << _provided_sets_layouts[s]->bindings().size() << " but expected a least " << _reflection_sets_layouts[s]->bindings().size() << "!\n";
+						<< ", found " << provided_layout.bindings().size() << " but expected a least " << refl_layout.bindings().size() << "!\n";
 				}
 				// Check if the reflection descriptors are present at the right index in the provided one, and for the right stages
 				if (res)
 				{
 
-					size_t pi = 0;
-					for (size_t i = 0; i < _reflection_sets_layouts[s]->bindings().size(); ++i)
+					size_t pi = 0; // provided i
+					for (size_t i = 0; i < refl_layout.bindings().size(); ++i)
 					{
-						const VkDescriptorSetLayoutBinding & rb = _reflection_sets_layouts[s]->bindings()[i];
+						const VkDescriptorSetLayoutBinding & rb = refl_layout.bindings()[i];
 						while (true)
 						{
 						// TODO _provided are now optional
-							if (_provided_sets_layouts[s]->bindings()[pi].binding == rb.binding)
+							if (provided_layout.bindings()[pi].binding == rb.binding)
 							{
 								break;
 							}
 							++pi;
-							if (pi == _provided_sets_layouts[s]->bindings().size())
+							if (pi == provided_layout.bindings().size())
 							{
 								pi = -1;
 								break;
@@ -272,7 +314,7 @@ namespace vkl
 							}
 							break;
 						}
-						const VkDescriptorSetLayoutBinding & pb = _provided_sets_layouts[s]->bindings()[pi];
+						const VkDescriptorSetLayoutBinding & pb = provided_layout.bindings()[pi];
 
 						const bool same_type = rb.descriptorType == pb.descriptorType;
 						const bool same_count = rb.descriptorCount == pb.descriptorCount;
@@ -321,7 +363,7 @@ namespace vkl
 		{
 			return;
 		}
-		assert(checkSetsLayoutsMatch(&std::cerr));
+		assert(checkSetsLayoutsMatch(&std::cout));
 
 		_sets_layouts.resize(std::max(_reflection_sets_layouts.size(), _provided_sets_layouts.size()));
 		for (size_t i = 0; i < _sets_layouts.size(); ++i)
@@ -329,7 +371,7 @@ namespace vkl
 			_sets_layouts.getRef(i) = _provided_sets_layouts.getSafe(i) ? _provided_sets_layouts.getSafe(i) : _reflection_sets_layouts.getSafe(i);
 		}
 
-		_layout = std::make_shared<PipelineLayout>(PipelineLayout::CI{
+		_layout = std::make_shared<PipelineLayoutInstance>(PipelineLayoutInstance::CI{
 			.app = application(),
 			.name = name() + ".layout",
 			.sets = _sets_layouts.asVector(),
@@ -344,6 +386,13 @@ namespace vkl
 		{
 			shader->removeInvalidationCallbacks(this);
 		}
+		for (size_t i = 0; i < _provided_sets_layouts.size(); ++i)
+		{
+			if (_provided_sets_layouts[i])
+			{
+				_provided_sets_layouts[i]->removeInvalidationCallbacks(this);
+			}
+		}
 	}
 
 	void Program::addShadersInvalidationCallbacks()
@@ -355,6 +404,13 @@ namespace vkl
 		for (auto& shader : _shaders)
 		{
 			shader->addInvalidationCallback(ic);
+		}
+		for (size_t i = 0; i < _provided_sets_layouts.size(); ++i)
+		{
+			if (_provided_sets_layouts[i])
+			{
+				_provided_sets_layouts[i]->addInvalidationCallback(ic);
+			}
 		}
 	}
 
@@ -414,7 +470,7 @@ namespace vkl
 		ProgramInstance(ProgramInstance::CI{
 			.app = ci.app,
 			.name = ci.name,
-			.sets_layouts = ci.sets_layouts,
+			.sets_layouts = ci.sets_layouts.getInstance(),
 		}),
 		_vertex(ci.vertex),
 		_tess_control(ci.tess_control),
@@ -437,7 +493,7 @@ namespace vkl
 		ProgramInstance(ProgramInstance::CI{
 			.app = ci.app,
 			.name = ci.name,
-			.sets_layouts = ci.sets_layouts,
+			.sets_layouts = ci.sets_layouts.getInstance(),
 		}),
 		_task(ci.task),
 		_mesh(ci.mesh),
@@ -583,7 +639,7 @@ namespace vkl
 		ProgramInstance(ProgramInstance::CI{
 			.app = ci.app,
 			.name = ci.name,
-			.sets_layouts = ci.sets_layouts,
+			.sets_layouts = ci.sets_layouts.getInstance(),
 		}),
 		_shader(ci.shader)
 	{

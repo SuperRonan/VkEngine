@@ -481,7 +481,8 @@ namespace vkl
 		else // Use Staging Buffer
 		{
 			std::shared_ptr<StagingBuffer> sb;
-			if (ui.staging_buffer)
+			const bool extern_sb = ui.staging_buffer.operator bool();
+			if (extern_sb)
 			{
 				// Assume externally synched
 				sb = ui.staging_buffer;
@@ -514,7 +515,7 @@ namespace vkl
 				sb->buffer()->unMap();
 			}
 
-			if (ui.staging_buffer)
+			if (extern_sb)
 			{
 				// Assume externally .end_state
 				VkBufferMemoryBarrier2 sb_barrier{
@@ -580,7 +581,7 @@ namespace vkl
 
 			vkCmdCopyBuffer2(cmd, &copy);
 
-			//if (!ui.staging_buffer)
+			if (!extern_sb)
 			{
 				ctx.keppAlive(sb);
 			}
@@ -670,6 +671,10 @@ namespace vkl
 			.exec_fn = [this, uii](ExecutionContext& ctx)
 			{
 				execute(ctx, uii);
+				if (uii.staging_buffer)
+				{
+					ctx.keppAlive(uii.staging_buffer);
+				}
 			},
 		};
 		return res;
@@ -707,7 +712,8 @@ namespace vkl
 		CommandBuffer& cmd = *ctx.getCommandBuffer();
 
 		std::shared_ptr<StagingBuffer> sb;
-		if (ui.staging_buffer)
+		const bool extern_sb = ui.staging_buffer.operator bool();
+		if (extern_sb)
 		{
 			// Assume externally synched
 			sb = ui.staging_buffer;
@@ -736,7 +742,7 @@ namespace vkl
 			sb->buffer()->unMap();
 		}
 
-		if (ui.staging_buffer)
+		if (extern_sb)
 		{
 			// Assume externally .end_state
 			VkBufferMemoryBarrier2 sb_barrier{
@@ -802,7 +808,7 @@ namespace vkl
 
 		vkCmdCopyBufferToImage2(cmd, &copy);
 
-		//if (!ui.staging_buffer)
+		if (!extern_sb)
 		{
 			ctx.keppAlive(sb);
 		}
@@ -849,6 +855,10 @@ namespace vkl
 			.exec_fn = [this, uii](ExecutionContext& ctx)
 			{
 				execute(ctx, uii);
+				if (uii.staging_buffer)
+				{
+					ctx.keppAlive(uii.staging_buffer);
+				}
 			},
 		};
 		return res;

@@ -5,96 +5,8 @@
 namespace vkl
 {
 
-	void DescriptorSetLayout::create(VkDescriptorSetLayoutCreateInfo const& ci)
+	void DescriptorSetLayoutInstance::create(CreateInfo const& ci)
 	{
-		VK_CHECK(vkCreateDescriptorSetLayout(_app->device(), &ci, nullptr, &_handle), "Failed to create a descriptor set layout.");
-	}
-
-	void DescriptorSetLayout::setVkName()
-	{
-		application()->nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT{
-			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-			.pNext = nullptr,
-			.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
-			.objectHandle = reinterpret_cast<uint64_t>(_handle),
-			.pObjectName = name().c_str(),
-		});
-	}
-
-	void DescriptorSetLayout::destroy()
-	{
-		vkDestroyDescriptorSetLayout(_app->device(), _handle, nullptr);
-		_handle = VK_NULL_HANDLE;
-	}
-
-	void DescriptorSetLayout::sortBindings()
-	{
-		// TODO Optimize sometime
-		// Make a std SoA sort
-		
-		std::vector<Binding> tmp(_bindings.size());
-		for (size_t i = 0; i < tmp.size(); ++i)
-		{
-			tmp[i].vk_binding = _bindings[i];
-			tmp[i].meta = _metas[i];
-		}
-		std::sort(tmp.begin(), tmp.end(), [](Binding const& a, Binding const& b){return a.vk_binding.binding < b.vk_binding.binding; });
-		for (size_t i = 0; i < tmp.size(); ++i)
-		{
-			_bindings[i] = tmp[i].vk_binding;
-			_metas[i] = tmp[i].meta;
-		}
-	}
-	
-	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
-		_metas(ci.metas),
-		_bindings(ci.vk_bindings),
-		_flags(ci.flags)
-	{
-		if (ci.bindings.empty())
-		{
-			assert(_metas.size() == _bindings.size());
-		}
-		else
-		{
-			_bindings.resize(ci.bindings.size());
-			_metas.resize(ci.bindings.size());
-			for (size_t i = 0; i < ci.bindings.size(); ++i)
-			{
-				_bindings[i] = ci.bindings[i].vk_binding;
-				_metas[i] = ci.bindings[i].meta;
-			}
-		}
-
-
-		sortBindings();
-
-		for (size_t i = 0; i < _bindings.size(); ++i)
-		{
-			const VkDescriptorType type = _bindings[i].descriptorType;
-			if ( // Is image
-				type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-				type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-				type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
-			)
-			{
-				if (_metas[i].layout == VK_IMAGE_LAYOUT_UNDEFINED)
-				{
-					VkImageLayout induced_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-					if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || _metas[i].access == VK_ACCESS_2_SHADER_READ_BIT)
-					{
-						induced_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					}
-					else 
-					{
-						induced_layout = VK_IMAGE_LAYOUT_GENERAL;
-					}
-					_metas[i].layout = induced_layout;
-				}
-			}
-		}
-
 		VkDescriptorSetLayoutCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
@@ -104,7 +16,7 @@ namespace vkl
 		};
 		VkDescriptorSetLayoutBindingFlagsCreateInfo bindings_flags_ci;
 		std::vector<VkDescriptorBindingFlags> bindings_flags;
-		
+
 		if (ci.binding_flags)
 		{
 			VkDescriptorBindingFlags common_bindings_flags = ci.binding_flags;
@@ -172,28 +84,172 @@ namespace vkl
 				.pBindingFlags = bindings_flags.data(),
 			};
 		}
-		create(vk_ci);
+
+		VK_CHECK(vkCreateDescriptorSetLayout(_app->device(), &vk_ci, nullptr, &_handle), "Failed to create a descriptor set layout.");
+	}
+
+	void DescriptorSetLayoutInstance::setVkName()
+	{
+		application()->nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT{
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+			.pNext = nullptr,
+			.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+			.objectHandle = reinterpret_cast<uint64_t>(_handle),
+			.pObjectName = name().c_str(),
+		});
+	}
+
+	void DescriptorSetLayoutInstance::destroy()
+	{
+		vkDestroyDescriptorSetLayout(_app->device(), _handle, nullptr);
+		_handle = VK_NULL_HANDLE;
+	}
+
+
+	DescriptorSetLayoutInstance::DescriptorSetLayoutInstance(CreateInfo const& ci) :
+		AbstractInstance(ci.app, ci.name),
+		_bindings(ci.vk_bindings),
+		_metas(ci.metas),
+		_flags(ci.flags),
+		_binding_flags(ci.binding_flags)
+	{
+		create(ci);
 		setVkName();
 	}
 
-	DescriptorSetLayout::~DescriptorSetLayout()
+	DescriptorSetLayoutInstance::DescriptorSetLayoutInstance(CreateInfo && ci) :
+		AbstractInstance(ci.app, std::move(ci.name)),
+		_bindings(std::move(ci.vk_bindings)),
+		_metas(std::move(ci.metas)),
+		_flags(ci.flags),
+		_binding_flags(ci.binding_flags)
+	{
+		create(ci);
+		setVkName();
+	}
+
+	DescriptorSetLayoutInstance::~DescriptorSetLayoutInstance()
 	{
 		if (_handle)
 		{
 			destroy();
 		}
 	}
-	
 
 
-	MultiDescriptorSetsLayouts& MultiDescriptorSetsLayouts::operator+=(std::pair<uint32_t, std::shared_ptr<DescriptorSetLayout>> const& p)
+
+	void DescriptorSetLayout::sortBindings()
 	{
-		if (p.first >= _layouts.size())
+		std::sort(_bindings.begin(), _bindings.end(), [](Binding const& a, Binding const& b){return a.binding < b.binding;});
+	}
+	
+	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
+		ParentType(ci.app, ci.name),
+		_is_dynamic(ci.is_dynamic),
+		_bindings(ci.bindings),
+		_flags(ci.flags),
+		_binding_flags(ci.binding_flags)
+	{
+		sortBindings();
+
+		// Deduce undefined layouts
+		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
-			_layouts.resize(p.first + 1);
+			const VkDescriptorType type = _bindings[i].type;
+			if ( // Is image
+				type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
+				type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
+				type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+			)
+			{
+				if (_bindings[i].layout == VK_IMAGE_LAYOUT_UNDEFINED)
+				{
+					VkImageLayout induced_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+					if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || _bindings[i].access == VK_ACCESS_2_SHADER_READ_BIT)
+					{
+						induced_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					}
+					else 
+					{
+						induced_layout = VK_IMAGE_LAYOUT_GENERAL;
+					}
+					_bindings[i].layout = induced_layout;
+				}
+			}
 		}
-		_layouts[p.first] = p.second;
-		return *this;
+		
+		if (!isDynamic())
+		{
+			createInstance();
+		}
 	}
 
+	void DescriptorSetLayout::destroyInstance()
+	{
+		if (_inst)
+		{
+			callInvalidationCallbacks();
+			_inst = nullptr;
+		}
+	}
+
+	void DescriptorSetLayout::createInstance()
+	{
+		assert(!_inst);
+		std::vector<VkDescriptorSetLayoutBinding> vk_bindings(_bindings.size());
+		std::vector< DescriptorSetLayoutInstance::BindingMeta> metas(_bindings.size());
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			vk_bindings[i] = _bindings[i].getVkBinding();
+			metas[i] = _bindings[i].getMeta();
+		}
+		_inst = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
+			.app = application(),
+			.name = name(),
+			.flags = _flags,
+			.vk_bindings = std::move(vk_bindings),
+			.metas = std::move(metas),
+			.binding_flags = _binding_flags,
+		});
+	}
+
+	DescriptorSetLayout::~DescriptorSetLayout()
+	{
+		destroyInstance();
+	}
+	
+	bool DescriptorSetLayout::updateResources(UpdateContext& ctx)
+	{
+		bool res = false;
+		if (isDynamic())
+		{
+			if (ctx.updateTick() > _update_tick)
+			{
+				_update_tick = ctx.updateTick();
+				if (_inst)
+				{
+					bool destroy_instance = false;
+					for (size_t i = 0; i < _bindings.size(); ++i)
+					{
+						if (_bindings[i].count.value() != _inst->_bindings[i].binding)
+						{
+							destroy_instance = true;
+							break;
+						}
+					}
+					if (destroy_instance)
+					{
+						destroyInstance();
+					}
+				}
+
+				if (!_inst)
+				{
+					createInstance();
+					res = true;
+				}
+			}
+		}
+		return res;
+	}
 }

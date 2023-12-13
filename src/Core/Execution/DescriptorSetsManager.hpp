@@ -15,7 +15,7 @@ namespace vkl
 	{
 	protected:
 		
-		std::shared_ptr<DescriptorSetLayout> _layout = nullptr;
+		std::shared_ptr<DescriptorSetLayoutInstance> _layout = nullptr;
 
 		// sorted and at the size of layout.bindings -> can keep a pointer on a binding
 		ResourceBindings _bindings = {};
@@ -41,7 +41,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::shared_ptr<DescriptorSetLayout> layout = nullptr;
+			std::shared_ptr<DescriptorSetLayoutInstance> layout = nullptr;
 			ResourceBindings bindings = {}; // Not sorted
 		};
 		using CI = CreateInfo;
@@ -207,8 +207,8 @@ namespace vkl
 
 		using PerBindingFunction = std::function<void(std::shared_ptr<DescriptorSetAndPoolInstance>)>;
 
-		void recordBinding(std::shared_ptr<PipelineLayout> const& layout, PerBindingFunction const& func = nullptr);
+		void recordBinding(std::shared_ptr<PipelineLayoutInstance> const& layout, PerBindingFunction const& func = nullptr);
 
-		void bindOneAndRecord(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set, std::shared_ptr<PipelineLayout> const& layout);
+		void bindOneAndRecord(uint32_t binding, std::shared_ptr<DescriptorSetAndPoolInstance> const& set, std::shared_ptr<PipelineLayoutInstance> const& layout);
 	};
 }

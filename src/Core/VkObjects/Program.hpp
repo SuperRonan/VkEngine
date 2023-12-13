@@ -11,18 +11,18 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<PipelineLayout> _layout;
+		std::shared_ptr<PipelineLayoutInstance> _layout;
 		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
-		MultiDescriptorSetsLayouts _provided_sets_layouts;
-		MultiDescriptorSetsLayouts _reflection_sets_layouts;
-		MultiDescriptorSetsLayouts _sets_layouts;
+		MultiDescriptorSetsLayoutsInstances _provided_sets_layouts;
+		MultiDescriptorSetsLayoutsInstances _reflection_sets_layouts;
+		MultiDescriptorSetsLayoutsInstances _sets_layouts;
 		std::vector<VkPushConstantRange> _push_constants;
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
+			MultiDescriptorSetsLayoutsInstances sets_layouts;
 		};
 		using CI = CreateInfo;
 
@@ -76,6 +76,8 @@ namespace vkl
 	protected:
 
 		using ParentType = InstanceHolder<ProgramInstance>;
+
+		// Keep a pipeline layout descriptor here?
 		
 		MultiDescriptorSetsLayouts _provided_sets_layouts;
 

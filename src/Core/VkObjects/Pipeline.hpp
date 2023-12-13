@@ -13,6 +13,7 @@ namespace vkl
 		VkPipeline _handle = VK_NULL_HANDLE;
 		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 		std::shared_ptr<ProgramInstance> _program;
+		std::shared_ptr<PipelineLayoutInstance> _layout;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 
 	public:
@@ -43,86 +44,7 @@ namespace vkl
 			mutable VkGraphicsPipelineCreateInfo _pipeline_ci;
 		public:
 
-			const VkGraphicsPipelineCreateInfo & assemble() const
-			{
-				{
-					if(vertex_input.has_value())
-						_vk_vertex_input = vertex_input->link();
-
-					uint32_t num_viewport = static_cast<uint32_t>(viewports.size());
-					uint32_t num_scissor = static_cast<uint32_t>(scissors.size());
-					if (std::find(dynamic.cbegin(), dynamic.cend(), VK_DYNAMIC_STATE_VIEWPORT) != dynamic.cend())
-					{
-						num_viewport = 1;
-					}
-					if (std::find(dynamic.cbegin(), dynamic.cend(), VK_DYNAMIC_STATE_SCISSOR) != dynamic.cend())
-					{
-						num_scissor = 1;
-					}
-
-					_viewport = {
-						.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-						.viewportCount = num_viewport,
-						.pViewports = viewports.data(),
-						.scissorCount = num_scissor,
-						.pScissors = scissors.data(),
-					};
-
-					_blending = {
-						.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-						.logicOpEnable = VK_FALSE, // TODO
-						.attachmentCount = (uint32_t)attachements_blends.size(),
-						.pAttachments = attachements_blends.data(),
-						.blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
-					};
-
-					_shaders.resize(program->shaders().size());
-					for (size_t i = 0; i < _shaders.size(); ++i)
-					{
-						_shaders[i] = program->shaders()[i]->getPipelineShaderStageCreateInfo();
-					}
-
-					_dynamic_state = {
-						.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-						.pNext = nullptr,
-						.flags = 0,
-						.dynamicStateCount = static_cast<uint32_t>(dynamic.size()),
-						.pDynamicStates = dynamic.data(),
-					};
-
-					if (line_raster.has_value() && app->hasDeviceExtension(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
-					{
-						rasterization.pNext = &line_raster.value();
-					}
-					else
-					{
-						rasterization.pNext = nullptr;
-					}
-				}
-
-
-				_pipeline_ci = VkGraphicsPipelineCreateInfo{
-					.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.stageCount = (uint32_t)_shaders.size(),
-					.pStages = _shaders.data(),
-					.pVertexInputState = vertex_input.has_value() ? &_vk_vertex_input : nullptr,
-					.pInputAssemblyState = input_assembly.has_value() ? &input_assembly.value() : nullptr,
-					.pViewportState = &_viewport,
-					.pRasterizationState = &rasterization,
-					.pMultisampleState = &multisampling,
-					.pDepthStencilState = depth_stencil.has_value() ? &depth_stencil.value() : nullptr,
-					.pColorBlendState = &_blending,
-					.pDynamicState = &_dynamic_state,
-					.layout = *program->pipelineLayout(),
-					.renderPass = *render_pass->instance(),
-					.subpass = 0,
-					.basePipelineHandle = VK_NULL_HANDLE,
-					.basePipelineIndex = 0,
-				};
-				return _pipeline_ci;
-			}
+			const VkGraphicsPipelineCreateInfo & assemble() const;
 		};
 
 		struct ComputeCreateInfo

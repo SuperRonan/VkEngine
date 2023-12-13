@@ -408,7 +408,7 @@ namespace vkl
 	{
 		using namespace std::containers_operators;
 		ResourcesInstances res;
-		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
 			const auto & layouts = _program->instance()->reflectionSetsLayouts();
 			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 			if (set_index < layouts.size())
@@ -483,7 +483,7 @@ namespace vkl
 		DrawInfo const& di = *reinterpret_cast<DrawInfo*>(user_data);
 		
 		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		const std::shared_ptr<PipelineLayout> & layout = _pipeline->program()->instance()->pipelineLayout();
+		const std::shared_ptr<PipelineLayoutInstance> & layout = _pipeline->program()->instance()->pipelineLayout();
 		std::vector<VkBuffer> vb_bind;
 		std::vector<VkDeviceSize> vb_offsets;
 		for (auto& to_draw : di.draw_list)
@@ -692,7 +692,7 @@ namespace vkl
 	{
 		ResourcesInstances res;
 		using namespace std::containers_operators;
-		std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
 			const auto& layouts = _program->instance()->reflectionSetsLayouts();
 			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 			if (set_index < layouts.size())
@@ -730,7 +730,7 @@ namespace vkl
 		const auto & _vkCmdDrawMeshTasksEXT = application()->extFunctions()._vkCmdDrawMeshTasksEXT;
 
 		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		const std::shared_ptr<PipelineLayout>& layout = _pipeline->program()->instance()->pipelineLayout();
+		const std::shared_ptr<PipelineLayoutInstance>& layout = _pipeline->program()->instance()->pipelineLayout();
 		
 		for (auto& to_draw : di.draw_list)
 		{

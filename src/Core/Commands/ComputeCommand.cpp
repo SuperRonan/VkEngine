@@ -55,7 +55,7 @@ namespace vkl
 		
 		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
 		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		const std::shared_ptr<PipelineLayout>& prog_layout = _pipeline->program()->instance()->pipelineLayout();
+		const std::shared_ptr<PipelineLayoutInstance>& prog_layout = _pipeline->program()->instance()->pipelineLayout();
 
 		for (auto& to_dispatch : di.dispatch_list)
 		{
@@ -104,7 +104,7 @@ namespace vkl
 		ResourcesInstances resources = getBoundResources(ctx.computeBoundSets(), shader_set_index + 1);
 
 		{
-			std::shared_ptr<DescriptorSetLayout> layout = [&]() -> std::shared_ptr<DescriptorSetLayout> {
+			std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
 				const auto& layouts = _program->instance()->reflectionSetsLayouts();
 				if (invocation_set_index < layouts.size())
 				{
