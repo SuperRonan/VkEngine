@@ -7,7 +7,7 @@
 #include <Core/Execution/ResourcesToUpload.hpp>
 #include <Core/Execution/UploadQueue.hpp>
 #include <Core/Execution/FramePerformanceCounters.hpp>
-#include <Core/Execution/DescriptorWrites.hpp>
+#include <Core/Execution/DescriptorWriter.hpp>
 
 #include <Core/Utils/TickTock.hpp>
 
