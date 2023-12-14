@@ -15,6 +15,10 @@ namespace vkl
 		_mips_queue(MipMapComputeQueue::CI{
 			.app = application(),
 			.name = name() + ".MipMapQueue",
+		}),
+		_descriptor_writer(DescriptorWriter::CI{
+			.app = application(),
+			.name = name() + ".DescriptorWriter",
 		})
 	{
 		_last_shader_check = _shader_clock_t::now() - 2 * _shader_check_period;
@@ -43,6 +47,7 @@ namespace vkl
 			.mounting_points = _mounting_points,
 			.upload_queue = &_upload_queue,
 			.mips_queue = &_mips_queue,
+			.descriptor_writer = _descriptor_writer,
 		});
 		return res;
 	}
@@ -53,5 +58,7 @@ namespace vkl
 		assert(context);
 		ResourcesLists & resources_to_update = context->resourcesToUpdateLater();
 		resources_to_update.update(*context);
+
+		_descriptor_writer.record();
 	}
 }

@@ -3,11 +3,11 @@
 #include <vector>
 #include <string>
 #include "DefinitionMap.hpp"
-#include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/Execution/ResourcesLists.hpp>
 #include <Core/Execution/ResourcesToUpload.hpp>
 #include <Core/Execution/UploadQueue.hpp>
 #include <Core/Execution/FramePerformanceCounters.hpp>
+#include <Core/Execution/DescriptorWrites.hpp>
 
 #include <Core/Utils/TickTock.hpp>
 
@@ -40,6 +40,8 @@ namespace vkl
 
 		FramePerfCounters * _frame_perf_counters = nullptr;
 
+		DescriptorWriter & _descriptor_writer;
+
 	public:
 
 		struct CreateInfo
@@ -52,6 +54,7 @@ namespace vkl
 			MountingPoints* mounting_points = nullptr;
 			UploadQueue * upload_queue = nullptr;
 			MipMapComputeQueue * mips_queue = nullptr;
+			DescriptorWriter& descriptor_writer;
 		};
 		using CI = CreateInfo;
 
@@ -62,7 +65,8 @@ namespace vkl
 			_common_definitions(ci.common_definitions),
 			_mounting_points(ci.mounting_points),
 			_upload_queue(ci.upload_queue),
-			_mips_queue(ci.mips_queue)
+			_mips_queue(ci.mips_queue),
+			_descriptor_writer(ci.descriptor_writer)
 		{
 			_tick_tock.tick();
 		}
@@ -130,6 +134,11 @@ namespace vkl
 		void setFramePerfCounters(FramePerfCounters* pfc)
 		{
 			_frame_perf_counters = pfc;
+		}
+
+		DescriptorWriter& descriptorWriter()
+		{
+			return _descriptor_writer;
 		}
 	};
 }

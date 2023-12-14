@@ -212,6 +212,44 @@ namespace vkl
 		}
 	};
 
+	enum class DescriptorSetName : uint32_t
+	{
+		common = 0,
+		scene = 1,
+		module = 2,
+		shader = 3,
+		invocation = 4,
+		MAX_ENUM,
+	};
+
+	const static std::string s_descriptor_set_names[] = {
+		"common",
+		"scene",
+		"module",
+		"shader",
+		"invocation"
+	};
+
+	struct BindingIndex
+	{
+		uint32_t set = 0;
+		uint32_t binding = 0;
+
+		constexpr BindingIndex operator+(uint32_t b) const
+		{
+			return BindingIndex{ .set = set, .binding = binding + b };
+		}
+
+		std::string asString()const;
+	};
+
+	struct DescriptorSetBindingGlobalOptions
+	{
+		bool use_push_descriptors;
+		bool merge_module_and_shader;
+		std::vector<BindingIndex> set_bindings;
+		uint32_t shader_set;
+	};
 
 	constexpr VkComponentMapping defaultComponentMapping()
 	{
@@ -680,6 +718,13 @@ namespace vkl
 		ObjectView obj = {};
 		size_t pos = 0;
 	};
+}
+
+template<class Stream>
+Stream& operator<<(Stream& s, vkl::BindingIndex const& b)
+{
+	s << "(set = " << b.set << ", binding = " << b.binding << ")";
+	return s;
 }
 
 

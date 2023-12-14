@@ -13,9 +13,6 @@
 
 #include <Core/Utils/stl_extension.hpp>
 
-
-#include <Core/Commands/ShaderBindingDescriptor.hpp>
-
 #include <Core/VkObjects/GenericCache.hpp>
 
 #include <Core/Execution/ThreadPool.hpp>

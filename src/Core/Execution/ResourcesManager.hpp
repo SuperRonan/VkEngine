@@ -25,6 +25,8 @@ namespace vkl
 		UploadQueue _upload_queue;
 		MipMapComputeQueue _mips_queue;
 
+		DescriptorWriter _descriptor_writer;
+
 	public:
 
 		struct CreateInfo

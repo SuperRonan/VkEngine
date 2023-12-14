@@ -261,18 +261,11 @@ namespace vkl
 	{
 		const size_t N = _bindings.size();
 
-		std::vector<VkDescriptorBufferInfo> buffers;
-		buffers.reserve(N);
-		std::vector<VkDescriptorImageInfo> images;
-		images.reserve(N);
+		DescriptorWriter _own_writer(DescriptorWriter::CI{
+			.app = application(),
+		});
 
-		std::vector<VkWriteDescriptorSet> writes;
-		writes.reserve(N);
-
-		bool update_uniform_buffer = false;
-		bool update_storage_image = false;
-		bool update_storage_buffer = false;
-		bool update_sampled_image = false;
+		DescriptorWriter & writer = context ? context->descriptorWriter() : _own_writer;
 
 		const bool can_write_null = application()->availableFeatures().robustness2_ext.nullDescriptor;
 		for (size_t i = 0; i < _bindings.size(); ++i)
@@ -282,34 +275,13 @@ namespace vkl
 			if (!b.updated())
 			{
 				bool do_write = false;
-				VkWriteDescriptorSet write{
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.pNext = nullptr,
-					.dstSet = *_set,
-					.dstBinding = b.resolvedBinding(),
-					.dstArrayElement = 0, // TODO
-					.descriptorCount = 1,
-					.descriptorType = b.vkType(),
+				DescriptorWriter::WriteDestination dst{
+					.set = *_set,
+					.binding = b.resolvedBinding(),
+					.index = 0,
+					.type = b.vkType(),
 				};
-				switch (b.vkType())
-				{
-				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-					update_uniform_buffer = true;
-					break;
-				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-					update_storage_buffer = true;
-					break;
-				case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-					update_storage_image = true;
-					break;
-				case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-				case VK_DESCRIPTOR_TYPE_SAMPLER:
-				case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-					update_sampled_image = true;
-					break;
-				default:
-					std::cerr << "Unknown descriptor type!" << std::endl;
-				}
+
 				if (b.isBuffer())
 				{
 					Buffer::Range range = b.resource().buffer_range.valueOr(Buffer::Range{});
@@ -325,8 +297,7 @@ namespace vkl
 					do_write = true;
 					if (do_write)
 					{
-						buffers.push_back(info);
-						write.pBufferInfo = &buffers.back();
+						writer.add(dst, info);
 					}
 				}
 				else if (b.isImage() || b.isSampler())
@@ -367,50 +338,20 @@ namespace vkl
 					}
 					if (do_write)
 					{
-						images.push_back(info);
-						write.pImageInfo = &images.back();
+						writer.add(dst, info);
 					}
 				}
 				else
 				{
 					assert(false);
 				}
-				if (do_write)
-				{
-					writes.push_back(write);
-				}
 				b.setUpdateStatus(true);
 			}
 		}
 
-		// TODO delegate the updates to the context
-		if (!writes.empty())
+		if (!context)
 		{
-			bool wait = false;
-			const auto& features12 = application()->availableFeatures().features_12;
-			if (update_uniform_buffer && features12.descriptorBindingUniformBufferUpdateAfterBind == VK_FALSE)
-			{
-				wait = true;
-			}
-			if (update_storage_buffer && features12.descriptorBindingStorageBufferUpdateAfterBind == VK_FALSE)
-			{
-				wait = true;
-			}
-			if (update_storage_image && features12.descriptorBindingStorageImageUpdateAfterBind == VK_FALSE)
-			{
-				wait = false;
-			}
-			if (update_sampled_image && features12.descriptorBindingSampledImageUpdateAfterBind == VK_FALSE)
-			{
-				wait = true;
-			}
-
-			if (wait)
-			{
-				vkDeviceWaitIdle(device());
-			}
-
-			vkUpdateDescriptorSets(_app->device(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
+			_own_writer.record();
 		}
 	}
 

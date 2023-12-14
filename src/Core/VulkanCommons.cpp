@@ -1,5 +1,6 @@
 #include "VulkanCommons.hpp"
 #include <unordered_map>
+#include <sstream>
 
 
 namespace vkl
@@ -67,6 +68,13 @@ namespace vkl
 		return res;
 	}
 
+
+	std::string BindingIndex::asString() const
+	{
+		std::stringstream ss;
+		ss << *this;
+		return ss.str();
+	}
 
 
 	std::string getVkPresentModeKHRName(VkPresentModeKHR p)

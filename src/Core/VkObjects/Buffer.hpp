@@ -237,4 +237,25 @@ namespace vkl
 
 		//void recordCopyStagingToBuffer(VkCommandBuffer cmd, StagingPool::StagingBuffer * sb);
 	};
+
+	struct BufferAndRangeInstance
+	{
+		std::shared_ptr<BufferInstance> buffer = {};
+		Buffer::Range range = {};
+	};
+
+	struct BufferAndRange
+	{
+		using InstanceType = BufferAndRangeInstance;
+		std::shared_ptr<Buffer> buffer = {};
+		Dyn<Buffer::Range> range = {};
+
+		BufferAndRangeInstance getInstance() const
+		{
+			BufferAndRangeInstance res;
+			if(buffer)	res.buffer = buffer->instance();
+			if(range.hasValue())	res.range = range.value();
+			return res;
+		}
+	};
 }
