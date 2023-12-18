@@ -1,0 +1,108 @@
+#pragma once
+
+#include <vector>
+#include <iterator>
+#include <utility>
+
+namespace vkl
+{
+	template <class T, class Allocator = std::allocator<T>>
+	class MyVector final : public std::vector<T, Allocator>
+	{
+	protected:
+
+
+	public:
+
+		using ParentType = std::vector<T, Allocator>;
+		using size_type = typename ParentType::size_type;
+		
+		// (1)
+		constexpr MyVector() noexcept(noexcept(Allocator())) = default;
+
+		// (2)
+		constexpr explicit MyVector(const Allocator& alloc) noexcept :
+			ParentType(alloc)
+		{}
+
+		// (3)
+		constexpr MyVector(size_type count, const T& value, const Allocator & alloc = Allocator()) :
+			ParentType(count, value, alloc)
+		{}
+
+		// (4)
+		constexpr explicit MyVector(size_type count, const Allocator& alloc = Allocator()) :
+			ParentType(count, alloc)
+		{}
+
+		// (5)
+		template <std::input_iterator InputIt>
+		constexpr MyVector(InputIt first, InputIt last, const Allocator& alloc = Allocator()) :
+			ParentType(first, last, alloc)
+		{}
+
+		// (6)
+		constexpr MyVector(MyVector const& other) :
+			ParentType(other)
+		{}
+
+		// (7)
+		constexpr MyVector(MyVector const& other, const Allocator& alloc) :
+			ParentType(other, alloc)
+		{}
+
+		// (8)
+		constexpr MyVector(MyVector && other) noexcept :
+			ParentType(std::move(other))
+		{}
+
+		// (9)
+		constexpr MyVector(MyVector&& other, const Allocator& alloc) noexcept :
+			ParentType(std::move(other), alloc)
+		{}
+
+		// (10)
+		constexpr MyVector(std::initializer_list<T> init, const Allocator& alloc = Allocator()) :
+			ParentType(init, alloc)
+		{}
+
+		// (11) Range C++ 23
+
+		
+		
+		constexpr ~MyVector() = default;
+
+
+		// (1)
+		constexpr MyVector& operator=(const MyVector& other)
+		{
+			ParentType::operator=(other);
+			return *this;
+		}
+
+		// (2)
+		constexpr MyVector& operator=(MyVector&& other) noexcept
+		{
+			ParentType::operator=(std::move(other));
+			return *this;
+		}
+
+		// (3)
+		constexpr MyVector& operator=(std::initializer_list<T> ilist)
+		{
+			ParentType::operator=(ilist);
+			return *this;
+		}
+
+
+		constexpr operator bool()const
+		{
+			return !ParentType::empty();
+		}
+
+		constexpr uint32_t size32() const
+		{
+			return static_cast<uint32_t>(ParentType::size());
+		}
+	};
+}

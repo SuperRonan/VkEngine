@@ -127,7 +127,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx) = 0;
 
-		virtual void fillVertexDrawCallResources(VertexDrawCallResources & vr) override = 0;
+		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo & vr) override = 0;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -363,7 +363,7 @@ namespace vkl
 
 		virtual Status getStatus() const override;
 
-		virtual void fillVertexDrawCallResources(VertexDrawCallResources& vr) override;
+		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo& vr) override;
 
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
 

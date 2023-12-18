@@ -124,6 +124,15 @@ namespace vkl
 		virtual ~ImageSynchronizationHelper() = default;
 	};
 
+	class BasisBufferSynchronizationHelper final : public BufferSynchronizationHelper
+	{
+	protected:
+		
+		ExecutionContext & _ctx;
+
+	public:
+	};
+
 	class FullyMergedBufferSynchronizationHelper final : public BufferSynchronizationHelper
 	{
 	protected:

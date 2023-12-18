@@ -14,10 +14,11 @@ namespace vkl
 	public:
 
 	protected:
+		
 		Resource _resource = {};
-		std::shared_ptr<Sampler> _sampler = {};
+		Array<std::shared_ptr<Sampler>> _samplers = {};
+		
 		uint32_t _binding = uint32_t(-1);
-		//DescriptorSetName _set = DescriptorSetName::MAX_ENUM;
 
 		uint32_t _resolved_binding = uint32_t(-1);
 		std::string _name = "";
@@ -31,6 +32,7 @@ namespace vkl
 		{}
 
 		ResourceBinding(ShaderBindingDescription const& desc);
+		ResourceBinding(ShaderBindingDescription && desc);
 
 		constexpr void resolve(uint32_t b)
 		{
@@ -100,24 +102,14 @@ namespace vkl
 				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		}
 
-		constexpr auto& buffer()
+		constexpr const auto& samplers()const
 		{
-			return _resource.buffer;
+			return _samplers;
 		}
 
-		constexpr auto& image()
+		constexpr auto& samplers()
 		{
-			return _resource.image_view;
-		}
-
-		constexpr auto& sampler()
-		{
-			return _sampler;
-		}
-
-		constexpr const auto& sampler()const
-		{
-			return _sampler;
+			return _samplers;
 		}
 
 		constexpr VkDescriptorType vkType()const
@@ -160,30 +152,47 @@ namespace vkl
 			_updated = status;
 		}
 
-		bool isNull()const
+		std::string_view nameFromResourceIFP() const
 		{
-			bool res = false;
-			if (_type == VK_DESCRIPTOR_TYPE_MAX_ENUM)
+			std::string_view res;
+			if (isBuffer() || isImage())
 			{
-				res = true;
+				res = _resource.nameIFP();
 			}
-			else if (isBuffer())
+			else if (isSampler())
 			{
-				res = !_resource.buffer;
-			}
-			else
-			{
-				if (isImage())
+				if (_samplers && _samplers.front())
 				{
-					res |= !_resource.image_view;
-				}
-				if (isSampler())
-				{
-					res |= !_sampler;
+					res = _samplers.front()->name();
 				}
 			}
 			return res;
 		}
+
+		//bool isNull()const
+		//{
+		//	bool res = false;
+		//	if (_type == VK_DESCRIPTOR_TYPE_MAX_ENUM)
+		//	{
+		//		res = true;
+		//	}
+		//	else if (isBuffer())
+		//	{
+		//		res = !_resource.buffer && _resource.buffer_array.empty();
+		//	}
+		//	else
+		//	{
+		//		if (isImage())
+		//		{
+		//			res |= !_resource.image_view && _resource.image_array.empty();
+		//		}
+		//		if (isSampler())
+		//		{
+		//			res |= !_sampler && _sampler_array.empty();
+		//		}
+		//	}
+		//	return res;
+		//}
 	};
 
 	using ResourceBindings = std::vector<ResourceBinding>;

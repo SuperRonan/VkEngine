@@ -175,11 +175,11 @@ namespace vkl
 		return res;
 	}
 
-	void Model::fillVertexDrawCallResources(VertexDrawCallResources& vr)
+	void Model::fillVertexDrawCallInfo(VertexDrawCallInfo& vr)
 	{
 		if (_mesh)
 		{
-			_mesh->fillVertexDrawCallResources(vr);
+			_mesh->fillVertexDrawCallInfo(vr);
 		}
 	}
 

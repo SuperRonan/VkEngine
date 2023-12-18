@@ -263,13 +263,13 @@ namespace vkl
 	{
 		ResourcesInstances resources{
 			ResourceInstance{
-				.image_view = _swapchain->instance()->views()[ei.index]->instance(),
+				.images = {_swapchain->instance()->views()[ei.index]->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 				},
-				.image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			},
 		};
 		ExecutionInfo ei_copy = ei;

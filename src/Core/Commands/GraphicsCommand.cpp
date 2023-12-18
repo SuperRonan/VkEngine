@@ -148,13 +148,13 @@ namespace vkl
 		{
 			std::shared_ptr<ImageView> view = _framebuffer->textures()[i];
 			ResourceInstance r{
-				.image_view = view->instance(),
+				.images = {view->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT, // TODO add read bit if alpha blending 
 					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
-				.image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			};
 			res.push_back(r);
 		}
@@ -162,7 +162,7 @@ namespace vkl
 		{
 			const VkAccessFlags2 access2 = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT; // TODO deduce from the depth test;
 			ResourceInstance r{
-				.image_view = _depth->instance(),
+				.images= {_depth->instance()},
 				.begin_state = ResourceState2{
 					.access = access2,
 					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
@@ -173,7 +173,7 @@ namespace vkl
 					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
 				},
-				.image_usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			};
 			res.push_back(r);
 		}
@@ -450,27 +450,28 @@ namespace vkl
 			//}
 			//else
 			{
-				if (to_draw.index_buffer)
+				const Drawable::VertexDrawCallInfo & info = to_draw.vertex_draw_info;
+				if (info.index_buffer.buffer)
 				{
 					res += ResourceInstance{
-						.buffer = to_draw.index_buffer->instance(),
-						.buffer_range = to_draw.index_buffer_range,
+						.buffers = {info.index_buffer.getInstance()},
 						.begin_state = ResourceState2{
 							.access = VK_ACCESS_2_INDEX_READ_BIT,
 							.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
 						},
+						.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 					};
 				}
 			
-				for (VertexBuffer vb : to_draw.vertex_buffers)
+				for (const BufferAndRange & vb : info.vertex_buffers)
 				{
 					res += ResourceInstance{
-						.buffer = vb.buffer->instance(),
-						.buffer_range = vb.range,
+						.buffers = {vb.getInstance()},
 						.begin_state = ResourceState2{
 							.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
 							.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
 						},
+						.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 					};
 				}
 			}
@@ -503,31 +504,32 @@ namespace vkl
 				}
 			}
 			recordPushConstant(cmd, context, to_draw.pc);
-			if (to_draw.index_buffer)
+
+			if (to_draw.vertex_draw_info.index_buffer.buffer)
 			{
-				vkCmdBindIndexBuffer(cmd, to_draw.index_buffer->instance()->handle(), to_draw.index_buffer_range.begin, to_draw.index_type);
-				context.keppAlive(to_draw.index_buffer->instance());
+				BufferAndRangeInstance bari = to_draw.vertex_draw_info.index_buffer.getInstance();
+				vkCmdBindIndexBuffer(cmd, bari.buffer->handle(), bari.range.begin, to_draw.vertex_draw_info.index_type);
 			}
-			if (!to_draw.vertex_buffers.empty())
+			if (to_draw.vertex_draw_info.vertex_buffers)
 			{
-				vb_bind.resize(to_draw.vertex_buffers.size());
-				vb_offsets.resize(to_draw.vertex_buffers.size());
+				vb_bind.resize(to_draw.vertex_draw_info.vertex_buffers.size());
+				vb_offsets.resize(to_draw.vertex_draw_info.vertex_buffers.size());
 				for (size_t i = 0; i < vb_bind.size(); ++i)
 				{
-					vb_bind[i] = to_draw.vertex_buffers[i].buffer->instance()->handle();
-					vb_offsets[i] = to_draw.vertex_buffers[i].range.begin;
-					context.keppAlive(to_draw.vertex_buffers[i].buffer->instance());
+					BufferAndRangeInstance bari = to_draw.vertex_draw_info.vertex_buffers[i].getInstance();
+					vb_bind[i] = bari.buffer->handle(),
+					vb_offsets[i] = bari.range.begin;
 				}
-				vkCmdBindVertexBuffers(cmd, 0, static_cast<uint32_t>(to_draw.vertex_buffers.size()), vb_bind.data(), vb_offsets.data());
+				vkCmdBindVertexBuffers(cmd, 0, static_cast<uint32_t>(to_draw.vertex_draw_info.vertex_buffers.size()), vb_bind.data(), vb_offsets.data());
 			}
 
 			switch (di.draw_type)
 			{
 				case DrawType::Draw:
-					vkCmdDraw(cmd, to_draw.draw_count, to_draw.instance_count, 0, 0);
+					vkCmdDraw(cmd, to_draw.vertex_draw_info.draw_count, to_draw.vertex_draw_info.instance_count, 0, 0);
 				break;
 				case DrawType::DrawIndexed:
-					vkCmdDrawIndexed(cmd, to_draw.draw_count, to_draw.instance_count, 0, 0, 0);
+					vkCmdDrawIndexed(cmd, to_draw.vertex_draw_info.draw_count, to_draw.vertex_draw_info.instance_count, 0, 0, 0);
 				break;
 				default:
 					assertm(false, "Unsupported draw call type");
@@ -635,10 +637,10 @@ namespace vkl
 
 		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
 			.app = application(),
-				.name = name() + ".set",
-				.program = _program,
-				.target_set = application()->descriptorBindingGlobalOptions().shader_set,
-				.bindings = ci.bindings,
+			.name = name() + ".set",
+			.program = _program,
+			.target_set = application()->descriptorBindingGlobalOptions().shader_set,
+			.bindings = ci.bindings,
 		});
 	}
 
@@ -649,30 +651,30 @@ namespace vkl
 		{
 			task = std::make_shared<Shader>(Shader::CI{
 				.app = application(),
-					.name = name() + ".task",
-					.source_path = _shaders.task_path,
-					.stage = VK_SHADER_STAGE_TASK_BIT_EXT,
-					.definitions = _shaders.definitions
+				.name = name() + ".task",
+				.source_path = _shaders.task_path,
+				.stage = VK_SHADER_STAGE_TASK_BIT_EXT,
+				.definitions = _shaders.definitions
 			});
 		}
 		if (!_shaders.mesh_path.empty())
 		{
 			mesh = std::make_shared<Shader>(Shader::CI{
 				.app = application(),
-					.name = name() + ".mesh",
-					.source_path = _shaders.mesh_path,
-					.stage = VK_SHADER_STAGE_MESH_BIT_EXT,
-					.definitions = _shaders.definitions
+				.name = name() + ".mesh",
+				.source_path = _shaders.mesh_path,
+				.stage = VK_SHADER_STAGE_MESH_BIT_EXT,
+				.definitions = _shaders.definitions
 			});
 		}
 		if (!_shaders.fragment_path.empty())
 		{
 			frag = std::make_shared<Shader>(Shader::CI{
 				.app = application(),
-					.name = name() + ".frag",
-					.source_path = _shaders.fragment_path,
-					.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-					.definitions = _shaders.definitions
+				.name = name() + ".frag",
+				.source_path = _shaders.fragment_path,
+				.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+				.definitions = _shaders.definitions
 			});
 		}
 

@@ -107,12 +107,15 @@ namespace vkl
 	{
 		recorder.pushDebugLabel(name());
 		
-		std::vector<VertexCommand::DrawCallInfo> basis_draw_list;
+		Array<VertexCommand::DrawCallInfo> basis_draw_list;
 		using namespace std::containers_operators;
 		if (_show_world_basis)
 		{
 			basis_draw_list += VertexCommand::DrawCallInfo{
-				.draw_count = 3,
+				.vertex_draw_info = Drawable::VertexDrawCallInfo{
+					.draw_count = 3,
+					.instance_count = 1,
+				},
 				.pc = camera.getWorldToProj(),
 			};
 		}
@@ -120,14 +123,20 @@ namespace vkl
 		{
 			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25))* camera.getWorldRoationMatrix()* scaleMatrix<4, float>(0.03125);
 			basis_draw_list += VertexCommand::DrawCallInfo{
-				.draw_count = 3,
+				.vertex_draw_info = Drawable::VertexDrawCallInfo{
+					.draw_count = 3,
+					.instance_count = 1,
+				},
 				.pc = view_3D_basis_matrix,
 			};
 		}
 		if (_gui_selected_node.hasValue())
 		{
 			basis_draw_list += VertexCommand::DrawCallInfo{
-				.draw_count = 3,
+				.vertex_draw_info = Drawable::VertexDrawCallInfo{
+					.draw_count = 3,
+					.instance_count = 1,
+				},
 				.pc = camera.getWorldToProj() * glm::mat4(_gui_selected_node.node.matrix),
 			};
 		}
@@ -139,7 +148,7 @@ namespace vkl
 			}));
 		}
 
-		std::vector<VertexCommand::DrawCallInfo> boxes_draw_list;
+		Array<VertexCommand::DrawCallInfo> boxes_draw_list;
 
 		if (_gui_selected_node.hasValue() && _box_mesh->isReadyToDraw())
 		{
@@ -149,20 +158,15 @@ namespace vkl
 				const auto & mesh = model->mesh();
 				if (mesh)
 				{
-					Drawable::VertexDrawCallResources vdcr;
-					_box_mesh->fillVertexDrawCallResources(vdcr);
+					Drawable::VertexDrawCallInfo vdcr;
+					_box_mesh->fillVertexDrawCallInfo(vdcr);
 
 					const AABB3f & aabb = mesh->getAABB();
 					Mat4 aabb_matrix = translateMatrix<4, float>(aabb.bottom())* scaleMatrix<4, float>(aabb.diagonal());
 					
 					boxes_draw_list += VertexCommand::DrawCallInfo{
 						.name = mesh->name(),
-						.draw_count = vdcr.draw_count,
-						.instance_count = vdcr.instance_count,
-						.index_buffer = std::move(vdcr.index_buffer),
-						.index_buffer_range = vdcr.index_buffer_range,
-						.index_type = vdcr.index_type,
-						.vertex_buffers = std::move(vdcr.vertex_buffers),
+						.vertex_draw_info = std::move(vdcr),
 						.pc = Render3DBoxPC{
 							.matrix = camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix) * aabb_matrix,
 							.color = glm::vec4(1, 1, 1, 1),

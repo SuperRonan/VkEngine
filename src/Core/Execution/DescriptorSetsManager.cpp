@@ -1,5 +1,6 @@
 #include "DescriptorSetsManager.hpp"
 #include <algorithm>
+#include <string_view>
 
 namespace vkl
 {
@@ -17,15 +18,34 @@ namespace vkl
 
 	void DescriptorSetAndPoolInstance::installInvalidationCallback(ResourceBinding& binding, Callback& cb)
 	{
+		Resource & rs = binding.resource();
+		// For now, one element in the binding is invalidated -> all the binding is invalidated
+		// TODO invalidated only the element
+		// For buffers, the Dyn<Range> cannot be invalidated like this, so maybe no invalidation callback
 		if (binding.isBuffer())
 		{
-			if (binding.buffer())
+			bool all_null = true;
+			bool any_null = false;
+			for (size_t i = 0; i < rs.buffers.size(); ++i)
 			{
-				binding.buffer()->addInvalidationCallback(cb);
+				if (rs.buffers[i].buffer)
+				{
+					all_null = false;
+					// TODO invalidate on range change (probably in the write function)
+					rs.buffers[i].buffer->addInvalidationCallback(cb);
+				}
+				else
+				{
+					any_null = true;
+				}
 			}
-			else
+
+			if (any_null)
 			{
 				assert(_allow_null_bindings);
+			}
+			if(all_null)
+			{
 				binding.setUpdateStatus(true);
 			}
 		}
@@ -34,25 +54,53 @@ namespace vkl
 			int null_desc = 0;
 			if (binding.isImage())
 			{
-				if (binding.image())
+				bool all_null = true;
+				bool any_null = false;
+				for (size_t i = 0; i < rs.images.size(); ++i)
 				{
-					binding.image()->addInvalidationCallback(cb);
+					if (rs.images[i])
+					{
+						all_null = false;
+						rs.images[i]->addInvalidationCallback(cb);
+					}
+					else
+					{
+						any_null = true;
+					}
 				}
-				else
+
+				if (any_null)
 				{
 					assert(_allow_null_bindings);
+				}
+				if(all_null)
+				{
 					++null_desc;
 				}
 			}
-			else if (binding.isSampler())
+			if (binding.isSampler())
 			{
-				if (binding.sampler())
+				bool all_null = true;
+				bool any_null = false;
+				for (size_t i = 0; i < binding.samplers().size(); ++i)
 				{
-					binding.sampler()->addInvalidationCallback(cb);
+					if (binding.samplers()[i])
+					{
+						all_null = false;
+						binding.samplers()[i]->addInvalidationCallback(cb);
+					}
+					else
+					{
+						any_null = true;
+					}
 				}
-				else
+
+				if (any_null)
 				{
 					assert(_allow_null_bindings);
+				}
+				if (all_null)
+				{
 					++null_desc;
 				}
 			}
@@ -69,42 +117,36 @@ namespace vkl
 
 	void DescriptorSetAndPoolInstance::removeInvalidationCallbacks(ResourceBinding& binding)
 	{
+		Resource& rs = binding.resource();
 		if (binding.isBuffer())
 		{
-			if (binding.buffer())
+			for (size_t i = 0; i < rs.buffers.size(); ++i)
 			{
-				binding.buffer()->removeInvalidationCallbacks(this);
-			}
-			else
-			{
-				assert(_allow_null_bindings);
-			}
-		}
-		else if (binding.isImage())
-		{
-			if (binding.image())
-			{
-				binding.image()->removeInvalidationCallbacks(this);
-			}
-			else
-			{
-				assert(_allow_null_bindings);
+				if (rs.buffers[i].buffer)
+				{
+					rs.buffers[i].buffer->removeInvalidationCallbacks(this);
+				}
 			}
 		}
-		else if (binding.isSampler())
+		if (binding.isImage())
 		{
-			if (binding.sampler())
+			for (size_t i = 0; i < rs.images.size(); ++i)
 			{
-				binding.sampler()->removeInvalidationCallbacks(this);
-			}
-			else
-			{
-				assert(_allow_null_bindings);
+				if (rs.images[i])
+				{
+					rs.images[i]->removeInvalidationCallbacks(this);
+				}
 			}
 		}
-		else
+		if (binding.isSampler())
 		{
-			assert(false);
+			for (size_t i = 0; i < binding.samplers().size(); ++i)
+			{
+				if (binding.samplers()[i])
+				{
+					binding.samplers()[i]->removeInvalidationCallbacks(this);
+				}
+			}
 		}
 	}
 
@@ -113,7 +155,6 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding& binding = _bindings[i];
-			if (!binding.isNull())
 			{
 				removeInvalidationCallbacks(binding);
 			}
@@ -201,7 +242,6 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding & binding = _bindings[i];
-			if (!binding.isNull())
 			{
 				Callback cb{
 					.callback = [i,  this]() {
@@ -224,6 +264,37 @@ namespace vkl
 			res &= _bindings[i].vkType() != VK_DESCRIPTOR_TYPE_MAX_ENUM;
 			assert(res);
 
+			const uint32_t lc = _layout->bindings()[i].descriptorCount;
+
+			if (_bindings[i].isBuffer())
+			{
+				res &= (_bindings[i].resource().buffers.size32() <= lc);
+				assert(res);
+			}
+			else if (_bindings[i].isSampler() || _bindings[i].isImage())
+			{
+				uint32_t image_count = 0;
+				uint32_t sampler_count = 0;
+				if (_bindings[i].isImage())
+				{
+					image_count = _bindings[i].resource().images.size32();
+				}
+				if (_bindings[i].isSampler())
+				{
+					sampler_count = _bindings[i].samplers().size32();
+				}
+				if (_bindings[i].vkType() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				{
+					res &= image_count == sampler_count;
+					assert(res);
+				}
+
+				res &= (std::max(image_count, sampler_count) <= lc);
+				assert(res);
+			}
+			assert(res);
+
+			// Check isSorted
 			if(i != _bindings.size() -1)
 			{
 				if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
@@ -270,8 +341,10 @@ namespace vkl
 		const bool can_write_null = application()->availableFeatures().robustness2_ext.nullDescriptor;
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
+			const VkDescriptorSetLayoutBinding & layout_binding = _layout->bindings()[i];
 			ResourceBinding& b = _bindings[i];
 			assert(b.isResolved());
+			// TODO probably scan all buffers to check any range change (e.g. the updated flag is useless for buffers?)
 			if (!b.updated())
 			{
 				bool do_write = false;
@@ -284,61 +357,85 @@ namespace vkl
 
 				if (b.isBuffer())
 				{
-					Buffer::Range range = b.resource().buffer_range.valueOr(Buffer::Range{});
-					if (range.len == 0)
+					// For now write all elems in the binding
+					// TODO later write only the updated elems
+					if (b.resource().buffers)
 					{
-						range.len = VK_WHOLE_SIZE;
-					}
-					VkDescriptorBufferInfo info{
-						.buffer = *b.buffer()->instance(),
-						.offset = range.begin,
-						.range = range.len,
-					};
-					do_write = true;
-					if (do_write)
-					{
-						writer.add(dst, info);
+						VkDescriptorBufferInfo* infos = writer.addBuffers(dst, b.resource().buffers.size());
+						bool any_null = false;
+						for (size_t i = 0; i < b.resource().buffers.size(); ++i)
+						{
+							const BufferAndRange & bar = b.resource().buffers[i];
+							if (bar.buffer)
+							{
+								BufferAndRangeInstance bari = bar.getInstance();
+								if (bari.range.len == 0)
+								{
+									bari.range.len = VK_WHOLE_SIZE;
+								}
+								infos[i] = VkDescriptorBufferInfo{
+									.buffer = bari.buffer->handle(),
+									.offset = bari.range.begin,
+									.range = bari.range.len,
+								};
+							}
+							else
+							{
+								any_null = true;
+								infos[i] = VkDescriptorBufferInfo{
+									.buffer = VK_NULL_HANDLE,
+									.offset = 0,
+									.range = 0,
+								};
+							}
+						}
+						if (any_null)
+						{
+							assert(can_write_null);
+						}
 					}
 				}
 				else if (b.isImage() || b.isSampler())
 				{
-					VkDescriptorImageInfo info{
-						.sampler = VK_NULL_HANDLE,
-						.imageView = VK_NULL_HANDLE,
-						.imageLayout = b.resource().begin_state.layout,
-					};
-					
-					if (b.isSampler() && b.sampler())
+					// For now write all elems in the binding
+					// TODO later write only the updated elems
+					const size_t count = std::max(b.resource().images.size(), b.samplers().size());
+					if (count > 0)
 					{
-						info.sampler = b.sampler()->instance()->handle();
-						do_write = true;
-					}
-
-					
-					if (b.isImage() && b.image())
-					{
-						info.imageView = b.image()->instance()->handle();
-						do_write = true;
-						if (info.imageLayout == VK_IMAGE_LAYOUT_UNDEFINED)
+						VkDescriptorImageInfo * infos = writer.addImages(dst, count);
+						for (size_t i = 0; i < count; ++i)
 						{
-							assert(false);
+							VkDescriptorImageInfo & info = infos[i];
+							info.sampler = VK_NULL_HANDLE;
+							info.imageView = VK_NULL_HANDLE;
+							info.imageLayout = b.resource().begin_state.layout;
+							bool any_null = false;
+							if (b.isImage())
+							{
+								assert(info.imageLayout != VK_IMAGE_LAYOUT_UNDEFINED);
+								assert(info.imageLayout != VK_IMAGE_LAYOUT_MAX_ENUM);
+								if (b.resource().images[i])
+								{
+									info.imageView = b.resource().images[i]->instance()->handle();
+								}
+								else
+									any_null = true;
+							}
+							if (b.isSampler())
+							{
+								if (b.samplers()[i])
+								{
+									info.sampler = b.samplers()[i]->instance()->handle();
+								}
+								else
+									any_null = true;
+							}
+
+							if (any_null)
+							{
+								assert(can_write_null);
+							}
 						}
-					}
-
-					if (b.vkType() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER && !b.sampler() && b.image())
-					{
-						assert(false);
-					}
-
-					do_write |= can_write_null;
-					if (b.isSampler() && info.sampler == VK_NULL_HANDLE)
-					{
-						// null descriptor does not work with samplers
-						do_write = false;
-					}
-					if (do_write)
-					{
-						writer.add(dst, info);
 					}
 				}
 				else
@@ -358,60 +455,28 @@ namespace vkl
 	void DescriptorSetAndPoolInstance::setBinding(ResourceBinding const& binding)
 	{
 		auto it = _bindings.begin();
-		while (it != _bindings.end())
+		ResourceBinding * found = findBinding(binding.resolvedBinding());
+		assert(found);
+		//if (found)
 		{
-			const uint32_t b = it->resolvedBinding();
-			if (b == binding.resolvedBinding())
+			removeInvalidationCallbacks(*found);
+			if (found->isBuffer())
 			{
-				// Replace current binding
+				found->resource().buffers = binding.resource().buffers;
+			}
+			else if (found->isImage() || found->isSampler())
+			{
+				if (found->isImage())
 				{
-					ResourceBinding & old = *it;
-					if (!old.isNull())
-					{
-						removeInvalidationCallbacks(old);
-					}
+					found->resource().images = binding.resource().images;
 				}
+				if (found->isSampler())
+				{
+					found->samplers() = binding.samplers();
+				}
+			}
 
-				if (it->isBuffer())
-				{
-					it->resource().buffer = binding.resource().buffer;
-					it->resource().buffer_range = binding.resource().buffer_range;
-				}
-				else
-				{
-					if (it->isImage())
-					{
-						it->resource().image_view = binding.resource().image_view;
-					}
-					if (it->isSampler())
-					{
-						it->sampler() = binding.sampler();
-					}
-				}
-				break;
-			}
-			else if (b < binding.resolvedBinding())
-			{
-				++it;
-			}
-			else
-			{
-				assert(false);
-			}
-		}
-		if (it == _bindings.end())
-		{
-			assert(false);
-			//it = _bindings.insert(it, binding);
-		}
-
-		if (it->isNull())
-		{
-			it->setUpdateStatus(true);
-		}
-		else
-		{
-			size_t i = it - _bindings.begin();
+			const size_t i = found - _bindings.data();
 			Callback cb{
 				.callback = [i,  this]() {
 					_bindings[i].setUpdateStatus(false);
@@ -419,11 +484,8 @@ namespace vkl
 				.id = this,
 			};
 			installInvalidationCallback(*it, cb);
-
-			it->setUpdateStatus(false);
+			found->setUpdateStatus(false);
 		}
-
-
 		assert(checkIntegrity());
 	}
 
@@ -522,7 +584,15 @@ namespace vkl
 							{
 								if (_bindings[j].resolveWithName())
 								{
-									const std::string name = (_bindings[j].name().empty() ? _bindings[j].resource().name() : _bindings[j].name());
+									std::string_view name;
+									if(!_bindings[j].name().empty())
+									{
+										name = _bindings[j].name();
+									}
+									else
+									{
+										name = _bindings[j].nameFromResourceIFP();
+									}
 									if (name == meta.name)
 									{
 										return j;

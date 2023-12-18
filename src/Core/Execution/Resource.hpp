@@ -20,74 +20,69 @@ namespace vkl
 
 
 	struct ResourceInstance
-	{
-		std::shared_ptr<BufferInstance> buffer = {};
-		Buffer::Range buffer_range = {};
-		std::shared_ptr<ImageViewInstance> image_view = {};
+	{	
+		Array<BufferAndRangeInstance> buffers = {};
+		Array<std::shared_ptr<ImageViewInstance>> images = {};
 		ResourceState2 begin_state = {};
 		std::optional<ResourceState2> end_state = {}; // None means the same as begin state
-		VkImageUsageFlags image_usage = 0;
-		VkBufferUsageFlags buffer_usage = 0;
+		VkFlags usage = 0;
 
-
-		bool isImage() const
-		{
-			return !!image_view;
-		}
-
-		bool isBuffer() const
-		{
-			return !!buffer;
-		}
 	};
 
 	struct Resource
 	{
-		std::shared_ptr<Buffer> buffer = {};
-		DynamicValue<Buffer::Range> buffer_range = {};
-		std::shared_ptr<ImageView> image_view = {};
+		Array<BufferAndRange> buffers = {};
+		Array<std::shared_ptr<ImageView>> images = {};
 		ResourceState2 begin_state = {};
 		std::optional<ResourceState2> end_state = {}; // None means the same as begin state
-		VkImageUsageFlags image_usage = 0;
-		VkBufferUsageFlags buffer_usage = 0;
+		VkFlags usage = 0;
 
 		// Can't have a constructor and still an aggregate initialization :'(
 		//Resource(std::shared_ptr<Buffer> buffer, std::shared_ptr<ImageView> image);
 
-		bool isImage() const
+		std::string_view nameIFP()const
 		{
-			return !!image_view;
-		}
-
-		bool isBuffer() const
-		{
-			return !!buffer;
-		}
-
-		const std::string& name()const
-		{
-			if (isImage())
-				return image_view->name();
-			else// if (isBuffer())
-				return buffer->name();
+			std::string_view res;
+			if (buffers && buffers.front().buffer)
+			{
+				res = buffers.front().buffer->name();
+			}
+			else if (images && images.front())
+			{
+				res = images.front()->name();
+			}
+			return res;
 		}
 
 		ResourceInstance getInstance()
 		{
 			ResourceInstance res;
-			if (buffer)
+			if (buffers)
 			{
-				res.buffer = buffer->instance();
-				res.buffer_range = buffer_range.valueOr(Buffer::Range{});
+				res.buffers.resize(buffers.size());
+				for (size_t i = 0; i < buffers.size(); ++i)
+				{
+					if (buffers[i].buffer)
+					{
+						res.buffers[i] = buffers[i].getInstance();
+					}
+				}
 			}
-			else if (image_view)
+			else if (images)
 			{
-				res.image_view = image_view->instance();
+				res.images.resize(images.size());
+				for (size_t i = 0; i < images.size(); ++i)
+				{
+					if (images[i])
+					{
+						res.images[i] = images[i]->instance();
+					}
+				}
 			}
+
 			res.begin_state = begin_state;
 			res.end_state = end_state;
-			res.image_usage = image_usage;
-			res.buffer_usage = buffer_usage;
+			res.usage = usage;
 			return res;
 		}
 	};

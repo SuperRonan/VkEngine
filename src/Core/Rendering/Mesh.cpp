@@ -529,12 +529,11 @@ namespace vkl
 	//	vkCmdDrawIndexed(command_buffer, _device.num_indices, 1, 0, 0, 0);
 	//}
 
-	void RigidMesh::fillVertexDrawCallResources(VertexDrawCallResources& vr)
+	void RigidMesh::fillVertexDrawCallInfo(VertexDrawCallInfo& vr)
 	{
 		assert(_device.loaded());
 		vr.draw_count = _device.num_indices;
 		vr.instance_count = 1;
-		vr.index_buffer = _device.mesh_buffer;
 		const size_t index_size = [&]() {
 			size_t res = 0;
 			switch (_device.index_type)
@@ -551,13 +550,16 @@ namespace vkl
 			}
 			return res;
 		}();
-		vr.index_buffer_range = {.begin = _device.vertices_size + _device.header_size, .len = _device.num_indices * index_size};
+		vr.index_buffer = BufferAndRange{
+			.buffer = _device.mesh_buffer,
+			.range = Buffer::Range{.begin = _device.vertices_size + _device.header_size, .len = _device.num_indices * index_size},
+		};
 		vr.index_type = _device.index_type;
 		size_t vertex_size = _host.use_full_vertices ? sizeof(Vertex) : (_host.dims * sizeof(float));
 		vr.vertex_buffers = {
-			VertexBuffer{
+			BufferAndRange{
 				.buffer = _device.mesh_buffer,
-				.range = {.begin = _device.header_size, .len = _device.num_vertices * vertex_size},
+				.range = Buffer::Range{.begin = _device.header_size, .len = _device.num_vertices * vertex_size},
 			},
 		};
 	}

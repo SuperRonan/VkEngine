@@ -57,6 +57,31 @@ namespace vkl
 			info_index = o;
 			_writes.push_back(write);
 		}
+
+		VkDescriptorBufferInfo* addBuffers(WriteDestination const& dst, size_t N)
+		{
+			const size_t o = _buffers.size();
+			_buffers.resize(o + N);
+
+			assert(dst.type != VK_DESCRIPTOR_TYPE_MAX_ENUM);
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = dst.set,
+				.dstBinding = dst.binding,
+				.dstArrayElement = dst.index,
+				.descriptorCount = 1,
+				.descriptorType = dst.type,
+				.pImageInfo = nullptr,
+				.pBufferInfo = nullptr,
+				.pTexelBufferView = nullptr,
+			};
+			std::uintptr_t& info_index = (std::uintptr_t&)write.pBufferInfo;
+			info_index = o;
+			_writes.push_back(write);
+
+			return _buffers.data() + o;
+		}
 		
 		template <std::forward_iterator It, class ItEnd = It>
 		void addBuffers(WriteDestination const& dst, It buffer_info_begin, ItEnd const& buffer_info_end)
@@ -121,6 +146,31 @@ namespace vkl
 			std::uintptr_t& info_index = (std::uintptr_t&)write.pImageInfo;
 			info_index = o;
 			_writes.push_back(write);
+		}
+
+		VkDescriptorImageInfo* addImages(WriteDestination const& dst, size_t N)
+		{
+			const size_t o = _images.size();
+			_images.resize(o + N);
+
+			assert(dst.type != VK_DESCRIPTOR_TYPE_MAX_ENUM);
+			VkWriteDescriptorSet write{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = dst.set,
+				.dstBinding = dst.binding,
+				.dstArrayElement = dst.index,
+				.descriptorCount = 1,
+				.descriptorType = dst.type,
+				.pImageInfo = nullptr,
+				.pBufferInfo = nullptr,
+				.pTexelBufferView = nullptr,
+			};
+			std::uintptr_t& info_index = (std::uintptr_t&)write.pImageInfo;
+			info_index = o;
+			_writes.push_back(write);
+
+			return _images.data() + o;
 		}
 		
 		template <std::forward_iterator It, class ItEnd = It>

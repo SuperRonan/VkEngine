@@ -235,7 +235,7 @@ namespace vkl
 
 		SynchronizationHelper synch(_context);
 		ResourceInstance res{
-			.image_view = blit_target->instance(),
+			.images = {blit_target->instance()},
 			.begin_state = ResourceState2 {
 				.access = VK_ACCESS_2_MEMORY_READ_BIT,
 				.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,

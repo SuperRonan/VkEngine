@@ -4,117 +4,129 @@ namespace vkl
 {
 	void SynchronizationHelperV1::addSynch(const ResourceInstance& r)
 	{
-		
-		const ResourceState2 next = r.begin_state;
-		const bool synch_to_readonly = accessIsReadonly2(r.begin_state.access);
-		if (r.isImage())
-		{	
-			_resources.push_back(r);
-			assert(r.image_view);
-			const auto prevs = r.image_view->getState(_ctx.resourceThreadId());
-			for (const auto& prev_state_in_range : prevs)
-			{
-				bool add_barrier = false;
-				ResourceState2 synch_from;
-
-				const DoubleResourceState2& prev = prev_state_in_range.state;
-				const VkImageSubresourceRange& range = prev_state_in_range.range;
-
-				if (synch_to_readonly)
-				{
-					const bool access_already_synch = (r.begin_state.access & prev.read_only_state.access) == r.begin_state.access;
-					const bool stage_already_synch = (r.begin_state.stage & prev.read_only_state.stage) == r.begin_state.stage;
-					const bool same_layout = r.begin_state.layout == prev.read_only_state.layout;
-
-					if (!access_already_synch || !stage_already_synch || !same_layout)
-					{
-						synch_from = prev.write_state;
-						synch_from.layout = prev.read_only_state.layout;
-						add_barrier = true;
-					}
-				}
-				else
-				{
-					synch_from = prev.read_only_state | prev.write_state;
-					add_barrier = true;
-				}
-
-				if (add_barrier)
-				{
-					VkImageMemoryBarrier2 barrier = {
-						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-						.pNext = nullptr,
-						.srcStageMask = synch_from.stage,
-						.srcAccessMask = synch_from.access,
-						.dstStageMask = next.stage,
-						.dstAccessMask = next.access,
-						.oldLayout = synch_from.layout,
-						.newLayout = next.layout,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.image = *r.image_view->image(),
-						.subresourceRange = range,
-					};
-					_images_barriers.push_back(barrier);
-				}
-			}
-		}
-		else if (r.isBuffer())
-		{
-			_resources.push_back(r);
-			assert(r.buffer);
-			Buffer::Range range = r.buffer_range;
-			if (range.len == 0)
-			{
-				range.len = r.buffer->createInfo().size - range.begin;
-			}
-			const DoubleResourceState2 prev = r.buffer->getState(_ctx.resourceThreadId(), range);
-			
-			bool add_barrier = false;
-			ResourceState2 synch_from;
-
-			if (synch_to_readonly)
-			{
-				const bool access_already_synch = (r.begin_state.access & prev.read_only_state.access) == r.begin_state.access;
-				const bool stage_already_synch = (r.begin_state.stage & prev.read_only_state.stage) == r.begin_state.stage;
-
-				if (!access_already_synch || !stage_already_synch)
-				{
-					synch_from = prev.write_state;
-					add_barrier = true;
-				}
-			}
-			else
-			{
-				synch_from = prev.read_only_state | prev.write_state;
-				add_barrier = true;
-			}
-			if (add_barrier)
-			{
-				VkBufferMemoryBarrier2 barrier = {
-					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-					.pNext = nullptr,
-					.srcStageMask = synch_from.stage,
-					.srcAccessMask = synch_from.access,
-					.dstStageMask = next.stage,
-					.dstAccessMask = next.access,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = *r.buffer,
-					.offset = range.begin,
-					.size = range.len,
-				};
-				_buffers_barriers.push_back(barrier);
-			}
-		}
-		else
-		{
-			
-		}
+		_resources.push_back(r);
 	}
 
 	void SynchronizationHelperV1::record()
 	{
+		for (ResourceInstance& r : _resources)
+		{
+			const ResourceState2 next = r.begin_state;
+			const bool synch_to_readonly = accessIsReadonly2(r.begin_state.access);
+			if (r.buffers)
+			{
+				for (auto& b : r.buffers)
+				{
+					if (b.buffer)
+					{
+						Buffer::Range range = b.range;
+						if (range.len == 0)
+						{
+							range.len = b.buffer->createInfo().size - range.begin;
+						}
+						const DoubleResourceState2 prev = b.buffer->getState(_ctx.resourceThreadId(), range);
+
+						bool add_barrier = false;
+						ResourceState2 synch_from;
+
+						if (synch_to_readonly)
+						{
+							const bool access_already_synch = (r.begin_state.access & prev.read_only_state.access) == r.begin_state.access;
+							const bool stage_already_synch = (r.begin_state.stage & prev.read_only_state.stage) == r.begin_state.stage;
+
+							if (!access_already_synch || !stage_already_synch)
+							{
+								synch_from = prev.write_state;
+								add_barrier = true;
+							}
+						}
+						else
+						{
+							synch_from = prev.read_only_state | prev.write_state;
+							add_barrier = true;
+						}
+						if (add_barrier)
+						{
+							VkBufferMemoryBarrier2 barrier = {
+								.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+								.pNext = nullptr,
+								.srcStageMask = synch_from.stage,
+								.srcAccessMask = synch_from.access,
+								.dstStageMask = next.stage,
+								.dstAccessMask = next.access,
+								.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+								.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+								.buffer = *b.buffer,
+								.offset = range.begin,
+								.size = range.len,
+							};
+							_buffers_barriers.push_back(barrier);
+						}
+						b.buffer->setState(_ctx.resourceThreadId(), range, r.end_state.value_or(r.begin_state));
+						_ctx.keppAlive(b.buffer);
+					}
+				}
+			}
+			else if (r.images)
+			{
+				for (auto& i : r.images)
+				{
+					if (i)
+					{
+						const auto prevs = i->getState(_ctx.resourceThreadId());
+						for (const auto& prev_state_in_range : prevs)
+						{
+							bool add_barrier = false;
+							ResourceState2 synch_from;
+
+							const DoubleResourceState2& prev = prev_state_in_range.state;
+							const VkImageSubresourceRange& range = prev_state_in_range.range;
+
+							if (synch_to_readonly)
+							{
+								const bool access_already_synch = (r.begin_state.access & prev.read_only_state.access) == r.begin_state.access;
+								const bool stage_already_synch = (r.begin_state.stage & prev.read_only_state.stage) == r.begin_state.stage;
+								const bool same_layout = r.begin_state.layout == prev.read_only_state.layout;
+
+								if (!access_already_synch || !stage_already_synch || !same_layout)
+								{
+									synch_from = prev.write_state;
+									synch_from.layout = prev.read_only_state.layout;
+									add_barrier = true;
+								}
+							}
+							else
+							{
+								synch_from = prev.read_only_state | prev.write_state;
+								add_barrier = true;
+							}
+
+							if (add_barrier)
+							{
+								VkImageMemoryBarrier2 barrier = {
+									.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+									.pNext = nullptr,
+									.srcStageMask = synch_from.stage,
+									.srcAccessMask = synch_from.access,
+									.dstStageMask = next.stage,
+									.dstAccessMask = next.access,
+									.oldLayout = synch_from.layout,
+									.newLayout = next.layout,
+									.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+									.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+									.image = *i->image(),
+									.subresourceRange = range,
+								};
+								_images_barriers.push_back(barrier);
+							}
+						}
+						i->setState(_ctx.resourceThreadId(), r.end_state.value_or(r.begin_state));
+						_ctx.keppAlive(i);
+					}
+				}
+			}
+		}
+
 		if (!_images_barriers.empty() || !_buffers_barriers.empty())
 		{
 			const VkDependencyInfo dep{
@@ -129,25 +141,6 @@ namespace vkl
 				.pImageMemoryBarriers = _images_barriers.data(),
 			};
 			vkCmdPipelineBarrier2(*_ctx.getCommandBuffer(), &dep);
-		}
-		
-		for (const auto& r : _resources)
-		{
-			ResourceState2 const& s = r.end_state.value_or(r.begin_state);
-			if (r.isBuffer())
-			{
-				r.buffer->setState(_ctx.resourceThreadId(), r.buffer_range, s);
-				_ctx.keppAlive(r.buffer);
-			}
-			else if (r.isImage())
-			{
-				r.image_view->setState(_ctx.resourceThreadId(), s);
-				_ctx.keppAlive(r.image_view);
-			}
-			else
-			{
-				assert(false);
-			}
 		}
 	}
 
@@ -674,31 +667,41 @@ namespace vkl
 
 	void ModularSynchronizationHelper::addSynch(ResourceInstance const& r)
 	{
-		if (r.isBuffer())
+		if (r.buffers)
 		{
-			const std::shared_ptr<BufferInstance> & bi = r.buffer;
-			Buffer::Range range = r.buffer_range;
-			assert(!!bi);
-			if (_policy >= BarrierMergePolicy::AsMuchAsPossible)
+			for (auto& bari : r.buffers)
 			{
-				_fully_merged_buffers.add(bi, range, r.begin_state, r.end_state);
-			}
-			else
-			{
-				assert(false);
+				if (bari.buffer)
+				{
+					const std::shared_ptr<BufferInstance> & bi = bari.buffer;
+					Buffer::Range range = bari.range;
+					assert(!!bi);
+					if (_policy >= BarrierMergePolicy::AsMuchAsPossible)
+					{
+						_fully_merged_buffers.add(bi, range, r.begin_state, r.end_state);
+					}
+					else
+					{
+						assert(false);
+					}
+				}
 			}
 		}
-		else if (r.isImage())
+		else if (r.images)
 		{
-			const std::shared_ptr<ImageViewInstance> & ivi = r.image_view;
-			assert(!!ivi);
-			if (_policy >= BarrierMergePolicy::Always)
+			for (auto& ivi : r.images)
 			{
-				_fully_merged_images.addv(ivi, r.begin_state, r.end_state);
-			}
-			else
-			{
-				assert(false);
+				if (ivi)
+				{
+					if (_policy >= BarrierMergePolicy::Always)
+					{
+						_fully_merged_images.addv(ivi, r.begin_state, r.end_state);
+					}
+					else
+					{
+						assert(false);
+					}
+				}
 			}
 		}
 		else

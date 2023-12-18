@@ -152,12 +152,7 @@ namespace vkl
 		{
 			std::string name = {};
 			
-			uint32_t draw_count = 0;
-			uint32_t instance_count = 1;
-			std::shared_ptr<Buffer> index_buffer = nullptr;
-			Range_st index_buffer_range = {};
-			VkIndexType index_type = VK_INDEX_TYPE_NONE_KHR;
-			std::vector<VertexBuffer> vertex_buffers = {};
+			Drawable::VertexDrawCallInfo vertex_draw_info;
 
 			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
 			PushConstant pc;
@@ -169,7 +164,7 @@ namespace vkl
 			DrawType draw_type;	
 			std::optional<VkViewport> viewport = {};
 
-			std::vector<DrawCallInfo> draw_list = {};
+			Array<DrawCallInfo> draw_list = {};
 		};
 		using DI = DrawInfo;
 		
@@ -204,7 +199,10 @@ namespace vkl
 				.viewport = sdi.viewport,
 				.draw_list = {
 					DrawCallInfo{
-						.draw_count = sdi.draw_count,
+						.vertex_draw_info = Drawable::VertexDrawCallInfo{
+							.draw_count = sdi.draw_count,
+							.instance_count = 1,
+						},
 						.pc = sdi.pc,
 					},
 				}

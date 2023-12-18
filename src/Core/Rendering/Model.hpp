@@ -97,7 +97,7 @@ namespace vkl
 
 		//virtual void recordBindAndDraw(ExecutionContext& ctx) override final;
 
-		virtual void fillVertexDrawCallResources(VertexDrawCallResources& vr) override;
+		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo& vr) override;
 
 		virtual std::shared_ptr<DescriptorSetLayout> setLayout();
 

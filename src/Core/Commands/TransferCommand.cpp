@@ -42,22 +42,22 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.image_view = ci.src->instance(),
+				.images = {ci.src->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			},
 			ResourceInstance{
-				.image_view = ci.dst->instance(),
+				.images = {ci.dst->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		CopyInfoInstance cii{
@@ -136,22 +136,21 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.buffer = ci.src->instance(),
-				.buffer_range = ci.range,
+				.buffers = {{ci.src->instance(), ci.range}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			},
 			ResourceInstance{
-				.image_view = ci.dst->instance(),
+				.images = {ci.dst->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		CopyInfoInstance cii{
@@ -260,22 +259,20 @@ namespace vkl
 
 		ResourcesInstances resources{
 			ResourceInstance{
-				.buffer = ci.src->instance(),
-				.buffer_range = Range_st{.begin = src_base, .len = len},
+				.buffers = {{ci.src->instance(), Buffer::Range{.begin = src_base, .len = len}}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			},
 			ResourceInstance{
-				.buffer = ci.dst->instance(),
-				.buffer_range = Range_st{.begin = dst_base, .len = len},
+				.buffers = {{ci.dst->instance(), Range_st{.begin = dst_base, .len = len}}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		ExecutionNode res = ExecutionNode::CI{
@@ -328,13 +325,12 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.buffer = fi.buffer->instance(),
-				.buffer_range = fi.range.value(),
+				.buffers = {{fi.buffer->instance(), fi.range.value()}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
 				},
-				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		FillInfoInstance fii{
@@ -410,13 +406,12 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.buffer = ui.dst->instance(),
-				.buffer_range = Range_st{.begin = ui.offset.value(), .len = ui.src.size(), },
+				.buffers = {{ui.dst->instance(), Buffer::Range{.begin = ui.offset.value(), .len = ui.src.size()}}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
-				.buffer_usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		UpdateInfo ui_copy = ui;
@@ -493,12 +488,12 @@ namespace vkl
 				{
 					SynchronizationHelper synch(ctx);
 					synch.addSynch(ResourceInstance{
-						.buffer = sb->buffer(),
-						.buffer_range = Buffer::Range{.begin = 0, .len = ui.buffer_range.len},
+						.buffers = {{sb->buffer(), Buffer::Range{.begin = 0, .len = ui.buffer_range.len}}},
 						.begin_state = {
 							.access = VK_ACCESS_2_HOST_WRITE_BIT,
 							.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 						},
+						.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					});
 					synch.record();
 				}
@@ -548,12 +543,12 @@ namespace vkl
 			{
 				SynchronizationHelper synch(ctx);
 				synch.addSynch(ResourceInstance{
-					.buffer = sb->buffer(),
-					.buffer_range = Buffer::Range{.begin = 0, .len = ui.buffer_range.len},
+					.buffers = {{sb->buffer(), Buffer::Range{.begin = 0, .len = ui.buffer_range.len}}},
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
+					.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				});
 				synch.record();
 			}
@@ -617,12 +612,12 @@ namespace vkl
 		if(merge_synch)
 		{
 			resources.push_back(ResourceInstance{
-				.buffer = ui.dst->instance(),
-				.buffer_range = buffer_range,
+				.buffers = {{ui.dst->instance(), buffer_range}},
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
+				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			});
 		}
 		else
@@ -630,12 +625,12 @@ namespace vkl
 			for (const auto& src : ui.sources)
 			{
 				resources.push_back(ResourceInstance{
-					.buffer = ui.dst->instance(),
-					.buffer_range = Buffer::Range{.begin = src.pos, .len = src.obj.size()},
+					.buffers = {{ui.dst->instance(), Buffer::Range{.begin = src.pos, .len = src.obj.size()}}},
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
+					.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				});
 			}
 		}
@@ -652,8 +647,7 @@ namespace vkl
 			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), buffer_range.len);
 			uii.staging_buffer = sb;
 			resources.push_back(ResourceInstance{
-				.buffer = sb->buffer(),
-				.buffer_range = Buffer::Range{.begin = 0, .len = buffer_range.len},
+				.buffers = {{sb->buffer(), Buffer::Range{.begin = 0, .len = buffer_range.len}}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_HOST_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
@@ -662,6 +656,7 @@ namespace vkl
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
+				.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
 			});
 		}
 
@@ -724,12 +719,12 @@ namespace vkl
 			
 			SynchronizationHelper synch2(ctx);
 			synch2.addSynch(ResourceInstance{
-				.buffer = sb->buffer(),
-				.buffer_range = Buffer::Range{.begin = 0, .len = ui.src.size(), },
+				.buffers = {{sb->buffer(), Buffer::Range{.begin = 0, .len = ui.src.size(), }}},
 				.begin_state = {
 					.access = VK_ACCESS_2_HOST_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 				},
+				.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			});
 			synch2.record();
 		}
@@ -775,12 +770,12 @@ namespace vkl
 		{
 			SynchronizationHelper synch(ctx);
 			synch.addSynch(ResourceInstance{
-				.buffer = sb->buffer(),
-				.buffer_range = Range_st{.begin = 0, .len = ui.src.size(), },
+				.buffers = {{sb->buffer(), Range_st{.begin = 0, .len = ui.src.size()}}},
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
+				.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			});
 			synch.record();
 		}
@@ -818,12 +813,13 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.image_view = ui.dst->instance(),
+				.images = {ui.dst->instance()},
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		UploadInfoInstance uii{
@@ -837,8 +833,7 @@ namespace vkl
 			std::shared_ptr<StagingBuffer> sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), uii.src.size());
 			uii.staging_buffer = sb;
 			resources.push_back(ResourceInstance{
-				.buffer = sb->buffer(),
-				.buffer_range = Buffer::Range{.begin = 0, .len = uii.src.size()},
+				.buffers = {{sb->buffer(), Buffer::Range{.begin = 0, .len = uii.src.size()}}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_HOST_WRITE_BIT,
 					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
@@ -847,6 +842,7 @@ namespace vkl
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
+				.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
 			});
 		}
 		ExecutionNode res = ExecutionNode::CI{
@@ -991,12 +987,12 @@ namespace vkl
 			if (merge_synch)
 			{
 				resources.push_back(ResourceInstance{
-					.buffer = buffer_upload.dst,
-					.buffer_range = buffer_range,
+					.buffers = {{buffer_upload.dst, buffer_range}},
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
+					.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				});
 			}
 			else
@@ -1004,12 +1000,12 @@ namespace vkl
 				for (const auto& src : buffer_upload.sources)
 				{
 					resources.push_back(ResourceInstance{
-						.buffer = buffer_upload.dst,
-						.buffer_range = Range_st{.begin = src.pos, .len = src.obj.size()},
+						.buffers = {{buffer_upload.dst, Buffer::Range{.begin = src.pos, .len = src.obj.size()}}},
 						.begin_state = {
 							.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 							.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 						},
+						.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					});
 				}
 			}
@@ -1017,12 +1013,13 @@ namespace vkl
 		for (const auto& image_upload : ui.upload_list.images)
 		{
 			resources.push_back(ResourceInstance{
-				.image_view = image_upload.dst,
+				.images = {image_upload.dst},
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			});
 		}
 		UploadInfo ui_copy = ui;

@@ -8,11 +8,6 @@
 
 namespace vkl
 {
-	struct VertexBuffer
-	{
-		std::shared_ptr<Buffer> buffer = nullptr;
-		Range_st range = {};
-	};
 	class Drawable
 	{
 		public:
@@ -30,16 +25,15 @@ namespace vkl
 
 			//virtual std::shared_ptr<DescriptorSetAndPool> setAndPool() = 0;
 
-			struct VertexDrawCallResources
+			struct VertexDrawCallInfo
 			{
 				uint32_t draw_count;
 				uint32_t instance_count;
-				std::shared_ptr<Buffer> index_buffer = nullptr;
-				Range_st index_buffer_range;
+				BufferAndRange index_buffer;
 				VkIndexType index_type;
-				std::vector<VertexBuffer> vertex_buffers;
+				Array<BufferAndRange> vertex_buffers;
 			};
 
-			virtual void fillVertexDrawCallResources(VertexDrawCallResources & vr) = 0;
+			virtual void fillVertexDrawCallInfo(VertexDrawCallInfo & vr) = 0;
 	};
 }

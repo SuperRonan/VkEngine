@@ -17,6 +17,8 @@
 #include "DynamicValue.hpp"
 #include <cassert>
 
+#include <Core/Utils/MyVector.hpp>
+
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 #define VK_LOG std::cout << "[Vk]: " 
@@ -46,6 +48,9 @@ call
 namespace vkl
 {
 	class VkObject;
+
+	template <class T>
+	using Array = MyVector<T>;
 
 	extern std::mutex g_mutex;
 	

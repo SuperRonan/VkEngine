@@ -88,7 +88,10 @@ namespace vkl
 				.draw_type = GraphicsCommand::DrawType::Draw,
 				.draw_list = {
 					VertexCommand::DrawCallInfo{
-						.draw_count = 5,
+						.vertex_draw_info = Drawable::VertexDrawCallInfo{
+							.draw_count = 5,
+							.instance_count = 1,
+						},
 						.pc = ShowOutlinePC{
 							.pos = pip_pos,
 							.size = Vector2f(region_size),
@@ -96,7 +99,10 @@ namespace vkl
 						},
 					},
 					VertexCommand::DrawCallInfo{
-						.draw_count = 5,
+						.vertex_draw_info = Drawable::VertexDrawCallInfo{
+							.draw_count = 5,
+							.instance_count = 1,
+						},
 						.pc = ShowOutlinePC{
 							.pos = Vector2f(0),
 							.size = Vector2f(_pip_size),

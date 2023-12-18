@@ -25,10 +25,10 @@ namespace vkl
 	{
 		std::shared_ptr<Buffer>		buffer = nullptr;
 		DynamicValue<Buffer::Range>	buffer_range = Buffer::Range{0, 0};
-		std::vector<BufferAndRange> buffer_array = {};
+		Array<BufferAndRange> buffer_array = {};
 		std::shared_ptr<ImageView>	view = nullptr;
 		std::shared_ptr<Sampler>	sampler = nullptr;
-		std::vector<CombinedImageSampler> image_array = {};
+		Array<CombinedImageSampler> image_array = {};
 		std::string					name = {};
 		uint32_t					binding = uint32_t(-1);
 	};

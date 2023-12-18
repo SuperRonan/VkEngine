@@ -222,9 +222,8 @@ namespace vkl
 			{
 				const uint32_t model_type = node->model()->type();
 				VertexCommand::DrawCallInfo draw_call;
-				Drawable::VertexDrawCallResources * vr = reinterpret_cast<Drawable::VertexDrawCallResources *>(&draw_call.draw_count);
-				assert(vr);
-				node->model()->fillVertexDrawCallResources(*vr);
+				Drawable::VertexDrawCallInfo & vr = draw_call.vertex_draw_info;
+				node->model()->fillVertexDrawCallInfo(vr);
 
 				draw_call.set = node->model()->setAndPool();
 				draw_call.pc = matrix,

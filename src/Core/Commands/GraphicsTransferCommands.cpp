@@ -33,7 +33,6 @@ namespace vkl
 			n_regions = 1;
 		}
 
-
 		vkCmdBlitImage(*cmd,
 			*bi.src->image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 			*bi.dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -45,22 +44,22 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.image_view = bi.src->instance(),
+				.images = {bi.src->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			},
 			ResourceInstance{
-				.image_view = bi.dst->instance(),
+				.images = {bi.dst->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		BlitInfoInstance bii{
@@ -336,13 +335,13 @@ namespace vkl
 		for (size_t i = 0; i < resources.size(); ++i)
 		{
 			resources[i] = ResourceInstance{
-				.image_view = ei.targets[i].target,
+				.images = {ei.targets[i].target},
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_BITS,
+				.usage = VK_IMAGE_USAGE_TRANSFER_BITS,
 			};
 		}
 		ExecInfo ei_copy = ei;
@@ -425,13 +424,13 @@ namespace vkl
 	{
 		ResourcesInstances resources = {
 			ResourceInstance{
-				.image_view = ci.view->instance(),
+				.images = {ci.view->instance()},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
 				},
-				.image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			},
 		};
 		ClearInfoInstance cii{
