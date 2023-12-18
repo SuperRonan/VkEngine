@@ -87,7 +87,8 @@ namespace vkl
 
 		using MultiVertexDrawCallList = MultiDrawCallLists<VertexCommand::DrawCallInfo>;
 
-		MultiVertexDrawCallList generateVertexDrawList();
+		MultiVertexDrawCallList _cached_draw_list;
+		void generateVertexDrawList(MultiVertexDrawCallList & res);
 
 		void createInternalResources();
 

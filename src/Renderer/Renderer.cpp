@@ -212,10 +212,8 @@ namespace vkl
 		}
 	}
 
-	SimpleRenderer::MultiVertexDrawCallList SimpleRenderer::generateVertexDrawList()
+	void SimpleRenderer::generateVertexDrawList(MultiVertexDrawCallList & res)
 	{
-		MultiVertexDrawCallList res;
-
 		auto add_model = [&res](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
 			if (node->visible() && node->model() && node->model()->isReadyToDraw())
@@ -233,9 +231,7 @@ namespace vkl
 			}
 			return node->visible();
 		};
-
 		_scene->getTree()->iterateOnDag(add_model);
-		return res;
 	}
 
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
@@ -294,7 +290,15 @@ namespace vkl
 
 		std::TickTock_hrc tick_tock;
 		tick_tock.tick();
-		MultiVertexDrawCallList draw_list = generateVertexDrawList();
+		{
+			// Clear the cached draw list
+			for (auto& [vt, vl] : _cached_draw_list)
+			{
+				vl.clear();
+			}
+		}
+		MultiVertexDrawCallList & draw_list = _cached_draw_list;
+		generateVertexDrawList(draw_list);
 		if (exec.framePerfCounters())
 		{
 			exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockv().count();
