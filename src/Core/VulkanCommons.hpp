@@ -13,11 +13,16 @@
 #include <utility>
 #include <string>
 #include <mutex>
+#include <cassert>
+#include <vector>
+#include <deque>
+#include <list>
 
 #include "DynamicValue.hpp"
-#include <cassert>
 
 #include <Core/Utils/MyVector.hpp>
+#include <Core/Utils/OptVector.hpp>
+#include <Core/Utils/stl_extension.hpp>
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
@@ -44,6 +49,18 @@ call
 #endif
 
 #define NOT_YET_IMPLEMENTED assert(false)
+
+template <class T, class Allocator>
+struct std::ContainerUseCommonAppendConcatAndOperators<std::vector<T, Allocator>> : public std::true_type
+{};
+
+template <class T, class Allocator>
+struct std::ContainerUseCommonAppendConcatAndOperators<std::deque<T, Allocator>> : public std::true_type
+{};
+
+template <class T, class Allocator>
+struct std::ContainerUseCommonAppendConcatAndOperators<std::list<T, Allocator>> : public std::true_type
+{};
 
 namespace vkl
 {

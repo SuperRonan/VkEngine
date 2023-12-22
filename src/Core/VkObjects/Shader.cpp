@@ -605,7 +605,7 @@ namespace vkl
 		_shader_string_packed_capacity(ci.shader_string_packed_capacity)
 	{
 		_creation_result.success = true;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
 
 		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
@@ -682,7 +682,7 @@ namespace vkl
 		}
 		else {
 
-			using namespace std::containers_operators;
+			using namespace std::containers_append_operators;
 			std::vector<std::string> definitions = (*_definitions);
 			definitions += common_definitions;
 
@@ -731,7 +731,7 @@ namespace vkl
 
 	bool Shader::updateResources(UpdateContext & ctx)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		bool res = false;
 
 		std::vector<std::string> definitions = *_definitions;

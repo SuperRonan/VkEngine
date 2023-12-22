@@ -44,7 +44,7 @@ namespace vkl
 
 	void Model::createSet()
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		ShaderBindings bindings;
 
 		bindings += _mesh->getShaderBindings(mesh_binding_offset);
@@ -118,7 +118,7 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetLayout> res = cache->findOrEmplace(options, [app, &options]()
 		{
-			using namespace std::containers_operators;
+			using namespace std::containers_append_operators;
 
 			std::vector<DescriptorSetLayout::Binding> bindings;
 

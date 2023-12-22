@@ -47,7 +47,7 @@ namespace vkl
 
 	ResourcesLists& ResourcesLists::operator+=(ResourcesLists const& o)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		images += o.images;
 		buffers += o.buffers;
 		samplers += o.samplers;

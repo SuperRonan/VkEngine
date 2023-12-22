@@ -23,7 +23,7 @@ namespace vkl
 
 	void GraphicsCommand::createGraphicsResources()
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
 		std::vector<RenderPass::AttachmentDescription2> at_desc(n_color);
 		std::vector<VkAttachmentReference2> at_ref(n_color);
@@ -406,7 +406,7 @@ namespace vkl
 
 	ResourcesInstances VertexCommand::getPerDrawResources(DrawInfo const& di)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		ResourcesInstances res;
 		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
 			const auto & layouts = _program->instance()->reflectionSetsLayouts();
@@ -549,7 +549,7 @@ namespace vkl
 
 	ExecutionNode VertexCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		DrawInfo di_copy = di;
 		
 		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
@@ -693,7 +693,7 @@ namespace vkl
 	ResourcesInstances MeshCommand::getPerDrawResources(DrawInfo const& di)
 	{
 		ResourcesInstances res;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
 			const auto& layouts = _program->instance()->reflectionSetsLayouts();
 			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
@@ -769,7 +769,7 @@ namespace vkl
 
 	ExecutionNode MeshCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		DrawInfo di_copy = di;
 
 		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;

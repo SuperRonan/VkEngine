@@ -8,7 +8,7 @@ namespace vkl
 {
 	template <class T, class Allocator = std::allocator<T>>
 	class MyVector final : public std::vector<T, Allocator>
-	{
+	{ 
 	protected:
 
 
@@ -104,5 +104,49 @@ namespace vkl
 		{
 			return static_cast<uint32_t>(ParentType::size());
 		}
+
+		MyVector& operator+=(T const& t)
+		{
+			ParentType::push_back(t);
+			return *this;
+		}
+
+		MyVector& operator+=(T && t)
+		{
+			ParentType::push_back(std::forward<T>(t));
+			return *this;
+		}
+
+		template <std::concepts::ContainerMaybeRef<T> C>
+		MyVector& operator+=(C const& c)
+		{
+			ParentType::insert(ParentType::end(), c.begin(), c.end());
+			return *this;
+		}
+
+		MyVector operator+(T const& t) const
+		{
+			MyVector res = *this;
+			res += t;
+			return res;
+		}
+
+		MyVector operator+(T && t) const
+		{
+			MyVector res = *this;
+			res += std::forward<T>(t);
+			return res;
+		}
+
+		template <std::concepts::ContainerMaybeRef<T> C>
+		MyVector operator+(C const& c) const
+		{
+			MyVector res = *this;
+			res += c;
+			return res;
+		}
+
 	};
+
+	static_assert(std::concepts::GenericContainer<MyVector<int>>);
 }

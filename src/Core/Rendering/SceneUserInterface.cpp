@@ -108,7 +108,7 @@ namespace vkl
 		recorder.pushDebugLabel(name());
 		
 		Array<VertexCommand::DrawCallInfo> basis_draw_list;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		if (_show_world_basis)
 		{
 			basis_draw_list += VertexCommand::DrawCallInfo{

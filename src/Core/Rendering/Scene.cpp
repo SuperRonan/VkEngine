@@ -161,7 +161,7 @@ namespace vkl
 		std::shared_ptr<DescriptorSetLayout> res = cache->findOrEmplace(options, [app]() {
 
 			std::vector<DescriptorSetLayout::Binding> bindings;
-			using namespace std::containers_operators;
+			using namespace std::containers_append_operators;
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "SceneUBOBinding",
@@ -228,7 +228,7 @@ namespace vkl
 	void Scene::createSet()
 	{
 		createInternalBuffers();
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		std::shared_ptr<DescriptorSetLayout> layout = setLayout();
 		ShaderBindings bindings;
 

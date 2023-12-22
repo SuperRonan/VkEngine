@@ -1,7 +1,7 @@
 
+#include <Core/Utils/stl_extension.hpp>
 #include <Core/DynamicValue.hpp>
 #include <Core/VulkanCommons.hpp>
-#include <Core/Utils/stl_extension.hpp>
 
 #include <chrono>
 #include <thread>
@@ -10,25 +10,56 @@
 #include <Core/Execution/ThreadPool.hpp>
 
 
-template <class T, Container<T> C>
+template <class T, std::concepts::Container<T> C>
 const T* f(C const& c)
 {
 	return c.data();
 }
 
+template <class Op, class L, class R = L>
+concept BinaryOpWrapperConcept = requires(Op op, L l, R r)
+{
+	op(l, r);
+};
+
+template <class L, class R = L>
+struct MyPlus
+{
+	decltype(auto) operator()(L&& l, R&& r) const
+	{
+		return std::forward<L>(l) + std::forward<R>(r);
+	}
+
+	decltype(auto) operator()(const L & l, const R & r) const
+	{
+		return l + r;
+	}
+};
+
+template <class L, class R, class Op>
+concept CombinableWithOperator = BinaryOpWrapperConcept<Op, L, R>;
+
+static_assert(CombinableWithOperator<int, float, MyPlus<int, float>>);
+
+//static_assert(std::concepts::GenericContainer<vkl::OptVector<int>>);
+
 int main(int argc, const char** argv)
 {
 	using namespace vkl;
-	using namespace std::containers_operators;
+	using namespace std::containers_append_operators;
 	using namespace std::string_literals;
 
-	dv_<VkExtent3D> ex = makeZeroExtent3D();
+	Dyn<VkExtent3D> ex = makeZeroExtent3D();
 
-	dv_<float> pi = 3.14f;
+	Dyn<float> pi = 3.14f;
 
-	dv_<int> pii = pi;
+	Dyn<int> pii = pi;
 
-	dv_<double> tau = pi + pii;
+	Dyn<double> tau = pi + pii + 0.14;
+
+	Dyn<std::string> str = "abcdef";
+	Dyn<std::string> rts = "fedcba";
+	Dyn concat = str + rts;
 
 
 
@@ -44,9 +75,18 @@ int main(int argc, const char** argv)
 	std::vector e = d + "e"s;
 
 
-	Dyn<std::vector<std::string>> s = {{"a"s, "b"s}};
-	// TODO make this line work
-	//Dyn<std::vector<std::string>> t = s + "c"s;
+		
+	// TODO make these lines work
+	// From the compiler error, int the DynValue<T>'s operator +, it doesnt find T's operator + for std::vector
+	// My operators are not even mentioned, so it doesn't seem to be a concept failure issue
+	// My Container's operator + isn't even in the list of candidates it appears...
+	{
+		Dyn<std::vector<std::string>> s = {{"a"s, "b"s}};
+		//Dyn<std::vector<std::string>> t = s + "c"s;
+
+		Dyn<Array<int>> vec = Array<int>{12, 23};
+		//Dyn<Array<int>> vec2 = vec + vec;
+	}
 
 	//std::chrono::time_point<std::chrono::high_resolution_clock> tic = std::chrono::high_resolution_clock::now();
 	//

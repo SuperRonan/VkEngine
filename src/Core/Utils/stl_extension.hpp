@@ -1,10 +1,16 @@
 #pragma once 
 
+#include <type_traits>
 #include <algorithm>
 #include <stdint.h>
 #include <memory>
 #include <numeric>
 #include <vector>
+#include <iterator>
+#include <string>
+
+#include <Core/Utils/Container.hpp>
+
 #include <glm/glm.hpp>
 
 using namespace std::literals;
@@ -58,38 +64,114 @@ namespace glm
 	}
 }
 
-template <class T, class Q>
-concept Container = std::is_same<Q, typename T::value_type>::value && requires(T const& t) { t.begin(); t.end(); };
+namespace std
+{
+	//template <class T, Container<T> C>
+	//std::vector<typename C::value_type> makeVector(C const& c)
+	//{
+	//	return std::vector(c.begin(), c.end());
+	//}
+
+	//template <class T>
+	//std::vector<T> makeVector(std::vector<T>&& v)
+	//{
+	//	return std::move(v);
+	//}
+
+	template <concepts::GenericGrowableContainerMaybeRef Container>
+	struct ContainerUseCommonAppendConcatAndOperators : public std::false_type
+	{};
+
+	namespace concepts
+	{
+		template <class C>
+		concept GenericContainerNeedingCommonAppendConcatAndOperator = requires
+		{
+			requires GenericGrowableContainerMaybeRef<C>;
+			requires ContainerUseCommonAppendConcatAndOperators<typename std::remove_reference<C>::type>::value;
+		};
+
+		template <class C, class T>
+		concept ContainerNeedingCommonAppendConcatAndOperator = requires
+		{
+			requires GrowableContainerMaybeRef<C, T>;
+			requires ContainerUseCommonAppendConcatAndOperators<typename std::remove_reference<C>::type>::value;
+		};
+	}
+
+	template<class T, concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
+	C& append(C& c, T&& b)
+	{
+		c.push_back(std::forward<T>(b));
+		return c;
+	}
+
+	template <concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
+	C& append(C& a, CC const& b)
+	{
+		std::copy(b.begin(), b.end(), std::back_inserter(a));
+		return a;
+	}
+
+	template <class T, concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
+	C concat(C && c, T&& t)
+	{
+		C res = std::forward<C>(c);
+		append(res, std::forward<T>(t));
+		return res;
+	}
+
+	template <concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
+	C concat(C && c, CC const& cc)
+	{
+		C res = std::forward<C>(c);
+		append(res, cc);
+		return res;
+	}
+}
+
 
 namespace std
 {
-	template <class T, Container<T> C>
-	std::vector<typename C::value_type> makeVector(C const& c)
+	namespace containers_append_operators
 	{
-		return std::vector(c.begin(), c.end());
-	}
-
-	template <class T>
-	std::vector<T> makeVector(std::vector<T>&& v)
-	{
-		return std::move(v);
-	}
-
-	namespace containers_operators
-	{
-		template<class T>
-		std::vector<T>& operator+=(std::vector<T>& a, T&& b)
+		template<class T, ::std::concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
+		C& operator+=(C& c, T&& b)
 		{
-			a.emplace_back(std::forward<T>(b));
-			return a;
+			return std::append(c, std::forward<T>(b));
 		}
 
-		template<class T, Container<T> Q>
-		std::vector<T>& operator+=(std::vector<T>& a, const Q & b)
+		template <::std::concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, ::std::concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
+		C& operator+=(C& a, CC const& b)
 		{
-			a.insert(a.end(), b.begin(), b.end());
-			return a;
+			return std::append(a, b);
 		}
+
+		template <class T, ::std::concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
+		C operator+(C&& c, T&& t)
+		{
+			return std::concat(std::forward<C>(c), std::forward<T>(t));
+		}
+
+		template <::std::concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, ::std::concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
+		C operator+(C&& c, CC const& cc)
+		{
+			return std::concat(std::forward<C>(c), cc);
+		}
+
+		//template<class T>
+		//std::vector<T>& operator+=(std::vector<T>& a, T&& b)
+		//{
+		//	a.emplace_back(std::forward<T>(b));
+		//	return a;
+		//}
+
+		//template<class T, Container<T> Q>
+		//std::vector<T>& operator+=(std::vector<T>& a, const Q & b)
+		//{
+		//	a.insert(a.end(), b.begin(), b.end());
+		//	return a;
+		//}
 
 		// Can't work because can't deduce T...
 		//template <class T, Container<T> A, Container<T> B>
@@ -100,64 +182,67 @@ namespace std
 		//	return res;
 		//}
 
-		template <class T, Container<T> C>
-		std::vector<T> operator+(const std::vector<T>& a, const C& b)
-		{
-			std::vector<T> res = a;
-			res += b;
-			return res;
-		}
+		//template <class T, Container<T> C>
+		//std::vector<T> operator+(const std::vector<T>& a, const C& b)
+		//{
+		//	std::vector<T> res = a;
+		//	res += b;
+		//	return res;
+		//}
 
-		template <class T, Container<T> C>
-		std::vector<T> operator+(const C& b, const std::vector<T>& a)
-		{
-			std::vector<T> res = makeVector(b);
-			res += a;
-			return res;
-		}
+		//template <class T, Container<T> C>
+		//std::vector<T> operator+(const C& b, const std::vector<T>& a)
+		//{
+		//	std::vector<T> res = makeVector(b);
+		//	res += a;
+		//	return res;
+		//}
 
-		// Have to declare this one, else it would be ambiguous
-		template <class T>
-		std::vector<T> operator+(std::vector<T> const& a, std::vector<T> const& b)
-		{
-			std::vector<T> res = a;
-			res += b;
-			return res;
-		}
+		//// Have to declare this one, else it would be ambiguous
+		//template <class T>
+		//std::vector<T> operator+(std::vector<T> const& a, std::vector<T> const& b)
+		//{
+		//	std::vector<T> res = a;
+		//	res += b;
+		//	return res;
+		//}
 
-		template <class T, Container<T> C>
-		std::vector<T> operator+(std::vector<T> && a, const C & b)
-		{
-			std::vector<T> res = std::move(a);
-			res += b;
-			return res;
-		}
+		//template <class T, Container<T> C>
+		//std::vector<T> operator+(std::vector<T> && a, const C & b)
+		//{
+		//	std::vector<T> res = std::move(a);
+		//	res += b;
+		//	return res;
+		//}
 
-		template <class T, Container<T> C>
-		std::vector<T> operator+(const C & a, T && b)
-		{
-			std::vector<T> res = makeVector(a);
-			res += std::forward<T>(b);
-			return res;
-		}
+		//template <class T, Container<T> C>
+		//std::vector<T> operator+(const C & a, T && b)
+		//{
+		//	std::vector<T> res = makeVector(a);
+		//	res += std::forward<T>(b);
+		//	return res;
+		//}
 
-		template <class T>
-		std::vector<T> operator+(const std::vector<T>& a, T&& b)
-		{
-			std::vector<T> res = a;
-			res += std::forward<T>(b);
-			return res;
-		}
+		//template <class T>
+		//std::vector<T> operator+(const std::vector<T>& a, T&& b)
+		//{
+		//	std::vector<T> res = a;
+		//	res += std::forward<T>(b);
+		//	return res;
+		//}
 
-		template <class T>
-		std::vector<T> operator+(std::vector<T>&& a, T && b)
-		{
-			std::vector<T> res = std::move(a);
-			res += std::forward<T>(b);
-			return res;
-		}
+		//template <class T>
+		//std::vector<T> operator+(std::vector<T>&& a, T && b)
+		//{
+		//	std::vector<T> res = std::move(a);
+		//	res += std::forward<T>(b);
+		//	return res;
+		//}
 	}
+}
 
+namespace std
+{
 	template <class T>
 	constexpr T& zeroInit(T& t)
 	{

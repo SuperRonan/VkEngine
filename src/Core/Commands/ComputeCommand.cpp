@@ -94,7 +94,7 @@ namespace vkl
 
 	ExecutionNode ComputeCommand::getExecutionNode(RecordContext& ctx, DispatchInfo const& di)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 
 		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
 		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;

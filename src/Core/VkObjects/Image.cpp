@@ -204,7 +204,7 @@ namespace vkl
 		// Linearize
 		std::vector<StateInRange> res;
 		res.reserve(states_per_mip.size() * states_per_mip[0].size());
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		for (size_t m = 0; m < states_per_mip.size(); ++m)
 		{
 			res += states_per_mip[m];

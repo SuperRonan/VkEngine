@@ -58,7 +58,7 @@ namespace vkl
 		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
 
 		std::vector<std::string> defs;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 
 		if (application()->availableFeatures().mesh_shader_ext.meshShader)
 		{

@@ -3,6 +3,7 @@
 #include <memory>
 #include <cassert>
 #include <type_traits>
+#include <Core/Utils/stl_extension.hpp>
 
 template <class Q, class T>
 concept TLike = std::is_convertible<Q, T>::value;
@@ -12,6 +13,35 @@ using LambdaType = std::function<T(void)>;
 
 template <class Q, class T>
 concept LambdaLike = std::is_convertible<Q, LambdaType<T>>::value;
+
+template <class Q, class T, class Op>
+concept CombinableWith = requires(Q q, T t, Op op)
+{
+	op(t, q);
+};
+
+// names match std <functional> names
+// Binary operators
+#define OPERATOR_plus +
+#define OPERATOR_minus -
+#define OPERATOR_multiplies *
+#define OPERATOR_divides /
+#define OPERATOR_modulus %
+#define OPERATOR_equal_to ==
+#define OPERATOR_not_equal_to !=
+#define OPERATOR_greater >
+#define OPERATOR_less <
+#define OPERATOR_greater_equal >=
+#define OPERATOR_less_equal <=
+#define OPERATOR_logical_and &&
+#define OPERATOR_logical_or ||
+#define OPERATOR_bit_and &
+#define OPERATOR_bit_or |
+#define OPERATOR_bit_xor ^
+// Unary operators
+#define OPERATOR_negate -
+#define OPERATOR_logical_not !
+#define OPERATOR_bit_not ~
 
 namespace vkl
 {
@@ -278,52 +308,95 @@ namespace vkl
 
 	};
 
-#define DECLARE_DYNAMIC_OP_DD(op) \
-		template <class T, class Q = T> \
-		auto operator op(DynamicValue<T> const& t, DynamicValue<Q> const& q) \
+#define DECLARE_BINARY_OPERATOR_WRAPPER(op_name) \
+		template <class T, class Q> \
+		struct BinaryOperator_ ## op_name \
 		{ \
-			using _op = decltype([](T const& t, Q const& q){return t op q;}); \
-			using RetType = std::invoke_result<_op, T, Q>::type; \
-			return DynamicValue<RetType>([=]() -> RetType {return t.value() op q.value(); }); \
+			auto operator()(T && t, Q && q) \
+			{ \
+				return std::forward<T>(t) OPERATOR_ ## op_name std::forward<Q>(q); \
+			} \
+			using Type = typename std::invoke_result<BinaryOperator_ ## op_name, T, Q>::type; \
+		};
+
+#define DECLARE_UNARY_OPERATOR_WRAPPER(op_name) \
+		template <class T> \
+		struct UnaryOperator_ ## op_name \
+		{ \
+			auto operator()(T && t) \
+			{ \
+				return OPERATOR_ ## op_name std::forward<T>(t); \
+			}\
+			using Type = typename std::invoke_result<UnaryOperator_ ## op_name, T>::type; \
+		};
+
+#define DECLARE_DYNAMIC_BINRARY_OP_DD(op_name) \
+		template <class T, class Q> \
+		auto operator OPERATOR_##op_name(DynamicValue<T> const& t, DynamicValue<Q> const& q) \
+		{ \
+			using RetType = typename BinaryOperator_ ## op_name <T, Q> :: Type; \
+			return DynamicValue<RetType>([=]() -> RetType {return t.value() OPERATOR_##op_name q.value(); }); \
 		}
 
-#define DECLARE_DYNAMIC_OP_DS(op) \
+#define DECLARE_DYNAMIC_BINRARY_OP_DS(op_name) \
 		template <class T, class Q = T> \
-		auto operator op(DynamicValue<T> const& t, Q const& q) \
+		auto operator OPERATOR_##op_name(DynamicValue<T> const& t, Q const& q) \
 		{ \
-			using _op = decltype([](T const& t, Q const& q) {return t op q; }); \
-			using RetType = std::invoke_result<_op, T, Q>::type; \
-			return DynamicValue<RetType>([=]() -> RetType {return t.value() op q; }); \
+			using RetType = typename BinaryOperator_ ## op_name <T, Q> :: Type; \
+			return DynamicValue<RetType>([=]() -> RetType {return t.value() OPERATOR_##op_name q; }); \
 		}
 
-#define DECLARE_DYNAMIC_OP_SD(op) \
+#define DECLARE_UNARY_OP_D(op_name) \
+		template<class T> \
+		auto operator OPERATOR_ ## op_name(DynamicValue<T> const& t) \
+		{ \
+			using RetType = typename UnaryOperator_ ## op_name <T> :: Type; \
+			return DynamicValue<RetType>([=]() -> RetType {return OPERATOR_ ## op_name t.value(); }); \
+		}
+
+/*
+#define DECLARE_DYNAMIC_BINRARY_OP_SD(op_name) \
 		template <class Q, class T = Q> \
-		auto operator op(T const& t, DynamicValue<Q> const& q) \
+		auto operator OPERATOR_##op_name(T const& t, DynamicValue<Q> const& q) \
 		{ \
-			using _op = decltype([](Q const& q, T const& t) {return q op t; }); \
-			using RetType = std::invoke_result<_op, Q, T>::type; \
-			return DynamicValue<RetType>([=]() -> RetType {return t op q.value(); }); \
+			using RetType = typename std::invoke_result<std::op_name, Q, T>::type; \
+			return DynamicValue<RetType>([=]() -> RetType {return t OPERATOR_##op_name q.value(); }); \
 		}
+*/
 
-#define DECLARE_DYNAMIC_OP(op) DECLARE_DYNAMIC_OP_DD(op) DECLARE_DYNAMIC_OP_SD(op) DECLARE_DYNAMIC_OP_DS(op)
+#define DECLARE_DYNAMIC_BINRARY_OP(op_name) DECLARE_BINARY_OPERATOR_WRAPPER(op_name) DECLARE_DYNAMIC_BINRARY_OP_DD(op_name) DECLARE_DYNAMIC_BINRARY_OP_DS(op_name) //DECLARE_DYNAMIC_OP_SD(op_name) 
+
+#define DECLARE_DYNAMIC_UNARY_OP(op_name) DECLARE_UNARY_OPERATOR_WRAPPER(op_name) DECLARE_UNARY_OP_D(op_name)
+
+	DECLARE_DYNAMIC_BINRARY_OP(plus)
+	DECLARE_DYNAMIC_BINRARY_OP(minus)
+	DECLARE_DYNAMIC_BINRARY_OP(multiplies)
+	DECLARE_DYNAMIC_BINRARY_OP(divides)
+	DECLARE_DYNAMIC_BINRARY_OP(modulus)
+
+	DECLARE_DYNAMIC_BINRARY_OP(equal_to)
+	DECLARE_DYNAMIC_BINRARY_OP(not_equal_to)
+	DECLARE_DYNAMIC_BINRARY_OP(less)
+	DECLARE_DYNAMIC_BINRARY_OP(less_equal)
+	DECLARE_DYNAMIC_BINRARY_OP(greater)
+	DECLARE_DYNAMIC_BINRARY_OP(greater_equal)
+
+	DECLARE_DYNAMIC_BINRARY_OP(logical_and)
+	DECLARE_DYNAMIC_BINRARY_OP(logical_or)
+	
+	DECLARE_DYNAMIC_BINRARY_OP(bit_and)
+	DECLARE_DYNAMIC_BINRARY_OP(bit_or)
+	DECLARE_DYNAMIC_BINRARY_OP(bit_xor)
+
+	DECLARE_DYNAMIC_UNARY_OP(negate)
+	DECLARE_DYNAMIC_UNARY_OP(logical_not)
+	DECLARE_DYNAMIC_UNARY_OP(bit_not)
 
 
-	DECLARE_DYNAMIC_OP(+)
-	DECLARE_DYNAMIC_OP(-)
-	DECLARE_DYNAMIC_OP(*)
-	DECLARE_DYNAMIC_OP(/ )
-
-	DECLARE_DYNAMIC_OP(== )
-	DECLARE_DYNAMIC_OP(!= )
-	DECLARE_DYNAMIC_OP(< )
-	DECLARE_DYNAMIC_OP(<= )
-	DECLARE_DYNAMIC_OP(> )
-	DECLARE_DYNAMIC_OP(>= )
-
-#undef DECLARE_DYNAMIC_OP
-#undef DECLARE_DYNAMIC_OP_DD
-#undef DECLARE_DYNAMIC_OP_DS
-#undef DECLARE_DYNAMIC_OP_SD
+//#undef DECLARE_DYNAMIC_OP
+//#undef DECLARE_DYNAMIC_OP_DD
+//#undef DECLARE_DYNAMIC_OP_DS
+//#undef DECLARE_DYNAMIC_OP_SD
 
 	template <class T>
 	using dv_ = DynamicValue<T>;

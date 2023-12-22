@@ -8,7 +8,7 @@ namespace vkl
 	
 	void Executor::buildCommonSetLayout()
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		std::vector<DescriptorSetLayout::Binding> bindings;
 
 		if (_use_debug_renderer)
@@ -48,7 +48,7 @@ namespace vkl
 	{
 		ShaderBindings bindings;
 
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		
 		if (_use_debug_renderer)
 		{

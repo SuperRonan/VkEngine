@@ -86,7 +86,7 @@ namespace vkl
 	ResourcesInstances ShaderCommand::getBoundResources(DescriptorSetsTacker& bound_sets, size_t max_set)
 	{
 		ResourcesInstances res;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		ProgramInstance & prog = *_pipeline->program()->instance();
 		
 		MultiDescriptorSetsLayoutsInstances const& sets = prog.reflectionSetsLayouts();

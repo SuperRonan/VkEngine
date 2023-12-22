@@ -576,7 +576,7 @@ namespace vkl
 	std::vector<DescriptorSetLayout::Binding> RigidMesh::getSetLayoutBindingsStatic(uint32_t offset)
 	{
 		std::vector<DescriptorSetLayout::Binding> res;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 
 		res += DescriptorSetLayout::Binding{
 			.name = "MeshHeader",
@@ -614,7 +614,7 @@ namespace vkl
 	ShaderBindings RigidMesh::getShaderBindings(uint32_t offset)
 	{
 		assert(!!_device.mesh_buffer);
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		ShaderBindings res;
 		res += ShaderBindingDescription{
 			.buffer = _device.mesh_buffer,

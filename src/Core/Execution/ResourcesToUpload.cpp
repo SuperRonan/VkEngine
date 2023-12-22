@@ -5,7 +5,7 @@ namespace vkl
 {
 	ResourcesToUpload& ResourcesToUpload::operator+=(ResourcesToUpload const& o)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 
 		images += o.images;
 		buffers += o.buffers;
@@ -26,7 +26,7 @@ namespace vkl
 
 	ResourcesToUpload& ResourcesToUpload::operator+=(ResourcesToUpload && o)
 	{
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 
 		images += std::move(o.images);
 		buffers += std::move(o.buffers);

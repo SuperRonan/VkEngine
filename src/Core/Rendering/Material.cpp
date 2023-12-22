@@ -115,7 +115,7 @@ namespace vkl
 	std::vector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)
 	{
 		std::vector<DescriptorSetLayout::Binding> res;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		res += DescriptorSetLayout::Binding{
 			.name = "MaterialPropertiesBuffer",
 			.binding = offset + 0,
@@ -143,7 +143,7 @@ namespace vkl
 	ShaderBindings PhysicallyBasedMaterial::getShaderBindings(uint32_t offset)
 	{
 		ShaderBindings res;
-		using namespace std::containers_operators;
+		using namespace std::containers_append_operators;
 		
 		res += Binding{
 			.buffer = _props_buffer,
