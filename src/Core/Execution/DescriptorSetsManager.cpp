@@ -194,6 +194,30 @@ namespace vkl
 	void DescriptorSetAndPoolInstance::sortBindings()
 	{
 		std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b){return a.resolvedBinding() < b.resolvedBinding();});
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			// Ensure descriptor arrays are fixed, pointers to it won't be invalidated
+			ResourceBinding & rb = _bindings[i];
+			const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
+			if (rb.isBuffer())
+			{
+				assert(rb.resource().buffers.size32() <= vkb.descriptorCount);
+				rb.resource().buffers.reserve(vkb.descriptorCount);
+			}
+			else if (rb.isImage() || rb.isBuffer())
+			{
+				if (rb.isImage())
+				{
+					assert(rb.resource().images.size32() <= vkb.descriptorCount);
+					rb.resource().images.reserve(vkb.descriptorCount);
+				}
+				if (rb.isSampler())
+				{
+					assert(rb.samplers().size32() <= vkb.descriptorCount);
+					rb.samplers().reserve(vkb.descriptorCount);
+				}
+			}
+		}
 		if (_layout && _bindings.size() != _layout->bindings().size())
 		{
 			assert(false);
