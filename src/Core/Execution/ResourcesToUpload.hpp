@@ -12,6 +12,16 @@ namespace vkl
 	
 	struct ResourcesToUpload
 	{
+		// Warning: There is a bug here!
+		// The source ObjectView (for both) is not guarantied to be available (if not owned) because the issuer might have destroyed it!
+		// We have to guaranty it!
+		// Potential solutions: 
+		// - A shared ownership of the ObjectView (not a good idea imo)
+		// - Do something like AsynchTask:
+		// Add a status to the upload object, which can be cancelled
+		// The issuer will have to keep a sptr to the upload 
+		// Note: Maybe solve this issue in the UploadQueue
+
 		struct ImageUpload
 		{
 			ObjectView src;
@@ -22,16 +32,17 @@ namespace vkl
 			CompletionCallback completion_callback = {};
 		};
 
-		std::vector<ImageUpload> images;
+		MyVector<ImageUpload> images;
 
+		// Don't like the vector in vector
 		struct BufferUpload
 		{
-			std::vector<PositionedObjectView> sources;
+			Array<PositionedObjectView> sources;
 			std::shared_ptr<BufferInstance> dst;
 			CompletionCallback completion_callback = {};
 		};
 
-		std::vector<BufferUpload> buffers;
+		MyVector<BufferUpload> buffers;
 
 		ResourcesToUpload& operator+=(ResourcesToUpload const& o);
 
@@ -53,5 +64,7 @@ namespace vkl
 		ResourcesToUpload operator+(BufferUpload const& bu) const;
 
 		size_t getSize()const;
+
+		void clear();
 	};
 }

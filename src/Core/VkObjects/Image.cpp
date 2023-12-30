@@ -114,14 +114,22 @@ namespace vkl
 		}
 	}
 
-
-	std::vector<ImageInstance::StateInRange> ImageInstance::getState(size_t tid, Range const& range) const
+	void ImageInstance::fillState(size_t tid, Range const& range, MyVector<StateInRange> & res) const
 	{
 		assert(statesAreSorted(tid));
 		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
 		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
-		std::vector<std::vector<StateInRange>> states_per_mip(range.levelCount);
+		// Or keep this cached in thiss
+		static thread_local 
+		MyVector<MyVector<StateInRange>> states_per_mip;
+		size_t states_per_mips_size = range.levelCount;
+		states_per_mip.resize(std::max(states_per_mips_size, states_per_mip.size()));
+		for (auto& spm : states_per_mip)
+		{
+			spm.clear();
+		}
+
 		
 		for (uint32_t m = range.baseMipLevel; m < (range.baseMipLevel + range.levelCount); ++m)
 		{
@@ -169,48 +177,57 @@ namespace vkl
 
 		
 		// Try to merge mips
-		for (size_t m = states_per_mip.size() - 1; m > 0; --m)
+		// The code is not perfect, it misses some potential merges
+		for (size_t m = (states_per_mips_size - 1); m > 0; --m)
 		{
-			std::vector<StateInRange> & mip_minus = states_per_mip[m - 1];
-			std::vector<StateInRange> & current_mip = states_per_mip[m];
+			//Container<StateInRange>
+			auto & mip_minus = states_per_mip[m - 1];
+			auto & current_mip = states_per_mip[m];
 
-			if (mip_minus.size() == current_mip.size())
-			{
-				bool can_merge = true;
-				for (size_t i = 0; i < mip_minus.size(); ++i)
+			bool can_merge = [&]() {
+				bool can_merge = false;
+				if (mip_minus.size() == current_mip.size())
 				{
-					can_merge &= (
-						(mip_minus[i].state == current_mip[i].state) &&
-						(mip_minus[i].range.baseArrayLayer == current_mip[i].range.baseArrayLayer) &&
-						(mip_minus[i].range.layerCount == current_mip[i].range.layerCount)
-					);
-					if (!can_merge)
-					{
-						break;
-					}
-				}
-
-				if (can_merge)
-				{
+					can_merge = true;
 					for (size_t i = 0; i < mip_minus.size(); ++i)
 					{
-						mip_minus[i].range.levelCount += current_mip[i].range.levelCount;
+						can_merge &= (
+							(mip_minus[i].state == current_mip[i].state) &&
+							(mip_minus[i].range.baseArrayLayer == current_mip[i].range.baseArrayLayer) &&
+							(mip_minus[i].range.layerCount == current_mip[i].range.layerCount)
+							);
+						if (!can_merge)
+						{
+							break;
+						}
 					}
-					states_per_mip.pop_back();
 				}
+				return can_merge;
+			}();
+
+			if (can_merge)
+			{
+				for (size_t i = 0; i < mip_minus.size(); ++i)
+				{
+					mip_minus[i].range.levelCount += current_mip[i].range.levelCount;
+				}
+				//states_per_mip.pop_back();
+				--states_per_mips_size;
+			}
+			else
+			{
+				break;
 			}
 		}
 
-		// Linearize
-		std::vector<StateInRange> res;
-		res.reserve(states_per_mip.size() * states_per_mip[0].size());
+		// Linearize to res
+		res.clear();
+		//res.reserve(states_per_mips_size * states_per_mip[0].size());
 		using namespace std::containers_append_operators;
-		for (size_t m = 0; m < states_per_mip.size(); ++m)
+		for (size_t m = 0; m < states_per_mips_size; ++m)
 		{
 			res += states_per_mip[m];
 		}
-
-		return res;
 	}
 
 	void ImageInstance::setState(size_t tid, Range const& range, ResourceState2 const& state)
@@ -221,7 +238,8 @@ namespace vkl
 
 		for (uint32_t m = range.baseMipLevel; m < (range.baseMipLevel + range.levelCount); ++m)
 		{
-			std::vector<InternalStates::PosAndState>& layers_states = _states.at(tid).states[m];
+			//Container<PosAndState>
+			auto& layers_states = _states.at(tid).states[m];
 			for (auto it = layers_states.begin(); it != layers_states.end(); ++it)
 			{
 				const uint32_t layers_begin = it->pos;

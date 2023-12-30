@@ -26,8 +26,27 @@ namespace vkl
 		ResourceState2 begin_state = {};
 		std::optional<ResourceState2> end_state = {}; // None means the same as begin state
 		VkFlags usage = 0;
-
 	};
+
+	//class ResourceInstanceArray
+	//{
+	//protected:
+
+	//	MyVector<BufferAndRangeInstance> _buffers = {};
+	//	MyVector<std::shared_ptr<ImageView>> _images = {};
+	//	struct ResourceReference
+	//	{
+	//		ResourceFlags flags = ResourceFlags::None;
+	//		size_t id = 0;
+	//		size_t count = 0;
+	//		ResourceState2 begin_state = {};
+	//		std::optional<ResourceState2> end_state = {};
+	//	};
+	//	MyVector<ResourceReference> _references;
+
+	//public:
+	//	
+	//};
 
 	struct Resource
 	{

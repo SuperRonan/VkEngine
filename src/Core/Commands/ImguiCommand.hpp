@@ -52,11 +52,9 @@ namespace vkl
 		};
 		using EI = ExecutionInfo;
 
-		void execute(ExecutionContext& ctx, ExecutionInfo const& ei);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, ExecutionInfo const& ei);
 
-		ExecutionNode getExecutionNode(RecordContext & ctx, ExecutionInfo const& ei);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(ExecutionInfo const& ei);
 

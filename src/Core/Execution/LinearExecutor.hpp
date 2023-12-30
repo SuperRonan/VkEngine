@@ -18,7 +18,7 @@ namespace vkl
 		RecordContext _record_context;
 		ExecutionContext* _context;
 
-		void executeNode(ExecutionNode const &node);
+		void executeNode(std::shared_ptr<ExecutionNode> const &node);
 
 	public:
 

@@ -5,23 +5,36 @@
 
 namespace vkl
 {
+	class GraphicsCommandNode : public ShaderCommandNode
+	{
+	public:
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+		GraphicsCommandNode(CreateInfo const& ci);
+
+		std::shared_ptr<RenderPassInstance> _render_pass;
+		std::shared_ptr<FramebufferInstance> _framebuffer;
+		std::shared_ptr<ImageViewInstance> _depth_stencil;
+
+		std::optional<VkClearColorValue> _clear_color;
+		std::optional<VkClearDepthStencilValue> _clear_depth_stencil;
+
+		VkViewport _viewport;
+
+		virtual void clear() override;
+
+		virtual void execute(ExecutionContext & ctx) override;
+
+		virtual void recordDrawCalls(ExecutionContext & ctx) = 0;
+	};
 	class GraphicsCommand : public ShaderCommand
 	{
 	public:
-		enum class DrawType
-		{
-			None,
-			Draw,
-			Dispatch = Draw,
-			DrawIndexed,
-			IndirectDraw,
-			IndirectDispatch = IndirectDraw,
-			IndirectDrawIndexed,
-			IndirectDrawCount,
-			IndirectDrawCountIndexed,
-			MultiDraw,
-			MultiDrawIndexed,
-		};
+		
 	protected:
 
 		VkPrimitiveTopology _topology;
@@ -50,7 +63,7 @@ namespace vkl
 
 		void createPipeline();
 
-		virtual ResourcesInstances getFramebufferResources();
+		virtual void populateFramebufferResources(GraphicsCommandNode & node);
 
 	public:
 
@@ -82,15 +95,53 @@ namespace vkl
 			VkViewport viewport;
 		};
 
-		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DrawInfo const& di, void * user_data);
-
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data) = 0;
-
 		virtual bool updateResources(UpdateContext & ctx) override;
 	};
 
 
 
+
+
+
+	class VertexCommandNode : public GraphicsCommandNode
+	{
+	public:
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+		VertexCommandNode(CreateInfo const& ci);
+
+		
+		MyVector<BufferAndRangeInstance> _vertex_buffers;
+
+		struct DrawCallInfo
+		{
+			std::string name = {};
+			
+			uint32_t draw_count = 0;
+			uint32_t instance_count = 0;
+			BufferAndRangeInstance index_buffer = {};
+			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
+			uint32_t vertex_buffer_begin = 0; // index in _vertex_buffers
+			uint32_t num_vertex_buffers = 0;
+
+			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
+			PushConstant pc = {};
+		};
+
+		MyVector<DrawCallInfo> _draw_list;
+		DrawType _draw_type = DrawType::MAX_ENUM;
+
+		virtual void clear() override;
+
+		MyVector<VkBuffer> _vb_bind;
+		MyVector<VkDeviceSize> _vb_offsets;
+
+		virtual void recordDrawCalls(ExecutionContext & ctx) override;
+	};
 
 	// Uses the "classic" vertex pipeline
 	class VertexCommand : public GraphicsCommand
@@ -114,7 +165,7 @@ namespace vkl
 		virtual void createProgram() override;
 
 		struct DrawInfo;
-		ResourcesInstances getPerDrawResources(DrawInfo const& di);
+		void populateDrawCallsResources(VertexCommandNode & node, DrawInfo const& di);
 
 	public:
 
@@ -173,11 +224,9 @@ namespace vkl
 
 		virtual bool updateResources(UpdateContext & ctx) override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
-		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
-
-		ExecutionNode getExecutionNode(RecordContext & ctx, DrawInfo const& di);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, DrawInfo const& di);
 
 		Executable with(DrawInfo const& di);
 		
@@ -215,6 +264,44 @@ namespace vkl
 		}
 	};
 
+
+
+
+
+
+
+
+
+
+	class MeshCommandNode : public GraphicsCommandNode
+	{
+	public:
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+		MeshCommandNode(CreateInfo const& ci);
+
+
+		struct DrawCallInfo
+		{
+			std::string name = {};
+			VkExtent3D extent = makeZeroExtent3D();
+			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
+			PushConstant pc = {};
+		};
+
+		MyVector<DrawCallInfo> _draw_list;
+		DrawType _draw_type = DrawType::MAX_ENUM;
+
+		virtual void clear() override;
+
+		virtual void recordDrawCalls(ExecutionContext& ctx) override;
+	};
+
+
 	// Uses the mesh pipeline
 	class MeshCommand : public GraphicsCommand
 	{
@@ -236,7 +323,7 @@ namespace vkl
 		virtual void createProgram() override;
 
 		struct DrawInfo;
-		ResourcesInstances getPerDrawResources(DrawInfo const& di);
+		void populateDrawCallsResources(MeshCommandNode & node, DrawInfo const& di);
 
 	public:
 
@@ -285,11 +372,9 @@ namespace vkl
 
 		virtual bool updateResources(UpdateContext& ctx) override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void* user_data) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
-		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
-
-		ExecutionNode getExecutionNode(RecordContext& ctx, DrawInfo const& di);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, DrawInfo const& di);
 
 		Executable with(DrawInfo const& di);
 
@@ -363,7 +448,7 @@ namespace vkl
 
 		virtual void init() override;
 
-		virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
+		//virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
 
 	};
 }

@@ -440,6 +440,7 @@ namespace vkl
 					ExecutionThread& exec_thread = *ptr_exec_thread;
 					exec_thread.setFramePerfCounters(&frame_counters);
 
+					
 					{
 						auto mips_list = resources_manager.mipMapQueue().consume(TransferBudget{
 							.bytes = 64'000'000,

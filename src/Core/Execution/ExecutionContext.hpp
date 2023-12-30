@@ -83,7 +83,7 @@ namespace vkl
 
 		size_t _resource_tid = 0;
 
-		std::vector<std::shared_ptr<VkObject>> _objects_to_keep = {};
+		MyVector<std::shared_ptr<VkObject>> _objects_to_keep = {};
 
 		StagingPool* _staging_pool = nullptr;
 
@@ -127,9 +127,20 @@ namespace vkl
 			_ray_tracing_bound_sets.setCommandBuffer(_command_buffer);
 		}
 
-		void keppAlive(std::shared_ptr<VkObject> obj)
+		void keepAlive(std::shared_ptr<VkObject> const& obj)
+		{
+			_objects_to_keep.emplace_back(obj);
+		}
+
+		void keepAlive(std::shared_ptr<VkObject> && obj)
 		{
 			_objects_to_keep.emplace_back(std::move(obj));
+		}
+
+		template <std::derived_from<VkObject> O>
+		void keepAlive(MyVector<std::shared_ptr<O>> const& objs)
+		{
+			_objects_to_keep += objs;
 		}
 
 		auto& objectsToKeepAlive()

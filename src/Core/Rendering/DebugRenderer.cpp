@@ -252,7 +252,7 @@ namespace vkl
 			{
 				VkExtent3D extent = { .width = _number_of_debug_strings, .height = 1, .depth = 1 };
 				exec(_render_strings_with_mesh->with(MeshCommand::DrawInfo{
-					.draw_type = MeshCommand::DrawType::Draw,
+					.draw_type = DrawType::Draw,
 					.dispatch_threads = true,
 					.draw_list = {
 						MeshCommand::DrawCallInfo{
@@ -265,7 +265,7 @@ namespace vkl
 			else
 			{
 				exec(_render_strings_with_geometry->with(VertexCommand::DrawInfo{
-					.draw_type = GraphicsCommand::DrawType::Draw,
+					.draw_type = DrawType::Draw,
 					.draw_list = {
 						VertexCommand::DrawCallInfo{
 							.vertex_draw_info = Drawable::VertexDrawCallInfo{

@@ -2,13 +2,21 @@
 
 namespace vkl
 {
-	void ShaderCommand::recordPushConstant(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
+	void ShaderCommandNode::clear()
+	{
+		ExecutionNode::clear();
+		_set.reset();
+		_pipeline.reset();
+		_image_views_to_keep.clear();
+	}
+
+	void ShaderCommandNode::recordPushConstant(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
 	{
 		if (pc.hasValue())
 		{
-			PipelineLayoutInstance & pipeline_layout = *_pipeline->program()->instance()->pipelineLayout();
+			PipelineLayoutInstance & pipeline_layout = *_pipeline->program()->pipelineLayout();
 			VkShaderStageFlags pc_stages = 0;
-			for (const auto& pc_range : _pipeline->program()->instance()->pushConstantRanges())
+			for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
 			{
 				pc_stages |= pc_range.stageFlags;
 			}
@@ -16,14 +24,12 @@ namespace vkl
 		}
 	}
 
-	void ShaderCommand::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
+	void ShaderCommandNode::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
 	{
-		_pipeline->waitForInstanceCreationIFN();
-		std::shared_ptr<PipelineInstance> pipeline = _pipeline->instance();
-		std::shared_ptr<PipelineLayoutInstance> pipeline_layout = pipeline->program()->pipelineLayout();
-		const VkPipelineBindPoint bp = _pipeline->instance()->binding();
-		vkCmdBindPipeline(cmd, bp, *_pipeline->instance());
-		context.keppAlive(pipeline);
+		std::shared_ptr<PipelineLayoutInstance> pipeline_layout = _pipeline->program()->pipelineLayout();
+		const VkPipelineBindPoint bp = _pipeline->binding();
+		vkCmdBindPipeline(cmd, bp, *_pipeline);
+		context.keepAlive(_pipeline);
 
 		DescriptorSetsManager& bound_sets = [&]() -> DescriptorSetsManager& {
 			if(bp == VK_PIPELINE_BIND_POINT_GRAPHICS)
@@ -33,22 +39,28 @@ namespace vkl
 			else
 				return context.rayTracingBoundSets();
 		}();
-		_set->waitForInstanceCreationIFN();
-		if(_set->instance()->exists())
+		if(_set->exists())
 		{
-			bound_sets.bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+			bound_sets.bind(application()->descriptorBindingGlobalOptions().shader_set, _set);
 		}
-		bound_sets.recordBinding(_pipeline->instance()->program()->pipelineLayout(), 
+		bound_sets.recordBinding(_pipeline->program()->pipelineLayout(), 
 			[&context](std::shared_ptr<DescriptorSetAndPoolInstance> set_inst){ 
-				context.keppAlive(set_inst); 
+				context.keepAlive(set_inst); 
 			}
 		);
+		// We have to keep alive the ImageViews of descriptors(Images and Buffers are kept alive via the resource list)
+		// This makes the node not reuseable
+		// // TODO make this work
+		//context.keepAlive(std::move(_image_views_to_keep));
+		for (auto& ivtk : _image_views_to_keep)
+		{
+			context.keepAlive(std::move(ivtk));
+		}
+		_image_views_to_keep.clear();
 	}
 
-	ResourcesInstances ShaderCommand::getDescriptorSetResources(DescriptorSetAndPoolInstance& set, DescriptorSetLayoutInstance const& layout)
+	void ShaderCommand::populateDescriptorSet(ShaderCommandNode & node, DescriptorSetAndPoolInstance& set, DescriptorSetLayoutInstance const& layout)
 	{
-		ResourcesInstances res;
-		res.reserve(layout.bindings().size());
 		const auto& shader_bindings = layout.bindings();
 		auto& set_bindings = set.bindings();
 		size_t set_it = 0;
@@ -64,30 +76,64 @@ namespace vkl
 					assertm(false, "Shader binding not found in bound set, not enough bindings!");
 				}
 			}
-			ResourceBinding& resource = set_bindings[set_it];
-			assertm(resource.resolvedBinding() == b, "Shader binding not found in bound set!");
-
-			ResourceInstance r = resource.resource().getInstance();
+			ResourceBinding& resource_binding = set_bindings[set_it];
+			assertm(resource_binding.resolvedBinding() == b, "Shader binding not found in bound set!");
 			const auto& meta = layout.metas()[i];
-			r.begin_state = ResourceState2{
+			ResourceState2 begin_state{
 				.access = meta.access,
 				.layout = meta.layout,
 				.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
 			};
-			if (r.end_state)
+			Resource & resource = resource_binding.resource();
+			// No end state
+
+			if (resource_binding.isBuffer())
 			{
-				r.end_state = r.begin_state;
+				BufferUsage bu{
+					.begin_state = begin_state,
+					.usage = meta.usage,
+				};
+				for (auto& bar : resource.buffers)
+				{
+					bu.bari = bar.getInstance();
+					if (bu.bari.buffer)
+					{
+						node.resources() += bu;
+					}
+				}
 			}
-			res.push_back(r);
+			else if (resource_binding.isImage())
+			{
+				ImageViewUsage ivu{
+					.begin_state = begin_state,
+					.usage = static_cast<VkImageUsageFlags>(meta.usage),
+				};
+				for (auto& iv : resource.images)
+				{
+					if (iv)
+					{
+						ivu.ivi = iv->instance();
+						node.resources() += ivu;
+						// Don't forget to keep alive the ivi during the execution of the node
+						node._image_views_to_keep.push_back(ivu.ivi);
+					}
+				}
+			}
 		}
-		return res;
 	}
 
-	ResourcesInstances ShaderCommand::getBoundResources(DescriptorSetsTacker& bound_sets, size_t max_set)
+	void ShaderCommand::populateBoundResources(ShaderCommandNode & node, DescriptorSetsTacker& bound_sets, size_t max_set)
 	{
-		ResourcesInstances res;
-		using namespace std::containers_append_operators;
-		ProgramInstance & prog = *_pipeline->program()->instance();
+		_pipeline->waitForInstanceCreationIFN();
+		node._pipeline = _pipeline->instance();
+		if (_set)
+		{
+			const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+			_set->waitForInstanceCreationIFN();
+			node._set = _set->instance();
+			bound_sets.bind(shader_set_index, node._set);
+		}
+		ProgramInstance & prog = *node._pipeline->program();
 		
 		MultiDescriptorSetsLayoutsInstances const& sets = prog.reflectionSetsLayouts();
 
@@ -107,10 +153,9 @@ namespace vkl
 					int _ = 0;
 				}
 				assertm(bound_set, "Shader binding set not bound!");
-				res += getDescriptorSetResources(*bound_set, set_layout);
+				populateDescriptorSet(node, *bound_set, set_layout);
 			}
 		}
-		return res;
 	}
 
 	bool ShaderCommand::updateResources(UpdateContext & ctx)

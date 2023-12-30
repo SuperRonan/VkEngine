@@ -116,9 +116,9 @@ namespace vkl
 		_queue.push_back(std::move(mc));
 	}
 
-	std::vector<AsynchMipsCompute> MipMapComputeQueue::consume(Budget const& b)
+	MyVector<AsynchMipsCompute> MipMapComputeQueue::consume(Budget const& b)
 	{
-		std::vector<AsynchMipsCompute> res;
+		MyVector<AsynchMipsCompute> res;
 		std::unique_lock lock(_mutex);
 
 		Budget total;

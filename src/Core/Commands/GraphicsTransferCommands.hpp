@@ -26,16 +26,8 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<ImageView> _src, _dst;
-		std::vector<VkImageBlit> _regions;
+		Array<VkImageBlit2> _regions;
 		VkFilter _filter = VK_FILTER_NEAREST;
-
-		struct BlitInfoInstance
-		{
-			std::shared_ptr<ImageViewInstance> src = nullptr;
-			std::shared_ptr<ImageViewInstance> dst = nullptr;
-			std::vector<VkImageBlit> regions = {};
-			VkFilter filter = VK_FILTER_MAX_ENUM;
-		};
 
 	public:
 
@@ -45,7 +37,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<ImageView> src = nullptr;
 			std::shared_ptr<ImageView> dst = nullptr;
-			std::vector<VkImageBlit> regions = {};
+			Array<VkImageBlit2> regions = {};
 			VkFilter filter = VK_FILTER_NEAREST;
 		};
 		using CI = CreateInfo;
@@ -54,18 +46,16 @@ namespace vkl
 		{
 			std::shared_ptr<ImageView> src = nullptr;
 			std::shared_ptr<ImageView> dst = nullptr;
-			std::vector<VkImageBlit> regions = {};
+			Array<VkImageBlit2> regions = {};
 			VkFilter filter = VK_FILTER_MAX_ENUM;
 		};
 		using BI = BlitInfo;
 
 		BlitImage(CreateInfo const& ci);
 
-		void execute(ExecutionContext& context, BlitInfoInstance const& bi);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, BlitInfo const& bi);
 
-		ExecutionNode getExecutionNode(RecordContext& ctx, BlitInfo const& bi);
-
-		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
 		Executable with(BlitInfo const& bi);
 
@@ -89,7 +79,7 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageView>> _targets;
+		Array<std::shared_ptr<ImageView>> _targets;
 
 	public:
 
@@ -97,7 +87,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<std::shared_ptr<ImageView>> targets;
+			Array<std::shared_ptr<ImageView>> targets;
 		};
 		using CI = CreateInfo;
 
@@ -114,15 +104,13 @@ namespace vkl
 
 		struct ExecInfo
 		{
-			std::vector<MipsInfo> targets;
+			Array<MipsInfo> targets;
 		};
 		using EI = ExecInfo;
 
-		void execute(ExecutionContext& ctx, ExecInfo const& ei);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, ExecInfo const& ei);
 
-		ExecutionNode getExecutionNode(RecordContext& ctx, ExecInfo const& ei);
-
-		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
 		Executable with(ExecInfo const& ei);
 
@@ -191,11 +179,9 @@ namespace vkl
 
 		ClearImage(CreateInfo const& ci);
 
-		void execute(ExecutionContext& context, ClearInfoInstance const& ci);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, ClearInfo const& ci);
 
-		ExecutionNode getExecutionNode(RecordContext& ctx, ClearInfo const& ci);
-
-		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
 		Executable with(ClearInfo const& ci);
 

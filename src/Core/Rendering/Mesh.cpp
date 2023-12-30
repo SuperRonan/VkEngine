@@ -651,7 +651,7 @@ namespace vkl
 					synch_upload = true;
 				}
 
-				std::vector<PositionedObjectView> sources(3);
+				MyVector<PositionedObjectView> sources(3);
 				const MeshHeader header = getHeader();
 				sources[0] = PositionedObjectView{
 					.obj = header,

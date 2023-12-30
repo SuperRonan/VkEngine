@@ -2,6 +2,69 @@
 
 namespace vkl
 {
+
+	ComputeCommandNode::ComputeCommandNode(CreateInfo const& ci) :
+		ShaderCommandNode(ShaderCommandNode::CI{
+			.app = ci.app,
+			.name = ci.name,
+		})
+	{}
+
+	void ComputeCommandNode::clear()
+	{
+		ShaderCommandNode::clear();
+
+		_dispatch_list.clear();
+	}
+
+	void ComputeCommandNode::execute(ExecutionContext& ctx)
+	{
+		ctx.pushDebugLabel(name());
+		CommandBuffer & cmd = *ctx.getCommandBuffer();
+		recordBindings(cmd, ctx);
+
+		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		const std::shared_ptr<PipelineLayoutInstance>& prog_layout = _pipeline->program()->pipelineLayout();
+
+		for (auto& to_dispatch : _dispatch_list)
+		{
+			if (!to_dispatch.name.empty())
+			{
+				ctx.pushDebugLabel(to_dispatch.name);
+			}
+			if (to_dispatch.set)
+			{
+				const std::shared_ptr<DescriptorSetAndPoolInstance> & set = to_dispatch.set;
+				if (set->exists() && !set->empty())
+				{
+					ctx.computeBoundSets().bindOneAndRecord(invocation_set_index, set, prog_layout);
+					ctx.keepAlive(set);
+				}
+			}
+			recordPushConstant(cmd, ctx, to_dispatch.pc);
+
+			const VkExtent3D workgroups = to_dispatch.extent;
+			
+			vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
+			
+			if (!to_dispatch.name.empty())
+			{
+				ctx.popDebugLabel();
+			}
+		}
+
+		if (ctx.framePerfCounters())
+		{
+			ctx.framePerfCounters()->dispatch_calls += _dispatch_list.size();
+		}
+
+
+		ctx.keepAlive(_pipeline);
+		ctx.popDebugLabel();
+	}
+
+
 	ComputeCommand::ComputeCommand(CreateInfo const& ci) :
 		ShaderCommand(ShaderCommand::CreateInfo{
 			.app = ci.app, 
@@ -48,102 +111,65 @@ namespace vkl
 
 	}
 
-	void ComputeCommand::recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di)
+	std::shared_ptr<ExecutionNode> ComputeCommand::getExecutionNode(RecordContext& ctx, DispatchInfo const& di)
 	{
-		context.pushDebugLabel(name());
-		recordBindings(cmd, context);
-		
-		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		const std::shared_ptr<PipelineLayoutInstance>& prog_layout = _pipeline->program()->instance()->pipelineLayout();
+		std::shared_ptr<ComputeCommandNode> node = _exec_node_cache.getCleanNode<ComputeCommandNode>([&]() {
+			return std::make_shared<ComputeCommandNode>(ComputeCommandNode::CI{
+				.app = application(),
+				.name = name(),
+			});
+		});
 
-		for (auto& to_dispatch : di.dispatch_list)
-		{
-			if (!to_dispatch.name.empty())
-			{
-				context.pushDebugLabel(to_dispatch.name);
-			}
-			if(to_dispatch.set)
-			{
-				std::shared_ptr<DescriptorSetAndPoolInstance> set = to_dispatch.set->instance();
-				if (set->exists() && !set->empty())
-				{
-					context.computeBoundSets().bindOneAndRecord(invocation_set_index, set, prog_layout);
-					context.keppAlive(set);
-				}
-			}
-			recordPushConstant(cmd, context, to_dispatch.pc);
+		node->setName(name());
 
-			const VkExtent3D workgroups = di.dispatch_threads ? getWorkgroupsDispatchSize(to_dispatch.extent) : to_dispatch.extent;
-			vkCmdDispatch(cmd, workgroups.width, workgroups.height, workgroups.depth);
-			if (!to_dispatch.name.empty())
-			{
-				context.popDebugLabel();
-			}
-		}
-		
-		if (context.framePerfCounters())
-		{
-			context.framePerfCounters()->dispatch_calls += di.dispatch_list.size();
-		}
-
-
-		context.keppAlive(_pipeline->instance());
-		context.popDebugLabel();
-	}
-
-	ExecutionNode ComputeCommand::getExecutionNode(RecordContext& ctx, DispatchInfo const& di)
-	{
-		using namespace std::containers_append_operators;
-
-		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		_program->waitForInstanceCreationIFN(); // Wait for the pipeline layout, and descriptor sets layouts
+		_pipeline->waitForInstanceCreationIFN();
 		_set->waitForInstanceCreationIFN();
-		ctx.computeBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
-		ResourcesInstances resources = getBoundResources(ctx.computeBoundSets(), shader_set_index + 1);
 
+		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		ctx.computeBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
+		populateBoundResources(*node, ctx.computeBoundSets(), shader_set_index + 1);
+
+		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
+			const auto& layouts = _program->instance()->reflectionSetsLayouts();
+			if (invocation_set_index < layouts.size())
+			{
+				return layouts[invocation_set_index];
+			}
+			else
+			{
+				return nullptr;
+			}
+		}();
+
+		node->_dispatch_list.resize(di.dispatch_list.size());
+
+		
+		//static thread_local std::set<void*> already_sync;
+		//already_sync.clear();
+
+		for (size_t i = 0; i < di.dispatch_list.size(); ++i)
 		{
-			std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
-				const auto& layouts = _program->instance()->reflectionSetsLayouts();
-				if (invocation_set_index < layouts.size())
-				{
-					return layouts[invocation_set_index];
-				}
-				else
-				{
-					return nullptr;
-				}
-			}();
+			const DispatchCallInfo & to_dispatch = di.dispatch_list[i];
+			ComputeCommandNode::DispatchCallInfo & to_dispatch_inst = node->_dispatch_list[i];
+
+			to_dispatch_inst.name = to_dispatch.name;
+			to_dispatch_inst.extent = di.dispatch_threads ? getWorkgroupsDispatchSize(to_dispatch.extent) : to_dispatch.extent;
+			to_dispatch_inst.pc = to_dispatch.pc;
+			to_dispatch_inst.set = to_dispatch.set ? to_dispatch.set->instance() : nullptr;
+				
+			//if (!already_sync.contains(to_dispatch.set.get()))
 			if (layout)
 			{
-				std::set<void*> already_sync;
-				for (auto& to_dispatch : di.dispatch_list)
-				{
-					if (!already_sync.contains(to_dispatch.set.get()))
-					{
-						assert(!!to_dispatch.set);
-						resources += getDescriptorSetResources(*to_dispatch.set->instance(), *layout);
-						already_sync.emplace(to_dispatch.set.get());
-					}
-				}
+				assert(!!to_dispatch.set);
+				populateDescriptorSet(*node, *to_dispatch.set->instance(), *layout);
+				//already_sync.emplace(to_dispatch.set.get());
 			}
 		}
-
-		DispatchInfo di_copy = di;
-		ExecutionNode res = ExecutionNode::CI{
-			.name = name(),
-			.resources = resources,
-			.exec_fn = [this, di_copy](ExecutionContext& exec_context)
-			{
-				std::shared_ptr<CommandBuffer> cmd = exec_context.getCommandBuffer();
-				recordCommandBuffer(*cmd, exec_context, di_copy);
-			},
-		};
-		return res;
+		return node;
 	}
 
-	ExecutionNode ComputeCommand::getExecutionNode(RecordContext& ctx)
+	std::shared_ptr<ExecutionNode> ComputeCommand::getExecutionNode(RecordContext& ctx)
 	{
 		DispatchInfo di{
 			.dispatch_threads = _dispatch_threads,
@@ -161,7 +187,7 @@ namespace vkl
 	Executable ComputeCommand::with(DispatchInfo const& di)
 	{
 		using namespace vk_operators;
-		Executable res = [this, di](RecordContext& ctx) -> ExecutionNode
+		Executable res = [this, di](RecordContext& ctx)
 		{
 			return getExecutionNode(ctx, di);
 		};

@@ -85,7 +85,7 @@ namespace vkl
 
 			
 			exec(_show_outline->with(VertexCommand::DrawInfo{
-				.draw_type = GraphicsCommand::DrawType::Draw,
+				.draw_type = DrawType::Draw,
 				.draw_list = {
 					VertexCommand::DrawCallInfo{
 						.vertex_draw_info = Drawable::VertexDrawCallInfo{

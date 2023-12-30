@@ -90,13 +90,13 @@ namespace vkl
 
 			_all_mips_view = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
-				.name = name() + "_top_mip"s,
+				.name = name() + "_all_mip"s,
 				.image = _image,
 			});
 
 			_top_mip_view = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
-				.name = name() + "_all_mips"s,
+				.name = name() + "_top_mip"s,
 				.image = _image,
 				.range = VkImageSubresourceRange{
 					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

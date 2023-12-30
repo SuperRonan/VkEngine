@@ -49,7 +49,7 @@ namespace vkl
 	struct AsynchUpload
 	{
 		std::string name = {};
-		std::vector<PositionedObjectView> sources = {};
+		MyVector<PositionedObjectView> sources = {};
 		ObjectView source = {};
 		
 		std::shared_ptr<ImageViewInstance> target_view = nullptr;
@@ -125,6 +125,6 @@ namespace vkl
 		
 		using Budget = TransferBudget;
 
-		std::vector<AsynchMipsCompute> consume(Budget const& b);
+		MyVector<AsynchMipsCompute> consume(Budget const& b);
 	};
 }

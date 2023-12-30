@@ -4,6 +4,33 @@
 
 namespace vkl
 {
+	class ComputeCommandNode : public ShaderCommandNode
+	{
+	public:
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+		ComputeCommandNode(CreateInfo const& ci);
+
+		struct DispatchCallInfo
+		{
+			std::string name = {};
+			// In WorkGroups
+			VkExtent3D extent = makeZeroExtent3D();
+			PushConstant pc = {};
+			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
+		};
+
+		MyVector<DispatchCallInfo> _dispatch_list = {};
+
+		virtual void clear() override;
+
+		virtual void execute(ExecutionContext& ctx) override;
+	};
+
 	class ComputeCommand : public ShaderCommand
 	{
 	public:
@@ -21,6 +48,7 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		
 		struct DispatchCallInfo
 		{
 			std::string name = {};
@@ -32,9 +60,8 @@ namespace vkl
 		struct DispatchInfo
 		{
 			bool dispatch_threads = false;
-			std::vector<DispatchCallInfo> dispatch_list;
+			Array<DispatchCallInfo> dispatch_list;
 		};
-		using DI = DispatchInfo;
 
 	protected:
 
@@ -45,8 +72,6 @@ namespace vkl
 		DynamicValue<VkExtent3D> _extent = {};
 		bool _dispatch_threads = false;
 
-		virtual void recordCommandBuffer(CommandBuffer& cmd, ExecutionContext& context, DispatchInfo const& di) ;
-
 	public:
 
 		ComputeCommand(CreateInfo const& ci);
@@ -56,9 +81,9 @@ namespace vkl
 
 		virtual void init() override;
 
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
-		ExecutionNode getExecutionNode(RecordContext & ctx, DispatchInfo const& di);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, DispatchInfo const& di);
 
 		Executable with(DispatchInfo const& di);
 
@@ -124,10 +149,11 @@ namespace vkl
 		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
 		{
 			const std::shared_ptr<ComputeProgramInstance> & prog = std::dynamic_pointer_cast<ComputeProgramInstance>(_program->instance());
+			const VkExtent3D lcl = prog->localSize();
 			return VkExtent3D{
-				.width = std::divCeil(threads.width, prog->localSize().width),
-				.height = std::divCeil(threads.height, prog->localSize().height),
-				.depth = std::divCeil(threads.depth, prog->localSize().depth),
+				.width = std::divCeil(threads.width, lcl.width),
+				.height = std::divCeil(threads.height, lcl.height),
+				.depth = std::divCeil(threads.depth, lcl.depth),
 			};
 		}
 	};

@@ -143,7 +143,7 @@ namespace vkl
 		if (!basis_draw_list.empty())
 		{
 			recorder(_render_3D_basis->with(VertexCommand::DrawInfo{
-				.draw_type = VertexCommand::DrawType::Draw,
+				.draw_type = DrawType::Draw,
 				.draw_list = std::move(basis_draw_list),
 			}));
 		}
@@ -179,7 +179,7 @@ namespace vkl
 		if (!boxes_draw_list.empty())
 		{
 			recorder(_render_3D_box->with(VertexCommand::DrawInfo{
-				.draw_type = VertexCommand::DrawType::DrawIndexed,
+				.draw_type = DrawType::DrawIndexed,
 				.draw_list = std::move(boxes_draw_list),
 			}));
 		}

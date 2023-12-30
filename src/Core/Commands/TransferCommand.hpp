@@ -41,13 +41,6 @@ namespace vkl
 			std::vector<VkImageCopy> regions = {};
 		};
 		using CI = CreateInfo;
-		
-		struct CopyInfoInstance
-		{
-			std::shared_ptr<ImageViewInstance> src = nullptr;
-			std::shared_ptr<ImageViewInstance> dst = nullptr;
-			std::vector<VkImageCopy> regions = {};
-		};
 
 		struct CopyInfo
 		{
@@ -58,11 +51,9 @@ namespace vkl
 
 		CopyImage(CreateInfo const& ci);
 
-		void execute(ExecutionContext& ctx, CopyInfoInstance const& cinfo);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, CopyInfo const& ci);
 
-		ExecutionNode getExecutionNode(RecordContext & ctx, CopyInfo const& ci);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
 
@@ -86,9 +77,9 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<Buffer> _src = nullptr;
-		DynamicValue<Range_st> _range = {};
+		DynamicValue<Buffer::Range> _range = {};
 		std::shared_ptr<ImageView> _dst = nullptr;
-		std::vector<VkBufferImageCopy> _regions = {};
+		Array<VkBufferImageCopy> _regions = {};
 
 	public:
 
@@ -97,39 +88,27 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Buffer> src = nullptr;
-			DynamicValue<Range_st> range = Range_st{0, 0};
+			DynamicValue<Buffer::Range> range = {};
 			std::shared_ptr<ImageView> dst = nullptr;
-			std::vector<VkBufferImageCopy> regions = {};
+			Array<VkBufferImageCopy> regions = {};
 		};
 		using CI = CreateInfo;
-
-		struct CopyInfoInstance
-		{
-			std::shared_ptr<BufferInstance> src = nullptr;
-			Range_st range;
-			std::shared_ptr<ImageViewInstance> dst = nullptr;
-			std::vector<VkBufferImageCopy> regions = {};
-			uint32_t default_buffer_row_length = 0;
-			uint32_t default_buffer_image_height = 0;
-		};
 
 		struct CopyInfo
 		{
 			std::shared_ptr<Buffer> src = nullptr;
-			Range_st range;
+			Buffer::Range range;
 			std::shared_ptr<ImageView> dst = nullptr;
-			std::vector<VkBufferImageCopy> regions = {};
+			Array<VkBufferImageCopy> regions = {};
 			uint32_t default_buffer_row_length = 0;
 			uint32_t default_buffer_image_height = 0;
 		};
 
 		CopyBufferToImage(CreateInfo const& ci);
 
-		void execute(ExecutionContext& context, CopyInfoInstance const& cinfo);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, CopyInfo const& ci);
 
-		ExecutionNode getExecutionNode(RecordContext& ctx, CopyInfo const& ci);
-
-		virtual ExecutionNode getExecutionNode(RecordContext& ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
 
@@ -178,23 +157,14 @@ namespace vkl
 		{
 			std::shared_ptr<Buffer> src = nullptr;
 			std::shared_ptr<Buffer> dst = nullptr;
-			std::vector<VkBufferCopy2> regions = {};
-		};
-
-		struct CopyInfoInstance
-		{
-			std::shared_ptr<BufferInstance> src = nullptr;
-			std::shared_ptr<BufferInstance> dst = nullptr;
-			std::vector<VkBufferCopy2> regions = {};
+			Array<VkBufferCopy2> regions = {};
 		};
 
 		CopyBuffer(CreateInfo const& ci);
 
-		void execute(ExecutionContext& ctx, CopyInfoInstance const& cinfo);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, CopyInfo const& cinfo);
 
-		ExecutionNode getExecutionNode(RecordContext & ctx, CopyInfo const& cinfo);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
 
@@ -226,7 +196,7 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<Buffer> _buffer = nullptr;
-		DynamicValue<Range_st> _range = {};
+		DynamicValue<Buffer::Range> _range = {};
 		uint32_t _value = 0u;
 
 	public:
@@ -236,7 +206,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Buffer> buffer = nullptr;
-			DynamicValue<Range_st> range = Range_st{.begin = 0, .len = 0};
+			DynamicValue<Buffer::Range> range = Buffer::Range{.begin = 0, .len = 0};
 			uint32_t value = 0;
 		};
 		using CI = CreateInfo;
@@ -244,24 +214,15 @@ namespace vkl
 		struct FillInfo
 		{
 			std::shared_ptr<Buffer> buffer = nullptr;
-			std::optional<Range_st> range = {};
+			std::optional<Buffer::Range> range = {};
 			std::optional<uint32_t> value = {};
-		};
-
-		struct FillInfoInstance
-		{
-			std::shared_ptr<BufferInstance> buffer = nullptr;
-			Range_st range = {};
-			uint32_t value = {};
 		};
 
 		FillBuffer(CreateInfo const& ci);
 
-		void execute(ExecutionContext& context, FillInfoInstance const& fi);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, FillInfo const& fi);
 
-		ExecutionNode getExecutionNode(RecordContext & ctx, FillInfo const& fi);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(FillInfo const& fi);
 
@@ -314,18 +275,9 @@ namespace vkl
 		};
 		using UI = UpdateInfo;
 
-		struct UpdateInfoInstance
-		{
-			ObjectView src;
-			std::shared_ptr<BufferInstance> dst;
-			size_t offset;
-		};
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, UpdateInfo const& ui);
 
-		void execute(ExecutionContext& ctx, UpdateInfo const& ui);
-
-		ExecutionNode getExecutionNode(RecordContext & ctx, UpdateInfo const& ui);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UpdateInfo const& ui);
 
@@ -375,27 +327,15 @@ namespace vkl
 
 		struct UploadInfo
 		{
-			std::vector<PositionedObjectView> sources = {};
+			Array<PositionedObjectView> sources = {};
 			std::shared_ptr<Buffer> dst = nullptr;
 			std::optional<bool> use_update_buffer_ifp = {};
 		};
 		using UI = UploadInfo;
 
-		struct UploadInfoInstance
-		{
-			std::vector<PositionedObjectView> sources = {};
-			std::shared_ptr<BufferInstance> dst;
-			bool use_update;
-			// Optional
-			std::shared_ptr<StagingBuffer> staging_buffer = {};
-			Buffer::Range buffer_range; // Merged range of all sources
-		};
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
 
-		void execute(ExecutionContext& ctx, UploadInfoInstance const& ui);
-
-		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
-
-		ExecutionNode getExecutionNode(RecordContext & ctx);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx);
 
 		Executable with(UploadInfo const& ui);
 
@@ -445,20 +385,9 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		struct UploadInfoInstance
-		{
-			ObjectView src = {};
-			uint32_t buffer_row_length = 0;
-			uint32_t buffer_image_height = 0;
-			std::shared_ptr<ImageViewInstance> dst = nullptr;
-			std::shared_ptr<StagingBuffer> staging_buffer = nullptr;
-		};
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
 
-		void execute(ExecutionContext& ctx, UploadInfoInstance const& ui);
-
-		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UploadInfo const& ui);
 
@@ -483,12 +412,6 @@ namespace vkl
 	
 		std::shared_ptr<ResourcesHolder> _holder;
 
-		struct BufferUploadExtraInfo
-		{
-			bool use_update = false;
-			Buffer::Range range = {};
-		};
-
 	public:
 
 		struct CreateInfo
@@ -509,11 +432,9 @@ namespace vkl
 		};
 		using UI = UploadInfo;
 
-		void execute(ExecutionContext & ctx, UploadInfo const& ui, std::vector<std::shared_ptr<StagingBuffer>> const& staging_buffers, std::vector<BufferUploadExtraInfo> const& extra_buffer_info);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
 
-		ExecutionNode getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
-
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) override;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UploadInfo const& ui);
 

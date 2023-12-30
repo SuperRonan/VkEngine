@@ -316,7 +316,7 @@ namespace vkl
 					if (!draw_list[model_type].empty())
 					{
 						exec(_direct_pipeline._render_scene_direct[model_type]->with(VertexCommand::DrawInfo{
-							.draw_type = VertexCommand::DrawType::DrawIndexed,
+							.draw_type = DrawType::DrawIndexed,
 							.draw_list = draw_list[model_type],
 						}));
 					}
@@ -336,7 +336,7 @@ namespace vkl
 					if (!draw_list[model_type].empty())
 					{
 						exec(_deferred_pipeline._raster_gbuffer[model_type]->with(VertexCommand::DrawInfo{
-							.draw_type = VertexCommand::DrawType::DrawIndexed,
+							.draw_type = DrawType::DrawIndexed,
 							.draw_list = draw_list[model_type],
 						}));
 					}

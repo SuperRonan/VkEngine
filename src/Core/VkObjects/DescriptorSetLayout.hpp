@@ -17,7 +17,7 @@ namespace vkl
 			std::string name = {};
 			VkAccessFlags2 access = VK_ACCESS_NONE_KHR;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_MAX_ENUM;
-			VkFlags usage = 0;
+			VkFlags64 usage = 0;
 		};
 
 		VkDescriptorSetLayout _handle = VK_NULL_HANDLE;

@@ -108,6 +108,7 @@ namespace vkl
 
 
 	constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	constexpr VkBufferUsageFlags2KHR VK_BUFFER_USAGE_2_TRANSFER_BITS_KHR = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR;
 	constexpr VkImageUsageFlags VK_IMAGE_USAGE_TRANSFER_BITS = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	constexpr VkImageAspectFlags VK_IMAGE_ASPECT_DEPTH_STENCIL_BITS = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
 
@@ -591,6 +592,12 @@ namespace vkl
 		{
 			return !empty();
 		}
+
+		constexpr void clear()
+		{
+			_data.clear();
+			_type = &typeid(void);
+		}
 	};
 
 
@@ -731,6 +738,13 @@ namespace vkl
 		constexpr bool ownsValue()const
 		{
 			return _storage.hasValue();
+		}
+
+		constexpr void clear()
+		{
+			_data = nullptr;
+			_size = 0;
+			_storage.clear();
 		}
 	};
 

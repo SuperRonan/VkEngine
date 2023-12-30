@@ -83,4 +83,10 @@ namespace vkl
 		}
 		return res;
 	}
+
+	void ResourcesToUpload::clear()
+	{
+		buffers.clear();
+		images.clear();
+	}
 }

@@ -133,12 +133,31 @@ namespace vkl
 			return _unique_id;
 		}
 
+		constexpr VkImageSubresourceRange defaultSubresourceRange()const
+		{
+			return VkImageSubresourceRange{
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // TODO determine the aspect from the format
+				.baseMipLevel = 0,
+				.levelCount = _ci.mipLevels,
+				.baseArrayLayer = 0,
+				.layerCount = _ci.arrayLayers,
+			};
+		}
+
 		struct StateInRange
 		{
 			DoubleResourceState2 state;
 			Range range;
 		};
-		std::vector<StateInRange> getState(size_t tid, Range const& range)const;
+		
+		void fillState(size_t tid, Range const& range, MyVector<StateInRange> & res) const;
+		
+		MyVector<StateInRange> getState(size_t tid, Range const& range) const
+		{
+			MyVector<StateInRange> res;
+			fillState(tid, range, res);
+			return res;
+		}
 
 		void setState(size_t tid, Range const& range, ResourceState2 const& state);
 

@@ -1,94 +1,124 @@
 #pragma once
 
 #include <Core/Execution/ExecutionContext.hpp>
+#include <Core/Commands/ResourceUsageList.hpp>
+
 #include <functional>
 #include <cassert>
 #include <iterator>
+#include <atomic>
+#include <mutex>
+
+
 
 namespace vkl
 {
-	class ExecutionNode
+	// Maybe make clear that the node is single use (can call execute once)
+	// 
+	class ExecutionNode : public VkObject
 	{
 	public:
 
-		using ExecFn = std::function<void(ExecutionContext&)>;
-
 	protected:
 
-		std::string _name = {};
-		std::vector<ResourceInstance> _resources = {};
-		ExecFn _exec_fn = {};
+		//bool _is_use = false;
+		std::atomic<bool> _in_use = false;
+		ResourceUsageList _resources = {};
 
 	public:
 		
 		struct CreateInfo
 		{
+			VkApplication * app = nullptr;
 			std::string name = {};
-			std::vector<ResourceInstance> resources = {};
-			ExecFn exec_fn = {};
 		};
 		using CI = CreateInfo;
 
 		ExecutionNode(CreateInfo const& ci):
-			_name(ci.name),
-			_resources(ci.resources),
-			_exec_fn(ci.exec_fn)
+			VkObject(ci.app, ci.name)
 		{}
 
-		void addResource(ResourceInstance const& ri)
+		void setInUse(bool usage = true)
 		{
-			_resources.push_back(ri);
+			_in_use = usage;
 		}
 
-		void addResource(ResourceInstance && ri)
+		bool isInUse()
 		{
-			_resources.emplace_back(ri);
+			return _in_use;
 		}
-
-		template <class ResourceInstanceIt>
-		void addResources(ResourceInstanceIt begin, ResourceInstanceIt const& end)
-		{	
-			using iter_category = typename std::iterator_traits<ResourceInstanceIt>::iterator_category;
-			if constexpr (std::is_same<iter_category, std::random_access_iterator_tag>::value)
-			{
-				const size_t N = std::distance(begin, end);
-				const size_t o = _resources.size();
-				_resources.resize(o + N);
-				for (size_t i = 0; i < N; ++i)
-				{
-					_resources[o + i] = *(begin + i);
-				}
-			}
-			else
-			{
-				while (begin != end)
-				{
-					addResource(*begin);
-					++begin;
-				}
-			}
-		}
-
-		constexpr const std::string& name()const
+		
+		void finish()
 		{
-			return _name;
+			setInUse(false);
+			clear();
 		}
 
-		constexpr const std::vector<ResourceInstance> & resources()const
+		virtual void clear();
+
+		virtual void execute(ExecutionContext& ctx)
+		{}
+
+		ResourceUsageList& resources()
 		{
 			return _resources;
 		}
 
-		void run(ExecutionContext& ctx) const
+		const ResourceUsageList& resources() const
 		{
-			assert(_exec_fn);
-			_exec_fn(ctx);
+			return _resources;
+		}
+	};
+
+	class ExecutionNodePool
+	{
+	protected:
+		
+		std::mutex _mutex;
+		MyVector<std::shared_ptr<ExecutionNode>> _available_nodes;
+		std::deque<std::shared_ptr<ExecutionNode>> _in_use_nodes;
+
+		void recycleNodes();
+
+	public:
+
+		template <class CreateNodeFn>
+		std::shared_ptr<ExecutionNode> getCleanNode(CreateNodeFn const& create_node_fn)
+		{
+			std::shared_ptr<ExecutionNode> res;
+			std::unique_lock lock(_mutex);
+
+			recycleNodes();
+
+			if (_available_nodes)
+			{
+				res = _available_nodes.back();
+				_available_nodes.pop_back();
+				// Assume res is already cleared
+			}
+			else
+			{
+				res = create_node_fn();
+			}
+			assert(!!res);
+			res->setInUse();
+			_in_use_nodes.push_back(res);
+			return res;
+		}
+
+		template <std::derived_from<ExecutionNode> DerivedExecutionNode, class CreateNodeFn>
+		std::shared_ptr<DerivedExecutionNode> getCleanNode(CreateNodeFn const& create_node_fn)
+		{
+			std::shared_ptr<ExecutionNode> res = getCleanNode(create_node_fn);
+			return std::dynamic_pointer_cast<DerivedExecutionNode>(res);
 		}
 	};
 
 	class Command : public VkObject
 	{
 	protected:
+		
+		ExecutionNodePool _exec_node_cache;
 
 	public:
 
@@ -101,19 +131,19 @@ namespace vkl
 
 		virtual void init() {};
 
-		virtual ExecutionNode getExecutionNode(RecordContext & ctx) = 0;
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) = 0;
 
-		ExecutionNode operator()(RecordContext & ctx)
+		std::shared_ptr<ExecutionNode> operator()(RecordContext & ctx)
 		{
 			return getExecutionNode(ctx);
 		}
 
 		virtual bool updateResources(UpdateContext & ctx) 
 		{ 
-			return false; 
+			return false;
 		};
 
 	};
 
-	using Executable = std::function<ExecutionNode(RecordContext& ctx)>;
+	using Executable = std::function<std::shared_ptr<ExecutionNode>(RecordContext& ctx)>;
 }

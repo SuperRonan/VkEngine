@@ -18,21 +18,24 @@ namespace vkl
 		_context(ci.context)
 	{}
 
-	void ExecutionThread::executeNode(ExecutionNode const& node)
+	void ExecutionThread::executeNode(std::shared_ptr<ExecutionNode> const& node)
 	{
-		SynchronizationHelper synch(*_context);
-		for (auto& resource : node.resources())
+		static thread_local SynchronizationHelper synch;
+		assert(node->isInUse());
+		if (node->name() == "Renderer.RasterGBuffer")
 		{
-			synch.addSynch(resource);
+			int _ = 0;
 		}
+		synch.reset(_context);
+		synch.commit(node->resources());
 		synch.record();
-
-		node.run(*_context);
+		node->execute(*_context);
+		node->finish();
 	}
 
 	void ExecutionThread::record(Command& cmd)
 	{
-		ExecutionNode node = cmd.getExecutionNode(_record_context);
+		std::shared_ptr<ExecutionNode> node = cmd.getExecutionNode(_record_context);
 		executeNode(node);
 	}
 
@@ -43,7 +46,7 @@ namespace vkl
 
 	void ExecutionThread::record(Executable const& executable)
 	{
-		ExecutionNode node = executable(_record_context);
+		std::shared_ptr<ExecutionNode> node = executable(_record_context);
 		executeNode(node);
 	}
 
@@ -233,18 +236,11 @@ namespace vkl
 			execute(_render_gui->with(ImguiCommand::ExecutionInfo{.index = _latest_aquire_event->aquired_id}));
 		}
 
-		SynchronizationHelper synch(_context);
-		ResourceInstance res{
-			.images = {blit_target->instance()},
-			.begin_state = ResourceState2 {
-				.access = VK_ACCESS_2_MEMORY_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
-			},
-		};
-
-		synch.addSynch(res);
-		synch.record();
+		InlineSynchronizeImageView(_context, blit_target->instance(), ResourceState2{
+			.access = VK_ACCESS_2_MEMORY_READ_BIT,
+			.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
+		});
 	}
 
 	void LinearExecutor::present()
