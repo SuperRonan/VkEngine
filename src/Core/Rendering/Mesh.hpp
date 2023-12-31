@@ -127,7 +127,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx) = 0;
 
-		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo & vr) override = 0;
+		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo& vr) override = 0;
 
 		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -297,6 +297,9 @@ namespace vkl
 			// In bytes
 			VkDeviceSize header_size = 0, vertices_size = 0, indices_size = 0;
 			VkDeviceSize total_buffer_size = 0;
+			BufferAndRange header_buffer;
+			BufferAndRange vertex_buffer;
+			BufferAndRange index_buffer;
 			// Structure of the mesh buffer:
 			// header
 			// vertices
@@ -304,6 +307,7 @@ namespace vkl
 			bool up_to_date = false;
 			bool uploaded = false;
 			bool just_uploaded = false;
+			uint8_t index_type_size = 0;
 
 			bool loaded()const
 			{

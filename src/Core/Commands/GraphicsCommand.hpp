@@ -199,23 +199,20 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		struct DrawCallInfo
-		{
-			std::string name = {};
-			
-			Drawable::VertexDrawCallInfo vertex_draw_info;
-
-			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
-			PushConstant pc;
-		};
-
 		
 		struct DrawInfo
 		{
-			DrawType draw_type;	
+			DrawType draw_type = DrawType::MAX_ENUM;	
 			std::optional<VkViewport> viewport = {};
 
-			Array<DrawCallInfo> draw_list = {};
+			VertexDrawList draw_list = {};
+
+			void clear()
+			{
+				draw_type = DrawType::MAX_ENUM;
+				viewport.reset();
+				draw_list.clear();
+			}
 		};
 		using DI = DrawInfo;
 		
@@ -246,16 +243,12 @@ namespace vkl
 			DrawInfo di{
 				.draw_type = DrawType::Draw,
 				.viewport = sdi.viewport,
-				.draw_list = {
-					DrawCallInfo{
-						.vertex_draw_info = Drawable::VertexDrawCallInfo{
-							.draw_count = sdi.draw_count,
-							.instance_count = 1,
-						},
-						.pc = sdi.pc,
-					},
-				}
 			};
+			di.draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.draw_count = sdi.draw_count,
+				.instance_count = 1,
+				.pc = sdi.pc,
+			});
 			return with(di);
 		}
 		Executable operator()(SingleDrawInfo const& sdi)

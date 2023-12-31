@@ -540,23 +540,23 @@ namespace vkl
 		node._draw_list.resize(di.draw_list.size());
 		for (size_t i = 0; i < node._draw_list.size(); ++i)
 		{
-			const DrawCallInfo & to_draw = di.draw_list[i];
+			const VertexDrawList::DrawCallInfo & to_draw = di.draw_list.drawCalls()[i];
 			VertexCommandNode::DrawCallInfo & node_to_draw = node._draw_list[i];
 
 			node_to_draw.name = to_draw.name;
-			node_to_draw.draw_count = to_draw.vertex_draw_info.draw_count;
-			node_to_draw.instance_count = to_draw.vertex_draw_info.instance_count;
-			node_to_draw.index_buffer = to_draw.vertex_draw_info.index_buffer.getInstance();
-			node_to_draw.index_type = to_draw.vertex_draw_info.index_type;
-			node_to_draw.num_vertex_buffers = to_draw.vertex_draw_info.vertex_buffers.size32();
+			node_to_draw.draw_count = to_draw.draw_count;
+			node_to_draw.instance_count = to_draw.instance_count;
+			node_to_draw.index_buffer = to_draw.index_buffer.getInstance();
+			node_to_draw.index_type = to_draw.index_type;
+			node_to_draw.num_vertex_buffers = to_draw.num_vertex_buffers;
 			if (node_to_draw.num_vertex_buffers > 0)
 			{
 				const size_t old_size = node._vertex_buffers.size();
 				node_to_draw.vertex_buffer_begin = old_size;
-				node._vertex_buffers.resize(old_size + to_draw.vertex_draw_info.vertex_buffers.size());
-				for (size_t i = 0; i < to_draw.vertex_draw_info.vertex_buffers.size(); ++i)
+				node._vertex_buffers.resize(old_size + node_to_draw.num_vertex_buffers);
+				for (uint32_t i = 0; i < node_to_draw.num_vertex_buffers; ++i)
 				{
-					node._vertex_buffers[old_size + i] = to_draw.vertex_draw_info.vertex_buffers[i].getInstance();
+					node._vertex_buffers[old_size + i] = di.draw_list.vertexBuffers()[to_draw.vertex_buffer_begin + i].getInstance();
 				}
 			}
 

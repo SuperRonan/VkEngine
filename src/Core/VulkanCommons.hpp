@@ -123,7 +123,25 @@ namespace vkl
 
 
 
-
+	
+	enum class DrawType
+	{
+		None,
+		Draw,
+		Dispatch = Draw,
+		DrawIndexed,
+		IndirectDraw,
+		IndirectDispatch = IndirectDraw,
+		IndirectDrawIndexed,
+		IndirectDrawCount,
+		IndirectDrawCountIndexed,
+		MultiDraw,
+		MultiDrawIndexed,
+		MAX_ENUM,
+	};
+	using DispatchType = DrawType;
+	
+	
 	struct VulkanFeatures
 	{
 		VkPhysicalDeviceFeatures features = {};
@@ -747,6 +765,8 @@ namespace vkl
 			_storage.clear();
 		}
 	};
+
+	using PushConstant = ObjectView;
 
 
 	struct PositionedObjectView

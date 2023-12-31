@@ -82,10 +82,10 @@ namespace vkl
 			alignas(16) glm::mat4 world_to_proj;
 		};
 
-		template <class DrawCallType>
-		using MultiDrawCallLists = std::map<uint32_t, Array<DrawCallType>>;
+		template <class DrawInfoType>
+		using MultiDrawCallLists = std::map<uint32_t, DrawInfoType>;
 
-		using MultiVertexDrawCallList = MultiDrawCallLists<VertexCommand::DrawCallInfo>;
+		using MultiVertexDrawCallList = MultiDrawCallLists<VertexCommand::DrawInfo>;
 
 		MultiVertexDrawCallList _cached_draw_list;
 		void generateVertexDrawList(MultiVertexDrawCallList & res);

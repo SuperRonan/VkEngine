@@ -83,34 +83,30 @@ namespace vkl
 				.pc = pc,
 			}));
 
-			
-			exec(_show_outline->with(VertexCommand::DrawInfo{
+			static thread_local VertexCommand::DrawInfo vertex_draw_info;
+			vertex_draw_info.clear();
+			vertex_draw_info = VertexCommand::DrawInfo{
 				.draw_type = DrawType::Draw,
-				.draw_list = {
-					VertexCommand::DrawCallInfo{
-						.vertex_draw_info = Drawable::VertexDrawCallInfo{
-							.draw_count = 5,
-							.instance_count = 1,
-						},
-						.pc = ShowOutlinePC{
-							.pos = pip_pos,
-							.size = Vector2f(region_size),
-							.color = Vector4f(1, 1, 1, 1),
-						},
-					},
-					VertexCommand::DrawCallInfo{
-						.vertex_draw_info = Drawable::VertexDrawCallInfo{
-							.draw_count = 5,
-							.instance_count = 1,
-						},
-						.pc = ShowOutlinePC{
-							.pos = Vector2f(0),
-							.size = Vector2f(_pip_size),
-							.color = Vector4f(1, 1, 1, 1),
-						},
-					},
+			};
+			vertex_draw_info.draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.draw_count = 5,
+				.instance_count = 1,
+				.pc = ShowOutlinePC{
+					.pos = pip_pos,
+					.size = Vector2f(region_size),
+					.color = Vector4f(1, 1, 1, 1),
 				},
-			}));
+			});
+			vertex_draw_info.draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.draw_count = 5,
+				.instance_count = 1,
+				.pc = ShowOutlinePC{
+					.pos = Vector2f(0),
+					.size = Vector2f(_pip_size),
+					.color = Vector4f(1, 1, 1, 1),
+				},
+			});
+			exec(_show_outline->with(vertex_draw_info));
 			exec.popDebugLabel();
 		}
 	}

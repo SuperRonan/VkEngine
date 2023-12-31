@@ -264,17 +264,9 @@ namespace vkl
 			}
 			else
 			{
-				exec(_render_strings_with_geometry->with(VertexCommand::DrawInfo{
-					.draw_type = DrawType::Draw,
-					.draw_list = {
-						VertexCommand::DrawCallInfo{
-							.vertex_draw_info = Drawable::VertexDrawCallInfo{
-								.draw_count = _number_of_debug_strings,
-								.instance_count = 1,
-							},
-							.pc = pc,
-						},
-					},
+				exec(_render_strings_with_geometry->with(VertexCommand::SingleDrawInfo{
+					.draw_count = _number_of_debug_strings,
+					.pc = pc,
 				}));
 			}
 

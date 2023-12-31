@@ -107,81 +107,85 @@ namespace vkl
 	{
 		recorder.pushDebugLabel(name());
 		
-		Array<VertexCommand::DrawCallInfo> basis_draw_list;
-		using namespace std::containers_append_operators;
+		static thread_local VertexCommand::DrawInfo vertex_draw_info;
+		
+		vertex_draw_info.clear();
+		auto & draw_list = vertex_draw_info.draw_list;
+
 		if (_show_world_basis)
 		{
-			basis_draw_list += VertexCommand::DrawCallInfo{
-				.vertex_draw_info = Drawable::VertexDrawCallInfo{
-					.draw_count = 3,
-					.instance_count = 1,
-				},
+			draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.name = "world",
+				.draw_count = 3,
+				.instance_count = 1,
 				.pc = camera.getWorldToProj(),
-			};
+			});
 		}
 		if (_show_view_basis)
 		{
 			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25))* camera.getWorldRoationMatrix()* scaleMatrix<4, float>(0.03125);
-			basis_draw_list += VertexCommand::DrawCallInfo{
-				.vertex_draw_info = Drawable::VertexDrawCallInfo{
-					.draw_count = 3,
-					.instance_count = 1,
-				},
+			draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.name = "view",
+				.draw_count = 3,
+				.instance_count = 1,
 				.pc = view_3D_basis_matrix,
-			};
+			});
 		}
 		if (_gui_selected_node.hasValue())
 		{
-			basis_draw_list += VertexCommand::DrawCallInfo{
-				.vertex_draw_info = Drawable::VertexDrawCallInfo{
-					.draw_count = 3,
-					.instance_count = 1,
-				},
+			draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.name = "selected node",
+				.draw_count = 3,
+				.instance_count = 1,
 				.pc = camera.getWorldToProj() * glm::mat4(_gui_selected_node.node.matrix),
-			};
+			});
 		}
-		if (!basis_draw_list.empty())
+		if (draw_list.size())
 		{
-			recorder(_render_3D_basis->with(VertexCommand::DrawInfo{
-				.draw_type = DrawType::Draw,
-				.draw_list = std::move(basis_draw_list),
-			}));
+			vertex_draw_info.draw_type = DrawType::Draw;
+
+			recorder(_render_3D_basis->with(vertex_draw_info));
 		}
 
-		Array<VertexCommand::DrawCallInfo> boxes_draw_list;
+
+
 
 		if (_gui_selected_node.hasValue() && _box_mesh->isReadyToDraw())
 		{
+			vertex_draw_info.clear();
 			const auto & model = _gui_selected_node.node.node->model();
 			if (model)
 			{
 				const auto & mesh = model->mesh();
 				if (mesh)
 				{
-					Drawable::VertexDrawCallInfo vdcr;
+					static thread_local VertexDrawCallInfo vdcr;
+					vdcr.clear();
 					_box_mesh->fillVertexDrawCallInfo(vdcr);
 
 					const AABB3f & aabb = mesh->getAABB();
 					Mat4 aabb_matrix = translateMatrix<4, float>(aabb.bottom())* scaleMatrix<4, float>(aabb.diagonal());
 					
-					boxes_draw_list += VertexCommand::DrawCallInfo{
-						.name = mesh->name(),
-						.vertex_draw_info = std::move(vdcr),
+					draw_list.push_back(VertexDrawList::DrawCallInfo{
+						.name = mesh->name() + "::AABB",
+						.draw_count = vdcr.draw_count,
+						.instance_count = vdcr.instance_count,
+						.index_buffer = vdcr.index_buffer,
+						.index_type = vdcr.index_type,
+						.num_vertex_buffers = vdcr.vertex_buffers.size32(),
 						.pc = Render3DBoxPC{
 							.matrix = camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix) * aabb_matrix,
 							.color = glm::vec4(1, 1, 1, 1),
 						},
-					};
+					}, vdcr.vertex_buffers);
 				}
 			}
 		}
 
-		if (!boxes_draw_list.empty())
+		if (draw_list.size())
 		{
-			recorder(_render_3D_box->with(VertexCommand::DrawInfo{
-				.draw_type = DrawType::DrawIndexed,
-				.draw_list = std::move(boxes_draw_list),
-			}));
+			vertex_draw_info.draw_type = DrawType::DrawIndexed;
+			recorder(_render_3D_box->with(vertex_draw_info));
 		}
 		
 		recorder.popDebugLabel();

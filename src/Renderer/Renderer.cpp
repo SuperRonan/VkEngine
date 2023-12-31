@@ -214,20 +214,29 @@ namespace vkl
 
 	void SimpleRenderer::generateVertexDrawList(MultiVertexDrawCallList & res)
 	{
-		auto add_model = [&res](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
+		
+
+		VertexDrawCallInfo vr;
+		auto add_model = [&res, &vr](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
 			if (node->visible() && node->model() && node->model()->isReadyToDraw())
 			{
+				vr.clear();
 				const uint32_t model_type = node->model()->type();
-				VertexCommand::DrawCallInfo draw_call;
-				Drawable::VertexDrawCallInfo & vr = draw_call.vertex_draw_info;
 				node->model()->fillVertexDrawCallInfo(vr);
-
-				draw_call.set = node->model()->setAndPool();
-				draw_call.pc = matrix,
-				draw_call.name = node->name();
-
-				res[model_type].push_back(draw_call);
+				
+				auto & res_model_type = res[model_type];
+				res_model_type.draw_type = DrawType::DrawIndexed;
+				res_model_type.draw_list.push_back(VertexDrawList::DrawCallInfo{
+					.name = node->name(),
+					.draw_count = vr.draw_count,
+					.instance_count = vr.instance_count,
+					.index_buffer = vr.index_buffer,
+					.index_type = vr.index_type,
+					.num_vertex_buffers = vr.vertex_buffers.size32(),
+					.set = node->model()->setAndPool(),
+					.pc = matrix,
+				}, vr.vertex_buffers);
 			}
 			return node->visible();
 		};
@@ -313,12 +322,9 @@ namespace vkl
 				exec.pushDebugLabel("DirectPipeline");
 				for (uint32_t model_type : _model_types)
 				{
-					if (!draw_list[model_type].empty())
+					if (draw_list[model_type].draw_list.size())
 					{
-						exec(_direct_pipeline._render_scene_direct[model_type]->with(VertexCommand::DrawInfo{
-							.draw_type = DrawType::DrawIndexed,
-							.draw_list = draw_list[model_type],
-						}));
+						exec(_direct_pipeline._render_scene_direct[model_type]->with(draw_list[model_type]));
 					}
 				}
 				if (exec.framePerfCounters())
@@ -333,12 +339,9 @@ namespace vkl
 				exec.pushDebugLabel("DeferredPipeline");
 				for (uint32_t model_type : _model_types)
 				{
-					if (!draw_list[model_type].empty())
+					if (draw_list[model_type].draw_list.size())
 					{
-						exec(_deferred_pipeline._raster_gbuffer[model_type]->with(VertexCommand::DrawInfo{
-							.draw_type = DrawType::DrawIndexed,
-							.draw_list = draw_list[model_type],
-						}));
+						exec(_deferred_pipeline._raster_gbuffer[model_type]->with(draw_list[model_type]));
 					}
 				}
 				if (exec.framePerfCounters())

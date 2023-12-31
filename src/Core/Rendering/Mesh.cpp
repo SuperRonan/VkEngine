@@ -516,6 +516,36 @@ namespace vkl
 			.queues = queues,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
+
+		_device.index_type_size = [&]() {
+			uint8_t res = 0;
+			switch (_device.index_type)
+			{
+			case VK_INDEX_TYPE_UINT16:
+				res = sizeof(uint16_t);
+				break;
+			case VK_INDEX_TYPE_UINT32:
+				res = sizeof(uint32_t);
+				break;
+			case VK_INDEX_TYPE_UINT8_EXT:
+				res = sizeof(uint8_t);
+				break;
+			}
+			return res;
+		}();
+
+		_device.header_buffer = BufferAndRange{
+			.buffer = _device.mesh_buffer,
+			.range = Buffer::Range{.begin = 0, .len = _device.header_size},
+		};
+		_device.vertex_buffer = BufferAndRange{
+			.buffer = _device.mesh_buffer,
+			.range = Buffer::Range{.begin = _device.header_size, .len = _device.vertices_size},
+		};
+		_device.index_buffer = BufferAndRange{
+			.buffer = _device.mesh_buffer,
+			.range = Buffer::Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
+		};
 	}
 
 	//void RigidMesh::recordBindAndDraw(ExecutionContext & ctx)
@@ -534,33 +564,12 @@ namespace vkl
 		assert(_device.loaded());
 		vr.draw_count = _device.num_indices;
 		vr.instance_count = 1;
-		const size_t index_size = [&]() {
-			size_t res = 0;
-			switch (_device.index_type)
-			{
-				case VK_INDEX_TYPE_UINT16:
-					res = 2;
-				break;
-				case VK_INDEX_TYPE_UINT32:
-					res = 4;
-				break;
-				case VK_INDEX_TYPE_UINT8_EXT:
-					res = 1;
-				break;
-			}
-			return res;
-		}();
-		vr.index_buffer = BufferAndRange{
-			.buffer = _device.mesh_buffer,
-			.range = Buffer::Range{.begin = _device.vertices_size + _device.header_size, .len = _device.num_indices * index_size},
-		};
+		
+		vr.index_buffer = _device.index_buffer;
 		vr.index_type = _device.index_type;
 		size_t vertex_size = _host.use_full_vertices ? sizeof(Vertex) : (_host.dims * sizeof(float));
 		vr.vertex_buffers = {
-			BufferAndRange{
-				.buffer = _device.mesh_buffer,
-				.range = Buffer::Range{.begin = _device.header_size, .len = _device.num_vertices * vertex_size},
-			},
+			_device.vertex_buffer,
 		};
 	}
 

@@ -9,24 +9,6 @@
 
 namespace vkl
 {	
-	using PushConstant = ObjectView;
-
-	enum class DrawType
-	{
-		None,
-		Draw,
-		Dispatch = Draw,
-		DrawIndexed,
-		IndirectDraw,
-		IndirectDispatch = IndirectDraw,
-		IndirectDrawIndexed,
-		IndirectDrawCount,
-		IndirectDrawCountIndexed,
-		MultiDraw,
-		MultiDrawIndexed,
-		MAX_ENUM,
-	};
-	using DispatchType = DrawType;
 
 	class ShaderCommandNode : public ExecutionNode
 	{
