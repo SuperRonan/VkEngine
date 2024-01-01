@@ -25,3 +25,6 @@
 [submodule "ext/argparse"]
 	path = ext/argparse
 	url = https://github.com/p-ranav/argparse.git
+[submodule "ext/imgui"]
+	path = ext/imgui
+	url = https://github.com/SuperRonan/imgui.git

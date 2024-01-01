@@ -273,8 +273,8 @@ namespace vkl
 			.MinImageCount = static_cast<uint32_t>(2),
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-			.ImageFormat = VK_FORMAT_B8G8R8A8_UNORM,
 			.UseDynamicRendering = _render_pass ? false : true,
+			.ColorAttachmentFormat = VK_FORMAT_B8G8R8A8_UNORM,
 		};
 		
 		ImGui_ImplVulkan_Init(&ii);
