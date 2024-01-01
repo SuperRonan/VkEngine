@@ -16,9 +16,6 @@
 [submodule "ext/DualSenseWindows"]
 	path = ext/DualSenseWindows
 	url = https://github.com/SuperRonan/DualSense-Windows.git
-[submodule "ext/imgui"]
-	path = ext/imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "ext/SPIRV-Cross"]
 	path = ext/SPIRV-Cross
 	url = https://github.com/KhronosGroup/SPIRV-Cross.git
