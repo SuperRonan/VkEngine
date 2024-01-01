@@ -152,7 +152,7 @@ FILE(
 	src/Core/Utils/* 
 )
 
-FILE(GLOB SPV_REFLECT_SOURCE ext/SPIRV-Reflect/*)
+FILE(GLOB SPV_REFLECT_SOURCE ext/SPIRV-Reflect/spirv_reflect.h ext/SPIRV-Reflect/spirv_reflect.cpp)
 
 SOURCE_GROUP(TREE ${CMAKE_CURRENT_LIST_DIR}/src/ FILES ${VK_ENGINE_SOURCE})
 

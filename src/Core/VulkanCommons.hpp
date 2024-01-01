@@ -286,10 +286,10 @@ namespace vkl
 
 	struct DescriptorSetBindingGlobalOptions
 	{
-		bool use_push_descriptors;
-		bool merge_module_and_shader;
-		std::vector<BindingIndex> set_bindings;
-		uint32_t shader_set;
+		bool use_push_descriptors = false;
+		bool merge_module_and_shader = false;
+		std::vector<BindingIndex> set_bindings = {};
+		uint32_t shader_set = 0;
 	};
 
 	constexpr VkComponentMapping defaultComponentMapping()
