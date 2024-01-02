@@ -182,7 +182,7 @@ function(AddProject p_name)
 	TARGET_LINK_LIBRARIES(${p_name} PUBLIC ${ALL_EXT_LIBS} ${VULKAN_LIBS} VkEngine)
 	TARGET_LINK_LIBRARIES(${p_name} PUBLIC $<IF:$<CONFIG:Debug>, ${VULKAN_SHADER_LIBS_DEBUG}, ${VULKAN_SHADER_LIBS_RELEASE}>)
 	
-	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # TODO don't have the warning in the first place
+	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
 	SET(EXECUTABLES ${EXECUTABLES} ${p_name})
 endfunction()
 
