@@ -1,98 +1,124 @@
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.18.0)
+cmake_minimum_required(VERSION 3.18.0)
 
-SET(Project_Name "VkEngine")
-PROJECT(${Project_Name})
+set(Project_Name "VkEngine")
+project(${Project_Name})
 
-SET(CMAKE_CXX_STANDARD 20)
-SET(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# SET(CMAKE_CXX_FLAGS_DEBUG	"/MD")
-# SET(CMAKE_CXX_FLAGS_RELEASE	"/MD")
+# set(CMAKE_CXX_FLAGS_DEBUG	"/MD")
+# set(CMAKE_CXX_FLAGS_RELEASE	"/MD")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
+set(VK_ENGINE_INCLUDE_DIRS "")
+set(VK_ENGINE_LINK_LIBS "")
+set(VK_ENGINE_LINK_DEBUG_LIBS "")
+set(VK_ENGINE_LINK_RELEASE_LIBS "")
+set(VK_ENGINE_LINK_DIRS "")
+set(VK_ENGINE_DEFINITIONS "")
+
 # ThatLib
-ADD_SUBDIRECTORY(ext/thatlib)
-SET(THAT_LIB "thatlib")
+add_subdirectory(ext/thatlib)
+set(THAT_LIB "thatlib")
+set(THAT_LIB_INCLUDE_DIR ext/thatlib)
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${THAT_LIB})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${THAT_LIB_INCLUDE_DIR})
+
 
 # GLFW
-SET(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-SET(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-SET(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-ADD_SUBDIRECTORY(ext/glfw)
-INCLUDE_DIRECTORIES(ext/glfw/include)
-SET(GLFW_LIBS "glfw")
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(ext/glfw)
+
+set(GLFW_INCLUDE_DIRS ext/glfw/include)
+set(GLFW_LIBS "glfw")
+
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${GLFW_LIBS})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${GLFW_INCLUDE_DIRS})
 
 # GLM
-ADD_SUBDIRECTORY(ext/glm)
-INCLUDE_DIRECTORIES(ext/glm)
-SET(GLM_LIBS "")
+add_subdirectory(ext/glm)
+set(GLM_INCLUDE_DIRS ext/glm)
+set(GLM_LIBS "")
+
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${GLM_LIBS})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${GLM_INCLUDE_DIRS})
 
 # Vulkan
-OPTION(AUTO_LOCATE_VULKAN "AUTO_LOCATE_VULKAN" ON)
+option(AUTO_LOCATE_VULKAN "AUTO_LOCATE_VULKAN" ON)
 
-IF(AUTO_LOCATE_VULKAN)
-	MESSAGE(STATUS "Attempting auto locate Vulkan using CMake...")
+if(AUTO_LOCATE_VULKAN)
+	message(STATUS "Attempting auto locate Vulkan using CMake...")
 
-	FIND_PACKAGE(Vulkan)
+	find_package(Vulkan)
 
-	IF(NOT ${Vulkan_INCLUDE_DIRS} STREQUAL "")
-		SET(VULKAN_PATH ${Vulkan_INCLUDE_DIRS})
-		STRING(REGEX REPLACE "/Include" "" VULKAN_PATH ${VULKAN_PATH})
-	ENDIF()
+	if(NOT ${Vulkan_INCLUDE_DIRS} STREQUAL "")
+		set(VULKAN_PATH ${Vulkan_INCLUDE_DIRS})
+		string(REGEX REPLACE "/Include" "" VULKAN_PATH ${VULKAN_PATH})
+	endif()
 
-	IF(NOT Vulkan_FOUND)
-		MESSAGE(STATUS "Failed to locate Vulkan SDK, retrying again...")
-		IF(EXISTS "${VULKAN_PATH}")
-			MESSAGE(STATUS "Successfully located the Vulkan SDK: ${VULKAN_PATH}")
-		ELSE()
-			MESSAGE("Error: Unable to locate Vulkan SDK. Please turn off auto locate option by specifying 'AUTO_LOCATE_VULKAN' as 'OFF'")
-			MESSAGE("and specify manually path using 'VULKAN_SDK' and 'VULKAN_VERSION' variables in the CMakeLists.txt.")
-			RETURN()
-		ENDIF()
-	ENDIF()
+	if(NOT Vulkan_FOUND)
+		message(STATUS "Failed to locate Vulkan SDK, retrying again...")
+		if(EXISTS "${VULKAN_PATH}")
+			message(STATUS "Successfully located the Vulkan SDK: ${VULKAN_PATH}")
+		else()
+			message("Error: Unable to locate Vulkan SDK. Please turn off auto locate option by specifying 'AUTO_LOCATE_VULKAN' as 'OFF'")
+			message("and specify manually path using 'VULKAN_SDK' and 'VULKAN_VERSION' variables in the CMakeLists.txt.")
+			return()
+		endif()
+	endif()
 
-	MESSAGE(STATUS "Attempting to locate Vulkan SDK using manual path......")
-	SET(VULKAN_SDK "C:/VulkanSDK")
-	SET(VULKAN_VERSION "1.3.261.1")
-	# SET(VULKAN_VERSION "1.3.250.0")
-	# SET(VULKAN_VERSION "1.3.243.0")
-	#SET(VULKAN_VERSION "1.3.224.1")
-	SET(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
-	MESSAGE(STATUS "Using manual specified path: ${VULKAN_PATH}")
+	message(STATUS "Attempting to locate Vulkan SDK using manual path......")
+	set(VULKAN_SDK "C:/VulkanSDK")
+	set(VULKAN_VERSION "1.3.261.1")
+	# set(VULKAN_VERSION "1.3.250.0")
+	# set(VULKAN_VERSION "1.3.243.0")
+	# set(VULKAN_VERSION "1.3.224.1")
+	set(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
+	message(STATUS "Using manual specified path: ${VULKAN_PATH}")
 
-	IF(NOT EXISTS "${VULKAN_PATH}")
-		MESSAGE("Error: Unable to locate this Vulkan SDK path VULKAN_PATH: ${VULKAN_PATH}, please specify correct path.
+	if(NOT EXISTS "${VULKAN_PATH}")
+		message("Error: Unable to locate this Vulkan SDK path VULKAN_PATH: ${VULKAN_PATH}, please specify correct path.
 		For more information on correct installation process, please refer to subsection 'Getting started with Lunar-G SDK'
 		and 'Setting up first project with CMake' in Chapter 3, 'Shaking hands with the device' in this book 'Learning Vulkan', ISBN - 9781786469809.")
-	    RETURN()
-	ENDIF()
+	    return()
+	endif()
 
-ENDIF()
+endif()
 
-ADD_DEFINITIONS(-DVK_USE_PLATFORM_WIN32_KHR)
+add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 
-SET(VULKAN_LIBS "vulkan-1")
+set(VULKAN_LIBS "vulkan-1")
 
-SET(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OGLCompiler;HLSL;OSDependent")
-SET(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OGLCompilerd;HLSLd;OSDependentd")
+set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OGLCompiler;HLSL;OSDependent")
+set(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OGLCompilerd;HLSLd;OSDependentd")
 
-SET(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
-SET(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
-INCLUDE_DIRECTORIES(${VULKAN_INCLUDES})
-LINK_DIRECTORIES(${VULKAN_LIBS_DIR})
+set(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
+set(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
+
+set(VK_ENGINE_LINK_DIRS "${VK_ENGINE_LINK_DIRS}" ${VULKAN_LIBS_DIR})
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${VULKAN_LIBS})
+set(VK_ENGINE_LINK_DEBUG_LIBS "${VK_ENGINE_LINK_DEBUG_LIBS}" ${VULKAN_SHADER_LIBS_DEBUG})
+set(VK_ENGINE_LINK_RELEASE_LIBS "${VK_ENGINE_LINK_RELEASE_LIBS}" ${VULKAN_SHADER_LIBS_RELEASE})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${VULKAN_INCLUDES})
 
 # VMA
-ADD_SUBDIRECTORY(ext/VMA)
-INCLUDE_DIRECTORIES(ext/VMA/include)
-SET(VMA_LIBS VulkanMemoryAllocator)
+add_subdirectory(ext/VMA)
+set(VMA_INCLUDE_DIRS ext/VMA/include)
+set(VMA_LIBS VulkanMemoryAllocator)
+
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${VMA_LIBS})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${VMA_INCLUDE_DIRS})
+
 
 # ImGui
-SET(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/imgui/")
-FILE(GLOB IMGUI_SOURCES 
+set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/imgui/")
+file(GLOB IMGUI_SOURCES 
 "${IMGUI_DIR}imgui.h"
 "${IMGUI_DIR}imgui.cpp"
 
@@ -105,39 +131,43 @@ FILE(GLOB IMGUI_SOURCES
 "${IMGUI_DIR}backends/imgui_impl_glfw.cpp"
 "${IMGUI_DIR}backends/imgui_impl_win32.cpp"
 )
-ADD_LIBRARY(imgui STATIC ${IMGUI_SOURCES})
-INCLUDE_DIRECTORIES(${IMGUI_DIR})
-SET(IMGUI_LIBS imgui)
+add_library(imgui STATIC ${IMGUI_SOURCES})
+target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES} ${GLFW_INCLUDE_DIRS})
+
+set(IMGUI_LIBS imgui)
+
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${IMGUI_LIBS})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${IMGUI_DIR})
 
 
 # tinyobj
-ADD_SUBDIRECTORY(ext/tinyobj)
-INCLUDE_DIRECTORIES(ext)
+add_subdirectory(ext/tinyobj)
+set(TINYOBJ_INCLUDE_DIRS ext)
 SET(TINYOBJ_LIBS tinyobjloader)
 
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${TINYOBJ_LIBS})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${TINYOBJ_INCLUDE_DIRS})
 
 
 # ArgParse
-ADD_SUBDIRECTORY(ext/argparse)
-INCLUDE_DIRECTORIES(ext/argparse/include)
-
+add_subdirectory(ext/argparse)
+set(ARGPARSE_INCLUDE_DIRS ext/argparse/include)
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${ARGPARSE_INCLUDE_DIRS})
 
 # SPIRV-Cross
-# ADD_SUBDIRECTORY(ext/SPIRV-Cross)
-# INCLUDE_DIRECTORIES(ext/SPIRV-Cross)
-# SET(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
+# add_subdirectory(ext/SPIRV-Cross)
+# include_directories(ext/SPIRV-Cross)
+# set(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
 
 # VkEngine
-SET(VK_ENGINE_LINK_LIBS ${VULKAN_LIBS} ${THAT_LIB} ${GLFW_LIBS} ${GLM_LIBS} ${VMA_LIBS} ${IMGUI_LIBS} ${TINYOBJ_LIBS})
 
-ADD_DEFINITIONS(-DNOMINMAX)
-ADD_COMPILE_DEFINITIONS($<IF:$<CONFIG:Debug>,_ITERATOR_DEBUG_LEVEL=2,_ITERATOR_DEBUG_LEVEL=0>)
+
+add_definitions(-DNOMINMAX)
+add_compile_definitions($<IF:$<CONFIG:Debug>,_ITERATOR_DEBUG_LEVEL=2,_ITERATOR_DEBUG_LEVEL=0>)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-INCLUDE_DIRECTORIES(src)
-INCLUDE_DIRECTORIES(ext)
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" src ext)
 
-# ADD_SUBDIRECTORY(src)
 
 FILE(
 	GLOB VK_ENGINE_SOURCE 
@@ -152,63 +182,32 @@ FILE(
 	src/Core/Utils/* 
 )
 
-FILE(GLOB SPV_REFLECT_SOURCE ext/SPIRV-Reflect/spirv_reflect.h ext/SPIRV-Reflect/spirv_reflect.cpp)
+file(GLOB SPV_REFLECT_SOURCE ext/SPIRV-Reflect/spirv_reflect.h ext/SPIRV-Reflect/spirv_reflect.cpp)
 
-SOURCE_GROUP(TREE ${CMAKE_CURRENT_LIST_DIR}/src/ FILES ${VK_ENGINE_SOURCE})
+source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/src/ FILES ${VK_ENGINE_SOURCE})
 
-SOURCE_GROUP("SPIRV-Reflect" FILES ${SPV_REFLECT_SOURCE})
+source_group("SPIRV-Reflect" FILES ${SPV_REFLECT_SOURCE})
 
-ADD_LIBRARY(VkEngine STATIC ${VK_ENGINE_SOURCE} ${SPV_REFLECT_SOURCE})
-SET_TARGET_PROPERTIES(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
-TARGET_COMPILE_DEFINITIONS(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/\"")
-target_include_directories(VkEngine PUBLIC ext/thatlib/ext) # TODO do correctly
+add_library(VkEngine STATIC ${VK_ENGINE_SOURCE} ${SPV_REFLECT_SOURCE})
+set_target_properties(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_definitions(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/\"")
+
+target_include_directories(VkEngine PUBLIC ${VK_ENGINE_INCLUDE_DIRS}) 
+
 target_link_libraries(VkEngine PUBLIC ${VK_ENGINE_LINK_LIBS})
-TARGET_LINK_LIBRARIES(VkEngine PUBLIC $<IF:$<CONFIG:Debug>, ${VULKAN_SHADER_LIBS_DEBUG}, ${VULKAN_SHADER_LIBS_RELEASE}>)
+target_link_libraries(VkEngine PUBLIC $<IF:$<CONFIG:Debug>, ${VK_ENGINE_LINK_DEBUG_LIBS}, ${VK_ENGINE_LINK_RELEASE_LIBS}>)
 
-SET(EXECUTABLES)
+target_link_directories(VkEngine PUBLIC ${VK_ENGINE_LINK_DIRS})
 
-function(AddProject p_name)
-	if(DEFINED ARGV1)
-		SET(folder ${ARGV1})
-	else()
-		SET(folder ${p_name})
-	endif()
-	FILE(GLOB ${p_name}_SOURCES src/${folder}/*)
-	ADD_EXECUTABLE(${p_name} src/${folder}/main.cpp ${${p_name}_SOURCES})
-	TARGET_INCLUDE_DIRECTORIES(${p_name} PRIVATE src/${folder})
-	
-	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_NAME=\"${p_name}\"")
-	TARGET_COMPILE_DEFINITIONS(${p_name} PRIVATE "PROJECT_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/${folder}/\"")
 
-	TARGET_LINK_LIBRARIES(${p_name} PUBLIC VkEngine)
-	
-	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
-	SET(EXECUTABLES ${EXECUTABLES} ${p_name})
-endfunction()
 
 option(BUILD_PROJECTS ON)
 
 if(${BUILD_PROJECTS})
 
-	AddProject(Test)
-
-	# AddProject(GameOfLife "GOL")
-
-	# AddProject(Paint)
-
-	# AddProject(Particules2D "Particules/sim2D")
-	# AddProject(Particules3D "Particules/sim3D")
-
-	# AddProject(Flotsam)
-
-	AddProject(Renderer)
+add_subdirectory(projects)
 
 endif()
 
-INSTALL(TARGETS VkEngine DESTINATION lib)
+install(TARGETS VkEngine DESTINATION lib)
 
-if(${BUILD_PROJECTS})
-
-	INSTALL(TARGETS ${EXECUTABLES} DESTINATION bin)
-
-endif()
