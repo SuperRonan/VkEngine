@@ -224,6 +224,10 @@ namespace vkl
 	{
 		waitForInstanceCreationIFN();
 		destroyInstance();
+		if (_gci.render_pass)
+		{
+			_gci.render_pass->removeInvalidationCallbacks(this);
+		}
 		_program->removeInvalidationCallbacks(this);
 	}
 
