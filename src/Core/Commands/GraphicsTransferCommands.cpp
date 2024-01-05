@@ -494,6 +494,16 @@ namespace vkl
 		{
 			_target = ci.view->instance();
 			_value = ci.value.value();
+
+			resources() += ImageViewUsage{
+				.ivi = _target,
+				.begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+				},
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			};
 		}
 
 		virtual void clear()
