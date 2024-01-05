@@ -123,6 +123,7 @@ namespace vkl
 
 		std::vector<KeyState> _keys;
 
+		// just preseed and just released
 		std::vector<glm::vec2> _pressed_pos;
 		std::vector<glm::vec2> _released_pos;
 
