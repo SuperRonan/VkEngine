@@ -32,7 +32,7 @@ namespace vkl
 		size_t _index = 0;
 		std::vector<Option> _options = {};
 		
-		bool _same_line;
+		bool _same_line = false;
 
 	public:
 

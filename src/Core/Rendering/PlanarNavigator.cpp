@@ -54,7 +54,7 @@ namespace vkl
 		const mat3 t = translateMatrix<3, Float>(-_translation);
 		res = s * t;
 		using namespace glm_operators;
-		std::cout << res << std::endl << std::endl;
+		//std::cout << res << std::endl << std::endl;
 		return res;
 	}
 }
