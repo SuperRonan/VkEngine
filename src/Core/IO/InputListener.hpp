@@ -120,6 +120,7 @@ namespace vkl
 		VWP<glm::vec2> _mouse_pos = glm::vec2(0);
 
 		VWP<bool> _focus = false;
+		VWP<bool> _hovered = false;
 
 		std::vector<KeyState> _keys;
 

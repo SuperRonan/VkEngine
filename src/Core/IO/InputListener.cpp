@@ -61,16 +61,19 @@ namespace vkl
 	void MouseListener::update()
 	{
 		_focus << glfwGetWindowAttrib(_window, GLFW_FOCUSED);
+		_hovered << glfwGetWindowAttrib(_window, GLFW_HOVERED);
 		if (_focus.current && !_focus.prev)
 		{
 			glm::dvec2 mouse_pos;
 			glfwGetCursorPos(_window, &mouse_pos.x, &mouse_pos.y);
 			_mouse_pos = glm::vec2(mouse_pos.x, mouse_pos.y);
 		}
-		if (_focus.current)
+		if (_hovered.current)
 		{
 			_scroll << glm::vec2(s_scroll.x, s_scroll.y);
-
+		}
+		if (_focus.current)
+		{
 			glm::dvec2 mouse_pos;
 			glfwGetCursorPos(_window, &mouse_pos.x, &mouse_pos.y);
 			_mouse_pos << glm::vec2(mouse_pos.x, mouse_pos.y);

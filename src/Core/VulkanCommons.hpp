@@ -120,7 +120,7 @@ namespace vkl
 	extern std::string getVkColorSpaceKHRName(VkColorSpaceKHR);
 	extern std::string getVkFormatName(VkFormat);
 	extern bool checkVkFormatIsValid(VkFormat);
-
+	extern VkImageAspectFlags getImageAspectFromFormat(VkFormat);
 
 
 	
@@ -494,33 +494,6 @@ namespace vkl
 		return res;
 	}
 
-	constexpr VkImageAspectFlags getImageAspectFromFormat(VkFormat f)
-	{
-		if (f >= VK_FORMAT_R4G4_UNORM_PACK8 && f <= VK_FORMAT_E5B9G9R9_UFLOAT_PACK32)
-		{
-			return VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-		else if (f >= VK_FORMAT_D16_UNORM && f <= VK_FORMAT_D32_SFLOAT)
-		{
-			return VK_IMAGE_ASPECT_DEPTH_BIT;
-		}
-		else if (f == VK_FORMAT_S8_UINT)
-		{
-			return VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		else if (f >= VK_FORMAT_D16_UNORM_S8_UINT && f <= VK_FORMAT_D32_SFLOAT_S8_UINT)
-		{
-			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-		else
-		{
-			// TODO compressed, packed and multiplanar formats
-			assert(false);
-			// Probably a color aspect though
-			return VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-	}
-
 	template <class Op>
 	void VkBool32ArrayOp(VkBool32 *res, const VkBool32* a, const VkBool32 * b, size_t n, Op const& op)
 	{
@@ -841,6 +814,7 @@ namespace std
 		}
 	};
 
+	// Align up
 	template <class Uint>
 	Uint align(Uint n, Uint a)
 	{

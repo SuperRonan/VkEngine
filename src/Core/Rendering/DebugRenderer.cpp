@@ -145,20 +145,22 @@ namespace vkl
 			.buffer = _string_buffer,
 		});
 
+		std::shared_ptr<Image> font_img = std::make_shared<Image>(Image::CI{
+			.app = application(),
+			.name = name() + ".Font",
+			.type = VK_IMAGE_TYPE_2D,
+			.format = VK_FORMAT_R8_UNORM,
+			.extent = [&]() {return VkExtent3D{.width = _glyph_size.x, .height = _glyph_size.y, .depth = 1}; },
+			.mips = 1,
+			.layers = 256,
+			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
 		_font = std::make_shared<ImageView>(ImageView::CI{
 			.app = application(),
 			.name = name() + ".Font",
-			.image_ci = Image::CI{
-				.app = application(),
-				.name = name() + ".Font",
-				.type = VK_IMAGE_TYPE_2D,
-				.format = VK_FORMAT_R8_UNORM,
-				.extent = [&](){return VkExtent3D{.width = _glyph_size.x, .height = _glyph_size.y, .depth = 1};},
-				.mips = 1,
-				.layers = 256,
-				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-			},
+			.image = font_img,
 			.type = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 		});
 

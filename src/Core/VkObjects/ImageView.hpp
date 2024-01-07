@@ -117,7 +117,6 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = "";
 			std::shared_ptr<Image> image = nullptr;
-			std::optional<Image::CreateInfo> image_ci = {};
 			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 			Dyn<VkFormat> format;
 			VkComponentMapping components = defaultComponentMapping();
@@ -135,10 +134,14 @@ namespace vkl
 		Dyn<VkFormat> _format;
 		VkComponentMapping _components = defaultComponentMapping();
 		VkImageSubresourceRange _range = {};
+
+		void constructorBody(bool create_instance);
 		
 	public:
 
 		ImageView(CreateInfo const& ci);
+
+		ImageView(Image::CreateInfo const& ci);
 
 		virtual ~ImageView() override;
 

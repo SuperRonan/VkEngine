@@ -314,16 +314,7 @@ namespace vkl
 			return _initial_layout;
 		}
 
-		constexpr VkImageSubresourceRange defaultSubresourceRange()const
-		{
-			return VkImageSubresourceRange{
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // TODO determine the aspect from the format
-				.baseMipLevel = 0,
-				.levelCount = _mips,
-				.baseArrayLayer = 0,
-				.layerCount = _layers,
-			};
-		}
+		VkImageSubresourceRange defaultSubresourceRange();
 
 		bool updateResource(UpdateContext & ctx);
 

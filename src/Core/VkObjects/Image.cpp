@@ -432,15 +432,6 @@ namespace vkl
 		}
 	}
 
-	//StagingPool::StagingBuffer* Image::copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size)
-	//{
-	//	assert(_type == VK_IMAGE_TYPE_2D);
-	//	size_t size = _extent.width * _extent.height * elem_size;
-	//	StagingPool::StagingBuffer* sb = pool.getStagingBuffer(size);
-	//	std::memcpy(sb->data, data, size);
-	//	return sb;
-	//}
-
 
 	bool Image::updateResource(UpdateContext & ctx)
 	{
@@ -477,5 +468,19 @@ namespace vkl
 
 
 		return res;
+	}
+
+	VkImageSubresourceRange Image::defaultSubresourceRange()
+	{
+		// Assume the dyn format keeps the same aspect,
+		// else return a dynamic value
+		VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());
+		return VkImageSubresourceRange{
+			.aspectMask = aspect, 
+			.baseMipLevel = 0,
+			.levelCount = _mips,
+			.baseArrayLayer = 0,
+			.layerCount = _layers,
+		};
 	}
 }

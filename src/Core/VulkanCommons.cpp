@@ -520,4 +520,48 @@ namespace vkl
 		}
 		return res;
 	}
+
+	VkImageAspectFlags getImageAspectFromFormat(VkFormat f)
+	{
+		// The detailed format could take care of this
+		VkImageAspectFlags res = 0;
+		
+		if (f >= VK_FORMAT_R4G4_UNORM_PACK8 && f <= VK_FORMAT_E5B9G9R9_UFLOAT_PACK32)
+		{
+			res = VK_IMAGE_ASPECT_COLOR_BIT;
+		}
+		else if (f >= VK_FORMAT_E5B9G9R9_UFLOAT_PACK32 && f <= VK_FORMAT_D32_SFLOAT_S8_UINT)
+		{
+			switch (f)
+			{
+				case VK_FORMAT_D16_UNORM:
+					res = VK_IMAGE_ASPECT_DEPTH_BIT;
+					break;
+				case VK_FORMAT_X8_D24_UNORM_PACK32:
+					res = VK_IMAGE_ASPECT_DEPTH_BIT;
+					break;
+				case VK_FORMAT_D32_SFLOAT:
+					res = VK_IMAGE_ASPECT_DEPTH_BIT;
+					break;
+				case VK_FORMAT_S8_UINT:
+					res = VK_IMAGE_ASPECT_STENCIL_BIT;
+					break;
+				case VK_FORMAT_D16_UNORM_S8_UINT:
+					res = VK_IMAGE_ASPECT_DEPTH_STENCIL_BITS;
+					break;
+				case VK_FORMAT_D24_UNORM_S8_UINT:
+					res = VK_IMAGE_ASPECT_DEPTH_STENCIL_BITS;
+					break;
+				case VK_FORMAT_D32_SFLOAT_S8_UINT:
+					res = VK_IMAGE_ASPECT_DEPTH_BIT;
+					break;
+			}
+		}
+		else
+		{
+			assert(false);
+		}
+		
+		return res;
+	}
 }

@@ -91,26 +91,43 @@ namespace vkl
 		_image->removeInvalidationCallbacks(this);
 	}
 
+	void ImageView::constructorBody(bool create_instance)
+	{
+		_image->addInvalidationCallback(Callback{
+				.callback = [&]()
+				{
+					this->destroyInstance();
+				},
+				.id = this,
+			});
+		if (create_instance)
+		{
+			createInstance();
+		}
+	}
+
 	ImageView::ImageView(CreateInfo const& ci) :
-		InstanceHolder<ImageViewInstance>((ci.app ? ci.app : (ci.image ? ci.image->application() : ci.image_ci->app)), ci.name),
-		_image(ci.image ? ci.image : std::make_shared<Image>(*ci.image_ci)),
+		InstanceHolder<ImageViewInstance>((ci.app ? ci.app : ci.image->application()), ci.name),
+		_image(ci.image),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format.hasValue() ? ci.format : _image->format()),
 		_components(ci.components),
 		_range(ci.range.has_value() ? ci.range.value() : _image->defaultSubresourceRange())
 	{
-		_image->addInvalidationCallback(Callback{
-			.callback = [&]()
-			{
-				this->destroyInstance();
-			},
-			.id = this,
-		});
-		if (ci.create_on_construct)
-		{
-			createInstance();
-		}
+		constructorBody(ci.create_on_construct);
 	}
+
+	ImageView::ImageView(Image::CreateInfo const& ci):
+		InstanceHolder<ImageViewInstance>(ci.app, ci.name),
+		_image(std::make_shared<Image>(ci)),
+		_type(getDefaultViewTypeFromImageType(_image->type())),
+		_format(_image->format()),
+		_components(defaultComponentMapping()),
+		_range(_image->defaultSubresourceRange())
+	{
+		constructorBody(ci.create_on_construct);
+	}
+
 
 	bool ImageView::updateResource(UpdateContext & ctx)
 	{
