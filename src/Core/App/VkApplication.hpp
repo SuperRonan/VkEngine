@@ -28,6 +28,7 @@ namespace vkl
 	class StagingPool;
 	class CommandPool;
 	class DescriptorSetLayout;
+	class DescriptorSetLayoutInstance;
 	using DescriptorSetLayoutCache = GenericCache<DescriptorSetLayout>;
 	template <class Key>
 	using DescriptorSetLayoutCacheImpl = GenericCacheImpl<Key, DescriptorSetLayout>;
@@ -126,6 +127,7 @@ namespace vkl
 		VulkanFeatures _available_features = {};
 
 		mutable std::shared_mutex _mutex;
+		std::shared_ptr<DescriptorSetLayoutInstance> _empty_set_layout;
 		std::vector<std::shared_ptr<DescriptorSetLayoutCache>> _desc_set_layout_caches;
 		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
 
@@ -285,6 +287,8 @@ namespace vkl
 		{
 			return _options;
 		}
+
+		std::shared_ptr<DescriptorSetLayoutInstance> getEmptyDescSetLayout();
 	};
 
 	class VkObject

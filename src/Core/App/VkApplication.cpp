@@ -2,6 +2,7 @@
 #include "VkApplication.hpp"
 #include <Core/VkObjects/CommandBuffer.hpp>
 #include <Core/Execution/SamplerLibrary.hpp>
+#include <Core/VkObjects/DescriptorSetLayout.hpp>
 
 #include <argparse/argparse.hpp>
 
@@ -646,6 +647,19 @@ namespace vkl
 
 	}
 
+	std::shared_ptr<DescriptorSetLayoutInstance> VkApplication::getEmptyDescSetLayout()
+	{
+		std::unique_lock lock(_mutex);
+		if (!_empty_set_layout)
+		{
+			_empty_set_layout = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
+				.app = this,
+				.name = "EmptyDescSetLayout",
+			});
+		}
+		return _empty_set_layout;
+	}
+
 	void VkApplication::initGLFW()
 	{
 		glfwInit();
@@ -728,6 +742,8 @@ namespace vkl
 			delete _sampler_library;
 			_sampler_library = nullptr;
 		}
+
+		_empty_set_layout = nullptr;
 
 		_pools.graphics = nullptr;
 		_pools.transfer = nullptr;

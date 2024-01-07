@@ -368,7 +368,12 @@ namespace vkl
 		_sets_layouts.resize(std::max(_reflection_sets_layouts.size(), _provided_sets_layouts.size()));
 		for (size_t i = 0; i < _sets_layouts.size(); ++i)
 		{
-			_sets_layouts.getRef(i) = _provided_sets_layouts.getSafe(i) ? _provided_sets_layouts.getSafe(i) : _reflection_sets_layouts.getSafe(i);
+			std::shared_ptr<DescriptorSetLayoutInstance> & sli = _sets_layouts.getRef(i);
+			sli = _provided_sets_layouts.getSafe(i);
+			if(!sli)
+				sli = _reflection_sets_layouts.getSafe(i);
+			if(!sli)
+				sli = application()->getEmptyDescSetLayout();
 		}
 
 		_layout = std::make_shared<PipelineLayoutInstance>(PipelineLayoutInstance::CI{

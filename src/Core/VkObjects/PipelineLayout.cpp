@@ -7,13 +7,19 @@ namespace vkl
 		_sets(ci.sets),
 		_push_constants(ci.push_constants)
 	{
-		std::vector<VkDescriptorSetLayout> sets_layout(_sets.size());
-		for(size_t i=0; i<_sets.size(); ++i)	sets_layout[i] = _sets[i] ? *_sets[i] : VK_NULL_HANDLE;
+		
+		MyVector<VkDescriptorSetLayout> sets_layout;
+		sets_layout.resize(_sets.size());
+		for(size_t i=0; i<_sets.size(); ++i)
+		{
+			assert(_sets[i]);
+			sets_layout[i] = _sets[i]->handle();
+		}
 		VkPipelineLayoutCreateInfo vk_ci {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = _flags,
-			.setLayoutCount = static_cast<uint32_t>(_sets.size()),
+			.setLayoutCount = sets_layout.size32(),
 			.pSetLayouts = sets_layout.data(),
 			.pushConstantRangeCount = static_cast<uint32_t>(_push_constants.size()),
 			.pPushConstantRanges = _push_constants.data(),
