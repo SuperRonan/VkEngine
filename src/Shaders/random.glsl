@@ -46,6 +46,18 @@ float randomFloat01(inout RNGState rng)
 	return res;
 }
 
+int randomSigni(inout RNGState rng)
+{
+	int r = int(randomUint(rng));
+	int res = (r & 1) * 2 - 1;
+	return res;
+}
+
+float randomSignf(inout RNGState rng)
+{
+	return float(randomSigni(rng));
+}
+
 float randomFloat(inout RNGState rng, float lower, float upper)
 {
 	const float xi = randomFloat01(rng);
