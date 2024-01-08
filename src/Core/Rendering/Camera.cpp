@@ -73,36 +73,40 @@ namespace vkl
 		_gamepad(ci.gamepad)
 	{}
 
-	void FirstPersonCameraController::updateCamera(float dt)
+	void FirstPersonCameraController::updateCamera(float dt, MouseListener* mouse, KeyboardListener* keyboard, GamepadListener* gamepad)
 	{
 		Camera::CameraDelta delta;
 
 		const float fov_sensitivity = (_camera->fov()) / (std::numbers::pi / 2.0);
 
-		if (_keyboard)
+		if(!mouse) mouse = _mouse;
+		if(!keyboard) keyboard = _keyboard;
+		if(!gamepad) gamepad = _gamepad;
+
+		if (keyboard)
 		{
 
-			if (_keyboard->getKey(_key_forward).currentlyPressed())
+			if (keyboard->getKey(_key_forward).currentlyPressed())
 			{
 				delta.movement.z += 1;
 			}
-			if (_keyboard->getKey(_key_backward).currentlyPressed())
+			if (keyboard->getKey(_key_backward).currentlyPressed())
 			{
 				delta.movement.z += -1;
 			}
-			if (_keyboard->getKey(_key_left).currentlyPressed())
+			if (keyboard->getKey(_key_left).currentlyPressed())
 			{
 				delta.movement.x += -1;
 			}
-			if (_keyboard->getKey(_key_right).currentlyPressed())
+			if (keyboard->getKey(_key_right).currentlyPressed())
 			{
 				delta.movement.x += 1;
 			}
-			if (_keyboard->getKey(_key_upward).currentlyPressed())
+			if (keyboard->getKey(_key_upward).currentlyPressed())
 			{
 				delta.movement.y += 1;
 			}
-			if (_keyboard->getKey(_key_downward).currentlyPressed())
+			if (keyboard->getKey(_key_downward).currentlyPressed())
 			{
 				delta.movement.y += -1;
 			}
@@ -112,34 +116,34 @@ namespace vkl
 
 
 
-		if (_mouse)
+		if (mouse)
 		{
-			if (_mouse->getButton(GLFW_MOUSE_BUTTON_LEFT).currentlyPressed())
+			if (mouse->getButton(GLFW_MOUSE_BUTTON_LEFT).currentlyPressed())
 			{
-				delta.angle += _mouse->getPos().delta() * _mouse_sensitivity;
+				delta.angle += mouse->getPos().delta() * _mouse_sensitivity;
 			}
 
-			delta.fov *= exp(-_mouse->getScroll().current.y * _fov_sensitivity);
+			delta.fov *= exp2(-mouse->getScroll().current.y * _fov_sensitivity);
 		}
 
-		if (_gamepad)
+		if (gamepad)
 		{
-			delta.movement.x += _gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_X).current;
-			delta.movement.z -= _gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_Y).current;
+			delta.movement.x += gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_X).current;
+			delta.movement.z -= gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_Y).current;
 
-			if (_gamepad->getButton(GLFW_GAMEPAD_BUTTON_CROSS).currentlyPressed())
+			if (gamepad->getButton(GLFW_GAMEPAD_BUTTON_CROSS).currentlyPressed())
 			{
 				delta.movement.y += 1;
 			}
-			if (_gamepad->getButton(GLFW_GAMEPAD_BUTTON_CIRCLE).currentlyPressed())
+			if (gamepad->getButton(GLFW_GAMEPAD_BUTTON_CIRCLE).currentlyPressed())
 			{
 				delta.movement.y -= 1;
 			}
 
-			delta.angle.x += _gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_X).current * dt * _joystick_sensitivity;
-			delta.angle.y += _gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_Y).current * dt * _joystick_sensitivity;
+			delta.angle.x += gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_X).current * dt * _joystick_sensitivity;
+			delta.angle.y += gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_Y).current * dt * _joystick_sensitivity;
 
-			float fov_zoom = _gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_TRIGGER).current - _gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER).current;
+			float fov_zoom = gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_TRIGGER).current - gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER).current;
 			delta.fov *= exp(fov_zoom * _fov_sensitivity * dt * 1e1);
 		}
 

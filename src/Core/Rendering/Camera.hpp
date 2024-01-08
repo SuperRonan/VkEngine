@@ -141,7 +141,7 @@ namespace vkl
 			_camera(camera)
 		{}
 
-		virtual void updateCamera(float dt) = 0;
+		virtual void updateCamera(float dt, MouseListener * mouse = nullptr, KeyboardListener * keyboard = nullptr, GamepadListener * gamepad = nullptr) = 0;
 
 	};
 
@@ -182,6 +182,6 @@ namespace vkl
 			return _key_upward;
 		}
 
-		virtual void updateCamera(float dt) override;
+		virtual void updateCamera(float dt, MouseListener* mouse = nullptr, KeyboardListener* keyboard = nullptr, GamepadListener* gamepad = nullptr) override;
 	};
 }
