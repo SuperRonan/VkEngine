@@ -19,8 +19,9 @@ namespace vkl
 		
 		struct Option
 		{
-			std::string name;
-			std::string desc;
+			std::string name = {};
+			std::string desc = {};
+			bool disable = false;
 		};
 
 	protected:

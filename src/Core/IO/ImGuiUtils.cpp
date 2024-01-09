@@ -43,6 +43,7 @@ namespace vkl
 		size_t active_index = _index;
 		for (size_t i = 0; i < _options.size(); ++i)
 		{
+			ImGui::BeginDisabled(_options[i].disable);
 			const bool b = ImGui::RadioButton(_options[i].name.c_str(), i == _index);
 			if (!_options[i].desc.empty())
 			{
@@ -51,6 +52,7 @@ namespace vkl
 			if (b)	active_index = i;
 			if (same_line && (i != _options.size() - 1))
 				ImGui::SameLine();
+			ImGui::EndDisabled();
 		}
 		bool changed = _index != active_index;
 		if (changed)
@@ -69,6 +71,7 @@ namespace vkl
 			size_t active_index = _index;
 			for (size_t i = 0; i < _options.size(); ++i)
 			{
+				ImGui::BeginDisabled(_options[i].disable);
 				const bool b = active_index == i;
 				if (ImGui::Selectable(_options[i].name.c_str(), b))
 				{
@@ -82,6 +85,7 @@ namespace vkl
 				{
 					ImGui::SetItemTooltip(_options[i].desc.c_str());
 				}
+				ImGui::EndDisabled();
 			}
 			ImGui::EndCombo();
 			res = _index != active_index;
