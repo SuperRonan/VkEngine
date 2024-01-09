@@ -359,7 +359,7 @@ namespace vkl
 		{
 			DrawType draw_type;
 			bool dispatch_threads = true;
-			std::vector<DrawCallInfo> draw_list;
+			MyVector<DrawCallInfo> draw_list;
 		};
 		using DI = DrawInfo;
 

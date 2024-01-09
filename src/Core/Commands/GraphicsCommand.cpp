@@ -859,9 +859,14 @@ namespace vkl
 
 	std::shared_ptr<ExecutionNode> MeshCommand::getExecutionNode(RecordContext& ctx)
 	{
-		NOT_YET_IMPLEMENTED;
 		DrawInfo di{
-
+			.draw_type = DrawType::Draw,
+			.dispatch_threads = _dispatch_threads,
+			.draw_list = {
+				DrawCallInfo{
+					.extent = _extent.value(),
+				}
+			},
 		};
 
 		return getExecutionNode(ctx, di);
