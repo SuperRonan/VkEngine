@@ -79,8 +79,6 @@ namespace vkl
 
 		ResourcesLists _internal_resources;
 
-		MountingPoints * _mounting_points;
-
 		ExecutionContext _context;
 
 		ExecutionThread* _current_thread = nullptr;
@@ -149,6 +147,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<VkWindow> window = nullptr;
 			MountingPoints * mounting_points = nullptr;
+			DefinitionsMap * common_definitions = nullptr;
 			bool use_ImGui = false;
 			bool use_debug_renderer = true;
 			bool use_ray_tracing = false;

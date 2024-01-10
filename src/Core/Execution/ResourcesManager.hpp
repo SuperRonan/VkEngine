@@ -18,14 +18,16 @@ namespace vkl
 		std::chrono::time_point<_shader_clock_t> _last_shader_check;
 		std::chrono::milliseconds _shader_check_period;
 
-		const DefinitionsMap * _common_definitions;
+		std::unique_ptr<DefinitionsMap> _common_definitions;
 
-		MountingPoints * _mounting_points = nullptr;
+		std::unique_ptr<MountingPoints> _mounting_points;
 
 		UploadQueue _upload_queue;
 		MipMapComputeQueue _mips_queue;
 
 		DescriptorWriter _descriptor_writer;
+
+		void populateCommonObjects();
 
 	public:
 
@@ -34,8 +36,6 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			std::chrono::milliseconds shader_check_period = 1000ms;
-			const DefinitionsMap * common_definitions;
-			MountingPoints * mounting_points = nullptr;
 		};
 
 		ResourcesManager(CreateInfo const& ci);
@@ -54,6 +54,16 @@ namespace vkl
 		MipMapComputeQueue& mipMapQueue()
 		{
 			return _mips_queue;
+		}
+
+		DefinitionsMap* commonDefinitions()const
+		{
+			return _common_definitions.get();
+		}
+
+		MountingPoints* mountingPoints()const
+		{
+			return _mounting_points.get();
 		}
 	};
 }

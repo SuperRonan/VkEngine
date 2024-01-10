@@ -94,6 +94,7 @@ namespace vkl
 		Executor(Executor::CI{
 			.app = ci.app ? ci.app : ci.window->application(), 
 			.name = ci.name,
+			.common_definitions = ci.common_definitions,
 			.use_debug_renderer = ci.use_debug_renderer,
 			.use_ray_tracing_pipeline = ci.use_ray_tracing,
 		}),
@@ -103,17 +104,13 @@ namespace vkl
 			.name = name() + ".StagingPool",
 			.allocator = application()->allocator(),
 		}),
-		_mounting_points(ci.mounting_points),
 		_context(ExecutionContext::CI{
 			.app = application(),
 			.name = name() + ".exec_context",
 			.resource_tid = 0,
 			.staging_pool = &_staging_pool,
-			.mounting_points = _mounting_points,
 		})
 	{
-		(*_mounting_points)["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
-
 		if (ci.use_ImGui)
 		{
 			_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
@@ -160,8 +157,6 @@ namespace vkl
 
 	void LinearExecutor::updateResources(UpdateContext & context)
 	{
-		_common_definitions.update();
-
 		if (_window->updateResources(context))
 		{
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();

@@ -87,8 +87,6 @@ namespace vkl
 
 		StagingPool* _staging_pool = nullptr;
 
-		MountingPoints * _mounting_points = nullptr;
-
 		DescriptorSetsManager _graphics_bound_sets;
 		DescriptorSetsManager _compute_bound_sets;
 		DescriptorSetsManager _ray_tracing_bound_sets;
@@ -108,7 +106,6 @@ namespace vkl
 			std::shared_ptr<CommandBuffer> cmd = nullptr;
 			size_t resource_tid = 0;
 			StagingPool* staging_pool = nullptr;
-			MountingPoints * mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -161,16 +158,6 @@ namespace vkl
 		size_t resourceThreadId()const
 		{
 			return  _resource_tid;
-		}
-
-		MountingPoints* mountingPoints()
-		{
-			return _mounting_points;
-		}
-
-		const MountingPoints* mountingPoints() const
-		{
-			return _mounting_points;
 		}
 
 		DescriptorSetsManager& graphicsBoundSets()

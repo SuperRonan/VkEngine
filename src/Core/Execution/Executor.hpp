@@ -91,11 +91,10 @@ namespace vkl
 	{
 	protected:
 
-		DefinitionsMap _common_definitions;
-
-
 		bool _use_debug_renderer = true;
 		bool _use_rt_pipeline = false;
+		
+		DefinitionsMap * _common_definitions = nullptr;
 		
 		std::shared_ptr<DebugRenderer> _debug_renderer = nullptr;
 
@@ -114,6 +113,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
+			DefinitionsMap * common_definitions = nullptr;
 			bool use_debug_renderer = true;
 			bool use_ray_tracing_pipeline = false;
 		};
@@ -122,19 +122,15 @@ namespace vkl
 		Executor(CreateInfo const& ci):
 			VkObject(ci.app, ci.name),
 			_use_debug_renderer(ci.use_debug_renderer),
-			_use_rt_pipeline(ci.use_ray_tracing_pipeline)
+			_use_rt_pipeline(ci.use_ray_tracing_pipeline),
+			_common_definitions(ci.common_definitions)
 		{}
 
 		virtual void init() = 0;
 
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) = 0;
 
-		DefinitionsMap& getCommonDefinitions()
-		{
-			return _common_definitions;
-		}
-
-		const DefinitionsMap& getCommonDefinitions()const
+		DefinitionsMap * getCommonDefinitions()const
 		{
 			return _common_definitions;
 		}

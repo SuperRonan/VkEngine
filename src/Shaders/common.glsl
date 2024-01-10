@@ -87,7 +87,7 @@ float16_t sqr(float16_t x)
 
 float16_t rcp(float16_t f)
 {
-	return 1.0f / f;
+	return float16_t(1.0f) / f;
 }
 #endif
 

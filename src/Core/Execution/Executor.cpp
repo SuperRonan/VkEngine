@@ -39,7 +39,7 @@ namespace vkl
 		sets_layouts += {0, _common_set_layout};
 		_debug_renderer = std::make_shared<DebugRenderer>(DebugRenderer::CreateInfo{
 			.app = application(),
-			.common_definitions = &_common_definitions,
+			.common_definitions = _common_definitions,
 			.sets_layout = sets_layouts,
 		});
 	}

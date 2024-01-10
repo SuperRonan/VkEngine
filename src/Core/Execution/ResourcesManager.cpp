@@ -6,8 +6,8 @@ namespace vkl
 	ResourcesManager::ResourcesManager(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
 		_shader_check_period(ci.shader_check_period),
-		_common_definitions(ci.common_definitions),
-		_mounting_points(ci.mounting_points),
+		_common_definitions(std::make_unique<DefinitionsMap>()),
+		_mounting_points(std::make_unique<MountingPoints>()),
 		_upload_queue(UploadQueue::CI{
 			.app = application(),
 			.name = name() + ".uploadQueue",
@@ -22,6 +22,21 @@ namespace vkl
 		})
 	{
 		_last_shader_check = _shader_clock_t::now() - 2 * _shader_check_period;
+
+		populateCommonObjects();
+	}
+
+	void ResourcesManager::populateCommonObjects()
+	{
+		(*_mounting_points)["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
+
+		VulkanFeatures const& features = application()->availableFeatures();
+		VulkanDeviceProps const& props = application()->deviceProperties();
+
+		if (features.features_12.shaderFloat16)
+		{
+			_common_definitions->setDefinition("SHADER_FP16_AVAILABLE", "1");
+		}
 	}
 
 
@@ -38,13 +53,15 @@ namespace vkl
 			}
 		}
 
+		_common_definitions->update();
+
 		std::shared_ptr<UpdateContext> res = std::make_shared<UpdateContext>(UpdateContext::CI{
 			.app = application(),
 			.name = name() + ".update_context",
 			.update_tick = _update_tick,
 			.shader_check_tick = _shader_check_tick,
-			.common_definitions = _common_definitions,
-			.mounting_points = _mounting_points,
+			.common_definitions = _common_definitions.get(),
+			.mounting_points = _mounting_points.get(),
 			.upload_queue = &_upload_queue,
 			.mips_queue = &_mips_queue,
 			.descriptor_writer = _descriptor_writer,
