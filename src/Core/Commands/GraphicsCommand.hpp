@@ -42,11 +42,14 @@ namespace vkl
 		VertexInputDescription _vertex_input_desc;
 		std::shared_ptr<GraphicsProgram> _program;
 		std::vector<std::shared_ptr<ImageView>> _attachements = {};
-		std::shared_ptr<ImageView> _depth = nullptr;
+		std::shared_ptr<ImageView> _depth_stencil = nullptr;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 
 		std::optional<bool> _write_depth = {};
+		std::optional<VkCompareOp> _depth_compare_op = VK_COMPARE_OP_LESS;
+		std::optional<VkStencilOpState> _stencil_front_op = {};
+		std::optional<VkStencilOpState> _stencil_back_op = {};
 
 		std::optional<VkClearColorValue> _clear_color = {};
 		std::optional<VkClearDepthStencilValue> _clear_depth_stencil = {};
@@ -78,8 +81,11 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
-			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			std::optional<bool> write_depth = {};
+			std::optional<VkCompareOp> depth_compare_op = {};
+			std::optional<VkStencilOpState> stencil_front_op = {};
+			std::optional<VkStencilOpState> stencil_back_op = {};
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
@@ -181,8 +187,11 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
-			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			std::optional<bool> write_depth = {};
+			std::optional<VkCompareOp> depth_compare_op = {};
+			std::optional<VkStencilOpState> stencil_front_op = {};
+			std::optional<VkStencilOpState> stencil_back_op = {};
 			std::filesystem::path vertex_shader_path = {};
 			std::filesystem::path tess_control_shader_path = {};
 			std::filesystem::path tess_eval_shader_path = {};
@@ -331,8 +340,11 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
-			std::shared_ptr<ImageView> depth_buffer = nullptr;
+			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			std::optional<bool> write_depth = {};
+			std::optional<VkCompareOp> depth_compare_op = {};
+			std::optional<VkStencilOpState> stencil_front_op = {};
+			std::optional<VkStencilOpState> stencil_back_op = {};
 			std::filesystem::path task_shader_path = {};
 			std::filesystem::path mesh_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};

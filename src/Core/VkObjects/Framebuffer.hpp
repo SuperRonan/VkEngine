@@ -13,8 +13,8 @@ namespace vkl
 	protected:
 
 		std::vector<std::shared_ptr<ImageViewInstance>> _textures = {};
-		std::shared_ptr<ImageViewInstance> _depth = nullptr;
-		std::shared_ptr<RenderPass> _render_pass = nullptr;
+		std::shared_ptr<ImageViewInstance> _depth_stencil = nullptr;
+		std::shared_ptr<RenderPassInstance> _render_pass = nullptr;
 		VkFramebuffer _handle = VK_NULL_HANDLE;
 
 	public:
@@ -23,9 +23,9 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::shared_ptr<RenderPass> render_pass = nullptr;
+			std::shared_ptr<RenderPassInstance> render_pass = nullptr;
 			std::vector<std::shared_ptr<ImageViewInstance>> targets = {};
-			std::shared_ptr<ImageViewInstance> depth = nullptr;
+			std::shared_ptr<ImageViewInstance> depth_stencil = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -90,7 +90,8 @@ namespace vkl
 	protected:
 
 		std::vector<std::shared_ptr<ImageView>> _textures = {};
-		std::shared_ptr<ImageView> _depth = nullptr;
+		// Maybe in a future version of vulkan, depth and stencil can be separate images
+		std::shared_ptr<ImageView> _depth_stencil = nullptr;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 
 		void createInstance();
@@ -104,7 +105,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<RenderPass> render_pass = nullptr;
 			std::vector<std::shared_ptr<ImageView>> targets = {};
-			std::shared_ptr<ImageView> depth = nullptr;
+			std::shared_ptr<ImageView> depth_stencil = nullptr;
 		};
 
 		using CI = CreateInfo;

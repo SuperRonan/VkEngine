@@ -535,7 +535,7 @@ namespace vkl
 					&range
 				);
 			}
-			if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+			if (aspect & VK_IMAGE_ASPECT_DEPTH_STENCIL_BITS)
 			{
 				vkCmdClearDepthStencilImage(
 					*cmd,

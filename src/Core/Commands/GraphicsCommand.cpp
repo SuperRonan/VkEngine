@@ -94,8 +94,11 @@ namespace vkl
 		_cull_mode(ci.cull_mode),
 		_vertex_input_desc(ci.vertex_input_description),
 		_attachements(ci.targets),
-		_depth(ci.depth_buffer),
+		_depth_stencil(ci.depth_stencil),
 		_write_depth(ci.write_depth),
+		_depth_compare_op(ci.depth_compare_op),
+		_stencil_front_op(ci.stencil_front_op),
+		_stencil_back_op(ci.stencil_back_op),
 		_clear_color(ci.clear_color),
 		_clear_depth_stencil(ci.clear_depth_stencil),
 		_blending(ci.blending),
@@ -107,75 +110,51 @@ namespace vkl
 	{
 		using namespace std::containers_append_operators;
 		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
+		
 		std::vector<RenderPass::AttachmentDescription2> at_desc(n_color);
 		std::vector<VkAttachmentReference2> at_ref(n_color);
+
+		std::vector<VkSubpassDependency2> dependencies;
+
 		for (size_t i = 0; i < n_color; ++i)
 		{
+			const std::optional<VkClearColorValue> & clear_color = _clear_color;
+			const std::optional<VkPipelineColorBlendAttachmentState> & opt_blending = _blending;
+
+			VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+
+			if (clear_color.has_value())	load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			if (opt_blending.has_value())
+			{
+				const VkPipelineColorBlendAttachmentState & blending = opt_blending.value();
+				if (blending.blendEnable)
+				{
+					load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+					// We could go in details of the blend factors
+				}
+			}
+			
 			at_desc[i] = RenderPass::AttachmentDescription2{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
 				.flags = 0,
 				.format = _attachements[i]->format(),
 				.samples = _attachements[i]->image()->sampleCount(),
-				.loadOp = _clear_color.has_value() ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
+				.loadOp = load_op,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.initialLayout = layout,
+				.finalLayout = layout,
 			};
 			at_ref[i] = VkAttachmentReference2{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
 				.pNext = nullptr,
 				.attachment = uint32_t(i),
-				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.layout = layout,
 			};
 		}
-
-
-		const bool render_depth = !!_depth;
-
-		if (render_depth)
-		{
-			const bool write_depth = _write_depth.value_or(true);
-
-			at_desc.push_back(RenderPass::AttachmentDescription2{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-				.pNext = nullptr,
-				.flags = 0,
-				.format = _depth->format(),
-				.samples = _depth->image()->sampleCount(),
-				.loadOp = _clear_depth_stencil.has_value() ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp = write_depth ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_NONE,
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-				.finalLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-			});
-			at_ref.push_back(VkAttachmentReference2{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-				.pNext = nullptr,
-				.attachment = static_cast<uint32_t>(at_desc.size() - 1),
-				.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			});
-		}
-
-		VkSubpassDescription2 subpass = {
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-			.pNext = nullptr,
-			.flags = 0,
-			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
-			.colorAttachmentCount = n_color,
-			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the ptr is copied, assuming the data is copied later
-			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = render_depth ? (at_ref.data() + n_color) : nullptr, // Warning this is unsafe, the ptr is copied, assuming the data is copied later
-			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
-		};
-		std::vector<VkSubpassDependency2> dependencies;
-
 		VkSubpassDependency2 color_dependency = {
 			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
 			.pNext = nullptr,
@@ -188,9 +167,77 @@ namespace vkl
 		};
 		dependencies.push_back(color_dependency);
 
-		if (render_depth)
+		if (_depth_stencil)
 		{
-			VkSubpassDependency2 depth_dependency = {
+			const bool write_depth = _write_depth.value_or(false);
+
+			const VkImageAspectFlags aspect = _depth_stencil->range().aspectMask;
+			const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.has_value();
+			const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.has_value() || _stencil_back_op.has_value());
+			assert(depth || stencil);
+			VkImageLayout layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			if (depth && !stencil)
+			{
+				layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+			}
+			else if (!depth && stencil)
+			{
+				layout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+			}
+
+			VkAttachmentLoadOp depth_load_op = VK_ATTACHMENT_LOAD_OP_LOAD, stencil_load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			VkAttachmentStoreOp depth_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE, stencil_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+			if (depth)
+			{
+				if (_clear_depth_stencil.has_value())
+				{
+					depth_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				}
+
+				if (write_depth)
+				{
+					depth_store_op = VK_ATTACHMENT_STORE_OP_STORE;
+				}
+			}
+
+			if (stencil)
+			{
+				if (_stencil_back_op.has_value() || _stencil_front_op.has_value())
+				{
+					// TODO go in the details of the stencil op
+					stencil_load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
+					stencil_store_op = VK_ATTACHMENT_STORE_OP_STORE;
+				}
+			
+				if (_clear_depth_stencil.has_value())
+				{
+					stencil_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				}
+			}
+
+
+			at_desc.push_back(RenderPass::AttachmentDescription2{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
+				.pNext = nullptr,
+				.flags = 0,
+				.format = _depth_stencil->format(),
+				.samples = _depth_stencil->image()->sampleCount(),
+				.loadOp = depth_load_op,
+				.storeOp = depth_store_op,
+				.stencilLoadOp = stencil_load_op,
+				.stencilStoreOp = stencil_store_op,
+				.initialLayout = layout,
+				.finalLayout = layout,
+			});
+			at_ref.push_back(VkAttachmentReference2{
+				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
+				.pNext = nullptr,
+				.attachment = static_cast<uint32_t>(at_desc.size() - 1),
+				.layout = layout,
+			});
+
+			VkSubpassDependency2 depth_stencil_dependency = {
 				.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
 				.pNext = nullptr,
 				.srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -200,8 +247,23 @@ namespace vkl
 				.srcAccessMask = VK_ACCESS_NONE,
 				.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, // TODO if read depth
 			};
-			dependencies.push_back(depth_dependency);
+			dependencies.push_back(depth_stencil_dependency);
 		}
+
+		VkSubpassDescription2 subpass = {
+			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
+			.pNext = nullptr,
+			.flags = 0,
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount = 0,
+			.pInputAttachments = nullptr,
+			.colorAttachmentCount = n_color,
+			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the ptr is copied, assuming the data is copied later
+			.pResolveAttachments = nullptr,
+			.pDepthStencilAttachment = _depth_stencil ? (at_ref.data() + n_color) : nullptr, // Warning this is unsafe, the ptr is copied, assuming the data is copied later
+			.preserveAttachmentCount = 0,
+			.pPreserveAttachments = nullptr,
+		};
 
 		_render_pass = std::make_shared <RenderPass>(RenderPass::CI{
 			.app = application(),
@@ -210,7 +272,7 @@ namespace vkl
 			.attachement_ref_per_subpass = {at_ref},
 			.subpasses = {subpass},
 			.dependencies = dependencies,
-			.last_is_depth_stencil = render_depth,
+			.last_is_depth_stencil = _depth_stencil.operator bool(),
 		});
 
 		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
@@ -218,7 +280,7 @@ namespace vkl
 			.name = name() + ".Framebuffer",
 			.render_pass = _render_pass,
 			.targets = _attachements,
-			.depth = _depth,
+			.depth_stencil = _depth_stencil,
 		});
 	}
 
@@ -226,35 +288,60 @@ namespace vkl
 	{
 		node._render_pass = _render_pass->instance();
 		node._framebuffer = _framebuffer->instance();
-		node._depth_stencil = _depth ? _depth->instance() : nullptr;
+		node._depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr;
 
 		node._clear_color = _clear_color;
 		node._clear_depth_stencil = _clear_depth_stencil;
 
 		for (size_t i = 0; i < node._framebuffer->size(); ++i)
 		{
+			const VkAttachmentDescription2 & at_desc = node._render_pass->getAttachementDescriptors2()[i];
+			VkAccessFlags2 access = VK_ACCESS_2_NONE;
+			if (at_desc.storeOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+			{
+				access |= VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+			}
+			if (at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
+			{
+				access |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
+			}
 			node.resources() += ImageViewUsage{
 				.ivi = node._framebuffer->textures()[i],
 				.begin_state = ResourceState2{
-					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT, // TODO add read bit if alpha blending 
-					.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.access = access, 
+					.layout = at_desc.initialLayout,
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				},
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			};
+			// TODO end state IFN
 		}
 		if (node._depth_stencil)
 		{
-			const VkAccessFlags2 access2 = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT; // TODO deduce from the depth test;
+			const VkAttachmentDescription2& at_desc = node._render_pass->getAttachementDescriptors2().back();
+			
+			VkAccessFlags2 access = VK_ACCESS_2_NONE;
+			VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+
+			if (at_desc.storeOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.stencilStoreOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR || at_desc.stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+			{
+				access |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			}
+			if (at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD || at_desc.stencilStoreOp == VK_ATTACHMENT_LOAD_OP_LOAD)
+			{
+				access |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			}
+
 			node.resources() += ImageViewUsage{
 				.ivi = node._depth_stencil,
 				.begin_state = ResourceState2{
-					.access = access2,
-					.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-					.stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, // TODO deduce from fragment shader reflection
+					.access = access,
+					.layout = at_desc.initialLayout,
+					.stage = stage,
 				},
 				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			};
+			// TODO end state IFN
 		}
 	}
 
@@ -276,9 +363,37 @@ namespace vkl
 		gci.program = _program;
 		gci.render_pass = _render_pass;
 
-		if (_depth)
+		if (_depth_stencil)
 		{
-			gci.depth_stencil = Pipeline::DepthStencilCloser(_write_depth.value_or(true));
+			const VkImageAspectFlags aspect = _depth_stencil->range().aspectMask;
+			const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.has_value();
+			const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.has_value() || _stencil_back_op.has_value());
+			gci.depth_stencil = VkPipelineDepthStencilStateCreateInfo{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.depthTestEnable = depth ? VK_TRUE : VK_FALSE,
+				.depthWriteEnable = _write_depth.value_or(false) ? VK_TRUE : VK_FALSE,
+				.depthCompareOp = _depth_compare_op.value_or(VK_COMPARE_OP_LESS),
+				.depthBoundsTestEnable = VK_FALSE,
+				.stencilTestEnable = stencil ? VK_TRUE : VK_FALSE,
+				.minDepthBounds = 0.0,
+				.maxDepthBounds = 1.0,
+			};
+			if (stencil)
+			{
+				const VkStencilOpState default_op{
+					.failOp = VK_STENCIL_OP_KEEP,
+					.passOp = VK_STENCIL_OP_KEEP,
+					.depthFailOp = VK_STENCIL_OP_KEEP,
+					.compareOp = VK_COMPARE_OP_ALWAYS,
+					.compareMask = 0x00,
+					.writeMask = 0x00,
+					.reference = 0x00,
+				};
+				gci.depth_stencil.value().front = _stencil_front_op.value_or(default_op);
+				gci.depth_stencil.value().back = _stencil_back_op.value_or(default_op);
+			}
 		}
 
 		if (false)
@@ -426,8 +541,11 @@ namespace vkl
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
-			.depth_buffer = ci.depth_buffer,
+			.depth_stencil = ci.depth_stencil,
 			.write_depth = ci.write_depth,
+			.depth_compare_op = ci.depth_compare_op,
+			.stencil_front_op = ci.stencil_front_op,
+			.stencil_back_op = ci.stencil_back_op,
 			.clear_color = ci.clear_color,
 			.clear_depth_stencil = ci.clear_depth_stencil,
 			.blending = ci.blending,
@@ -725,8 +843,11 @@ namespace vkl
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.targets = ci.color_attachements,
-			.depth_buffer = ci.depth_buffer,
+			.depth_stencil = ci.depth_stencil,
 			.write_depth = ci.write_depth,
+			.depth_compare_op = ci.depth_compare_op,
+			.stencil_front_op = ci.stencil_front_op,
+			.stencil_back_op = ci.stencil_back_op,
 			.clear_color = ci.clear_color,
 			.clear_depth_stencil = ci.clear_depth_stencil,
 			.blending = ci.blending,

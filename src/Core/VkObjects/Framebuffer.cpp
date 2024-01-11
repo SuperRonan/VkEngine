@@ -6,21 +6,21 @@ namespace vkl
 	FramebufferInstance::FramebufferInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_textures(ci.targets),
-		_depth(ci.depth),
+		_depth_stencil(ci.depth_stencil),
 		_render_pass(ci.render_pass)
 	{
 		assert(!_textures.empty());
 		std::vector<VkImageView> views(_textures.size());
 		for (size_t i = 0; i < _textures.size(); ++i)	views[i] = *_textures[i];
-		if (_depth)
+		if (_depth_stencil)
 		{
-			views.push_back(*_depth);
+			views.push_back(*_depth_stencil);
 		}
 		VkFramebufferCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.renderPass = *_render_pass->instance(),
+			.renderPass = *_render_pass,
 			.attachmentCount = static_cast<uint32_t>(views.size()),
 			.pAttachments = views.data(),
 			.width = extent().width,
@@ -50,8 +50,8 @@ namespace vkl
 		FramebufferInstance::CreateInfo ci{
 			.app = application(),
 			.name = name(),
-			.render_pass = _render_pass,
-			.depth = _depth ? _depth->instance() : nullptr,
+			.render_pass = _render_pass->instance(),
+			.depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr,
 		};
 		ci.targets.resize(_textures.size());
 		for (size_t i = 0; i < _textures.size(); ++i)
@@ -74,7 +74,7 @@ namespace vkl
 	Framebuffer::Framebuffer(CreateInfo const& ci):
 		InstanceHolder<FramebufferInstance>(ci.app, ci.name),
 		_textures(ci.targets),
-		_depth(ci.depth),
+		_depth_stencil(ci.depth_stencil),
 		_render_pass(ci.render_pass)
 	{
 		Callback cb{
