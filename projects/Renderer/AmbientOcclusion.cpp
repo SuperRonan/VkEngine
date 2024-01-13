@@ -30,19 +30,15 @@ namespace vkl
 			};
 		};
 
-		_target = std::make_shared<ImageView>(ImageView::CI{
+		_target = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".target",
-			.image_ci = Image::CI{
-				.app = application(),
-				.name = name() + ".target",
-				.type = VK_IMAGE_TYPE_2D,
-				.format = &_format,
-				.extent = target_extent,
-				.layers = _positions->image()->layers(),
-				.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-			},
+			.type = VK_IMAGE_TYPE_2D,
+			.format = &_format,
+			.extent = target_extent,
+			.layers = _positions->image()->layers(),
+			.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
 		_sampler = std::make_shared<Sampler>(Sampler::CI{

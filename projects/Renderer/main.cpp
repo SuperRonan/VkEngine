@@ -174,36 +174,32 @@ namespace vkl
 			std::filesystem::path shaders = PROJECT_SRC_PATH;
 
 			ResourcesLists script_resources;
-			MountingPoints mounting_points;
-
-			LinearExecutor exec(LinearExecutor::CI{
-				.app = this,
-				.name = "exec",
-				.window = _main_window,
-				.mounting_points = &mounting_points,
-				.use_ImGui = true,
-				.use_debug_renderer = true,
-			});
 
 			ResourcesManager resources_manager = ResourcesManager::CreateInfo{
 				.app = this,
 				.name = "ResourcesManager",
 				.shader_check_period = 1s,
-				.common_definitions = &exec.getCommonDefinitions(),
-				.mounting_points = &mounting_points,
 			};
 
-			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(ImageView::CI{
-				.name = "Final Image View",
-				.image_ci = Image::CI{
-					.app = this,
-					.name = "Final Image",
-					.type = VK_IMAGE_TYPE_2D,
-					.format = VK_FORMAT_R16G16B16A16_SFLOAT,
-					.extent = _main_window->extent3D(),
-					.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-				},
+			LinearExecutor exec(LinearExecutor::CI{
+				.app = this,
+				.name = "exec",
+				.window = _main_window,
+				.mounting_points = resources_manager.mountingPoints(),
+				.common_definitions = resources_manager.commonDefinitions(),
+				.use_ImGui = true,
+				.use_debug_renderer = true,
+			});
+
+
+			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(Image::CI{
+				.app = this,
+				.name = "Final Image",
+				.type = VK_IMAGE_TYPE_2D,
+				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+				.extent = _main_window->extent3D(),
+				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
 			script_resources += final_image;
 
