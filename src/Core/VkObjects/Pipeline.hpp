@@ -134,7 +134,7 @@ namespace vkl
 			return scissor;
 		}
 
-		constexpr static VkPipelineRasterizationStateCreateInfo RasterizationDefault(VkCullModeFlags cull = VK_CULL_MODE_NONE)
+		constexpr static VkPipelineRasterizationStateCreateInfo RasterizationDefault(VkCullModeFlags cull = VK_CULL_MODE_NONE, VkPolygonMode polygon_mode = VK_POLYGON_MODE_FILL, float line_width = 1.0f)
 		{
 			VkPipelineRasterizationStateCreateInfo rasterization{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -142,11 +142,11 @@ namespace vkl
 				.flags = 0,
 				.depthClampEnable = VK_FALSE,
 				.rasterizerDiscardEnable = VK_FALSE,
-				.polygonMode = VK_POLYGON_MODE_FILL,
+				.polygonMode = polygon_mode,
 				.cullMode = cull,
 				.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 				.depthBiasEnable = VK_FALSE,
-				.lineWidth = 1.0f,
+				.lineWidth = line_width,
 			};
 			return rasterization;
 		}
