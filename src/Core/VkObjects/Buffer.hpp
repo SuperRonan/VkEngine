@@ -84,6 +84,8 @@ namespace vkl
 
 		void unMap();
 
+		void flush();
+
 		constexpr void* data()
 		{
 			return _data;

@@ -322,6 +322,23 @@ namespace vkl
 		};
 	}
 
+	constexpr VkExtent2D makeOneExtent2D()
+	{
+		return VkExtent2D{
+			.width = 1,
+			.height = 1,
+		};
+	}
+
+	constexpr VkExtent3D makeOneExtent3D()
+	{
+		return VkExtent3D{
+			.width = 1,
+			.height = 1,
+			.depth = 1,
+		};
+	}
+
 	constexpr VkOffset2D makeZeroOffset2D()
 	{
 		return VkOffset2D{

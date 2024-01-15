@@ -98,6 +98,12 @@ namespace vkl
 		_data = nullptr;
 	}
 
+	void BufferInstance::flush()
+	{
+		assert(_buffer != VK_NULL_HANDLE);
+		vmaFlushAllocation(_allocator, _alloc, 0, _ci.size);
+	}
+
 	DoubleResourceState2 BufferInstance::getState(size_t tid, Range r) const
 	{
 		assert(statesAreSorted(tid));

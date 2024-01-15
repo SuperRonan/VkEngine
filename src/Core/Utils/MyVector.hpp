@@ -105,6 +105,11 @@ namespace vkl
 			return static_cast<uint32_t>(ParentType::size());
 		}
 
+		constexpr size_t binary_size()const
+		{
+			return sizeof(T) * ParentType::size();
+		}
+
 		MyVector& operator+=(T const& t)
 		{
 			ParentType::push_back(t);
