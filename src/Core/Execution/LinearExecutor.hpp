@@ -167,6 +167,10 @@ namespace vkl
 
 		//ExecutionThread* beginTransferCommandBuffer();
 
+		void performSynchTransfers(UpdateContext & update_context, bool consume_asynch = true, TransferBudget budget = TransferBudget{.bytes = size_t(16'000'000), .instances = size_t(128)});
+
+		void performAsynchMipsCompute(MipMapComputeQueue & mips_queue, TransferBudget budget = TransferBudget{ .bytes = size_t(16'000'000), .instances = size_t(128) });
+
 		ExecutionThread* beginCommandBuffer(bool bind_common_set = true);
 
 		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);

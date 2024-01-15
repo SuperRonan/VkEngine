@@ -264,6 +264,58 @@ namespace vkl
 		_current_thread->execute(executable);
 	}
 
+	void LinearExecutor::performSynchTransfers(UpdateContext& update_context, bool consume_asynch, TransferBudget budget)
+	{
+		ExecutionThread* upload_thread = beginCommandBuffer();
+		UploadResources uploader(UploadResources::CI{
+			.app = application(),
+		});
+		ResourcesToUpload upload_list = update_context.resourcesToUpload();
+		if (consume_asynch && update_context.uploadQueue())
+		{
+
+			const size_t total_budget_bytes = budget.bytes;
+			const size_t min_asynch_budget_bytes = 1'000'000;
+			size_t synch_upload_cost = upload_list.getSize();
+			TransferBudget asynch_upload_budget{
+				.instances = budget.instances,
+			};
+			if (synch_upload_cost > (total_budget_bytes - min_asynch_budget_bytes))
+			{
+				asynch_upload_budget.bytes = min_asynch_budget_bytes;
+			}
+			else
+			{
+				asynch_upload_budget.bytes = total_budget_bytes - synch_upload_cost;
+			}
+			ResourcesToUpload asynch_list = update_context.uploadQueue()->consume(asynch_upload_budget);
+			upload_list += std::move(asynch_list);
+		}
+		
+		
+		(*upload_thread)(uploader.with(UploadResources::UI{
+			.upload_list = std::move(upload_list),
+		}));
+		
+		endCommandBuffer(upload_thread);
+	}
+
+	void LinearExecutor::performAsynchMipsCompute(MipMapComputeQueue& mips_queue, TransferBudget budget)
+	{
+		auto mips_list = mips_queue.consume(budget);
+
+		if (!mips_list.empty())
+		{
+			ComputeMips compute_mips = ComputeMips::CI{
+				.app = application(),
+				.name = "ComputeMipMaps",
+			};
+			_current_thread->execute(compute_mips.with(ComputeMips::ExecInfo{
+				.targets = mips_list,
+			}));
+		}
+	}
+
 	ExecutionThread* LinearExecutor::beginCommandBuffer(bool bind_common_set)
 	{
 		std::shared_ptr<CommandBuffer> cb = std::make_shared<CommandBuffer>(CommandBuffer::CI{
