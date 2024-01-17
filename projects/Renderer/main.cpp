@@ -403,57 +403,14 @@ namespace vkl
 				std::TickTock_hrc render_tick_tock;
 				render_tick_tock.tick();
 				{	
-					{
-						ExecutionThread * upload_thread = exec.beginCommandBuffer();
-						upload_thread->context()->setFramePerfCounters(&frame_counters);
-						UploadResources uploader(UploadResources::CI{
-							.app = this,
-						});
-						ResourcesToUpload upload_list = update_context->resourcesToUpload();
-						const size_t total_budget_bytes = 16'000'000;
-						const size_t min_asynch_budget_bytes = 1'000'000;
-						size_t synch_upload_cost = upload_list.getSize();
-						TransferBudget asynch_upload_budget{
-							.instances = 128,
-						};
-						if(synch_upload_cost > (total_budget_bytes - min_asynch_budget_bytes))
-						{
-							asynch_upload_budget.bytes = min_asynch_budget_bytes;
-						}
-						else
-						{
-							asynch_upload_budget.bytes = total_budget_bytes - synch_upload_cost;
-						}
-						ResourcesToUpload asynch_list = resources_manager.uploadQueue().consume(asynch_upload_budget);
-						upload_list += std::move(asynch_list);
-						(*upload_thread)(uploader.with(UploadResources::UI{
-							.upload_list = std::move(upload_list),
-						}));
-						exec.endCommandBuffer(upload_thread);
-					}
+					exec.performSynchTransfers(*update_context, true);
 					
 					ExecutionThread* ptr_exec_thread = exec.beginCommandBuffer();
 					ExecutionThread& exec_thread = *ptr_exec_thread;
 					exec_thread.setFramePerfCounters(&frame_counters);
 
 					
-					{
-						auto mips_list = resources_manager.mipMapQueue().consume(TransferBudget{
-							.bytes = 64'000'000,
-							.instances = 128,
-						});
-
-						if(!mips_list.empty())
-						{
-							ComputeMips compute_mips = ComputeMips::CI{
-								.app = this,
-								.name = "ComputeMipMaps",
-							};
-							exec_thread.execute(compute_mips.with(ComputeMips::ExecInfo{
-								.targets = mips_list,
-							}));
-						}
-					}
+					exec.performAsynchMipsCompute(*update_context->mipsQueue());
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
@@ -461,7 +418,7 @@ namespace vkl
 					sui->execute(exec_thread, camera);
 
 					gamma_correction.execute(exec_thread);
-
+					 
 					pip.execute(exec_thread);
 
 					exec_thread.bindSet(1, nullptr);
