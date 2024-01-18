@@ -72,6 +72,9 @@ float computeAO_1(inout RNGState rng, vec2 uv, vec2 ratio)
 
 	const vec3 camera_pos = _pc.camera_position;
 	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
+	const float center_dist_to_cam = sqrt(center_dist_to_cam2);
+	
+	const float world_radius =  center_dist_to_cam * ratio.x;
 
 	for(int i=0; i < AO_SAMPLES; ++i)
 	{
@@ -82,15 +85,26 @@ float computeAO_1(inout RNGState rng, vec2 uv, vec2 ratio)
 		const vec2 point_uv = uv + point_on_circle * ratio;
 		const vec3 point_wpos = textureLod(in_world_position, point_uv, 0).xyz;
 		const vec3 point_normal = textureLod(in_world_normal, point_uv, 0).xyz;
-		if(length2(point_normal) == 0)
+		if(length2(point_normal) == 0) // sky
 		{
 			res += 1.0 / pdf;
 		}
 		else
 		{
 			const float point_dist_to_cam2 = distance2(point_wpos, camera_pos);
+			const float point_dist_to_cam = sqrt(point_dist_to_cam2);
 
-			res += max(0.0f, dot(wcenter_normal, point_normal)) / pdf;
+			const float point_dist_to_center2 = distance2(point_wpos, wcenter);
+			const float point_dist_to_center = sqrt(point_dist_to_center2);
+			
+			float contrib = dot(wcenter_normal, point_normal);
+
+			if(point_dist_to_center > 2 * world_radius)
+			{
+				contrib = 1;
+			}
+
+			res += max(0.0f, contrib) / pdf;
 		}
 		
 	}
