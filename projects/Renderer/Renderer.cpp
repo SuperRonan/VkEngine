@@ -6,19 +6,29 @@ namespace vkl
 		Module(ci.app, ci.name),
 		_sets_layouts(ci.sets_layouts),
 		_scene(ci.scene),
-		_target(ci.target)
+		_output_target(ci.target) 
 	{
 		createInternalResources();
 	}
 
 	void SimpleRenderer::createInternalResources()
 	{
+		_render_target = std::make_shared<ImageView>(Image::CI{
+			.app = application(),
+			.name = name() + ".render_target",
+			.type = _output_target->image()->type(),
+			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.extent = _output_target->image()->extent(),
+			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
 		_depth = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".depth",
-			.type = _target->image()->type(),
+			.type = _render_target->image()->type(),
 			.format = VK_FORMAT_D32_SFLOAT,
-			.extent = _target->image()->extent(),
+			.extent = _render_target->image()->extent(),
 			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -62,7 +72,7 @@ namespace vkl
 						.binding = 0,
 					},
 				},
-				.color_attachements = {_target},
+				.color_attachements = {_render_target},
 				.depth_stencil = _depth,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
@@ -76,9 +86,9 @@ namespace vkl
 			_deferred_pipeline._albedo = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.albedo",
-				.type = _target->image()->type(),
+				.type = _render_target->image()->type(),
 				.format = VK_FORMAT_R32G32B32A32_SFLOAT,
-				.extent = _target->image()->extent(),
+				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
@@ -87,9 +97,9 @@ namespace vkl
 			_deferred_pipeline._position = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.position",
-				.type = _target->image()->type(),
+				.type = _render_target->image()->type(),
 				.format = VK_FORMAT_R32G32B32A32_SFLOAT,
-				.extent = _target->image()->extent(),
+				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
@@ -98,9 +108,9 @@ namespace vkl
 			_deferred_pipeline._normal = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.normal",
-				.type = _target->image()->type(),
+				.type = _render_target->image()->type(),
 				.format = VK_FORMAT_R32G32B32A32_SFLOAT,
-				.extent = _target->image()->extent(),
+				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
@@ -149,7 +159,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".ShadeFromGBuffer",
 				.shader_path = shaders / "ShadeFromGBuffer.comp",
-				.extent = _target->image()->extent(),
+				.extent = _render_target->image()->extent(),
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,
 				.bindings = {
@@ -171,7 +181,7 @@ namespace vkl
 						.binding = 3,
 					},
 					Binding{
-						.view = _target,
+						.view = _render_target,
 						.binding = 4,
 					},
 				},
@@ -225,6 +235,8 @@ namespace vkl
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
 		bool update_all_anyway = ctx.updateAnyway();
+
+		_render_target->updateResource(ctx);
 		_depth->updateResource(ctx);
 
 		if (_pipeline_selection.index() == 0 || update_all_anyway)

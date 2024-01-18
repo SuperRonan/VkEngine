@@ -37,7 +37,7 @@ namespace vkl
 			.format = &_format,
 			.extent = target_extent,
 			.layers = _positions->image()->layers(),
-			.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_BITS,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 

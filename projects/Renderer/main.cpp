@@ -29,6 +29,7 @@
 #include <Core/Rendering/SceneLoader.hpp>
 #include <Core/Rendering/SceneUserInterface.hpp>
 #include <Core/Rendering/GammaCorrection.hpp>
+#include <Core/Rendering/ImagePicker.hpp>
 
 #include <Core/Maths/Transforms.hpp>
 
@@ -252,6 +253,20 @@ namespace vkl
 				.sets_layouts = sets_layouts,
 			});
 
+			ImagePicker image_picker = ImagePicker::CI{
+				.app = this,
+				.name = "ImagePicker",
+				.sources = {
+					renderer.renderTarget(),
+					renderer.getAmbientOcclusionTargetIFP(),
+					renderer.getAlbedoImage(),
+					renderer.getPositionImage(),
+					renderer.getNormalImage(),
+					renderer.depth(), // Does not work yet
+				},
+				.dst = final_image,
+			};
+
 			exec.init();
 
 			FramePerfCounters frame_counters;
@@ -340,6 +355,8 @@ namespace vkl
 
 						pip.declareGui(*gui_ctx);
 
+						image_picker.declareGUI(*gui_ctx);
+
 						if (exec.getDebugRenderer())
 						{
 							exec.getDebugRenderer()->declareGui(*gui_ctx);
@@ -393,6 +410,7 @@ namespace vkl
 					renderer.updateResources(*update_context);
 					gamma_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
+					image_picker.updateResources(*update_context);
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
 
@@ -414,6 +432,8 @@ namespace vkl
 
 					exec_thread.bindSet(1, scene->set());
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
+
+					image_picker.execute(exec_thread);
 
 					sui->execute(exec_thread, camera);
 

@@ -27,7 +27,12 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<Scene> _scene = nullptr;
-		std::shared_ptr<ImageView> _target = nullptr;
+		
+		// "Read only"
+		std::shared_ptr<ImageView> _output_target = nullptr;
+
+		std::shared_ptr<ImageView> _render_target = nullptr;
+		
 		std::shared_ptr<ImageView> _depth = nullptr;
 
 		ImGuiListSelection _pipeline_selection = ImGuiListSelection::CI{
@@ -115,5 +120,35 @@ namespace vkl
 		}
 
 		void declareGui(GuiContext & ctx);
+
+		std::shared_ptr<ImageView> const& renderTarget() const
+		{
+			return _render_target;
+		}
+
+		std::shared_ptr<ImageView> getAmbientOcclusionTargetIFP() const
+		{
+			std::shared_ptr<ImageView> res = nullptr;
+			if (_ambient_occlusion)
+			{
+				res = _ambient_occlusion->target();
+			}
+			return res;
+		}
+
+		std::shared_ptr<ImageView> const& getPositionImage() const
+		{
+			return _deferred_pipeline._position;
+		}
+
+		std::shared_ptr<ImageView> const& getNormalImage()const
+		{
+			return _deferred_pipeline._normal;
+		}
+
+		std::shared_ptr<ImageView> const& getAlbedoImage()const
+		{
+			return _deferred_pipeline._albedo;
+		}
 	};
 }
