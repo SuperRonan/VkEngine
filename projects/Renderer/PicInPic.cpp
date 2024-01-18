@@ -108,6 +108,8 @@ namespace vkl
 			});
 			exec(_show_outline->with(vertex_draw_info));
 			exec.popDebugLabel();
+
+			vertex_draw_info.clear();
 		}
 	}
 

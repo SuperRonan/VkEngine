@@ -179,6 +179,8 @@ namespace vkl
 							.color = glm::vec4(1, 1, 1, 1),
 						},
 					}, vdcr.vertex_buffers);
+					
+					vdcr.clear();
 				}
 			}
 		}
@@ -190,6 +192,8 @@ namespace vkl
 		}
 		
 		recorder.popDebugLabel();
+
+		vertex_draw_info.clear();
 	}
 
 	void SceneUserInterface::declareGui(GuiContext& ctx)
@@ -294,7 +298,12 @@ namespace vkl
 				ImGui::Text(node->name().c_str());
 
 				ImGui::SameLine();
-				if (ImGui::Button("Close"))
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8, 0, 0, 1));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9, 0, 0, 1));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.95, 0, 0, 1));
+				bool clicked = ImGui::Button("Close");
+				ImGui::PopStyleColor(3);
+				if (clicked)
 				{
 					_gui_selected_node.clear();
 				}
