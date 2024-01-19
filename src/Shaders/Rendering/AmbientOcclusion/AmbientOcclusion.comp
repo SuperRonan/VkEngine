@@ -28,7 +28,7 @@ layout(push_constant) uniform PushConstant
 #define AO_SAMPLES 16 * 4
 #endif
 
-float computeAO_0(inout RNGState rng, vec2 uv, vec2 ratio)
+float computeAO_0(inout rng_t rng, vec2 uv, vec2 ratio)
 {
 	float res = 0;
 
@@ -58,7 +58,7 @@ float computeAO_0(inout RNGState rng, vec2 uv, vec2 ratio)
 	return res;
 }
 
-float computeAO_1(inout RNGState rng, vec2 uv, vec2 ratio)
+float computeAO_1(inout rng_t rng, vec2 uv, vec2 ratio)
 {
 	float res = 0;
 
@@ -120,7 +120,7 @@ void main()
 	{
 		float res = 1;
 		const vec2 uv = pixelToUV(pixel, dims);
-		RNGState rng = hash(pixel);
+		rng_t rng = hash(pixel);
 
 		const bool use_normal_texture = (_pc.flags & USE_NORMAL_TEXTURE_BIT) == USE_NORMAL_TEXTURE_BIT;
 
