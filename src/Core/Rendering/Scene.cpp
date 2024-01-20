@@ -149,17 +149,28 @@ namespace vkl
 
 
 
-	std::shared_ptr<DescriptorSetLayout> Scene::SetLayout(VkApplication* app, SetLayoutOptions const& options)
+	//std::shared_ptr<DescriptorSetLayout> Scene::SetLayout(VkApplication* app, SetLayoutOptions const& options)
+	//{
+	//	std::shared_ptr<DescriptorSetLayoutCache> gen_cache = app->getDescSetLayoutCacheOrEmplace(static_cast<uint32_t>(DescriptorSetName::scene), []()
+	//	{
+	//		return std::make_shared< DescriptorSetLayoutCacheImpl<SetLayoutOptions>>();
+	//	});
+	//	std::shared_ptr<DescriptorSetLayoutCacheImpl<SetLayoutOptions>> cache = std::dynamic_pointer_cast<DescriptorSetLayoutCacheImpl<SetLayoutOptions>>(gen_cache);
+	//	assert(!!cache);
+
+	//	std::shared_ptr<DescriptorSetLayout> res = cache->findOrEmplace(options, [app]() {
+
+	//		
+	//		return res;
+	//	});
+
+	//	return res;
+	//}
+
+	std::shared_ptr<DescriptorSetLayout> Scene::setLayout()
 	{
-		std::shared_ptr<DescriptorSetLayoutCache> gen_cache = app->getDescSetLayoutCacheOrEmplace(static_cast<uint32_t>(DescriptorSetName::scene), []()
+		if (!_set_layout)
 		{
-			return std::make_shared< DescriptorSetLayoutCacheImpl<SetLayoutOptions>>();
-		});
-		std::shared_ptr<DescriptorSetLayoutCacheImpl<SetLayoutOptions>> cache = std::dynamic_pointer_cast<DescriptorSetLayoutCacheImpl<SetLayoutOptions>>(gen_cache);
-		assert(!!cache);
-
-		std::shared_ptr<DescriptorSetLayout> res = cache->findOrEmplace(options, [app]() {
-
 			std::vector<DescriptorSetLayout::Binding> bindings;
 			using namespace std::containers_append_operators;
 
@@ -183,25 +194,45 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
+			Dyn<uint32_t> count = &_mesh_capacity;
 
-			std::shared_ptr<DescriptorSetLayout> res = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
-				.app = app,
-				.name = "Scene::SetLayout",
+			bindings += DescriptorSetLayout::Binding{
+				.name = "SceneMeshHeadersBindings",
+				.binding = _mesh_bindings_base + 0,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = count,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
+			bindings += DescriptorSetLayout::Binding{
+				.name = "SceneMeshVerticesBindings",
+				.binding = _mesh_bindings_base + 1,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = count,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
+			bindings += DescriptorSetLayout::Binding{
+				.name = "SceneMeshIndicesBindings",
+				.binding = _mesh_bindings_base + 2,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = count,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
+			_set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+				.app = application(),
+				.name = name() + ".SetLayout",
 				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
 				.bindings = bindings,
 				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
 			});
-			return res;
-		});
-
-		return res;
-	}
-
-	std::shared_ptr<DescriptorSetLayout> Scene::setLayout()
-	{
-		if (!_set_layout)
-		{
-			_set_layout = SetLayout(application(), {});
 		}
 		return _set_layout;
 	}

@@ -192,6 +192,10 @@ namespace vkl
 
 		std::shared_ptr<DirectedAcyclicGraph> _tree;
 
+		uint32_t _mesh_bindings_base = 4;
+		uint32_t _mesh_capacity = 1;
+		uint32_t _mesh_count = 0;
+
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
@@ -251,7 +255,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx);
 
-		static std::shared_ptr<DescriptorSetLayout> SetLayout(VkApplication * app, SetLayoutOptions const& options);
+		//static std::shared_ptr<DescriptorSetLayout> SetLayout(VkApplication * app, SetLayoutOptions const& options);
 
 		virtual std::shared_ptr<DescriptorSetLayout> setLayout();
 

@@ -159,11 +159,7 @@ namespace vkl
 		{
 			Callback cb{
 				.callback = [set, offset, this]() {
-					set->setBinding(ShaderBindingDescription{
-						.view = _albedo_texture->getView(),
-						.sampler = _sampler,
-						.binding = offset + 1,
-					});
+					set->setBinding(offset + 1, 0, 1, &_albedo_texture->getView(), &_sampler);
 					_should_update_props_buffer = true;
 				},
 				.id = set.get(),

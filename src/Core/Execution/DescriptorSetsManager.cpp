@@ -201,20 +201,17 @@ namespace vkl
 			const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
 			if (rb.isBuffer())
 			{
-				assert(rb.resource().buffers.size32() <= vkb.descriptorCount);
-				rb.resource().buffers.reserve(vkb.descriptorCount);
+				rb.resource().buffers.resize(vkb.descriptorCount);
 			}
 			else if (rb.isImage() || rb.isBuffer())
 			{
 				if (rb.isImage())
 				{
-					assert(rb.resource().images.size32() <= vkb.descriptorCount);
-					rb.resource().images.reserve(vkb.descriptorCount);
+					rb.resource().images.resize(vkb.descriptorCount);
 				}
 				if (rb.isSampler())
 				{
-					assert(rb.samplers().size32() <= vkb.descriptorCount);
-					rb.samplers().reserve(vkb.descriptorCount);
+					rb.samplers().resize(vkb.descriptorCount);
 				}
 			}
 		}
@@ -476,42 +473,145 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetAndPoolInstance::setBinding(ResourceBinding const& binding)
+	//void DescriptorSetAndPoolInstance::setBinding(ResourceBinding const& binding)
+	//{
+	//	auto it = _bindings.begin();
+	//	ResourceBinding * found = findBinding(binding.resolvedBinding());
+	//	assert(found);
+	//	//if (found)
+	//	{
+	//		removeInvalidationCallbacks(*found);
+	//		if (found->isBuffer())
+	//		{
+	//			found->resource().buffers = binding.resource().buffers;
+	//		}
+	//		else if (found->isImage() || found->isSampler())
+	//		{
+	//			if (found->isImage())
+	//			{
+	//				found->resource().images = binding.resource().images;
+	//			}
+	//			if (found->isSampler())
+	//			{
+	//				found->samplers() = binding.samplers();
+	//			}
+	//		}
+
+	//		const size_t i = found - _bindings.data();
+	//		Callback cb{
+	//			.callback = [i,  this]() {
+	//				_bindings[i].setUpdateStatus(false);
+	//			},
+	//			.id = this,
+	//		};
+	//		installInvalidationCallback(*it, cb);
+	//		found->setUpdateStatus(false);
+	//	}
+	//	assert(checkIntegrity());
+	//}
+
+	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)
 	{
-		auto it = _bindings.begin();
-		ResourceBinding * found = findBinding(binding.resolvedBinding());
+		ResourceBinding* found = findBinding(binding);
 		assert(found);
-		//if (found)
+		assert(found->isBuffer());
+		auto & bb = found->resource().buffers;
+		assert(bb.size32() >= (array_index + count));
+
+		for (uint32_t i = 0; i < count; ++i)
 		{
-			removeInvalidationCallbacks(*found);
-			if (found->isBuffer())
+			const uint32_t binding_array_index = array_index + i;
+			BufferAndRange & binding_bar = bb[binding_array_index];
+			if (binding_bar.buffer)
 			{
-				found->resource().buffers = binding.resource().buffers;
-			}
-			else if (found->isImage() || found->isSampler())
-			{
-				if (found->isImage())
-				{
-					found->resource().images = binding.resource().images;
-				}
-				if (found->isSampler())
-				{
-					found->samplers() = binding.samplers();
-				}
+				binding_bar.buffer->removeInvalidationCallbacks(this);
 			}
 
-			const size_t i = found - _bindings.data();
+			binding_bar = buffers[i];
+			if (binding_bar.buffer)
+			{
+				binding_bar.buffer->addInvalidationCallback(Callback{
+					.callback = [this, found, binding_array_index]() {
+						found->setUpdateStatus(false);
+					},
+					.id = this,
+				});
+			}
+		}
+		found->setUpdateStatus(false);
+		assert(checkIntegrity());
+	}
+
+	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers)
+	{
+		ResourceBinding* found = findBinding(binding);
+		assert(found);
+		const bool is_image = found->isImage();
+		const bool is_sampler = found->isSampler();
+		assert(is_image || is_sampler);
+		auto & bi = found->resource().images;
+		auto & bs = found->samplers();
+
+		if (is_image)
+		{
+			assert(bi.size32() >= (array_index + count));
+		}
+		if (is_sampler)
+		{
+			assert(bs.size32() >= (array_index + count));
+		}
+		if (is_image && is_sampler)
+		{
+			assert(bi.size() == bs.size());
+		}
+
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			const uint32_t binding_array_index = array_index + i;
 			Callback cb{
-				.callback = [i,  this]() {
-					_bindings[i].setUpdateStatus(false);
+				.callback = [this, found, binding_array_index]() {
+					found->setUpdateStatus(false);
 				},
 				.id = this,
 			};
-			installInvalidationCallback(*it, cb);
-			found->setUpdateStatus(false);
+
+			if(is_image)
+			{
+				std::shared_ptr<ImageView> & binding_view = bi[binding_array_index];
+				if (binding_view)
+				{
+					binding_view->removeInvalidationCallbacks(this);
+				}
+				binding_view = views[i];
+				if (binding_view)
+				{
+					binding_view->addInvalidationCallback(cb);
+				}
+			}
+
+			if (is_sampler)
+			{
+				std::shared_ptr<Sampler> & binding_sampler = bs[binding_array_index];
+				if (binding_sampler)
+				{
+					binding_sampler->removeInvalidationCallbacks(this);
+				}
+				binding_sampler = samplers[i];
+				if (binding_sampler)
+				{
+					binding_sampler->addInvalidationCallback(cb);
+				}
+			}
 		}
+		found->setUpdateStatus(false);
 		assert(checkIntegrity());
 	}
+
+
+
+
+
+
 
 
 
@@ -813,39 +913,120 @@ namespace vkl
 		return res;
 	}
 
-
-	void DescriptorSetAndPool::setBinding(ShaderBindingDescription const& binding)
+	ResourceBindings::iterator DescriptorSetAndPool::findBinding(uint32_t binding)
 	{
 		auto it = _bindings.begin();
-		ResourceBinding rb = binding;
-		rb.resolve(rb.binding());
 		// Bindings are not sorted !!!
 		// TODO sort when resolve
 		while (it != _bindings.end())
 		{
 			const uint32_t b = it->binding();
-			if (b == binding.binding)
+			if (b == binding)
 			{
-				*it = rb;
 				break;
 			}
-			else 
+			else
 			{
 				++it;
 			}
-
 		}
+		return it;
+	}
 
-		if (it == _bindings.end()) // Not found
+	ResourceBinding* DescriptorSetAndPool::findBindingOrEmplace(uint32_t binding)
+	{
+		auto it = findBinding(binding);
+		if (it == _bindings.end())
 		{
-			it = _bindings.insert(it, rb);
+			_bindings.push_back(Binding{
+				.binding = binding,
+				});
+			it = _bindings.end() - 1;
+			it->resolve(binding);
+		}
+		return &(*it);
+	}
+
+	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)
+	{
+		ResourceBinding & rb = *findBindingOrEmplace(binding);
+		auto & bb = rb.resource().buffers;
+		if (bb.size32() <= (array_index + count))
+		{
+			bb.resize(array_index + count);
+		}
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			BufferAndRange bar = buffers ? buffers[i] : BufferAndRange{};
+			bb[array_index + i] = std::move(bar);
+		}
+		if (_inst)
+		{
+			_inst->setBinding(binding, array_index, count, buffers);
+		}
+	}
+
+	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers)
+	{
+		ResourceBinding & rb = *findBindingOrEmplace(binding);
+		auto & bi = rb.resource().images;
+		auto & bs = rb.samplers();
+		
+		if (views)
+		{
+			if (bi.size32() <= (array_index + count))
+			{
+				bi.resize(array_index + count);
+			}
+		}
+		if (samplers)
+		{
+			if (bs.size32() <= (array_index + count))
+			{
+				bs.resize(array_index + count);
+			}
+		}
+		
+
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			if (views)
+			{
+				bi[array_index + i] = views[i];
+			}
+			if (samplers)
+			{
+				bs[array_index + i] = samplers[i];
+			}
 		}
 
 		if (_inst)
 		{
-			_inst->setBinding(*it);
+			_inst->setBinding(binding, array_index, count, views, samplers);
 		}
 	}
+
+	//void DescriptorSetAndPool::setBinding(ShaderBindingDescription const& binding)
+	//{
+	//	ResourceBinding rb = binding;
+	//	rb.resolve(rb.binding());
+	//	
+	//	auto it = findBinding(rb.resolvedBinding());
+
+	//	if (it == _bindings.end()) // Not found
+	//	{
+	//		it = _bindings.insert(it, rb);
+	//	}
+	//	else
+	//	{
+	//		*it = std::move(rb);
+	//	}
+
+	//	if (_inst)
+	//	{
+	//		_inst->setBinding(*it);
+	//	}
+	//}
 
 
 	void DescriptorSetAndPool::waitForInstanceCreationIFN()

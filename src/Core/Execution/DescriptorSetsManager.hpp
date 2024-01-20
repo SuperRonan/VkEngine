@@ -100,7 +100,11 @@ namespace vkl
 			}
 		}
 
-		void setBinding(ResourceBinding const& b);
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers = nullptr);
+
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views = nullptr, const std::shared_ptr<Sampler>* samplers = nullptr);
+
+		//void setBinding(ResourceBinding const& b);
 		
 	};
 
@@ -126,6 +130,10 @@ namespace vkl
 		void destroyInstance();
 
 		ResourceBindings resolveBindings(AsynchTask::ReturnType& result);
+
+		ResourceBindings::iterator findBinding(uint32_t b);
+
+		ResourceBinding * findBindingOrEmplace(uint32_t b);
 		
 	public:
 
@@ -146,7 +154,11 @@ namespace vkl
 
 		bool updateResources(UpdateContext & context);
 
-		void setBinding(ShaderBindingDescription const& binding);
+		//void setBinding(ShaderBindingDescription const& binding);
+
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange * buffers = nullptr);
+
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView> * views = nullptr, const std::shared_ptr<Sampler> * samplers = nullptr);
 
 		void waitForInstanceCreationIFN();
 	};

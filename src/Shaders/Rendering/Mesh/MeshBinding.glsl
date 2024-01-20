@@ -23,6 +23,10 @@ struct Vertex
 #define MESH_FLAG_INDEX_TYPE_UINT8  2
 #define MESH_FLAG_INDEX_TYPE_MASK	3
 
+#ifndef BIND_SINGLE_MESH
+#define BIND_SINGLE_MESH 0
+#endif
+
 #ifndef MESH_ACCESS
 #define MESH_ACCESS
 #endif
@@ -30,6 +34,8 @@ struct Vertex
 #ifndef MESH_BINDING_BASE
 #define MESH_BINDING_BASE 0
 #endif
+
+#if BIND_SINGLE_MESH
 
 layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 0, std430) buffer restrict MESH_ACCESS MeshHeader
 {
@@ -41,13 +47,13 @@ layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 1, std430) buffer res
 	Vertex vertices[];
 } bound_mesh_vertices;
 
-
 layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 2, std430) buffer restrict MESH_ACCESS MeshIndices
 {
 	uint indices[];
 } bound_mesh_indices32;
 
-uint getMeshIndex(uint i, uint flags)
+
+uint getBoundMeshIndex(uint i, uint flags)
 {
 	const uint index_type = flags & MESH_FLAG_INDEX_TYPE_MASK;
 	uint res;
@@ -68,7 +74,7 @@ uint getMeshIndex(uint i, uint flags)
 	return res;
 }
 
-uvec3 getMeshTriangleIndices(uint pid, uint flags)
+uvec3 getBoundMeshTriangleIndices(uint pid, uint flags)
 {
 	uvec3 res;
 	const uint index_type = flags & MESH_FLAG_INDEX_TYPE_MASK;
@@ -85,3 +91,5 @@ uvec3 getMeshTriangleIndices(uint pid, uint flags)
 	}
 	return res;
 }
+
+#endif

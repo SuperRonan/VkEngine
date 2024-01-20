@@ -726,21 +726,9 @@ namespace vkl
 	{
 		_descriptor_callbacks.push_back(Callback{
 			.callback = [this, set, offset]() {
-				set->setBinding(Binding{
-					.buffer = _device.mesh_buffer,
-					.buffer_range = Range_st{.begin = 0, .len = _device.header_size},
-					.binding = offset + 0,
-				});
-				set->setBinding(Binding{
-					.buffer = _device.mesh_buffer,
-					.buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size },
-					.binding = offset + 1,
-				});
-				set->setBinding(Binding{
-					.buffer = _device.mesh_buffer,
-					.buffer_range = Range_st{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size },
-					.binding = offset + 2,
-				});
+				set->setBinding(offset + 0, 0, 1, &_device.header_buffer);
+				set->setBinding(offset + 1, 0, 1, &_device.vertex_buffer);
+				set->setBinding(offset + 2, 0, 1, &_device.index_buffer);
 			},
 			.id = set.get(),
 		});
