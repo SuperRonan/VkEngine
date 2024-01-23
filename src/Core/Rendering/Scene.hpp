@@ -192,16 +192,59 @@ namespace vkl
 
 		std::shared_ptr<DirectedAcyclicGraph> _tree;
 
-		uint32_t _mesh_bindings_base = 4;
-		uint32_t _mesh_capacity = 1;
+		uint32_t _lights_bindings_base;
+		uint32_t _objects_binding_base;
+		uint32_t _mesh_bindings_base;
+		uint32_t _material_bindings_base;
+		uint32_t _textures_bindings_base;
+		uint32_t _xforms_bindings_base;
+
+		uint32_t _mesh_capacity = 1024;
 		uint32_t _mesh_count = 0;
+		uint32_t _texture_2D_capacity = 1024;
+		uint32_t _texture_2D_count = 0;
+
 
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
+		struct MeshData
+		{
+			size_t unique_index;
+		};
+
+		struct TextureData
+		{
+			size_t unique_index;
+		};
+
+		uint32_t _unique_mesh_counter = 0;
+		std::unordered_map<std::shared_ptr<Mesh>, MeshData> _meshes;
+		uint32_t allocateUniqueMeshID();
+
+		uint32_t _unique_texture_counter = 0;
+		std::unordered_map<std::shared_ptr<Texture>, TextureData> _textures;
+
+		struct ModelReference
+		{
+			uint32_t mesh_id;
+			uint32_t material_id;
+			uint32_t xform_id;
+			uint32_t flags;
+		};
+
+		MyVector<Mat4x3> _xforms;
+		std::shared_ptr<Buffer> _xforms_buffer;
+		BufferAndRange _xforms_segment;
+		BufferAndRange _prev_xforms_segment;
+
 		struct UBO {
-			glm::vec3 ambient;
 			uint32_t num_lights;
+			uint32_t num_objects;
+			uint32_t num_mesh;
+			uint32_t num_materials;
+			uint32_t num_textures;
+			ubo_vec3 ambient;
 		};
 
 		vec3 _ambient = vec3(0.1f);

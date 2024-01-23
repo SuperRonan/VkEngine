@@ -23,7 +23,7 @@ namespace vkl
 
 		if (_mesh)
 		{
-			_mesh->installResourceUpdateCallbacks(_set, mesh_binding_offset);
+			_mesh->registerToDescriptorSet(_set, mesh_binding_offset, 0);
 		}
 
 		if (_material)
@@ -36,7 +36,7 @@ namespace vkl
 	{
 		if (_mesh)
 		{
-			_mesh->removeResourceUpdateCallbacks(_set);
+			_mesh->unRegistgerFromDescriptorSet(_set);
 		}
 		if (_material)
 		{

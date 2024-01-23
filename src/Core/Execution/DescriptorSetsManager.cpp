@@ -526,8 +526,8 @@ namespace vkl
 			{
 				binding_bar.buffer->removeInvalidationCallbacks(this);
 			}
-
-			binding_bar = buffers[i];
+			
+			binding_bar = buffers ? buffers[i] : BufferAndRange{};
 			if (binding_bar.buffer)
 			{
 				binding_bar.buffer->addInvalidationCallback(Callback{
@@ -945,6 +945,23 @@ namespace vkl
 			it->resolve(binding);
 		}
 		return &(*it);
+	}
+
+	void DescriptorSetAndPool::Registration::clear(uint32_t num_bindings)
+	{
+		if (set)
+		{
+			for (uint32_t i = 0; i < num_bindings; ++i)
+			{
+				set->clearBinding(binding + i, array_index, 1);
+			}
+		}
+	}
+
+
+	void DescriptorSetAndPool::clearBinding(uint32_t binding, uint32_t array_index, uint32_t count)
+	{
+		NOT_YET_IMPLEMENTED;
 	}
 
 	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)

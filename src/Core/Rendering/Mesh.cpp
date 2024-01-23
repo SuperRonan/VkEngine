@@ -157,7 +157,18 @@ namespace vkl
 
 	RigidMesh::~RigidMesh()
 	{
-		
+		for (size_t i = 0; i < _registered_sets.size(); ++i)
+		{
+			DescriptorSetAndPool::Registration& rs = _registered_sets[i];
+
+			constexpr const BufferAndRange* null = nullptr;
+			rs.set->setBinding(rs.binding + 0, rs.array_index, 1, null);
+			rs.set->setBinding(rs.binding + 1, rs.array_index, 1, null);
+			rs.set->setBinding(rs.binding + 2, rs.array_index, 1, null);
+
+			_registered_sets.erase(_registered_sets.begin() + i);
+		}
+		_registered_sets.clear();
 	}
 
 	MeshHeader RigidMesh::getHeader() const
@@ -722,25 +733,38 @@ namespace vkl
 		}
 	}
 
-	void RigidMesh::installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset)
+	void RigidMesh::registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index)
 	{
-		_descriptor_callbacks.push_back(Callback{
-			.callback = [this, set, offset]() {
-				set->setBinding(offset + 0, 0, 1, &_device.header_buffer);
-				set->setBinding(offset + 1, 0, 1, &_device.vertex_buffer);
-				set->setBinding(offset + 2, 0, 1, &_device.index_buffer);
-			},
-			.id = set.get(),
-		});
+		DescriptorSetAndPool::Registration rs{
+			.set = set,
+			.binding = binding,
+			.array_index = array_index,
+		};
+		transmitToRegisteredSet(rs);
+		_registered_sets.push_back(std::move(rs));
 	}
 
-	void RigidMesh::removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set)
+	void RigidMesh::transmitToRegisteredSet(DescriptorSetAndPool::Registration& rs)
 	{
-		for (size_t i = 0; i < _descriptor_callbacks.size(); ++i)
+		rs.set->setBinding(rs.binding + 0, rs.array_index, 1, &_device.header_buffer);
+		rs.set->setBinding(rs.binding + 1, rs.array_index, 1, &_device.vertex_buffer);
+		rs.set->setBinding(rs.binding + 2, rs.array_index, 1, &_device.index_buffer);
+	}
+
+	void RigidMesh::unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set)
+	{
+		// Assume registered only once
+		for (size_t i = 0; i < _registered_sets.size(); ++i)
 		{
-			if (_descriptor_callbacks[i].id == set.get())
+			DescriptorSetAndPool::Registration& rs = _registered_sets[i];
+			if (rs.set == set)
 			{
-				_descriptor_callbacks.erase(_descriptor_callbacks.begin() + i);
+				constexpr const BufferAndRange * null = nullptr;
+				rs.set->setBinding(rs.binding + 0, rs.array_index, 1, null);
+				rs.set->setBinding(rs.binding + 1, rs.array_index, 1, null);
+				rs.set->setBinding(rs.binding + 2, rs.array_index, 1, null);
+
+				_registered_sets.erase(_registered_sets.begin() + i);
 				break;
 			}
 		}
@@ -748,9 +772,10 @@ namespace vkl
 
 	void RigidMesh::callResourceUpdateCallbacks()
 	{
-		for (size_t i = 0; i < _descriptor_callbacks.size(); ++i)
+		for (size_t i = 0; i < _registered_sets.size(); ++i)
 		{
-			_descriptor_callbacks[i].callback();
+			DescriptorSetAndPool::Registration& rs = _registered_sets[i];
+			transmitToRegisteredSet(rs);
 		}
 	}
 

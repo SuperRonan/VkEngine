@@ -77,9 +77,14 @@ namespace vkl
 
 		virtual ~Model() override;
 
-		std::shared_ptr<Mesh> mesh()const
+		const std::shared_ptr<Mesh>& mesh()const
 		{
 			return _mesh;
+		}
+
+		const std::shared_ptr<Material>& material()const
+		{
+			return _material;
 		}
 
 		constexpr uint32_t type()const

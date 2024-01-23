@@ -156,6 +156,17 @@ namespace vkl
 
 		//void setBinding(ShaderBindingDescription const& binding);
 
+		struct Registration
+		{
+			std::shared_ptr<DescriptorSetAndPool> set;
+			uint32_t binding;
+			uint32_t array_index;
+
+			void clear(uint32_t num_bindings);
+		};
+
+		void clearBinding(uint32_t binding, uint32_t array_index, uint32_t count);
+
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange * buffers = nullptr);
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView> * views = nullptr, const std::shared_ptr<Sampler> * samplers = nullptr);

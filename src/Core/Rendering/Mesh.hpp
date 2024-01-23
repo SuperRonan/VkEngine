@@ -87,6 +87,8 @@ namespace vkl
 
 		AABB3f _aabb;
 
+		MyVector<DescriptorSetAndPool::Registration> _registered_sets = {};
+
 	public:
 
 		
@@ -133,9 +135,11 @@ namespace vkl
 
 		virtual ShaderBindings getShaderBindings(uint offset) = 0;
 
-		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) = 0;
+		virtual void registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index = 0) = 0;
 
-		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
+		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
+
+		virtual void callResourceUpdateCallbacks() = 0;
 
 		virtual bool isReadyToDraw() const = 0;
 
@@ -318,7 +322,7 @@ namespace vkl
 
 		bool checkIntegrity() const;
 
-		std::vector<Callback> _descriptor_callbacks = {};
+		void transmitToRegisteredSet(DescriptorSetAndPool::Registration & rs);
 
 	public:
 
@@ -380,11 +384,11 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx) override;
 
-		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) override;
+		virtual void registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index = 0) override;
 
-		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) override;
+		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set) override;
 
-		void callResourceUpdateCallbacks();
+		virtual void callResourceUpdateCallbacks() override;
 
 		virtual bool isReadyToDraw() const override;
 

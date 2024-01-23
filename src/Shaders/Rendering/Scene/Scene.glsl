@@ -5,24 +5,54 @@
 
 #include <ShaderLib:/Rendering/Mesh/MeshBinding.glsl>
 
+#include <ShaderLib:/Rendering/Materials/PBMaterial.glsl>
+
 #ifndef BIND_SCENE
 #define BIND_SCENE 0
 #endif
 
+#define SCENE_OBJECT_FLAG_VISIBLE_BIT 1
+
+
+struct SceneObjectReference
+{
+	uint mesh_id;
+	uint material_id;
+	uint xform_id;
+	uint flags;
+};
+
+struct ScenePBMaterial
+{
+	PBMaterialProperties props;
+	uint albedo_texture_id;
+	uint normal_texture_id;
+	uint pad1;
+	uint pad2;
+};
 
 #if BIND_SCENE
 
-#define SCENE_BINDING SCENE_DESCRIPTOR_BINDING
+#define SCENE_BINDING SCENE_DESCRIPTOR_BINDING + 0
 
-#ifndef LIGHTS_ACCESS
-#define LIGHTS_ACCESS
-#endif
 
 layout(SCENE_BINDING + 0) uniform SceneUBOBinding
 {
-	vec3 ambient;
 	uint num_lights;
+	uint num_objects;
+	uint num_mesh;
+	uint num_materials;
+	uint num_textures;
+	
+	vec3 ambient;
 } scene_ubo;
+
+
+
+#define SCENE_LIGHTS_BINDING SCENE_BINDING + 1
+#ifndef LIGHTS_ACCESS
+#define LIGHTS_ACCESS readonly
+#endif
 
 layout(SCENE_BINDING + 1) restrict LIGHTS_ACCESS buffer LightsBufferBinding
 {
@@ -34,10 +64,22 @@ layout(SCENE_BINDING + 1) restrict LIGHTS_ACCESS buffer LightsBufferBinding
 // #define SCENE_MAX_TEXTURE_BINDING
 // #endif
 
-#define SCENE_MESHS_BINDING SCENE_BINDING + 4
+#define SCENE_OBJECTS_BINDING SCENE_LIGHTS_BINDING + 1
+
+#ifndef SCENE_OBJECTS_ACCESS
+#define SCENE_OBJECTS_ACCESS readonly
+#endif
+
+layout(SCENE_OBJECTS_BINDING + 0) buffer restrict SCENE_OBJECTS_ACCESS SceneObjectsTable
+{
+	SceneObjectReference table[];
+} scene_objects_table;
+
+
+#define SCENE_MESHS_BINDING SCENE_OBJECTS_BINDING + 1
 
 #ifndef SCENE_MESH_ACCESS 
-#define SCENE_MESH_ACCESS
+#define SCENE_MESH_ACCESS readonly
 #endif
 
 layout(SCENE_MESHS_BINDING + 0) buffer restrict SCENE_MESH_ACCESS SceneMeshHeadersBindings
@@ -55,8 +97,43 @@ layout(SCENE_MESHS_BINDING + 2) buffer restrict SCENE_MESH_ACCESS SceneMeshIndic
 	uint32_t indices[];
 } scene_mesh_indices[];
 
-// layout(SCENE_BINDING + 4) uniform sampler2D SceneTextures[];
-// layout(SCENE_BINDING + 5) uniform sampler2D SceneTextures2[];
+
+#define SCENE_MATERIAL_BINDING SCENE_MESHS_BINDING + 4
+
+#ifndef SCENE_MATERIAL_ACCESS
+#define SCENE_MATERIAL_ACCESS readonly
+#endif
+
+layout(SCENE_MATERIAL_BINDING + 0) buffer restrict SCENE_MATERIAL_ACCESS ScenePBMaterialsBinding
+{
+	ScenePBMaterial materials[];
+} scene_pb_materals;
+
+
+#define SCENE_TEXTURES_BINDING SCENE_MATERIAL_BINDING + 1
+
+#ifndef SCENE_TEXTURE_ACCESS
+#define SCENE_TEXTURE_ACCESS readonly
+#endif
+
+layout(SCENE_TEXTURES_BINDING + 0) uniform sampler2D SceneTextures2D[];
+
+
+#define SCENE_XFORM_BINDING SCENE_TEXTURES_BINDING + 1
+
+#ifndef SCENE_XFORM_ACCESS
+#define SCENE_XFORM_ACCESS readonly
+#endif
+
+layout(SCENE_XFORM_BINDING + 0) buffer restrict SCENE_XFORM_ACCESS SceneXFormBinding
+{
+	mat4x3 xforms[];
+} scene_xforms;
+
+layout(SCENE_XFORM_BINDING + 1) buffer restrict SCENE_XFORM_ACCESS ScenePrevXFormBinding
+{
+	mat4x3 xforms[];
+} scene_prev_xforms;
 
 
 

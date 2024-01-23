@@ -141,8 +141,8 @@ namespace vkl
 	Scene::UBO Scene::getUBO()const
 	{
 		UBO res{
-			.ambient = _ambient,
 			.num_lights = static_cast<uint32_t>(_lights_glsl.size()),
+			.ambient = _ambient,
 		};
 		return res;
 	}
@@ -171,6 +171,14 @@ namespace vkl
 	{
 		if (!_set_layout)
 		{
+			_lights_bindings_base = 1;
+			_objects_binding_base = _lights_bindings_base + 1;
+			_mesh_bindings_base = _objects_binding_base + 1;
+			_material_bindings_base = _mesh_bindings_base + 4;
+			_textures_bindings_base = _material_bindings_base + 1;
+			_xforms_bindings_base = _textures_bindings_base + 1;
+
+
 			std::vector<DescriptorSetLayout::Binding> bindings;
 			using namespace std::containers_append_operators;
 
@@ -186,7 +194,7 @@ namespace vkl
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "LightsBufferBinding",
-				.binding = 1,
+				.binding = _lights_bindings_base + 0,
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 				.count = 1,
 				.stages = VK_SHADER_STAGE_ALL,
@@ -226,6 +234,29 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
+			
+
+
+			bindings += DescriptorSetLayout::Binding{
+				.name = "SceneXFormBinding",
+				.binding = _xforms_bindings_base + 0,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+			
+			bindings += DescriptorSetLayout::Binding{
+				.name = "ScenePrevXFormBinding",
+				.binding = _xforms_bindings_base + 1,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
 			_set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = application(),
 				.name = name() + ".SetLayout",
@@ -254,6 +285,23 @@ namespace vkl
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
+
+		_xforms.reserve(1024);
+		_xforms_buffer = std::make_shared<Buffer>(Buffer::CI{
+			.app = application(),
+			.name = name() + ".xforms",
+			.size = [this](){return std::align(_xforms.capacity() * sizeof(Mat4x3), size_t(256)) * 2; },
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+		_xforms_segment = BufferAndRange{
+			.buffer = _xforms_buffer,
+			.range = [this](){return Buffer::Range{.begin = 0, .len = sizeof(Mat4x3) * _xforms.size(), }; },
+		};
+		_prev_xforms_segment = BufferAndRange{
+			.buffer = _xforms_buffer,
+			.range = [this]() {return Buffer::Range{.begin = std::align(_xforms.capacity() * sizeof(Mat4x3), size_t(256)), .len = sizeof(Mat4x3) * _xforms.size(), }; },
+		};
 	}
 
 	void Scene::createSet()
@@ -270,7 +318,21 @@ namespace vkl
 
 		bindings += Binding{
 			.buffer = _lights_buffer,
-			.binding = 1,
+			.binding = _lights_bindings_base + 0,
+		};
+
+		
+
+		bindings += Binding{
+			.buffer = _xforms_segment.buffer,
+			.buffer_range = _xforms_segment.range,
+			.binding = _xforms_bindings_base + 0,
+		};
+
+		bindings += Binding{
+			.buffer = _prev_xforms_segment.buffer,
+			.buffer_range = _prev_xforms_segment.range,
+			.binding = _xforms_bindings_base + 1,
 		};
 
 		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
@@ -279,6 +341,17 @@ namespace vkl
 			.layout = layout ,
 			.bindings = bindings,
 		});
+	}
+
+	uint32_t Scene::allocateUniqueMeshID()
+	{
+		if (_unique_mesh_counter >= _mesh_capacity)
+		{
+			_mesh_capacity *= 2;
+		}
+		uint32_t res = _unique_mesh_counter;
+		++_unique_mesh_counter;
+		return res;
 	}
 
 	std::shared_ptr<DescriptorSetAndPool> Scene::set()
@@ -306,14 +379,52 @@ namespace vkl
 	{
 		_tree->flatten();
 		fillLightsBuffer();
+
+		_tree->iterateOnFlattenDag([this](std::shared_ptr<Node> const& node, const std::vector<Mat4x3>& matrices) 
+		{
+			std::shared_ptr<Model> const& model = node->model();
+			if (model)
+			{
+				std::shared_ptr<Mesh> const& mesh = model->mesh();
+				std::shared_ptr<Material> const& material = model->material();
+
+				if (mesh)
+				{
+					RigidMesh * rigid_mesh = dynamic_cast<RigidMesh*>(mesh.get());
+					if (rigid_mesh)
+					{
+						if (!_meshes.contains(mesh)) // unknown mesh so far
+						{
+							const uint32_t unique_id = allocateUniqueMeshID();
+							_meshes[mesh] = MeshData{
+								.unique_index = unique_id,
+							};
+
+							rigid_mesh->registerToDescriptorSet(_set, _mesh_bindings_base, unique_id);
+						}
+					}
+				}
+
+				if(material)
+				{
+					
+				}
+			}
+		});
 	}
 
 	void Scene::updateResources(UpdateContext& ctx)
 	{
+		// Assume prepareForRendering() was called before
+
 		// Maybe separate between the few scene own internal resources and the lot of nodes resources (models, textures, ...)
 		_ubo_buffer->updateResource(ctx);
 		_lights_buffer->updateResource(ctx);
-		_set->updateResources(ctx);
+		
+		_xforms_buffer->updateResource(ctx);
+		
+		
+		ctx.resourcesToUpdateLater() += _set;
 
 		_tree->iterateOnNodes([&](std::shared_ptr<Node> const& node)
 		{
