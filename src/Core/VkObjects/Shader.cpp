@@ -606,7 +606,7 @@ namespace vkl
 	{
 		_creation_result.success = true;
 		using namespace std::containers_append_operators;
-		std::filesystem::file_time_type compile_time = std::filesystem::file_time_type::min();
+		std::filesystem::file_time_type compile_time = std::chrono::file_clock::now();
 
 		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 		std::vector<std::string> defines = { semantic_definition };
@@ -635,8 +635,11 @@ namespace vkl
 					std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
 					for (const auto& dep : _dependencies)
 					{
-						std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
-						res = std::max(res, ft);
+						if (std::filesystem::exists(dep))
+						{
+							std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
+							res = std::max(res, ft);
+						}
 					}
 					return res;
 				}();
