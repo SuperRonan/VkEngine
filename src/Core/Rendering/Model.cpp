@@ -2,6 +2,8 @@
 #include <tinyobj/tiny_obj_loader.h>
 #include <Core/Execution/SamplerLibrary.hpp>
 
+#include <Core/Rendering/TextureFromFile.hpp>
+
 #include <unordered_map>
 #include <functional>
 
@@ -260,6 +262,8 @@ namespace vkl
 			std::cerr << "Error: " << err << std::endl;
 		}
 
+		TextureFileCache & texture_file_cache = info.app->textureFileCache();
+
 		if (ret)
 		{
 			std::vector<std::shared_ptr<Material>> my_materials(materials.size());
@@ -272,13 +276,20 @@ namespace vkl
 					.address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 					.max_anisotropy = info.app->deviceProperties().props.limits.maxSamplerAnisotropy,
 				});
+
+				std::filesystem::path albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname;
+				std::filesystem::path normal_path = tm.normal_texname.empty() ? std::filesystem::path() : mtl_path / tm.normal_texname;
+
+				std::shared_ptr<Texture> albedo_texture = texture_file_cache.getTexture(albedo_path); 
+				std::shared_ptr<Texture> normal_texture = texture_file_cache.getTexture(normal_path);
 				
 				my_materials[m] = std::make_shared<PBMaterial>(PBMaterial::CI{
 					.app = info.app,
 					.name = tm.name,
 					.albedo = glm::vec3(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
 					.sampler = sampler,
-					.albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname,
+					.albedo_texture = albedo_texture,
+					.normal_texture = normal_texture,
 					.synch = info.synch,
 				});
 			}

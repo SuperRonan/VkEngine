@@ -24,7 +24,8 @@ namespace vkl
 		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased, .synch = ci.synch}),
 		_albedo(ci.albedo),
 		_sampler(ci.sampler),
-		_albedo_path(ci.albedo_path)
+		_albedo_texture(ci.albedo_texture),
+		_normal_texture(ci.normal_texture)
 	{
 		_should_update_props_buffer = true;
 
@@ -36,16 +37,15 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		if (!_albedo_path.empty())
+		if (_albedo_texture || _normal_texture)
 		{
-			_albedo_texture = Texture::MakeNew(Texture::MakeInfo{
-				.app = application(),
-				.name = name() + ".albedo_texture",
-				.path = _albedo_path,
-				.synch = _synch,
-			});
-
-			assert(!!_sampler);
+			if (!_sampler)
+			{
+				_sampler = std::make_shared<Sampler>(Sampler::CI{
+					.app = application(),
+					.name = name() + ".sampler",
+				});
+			}
 		}
 	}
 
@@ -95,6 +95,10 @@ namespace vkl
 		if (_albedo_texture)
 		{
 			_albedo_texture->updateResources(ctx);
+		}
+		if (_normal_texture)
+		{
+			_normal_texture->updateResources(ctx);
 		}
 		if (_sampler)
 		{

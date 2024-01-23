@@ -78,6 +78,7 @@ namespace vkl
 		enum Flags : uint32_t {
 			NONE = 0,
 			USE_ALBEDO_TEXTURE = (1 << 1),
+			USE_NORMAL_TEXTURE = (1 << 2),
 		};
 	protected:
 
@@ -89,8 +90,9 @@ namespace vkl
 
 		std::shared_ptr<Sampler> _sampler = nullptr;
 
-		std::filesystem::path _albedo_path = {};
 		std::shared_ptr<Texture> _albedo_texture = nullptr;
+
+		std::shared_ptr<Texture> _normal_texture = nullptr;
 		
 		bool _force_albedo_prop = false;
 
@@ -110,7 +112,8 @@ namespace vkl
 			std::string name = {};
 			vec3 albedo = vec3(0.7);
 			std::shared_ptr<Sampler> sampler = nullptr;
-			std::filesystem::path albedo_path = {};
+			std::shared_ptr<Texture> albedo_texture = nullptr;
+			std::shared_ptr<Texture> normal_texture;
 			bool synch = true;
 		};
 		using CI = CreateInfo;

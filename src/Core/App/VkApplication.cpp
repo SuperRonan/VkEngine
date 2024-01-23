@@ -2,6 +2,7 @@
 #include "VkApplication.hpp"
 #include <Core/VkObjects/CommandBuffer.hpp>
 #include <Core/Execution/SamplerLibrary.hpp>
+#include <Core/Rendering/TextureFromFile.hpp>
 #include <Core/VkObjects/DescriptorSetLayout.hpp>
 
 #include <argparse/argparse.hpp>
@@ -729,19 +730,21 @@ namespace vkl
 		createAllocator();
 		createCommandPools();
 
-		_sampler_library = new SamplerLibrary(SamplerLibrary::CI{
+		_sampler_library = std::make_unique<SamplerLibrary>(SamplerLibrary::CI{
 			.app = this,
 			.name = "SamplerLibrary",
+		});
+
+		_texture_file_cache = std::make_unique<TextureFileCache>(TextureFileCache::CI{
+			.app = this,
+			.name = "TextureFileCache",
 		});
 	}
 
 	void VkApplication::cleanup()
 	{
-		if (_sampler_library)
-		{
-			delete _sampler_library;
-			_sampler_library = nullptr;
-		}
+		_texture_file_cache.reset();
+		_sampler_library.reset();;
 
 		_empty_set_layout = nullptr;
 

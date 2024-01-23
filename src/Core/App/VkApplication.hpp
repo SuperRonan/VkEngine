@@ -34,7 +34,7 @@ namespace vkl
 	using DescriptorSetLayoutCacheImpl = GenericCacheImpl<Key, DescriptorSetLayout>;
 
 	class SamplerLibrary;
-
+	class TextureFileCache;
 
 
 	template <class T>
@@ -131,9 +131,11 @@ namespace vkl
 		std::vector<std::shared_ptr<DescriptorSetLayoutCache>> _desc_set_layout_caches;
 		DescriptorSetBindingGlobalOptions _descriptor_binding_options;
 
-		SamplerLibrary * _sampler_library = nullptr;
+		std::unique_ptr<SamplerLibrary> _sampler_library = nullptr;
 
 		std::unique_ptr<DelayedTaskExecutor> _thread_pool = nullptr;
+
+		std::unique_ptr<TextureFileCache> _texture_file_cache = nullptr;
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -289,6 +291,11 @@ namespace vkl
 		}
 
 		std::shared_ptr<DescriptorSetLayoutInstance> getEmptyDescSetLayout();
+
+		TextureFileCache& textureFileCache()
+		{
+			return *_texture_file_cache;
+		}
 	};
 
 	class VkObject

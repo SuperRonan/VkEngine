@@ -273,4 +273,53 @@ namespace vkl
 
 
 
+
+
+
+	TextureFileCache::TextureFileCache(CreateInfo const& ci):
+		VkObject(ci.app, ci.name)
+	{}
+
+
+	std::shared_ptr<TextureFromFile> TextureFileCache::getTexture(std::filesystem::path const& path)
+	{
+		std::unique_lock lock(_mutex);
+		std::shared_ptr<TextureFromFile> res;
+		if (!_cache.contains(path))
+		{
+			res = std::make_shared<TextureFromFile>(TextureFromFile::CI{
+				.app = application(),
+				.name = path.string(),
+				.path = path,
+			});
+			_cache[path] = res;
+		}
+		else
+		{
+			res = _cache.at(path);
+		}
+		return res;
+	}
+
+	void TextureFileCache::updateResources(UpdateContext & ctx)
+	{
+		std::unique_lock lock(_mutex);
+
+		auto it = _cache.begin();
+
+		while (it != _cache.end())
+		{
+			std::shared_ptr<TextureFromFile> & texture = it->second;
+
+			if (texture.use_count() <= 1)
+			{
+				it = _cache.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
+
+	}
 }

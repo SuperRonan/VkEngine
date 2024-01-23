@@ -4,6 +4,9 @@
 #include <filesystem>
 #include <thatlib/src/img/Image.hpp>
 
+#include <unordered_map>
+#include <mutex>
+
 namespace vkl
 {
 	class TextureFromFile : public Texture
@@ -58,5 +61,30 @@ namespace vkl
 		virtual ~TextureFromFile() override;
 
 		virtual void updateResources(UpdateContext& ctx) override;
+	};
+
+	class TextureFileCache : public VkObject
+	{
+	protected:
+
+		std::mutex _mutex;
+		
+		std::unordered_map<std::filesystem::path, std::shared_ptr<TextureFromFile>> _cache;		
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+
+		TextureFileCache(CreateInfo const& ci);
+
+
+		std::shared_ptr<TextureFromFile> getTexture(std::filesystem::path const& path);
+
+		void updateResources(UpdateContext & ctx);
 	};
 }
