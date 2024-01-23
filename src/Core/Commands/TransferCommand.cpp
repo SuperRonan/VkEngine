@@ -309,10 +309,10 @@ namespace vkl
 		std::shared_ptr<BufferInstance> _dst = nullptr;
 		Array<VkBufferCopy2> _regions = {};
 
-		void populate(CopyBuffer::CopyInfo const& ci)
+		void populate(CopyBuffer::CopyInfoInstance const& ci)
 		{
-			_src = ci.src->instance();
-			_dst = ci.dst->instance();
+			_src = ci.src;
+			_dst = ci.dst;
 			_regions = ci.regions;
 
 
@@ -406,7 +406,7 @@ namespace vkl
 		}
 	};
 
-	std::shared_ptr<ExecutionNode> CopyBuffer::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
+	std::shared_ptr<ExecutionNode> CopyBuffer::getExecutionNode(RecordContext& ctx, CopyInfoInstance const& ci)
 	{
 		std::shared_ptr<CopyBufferNode> node = _exec_node_cache.getCleanNode<CopyBufferNode>([&]() {
 			return std::make_shared<CopyBufferNode>(CopyBufferNode::CI{
@@ -430,12 +430,20 @@ namespace vkl
 	{
 		return [this, cinfo](RecordContext& ctx)
 		{
-			CopyInfo ci{
-				.src = cinfo.src ? cinfo.src : _src,
-				.dst = cinfo.dst ? cinfo.dst : _dst,
+			CopyInfoInstance ci{
+				.src = cinfo.src ? cinfo.src->instance() : _src->instance(),
+				.dst = cinfo.dst ? cinfo.dst->instance() : _dst->instance(),
 				.regions = cinfo.regions,
 			};
 			return getExecutionNode(ctx, ci);
+		};
+	}
+
+	Executable CopyBuffer::with(CopyInfoInstance const& cii)
+	{
+		return [this, cii](RecordContext& ctx)
+		{
+			return getExecutionNode(ctx, cii);
 		};
 	}
 

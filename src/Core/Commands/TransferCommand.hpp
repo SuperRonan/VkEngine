@@ -160,24 +160,33 @@ namespace vkl
 			Array<VkBufferCopy2> regions = {};
 		};
 
+		struct CopyInfoInstance
+		{
+			std::shared_ptr<BufferInstance> src = nullptr;
+			std::shared_ptr<BufferInstance> dst = nullptr;
+			Array<VkBufferCopy2> regions = {};
+		};
+
 		CopyBuffer(CreateInfo const& ci);
 
-		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, CopyInfo const& cinfo);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, CopyInfoInstance const& cii);
 
 		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
+
+		Executable with(CopyInfoInstance const& cii);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
 			return with(cinfo);
 		}
 
-		CopyInfo getDefaultCopyInfo()
+		CopyInfoInstance getDefaultCopyInfo()
 		{
-			return CopyInfo{
-				.src = _src,
-				.dst = _dst,
+			return CopyInfoInstance{
+				.src = _src->instance(),
+				.dst = _dst->instance(),
 				.regions = {
 					VkBufferCopy2{
 						.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
