@@ -4,8 +4,10 @@
 
 #include <Core/Execution/Executor.hpp>
 
+#include <Core/Commands/TransferCommand.hpp>
+
 namespace vkl
-{
+{	
 	class GrowableBuffer : public VkObject
 	{
 	protected:
@@ -23,6 +25,8 @@ namespace vkl
 		void updateResources(UpdateContext & ctx, bool shrink_to_fit = false);
 
 		void recordTransferIFN(ExecutionRecorder & exec);
+
+		CopyBuffer::CopyInfoInstance consumeSynchCopyInfo();
 
 		bool needsTransfer() const
 		{

@@ -94,7 +94,27 @@ namespace vkl
 		
 	}
 
-	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(NodePath const& path) const
+	size_t Scene::DirectedAcyclicGraph::FastNodePath::hash()const
+	{
+		size_t res = 0;
+		for (size_t i = 0; i < path.size(); ++i)
+		{
+			res = std::hash<size_t>()(res ^ std::hash<uint32_t>()(path[i]));
+		}
+		return res;
+	}
+
+	size_t Scene::DirectedAcyclicGraph::RobustNodePath::hash()const
+	{
+		size_t res = 0;
+		for (size_t i = 0; i < path.size(); ++i)
+		{
+			res = std::hash<size_t>()(res ^ std::hash<void*>()(path[i]));
+		}
+		return res;
+	}
+
+	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(FastNodePath const& path) const
 	{
 		PositionedNode res;
 
@@ -125,7 +145,45 @@ namespace vkl
 		return res;
 	}
 
+	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(RobustNodePath const& path) const
+	{
+		PositionedNode res;
 
+		std::shared_ptr<Node> n = _root;
+		Mat4 matrix = n->matrix4x4();
+		for (size_t i = 0; i < path.path.size(); ++i)
+		{
+			size_t found = size_t(-1);
+			for (size_t j = 0; j < n->children().size(); ++j)
+			{
+				if (n->children()[j].get() == path.path[i])
+				{
+					found = j;
+					break;
+				}
+			}
+			if (found != size_t(-1))
+			{
+				n = n->children()[found];
+				matrix *= n->matrix4x4();
+			}
+			else
+			{
+				n = nullptr;
+				break;
+			}
+		}
+
+		if (n)
+		{
+			res = PositionedNode{
+				.node = n,
+				.matrix = matrix,
+			};
+		}
+
+		return res;
+	}
 
 
 
@@ -287,7 +345,7 @@ namespace vkl
 		});
 
 		_xforms.reserve(1024);
-		_xforms_buffer = std::make_shared<Buffer>(Buffer::CI{
+		_xforms_buffer = std::make_shared<GrowableBuffer>(Buffer::CI{
 			.app = application(),
 			.name = name() + ".xforms",
 			.size = [this](){return std::align(_xforms.capacity() * sizeof(Mat4x3), size_t(256)) * 2; },
@@ -295,11 +353,11 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 		_xforms_segment = BufferAndRange{
-			.buffer = _xforms_buffer,
+			.buffer = _xforms_buffer->buffer(),
 			.range = [this](){return Buffer::Range{.begin = 0, .len = sizeof(Mat4x3) * _xforms.size(), }; },
 		};
 		_prev_xforms_segment = BufferAndRange{
-			.buffer = _xforms_buffer,
+			.buffer = _xforms_buffer->buffer(),
 			.range = [this]() {return Buffer::Range{.begin = std::align(_xforms.capacity() * sizeof(Mat4x3), size_t(256)), .len = sizeof(Mat4x3) * _xforms.size(), }; },
 		};
 	}
@@ -375,7 +433,7 @@ namespace vkl
 		});
 	}
 
-	void Scene::prepareForRendering()
+	void Scene::updateInternal()
 	{
 		_tree->flatten();
 		fillLightsBuffer();
@@ -415,13 +473,13 @@ namespace vkl
 
 	void Scene::updateResources(UpdateContext& ctx)
 	{
-		// Assume prepareForRendering() was called before
+		updateInternal();
 
 		// Maybe separate between the few scene own internal resources and the lot of nodes resources (models, textures, ...)
 		_ubo_buffer->updateResource(ctx);
 		_lights_buffer->updateResource(ctx);
 		
-		_xforms_buffer->updateResource(ctx);
+		_xforms_buffer->updateResources(ctx);
 		
 		
 		ctx.resourcesToUpdateLater() += _set;
@@ -455,5 +513,10 @@ namespace vkl
 				};
 			}
 		}
+	}
+
+	void Scene::prepareForRendering(ExecutionRecorder& exec)
+	{
+		_xforms_buffer->recordTransferIFN(exec);
 	}
 }

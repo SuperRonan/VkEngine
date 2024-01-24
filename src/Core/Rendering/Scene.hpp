@@ -1,11 +1,14 @@
 #pragma once
 
 #include <Core/App/VkApplication.hpp>
+
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/VkObjects/ImageView.hpp>
-#include <Core/Execution/DescriptorSetsManager.hpp>
-#include <Core/Rendering/Model.hpp>
 
+#include <Core/Execution/DescriptorSetsManager.hpp>
+#include <Core/Execution/GrowableBuffer.hpp>
+
+#include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Light.hpp>
 
 #include <unordered_map>
@@ -168,9 +171,18 @@ namespace vkl
 
 			void iterateOnNodes(const PerNodeFunction & f);
 
-			struct NodePath
+			struct FastNodePath
 			{
-				std::vector<uint32_t> path;
+				MyVector<uint32_t> path;
+
+				size_t hash() const;
+			};
+
+			struct RobustNodePath
+			{
+				MyVector<Node*> path;
+				
+				size_t hash() const;
 			};
 
 			struct PositionedNode
@@ -179,7 +191,9 @@ namespace vkl
 				Mat4x3 matrix;
 			};
 
-			PositionedNode findNode(NodePath const& path) const;
+			PositionedNode findNode(FastNodePath const& path) const;
+
+			PositionedNode findNode(RobustNodePath const& path) const;
 
 			bool empty() const
 			{
@@ -234,7 +248,7 @@ namespace vkl
 		};
 
 		MyVector<Mat4x3> _xforms;
-		std::shared_ptr<Buffer> _xforms_buffer;
+		std::shared_ptr<GrowableBuffer> _xforms_buffer;
 		BufferAndRange _xforms_segment;
 		BufferAndRange _prev_xforms_segment;
 
@@ -294,9 +308,11 @@ namespace vkl
 		};
 
 		// Call before updating resources
-		void prepareForRendering();
+		void updateInternal();
 
 		virtual void updateResources(UpdateContext & ctx);
+
+		virtual void prepareForRendering(ExecutionRecorder & exec);
 
 		//static std::shared_ptr<DescriptorSetLayout> SetLayout(VkApplication * app, SetLayoutOptions const& options);
 

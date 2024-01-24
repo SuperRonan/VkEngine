@@ -208,77 +208,77 @@ namespace vkl
 
 		if (ImGui::CollapsingHeader("Tree"))
 		{
-			Scene::DAG::NodePath path;
+			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
-				{
-					Mat4 node_matrix = matrix * node->matrix4x4();
-					std::string node_gui_name = node->name();
+			{
+				Mat4 node_matrix = matrix * node->matrix4x4();
+				std::string node_gui_name = node->name();
 
-					ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+				if (!path.path.empty())
+				{
+					flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+				}
+				const bool is_leaf = node->children().empty();
+				if (is_leaf)
+				{
+					flags |= ImGuiTreeNodeFlags_Leaf;
+				}
+
+				bool is_selected = false;
+				if (is_selected_path_so_far)
+				{
 					if (!path.path.empty())
 					{
-						flags |= ImGuiTreeNodeFlags_OpenOnArrow;
-					}
-					const bool is_leaf = node->children().empty();
-					if (is_leaf)
-					{
-						flags |= ImGuiTreeNodeFlags_Leaf;
-					}
-
-					bool is_selected = false;
-					if (is_selected_path_so_far)
-					{
-						if (!path.path.empty())
+						if (_gui_selected_node.path.path.size() >= path.path.size())
 						{
-							if (_gui_selected_node.path.path.size() >= path.path.size())
-							{
-								if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
-								{
-									is_selected_path_so_far = false;
-								}
-								else
-								{
-									is_selected = (_gui_selected_node.path.path.size() == path.path.size());
-								}
-							}
-							else
+							if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
 							{
 								is_selected_path_so_far = false;
 							}
+							else
+							{
+								is_selected = (_gui_selected_node.path.path.size() == path.path.size());
+							}
 						}
-					}
-
-					if (is_selected || node == _gui_selected_node.node.node)
-					{
-						flags |= ImGuiTreeNodeFlags_Selected;
-					}
-
-					const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
-
-					if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
-					{
-						//std::cout << "Clicked " << node->name() << std::endl;
-						_gui_selected_node.node = Scene::DAG::PositionedNode{
-							.node = node,
-							.matrix = node_matrix,
-						};
-						_gui_selected_node.path = path;
-						_gui_selected_node.bindMatrices();
-					}
-
-					if (node_open)
-					{
-						path.path.push_back(0);
-						for (size_t i = 0; i < node->children().size(); ++i)
+						else
 						{
-							path.path.back() = i;
-							recurse(node->children()[i], node_matrix, is_selected_path_so_far, recurse);
+							is_selected_path_so_far = false;
 						}
-						path.path.pop_back();
-
-						ImGui::TreePop();
 					}
-				};
+				}
+
+				if (is_selected || node == _gui_selected_node.node.node)
+				{
+					flags |= ImGuiTreeNodeFlags_Selected;
+				}
+
+				const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
+
+				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
+				{
+					//std::cout << "Clicked " << node->name() << std::endl;
+					_gui_selected_node.node = Scene::DAG::PositionedNode{
+						.node = node,
+						.matrix = node_matrix,
+					};
+					_gui_selected_node.path = path;
+					_gui_selected_node.bindMatrices();
+				}
+
+				if (node_open)
+				{
+					path.path.push_back(0);
+					for (size_t i = 0; i < node->children().size(); ++i)
+					{
+						path.path.back() = i;
+						recurse(node->children()[i], node_matrix, is_selected_path_so_far, recurse);
+					}
+					path.path.pop_back();
+
+					ImGui::TreePop();
+				}
+			};
 
 			Mat4 root_matrix = Mat4(1);
 			declare_node(_scene->getRootNode(), root_matrix, true, declare_node);

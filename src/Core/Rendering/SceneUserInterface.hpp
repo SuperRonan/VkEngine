@@ -22,7 +22,7 @@ namespace vkl
 		struct SelectedNode
 		{
 			Scene::DAG::PositionedNode node;
-			Scene::DAG::NodePath path;
+			Scene::DAG::FastNodePath path;
 
 			bool hasValue()const
 			{

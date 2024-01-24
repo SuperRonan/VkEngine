@@ -210,7 +210,6 @@ namespace vkl
 			});
 
 			createScene(scene);
-			scene->prepareForRendering();
 
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
 			std::shared_ptr<DescriptorSetLayout> scene_layout = scene->setLayout();
@@ -396,7 +395,7 @@ namespace vkl
 					{
 						std::TickTock_hrc prepare_scene_tt;
 						prepare_scene_tt.tick();
-						scene->prepareForRendering();
+						scene->updateInternal();
 						frame_counters.prepare_scene_time = prepare_scene_tt.tockv().count();
 					}
 
@@ -431,6 +430,7 @@ namespace vkl
 					exec.performAsynchMipsCompute(*update_context->mipsQueue());
 
 					exec_thread.bindSet(1, scene->set());
+					scene->prepareForRendering(exec_thread);
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
 
 					image_picker.execute(exec_thread);

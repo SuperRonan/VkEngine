@@ -1,7 +1,5 @@
 #include "GrowableBuffer.hpp"
 
-#include <Core/Commands/TransferCommand.hpp>
-
 namespace vkl
 {
 	GrowableBuffer::GrowableBuffer(Buffer::CI const& ci):
@@ -48,12 +46,21 @@ namespace vkl
 				.app = application(),
 			};
 
-			exec(cp.with(CopyBuffer::CopyInfoInstance{
-				.src = _prev_buffer_inst,
-				.dst = _buffer->instance()
-			}));
-
-			_prev_buffer_inst.reset();
+			exec(cp.with(consumeSynchCopyInfo()));
 		}
+	}
+
+	CopyBuffer::CopyInfoInstance GrowableBuffer::consumeSynchCopyInfo()
+	{
+		assert(needsTransfer());
+
+		CopyBuffer::CopyInfoInstance res{
+			.src = _prev_buffer_inst,
+			.dst = _buffer->instance()
+		};
+
+		_prev_buffer_inst.reset();
+
+		return res;
 	}
 }
