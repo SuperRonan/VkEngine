@@ -473,7 +473,7 @@ namespace vkl
 
 	void Scene::updateResources(UpdateContext& ctx)
 	{
-		updateInternal();
+		//updateInternal();
 
 		// Maybe separate between the few scene own internal resources and the lot of nodes resources (models, textures, ...)
 		_ubo_buffer->updateResource(ctx);

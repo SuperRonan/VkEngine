@@ -92,6 +92,11 @@ namespace vkl
 				return _visible;
 			}
 
+			void setVisibility(bool v)
+			{
+				_visible = v;
+			}
+
 			constexpr const std::vector<std::shared_ptr<Node>>& children()const
 			{
 				return _children;

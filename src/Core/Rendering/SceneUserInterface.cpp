@@ -212,7 +212,8 @@ namespace vkl
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
 			{
 				Mat4 node_matrix = matrix * node->matrix4x4();
-				std::string node_gui_name = node->name();
+				const std::string & node_gui_name = node->name();
+				const bool node_visible = node->visible();
 
 				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
 				if (!path.path.empty())
@@ -253,7 +254,16 @@ namespace vkl
 					flags |= ImGuiTreeNodeFlags_Selected;
 				}
 
+				if (!node_visible)
+				{
+					float c = 0.666;
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(c, c, c, 1));
+				}
 				const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
+				if (!node_visible)
+				{
+					ImGui::PopStyleColor(1);
+				}
 
 				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
 				{
@@ -309,6 +319,12 @@ namespace vkl
 				}
 				else
 				{
+					bool visible = node->visible();
+					if (ImGui::Checkbox("Visible", &visible))
+					{
+						node->setVisibility(visible);
+					}
+					
 					if (ImGui::CollapsingHeader("Transform"))
 					{
 						bool changed = false;
