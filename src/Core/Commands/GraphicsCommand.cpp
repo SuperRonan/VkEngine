@@ -512,6 +512,12 @@ namespace vkl
 			case DrawType::DrawIndexed:
 				vkCmdDrawIndexed(cmd, to_draw.draw_count, to_draw.instance_count, 0, 0, 0);
 				break;
+			case DrawType::IndirectDraw:
+				vkCmdDrawIndirect(cmd, to_draw.indirect_draw_buffer.buffer->handle(), to_draw.indirect_draw_buffer.range.begin, to_draw.draw_count, to_draw.indirect_draw_stride);
+				break;
+			case DrawType::IndirectDrawIndexed:
+				vkCmdDrawIndexedIndirect(cmd, to_draw.indirect_draw_buffer.buffer->handle(), to_draw.indirect_draw_buffer.range.begin, to_draw.draw_count, to_draw.indirect_draw_stride);
+				break;
 			default:
 				assertm(false, "Unsupported draw call type");
 				break;
@@ -679,6 +685,8 @@ namespace vkl
 					node._vertex_buffers[old_size + i] = di.draw_list.vertexBuffers()[to_draw.vertex_buffer_begin + i].getInstance();
 				}
 			}
+			node_to_draw.indirect_draw_buffer = to_draw.indirect_draw_buffer.getInstance();
+			node_to_draw.indirect_draw_stride = to_draw.indirect_draw_stride;
 
 			node_to_draw.pc = to_draw.pc;
 
@@ -715,6 +723,16 @@ namespace vkl
 						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
 					},
 					.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+				};
+			}
+			if (node_to_draw.indirect_draw_buffer.buffer)
+			{
+				node.resources() += BufferUsage{
+					.bari = node_to_draw.indirect_draw_buffer,
+					.begin_state = ResourceState2{
+						.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
+					},
 				};
 			}
 			for (uint32_t i = 0; i < node_to_draw.num_vertex_buffers; ++i)

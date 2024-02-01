@@ -1,6 +1,5 @@
 #pragma once
 
-
 #ifndef COMMON_DESCRIPTOR_BINDING
 #define COMMON_DESCRIPTOR_BINDING set = 0, binding = 0
 #endif

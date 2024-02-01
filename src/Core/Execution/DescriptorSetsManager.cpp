@@ -406,7 +406,7 @@ namespace vkl
 								infos[i] = VkDescriptorBufferInfo{
 									.buffer = VK_NULL_HANDLE,
 									.offset = 0,
-									.range = 0,
+									.range = VK_WHOLE_SIZE,
 								};
 							}
 						}

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Types.hpp"
 #include <numeric>
 #include <limits>
@@ -11,14 +13,39 @@ namespace vkl
 		
 		using vecN = Vector<N, Float>;
 
+		static constexpr vecN defaultBottom()
+		{
+			return vecN(std::numeric_limits<Float>::max());
+		}
+
+		static constexpr vecN defaultTop()
+		{
+			return vecN(std::numeric_limits<Float>::lowest());
+		}
+
 	protected:
 		
-		vecN _bottom = vecN(std::numeric_limits<Float>::max());
-		vecN _top = vecN(std::numeric_limits<Float>::lowest());
+		vecN _bottom = defaultBottom();
+		vecN _top = defaultTop();
+
+		constexpr bool invariant() const
+		{
+			bool res = empty();
+			if (!res)
+			{
+
+			}
+			return res;
+		}
 
 	public:
 
-		AlignedAxisBoundingBox() = default;
+		constexpr AlignedAxisBoundingBox() = default;
+
+		constexpr AlignedAxisBoundingBox(vecN const& bottom, vecN const& top):
+			_bottom(bottom),
+			_top(top)
+		{}
 
 		constexpr const vecN & bottom()const
 		{
@@ -30,42 +57,42 @@ namespace vkl
 			return _top;
 		}
 
-		vecN diagonal()const
+		constexpr vecN diagonal()const
 		{
 			return _top - _bottom;
 		}
 
 		// TODO simd version
 
-		AlignedAxisBoundingBox& operator+=(vecN const& p)
+		constexpr AlignedAxisBoundingBox& operator+=(vecN const& p)
 		{
 			_bottom = glm::min(_bottom, p);
 			_top = glm::max(_top, p);
 			return *this;
 		}
 
-		AlignedAxisBoundingBox& operator+=(AlignedAxisBoundingBox const& o)
+		constexpr AlignedAxisBoundingBox& operator+=(AlignedAxisBoundingBox const& o)
 		{
 			_bottom = glm::min(_bottom, o._bottom);
 			_top = glm::max(_top, o._top);
 			return *this;
 		}
 
-		AlignedAxisBoundingBox operator+(vecN const& p) const
+		constexpr AlignedAxisBoundingBox operator+(vecN const& p) const
 		{
 			AlignedAxisBoundingBox res = *this;
 			res += p;
 			return res;
 		}
 
-		AlignedAxisBoundingBox operator+(AlignedAxisBoundingBox const& o) const
+		constexpr AlignedAxisBoundingBox operator+(AlignedAxisBoundingBox const& o) const
 		{
 			AlignedAxisBoundingBox res = *this;
 			res += o;
 			return res;
 		}
 
-		bool isInsideStrict(vecN const& p)const
+		constexpr bool isInsideStrict(vecN const& p)const
 		{
 			bool res = true;
 			for (int i = 0; i < N; ++i)
@@ -76,7 +103,7 @@ namespace vkl
 			return res;
 		}
 
-		bool isInsideRelaxed(vecN const& p)const
+		constexpr bool isInsideRelaxed(vecN const& p)const
 		{
 			bool res = true;
 			for (int i = 0; i < N; ++i)
@@ -87,12 +114,12 @@ namespace vkl
 			return res;
 		}
 
-		AlignedAxisBoundingBox unionWith(AlignedAxisBoundingBox const& o)const
+		constexpr AlignedAxisBoundingBox unionWith(AlignedAxisBoundingBox const& o)const
 		{
 			return operator+(o);
 		}
 
-		AlignedAxisBoundingBox intersection(AlignedAxisBoundingBox const& o)const
+		constexpr AlignedAxisBoundingBox intersection(AlignedAxisBoundingBox const& o)const
 		{
 			AlignedAxisBoundingBox res;
 			res._bottom = glm::max(_bottom, o._bottom);
@@ -100,7 +127,7 @@ namespace vkl
 			return res;
 		}
 
-		bool isInit()const
+		constexpr bool isInit()const
 		{
 			return _bottom != vecN(std::numeric_limits<Float>::max());
 		}
@@ -108,7 +135,7 @@ namespace vkl
 		// 3D -> Volume
 		// 2D -> Area
 		// 1D -> Length
-		Float dimsN()const
+		constexpr Float measureInside()const
 		{
 			Float res = Float(1);
 			const vecN d = diagonal();
@@ -121,7 +148,7 @@ namespace vkl
 
 		// 3D -> Surface Area
 		// 2D -> Perimeter
-		Float dimsNMinus()const
+		constexpr Float measureBorder()const
 		{
 			const vecN d = diagonal();
 			Float res = 0;
@@ -140,10 +167,20 @@ namespace vkl
 			return res * Float(2);
 		}
 
-		void clear()
+		constexpr void clear()
 		{
-			_bottom = vecN(std::numeric_limits<Float>::max());
-			_top = vecN(std::numeric_limits<Float>::lowest());
+			_bottom = defaultBottom();
+			_top = defaultTop();
+		}
+
+		constexpr void reset()
+		{
+			clear();
+		}
+
+		constexpr bool empty()
+		{
+			return _bottom == defaultBottom() && _top == defaultTop();
 		}
 
 		//template <int M>

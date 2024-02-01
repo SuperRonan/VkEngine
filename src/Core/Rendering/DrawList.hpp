@@ -22,6 +22,8 @@ namespace vkl
 			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
 			uint32_t vertex_buffer_begin = 0;
 			uint32_t num_vertex_buffers = 0;
+			BufferAndRange indirect_draw_buffer;
+			uint32_t indirect_draw_stride = 5 * 4;
 
 			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
 			PushConstant pc = {};

@@ -4,9 +4,9 @@ namespace vkl
 {
 	void Vertex::transform(Matrix4 const& m, Matrix3 const& nm) noexcept
 	{
-		position = Vector3(m * Vector4(position, 1));
-		normal = glm::normalize(nm * normal);
-		tangent = glm::normalize(nm * tangent);
+		position = m * Vector4(Vector3(position), 1);
+		normal =  Vector4(glm::normalize(nm * Vector3(normal)), 0);
+		tangent = Vector4(glm::normalize(nm * Vector3(tangent)), 0);
 	}
 
 	void Vertex::transform(Matrix4 const& m) noexcept

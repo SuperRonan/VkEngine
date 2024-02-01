@@ -35,12 +35,22 @@ namespace vkl
 		
 		std::shared_ptr<ImageView> _depth = nullptr;
 
+		uint32_t _model_capacity = 256;
+		std::shared_ptr<Buffer> _draw_indexed_indirect_buffer = nullptr;
+		BufferAndRange _vk_draw_params_segment;
+		BufferAndRange _model_indices_segment;
+		BufferAndRange _atomic_counter_segment;
+
+		std::shared_ptr<ComputeCommand> _prepare_draw_list = nullptr;
+		
+
 		ImGuiListSelection _pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
 			.labels = {"Direct V1"s, "Deferred V1"s},
 			.default_index = 1,
 			.same_line = true,
 		};
+		bool _use_indirect_rendering = false;
 
 		std::vector<uint32_t> _model_types;
 
@@ -61,7 +71,12 @@ namespace vkl
 			std::shared_ptr<ImageView> _position = nullptr;
 			std::shared_ptr<ImageView> _normal = nullptr;
 
-			std::map<uint32_t, std::shared_ptr<VertexCommand>> _raster_gbuffer;
+			struct RasterCommands
+			{
+				std::shared_ptr<VertexCommand> raster;
+			};
+			std::shared_ptr<VertexCommand> raster_gbuffer_indirect;
+			std::map<uint32_t, RasterCommands> _raster_gbuffer;
 			struct RasterGBufferPC 
 			{
 				glm::mat4 object_to_world;

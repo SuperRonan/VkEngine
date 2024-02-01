@@ -3,15 +3,10 @@
 #include <ShaderLib:/common.glsl>
 
 #ifndef RENDERER_BINDING
-#define RENDERER_BINDING SHADER_DESCRIPTOR_BINDING
+#define RENDERER_BINDING SHADER_DESCRIPTOR_BINDING + 0
 #endif
 
-#ifndef UBO_BINDING
-#define UBO_BINDING RENDERER_BINDING
-#endif
-
-
-layout(UBO_BINDING) uniform UBO
+layout(RENDERER_BINDING + 0) uniform UBO
 {
 	float time;
 	float delta_time;

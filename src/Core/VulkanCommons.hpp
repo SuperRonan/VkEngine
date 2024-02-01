@@ -105,6 +105,21 @@ namespace vkl
 		{
 			return begin + len;
 		}
+
+		constexpr Range& operator|=(Range const& o)
+		{
+			UInt end = std::max(end(), o.end());
+			begin = std::min(begin, o.begin);
+			len = end - begin;
+			return *this;
+		}
+
+		constexpr Range operator|(Range const& o) const
+		{
+			Range res = *this;
+			res |= o;
+			return res;
+		}
 	};
 
 	using Range32u = Range<uint32_t>;
@@ -142,8 +157,6 @@ namespace vkl
 		IndirectDrawIndexed,
 		IndirectDrawCount,
 		IndirectDrawCountIndexed,
-		MultiDraw,
-		MultiDrawIndexed,
 		MAX_ENUM,
 	};
 	using DispatchType = DrawType;
@@ -838,11 +851,43 @@ namespace std
 		}
 	};
 
-	// Align up
-	template <class Uint>
-	Uint align(Uint n, Uint a)
+	template <integral Uint>
+	constexpr bool isPowerOf2(Uint i)
 	{
-		return n + (a - (n % a));
+		return ((i - 1) & i) == 0;
+	}
+
+	template <integral Uint>
+	constexpr Uint alignUp(Uint n, Uint a)
+	{
+		const Uint r = n % a;
+		return r ? n + (a - r) : n;
+	}
+
+	template <integral Uint>
+	constexpr Uint alignUpAssumeP2(Uint n, Uint a_p2)
+	{
+		assert(isPowerOf2(a_p2));
+		assert(a_p2 > 1);
+		const Uint a_mask = a_p2 - 1;
+		const Uint res = (n | a_mask) + 1;
+		return res;
+	}
+
+	template <integral Uint>
+	constexpr Uint alignDown(Uint n, Uint a)
+	{
+		return n - (n % a);
+	}
+
+	template <integral Uint>
+	constexpr Uint alignDownAssumeP2(Uint n, Uint a_p2)
+	{
+		assert(isPowerOf2(a_p2));
+		assert(a_p2 > 1);
+		const Uint a_mask = a_p2 - 1;
+		const Uint res = n & ~a_mask;
+		return res;
 	}
 }
 

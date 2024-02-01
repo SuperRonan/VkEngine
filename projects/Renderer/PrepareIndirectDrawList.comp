@@ -1,0 +1,64 @@
+#version 450
+
+#include <ShaderLib:/common.glsl>
+#include <ShaderLib:/Vulkan/Indirect.glsl>
+
+#define BIND_SCENE 1
+#include <ShaderLib:/Rendering/Scene/Scene.glsl>
+
+#define I_WANT_TO_DEBUG 1
+#include <ShaderLib:/DebugBuffers.glsl>
+
+layout(local_size_x = 128) in;
+
+layout(SHADER_DESCRIPTOR_BINDING + 0) buffer restrict writeonly VkIndirectDrawBinding
+{
+	VkDrawIndirectCommand  commands[];
+} vk_draw_list;
+
+layout(SHADER_DESCRIPTOR_BINDING + 1) buffer restrict writeonly ModelIndexBuffer
+{
+	uint index[];
+} index_buffer;
+
+layout(SHADER_DESCRIPTOR_BINDING + 2) buffer restrict AtomicCounter
+{
+	uint counter;
+} atomic_counter;
+
+layout(push_constant) uniform PushConstant
+{
+	uint num_objects;
+} _pc;
+
+void main()
+{
+	const uint gid = gl_GlobalInvocationID.x;
+	if(gid < _pc.num_objects)
+	{
+		const SceneObjectReference obj = scene_objects_table.table[gid];
+		bool emit = (obj.flags & SCENE_OBJECT_FLAG_VISIBLE_BIT) != 0;
+		if(emit)
+		{
+			const uint index = atomicAdd(atomic_counter.counter, 1);
+			const uint mesh_index = obj.mesh_id;
+			const uint mesh_num_indices = scene_mesh_headers[mesh_index].headers.num_indices;
+			
+			index_buffer.index[index] = gid;
+
+			VkDrawIndirectCommand  vk_draw;
+			vk_draw.vertexCount = mesh_num_indices;
+			vk_draw.instanceCount = 1;
+			vk_draw.firstVertex = 0;
+			vk_draw.firstInstance = 0;
+			
+			vk_draw_list.commands[index] = vk_draw;
+
+			if(gid == 0)
+			{
+				DebugStringCaret c = Caret2D(vec2(0, 10), 0);
+				c = pushToDebugPixLn(scene_mesh_headers[mesh_index].headers.num_indices, c);
+			}
+		}
+	}
+}

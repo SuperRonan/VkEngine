@@ -7,6 +7,7 @@
 
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/GrowableBuffer.hpp>
+#include <Core/Execution/HostManagedBuffer.hpp>
 
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Light.hpp>
@@ -24,6 +25,7 @@ namespace vkl
 
 		using Mat4 = glm::mat4;
 		using Mat4x3 = glm::mat4x3;
+		using Mat3x4 = glm::mat3x4;
 
 		class Node
 		{
@@ -141,20 +143,62 @@ namespace vkl
 
 		};
 		
-
-		using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
-		using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<Mat4x3> const&)>;
-		using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
+		
 		
 		class DirectedAcyclicGraph
 		{
+		public:
+
+
+			friend class Scene;
+			
+			struct FastNodePath
+			{
+				MyVector<uint32_t> path;
+
+				size_t hash() const;
+
+				auto operator<=>(FastNodePath const&) const = default;
+
+				bool operator==(FastNodePath const& other) const = default;
+			};
+
+			struct RobustNodePath
+			{
+				MyVector<Node*> path;
+				
+				size_t hash() const;
+
+				auto operator<=>(RobustNodePath const&) const = default;
+
+				bool operator==(RobustNodePath const& other) const = default;
+			};
+			
+			struct PerNodeInstance
+			{
+				Mat4x3 matrix;
+				bool visible;
+			};
+
+			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
+			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node>, FastNodePath const&, Mat4 const&)>;
+			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node>, RobustNodePath const&, Mat4 const&)>;
+			using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<PerNodeInstance> const&)>;
+			using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
+
+
 		protected:
 			
 			std::shared_ptr<Node> _root = nullptr;
 
 			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat4 const& matrix, const PerNodeInstanceFunction& f);
 
-			std::unordered_map<std::shared_ptr<Node>, std::vector<Mat4x3>> _flat_dag;
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat4 const& matrix, const PerNodeInstanceFastPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat4 const& matrix, const PerNodeInstanceRobustPathFunction& f);
+
+
+
+			std::unordered_map<std::shared_ptr<Node>, std::vector<PerNodeInstance>> _flat_dag;
 
 		public:
 
@@ -169,26 +213,16 @@ namespace vkl
 
 			void flatten();
 
+
 			void iterateOnDag(const PerNodeInstanceFunction & f);
+			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat4 const& matrix)> const& f);
+			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, RobustNodePath const& path, Mat4 const& matrix)> const& f);
 
 			void iterateOnFlattenDag(const PerNodeAllInstancesFunction& f);
 			void iterateOnFlattenDag(const PerNodeInstanceFunction& f);
 
 			void iterateOnNodes(const PerNodeFunction & f);
 
-			struct FastNodePath
-			{
-				MyVector<uint32_t> path;
-
-				size_t hash() const;
-			};
-
-			struct RobustNodePath
-			{
-				MyVector<Node*> path;
-				
-				size_t hash() const;
-			};
 
 			struct PositionedNode
 			{
@@ -229,17 +263,17 @@ namespace vkl
 
 		struct MeshData
 		{
-			size_t unique_index;
+			uint32_t unique_index;
 		};
 
 		struct TextureData
 		{
-			size_t unique_index;
+			uint32_t unique_index;
 		};
 
 		uint32_t _unique_mesh_counter = 0;
-		std::unordered_map<std::shared_ptr<Mesh>, MeshData> _meshes;
 		uint32_t allocateUniqueMeshID();
+		std::unordered_map<std::shared_ptr<Mesh>, MeshData> _meshes;
 
 		uint32_t _unique_texture_counter = 0;
 		std::unordered_map<std::shared_ptr<Texture>, TextureData> _textures;
@@ -251,9 +285,20 @@ namespace vkl
 			uint32_t xform_id;
 			uint32_t flags;
 		};
+		struct ModelInstance
+		{
+			uint32_t model_unique_index;
+			uint32_t xform_unique_index;
+		};
+		uint32_t _unique_model_counter = 0;
+		uint32_t allocateUniqueModelID();
+		std::unordered_map<DAG::RobustNodePath, ModelInstance> _unique_models; 
+		std::shared_ptr<HostManagedBuffer> _model_references_buffer;
 
-		MyVector<Mat4x3> _xforms;
-		std::shared_ptr<GrowableBuffer> _xforms_buffer;
+		uint32_t _unique_xform_counter = 0;
+		uint32_t allocateUniqueXformID();
+		std::shared_ptr<HostManagedBuffer> _xforms_buffer;
+		std::shared_ptr<Buffer> _prev_xforms_buffer;
 		BufferAndRange _xforms_segment;
 		BufferAndRange _prev_xforms_segment;
 
@@ -271,8 +316,8 @@ namespace vkl
 
 		std::shared_ptr<Buffer> _ubo_buffer;
 
-		std::vector<LightGLSL> _lights_glsl;
-		std::shared_ptr<Buffer> _lights_buffer;
+		uint32_t _num_lights;
+		std::shared_ptr<HostManagedBuffer> _lights_buffer;
 
 		UBO getUBO() const;
 
@@ -324,6 +369,11 @@ namespace vkl
 		virtual std::shared_ptr<DescriptorSetLayout> setLayout();
 
 		std::shared_ptr<DescriptorSetAndPool> set();
+
+		uint32_t objectCount()const
+		{
+			return _unique_model_counter;
+		}
 
 		friend class SceneUserInterface;
 	};

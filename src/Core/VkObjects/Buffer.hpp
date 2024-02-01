@@ -211,6 +211,11 @@ namespace vkl
 			return _size;
 		}
 
+		constexpr DynamicValue<VkDeviceSize>& size()
+		{
+			return _size;
+		}
+
 		constexpr auto usage()const
 		{
 			return _usage;

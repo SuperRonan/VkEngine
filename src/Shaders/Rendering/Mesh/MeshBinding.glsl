@@ -18,6 +18,24 @@ struct Vertex
 	vec2 uv;
 };
 
+struct StorageVertex
+{
+	vec4 position;
+	vec4 normal;
+	vec4 tangent;
+	vec4 uv;
+};
+
+Vertex MakeVertex(in const StorageVertex sv)
+{
+	Vertex res;
+	res.position = sv.position.xyz;
+	res.normal = sv.normal.xyz;
+	res.tangent = sv.tangent.xyz;
+	res.uv = sv.uv.xy;
+	return res;
+}
+
 #define MESH_FLAG_INDEX_TYPE_UINT16 0
 #define MESH_FLAG_INDEX_TYPE_UINT32 1
 #define MESH_FLAG_INDEX_TYPE_UINT8  2

@@ -317,7 +317,7 @@ namespace vkl
 						const VkDescriptorSetLayoutBinding & pb = provided_layout.bindings()[pi];
 
 						const bool same_type = rb.descriptorType == pb.descriptorType;
-						const bool same_count = rb.descriptorCount == pb.descriptorCount;
+						const bool same_count = (rb.descriptorCount == 0) || rb.descriptorCount == pb.descriptorCount;
 						const bool has_stages = (rb.stageFlags & pb.stageFlags) == rb.stageFlags;
 
 						res &= (same_type & same_count & has_stages);

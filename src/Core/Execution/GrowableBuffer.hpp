@@ -18,13 +18,15 @@ namespace vkl
 		std::shared_ptr<Buffer> _buffer;
 		std::shared_ptr<BufferInstance> _prev_buffer_inst;
 
+		std::shared_ptr<BufferInstance> updateBuffer(UpdateContext& ctx, bool shrink_to_fit);
+
 	public:
 
 		GrowableBuffer(Buffer::CI const& ci);
 
-		void updateResources(UpdateContext & ctx, bool shrink_to_fit = false);
+		virtual void updateResources(UpdateContext & ctx, bool shrink_to_fit = false);
 
-		void recordTransferIFN(ExecutionRecorder & exec);
+		virtual void recordTransferIFN(ExecutionRecorder & exec);
 
 		CopyBuffer::CopyInfoInstance consumeSynchCopyInfo();
 

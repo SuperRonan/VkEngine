@@ -231,7 +231,7 @@ namespace vkl
 					bool destroy_instance = false;
 					for (size_t i = 0; i < _bindings.size(); ++i)
 					{
-						if (_bindings[i].count.value() != _inst->_bindings[i].binding)
+						if (_bindings[i].count.value() != _inst->_bindings[i].descriptorCount)
 						{
 							destroy_instance = true;
 							break;

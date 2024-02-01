@@ -243,6 +243,24 @@ namespace std
 
 namespace std
 {
+	namespace concepts
+	{
+		template <class T>
+		concept HashableFromMethod = requires(T const& t)
+		{
+			{ t.hash() } -> std::same_as<size_t>; 
+		};
+	}
+
+	template <concepts::HashableFromMethod T>
+	struct hash<T>
+	{
+		constexpr size_t operator()(T const& t)const
+		{
+			return t.hash();
+		}
+	};
+
 	template <class T>
 	constexpr T& zeroInit(T& t)
 	{

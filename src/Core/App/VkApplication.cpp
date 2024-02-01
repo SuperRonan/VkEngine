@@ -105,6 +105,10 @@ namespace vkl
 		features.features.samplerAnisotropy = t;
 		features.features_12.samplerMirrorClampToEdge = t;
 
+		features.features.multiDrawIndirect = t;
+		features.features_11.shaderDrawParameters = t;
+
+
 		features.features_12.shaderInt8 = t;
 	
 		features.features_12.descriptorBindingPartiallyBound = t;
@@ -115,6 +119,8 @@ namespace vkl
 		features.features_12.descriptorBindingUniformTexelBufferUpdateAfterBind = t;
 		features.features_12.descriptorBindingStorageTexelBufferUpdateAfterBind = t;
 		features.features_12.descriptorBindingUpdateUnusedWhilePending = t;
+
+		features.features_12.runtimeDescriptorArray = t;
 
 		features.features_13.maintenance4 = t;
 

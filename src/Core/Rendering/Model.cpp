@@ -339,9 +339,9 @@ namespace vkl
 					if(!vertices_map.contains(tiny_index))
 					{
 						Vertex v{
-							.position = readVec3(attrib.vertices, tiny_index.vertex_index),
-							.normal = readVec3(attrib.normals, tiny_index.normal_index),
-							.uv = readVec2(attrib.texcoords, tiny_index.texcoord_index),
+							.position = Vector4f(readVec3(attrib.vertices, tiny_index.vertex_index), 1),
+							.normal = Vector4f(readVec3(attrib.normals, tiny_index.normal_index), 0),
+							.uv = Vector4f(readVec2(attrib.texcoords, tiny_index.texcoord_index), 0, 0),
 						};
 						// .obj flips the texture
 						v.uv.y = 1.0f - v.uv.y;

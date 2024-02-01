@@ -15,7 +15,7 @@ namespace vkl
 		_buffer = std::make_shared<Buffer>(_ci);
 	}
 
-	void GrowableBuffer::updateResources(UpdateContext & ctx, bool shrink_to_fit)
+	std::shared_ptr<BufferInstance> GrowableBuffer::updateBuffer(UpdateContext& ctx, bool shrink_to_fit)
 	{
 		const size_t size = _size.value();
 
@@ -31,7 +31,12 @@ namespace vkl
 
 		std::shared_ptr<BufferInstance> bi = _buffer->instance();
 		_buffer->updateResource(ctx);
+		return bi;
+	}
 
+	void GrowableBuffer::updateResources(UpdateContext & ctx, bool shrink_to_fit)
+	{
+		std::shared_ptr<BufferInstance> bi = updateBuffer(ctx, shrink_to_fit);
 		if (bi != _buffer->instance() && !_prev_buffer_inst)
 		{
 			_prev_buffer_inst = bi;

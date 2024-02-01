@@ -38,6 +38,40 @@ namespace vkl
 		}
 	}
 
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat4 const& matrix, const PerNodeInstanceFastPathFunction& f)
+	{
+		Mat4 new_matrix = matrix * node->matrix4x4();
+		if (f(node, path, new_matrix))
+		{
+			path.path.push_back(0);
+			for (size_t i=0; i < node->children().size(); ++i)
+			{
+				path.path.back() = static_cast<uint32_t>(i);
+				std::shared_ptr<Node> const& n = node->children()[i];
+				assert(!!n);
+				iterateOnNodeThenSons(n, path, new_matrix, f);
+			}
+			path.path.pop_back();
+		}
+	}
+
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath& path, Mat4 const& matrix, const PerNodeInstanceRobustPathFunction& f)
+	{
+		Mat4 new_matrix = matrix * node->matrix4x4();
+		if (f(node, path, new_matrix))
+		{
+			path.path.push_back(nullptr);
+			for (size_t i = 0; i < node->children().size(); ++i)
+			{
+				std::shared_ptr<Node> const& n = node->children()[i];
+				assert(!!n);
+				path.path.back() = n.get();
+				iterateOnNodeThenSons(n, path, new_matrix, f);
+			}
+			path.path.pop_back();
+		}
+	}
+
 	void Scene::DirectedAcyclicGraph::iterateOnDag(const PerNodeInstanceFunction& f)
 	{
 		Mat4 matrix = Mat4(1);
@@ -47,13 +81,33 @@ namespace vkl
 		}
 	}
 
+	void Scene::DirectedAcyclicGraph::iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat4 const& matrix)> const& f)
+	{
+		FastNodePath path;
+		Mat4 matrix = Mat4(1);
+		if (root())
+		{
+			iterateOnNodeThenSons(root(), path, matrix, f);
+		}
+	}
+
+	void Scene::DirectedAcyclicGraph::iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, RobustNodePath const& path, Mat4 const& matrix)> const& f)
+	{
+		RobustNodePath path;
+		Mat4 matrix = Mat4(1);
+		if (root())
+		{
+			iterateOnNodeThenSons(root(), path, matrix, f);
+		}
+	}
+
 	void Scene::DirectedAcyclicGraph::iterateOnFlattenDag(const PerNodeInstanceFunction& f)
 	{
 		for (auto& [node, matrices]  : _flat_dag)
 		{
 			for (const auto& matrix : matrices)
 			{
-				f(node, matrix);
+				f(node, matrix.matrix);
 			}
 		}
 	}
@@ -80,8 +134,11 @@ namespace vkl
 
 		const auto process_node = [&](std::shared_ptr<Node> const& node, Mat4 const& matrix)
 		{
-			std::vector<Mat4x3> & matrices = _flat_dag[node];
-			matrices.push_back(Mat4x3(matrix));
+			std::vector<PerNodeInstance> & matrices = _flat_dag[node];
+			matrices.push_back(PerNodeInstance{
+				.matrix = matrix, 
+				.visible = true, // TODO
+			});
 			return true;
 		};
 
@@ -199,7 +256,7 @@ namespace vkl
 	Scene::UBO Scene::getUBO()const
 	{
 		UBO res{
-			.num_lights = static_cast<uint32_t>(_lights_glsl.size()),
+			.num_lights = _num_lights,
 			.ambient = _ambient,
 		};
 		return res;
@@ -253,6 +310,16 @@ namespace vkl
 			bindings += DescriptorSetLayout::Binding{
 				.name = "LightsBufferBinding",
 				.binding = _lights_bindings_base + 0,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
+			bindings += DescriptorSetLayout::Binding{
+				.name = "SceneObjectsTable",
+				.binding = _objects_binding_base + 0,
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 				.count = 1,
 				.stages = VK_SHADER_STAGE_ALL,
@@ -319,8 +386,9 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".SetLayout",
 				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+				.is_dynamic = true,
 				.bindings = bindings,
-				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+				.binding_flags = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT,
 			});
 		}
 		return _set_layout;
@@ -336,29 +404,41 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		_lights_buffer = std::make_shared<Buffer>(Buffer::CI{
+		_model_references_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
-			.name = name() + ".LightBuffer",
-			.size = [this](){return std::max(_lights_glsl.size() * sizeof(LightGLSL), 1ull);},
+			.name = name() + ".ModelReferences",
+			.size = sizeof(ModelReference) * 256,
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		_xforms.reserve(1024);
-		_xforms_buffer = std::make_shared<GrowableBuffer>(Buffer::CI{
+		_lights_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
+			.app = application(),
+			.name = name() + ".LightBuffer",
+			.size = sizeof(LightGLSL) * 1,
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
+		_xforms_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
 			.name = name() + ".xforms",
-			.size = [this](){return std::align(_xforms.capacity() * sizeof(Mat4x3), size_t(256)) * 2; },
+			.size = sizeof(Mat4x3) * 256,
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+		_prev_xforms_buffer = std::make_shared<Buffer>(Buffer::CI{
+			.app = application(),
+			.name = name() + ".prev_xforms",
+			.size = [this](){return _xforms_buffer->byteSize();},
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 		_xforms_segment = BufferAndRange{
 			.buffer = _xforms_buffer->buffer(),
-			.range = [this](){return Buffer::Range{.begin = 0, .len = sizeof(Mat4x3) * _xforms.size(), }; },
 		};
 		_prev_xforms_segment = BufferAndRange{
-			.buffer = _xforms_buffer->buffer(),
-			.range = [this]() {return Buffer::Range{.begin = std::align(_xforms.capacity() * sizeof(Mat4x3), size_t(256)), .len = sizeof(Mat4x3) * _xforms.size(), }; },
+			.buffer = _prev_xforms_buffer,
 		};
 	}
 
@@ -375,11 +455,14 @@ namespace vkl
 		};
 
 		bindings += Binding{
-			.buffer = _lights_buffer,
+			.buffer = _lights_buffer->buffer(),
 			.binding = _lights_bindings_base + 0,
 		};
 
-		
+		bindings += Binding{
+			.buffer = _model_references_buffer->buffer(),
+			.binding = _objects_binding_base + 0,
+		};
 
 		bindings += Binding{
 			.buffer = _xforms_segment.buffer,
@@ -412,6 +495,20 @@ namespace vkl
 		return res;
 	}
 
+	uint32_t Scene::allocateUniqueModelID()
+	{
+		uint32_t res = _unique_model_counter;
+		++_unique_model_counter;
+		return res;
+	}
+
+	uint32_t Scene::allocateUniqueXformID()
+	{
+		uint32_t res = _unique_xform_counter;
+		++_unique_xform_counter;
+		return res;
+	}
+
 	std::shared_ptr<DescriptorSetAndPool> Scene::set()
 	{
 		return _set;
@@ -419,7 +516,7 @@ namespace vkl
 
 	void Scene::fillLightsBuffer()
 	{
-		_lights_glsl.clear();
+		_num_lights = 0;	
 		
 		_tree->iterateOnFlattenDag([&](std::shared_ptr<Node> const& node, Mat4 const& matrix)
 		{
@@ -427,7 +524,7 @@ namespace vkl
 			{
 				const Light & l = *node->light();
 				LightGLSL gl = l.getAsGLSL(matrix);
-				_lights_glsl.push_back(gl);
+				//_lights_glsl.push_back(gl);
 			}
 			return true;
 		});
@@ -435,17 +532,31 @@ namespace vkl
 
 	void Scene::updateInternal()
 	{
-		_tree->flatten();
-		fillLightsBuffer();
+		_tree->_flat_dag.clear();
+		_num_lights = 0;
 
-		_tree->iterateOnFlattenDag([this](std::shared_ptr<Node> const& node, const std::vector<Mat4x3>& matrices) 
+		std::unordered_map<DirectedAcyclicGraph::RobustNodePath, size_t> m;
+		m[DirectedAcyclicGraph::RobustNodePath()] = 21;
+		std::hash<DirectedAcyclicGraph::RobustNodePath> h;
+		static_assert(std::concepts::HashableFromMethod<DirectedAcyclicGraph::RobustNodePath>);
+
+		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat4 const& matrix4)
 		{
+			const Mat4x3 matrix = matrix4;
+			_tree->_flat_dag[node].push_back(DirectedAcyclicGraph::PerNodeInstance{
+				.matrix = matrix,
+				.visible = node->visible(),
+			});
+			
 			std::shared_ptr<Model> const& model = node->model();
 			if (model)
 			{
+
 				std::shared_ptr<Mesh> const& mesh = model->mesh();
 				std::shared_ptr<Material> const& material = model->material();
-
+				uint32_t mesh_unique_id = -1;
+				uint32_t material_unique_id = -1;
+				uint32_t xform_unique_id = -1;
 				if (mesh)
 				{
 					RigidMesh * rigid_mesh = dynamic_cast<RigidMesh*>(mesh.get());
@@ -453,12 +564,17 @@ namespace vkl
 					{
 						if (!_meshes.contains(mesh)) // unknown mesh so far
 						{
-							const uint32_t unique_id = allocateUniqueMeshID();
+							mesh_unique_id = allocateUniqueMeshID();
 							_meshes[mesh] = MeshData{
-								.unique_index = unique_id,
+								.unique_index = mesh_unique_id,
 							};
 
-							rigid_mesh->registerToDescriptorSet(_set, _mesh_bindings_base, unique_id);
+							rigid_mesh->registerToDescriptorSet(_set, _mesh_bindings_base, mesh_unique_id);
+						}
+						else
+						{
+							MeshData & md = _meshes.at(mesh);
+							mesh_unique_id = md.unique_index;
 						}
 					}
 				}
@@ -467,7 +583,58 @@ namespace vkl
 				{
 					
 				}
+
+
+				bool set_model_reference = false;
+				bool set_xform = false;
+				uint32_t unique_model_id;
+				if (!_unique_models.contains(path))
+				{
+					unique_model_id = allocateUniqueModelID();
+					xform_unique_id = allocateUniqueXformID();
+					_unique_models[path] = ModelInstance{
+						.model_unique_index = unique_model_id,
+						.xform_unique_index = xform_unique_id,
+					};
+					set_model_reference = true;
+					set_xform = true;
+				}
+				else
+				{
+					auto & um = _unique_models[path];
+					unique_model_id = um.model_unique_index;
+					xform_unique_id = um.xform_unique_index;
+					const ModelReference & mr = _model_references_buffer->get<ModelReference>(unique_model_id);
+				}
+
+				if (set_model_reference)
+				{
+					uint32_t flags = 0;
+					// TODO visibility
+					flags |= 1;
+					_model_references_buffer->set(unique_model_id, ModelReference{
+						.mesh_id = mesh_unique_id,
+						.material_id = material_unique_id,
+						.xform_id = xform_unique_id,
+						.flags = flags,
+					});
+				}
+				
+				if (set_xform)
+				{
+					_xforms_buffer->set<Mat3x4>(xform_unique_id, glm::transpose(matrix));
+				}
 			}
+
+			std::shared_ptr<Light> light = node->light();
+			if (light)
+			{
+				LightGLSL gl = light->getAsGLSL(matrix);
+				_lights_buffer->set(_num_lights, gl);
+				++_num_lights;
+			}
+			
+			return true;
 		});
 	}
 
@@ -477,12 +644,21 @@ namespace vkl
 
 		// Maybe separate between the few scene own internal resources and the lot of nodes resources (models, textures, ...)
 		_ubo_buffer->updateResource(ctx);
-		_lights_buffer->updateResource(ctx);
+		_lights_buffer->updateResources(ctx);
+		_model_references_buffer->updateResources(ctx);
 		
 		_xforms_buffer->updateResources(ctx);
+		_prev_xforms_buffer->updateResource(ctx);
 		
-		
-		ctx.resourcesToUpdateLater() += _set;
+
+		if (_set_layout)
+		{
+			_set_layout->updateResources(ctx);
+		}
+		if (_set)
+		{
+			ctx.resourcesToUpdateLater() += _set;
+		}
 
 		_tree->iterateOnNodes([&](std::shared_ptr<Node> const& node)
 		{
@@ -499,24 +675,13 @@ namespace vkl
 				},
 				.dst = _ubo_buffer->instance(),
 			};
-
-			if (!_lights_glsl.empty())
-			{
-				ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-					.sources = {
-						PositionedObjectView{
-							.obj = _lights_glsl,
-							.pos = 0,
-						},
-					},
-					.dst = _lights_buffer->instance(),
-				};
-			}
 		}
 	}
 
 	void Scene::prepareForRendering(ExecutionRecorder& exec)
 	{
 		_xforms_buffer->recordTransferIFN(exec);
+		_lights_buffer->recordTransferIFN(exec);
+		_model_references_buffer->recordTransferIFN(exec);
 	}
 }

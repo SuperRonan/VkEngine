@@ -397,7 +397,7 @@ namespace vkl
 
 			Vector3 c = glm::cross(normal, tg);
 			Float w = (glm::dot(c, btg) < 0) ? -1 : 1;
-			_host.vertices[vertex_id].tangent = t * w;
+			_host.vertices[vertex_id].tangent = Vector4(t * w, 0);
 		}
 	}
 
@@ -407,7 +407,7 @@ namespace vkl
 
 		for (Vertex& v : _host.vertices)
 		{
-			v.normal = vec3(0);
+			v.normal = vec4(0);
 		}
 
 		for (size_t i = 0; i < N; i += 3)
@@ -432,16 +432,16 @@ namespace vkl
 			// - based on triangle surface?
 			// - based on vertex angle? 
 
-			v0.normal += face_normal;
-			v1.normal += face_normal;
-			v2.normal += face_normal;
+			v0.normal += vec4(face_normal, 0);
+			v1.normal += vec4(face_normal, 0);
+			v2.normal += vec4(face_normal, 0);
 		}
 
 		for (Vertex& v : _host.vertices)
 		{
 			if (glm::dot(v.normal, v.normal) != 0)
 			{
-				v.normal = glm::normalize(v.normal);
+				v.normal = vec4(glm::normalize(vec3(v.normal)), 0);
 			}
 		}
 
@@ -503,16 +503,16 @@ namespace vkl
 		const size_t ssbo_align = application()->deviceProperties().props.limits.minStorageBufferOffsetAlignment;
 		const size_t ubo_align = application()->deviceProperties().props.limits.minUniformBufferOffsetAlignment;
 		
-		_device.header_size = std::align(sizeof(header), ssbo_align);
+		_device.header_size = std::alignUp(sizeof(header), ssbo_align);
 		if (_host.use_full_vertices)
 		{
-			_device.vertices_size = std::align(header.num_vertices * sizeof(Vertex), ssbo_align);
+			_device.vertices_size = std::alignUp(header.num_vertices * sizeof(Vertex), ssbo_align);
 		}
 		else
 		{
-			_device.vertices_size = std::align(header.num_vertices * sizeof(float) * _host.dims, ssbo_align);
+			_device.vertices_size = std::alignUp(header.num_vertices * sizeof(float) * _host.dims, ssbo_align);
 		}
-		_device.indices_size = std::align(_host.indexBufferSize(), ssbo_align);
+		_device.indices_size = std::alignUp(_host.indexBufferSize(), ssbo_align);
 		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
 		_device.num_indices = header.num_indices;
@@ -947,16 +947,16 @@ namespace vkl
 				const auto sign = [](Float f) {return f > 0 ? Float(1) : (f < 0 ? Float(-1) : Float(0)); };
 				const auto addVertexes = [&](Float x, Float y, Float z, Float u, Float v)
 				{
-					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(x) * X, .uv = Vector2{ u, v } });
-					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(y) * Y, .uv = Vector2{ u, v } });
-					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u, v } });
+					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3{ x, y, z }, 1), .normal = Vector4(sign(x) * X, 0), .uv = Vector4(Vector2{ u, v }, 0, 0) });
+					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3{ x, y, z }, 1), .normal = Vector4(sign(y) * Y, 0), .uv = Vector4(Vector2{ u, v }, 0, 0) });
+					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3{ x, y, z }, 1), .normal = Vector4(sign(z) * Z, 0), .uv = Vector4(Vector2{ u, v }, 0, 0) });
 				};
 
 				const auto addVertexes3 = [&](Float x, Float y, Float z, Float u0, Float v0, Float u1, Float v1, Float u2, Float v2)
 				{
-					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(x) * X, .uv = Vector2{ u0, v0 } });
-					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(y) * Y, .uv = Vector2{ u1, v1 } });
-					vertices.emplace_back(Vertex{ .position = center + Vector3{ x, y, z }, .normal = sign(z) * Z, .uv = Vector2{ u2, v2 } });
+					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3{ x, y, z }, 1), .normal = Vector4(sign(x) * X, 0), .uv = Vector4(Vector2{ u0, v0 }, 0, 0) });
+					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3{ x, y, z }, 1), .normal = Vector4(sign(y) * Y, 0), .uv = Vector4(Vector2{ u1, v1 }, 0, 0) });
+					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3{ x, y, z }, 1), .normal = Vector4(sign(z) * Z, 0), .uv = Vector4(Vector2{ u2, v2 }, 0, 0) });
 				};
 
 				if (cmi.same_face)
@@ -1046,9 +1046,9 @@ namespace vkl
 
 				const Vector3 normal = Vector3(x, z, y);
 				vertices[base_line_index + p] = Vertex{
-					.position = smi.center + smi.radius * normal,
-					.normal = normal,
-					.uv = Vector2(u, v),
+					.position = Vector4(smi.center + smi.radius * normal, 1),
+					.normal = Vector4(normal, 0),
+					.uv = Vector4(Vector2(u, v), 0, 0),
 				};
 
 				if (t != theta_divisions)
@@ -1099,9 +1099,9 @@ namespace vkl
 
 			const auto addFace = [&](vec3 v0, vec3 v1, vec3 v2)
 			{
-				vertices.push_back(Vertex{.position = c + v0});
-				vertices.push_back(Vertex{.position = c + v1});
-				vertices.push_back(Vertex{.position = c + v2});
+				vertices.push_back(Vertex{.position = vec4(c + v0, 1)});
+				vertices.push_back(Vertex{.position = vec4(c + v1, 1)});
+				vertices.push_back(Vertex{.position = vec4(c + v2, 1)});
 			};
 			
 			addFace(v0, v1, v2);
@@ -1116,10 +1116,10 @@ namespace vkl
 		{
 			vertices.resize(4);
 
-			vertices[0].position = c + vec3(r, r, r);
-			vertices[1].position = c + vec3(r, -r, -r);
-			vertices[2].position = c + vec3(-r, r, -r);
-			vertices[3].position = c + vec3(-r, -r, r);
+			vertices[0].position = Vector4(c + vec3(r, r, r), 1);
+			vertices[1].position = Vector4(c + vec3(r, -r, -r), 1);
+			vertices[2].position = Vector4(c + vec3(-r, r, -r), 1);
+			vertices[3].position = Vector4(c + vec3(-r, -r, r), 1);
 
 			indices.reserve(3 * 4);
 
@@ -1165,43 +1165,43 @@ namespace vkl
 			vertices.resize(6 + 3);
 
 			vertices[0] = Vertex{
-				.position = c + vec3(r, 0, 0),
-				.uv = vec2(1, 0.5),
+				.position = Vector4(c + vec3(r, 0, 0), 1),
+				.uv = vec4(vec2(1, 0.5), 0, 0),
 			};
 			vertices[1] = Vertex{
-				.position = c + vec3(0, r, 0),
-				.uv = vec2(0.5, 0.5),
+				.position = Vector4(c + vec3(0, r, 0), 1),
+				.uv = vec4(vec2(0.5, 0.5), 0, 0),
 			};
 			vertices[2] = Vertex{
-				.position = c + vec3(0, 0, r),
-				.uv = vec2(0.5, 1),
+				.position = Vector4(c + vec3(0, 0, r), 1),
+				.uv = vec4(vec2(0.5, 1), 0, 0),
 			};
 			vertices[3] = Vertex{
-				.position = c + vec3(-r, 0, 0),
-				.uv = vec2(0, 0.5),
+				.position = Vector4(c + vec3(-r, 0, 0), 1),
+				.uv = vec4(vec2(0, 0.5), 0, 0),
 			};
 			vertices[4] = Vertex{
-				.position = c + vec3(0, -r, 0),
-				.uv = vec2(0, 0),
+				.position = Vector4(c + vec3(0, -r, 0), 1),
+				.uv = vec4(vec2(0, 0), 0, 0),
 			};
 			vertices[5] = Vertex{
-				.position = c + vec3(0, 0, -r),
-				.uv = vec2(0.5 ,0),
+				.position = Vector4(c + vec3(0, 0, -r), 1),
+				.uv = vec4(vec2(0.5 ,0), 0, 0),
 			};
 
 			vertices[6] = Vertex{
 				.position = vertices[4].position,
-				.uv = vec2(0, 1), 
+				.uv = vec4(vec2(0, 1), 0, 0),
 			};
 
 			vertices[7] = Vertex{
 				.position = vertices[4].position,
-				.uv = vec2(1, 0), 
+				.uv = vec4(vec2(1, 0), 0, 0),
 			};
 
 			vertices[8] = Vertex{
 				.position = vertices[4].position,
-				.uv = vec2(1, 1), 
+				.uv = vec4(vec2(1, 1), 0, 0),
 			};
 
 
@@ -1236,10 +1236,10 @@ namespace vkl
 			.auto_compute_tangents = false,
 		});
 
-		res->_host.vertices[4].normal = vec3(0, -1, 0);
-		res->_host.vertices[6].normal = vec3(0, -1, 0);
-		res->_host.vertices[7].normal = vec3(0, -1, 0);
-		res->_host.vertices[8].normal = vec3(0, -1, 0);
+		res->_host.vertices[4].normal = vec4(vec3(0, -1, 0), 0);
+		res->_host.vertices[6].normal = vec4(vec3(0, -1, 0), 0);
+		res->_host.vertices[7].normal = vec4(vec3(0, -1, 0), 0);
+		res->_host.vertices[8].normal = vec4(vec3(0, -1, 0), 0);
 
 		return res;
 	}

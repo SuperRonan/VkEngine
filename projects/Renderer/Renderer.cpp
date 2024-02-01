@@ -43,6 +43,31 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 		
+		_draw_indexed_indirect_buffer = std::make_shared<Buffer>(Buffer::CI{
+			.app = application(),
+			.name = name() + ".draw_indirect_buffer",
+			.size = [this](){
+				const size_t align = application()->deviceProperties().props.limits.minStorageBufferOffsetAlignment;
+				return std::alignUp(_model_capacity * (sizeof(VkDrawIndirectCommand) + sizeof(uint32_t)), align) + 4 * sizeof(uint32_t);
+			},
+			.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+		
+		_vk_draw_params_segment = BufferAndRange{
+			.buffer = _draw_indexed_indirect_buffer,
+			.range = [this](){return Buffer::Range{.begin = 0, .len = _model_capacity * sizeof(VkDrawIndirectCommand)};},
+		};
+
+		_model_indices_segment = BufferAndRange{
+			.buffer = _draw_indexed_indirect_buffer,
+			.range = [this](){return Buffer::Range{.begin = _vk_draw_params_segment.range.value().len, .len = _model_capacity * sizeof(uint32_t)};}
+		};
+
+		_atomic_counter_segment = BufferAndRange{
+			.buffer = _draw_indexed_indirect_buffer,
+			.range = [this](){return Buffer::Range{.begin = _draw_indexed_indirect_buffer->size().value() - 4 * sizeof(uint32_t), .len = 4 * sizeof(uint32_t)};},
+		};
 
 
 		const uint32_t model_set = application()->descriptorBindingGlobalOptions().set_bindings[size_t(DescriptorSetName::invocation)].set;
@@ -57,6 +82,29 @@ namespace vkl
 
 		const std::filesystem::path shaders = PROJECT_SRC_PATH;
 
+		_prepare_draw_list = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+			.app = application(),
+			.name = name() + ".PrepareDrawList",
+			.shader_path = shaders / "PrepareIndirectDrawList.comp",
+			.sets_layouts = _sets_layouts,
+			.bindings = {
+				Binding{
+					.buffer = _vk_draw_params_segment.buffer,
+					.buffer_range = _vk_draw_params_segment.range,
+					.binding = 0,
+				},
+				Binding{
+					.buffer = _model_indices_segment.buffer,
+					.buffer_range = _model_indices_segment.range,
+					.binding = 1,
+				},
+				Binding{
+					.buffer = _atomic_counter_segment.buffer,
+					.buffer_range = _atomic_counter_segment.range,
+					.binding = 2,
+				},
+			},
+		});
 
 		for (uint32_t model_type : _model_types)
 		{
@@ -118,7 +166,8 @@ namespace vkl
 
 			for (uint32_t model_type : _model_types)
 			{
-				_deferred_pipeline._raster_gbuffer[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
+				DeferredPipelineV1::RasterCommands& raster_commands = _deferred_pipeline._raster_gbuffer[model_type];
+				 raster_commands.raster = std::make_shared<VertexCommand>(VertexCommand::CI{
 					.app = application(),
 					.name = name() + ".RasterGBuffer",
 					.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
@@ -139,8 +188,33 @@ namespace vkl
 					.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 					.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 				});
-				
 			}
+
+			_deferred_pipeline.raster_gbuffer_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RasterSceneGBuffer",
+				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _ubo_buffer,
+						.binding = 0,
+					},
+					Binding{
+						.buffer = _model_indices_segment.buffer,
+						.buffer_range = _model_indices_segment.range,
+						.binding = 1,
+					},
+				},
+				.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal},
+				.depth_stencil = _depth,
+				.write_depth = true,
+				.depth_compare_op = VK_COMPARE_OP_LESS,
+				.vertex_shader_path = shaders / "RasterSceneGBuffer.vert",
+				.fragment_shader_path = shaders / "RasterSceneGBuffer.frag",
+				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
+				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
+			});
 			
 			_ambient_occlusion = std::make_shared<AmbientOcclusion>(AmbientOcclusion::CI{
 				.app = application(),
@@ -239,6 +313,17 @@ namespace vkl
 		_render_target->updateResource(ctx);
 		_depth->updateResource(ctx);
 
+		{
+			const uint32_t desired_size = _scene->objectCount();
+			if (desired_size > _model_capacity)
+			{
+				const uint32_t new_size = std::max(desired_size, 2 * _model_capacity);
+				_model_capacity = new_size;
+			}
+		}
+		_draw_indexed_indirect_buffer->updateResource(ctx);
+		ctx.resourcesToUpdateLater() += _prepare_draw_list;
+
 		if (_pipeline_selection.index() == 0 || update_all_anyway)
 		{
 			for (auto& cmd : _direct_pipeline._render_scene_direct)
@@ -252,9 +337,17 @@ namespace vkl
 			_deferred_pipeline._position->updateResource(ctx);
 			_deferred_pipeline._normal->updateResource(ctx);
 
-			for (auto& cmd : _deferred_pipeline._raster_gbuffer)
+			if (_use_indirect_rendering)
 			{
-				ctx.resourcesToUpdateLater() += cmd.second;
+				ctx.resourcesToUpdateLater() += _deferred_pipeline.raster_gbuffer_indirect;
+			}
+			else
+			{
+				for (auto& cmd : _deferred_pipeline._raster_gbuffer)
+				{
+					auto & raster_commands = cmd.second;
+					ctx.resourcesToUpdateLater() += raster_commands.raster;	
+				}
 			}
 
 			_ambient_occlusion->updateResources(ctx);
@@ -289,19 +382,45 @@ namespace vkl
 		}));
 
 		std::TickTock_hrc tick_tock;
-		tick_tock.tick();
-		{
-			// Clear the cached draw list
-			for (auto& [vt, vl] : _cached_draw_list)
-			{
-				vl.clear();
-			}
-		}
 		MultiVertexDrawCallList & draw_list = _cached_draw_list;
-		generateVertexDrawList(draw_list);
-		if (exec.framePerfCounters())
+		
+		if (_use_indirect_rendering)
 		{
-			exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockv().count();
+			FillBuffer fill_buffer = FillBuffer::CI{
+				.app = application(),
+			};
+			exec(fill_buffer.with(FillBuffer::FillInfo{
+				.buffer = _atomic_counter_segment.buffer,
+				.range = _atomic_counter_segment.range.value(),
+				.value = 0,
+			}));
+
+			const uint32_t num_objects = _scene->objectCount();
+			struct PrepareDrawListPC
+			{
+				uint32_t num_objects;
+			};
+			exec(_prepare_draw_list->with(ComputeCommand::SingleDispatchInfo{
+				.extent = VkExtent3D{.width = num_objects, .height = 1, .depth = 1},
+				.dispatch_threads = true,
+				.pc = PrepareDrawListPC{.num_objects = num_objects},
+			}));
+			VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
+			my_draw_list.draw_type = DrawType::IndirectDraw;
+			my_draw_list.draw_list.push_back(VertexDrawList::DrawCallInfo{
+				.draw_count = num_objects,
+				.indirect_draw_buffer = _vk_draw_params_segment,
+				.indirect_draw_stride = sizeof(VkDrawIndirectCommand),
+			});
+		}
+		else
+		{
+			tick_tock.tick();
+			generateVertexDrawList(draw_list);
+			if (exec.framePerfCounters())
+			{
+				exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockv().count();
+			}
 		}
 
 		if (!draw_list.empty())
@@ -326,15 +445,29 @@ namespace vkl
 			}
 			else
 			{
-				tick_tock.tick();
 				exec.pushDebugLabel("DeferredPipeline");
-				for (uint32_t model_type : _model_types)
+				
+				tick_tock.tick();
+				
+				if (_use_indirect_rendering)
 				{
-					if (draw_list[model_type].draw_list.size())
+					VertexCommand::DrawInfo & my_draw_list = (_cached_draw_list.begin())->second;
 					{
-						exec(_deferred_pipeline._raster_gbuffer[model_type]->with(draw_list[model_type]));
+						exec(_deferred_pipeline.raster_gbuffer_indirect->with(my_draw_list));
 					}
 				}
+				else
+				{
+					for (uint32_t model_type : _model_types)
+					{
+						if (draw_list[model_type].draw_list.size())
+						{
+							exec(_deferred_pipeline._raster_gbuffer[model_type].raster->with(draw_list[model_type]));
+						}
+					}
+				}
+
+				
 				if (exec.framePerfCounters())
 				{
 					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
@@ -347,6 +480,15 @@ namespace vkl
 				exec.popDebugLabel();
 			}
 		}
+
+		{
+			// Clear the cached draw list
+			for (auto& [vt, vl] : _cached_draw_list)
+			{
+				vl.clear();
+			}
+		}
+
 		exec.popDebugLabel();
 	}
 	
@@ -355,6 +497,8 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
+			ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
+
 			_pipeline_selection.declare();
 
 			if (_pipeline_selection.index() == 1)

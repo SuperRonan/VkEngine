@@ -50,7 +50,7 @@ namespace vkl
 
 		if (it == end) // Did not find any: allocate a new one (Maybe re allocate a too small one if available)
 		{
-			size_t buffer_size = std::align(size, size_t(1024));
+			size_t buffer_size = std::alignUp(size, size_t(1024));
 			VkBufferCreateInfo ci{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 				.pNext = nullptr,

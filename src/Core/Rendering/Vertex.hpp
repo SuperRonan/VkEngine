@@ -15,10 +15,10 @@ namespace vkl
 		using Matrix4 = glm::mat4;
 		using Matrix3 = glm::mat3;
 
-		Vector3 position;
-		Vector3 normal;
-		Vector3 tangent;
-		Vector2 uv;
+		Vector4 position;
+		Vector4 normal;
+		Vector4 tangent;
+		Vector4 uv;
 
 		void transform(Matrix4 const& m, Matrix3 const& nm) noexcept;
 
