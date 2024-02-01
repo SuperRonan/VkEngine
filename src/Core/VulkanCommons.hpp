@@ -157,6 +157,8 @@ namespace vkl
 		IndirectDrawIndexed,
 		IndirectDrawCount,
 		IndirectDrawCountIndexed,
+		MultiDrawn,
+		MultiDrawIndexed,
 		MAX_ENUM,
 	};
 	using DispatchType = DrawType;
