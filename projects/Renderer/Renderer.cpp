@@ -8,7 +8,15 @@ namespace vkl
 		_scene(ci.scene),
 		_output_target(ci.target) 
 	{
+
+		const bool can_multi_draw = application()->availableFeatures().features.multiDrawIndirect;
+		if (!can_multi_draw)
+		{
+			_use_indirect_rendering = false;
+		}
+
 		createInternalResources();
+		
 	}
 
 	void SimpleRenderer::createInternalResources()
@@ -321,8 +329,11 @@ namespace vkl
 				_model_capacity = new_size;
 			}
 		}
-		_draw_indexed_indirect_buffer->updateResource(ctx);
-		ctx.resourcesToUpdateLater() += _prepare_draw_list;
+		if (_use_indirect_rendering || update_all_anyway)
+		{
+			_draw_indexed_indirect_buffer->updateResource(ctx);
+			ctx.resourcesToUpdateLater() += _prepare_draw_list;
+		}
 
 		if (_pipeline_selection.index() == 0 || update_all_anyway)
 		{
@@ -337,11 +348,11 @@ namespace vkl
 			_deferred_pipeline._position->updateResource(ctx);
 			_deferred_pipeline._normal->updateResource(ctx);
 
-			if (_use_indirect_rendering)
+			if (_use_indirect_rendering || update_all_anyway)
 			{
 				ctx.resourcesToUpdateLater() += _deferred_pipeline.raster_gbuffer_indirect;
 			}
-			else
+			if(!_use_indirect_rendering || update_all_anyway)
 			{
 				for (auto& cmd : _deferred_pipeline._raster_gbuffer)
 				{
@@ -497,7 +508,10 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
+			const bool can_multi_draw = application()->availableFeatures().features.multiDrawIndirect;
+			ImGui::BeginDisabled(!can_multi_draw);
 			ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
+			ImGui::EndDisabled();
 
 			_pipeline_selection.declare();
 

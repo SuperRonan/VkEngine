@@ -6,9 +6,6 @@
 #define BIND_SCENE 1
 #include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
-#define I_WANT_TO_DEBUG 1
-#include <ShaderLib:/DebugBuffers.glsl>
-
 layout(local_size_x = 128) in;
 
 layout(SHADER_DESCRIPTOR_BINDING + 0) buffer restrict writeonly VkIndirectDrawBinding
@@ -54,11 +51,6 @@ void main()
 			
 			vk_draw_list.commands[index] = vk_draw;
 
-			if(gid == 0)
-			{
-				DebugStringCaret c = Caret2D(vec2(0, 10), 0);
-				c = pushToDebugPixLn(scene_mesh_headers[mesh_index].headers.num_indices, c);
-			}
 		}
 	}
 }
