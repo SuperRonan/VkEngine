@@ -1,5 +1,12 @@
 #version 460
 
+#include "common.glsl"
+
+#define I_WANT_TO_DEBUG 0
+
+#include <ShaderLib:/debugBuffers.glsl>
+#include <ShaderLib:/random.glsl>
+
 #include "IndirectCommon.glsl"
 
 // layout(location = 0) in vec3 a_position;
@@ -10,7 +17,6 @@
 layout(location = 0) out vec3 v_w_position;
 layout(location = 1) out vec2 v_uv;
 layout(location = 2) out vec3 v_w_normal;
-
 
 void main()
 {	
@@ -26,12 +32,17 @@ void main()
 	const mat4 o2w = mat4(vd.matrix);
 	const mat4 o2p = w2p * o2w;
 	
-	vec3 m_position = a_position;
 	
-	gl_Position = o2p * vec4(m_position, 1);
+	gl_Position = o2p * vec4(a_position, 1);
 
 	v_uv = a_uv;
 	// TODO Use the correct matrix (works as long as the scale is uniform)
 	v_w_normal = mat3(o2w) * a_normal;
-	v_w_position = (o2w * vec4(m_position, 1)).xyz;
+	v_w_position = (o2w * vec4(a_position, 1)).xyz;
+
+	{
+		Caret crt = Caret3D(gl_Position, 0);
+
+		crt = pushToDebugClipSpaceLn(gl_VertexIndex, crt);
+	}
 }

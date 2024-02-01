@@ -57,6 +57,7 @@ namespace vkl
 		struct DirectPipelineV1
 		{
 			std::map<uint32_t, std::shared_ptr<VertexCommand>> _render_scene_direct;
+			std::shared_ptr<VertexCommand> _render_scene_indirect;
 			struct RenderSceneDirectPC
 			{
 				glm::mat4 object_to_world;

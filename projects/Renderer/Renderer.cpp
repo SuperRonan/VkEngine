@@ -11,8 +11,8 @@ namespace vkl
 		_output_target(ci.target) 
 	{
 
-		const bool can_multi_draw = application()->availableFeatures().features.multiDrawIndirect;
-		if (!can_multi_draw)
+		const bool can_multi_draw_indirect = application()->availableFeatures().features.multiDrawIndirect;
+		if (!can_multi_draw_indirect)
 		{
 			_use_indirect_rendering = false;
 		}
@@ -141,6 +141,34 @@ namespace vkl
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
 		}
+
+		_direct_pipeline._render_scene_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
+			.app = application(),
+			.name = name() + ".RenderSceneIndirect",
+			.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			.cull_mode = VK_CULL_MODE_BACK_BIT,
+			.sets_layouts = _sets_layouts,
+			.bindings = {
+				Binding{
+					.buffer = _ubo_buffer,
+					.binding = 0,
+				},
+				Binding{
+					.buffer = _model_indices_segment.buffer,
+					.buffer_range = _model_indices_segment.range,
+					.binding = 1,
+				},
+			},
+			.color_attachements = {_render_target},
+			.depth_stencil = _depth,
+			.write_depth = true,
+			.depth_compare_op = VK_COMPARE_OP_LESS,
+			.vertex_shader_path = shaders / "RenderIndirect.vert",
+			.fragment_shader_path = shaders / "RenderIndirect.frag",
+			.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
+			.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
+		});
+
 		{
 			_deferred_pipeline._albedo = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
@@ -290,8 +318,6 @@ namespace vkl
 
 	void SimpleRenderer::generateVertexDrawList(MultiVertexDrawCallList & res)
 	{
-		
-
 		VertexDrawCallInfo vr;
 		auto add_model = [&res, &vr](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
@@ -342,9 +368,16 @@ namespace vkl
 
 		if (_pipeline_selection.index() == 0 || update_all_anyway)
 		{
-			for (auto& cmd : _direct_pipeline._render_scene_direct)
+			if (_use_indirect_rendering || update_all_anyway)
 			{
-				ctx.resourcesToUpdateLater() += cmd.second;
+				ctx.resourcesToUpdateLater() += _direct_pipeline._render_scene_indirect;
+			}
+			if (!_use_indirect_rendering || update_all_anyway)
+			{
+				for (auto& cmd : _direct_pipeline._render_scene_direct)
+				{
+					ctx.resourcesToUpdateLater() += cmd.second;
+				}
 			}
 		}
 		if (_pipeline_selection.index() == 1 || update_all_anyway)
@@ -441,13 +474,22 @@ namespace vkl
 			{
 				tick_tock.tick();
 				exec.pushDebugLabel("DirectPipeline");
-				for (uint32_t model_type : _model_types)
+				if (_use_indirect_rendering)
 				{
-					if (draw_list[model_type].draw_list.size())
+					VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
+					exec(_direct_pipeline._render_scene_indirect->with(my_draw_list));
+				}
+				else
+				{
+					for (uint32_t model_type : _model_types)
 					{
-						exec(_direct_pipeline._render_scene_direct[model_type]->with(draw_list[model_type]));
+						if (draw_list[model_type].draw_list.size())
+						{
+							exec(_direct_pipeline._render_scene_direct[model_type]->with(draw_list[model_type]));
+						}
 					}
 				}
+				
 				if (exec.framePerfCounters())
 				{
 					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
@@ -508,8 +550,8 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
-			const bool can_multi_draw = application()->availableFeatures().features.multiDrawIndirect;
-			ImGui::BeginDisabled(!can_multi_draw);
+			const bool can_multi_draw_indirect = application()->availableFeatures().features.multiDrawIndirect;
+			ImGui::BeginDisabled(!can_multi_draw_indirect);
 			ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
 			ImGui::EndDisabled();
 
