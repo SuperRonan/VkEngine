@@ -2,6 +2,8 @@
 
 #include <Core/Rendering/DebugRenderer.hpp>
 
+#include <Core/Commands/PrebuiltTransferCommands.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
@@ -267,9 +269,7 @@ namespace vkl
 	void LinearExecutor::performSynchTransfers(UpdateContext& update_context, bool consume_asynch, TransferBudget budget)
 	{
 		ExecutionThread* upload_thread = beginCommandBuffer();
-		UploadResources uploader(UploadResources::CI{
-			.app = application(),
-		});
+		UploadResources &uploader = application()->getPrebuiltTransferCommands().upload_resources;
 		ResourcesToUpload upload_list = update_context.resourcesToUpload();
 		if (consume_asynch && update_context.uploadQueue())
 		{
@@ -306,10 +306,7 @@ namespace vkl
 
 		if (!mips_list.empty())
 		{
-			ComputeMips compute_mips = ComputeMips::CI{
-				.app = application(),
-				.name = "ComputeMipMaps",
-			};
+			ComputeMips & compute_mips = application()->getPrebuiltTransferCommands().compute_mips;
 			_current_thread->execute(compute_mips.with(ComputeMips::ExecInfo{
 				.targets = mips_list,
 			}));

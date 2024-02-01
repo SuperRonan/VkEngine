@@ -1,5 +1,7 @@
 #include "HostManagedBuffer.hpp"
 
+#include <Core/Commands/PrebuiltTransferCommands.hpp>
+
 namespace vkl
 {
 	HostManagedBuffer::HostManagedBuffer(CreateInfo const& ci) :
@@ -134,14 +136,13 @@ namespace vkl
 		GrowableBuffer::recordTransferIFN(exec);
 		if (!_upload_range.empty())
 		{
-			UploadBuffer uploader = UploadBuffer::CI{
-				.app = application(),
-			};
+			UploadBuffer & uploader = application()->getPrebuiltTransferCommands().upload_buffer;
 			exec(uploader.with(UploadBuffer::UploadInfo{
 				.sources = {
 					consumeUploadView(),
 				},
 				.dst = _buffer,
+				.use_update_buffer_ifp = true,
 			}));
 		}
 	}

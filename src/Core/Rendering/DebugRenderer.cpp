@@ -1,6 +1,8 @@
 #include "DebugRenderer.hpp"
 #include <Core/Execution/Executor.hpp>
 
+#include <Core/Commands/PrebuiltTransferCommands.hpp>
+
 #include "imgui.h"
 
 #include <thatlib/src/img/ImWrite.hpp>
@@ -195,15 +197,19 @@ namespace vkl
 		//	std::filesystem::path save_path = ENGINE_SRC_PATH "/Core/Modules/16x16_linear.png";
 		//	img::io::write(font_with_new_layout, save_path, img::io::WriteInfo{.is_default = false, .magic_number = 2 });
 		//}
-
-		UploadImage upload(UploadImage::CI{
-			.app = application(),
-			.name = name() + ".UploadBuffer",
+		UploadImage& uploader = application()->getPrebuiltTransferCommands().upload_image;
+		exec(uploader.with(UploadImage::UploadInfo{
 			.src = ObjectView(host_font.data(), host_font.byteSize()),
 			.dst = _font,
-		});
+		}));
 
-		exec(upload);
+		//UploadImage upload(UploadImage::CI{
+		//	.app = application(),
+		//	.name = name() + ".UploadBuffer",
+		//	.src = ObjectView(host_font.data(), host_font.byteSize()),
+		//	.dst = _font,
+		//});
+		//exec(upload);
 
 		_font_loaded = true;
 	}

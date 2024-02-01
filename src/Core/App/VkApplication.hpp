@@ -40,6 +40,8 @@ namespace vkl
 	template <class T>
 	using SPtr = std::shared_ptr<T>;
 
+	struct PrebuilTransferCommands;
+
 	class VkApplication
 	{
 	public:
@@ -136,6 +138,8 @@ namespace vkl
 		std::unique_ptr<DelayedTaskExecutor> _thread_pool = nullptr;
 
 		std::unique_ptr<TextureFileCache> _texture_file_cache = nullptr;
+
+		std::unique_ptr<PrebuilTransferCommands> _prebuilt_transfer_commands = nullptr;
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -295,6 +299,12 @@ namespace vkl
 		TextureFileCache& textureFileCache()
 		{
 			return *_texture_file_cache;
+		}
+
+		PrebuilTransferCommands& getPrebuiltTransferCommands()
+		{
+			assert(_prebuilt_transfer_commands);
+			return *_prebuilt_transfer_commands;
 		}
 	};
 

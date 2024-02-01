@@ -5,6 +5,8 @@
 #include <Core/Rendering/TextureFromFile.hpp>
 #include <Core/VkObjects/DescriptorSetLayout.hpp>
 
+#include <Core/Commands/PrebuiltTransferCommands.hpp>
+
 #include <argparse/argparse.hpp>
 
 #include <exception>
@@ -745,10 +747,13 @@ namespace vkl
 			.app = this,
 			.name = "TextureFileCache",
 		});
+
+		_prebuilt_transfer_commands = std::make_unique<PrebuilTransferCommands>(this);
 	}
 
 	void VkApplication::cleanup()
 	{
+		_prebuilt_transfer_commands.reset();
 		_texture_file_cache.reset();
 		_sampler_library.reset();;
 

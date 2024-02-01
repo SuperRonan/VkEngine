@@ -1,4 +1,5 @@
 #include "GrowableBuffer.hpp"
+#include <Core/Commands/PrebuiltTransferCommands.hpp>
 
 namespace vkl
 {
@@ -47,9 +48,7 @@ namespace vkl
 	{
 		if (needsTransfer())
 		{
-			CopyBuffer cp = CopyBuffer::CI{
-				.app = application(),
-			};
+			CopyBuffer & cp = application()->getPrebuiltTransferCommands().copy_buffer;
 
 			exec(cp.with(consumeSynchCopyInfo()));
 		}

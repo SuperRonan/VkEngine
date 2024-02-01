@@ -1,5 +1,7 @@
 #include "Renderer.hpp"
 
+#include <Core/Commands/PrebuiltTransferCommands.hpp>
+
 namespace vkl
 {
 	SimpleRenderer::SimpleRenderer(CreateInfo const& ci):
@@ -382,10 +384,7 @@ namespace vkl
 			.world_to_proj = camera.getWorldToProj(),
 		};
 
-		UpdateBuffer updater = UpdateBuffer::CI{
-			.app = application(),
-			.name = name() + ".UpdateUBO",
-		};
+		UpdateBuffer & updater = application()->getPrebuiltTransferCommands().update_buffer;
 
 		exec(updater.with(UpdateBuffer::UpdateInfo{
 			.src = ubo,
@@ -397,9 +396,7 @@ namespace vkl
 		
 		if (_use_indirect_rendering)
 		{
-			FillBuffer fill_buffer = FillBuffer::CI{
-				.app = application(),
-			};
+			FillBuffer & fill_buffer = application()->getPrebuiltTransferCommands().fill_buffer;
 			exec(fill_buffer.with(FillBuffer::FillInfo{
 				.buffer = _atomic_counter_segment.buffer,
 				.range = _atomic_counter_segment.range.value(),
