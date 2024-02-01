@@ -123,6 +123,7 @@ namespace vkl
 				.name = name() + ".RenderSceneDirect",
 				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(), // TODO model type dependent
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.cull_mode = VK_CULL_MODE_BACK_BIT,
 				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 				.bindings = {
 					Binding{
@@ -182,6 +183,7 @@ namespace vkl
 					.name = name() + ".RasterGBuffer",
 					.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
 					.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+					.cull_mode = VK_CULL_MODE_BACK_BIT,
 					.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 					.bindings = {
 						Binding{
@@ -204,6 +206,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".RasterSceneGBuffer",
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.cull_mode = VK_CULL_MODE_BACK_BIT,
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{

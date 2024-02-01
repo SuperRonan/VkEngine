@@ -91,43 +91,34 @@ layout(SCENE_MESHS_BINDING + 1, std430) buffer restrict SCENE_MESH_ACCESS SceneM
 	Vertex vertices[];
 } scene_mesh_vertices[];
 
-// Vertex readSceneVertex(uint mesh_id, uint vertex_id)
-// {
-// 	const StorageVertex sv = scene_mesh_vertices[mesh_id].vertices[vertex_id];
-// 	return MakeVertex(sv);
-// } 
-
 Vertex readSceneVertex(uint mesh_id, uint vertex_id)
 {
 	return scene_mesh_vertices[mesh_id].vertices[vertex_id];
-} 
+}
 
-// Vertex readSceneVertex(uint mesh_id, uint vertex_id)
-// {
-// 	const uint float_per_vertex = 3 + 3 + 3 + 2;
-// 	const uint vertex_data_base = vertex_id * float_per_vertex;
-// 	Vertex res;
-// 	res.position = vec3(
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 0],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 1],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 2]
-// 	);
-// 	res.normal = vec3(
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 3],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 4],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 5]
-// 	);
-// 	res.tangent = vec3(
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 6],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 7],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 8]
-// 	);
-// 	res.uv = vec2(
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 9],
-// 		scene_mesh_vertices[mesh_id].data[vertex_data_base + 10]
-// 	);
-// 	return res;
-// }
+Vertex interpolateSceneVertex(uint mesh_id, uvec3 vertex_ids, vec2 triangle_uv)
+{
+	const vec3 bary = triangleUVToBarycentric(triangle_uv);
+	Vertex res;
+	for(uint i=0; i<3; ++i)
+	{
+		const Vertex src = readSceneVertex(mesh_id, vertex_ids[i]);
+		const float w = bary[i];
+		res.position += src.position * w;
+		res.normal += src.normal * w;
+		res.tangent += src.tangent * w;
+		res.uv += src.uv * w;
+	}
+	return res;
+}
+
+Vertex interpolateSceneVertexAndNormalize(uint mesh_id, uvec3 vertex_ids, vec2 triangle_uv)
+{
+	Vertex res = interpolateSceneVertex(mesh_id, vertex_ids, triangle_uv);
+	res.normal = normalize(res.normal);
+	res.tangent = normalize(res.tangent);
+	return res;
+}
 
 layout(SCENE_MESHS_BINDING + 2) buffer restrict SCENE_MESH_ACCESS SceneMeshIndicesBindings
 {

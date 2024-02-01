@@ -180,6 +180,10 @@ mat4 tilt(vec4 a, vec4 b)
 	return outerProduct(a, b) - outerProduct(b, a);
 }
 
+vec3 triangleUVToBarycentric(vec2 uv)
+{
+	return vec3(1.0f - uv.x - uv.y, uv.x, uv.y);
+}
 
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI (PI / 2.0)

@@ -35,9 +35,9 @@ void main()
 	{
 		const SceneObjectReference obj = scene_objects_table.table[gid];
 		bool emit = (obj.flags & SCENE_OBJECT_FLAG_VISIBLE_BIT) != 0;
+		const uint index = gid;//atomicAdd(atomic_counter.counter, 1);
 		if(emit)
 		{
-			const uint index = atomicAdd(atomic_counter.counter, 1);
 			const uint mesh_index = obj.mesh_id;
 			const uint mesh_num_indices = scene_mesh_headers[mesh_index].headers.num_indices;
 			
@@ -51,6 +51,16 @@ void main()
 			
 			vk_draw_list.commands[index] = vk_draw;
 
+		}
+		else
+		{
+			VkDrawIndirectCommand  vk_draw;
+			vk_draw.vertexCount = 0;
+			vk_draw.instanceCount = 0;
+			vk_draw.firstVertex = 0;
+			vk_draw.firstInstance = 0;
+			
+			vk_draw_list.commands[index] = vk_draw;
 		}
 	}
 }

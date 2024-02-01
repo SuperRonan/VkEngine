@@ -182,7 +182,7 @@ namespace vkl
 
 			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
 			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node>, FastNodePath const&, Mat4 const&)>;
-			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node>, RobustNodePath const&, Mat4 const&)>;
+			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node>, RobustNodePath const&, Mat4 const&, uint32_t)>;
 			using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<PerNodeInstance> const&)>;
 			using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
 
@@ -194,7 +194,7 @@ namespace vkl
 			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat4 const& matrix, const PerNodeInstanceFunction& f);
 
 			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat4 const& matrix, const PerNodeInstanceFastPathFunction& f);
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat4 const& matrix, const PerNodeInstanceRobustPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f);
 
 
 
@@ -216,7 +216,7 @@ namespace vkl
 
 			void iterateOnDag(const PerNodeInstanceFunction & f);
 			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat4 const& matrix)> const& f);
-			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, RobustNodePath const& path, Mat4 const& matrix)> const& f);
+			void iterateOnDag(PerNodeInstanceRobustPathFunction const& f);
 
 			void iterateOnFlattenDag(const PerNodeAllInstancesFunction& f);
 			void iterateOnFlattenDag(const PerNodeInstanceFunction& f);

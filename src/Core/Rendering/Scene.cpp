@@ -1,8 +1,9 @@
 #include "Scene.hpp"
 
 #include <cassert>
-
 #include <stack>
+#include <bitset>
+
 #include <Core/Utils/stl_extension.hpp>
 
 #include <imgui/imgui.h>
@@ -55,18 +56,23 @@ namespace vkl
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath& path, Mat4 const& matrix, const PerNodeInstanceRobustPathFunction& f)
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath& path, Mat4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f)
 	{
 		Mat4 new_matrix = matrix * node->matrix4x4();
-		if (f(node, path, new_matrix))
+		bool visible = node->visible();
+		std::bitset<32> flags_bits(flags);
+		flags_bits.set(0, visible && flags_bits[0]);
+		uint32_t new_flags = flags_bits.to_ulong();
+		if (f(node, path, new_matrix, new_flags))
 		{
 			path.path.push_back(nullptr);
+
 			for (size_t i = 0; i < node->children().size(); ++i)
 			{
 				std::shared_ptr<Node> const& n = node->children()[i];
 				assert(!!n);
 				path.path.back() = n.get();
-				iterateOnNodeThenSons(n, path, new_matrix, f);
+				iterateOnNodeThenSons(n, path, new_matrix, new_flags, f);
 			}
 			path.path.pop_back();
 		}
@@ -91,13 +97,13 @@ namespace vkl
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, RobustNodePath const& path, Mat4 const& matrix)> const& f)
+	void Scene::DirectedAcyclicGraph::iterateOnDag(PerNodeInstanceRobustPathFunction const& f)
 	{
 		RobustNodePath path;
 		Mat4 matrix = Mat4(1);
 		if (root())
 		{
-			iterateOnNodeThenSons(root(), path, matrix, f);
+			iterateOnNodeThenSons(root(), path, matrix, 1, f);
 		}
 	}
 
@@ -540,13 +546,15 @@ namespace vkl
 		std::hash<DirectedAcyclicGraph::RobustNodePath> h;
 		static_assert(std::concepts::HashableFromMethod<DirectedAcyclicGraph::RobustNodePath>);
 
-		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat4 const& matrix4)
+		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat4 const& matrix4, uint32_t flags)
 		{
 			const Mat4x3 matrix = matrix4;
 			_tree->_flat_dag[node].push_back(DirectedAcyclicGraph::PerNodeInstance{
 				.matrix = matrix,
 				.visible = node->visible(),
 			});
+
+			const bool visible = flags & 1;
 			
 			std::shared_ptr<Model> const& model = node->model();
 			if (model)
@@ -588,6 +596,10 @@ namespace vkl
 				bool set_model_reference = false;
 				bool set_xform = false;
 				uint32_t unique_model_id;
+				uint32_t model_flags = 0;
+				Mat3x4 model_matrix = glm::transpose(matrix);
+				if(visible)
+					model_flags |= 1;
 				if (!_unique_models.contains(path))
 				{
 					unique_model_id = allocateUniqueModelID();
@@ -605,24 +617,30 @@ namespace vkl
 					unique_model_id = um.model_unique_index;
 					xform_unique_id = um.xform_unique_index;
 					const ModelReference & mr = _model_references_buffer->get<ModelReference>(unique_model_id);
+
+					set_model_reference |= 
+						(mr.flags != model_flags) || 
+						(mr.mesh_id != mesh_unique_id) || 
+						(mr.material_id || material_unique_id) || 
+						(mr.xform_id != xform_unique_id);
+
+					const Mat3x4 & registed_matrix = _xforms_buffer->get<Mat3x4>(xform_unique_id);
+					set_xform |= (registed_matrix != model_matrix);
 				}
 
 				if (set_model_reference)
 				{
-					uint32_t flags = 0;
-					// TODO visibility
-					flags |= 1;
 					_model_references_buffer->set(unique_model_id, ModelReference{
 						.mesh_id = mesh_unique_id,
 						.material_id = material_unique_id,
 						.xform_id = xform_unique_id,
-						.flags = flags,
+						.flags = model_flags,
 					});
 				}
 				
 				if (set_xform)
 				{
-					_xforms_buffer->set<Mat3x4>(xform_unique_id, glm::transpose(matrix));
+					_xforms_buffer->set<Mat3x4>(xform_unique_id, model_matrix);
 				}
 			}
 

@@ -59,6 +59,14 @@ namespace vkl
 		{
 			AppWithImGui::requestFeatures(features);
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
+			features.features.fillModeNonSolid = VK_TRUE;
+		}
+
+		virtual std::vector<const char* > getDeviceExtensions() override
+		{
+			std::vector<const char* > res = AppWithImGui::getDeviceExtensions();
+			res.push_back(VK_NV_FILL_RECTANGLE_EXTENSION_NAME);
+			return res;
 		}
 
 	public:
