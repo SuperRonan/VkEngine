@@ -34,6 +34,7 @@ namespace vkl
 		std::atomic<size_t> _sampler_count = 0;
 		std::unordered_map<SamplerInfo, std::shared_ptr<Sampler>, Hasher> _map;
 		std::unordered_map<std::string, std::shared_ptr<Sampler>> _named_samplers;
+		std::shared_ptr<Sampler> _default_sampler;
 
 	public:
 
@@ -49,6 +50,11 @@ namespace vkl
 		std::shared_ptr<Sampler> getSampler(SamplerInfo const& si);
 
 		std::shared_ptr<Sampler> getNamedSampler(std::string const& name) const;
+
+		std::shared_ptr<Sampler> const& getDefaultSampler()const
+		{
+			return _default_sampler;
+		}
 
 		void setNamedSampler(std::string const& name, std::shared_ptr<Sampler> const& s);
 		

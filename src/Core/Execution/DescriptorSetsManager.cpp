@@ -1,10 +1,13 @@
 #include "DescriptorSetsManager.hpp"
+
+#include <Core/Execution/SamplerLibrary.hpp>
+
 #include <algorithm>
 #include <string_view>
 
 namespace vkl
 {
-
+	
 	DescriptorSetAndPoolInstance::DescriptorSetAndPoolInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_bindings(ci.bindings),
@@ -278,11 +281,20 @@ namespace vkl
 	bool DescriptorSetAndPoolInstance::checkIntegrity()const
 	{
 		bool res = true;
+		if (!_layout)
+		{
+			return res;
+		}
+		res &= _bindings.size() == _layout->bindings().size();
+		assert(res);
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			assert(_bindings[i].isResolved());
-
+			
 			res &= _bindings[i].vkType() != VK_DESCRIPTOR_TYPE_MAX_ENUM;
+			assert(res);
+
+			res &= _bindings[i].vkType() == _layout->bindings()[i].descriptorType;
 			assert(res);
 
 			const uint32_t lc = _layout->bindings()[i].descriptorCount;
@@ -449,7 +461,17 @@ namespace vkl
 									info.sampler = b.samplers()[i]->instance()->handle();
 								}
 								else
-									any_null = true;
+								{
+									// The Vulkan spec allows null descriptor (with the feature enable), EXCEPT for samplers!
+									// Solution: use a default sampler
+									std::shared_ptr<Sampler> const& default_sampler = application()->getSamplerLibrary().getDefaultSampler();
+									info.sampler = default_sampler->instance()->handle();
+								}
+							}
+
+							if (b.vkType() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+							{
+
 							}
 
 							if (any_null)
@@ -564,6 +586,7 @@ namespace vkl
 		{
 			assert(bi.size() == bs.size());
 		}
+		assert(views || samplers);
 
 		for (uint32_t i = 0; i < count; ++i)
 		{
@@ -575,7 +598,7 @@ namespace vkl
 				.id = this,
 			};
 
-			if(is_image)
+			if(is_image && views)
 			{
 				std::shared_ptr<ImageView> & binding_view = bi[binding_array_index];
 				if (binding_view)
@@ -589,7 +612,7 @@ namespace vkl
 				}
 			}
 
-			if (is_sampler)
+			if (is_sampler && samplers)
 			{
 				std::shared_ptr<Sampler> & binding_sampler = bs[binding_array_index];
 				if (binding_sampler)
@@ -616,6 +639,15 @@ namespace vkl
 
 
 
+
+
+
+
+
+	size_t DescriptorSetAndPool::Registration::hash() const
+	{
+		return std::hash<void*>()(set.get()) ^ std::hash<uint32_t>()(binding) ^ std::hash<uint32_t>()(array_index);
+	}
 
 
 
@@ -767,6 +799,7 @@ namespace vkl
 			const bool fill_missing_bindings_with_null = _allow_missing_bindings;
 			assert(!!_layout->instance());
 			DescriptorSetLayoutInstance & layout = *_layout->instance();
+			std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b) {return a.binding() < b.binding(); });
 			if (_bindings.size() != layout.bindings().size())
 			{
 				if(!fill_missing_bindings_with_null)
@@ -792,7 +825,7 @@ namespace vkl
 					for (size_t i = 0; i < layout.bindings().size(); ++i)
 					{
 						const uint32_t b = layout.bindings()[i].binding;
-						
+						// _bindings are sorted
 						const size_t b_index = [&]() -> size_t {
 							while (j != -1)
 							{
@@ -840,11 +873,14 @@ namespace vkl
 				}
 			}
 			
+			assert(_bindings.size() == layout.bindings().size());
+			
 			for (size_t j = 0; j < _bindings.size(); ++j)
 			{
-				_bindings[j].resolve(_bindings[j].binding());
 				const auto& meta = layout.metas()[j];
 				const auto& vkb = layout.bindings()[j];
+				assert(_bindings[j].binding() == vkb.binding);
+				_bindings[j].resolve(_bindings[j].binding());
 				_bindings[j].setType(vkb.descriptorType);
 				_bindings[j].resource().begin_state.layout = meta.layout;
 			}

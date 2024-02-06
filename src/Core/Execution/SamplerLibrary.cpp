@@ -24,7 +24,13 @@ namespace vkl
 
 	SamplerLibrary::SamplerLibrary(CreateInfo const& ci):
 		VkObject(ci.app, ci.name)
-	{}
+	{
+		_default_sampler = std::make_shared<Sampler>(Sampler::CI{
+			.app = application(),
+			.name = "DefaultSampler",
+			.create_on_construct = true,
+		});
+	}
 
 	std::shared_ptr<Sampler> SamplerLibrary::getSampler(SamplerInfo const& si)
 	{

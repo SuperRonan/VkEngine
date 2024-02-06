@@ -102,6 +102,9 @@ namespace vkl
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers = nullptr);
 
+		// For views and samplers: 
+		// views == nullptr -> does not set the binding
+		// *view == nullptr -> set the binding to nullptr
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views = nullptr, const std::shared_ptr<Sampler>* samplers = nullptr);
 
 		//void setBinding(ResourceBinding const& b);
@@ -163,12 +166,19 @@ namespace vkl
 			uint32_t array_index;
 
 			void clear(uint32_t num_bindings);
+
+			size_t hash()const;
+
+			std::strong_ordering operator<=>(Registration const & other) const = default;
 		};
 
 		void clearBinding(uint32_t binding, uint32_t array_index, uint32_t count);
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange * buffers = nullptr);
 
+		// For views and samplers: 
+		// views == nullptr -> does not set the binding
+		// *view == nullptr -> set the binding to nullptr
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView> * views = nullptr, const std::shared_ptr<Sampler> * samplers = nullptr);
 
 		void waitForInstanceCreationIFN();
