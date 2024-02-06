@@ -459,7 +459,7 @@ void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
 
 	const uint integral_part = uint(abs(f));
 	const float dec = abs(f - trunc(f));
-	uint dec_part = uint(dec * pow(basis, flt_precision));
+	uint dec_part = uint(dec * pow(basis, flt_precision) + 0.5);
 	
 	append(s, integral_part, basis);
 	appendOneChar(s, CHAR_dot);
