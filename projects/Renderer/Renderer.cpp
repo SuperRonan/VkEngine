@@ -201,6 +201,16 @@ namespace vkl
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
+
+			_deferred_pipeline._tangent = std::make_shared<ImageView>(Image::CI{
+				.app = application(),
+				.name = name() + ".GBuffer.tangent",
+				.type = _render_target->image()->type(),
+				.format = VK_FORMAT_R32G32B32A32_SFLOAT,
+				.extent = _render_target->image()->extent(),
+				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			});
 			
 
 			for (uint32_t model_type : _model_types)
@@ -247,7 +257,7 @@ namespace vkl
 						.binding = 1,
 					},
 				},
-				.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal},
+				.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal, _deferred_pipeline._tangent},
 				.depth_stencil = _depth,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
@@ -291,13 +301,17 @@ namespace vkl
 						.binding = 2,
 					},
 					Binding{
-						.view = _ambient_occlusion->target(),
-						.sampler = bilinear_sampler,
+						.view = _deferred_pipeline._tangent,
 						.binding = 3,
 					},
 					Binding{
-						.view = _render_target,
+						.view = _ambient_occlusion->target(),
+						.sampler = bilinear_sampler,
 						.binding = 4,
+					},
+					Binding{
+						.view = _render_target,
+						.binding = 5,
 					},
 				},
 				.definitions = [this]()
@@ -385,6 +399,7 @@ namespace vkl
 			_deferred_pipeline._albedo->updateResource(ctx);
 			_deferred_pipeline._position->updateResource(ctx);
 			_deferred_pipeline._normal->updateResource(ctx);
+			_deferred_pipeline._tangent->updateResource(ctx);
 
 			if (_use_indirect_rendering || update_all_anyway)
 			{

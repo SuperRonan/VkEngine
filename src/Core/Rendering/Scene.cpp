@@ -665,6 +665,7 @@ namespace vkl
 					if (pb_material)
 					{
 						TextureAndSampler albedo_tex = pb_material->albedoTextureAndSampler();
+						TextureAndSampler normal_tex = pb_material->normalTextureAndSampler();
 						uint32_t albedo_texture_id = uint32_t(-1);
 						uint32_t normal_texture_id = uint32_t(-1);
 						if (albedo_tex.texture)
@@ -682,6 +683,21 @@ namespace vkl
 							else
 							{
 								albedo_texture_id = _unique_textures.at(albedo_tex.texture.get()).unique_index;
+							}
+						}
+						// TODO factorize this code with the above one
+						if (normal_tex.texture)
+						{
+							if (!_unique_textures.contains(normal_tex.texture.get()))
+							{
+								normal_texture_id = allocateUniqueTexture2DID();
+								normal_tex.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, normal_texture_id);
+								_set->setBinding(_textures_bindings_base + 0, normal_texture_id, 1, nullptr, &normal_tex.sampler);
+								_unique_textures[normal_tex.texture.get()] = TextureData{ .unique_index = normal_texture_id };
+							}
+							else
+							{
+								normal_texture_id = _unique_textures.at(normal_tex.texture.get()).unique_index;
 							}
 						}
 

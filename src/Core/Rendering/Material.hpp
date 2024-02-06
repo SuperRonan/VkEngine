@@ -124,6 +124,11 @@ namespace vkl
 			return can_texture && !_force_albedo_prop;
 		}
 
+		bool useNormalTexture()const
+		{
+			return _normal_texture && _normal_texture->isReady();
+		}
+
 	public:
 
 		struct CreateInfo
@@ -133,7 +138,7 @@ namespace vkl
 			vec3 albedo = vec3(0.7);
 			std::shared_ptr<Sampler> sampler = nullptr;
 			std::shared_ptr<Texture> albedo_texture = nullptr;
-			std::shared_ptr<Texture> normal_texture;
+			std::shared_ptr<Texture> normal_texture = nullptr;
 			bool synch = true;
 		};
 		using CI = CreateInfo;
@@ -170,6 +175,14 @@ namespace vkl
 		{
 			return TextureAndSampler{
 				.texture = _albedo_texture,
+				.sampler = _sampler,
+			};
+		}
+
+		TextureAndSampler normalTextureAndSampler()
+		{
+			return TextureAndSampler{
+				.texture = _normal_texture,
 				.sampler = _sampler,
 			};
 		}

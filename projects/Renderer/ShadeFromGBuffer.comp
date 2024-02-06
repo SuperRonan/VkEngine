@@ -7,10 +7,11 @@
 layout(SHADER_DESCRIPTOR_BINDING + 0, rgba32f) uniform restrict readonly image2D AlbedoTexture;
 layout(SHADER_DESCRIPTOR_BINDING + 1, rgba32f) uniform restrict readonly image2D PositionTexture;
 layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict readonly image2D NormalTexture;
+layout(SHADER_DESCRIPTOR_BINDING + 3, rgba32f) uniform restrict readonly image2D TangentTexture;
 
-layout(SHADER_DESCRIPTOR_BINDING + 3) uniform sampler2D AOTexture;
+layout(SHADER_DESCRIPTOR_BINDING + 4) uniform sampler2D AOTexture;
 
-layout(SHADER_DESCRIPTOR_BINDING + 4, rgba16f) uniform restrict writeonly image2D ColorOutput;
+layout(SHADER_DESCRIPTOR_BINDING + 5, rgba16f) uniform restrict writeonly image2D ColorOutput;
 
 layout(local_size_x = 16, local_size_y = 16) in;
 

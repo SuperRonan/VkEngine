@@ -71,6 +71,7 @@ namespace vkl
 			std::shared_ptr<ImageView> _albedo = nullptr;
 			std::shared_ptr<ImageView> _position = nullptr;
 			std::shared_ptr<ImageView> _normal = nullptr;
+			std::shared_ptr<ImageView> _tangent = nullptr;
 
 			struct RasterCommands
 			{

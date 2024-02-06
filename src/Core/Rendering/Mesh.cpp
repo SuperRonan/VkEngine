@@ -393,7 +393,10 @@ namespace vkl
 			Vector3 btg = tans[vertex_id].btg;
 
 			Vector3 t = tg - (normal * glm::dot(normal, tg));
-			t = glm::normalize(t);
+			if (glm::dot(t, t) > 0)
+			{
+				t = glm::normalize(t);
+			}
 
 			Vector3 c = glm::cross(normal, tg);
 			Float w = (glm::dot(c, btg) < 0) ? -1 : 1;

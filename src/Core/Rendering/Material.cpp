@@ -25,7 +25,8 @@ namespace vkl
 		_albedo(ci.albedo),
 		_sampler(ci.sampler),
 		_albedo_texture(ci.albedo_texture),
-		_normal_texture(ci.normal_texture)
+		_normal_texture(ci.normal_texture),
+		_cached_props({})
 	{
 		_should_update_props_buffer = true;
 
@@ -73,6 +74,11 @@ namespace vkl
 		if (useAlbedoTexture())
 		{
 			flags |= Flags::USE_ALBEDO_TEXTURE;
+		}
+
+		if (useNormalTexture())
+		{
+			flags |= Flags::USE_NORMAL_TEXTURE;
 		}
 		
 		return Properties{
@@ -156,6 +162,17 @@ namespace vkl
 			.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		};
 
+		res += DescriptorSetLayout::Binding{
+			.name = "NormalTexture",
+			.binding = offset + 2,
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+			.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+		};
+
 		return res;
 	}
 
@@ -184,6 +201,7 @@ namespace vkl
 			if (_sampler)
 			{
 				reg.set->setBinding(reg.binding + 1, reg.array_index, 1, nullptr, &_sampler);
+				reg.set->setBinding(reg.binding + 2, reg.array_index, 1, nullptr, &_sampler);
 			}
 			// Automatically called by the texture
 		}
@@ -202,6 +220,10 @@ namespace vkl
 			if(_albedo_texture)
 			{
 				_albedo_texture->registerToDescriptorSet(set, binding + 1, array_index);
+			}
+			if (_normal_texture)
+			{
+				_normal_texture->registerToDescriptorSet(set, binding + 2, array_index);
 			}
 		}
 
@@ -226,6 +248,10 @@ namespace vkl
 						if (_albedo_texture)
 						{
 							_albedo_texture->unRegistgerFromDescriptorSet(reg.set, reg.binding, reg.array_index);
+						}
+						if (_normal_texture)
+						{
+							_normal_texture->unRegistgerFromDescriptorSet(reg.set, reg.binding, reg.array_index);
 						}
 						reg.set->setBinding(reg.binding + 1, reg.array_index, 1, &null_view, &null_sampler);
 					}

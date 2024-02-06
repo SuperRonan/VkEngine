@@ -30,6 +30,7 @@ layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 0, std140) unifor
 } material_props;
 
 layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 1) uniform sampler2D AlbedoTexture;
+layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 2) uniform sampler2D NormalTexture;
 
 
 #endif
@@ -42,8 +43,7 @@ vec3 getBoundMaterialAlbedo(vec2 uv)
 	{
 		// See texture LOD	
 		// const vec2 lod = textureQueryLod(AlbedoTexture, uv);
-		// RNGState rng = hash(int(lod.y));
-		// return randomRGB(rng);
+		// return RGBFromIndex(int(lod.y));
 		return texture(AlbedoTexture, uv).rgb;
 	}
 	else

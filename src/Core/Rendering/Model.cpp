@@ -272,6 +272,10 @@ namespace vkl
 
 				std::filesystem::path albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname;
 				std::filesystem::path normal_path = tm.normal_texname.empty() ? std::filesystem::path() : mtl_path / tm.normal_texname;
+				if (normal_path.empty() && !tm.displacement_texname.empty())
+				{
+					normal_path = mtl_path / tm.displacement_texname;
+				}
 
 				std::shared_ptr<Texture> albedo_texture = texture_file_cache.getTexture(albedo_path); 
 				std::shared_ptr<Texture> normal_texture = texture_file_cache.getTexture(normal_path);
