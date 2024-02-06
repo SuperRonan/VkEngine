@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ShaderLib:/common.glsl>
+
 #define fast_hash_t uint32_t
 #define slow_hash_t uint64_t
 
