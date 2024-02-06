@@ -166,7 +166,6 @@ namespace vkl
 
 	void TextureFromFile::updateResources(UpdateContext& ctx)
 	{
-		
 		if (ctx.updateTick() <= _latest_update_tick)
 		{
 			return;
@@ -201,37 +200,36 @@ namespace vkl
 			}
 			else
 			{
-				if (_load_image_task)
+				if (_load_image_task && _load_image_task->StatusIsFinish(_load_image_task->getStatus()))
 				{
-					if (_load_image_task->StatusIsFinish(_load_image_task->getStatus()))
+					if (_load_image_task->isSuccess())
 					{
-						if (_load_image_task->isSuccess())
-						{
-							_upload_done = false;
-							AsynchUpload up{
-								.name = name(),
-								.source = ObjectView(_host_image.rawData(), _host_image.byteSize()),
-								.target_view = _top_mip_view->instance(),
-								.completion_callback = [this](int ret)
+						_upload_done = false;
+						AsynchUpload up{
+							.name = name(),
+							.source = ObjectView(_host_image.rawData(), _host_image.byteSize()),
+							.target_view = _top_mip_view->instance(),
+							.completion_callback = [this](int ret)
+							{
+								if (ret == 0)
 								{
-									if (ret == 0)
-									{
-										_upload_done = true;
-									}
-								},
-							};
-							ctx.uploadQueue()->enqueue(up);
-						}
-						else
-						{
-							_should_upload = false;
-							_view = nullptr;
-							_image = nullptr;
-							_top_mip_view = nullptr;
-							_all_mips_view = nullptr;
-						}
-						_load_image_task = nullptr;
+									_upload_done = true;
+								}
+							},
+						};
+						ctx.uploadQueue()->enqueue(up);
 					}
+					else
+					{
+						// TODO manage this case properly
+						_should_upload = false;
+						_view = nullptr;
+						_image = nullptr;
+						_top_mip_view = nullptr;
+						_all_mips_view = nullptr;
+						callResourceUpdateCallbacks();
+					}
+					_load_image_task = nullptr;	
 				}
 			}
 		}

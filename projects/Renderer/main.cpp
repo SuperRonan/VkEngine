@@ -114,6 +114,12 @@ namespace vkl
 					.model = model,
 				});
 				root->addChild(model_node);
+
+				root->addChild(std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "ModelNode2",
+					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(2, 1, 1)) * scaleMatrix<4, float>(0.5)),
+					.model = model,
+				}));
 			}
 
 			{

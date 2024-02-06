@@ -5,6 +5,8 @@
 #include <Core/VkObjects/DetailedVkFormat.hpp>
 #include <filesystem>
 
+#include <Core/Execution/DescriptorSetsManager.hpp>
+
 namespace vkl
 {
 	class Texture : public VkObject
@@ -15,9 +17,11 @@ namespace vkl
 
 		std::shared_ptr<ImageView> _view = nullptr;
 
-		std::vector<Callback> _resource_update_callback = {};
+		//std::vector<Callback> _resource_update_callback = {};
 
-		virtual void callResourceUpdateCallbacks();
+		MyVector<DescriptorSetAndPool::Registration> _registered_sets = {};
+
+		void callRegistrationCallback(DescriptorSetAndPool::Registration & reg);
 
 	public:
 		
@@ -44,10 +48,14 @@ namespace vkl
 			return _is_ready;
 		}
 
-		virtual void addResourceUpdateCallback(Callback const& cb);
+		virtual void registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index = 0);
 
-		virtual void removeResourceUpdateCallback(VkObject* id);
+		// Remove all registrations of set
+		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set);
+		// Remove a single registration corresponding to the params
+		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index);
 
+		virtual void callResourceUpdateCallbacks();
 
 		struct MakeInfo
 		{

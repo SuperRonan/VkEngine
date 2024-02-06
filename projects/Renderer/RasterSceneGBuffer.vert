@@ -1,5 +1,8 @@
 #version 460
 
+// #define I_WANT_TO_DEBUG 1
+// #include <ShaderLib:/DebugBuffers.glsl>
+
 #include "IndirectCommon.glsl"
 
 // layout(location = 0) in vec3 a_position;
@@ -7,10 +10,10 @@
 // layout(location = 2) in vec3 a_tangent;
 // layout(location = 3) in vec2 a_uv;
 
-layout(location = 0) out vec3 v_w_position;
-layout(location = 1) out vec2 v_uv;
-layout(location = 2) out vec3 v_w_normal;
-
+layout(location = 0) out flat uvec4 v_flat;
+layout(location = 1) out vec3 v_w_position;
+layout(location = 2) out vec2 v_uv;
+layout(location = 3) out vec3 v_w_normal;
 
 void main()
 {	
@@ -34,4 +37,6 @@ void main()
 	// TODO Use the correct matrix (works as long as the scale is uniform)
 	v_w_normal = mat3(o2w) * a_normal;
 	v_w_position = (o2w * vec4(m_position, 1)).xyz;
+
+	v_flat.x = uint(gl_DrawID);
 }

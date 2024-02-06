@@ -51,10 +51,19 @@ namespace vkl
 
 	PhysicallyBasedMaterial::~PhysicallyBasedMaterial()
 	{
-		if (_albedo_texture)
+		for (size_t i = 0; i < _registered_sets; ++i)
 		{
-			_albedo_texture->removeResourceUpdateCallback(this);
+			auto & reg = _registered_sets[i];
+			reg.registration.set->setBinding(reg.registration.binding, reg.registration.array_index, 1, (const BufferAndRange*)nullptr);
+			if (reg.include_textures)
+			{
+				if (_albedo_texture)
+				{
+					_albedo_texture->unRegistgerFromDescriptorSet(reg.registration.set, reg.registration.binding, reg.registration.array_index);
+				}
+			}
 		}
+		_registered_sets.clear();
 	}
 
 	PhysicallyBasedMaterial::Properties PhysicallyBasedMaterial::getProperties() const
@@ -105,11 +114,17 @@ namespace vkl
 			_sampler->updateResources(ctx);
 		}
 
+		const Properties new_props = getProperties();
+		if (new_props.flags != _cached_props.flags)
+		{
+			_should_update_props_buffer = true;
+		}
+		_cached_props = new_props;
+
 		if (_should_update_props_buffer)
 		{
-			const Properties props = getProperties();
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-				.sources = {PositionedObjectView{.obj = props, .pos = 0}},
+				.sources = {PositionedObjectView{.obj = _cached_props, .pos = 0}},
 				.dst = _props_buffer->instance(),
 			};
 			_should_update_props_buffer = false;
@@ -144,39 +159,91 @@ namespace vkl
 		return res;
 	}
 
-	ShaderBindings PhysicallyBasedMaterial::getShaderBindings(uint32_t offset)
+	//ShaderBindings PhysicallyBasedMaterial::getShaderBindings(uint32_t offset)
+	//{
+	//	ShaderBindings res;
+	//	using namespace std::containers_append_operators;
+	//	
+	//	res += Binding{
+	//		.buffer = _props_buffer,
+	//		.binding = offset + 0,
+	//	};
+
+	//	return res;
+	//}
+
+	void PhysicallyBasedMaterial::callRegistrationCallback(DescriptorSetAndPool::Registration& reg, bool include_textures)
 	{
-		ShaderBindings res;
-		using namespace std::containers_append_operators;
-		
-		res += Binding{
+		BufferAndRange _props_buffer_bar{
 			.buffer = _props_buffer,
-			.binding = offset + 0,
 		};
-
-		return res;
-	}
-
-	void PhysicallyBasedMaterial::installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset)
-	{
-		if (_albedo_texture)
+		reg.set->setBinding(reg.binding + 0, reg.array_index, 1, &_props_buffer_bar);
+			
+		if (include_textures)
 		{
-			Callback cb{
-				.callback = [set, offset, this]() {
-					set->setBinding(offset + 1, 0, 1, &_albedo_texture->getView(), &_sampler);
-					_should_update_props_buffer = true;
-				},
-				.id = set.get(),
-			};
-			_albedo_texture->addResourceUpdateCallback(cb);
+			if (_sampler)
+			{
+				reg.set->setBinding(reg.binding + 1, reg.array_index, 1, nullptr, &_sampler);
+			}
+			// Automatically called by the texture
 		}
 	}
 
-	void PhysicallyBasedMaterial::removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set)
+	void PhysicallyBasedMaterial::registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index, bool include_textures)
 	{
-		if (_albedo_texture)
+		DescriptorSetAndPool::Registration reg{
+			.set = set,
+			.binding = binding,
+			.array_index = array_index,
+		};
+
+		if (include_textures)
 		{
-			_albedo_texture->removeResourceUpdateCallback(set.get());
+			if(_albedo_texture)
+			{
+				_albedo_texture->registerToDescriptorSet(set, binding + 1, array_index);
+			}
+		}
+
+		callRegistrationCallback(reg, include_textures);
+		_registered_sets += SetRegistration{.registration = std::move(reg), .include_textures = include_textures};
+	}
+
+	void PhysicallyBasedMaterial::unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, bool include_textures)
+	{
+		auto it = _registered_sets.begin();
+		while (it != _registered_sets.end())
+		{
+			auto & reg = it->registration;
+			if (it->registration.set == set)
+			{
+				{
+					reg.set->setBinding(reg.binding, reg.array_index, 1, (const BufferAndRange*)nullptr);
+					if (include_textures)
+					{
+						std::shared_ptr<ImageView> null_view = nullptr;
+						std::shared_ptr<Sampler> null_sampler = nullptr;
+						if (_albedo_texture)
+						{
+							_albedo_texture->unRegistgerFromDescriptorSet(reg.set, reg.binding, reg.array_index);
+						}
+						reg.set->setBinding(reg.binding + 1, reg.array_index, 1, &null_view, &null_sampler);
+					}
+				}
+				it = _registered_sets.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
+	}
+
+	void PhysicallyBasedMaterial::callResourceUpdateCallbacks()
+	{
+		for (auto& reg : _registered_sets)
+		{
+			callRegistrationCallback(reg.registration, reg.include_textures);
 		}
 	}
 }

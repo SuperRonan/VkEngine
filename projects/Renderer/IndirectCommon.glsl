@@ -5,12 +5,13 @@
 #define BIND_SCENE 1
 #include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
-#if SHADER_SEMANTIC_VERTEX
-
 layout(SHADER_DESCRIPTOR_BINDING + 1) buffer restrict readonly ModelIndexBuffer
 {
 	uint index[];
 } model_indices;
+
+#if SHADER_SEMANTIC_VERTEX
+
 
 struct VertexData
 {

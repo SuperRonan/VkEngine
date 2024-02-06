@@ -11,6 +11,12 @@
 
 namespace vkl
 {
+	struct TextureAndSampler
+	{
+		std::shared_ptr<Texture> texture;
+		std::shared_ptr<Sampler> sampler;
+	};
+
 	class Material : public VkObject
 	{
 	public:
@@ -23,6 +29,13 @@ namespace vkl
 		Type _type = Type::None;
 
 		bool _synch = true;
+
+		struct SetRegistration
+		{
+			DescriptorSetAndPool::Registration registration;
+			bool include_textures;
+		};
+		MyVector<SetRegistration> _registered_sets = {};
 
 	public:
 
@@ -55,11 +68,13 @@ namespace vkl
 
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(Type type, uint32_t offset);
 
-		virtual ShaderBindings getShaderBindings(uint32_t offset) = 0;
+		//virtual ShaderBindings getShaderBindings(uint32_t offset) = 0;
 
-		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) = 0;
+		virtual void registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index = 0, bool include_textures = true) = 0;
 
-		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) = 0;
+		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, bool include_textures = true) = 0;
+
+		virtual void callResourceUpdateCallbacks() = 0;
 	};
 
 	class PhysicallyBasedMaterial : public Material
@@ -80,11 +95,16 @@ namespace vkl
 			USE_ALBEDO_TEXTURE = (1 << 1),
 			USE_NORMAL_TEXTURE = (1 << 2),
 		};
+
+		void callRegistrationCallback(DescriptorSetAndPool::Registration& reg, bool include_textures);
+
 	protected:
 
 
 		vec3 _albedo;
 		
+		Properties _cached_props;
+
 		bool _should_update_props_buffer = false;
 		std::shared_ptr<Buffer> _props_buffer = nullptr;
 
@@ -133,11 +153,36 @@ namespace vkl
 
 		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
 
-		virtual ShaderBindings getShaderBindings(uint32_t offset) override;
+		//virtual ShaderBindings getShaderBindings(uint32_t offset) override;
 
-		virtual void installResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t offset) override;
+		virtual void registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index = 0, bool include_textures = true) override;
 
-		virtual void removeResourceUpdateCallbacks(std::shared_ptr<DescriptorSetAndPool> const& set) override;
+		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, bool include_textures = true) override;
+
+		virtual void callResourceUpdateCallbacks() override;
+
+		const std::shared_ptr<Sampler>& sampler()const
+		{
+			return _sampler;
+		}
+
+		TextureAndSampler albedoTextureAndSampler()
+		{
+			return TextureAndSampler{
+				.texture = _albedo_texture,
+				.sampler = _sampler,
+			};
+		}
+
+		const std::shared_ptr<Texture>& albedoTexture()const
+		{
+			return _albedo_texture;
+		}
+
+		const std::shared_ptr<Texture>& normalTexture()const
+		{
+			return _normal_texture;
+		}
 	};
 
 	using PBMaterial = PhysicallyBasedMaterial;

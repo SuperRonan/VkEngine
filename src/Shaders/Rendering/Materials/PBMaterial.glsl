@@ -10,6 +10,14 @@ struct PBMaterialProperties
 	uint flags;
 };
 
+PBMaterialProperties NoMaterialProps()
+{
+	PBMaterialProperties res;
+	res.albedo = vec3(0, 0, 0);
+	res.flags = 0;
+	return res;
+}
+
 #ifndef BIND_SINGLE_MATERIAL
 #define BIND_SINGLE_MATERIAL 0
 #endif

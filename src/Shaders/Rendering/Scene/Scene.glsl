@@ -22,20 +22,63 @@ struct SceneObjectReference
 	uint flags;
 };
 
-struct ScenePBMaterial
+struct ScenePBMaterialTextures
 {
-	PBMaterialProperties props;
 	uint albedo_texture_id;
 	uint normal_texture_id;
 	uint pad1;
 	uint pad2;
 };
 
+ScenePBMaterialTextures NoPBMaterialTextures()
+{
+	ScenePBMaterialTextures res;
+	res.albedo_texture_id = -1;
+	res.normal_texture_id = -1;
+	return res;
+}
+
 #if BIND_SCENE
 
 #extension GL_EXT_nonuniform_qualifier : require
 
 #define SCENE_BINDING SCENE_DESCRIPTOR_BINDING + 0
+
+#define SCENE_LIGHTS_BINDING SCENE_BINDING + 1
+#define SCENE_LIGHTS_NUM_BINDING 1
+#ifndef LIGHTS_ACCESS
+#define LIGHTS_ACCESS readonly
+#endif
+
+#define SCENE_OBJECTS_BINDING SCENE_LIGHTS_BINDING + SCENE_LIGHTS_NUM_BINDING
+#define SCENE_OBJECTS_NUM_BINDING 1
+#ifndef SCENE_OBJECTS_ACCESS
+#define SCENE_OBJECTS_ACCESS readonly
+#endif
+
+#define SCENE_MESHS_BINDING SCENE_OBJECTS_BINDING + SCENE_OBJECTS_NUM_BINDING
+#define SCENE_MESHS_NUM_BINDING 3
+#ifndef SCENE_MESH_ACCESS 
+#define SCENE_MESH_ACCESS readonly
+#endif
+
+#define SCENE_MATERIAL_BINDING SCENE_MESHS_BINDING + SCENE_MESHS_NUM_BINDING
+#define SCENE_MATERIAL_NUM_BINDING 2
+#ifndef SCENE_MATERIAL_ACCESS
+#define SCENE_MATERIAL_ACCESS readonly
+#endif
+
+#define SCENE_TEXTURES_BINDING SCENE_MATERIAL_BINDING + SCENE_MATERIAL_NUM_BINDING
+#define SCENE_TEXTURES_NUM_BINDING 1
+#ifndef SCENE_TEXTURE_ACCESS
+#define SCENE_TEXTURE_ACCESS readonly
+#endif
+
+#define SCENE_XFORM_BINDING SCENE_TEXTURES_BINDING + SCENE_TEXTURES_NUM_BINDING
+#define SCENE_XFORM_NUM_BINDING 2
+#ifndef SCENE_XFORM_ACCESS
+#define SCENE_XFORM_ACCESS readonly
+#endif
 
 
 layout(SCENE_BINDING + 0) uniform SceneUBOBinding
@@ -51,10 +94,6 @@ layout(SCENE_BINDING + 0) uniform SceneUBOBinding
 
 
 
-#define SCENE_LIGHTS_BINDING SCENE_BINDING + 1
-#ifndef LIGHTS_ACCESS
-#define LIGHTS_ACCESS readonly
-#endif
 
 layout(SCENE_BINDING + 1) restrict LIGHTS_ACCESS buffer LightsBufferBinding
 {
@@ -63,11 +102,6 @@ layout(SCENE_BINDING + 1) restrict LIGHTS_ACCESS buffer LightsBufferBinding
 
 
 
-#define SCENE_OBJECTS_BINDING SCENE_LIGHTS_BINDING + 1
-
-#ifndef SCENE_OBJECTS_ACCESS
-#define SCENE_OBJECTS_ACCESS readonly
-#endif
 
 layout(SCENE_OBJECTS_BINDING + 0) buffer restrict SCENE_OBJECTS_ACCESS SceneObjectsTable
 {
@@ -75,11 +109,6 @@ layout(SCENE_OBJECTS_BINDING + 0) buffer restrict SCENE_OBJECTS_ACCESS SceneObje
 } scene_objects_table;
 
 
-#define SCENE_MESHS_BINDING SCENE_OBJECTS_BINDING + 1
-
-#ifndef SCENE_MESH_ACCESS 
-#define SCENE_MESH_ACCESS readonly
-#endif
 
 layout(SCENE_MESHS_BINDING + 0) buffer restrict SCENE_MESH_ACCESS SceneMeshHeadersBindings
 {
@@ -147,32 +176,25 @@ uint readSceneMeshIndex(uint mesh_id, uint index_id, uint flags)
 }
 
 
-#define SCENE_MATERIAL_BINDING SCENE_MESHS_BINDING + 4
 
-#ifndef SCENE_MATERIAL_ACCESS
-#define SCENE_MATERIAL_ACCESS readonly
-#endif
 
 layout(SCENE_MATERIAL_BINDING + 0) buffer restrict SCENE_MATERIAL_ACCESS ScenePBMaterialsBinding
 {
-	ScenePBMaterial materials[];
-} scene_pb_materals;
+	PBMaterialProperties props;
+} scene_pb_materials[];
+
+layout(SCENE_MATERIAL_BINDING + 1) buffer restrict SCENE_MATERIAL_ACCESS ScenePBMaterialsRefBinding
+{
+	ScenePBMaterialTextures ids[];
+} scene_pb_materials_textures;
 
 
-#define SCENE_TEXTURES_BINDING SCENE_MATERIAL_BINDING + 1
 
-#ifndef SCENE_TEXTURE_ACCESS
-#define SCENE_TEXTURE_ACCESS readonly
-#endif
 
 layout(SCENE_TEXTURES_BINDING + 0) uniform sampler2D SceneTextures2D[];
 
 
-#define SCENE_XFORM_BINDING SCENE_TEXTURES_BINDING + 1
 
-#ifndef SCENE_XFORM_ACCESS
-#define SCENE_XFORM_ACCESS readonly
-#endif
 
 layout(SCENE_XFORM_BINDING + 0) buffer restrict SCENE_XFORM_ACCESS SceneXFormBinding
 {

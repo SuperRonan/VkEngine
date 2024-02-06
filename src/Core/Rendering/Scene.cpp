@@ -293,11 +293,17 @@ namespace vkl
 		if (!_set_layout)
 		{
 			_lights_bindings_base = 1;
-			_objects_binding_base = _lights_bindings_base + 1;
-			_mesh_bindings_base = _objects_binding_base + 1;
-			_material_bindings_base = _mesh_bindings_base + 4;
-			_textures_bindings_base = _material_bindings_base + 1;
-			_xforms_bindings_base = _textures_bindings_base + 1;
+			const uint32_t lights_num_bindings = 1;
+			_objects_binding_base = _lights_bindings_base + lights_num_bindings;
+			const uint32_t objects_num_bindings = 1;
+			_mesh_bindings_base = _objects_binding_base + objects_num_bindings;
+			const uint32_t mesh_num_bindings = 3;
+			_material_bindings_base = _mesh_bindings_base + mesh_num_bindings;
+			const uint32_t material_num_bindings = 2;
+			_textures_bindings_base = _material_bindings_base + material_num_bindings;
+			const uint32_t textures_num_bindings = 1;
+			_xforms_bindings_base = _textures_bindings_base + textures_num_bindings;
+			const uint32_t xforms_num_bindings = 2;
 
 
 			std::vector<DescriptorSetLayout::Binding> bindings;
@@ -333,13 +339,13 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
-			Dyn<uint32_t> count = &_mesh_capacity;
+			Dyn<uint32_t> mesh_count = &_mesh_capacity;
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "SceneMeshHeadersBindings",
 				.binding = _mesh_bindings_base + 0,
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.count = count,
+				.count = mesh_count,
 				.stages = VK_SHADER_STAGE_ALL,
 				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -349,7 +355,7 @@ namespace vkl
 				.name = "SceneMeshVerticesBindings",
 				.binding = _mesh_bindings_base + 1,
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.count = count,
+				.count = mesh_count,
 				.stages = VK_SHADER_STAGE_ALL,
 				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -359,13 +365,45 @@ namespace vkl
 				.name = "SceneMeshIndicesBindings",
 				.binding = _mesh_bindings_base + 2,
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.count = count,
+				.count = mesh_count,
 				.stages = VK_SHADER_STAGE_ALL,
 				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
+			Dyn<uint32_t> material_count = &_material_capacity;
 			
+			bindings += DescriptorSetLayout::Binding{
+				.name = "ScenePBMaterialsBinding",
+				.binding = _material_bindings_base + 0,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = material_count,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
+			bindings += DescriptorSetLayout::Binding{
+				.name = "ScenePBMaterialsRefBinding",
+				.binding = _material_bindings_base + 1,
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.count = 1,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+			
+
+			bindings += DescriptorSetLayout::Binding{
+				.name = "SceneTextures2D",
+				.binding = _textures_bindings_base + 0,
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.count = &_texture_2D_capacity,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+			};
+
 
 
 			bindings += DescriptorSetLayout::Binding{
@@ -426,6 +464,14 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
+		_material_ref_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
+			.app = application(),
+			.name = name() + ".MaterialRefBuffer",
+			.size = sizeof(MaterialReference) * 256,
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+		});
+
 		_xforms_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
 			.name = name() + ".xforms",
@@ -468,6 +514,11 @@ namespace vkl
 		bindings += Binding{
 			.buffer = _model_references_buffer->buffer(),
 			.binding = _objects_binding_base + 0,
+		};
+
+		bindings += Binding{
+			.buffer = _material_ref_buffer->buffer(),
+			.binding = _material_bindings_base + 1,
 		};
 
 		bindings += Binding{
@@ -515,6 +566,28 @@ namespace vkl
 		return res;
 	}
 
+	uint32_t Scene::allocateUniqueMaterialID()
+	{
+		uint32_t res = _unique_material_counter;
+		if (_unique_material_counter >= _material_capacity)
+		{
+			_material_capacity *= 2;
+		}
+		++_unique_material_counter;
+		return res;
+	}
+
+	uint32_t Scene::allocateUniqueTexture2DID()
+	{
+		uint32_t res = _unique_texture_2D_counter;
+		if (_unique_texture_2D_counter >= _texture_2D_capacity)
+		{
+			_texture_2D_capacity *= 2;
+		}
+		++_unique_texture_2D_counter;
+		return res;
+	}
+
 	std::shared_ptr<DescriptorSetAndPool> Scene::set()
 	{
 		return _set;
@@ -559,7 +632,6 @@ namespace vkl
 			std::shared_ptr<Model> const& model = node->model();
 			if (model)
 			{
-
 				std::shared_ptr<Mesh> const& mesh = model->mesh();
 				std::shared_ptr<Material> const& material = model->material();
 				uint32_t mesh_unique_id = -1;
@@ -570,10 +642,10 @@ namespace vkl
 					RigidMesh * rigid_mesh = dynamic_cast<RigidMesh*>(mesh.get());
 					if (rigid_mesh)
 					{
-						if (!_meshes.contains(mesh)) // unknown mesh so far
+						if (!_unique_meshes.contains(mesh.get())) // unknown mesh so far
 						{
 							mesh_unique_id = allocateUniqueMeshID();
-							_meshes[mesh] = MeshData{
+							_unique_meshes[mesh.get()] = MeshData{
 								.unique_index = mesh_unique_id,
 							};
 
@@ -581,7 +653,7 @@ namespace vkl
 						}
 						else
 						{
-							MeshData & md = _meshes.at(mesh);
+							MeshData & md = _unique_meshes.at(mesh.get());
 							mesh_unique_id = md.unique_index;
 						}
 					}
@@ -589,7 +661,58 @@ namespace vkl
 
 				if(material)
 				{
-					
+					PBMaterial * pb_material = dynamic_cast<PBMaterial*>(material.get());
+					if (pb_material)
+					{
+						TextureAndSampler albedo_tex = pb_material->albedoTextureAndSampler();
+						uint32_t albedo_texture_id = uint32_t(-1);
+						uint32_t normal_texture_id = uint32_t(-1);
+						if (albedo_tex.texture)
+						{
+							if (!_unique_textures.contains(albedo_tex.texture.get()))
+							{
+								albedo_texture_id = allocateUniqueTexture2DID();
+								albedo_tex.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, albedo_texture_id);
+								// TODO 
+								// With this impl, a sampler change will not propagate to the set
+								// The should be managed inside of the material
+								_set->setBinding(_textures_bindings_base + 0, albedo_texture_id, 1, nullptr, &albedo_tex.sampler);
+								_unique_textures[albedo_tex.texture.get()] = TextureData{.unique_index = albedo_texture_id };
+							}
+							else
+							{
+								albedo_texture_id = _unique_textures.at(albedo_tex.texture.get()).unique_index;
+							}
+						}
+
+						bool set_material = false;
+
+						if (!_unique_materials.contains(pb_material))
+						{
+							material_unique_id = allocateUniqueMaterialID();
+							_unique_materials[pb_material] = MaterialData{.unique_index = material_unique_id};
+							pb_material->registerToDescriptorSet(_set, _material_bindings_base + 0, material_unique_id, false);
+							set_material = true;
+						}
+						else
+						{
+							material_unique_id = _unique_materials.at(pb_material).unique_index;
+							const MaterialReference& mat_ref = _material_ref_buffer->get<MaterialReference>(material_unique_id);
+							if (mat_ref.albedo_id != albedo_texture_id)
+							{
+								set_material = true;
+							}
+						}
+
+						if (set_material)
+						{
+							MaterialReference mat_ref{
+								.albedo_id = albedo_texture_id,
+								.normal_id = normal_texture_id,
+							};
+							_material_ref_buffer->set<MaterialReference>(material_unique_id, mat_ref);
+						}
+					}
 				}
 
 
@@ -664,10 +787,16 @@ namespace vkl
 		_ubo_buffer->updateResource(ctx);
 		_lights_buffer->updateResources(ctx);
 		_model_references_buffer->updateResources(ctx);
-		
+		_material_ref_buffer->updateResources(ctx);
 		_xforms_buffer->updateResources(ctx);
 		_prev_xforms_buffer->updateResource(ctx);
 		
+
+
+		_tree->iterateOnNodes([&](std::shared_ptr<Node> const& node)
+		{
+			node->updateResources(ctx);
+		});
 
 		if (_set_layout)
 		{
@@ -676,13 +805,9 @@ namespace vkl
 		if (_set)
 		{
 			ctx.resourcesToUpdateLater() += _set;
+			//_set->updateResources(ctx);
 		}
-
-		_tree->iterateOnNodes([&](std::shared_ptr<Node> const& node)
-		{
-			node->updateResources(ctx);
-		});
-
+		
 		{
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
 				.sources = {
@@ -701,5 +826,6 @@ namespace vkl
 		_xforms_buffer->recordTransferIFN(exec);
 		_lights_buffer->recordTransferIFN(exec);
 		_model_references_buffer->recordTransferIFN(exec);
+		_material_ref_buffer->recordTransferIFN(exec);
 	}
 }

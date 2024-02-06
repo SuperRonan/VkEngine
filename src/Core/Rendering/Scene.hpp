@@ -256,7 +256,8 @@ namespace vkl
 		uint32_t _mesh_count = 0;
 		uint32_t _texture_2D_capacity = 1024;
 		uint32_t _texture_2D_count = 0;
-
+		uint32_t _material_capacity = 1024;
+		uint32_t _material_count = 0;
 
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
@@ -271,12 +272,31 @@ namespace vkl
 			uint32_t unique_index;
 		};
 
+		struct MaterialData
+		{
+			uint32_t unique_index;
+		};
+
 		uint32_t _unique_mesh_counter = 0;
 		uint32_t allocateUniqueMeshID();
-		std::unordered_map<std::shared_ptr<Mesh>, MeshData> _meshes;
+		std::unordered_map<Mesh*, MeshData> _unique_meshes;
 
-		uint32_t _unique_texture_counter = 0;
-		std::unordered_map<std::shared_ptr<Texture>, TextureData> _textures;
+		uint32_t _unique_texture_2D_counter = 0;
+		uint32_t allocateUniqueTexture2DID();
+		std::unordered_map<Texture*, TextureData> _unique_textures;
+
+		uint32_t _unique_material_counter = 0;
+		uint32_t allocateUniqueMaterialID();
+		std::unordered_map<Material*, MaterialData> _unique_materials;
+		std::shared_ptr<HostManagedBuffer> _material_ref_buffer;
+
+		struct MaterialReference
+		{
+			uint32_t albedo_id;
+			uint32_t normal_id;
+			uint32_t pad1;
+			uint32_t pad2;
+		};
 
 		struct ModelReference
 		{

@@ -3,28 +3,70 @@
 
 namespace vkl
 {
-	void Texture::addResourceUpdateCallback(Callback const& cb)
+	void Texture::registerToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index)
 	{
-		_resource_update_callback.push_back(cb);
+		DescriptorSetAndPool::Registration reg{
+			.set = set,
+			.binding = binding,
+			.array_index = array_index,
+		};
+		callRegistrationCallback(reg);
+		_registered_sets.push_back(std::move(reg));
 	}
 
-	void Texture::removeResourceUpdateCallback(VkObject* id)
+	void Texture::unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t index)
 	{
-		for (size_t i = 0; i < _resource_update_callback.size(); ++i)
+		DescriptorSetAndPool::Registration target{
+			.set = set,
+			.binding = binding,
+			.array_index = index,
+		};
+		// Assume present only once
+		auto it = _registered_sets.begin();
+		while (it != _registered_sets.end())
 		{
-			if (_resource_update_callback[i].id == id)
+			const auto & reg = *it;
+			if (reg == target)
 			{
-				_resource_update_callback.erase(_resource_update_callback.begin() + i);
+				reg.set->setBinding(reg.binding, reg.array_index, 1, nullptr, nullptr);
+				it = _registered_sets.erase(it);
 				break;
+			}
+			else
+			{
+				++it;
 			}
 		}
 	}
 
+	void Texture::unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set)
+	{
+		auto it = _registered_sets.begin();
+		while (it != _registered_sets.end())
+		{
+			const auto& reg = *it;
+			if (reg.set == set)
+			{
+				reg.set->setBinding(reg.binding, reg.array_index, 1, nullptr, nullptr);
+				it = _registered_sets.erase(it);
+			}
+			else
+			{
+				++it;
+			}
+		}
+	}
+
+	void Texture::callRegistrationCallback(DescriptorSetAndPool::Registration & reg)
+	{
+		reg.set->setBinding(reg.binding, reg.array_index, 1, &_view, nullptr);
+	}
+
 	void Texture::callResourceUpdateCallbacks()
 	{
-		for (size_t i = 0; i < _resource_update_callback.size(); ++i)
+		for (size_t i = 0; i < _registered_sets.size(); ++i)
 		{
-			_resource_update_callback[i].callback();
+			callRegistrationCallback(_registered_sets[i]);
 		}
 	}
 

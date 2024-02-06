@@ -28,7 +28,7 @@ namespace vkl
 
 		if (_material)
 		{
-			_material->installResourceUpdateCallbacks(_set, material_binding_offset);
+			_material->registerToDescriptorSet(_set, material_binding_offset, 0, true);
 		}
 	}
 
@@ -40,7 +40,7 @@ namespace vkl
 		}
 		if (_material)
 		{
-			_material->removeResourceUpdateCallbacks(_set);
+			_material->unRegistgerFromDescriptorSet(_set);
 		}
 	}
 
@@ -48,13 +48,6 @@ namespace vkl
 	{
 		using namespace std::containers_append_operators;
 		ShaderBindings bindings;
-
-		bindings += _mesh->getShaderBindings(mesh_binding_offset);
-
-		if (!!_material)
-		{
-			bindings += _material->getShaderBindings(material_binding_offset);
-		}
 
 		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CreateInfo{
 			.app = application(),
