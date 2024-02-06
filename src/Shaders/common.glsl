@@ -123,6 +123,21 @@ float distance2(vec4 a, vec4 b)
 	return length2(d);
 }
 
+vec2 safeNormalize(vec2 v)
+{
+	return length2(v) == 0 ? v : normalize(v);
+}
+
+vec3 safeNormalize(vec3 v)
+{
+	return length2(v) == 0 ? v : normalize(v);
+}
+
+vec4 safeNormalize(vec4 v)
+{
+	return length2(v) == 0 ? v : normalize(v);
+}
+
 
 vec2 clipSpaceToUV(vec2 cp)
 {
