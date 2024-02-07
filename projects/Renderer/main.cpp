@@ -164,13 +164,26 @@ namespace vkl
 					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 1, -1))),
 				});
 
+				if (true)
+				{
+					light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
+						.app = this,
+						.name = "Light",
+						.direction = glm::vec3(1, 1, -1),
+						.emission = glm::vec3(1, 0.8, 0.6),
+					});
+				}
+				else
+				{
+					light_node->light() = std::make_shared<PointLight>(PointLight::CI{
+						.app = this,
+						.name = "Light",
+						.position = glm::vec3(0, 0, 0),
+						.emission = glm::vec3(1, 0.8, 0.6),
+					});
+				}
+
 				//light_node->light() = std::make_shared<Light>(Light::MakePoint(glm::vec3(0), glm::vec3(1, 1, 1)));
-				light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
-					.app = this,
-					.name = "Light",
-					.direction = glm::vec3(1, 1, -1),
-					.emission = glm::vec3(1, 0.8, 0.6),
-				});
 
 				root->addChild(light_node);
 			}

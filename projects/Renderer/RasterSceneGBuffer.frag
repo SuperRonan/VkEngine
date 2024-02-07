@@ -56,15 +56,15 @@ void main()
 	vec3 normal = a_normal;
 	vec3 tangent = safeNormalize(v_w_tangent);
 	tangent = safeNormalize(tangent - dot(tangent, normal) * normal);
-	const vec3 bi_tangent = cross(normal, tangent);
+	const vec3 bi_tangent = cross(tangent, normal);
 
 	if((material_props.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0 && textures.normal_texture_id != -1)
 	{
 		const mat3 TBN = mat3(tangent, bi_tangent, normal);
 		vec3 tex_normal = vec3(0.5, 0.5, 1);
 		tex_normal = texture(SceneTextures2D[textures.normal_texture_id], uv).xyz;
-		tex_normal = normalize(tex_normal * 2.0 - 1);
-		normal = TBN * tex_normal;
+		tex_normal = (tex_normal * 2.0 - 1);
+		normal = normalize(TBN * tex_normal);
 	}
 
 	o_albedo = vec4(albedo, 0);

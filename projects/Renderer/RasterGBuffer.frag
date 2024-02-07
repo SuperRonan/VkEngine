@@ -24,7 +24,7 @@ void main()
 	vec3 normal = a_normal;
 	vec3 tangent = safeNormalize(v_w_tangent);
 	tangent = safeNormalize(tangent - dot(tangent, normal) * normal);
-	const vec3 bi_tangent = cross(normal, tangent);
+	const vec3 bi_tangent = cross(tangent, normal);
 
 	if((material_props.props.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0)
 	{
