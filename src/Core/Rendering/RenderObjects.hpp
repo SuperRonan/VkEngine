@@ -1,7 +1,5 @@
 #pragma once
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-
 #include <Core/IO/InputListener.hpp>
 
 #include <glm/ext/matrix_common.hpp>

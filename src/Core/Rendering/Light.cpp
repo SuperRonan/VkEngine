@@ -1,5 +1,8 @@
 #include "Light.hpp"
 
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+
 namespace vkl
 {
 	LightGLSL LightGLSL::MakePoint(vec3 position, vec3 emission)
@@ -142,6 +145,54 @@ namespace vkl
 
 		ImGui::PushID(name().c_str());
 
+		ImGui::PopID();
+	}
+
+
+
+
+	SpotLight::SpotLight(CreateInfo const& ci):
+		Light(Light::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.type = LightType::SPOT,
+			.emission = ci.emission,
+		}),
+		_position(ci.position),
+		_direction(glm::normalize(ci.direction)),
+		_up(glm::normalize(ci.up)),
+		_ratio(ci.aspect_ratio),
+		_fov(ci.fov),
+		_attenuate(ci.attenuate)
+	{
+		
+	}
+
+	LightGLSL SpotLight::getAsGLSL(mat4 const& xform)const
+	{
+		LightGLSL res;
+		res.emission = _emission;
+		res.flags = _type;
+		if (_attenuate)
+		{
+			res.flags |= (1 << 8);
+		}
+		const mat3 dir_mat = directionMatrix(xform);
+		res.position = vec3(xform * vec4(_position, 1));
+		const vec3 direction = glm::normalize(dir_mat * _direction);
+		const vec3 up = glm::normalize(dir_mat * _up);
+		const mat4 look_at = glm::lookAt(res.position, res.position + direction, up);
+		const mat4 proj = glm::infinitePerspective<float>(_fov, _ratio, _znear);
+		//const mat4 proj = glm::perspective<float>(_fov, _ratio, _znear, 2 * _znear);
+		res.matrix = (proj * look_at);
+		return res;
+	}
+
+	void SpotLight::declareGui(GuiContext& ctx)
+	{
+		Light::declareGui(ctx);
+		ImGui::PushID(name().c_str());
+		ImGui::Checkbox("Attenuation", &_attenuate);
 		ImGui::PopID();
 	}
 }

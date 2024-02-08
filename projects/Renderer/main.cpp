@@ -1,4 +1,4 @@
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 
 #include <Core/App/ImGuiApp.hpp>
 
@@ -186,6 +186,36 @@ namespace vkl
 				//light_node->light() = std::make_shared<Light>(Light::MakePoint(glm::vec3(0), glm::vec3(1, 1, 1)));
 
 				root->addChild(light_node);
+
+				for (int i = 0; i < 3; ++i)
+				{
+					glm::vec3 color = glm::vec3(0);
+					color[i] = 10;
+					std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
+						.app = this,
+						.name = "SpotLight_" + std::to_string(i),
+						.direction = glm::vec3(0, 0, -1),
+						.up = glm::vec3(0, 1, 0),
+						.emission = color,
+						.attenuate = true,
+					});
+					vec3 position = glm::vec3(2, 1, -4);
+					if (i == 1)
+					{
+						position += glm::vec3(0.5, 0, 0);
+					}
+					else if (i == 2)
+					{
+						position += glm::vec3(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
+					}
+					std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+						.name = "SpotLight_" + std::to_string(i),
+						.matrix = glm::mat4x3(translateMatrix<4, float>(position)),
+					});
+					spot_light_node->light() = spot_light;
+					root->addChild(spot_light_node);
+				}
+
 			}
 		}
 
