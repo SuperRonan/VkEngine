@@ -66,6 +66,14 @@ namespace vkl
 			return _ci;
 		}
 
+		VkSurfaceFormatKHR format()const
+		{
+			return VkSurfaceFormatKHR{
+				.format = _ci.imageFormat,
+				.colorSpace = _ci.imageColorSpace,
+			};	
+		}
+
 		constexpr const std::vector<std::shared_ptr<Image>>&images()const
 		{
 			return _images;

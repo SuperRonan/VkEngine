@@ -826,6 +826,16 @@ constexpr bool operator!=(VkExtent2D const& a, VkExtent2D const& b)
 	return !(a == b);
 }
 
+constexpr bool operator==(VkSurfaceFormatKHR const& a, VkSurfaceFormatKHR const& b)
+{
+	return a.format == b.format && a.colorSpace == b.colorSpace;
+}
+
+constexpr bool operator!=(VkSurfaceFormatKHR const& a, VkSurfaceFormatKHR const& b)
+{
+	return !(a == b);
+}
+
 namespace std
 {
 	template<class K, class V, class Hasher = std::hash<K>, class Eq = std::equal_to<K>>

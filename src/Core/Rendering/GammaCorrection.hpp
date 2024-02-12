@@ -4,6 +4,7 @@
 #include <Core/Commands/ComputeCommand.hpp>
 #include <Core/Execution/Executor.hpp>
 #include <Core/IO/GuiContext.hpp>
+#include <Core/VkObjects/Swapchain.hpp>
 
 namespace vkl
 {
@@ -18,6 +19,28 @@ namespace vkl
 		std::shared_ptr<Sampler> _sampler = nullptr;
 
 		std::shared_ptr<ComputeCommand> _compute_tonemap = nullptr;
+
+		std::shared_ptr<Swapchain> _swapchain = nullptr;
+		bool _auto_fit_to_swapchain = true;
+		struct SwapchainInfo 
+		{
+			VkSurfaceFormatKHR format = VkSurfaceFormatKHR{
+				.format = VK_FORMAT_MAX_ENUM,
+				.colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR,
+			};
+			//constexpr std::strong_ordering operator<=>(SwapchainInfo const&) const = default;
+			constexpr bool operator!=(SwapchainInfo const& other) const
+			{
+				return format != other.format;
+			}
+
+			constexpr bool operator==(SwapchainInfo const& other) const
+			{
+				return format == other.format;
+			}
+		};
+		SwapchainInfo _prev_swapchain_info = {};
+
 		struct ComputePC 
 		{
 			float exposure;
@@ -47,6 +70,7 @@ namespace vkl
 			std::shared_ptr<ImageView> dst = nullptr;
 			std::shared_ptr<Sampler> sampler = nullptr;
 			MultiDescriptorSetsLayouts sets_layouts;
+			std::shared_ptr<Swapchain> swapchain = nullptr;
 		};
 		using CI = CreateInfo;
 

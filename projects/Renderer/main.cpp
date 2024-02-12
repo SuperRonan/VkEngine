@@ -291,6 +291,7 @@ namespace vkl
 				.name = "GammaCorrection",
 				.dst = final_image,
 				.sets_layouts = sets_layouts,
+				.swapchain = _main_window->swapchain(),
 			};
 
 			PictureInPicture pip = PictureInPicture::CI{

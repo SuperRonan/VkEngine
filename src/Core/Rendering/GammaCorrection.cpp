@@ -10,7 +10,8 @@ namespace vkl
 		_src(ci.src),
 		_dst(ci.dst),
 		_sampler(ci.sampler),
-		_sets_layouts(ci.sets_layouts)
+		_sets_layouts(ci.sets_layouts),
+		_swapchain(ci.swapchain)
 	{
 		if (!_src)
 		{
@@ -65,6 +66,41 @@ namespace vkl
 
 	void GammaCorrection::updateResources(UpdateContext& ctx)
 	{
+		if (_auto_fit_to_swapchain && _swapchain && _swapchain->instance())
+		{
+			SwapchainInfo info{
+				.format = _swapchain->instance()->format(),
+			};
+
+			if (info != _prev_swapchain_info)
+			{
+				switch (info.format.colorSpace)
+				{
+					case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+						_enable = false;
+						_gamma = 1;
+						if (info.format.format == VK_FORMAT_R8G8B8A8_SRGB || info.format.format == VK_FORMAT_B8G8R8A8_SRGB)
+						{
+							_enable = true;
+							_gamma = 2.2;
+						}
+					break;
+					case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
+						_enable = true;
+						_gamma = 2.2;
+					break;
+					case VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT:
+						_enable = false;
+						_gamma = 1;
+					break;
+					case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+						// ???, maybe a complete color correction rather than just a simple gamma correction?
+					break;
+				}
+			}
+
+			_prev_swapchain_info = info;
+		}
 		const DetailedVkFormat dst_format = DetailedVkFormat::Find(_dst->format().value());
 		_dst_glsl_format = dst_format.getGLSLName();
 
@@ -96,13 +132,18 @@ namespace vkl
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
 			ImGui::PushID(name().c_str());
-			
+	
+			ImGui::Checkbox("Auto Fit to swapchain: ", &_auto_fit_to_swapchain);
+
 			ImGui::Checkbox("Enable", &_enable);
 
 			bool changed = false;
 
-			changed |= ImGui::SliderFloat("log2(Exposure)", &_log_exposure, -10, 10);
+			changed |= ImGui::SliderFloat("log2(Exposure)", &_log_exposure, -5, 5);
+			_exposure = std::exp2f(_log_exposure);
 			ImGui::Text("Exposure: %f", _exposure);
+			//ImGui::Text("Snap to: ");
+			//ImGui::SameLine();
 			
 			changed |= ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
 
@@ -114,7 +155,6 @@ namespace vkl
 			if(snap_1)	_gamma = 1.0f, changed = true;
 			if(snap_2_2)	_gamma = 2.2f, changed = true;
 
-			_exposure = std::exp2f(_log_exposure);
 
 			ImGui::Separator();
 
