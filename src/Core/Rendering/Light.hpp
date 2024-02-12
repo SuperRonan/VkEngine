@@ -128,6 +128,7 @@ namespace vkl
 		float _fov;
 		bool _attenuate;
 		float _znear = 1e-4;
+		bool _preserve_intensity_from_fov = false;
 		
 	public:
 

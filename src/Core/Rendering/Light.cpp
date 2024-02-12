@@ -172,6 +172,10 @@ namespace vkl
 	{
 		LightGLSL res;
 		res.emission = _emission;
+		if (_preserve_intensity_from_fov)
+		{
+			res.emission *= 1.0 / std::max(_fov, std::numeric_limits<float>::epsilon());
+		}
 		res.flags = _type;
 		if (_attenuate)
 		{
@@ -192,6 +196,8 @@ namespace vkl
 	{
 		Light::declareGui(ctx);
 		ImGui::PushID(name().c_str());
+		ImGui::SliderAngle("Angle", &_fov, 0, 180);
+		ImGui::Checkbox("Preserve total intensity from angle", &_preserve_intensity_from_fov);
 		ImGui::Checkbox("Attenuation", &_attenuate);
 		ImGui::PopID();
 	}
