@@ -622,12 +622,13 @@ namespace vkl
 		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat4 const& matrix4, uint32_t flags)
 		{
 			const Mat4x3 matrix = matrix4;
+			const bool visible = (flags & 1) && node->visible();
+			
 			_tree->_flat_dag[node].push_back(DirectedAcyclicGraph::PerNodeInstance{
 				.matrix = matrix,
-				.visible = node->visible(),
+				.visible = visible,
 			});
 
-			const bool visible = flags & 1;
 			
 			std::shared_ptr<Model> const& model = node->model();
 			if (model)
@@ -786,9 +787,12 @@ namespace vkl
 			std::shared_ptr<Light> light = node->light();
 			if (light)
 			{
-				LightGLSL gl = light->getAsGLSL(matrix);
-				_lights_buffer->set(_num_lights, gl);
-				++_num_lights;
+				if (visible)
+				{
+					LightGLSL gl = light->getAsGLSL(matrix);
+					_lights_buffer->set(_num_lights, gl);
+					++_num_lights;
+				}
 			}
 			
 			return true;
