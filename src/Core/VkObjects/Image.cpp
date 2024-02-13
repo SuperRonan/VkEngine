@@ -337,7 +337,7 @@ namespace vkl
 		_type(ci.type),
 		_format(ci.format),
 		_extent(ci.extent),
-		_mips(ci.mips == ALL_MIPS ? Image::howManyMips(ci.type, *ci.extent) : ci.mips),
+		_mips(ci.mips),
 		_layers(ci.layers),
 		_samples(ci.samples),
 		_tiling(ci.tiling),
@@ -370,17 +370,32 @@ namespace vkl
 			n_queues = _queues.size();
 			p_queues = _queues.data();
 		}
-
+		VkExtent3D extent = *_extent;
+		const uint32_t mips = [&]() {
+			uint32_t res = 1;
+			const uint32_t desired = *_mips;
+			if (desired == uint32_t(-1))
+			{
+				res = howManyMips(_type, extent);
+				_inst_all_mips = true;
+			}
+			else
+			{
+				res = desired;
+				_inst_all_mips = false;
+			}
+			return res;
+		}();
 		VkImageCreateInfo image_ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = _flags,
 			.imageType = _type,
 			.format = *_format,
-			.extent = *_extent,
-			.mipLevels = _mips,
-			.arrayLayers = _layers,
-			.samples = _samples,
+			.extent = extent,
+			.mipLevels = mips,
+			.arrayLayers = *_layers,
+			.samples = *_samples,
 			.tiling = _tiling,
 			.usage = _usage,
 			.sharingMode = _sharing_mode,
@@ -435,20 +450,44 @@ namespace vkl
 
 	bool Image::updateResource(UpdateContext & ctx)
 	{
+		if (ctx.updateTick() <= _latest_update_tick)
+		{
+			return _latest_update_res;
+		}
+		_latest_update_tick = ctx.updateTick();
+
 		using namespace vk_operators;
-		bool res = false;
+		bool & res = _latest_update_res = false;
 		if (_inst)
 		{
 			if (_inst->ownership())
 			{
+				const VkImageCreateInfo & inst_ci = _inst->createInfo();
 				const VkExtent3D new_extent = *_extent;
-
-				if (new_extent != _inst->createInfo().extent)
+				if (new_extent != inst_ci.extent)
 				{
 					res = true;
 				}
+				const uint32_t new_mips = *_mips;
+				if (new_mips != inst_ci.mipLevels)
+				{
+					if (!(new_mips == uint32_t(-1) && _inst_all_mips))
+					{
+						res = true;
+					}
+				}
 				const VkFormat new_format = *_format;
-				if (new_format != _inst->createInfo().format)
+				if (new_format != inst_ci.format)
+				{
+					res = true;
+				}
+				const uint32_t new_layers = *_layers;
+				if (new_layers != inst_ci.arrayLayers)
+				{
+					res = true;
+				}
+				const VkSampleCountFlagBits new_samples = *_samples;
+				if (new_samples != inst_ci.samples)
 				{
 					res = true;
 				}
@@ -466,21 +505,44 @@ namespace vkl
 			res = true;
 		}
 
-
 		return res;
 	}
 
-	VkImageSubresourceRange Image::defaultSubresourceRange()
+	//VkImageSubresourceRange Image::defaultSubresourceRange()
+	//{
+	//	// Assume the dyn format keeps the same aspect,
+	//	// else return a dynamic value
+	//	VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());
+	//	return VkImageSubresourceRange{
+	//		.aspectMask = aspect, 
+	//		.baseMipLevel = 0,
+	//		.levelCount = _mips,
+	//		.baseArrayLayer = 0,
+	//		.layerCount = _layers.value(),
+	//	};
+	//}
+
+	uint32_t Image::actualMipsCount()const
 	{
-		// Assume the dyn format keeps the same aspect,
-		// else return a dynamic value
-		VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());
-		return VkImageSubresourceRange{
-			.aspectMask = aspect, 
-			.baseMipLevel = 0,
-			.levelCount = _mips,
-			.baseArrayLayer = 0,
-			.layerCount = _layers,
+		uint32_t res = _mips.valueOr(1);
+		if (res == uint32_t(-1))
+		{
+			res = howManyMips(_type, *_extent);
+		}
+		return res;
+	}
+
+	Dyn<VkImageSubresourceRange> Image::fullSubresourceRange()
+	{
+		return [this]() {
+			VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());		
+			return VkImageSubresourceRange{
+				.aspectMask = aspect,
+				.baseMipLevel = 0,
+				.levelCount = actualMipsCount(),
+				.baseArrayLayer = 0,
+				.layerCount = _layers.value(),
+			};
 		};
 	}
 }

@@ -178,8 +178,8 @@ namespace vkl
 			Dyn<VkFormat> format;
 			Dyn<VkExtent3D> extent;
 			uint32_t mips = 1;
-			uint32_t layers = 1;
-			VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+			Dyn<uint32_t> layers = 1;
+			Dyn<VkSampleCountFlagBits> samples = VK_SAMPLE_COUNT_1_BIT;
 			VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 			VkImageUsageFlags usage = 0;
 			std::vector<uint32_t> queues = {};
@@ -228,9 +228,9 @@ namespace vkl
 		VkImageType _type = VK_IMAGE_TYPE_MAX_ENUM;
 		Dyn<VkFormat> _format;
 		Dyn<VkExtent3D> _extent;
-		uint32_t _mips = 1;
-		uint32_t _layers = 1;
-		VkSampleCountFlagBits _samples = VK_SAMPLE_COUNT_1_BIT;
+		Dyn<uint32_t> _mips = 1; // -1 means all mips possible from resolution
+		Dyn<uint32_t> _layers = 1;
+		Dyn<VkSampleCountFlagBits> _samples = VK_SAMPLE_COUNT_1_BIT;
 		VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
 		VkImageUsageFlags _usage = 0;
 		std::vector<uint32_t> _queues = {};
@@ -239,6 +239,10 @@ namespace vkl
 
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
 
+		// Could bitpack maybe
+		size_t _latest_update_tick = 0;
+		bool _latest_update_res = false;
+		bool _inst_all_mips = false;
 
 	public:
 
@@ -264,27 +268,29 @@ namespace vkl
 			return _type;
 		}
 
-		Dyn<VkFormat> format()const
+		constexpr const Dyn<VkFormat>& format()const
 		{
 			return _format;
 		}
 
-		Dyn<VkExtent3D> extent()const
+		constexpr const Dyn<VkExtent3D>& extent()const
 		{
 			return _extent;
 		}
 
-		constexpr uint32_t mips()const
+		constexpr const Dyn<uint32_t>& mips()const
 		{
 			return _mips;
 		}
 
-		constexpr uint32_t layers()const
+		uint32_t actualMipsCount()const;
+
+		constexpr const Dyn<uint32_t>& layers()const
 		{
 			return _layers;
 		}
 
-		constexpr VkSampleCountFlagBits sampleCount()const
+		constexpr const Dyn<VkSampleCountFlagBits>& sampleCount()const
 		{
 			return _samples;
 		}
@@ -314,7 +320,9 @@ namespace vkl
 			return _initial_layout;
 		}
 
-		VkImageSubresourceRange defaultSubresourceRange();
+		//VkImageSubresourceRange defaultSubresourceRange();
+
+		Dyn<VkImageSubresourceRange> fullSubresourceRange();
 
 		bool updateResource(UpdateContext & ctx);
 

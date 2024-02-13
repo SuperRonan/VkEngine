@@ -75,7 +75,7 @@ namespace vkl
 			const void*						pNext;
 			VkAttachmentDescriptionFlags	flags;
 			Dyn<VkFormat>					format;
-			VkSampleCountFlagBits			samples;
+			Dyn<VkSampleCountFlagBits>		samples;
 			VkAttachmentLoadOp				loadOp;
 			VkAttachmentStoreOp				storeOp;
 			VkAttachmentLoadOp				stencilLoadOp;
@@ -90,7 +90,7 @@ namespace vkl
 					.pNext = pNext,
 					.flags = flags,
 					.format = *format,
-					.samples = samples,
+					.samples = *samples,
 					.loadOp = loadOp,
 					.storeOp = storeOp,
 					.stencilLoadOp = stencilLoadOp,

@@ -77,6 +77,7 @@ namespace vkl
 	{
 		if (!_host_image.empty())
 		{
+			uint32_t layers = 1;
 			_image = std::make_shared<Image>(Image::CI{
 				.app = application(),
 				.name = name(),
@@ -84,6 +85,7 @@ namespace vkl
 				.format = _image_format.vk_format,
 				.extent = VkExtent3D{.width = static_cast<uint32_t>(_host_image.width()), .height = static_cast<uint32_t>(_host_image.height()), .depth = 1},
 				.mips = Image::ALL_MIPS,
+				.layers = layers,
 				.usage = _image_usages,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
@@ -103,7 +105,7 @@ namespace vkl
 					.baseMipLevel = 0,
 					.levelCount = 1,
 					.baseArrayLayer = 0,
-					.layerCount = _image->layers(),
+					.layerCount = layers,
 				},
 			});
 

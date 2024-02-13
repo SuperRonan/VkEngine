@@ -65,7 +65,7 @@ namespace vkl
 			.viewType = _type,
 			.format = *_format,
 			.components = _components,
-			.subresourceRange = _range,
+			.subresourceRange = *_range,
 		};
 		
 		_inst = std::make_shared<ImageViewInstance>(ImageViewInstance::CI{
@@ -112,7 +112,7 @@ namespace vkl
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format.hasValue() ? ci.format : _image->format()),
 		_components(ci.components),
-		_range(ci.range.has_value() ? ci.range.value() : _image->defaultSubresourceRange())
+		_range(ci.range.hasValue() ? ci.range : _image->fullSubresourceRange())
 	{
 		constructorBody(ci.create_on_construct);
 	}
@@ -123,7 +123,7 @@ namespace vkl
 		_type(getDefaultViewTypeFromImageType(_image->type())),
 		_format(_image->format()),
 		_components(defaultComponentMapping()),
-		_range(_image->defaultSubresourceRange())
+		_range(_image->fullSubresourceRange())
 	{
 		constructorBody(ci.create_on_construct);
 	}
@@ -131,13 +131,26 @@ namespace vkl
 
 	bool ImageView::updateResource(UpdateContext & ctx)
 	{
+		if (ctx.updateTick() <= _latest_update_tick)
+		{
+			return _latest_update_res;
+		}
+		_latest_update_tick = ctx.updateTick();
+
+		bool & res = _latest_update_res = false;
 		const bool updated = _image->updateResource(ctx);
-		bool res = updated;
+		res = updated;
 		
 		if (_inst)
 		{
+			const VkImageViewCreateInfo & inst_ci = _inst->createInfo();
 			const VkFormat new_format = *_format;
-			if (_inst->createInfo().format != new_format)
+			if (inst_ci.format != new_format)
+			{
+				res = true;
+			}
+			const VkImageSubresourceRange range = *_range;
+			if (inst_ci.subresourceRange != range)
 			{
 				res = true;
 			}

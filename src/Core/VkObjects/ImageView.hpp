@@ -120,7 +120,7 @@ namespace vkl
 			VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 			Dyn<VkFormat> format;
 			VkComponentMapping components = defaultComponentMapping();
-			std::optional<VkImageSubresourceRange> range = {};
+			Dyn<VkImageSubresourceRange> range = {};
 			bool create_on_construct = false;
 		};
 
@@ -133,7 +133,11 @@ namespace vkl
 		VkImageViewType _type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 		Dyn<VkFormat> _format;
 		VkComponentMapping _components = defaultComponentMapping();
-		VkImageSubresourceRange _range = {};
+		Dyn<VkImageSubresourceRange> _range = {};
+
+		// Could bitpack maybe
+		size_t _latest_update_tick = 0;
+		bool _latest_update_res = false;
 
 		void constructorBody(bool create_instance);
 		
@@ -169,18 +173,11 @@ namespace vkl
 			return _components;
 		}
 
-		constexpr VkImageSubresourceRange range()const
+		constexpr const Dyn<VkImageSubresourceRange>& range()const
 		{
 			return _range;
 		}
 
-		bool updateResource(UpdateContext & ctx);
-
-		// StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
-		
-		// void recordSendStagingToDevice2D(VkCommandBuffer command_buffer, StagingPool::StagingBuffer* sb, VkImageLayout layout);
-		
-		//void recordTransitionLayout(VkCommandBuffer command, VkImageLayout src, VkAccessFlags src_access, VkPipelineStageFlags src_stage, VkImageLayout dst, VkAccessFlags dst_access, VkPipelineStageFlags dst_stage);
-		
+		bool updateResource(UpdateContext & ctx);		
 	};
 }

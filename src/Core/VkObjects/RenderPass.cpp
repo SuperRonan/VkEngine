@@ -156,6 +156,12 @@ namespace vkl
 						res = true;
 						break;
 					}
+					const VkSampleCountFlagBits new_samples = _attachement_descriptors[i].samples.value();
+					if (new_samples != _inst->_attachement_descriptors[i].samples)
+					{
+						res = true;
+						break;
+					}
 				}
 			}
 			else
