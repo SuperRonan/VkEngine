@@ -105,17 +105,28 @@ namespace vkl
 		_blending(ci.blending),
 		_line_raster_mode(ci.line_raster_mode),
 		_draw_type(ci.draw_type)
-	{}
+	{
+		if (ci.extern_framebuffer.has_value())
+		{
+			_framebuffer = ci.extern_framebuffer.value();
+		}
+		else
+		{
+			_framebuffer = std::shared_ptr<Framebuffer>(nullptr);
+		}
+	}
 
 	void GraphicsCommand::createGraphicsResources()
 	{
 		using namespace std::containers_append_operators;
-		const uint32_t n_color = static_cast<uint32_t>(_attachements.size());
+		const bool use_extern_fb = _framebuffer.index() == 1;
+		const uint32_t n_color = use_extern_fb ? std::get<1>(_framebuffer).color_attachments.size32() : static_cast<uint32_t>(_attachements.size());
 		
 		std::vector<RenderPass::AttachmentDescription2> at_desc(n_color);
 		std::vector<VkAttachmentReference2> at_ref(n_color);
 
 		std::vector<VkSubpassDependency2> dependencies;
+
 
 		for (size_t i = 0; i < n_color; ++i)
 		{
@@ -136,12 +147,25 @@ namespace vkl
 				}
 			}
 			
+			Dyn<VkFormat> attachment_format;
+			Dyn<VkSampleCountFlagBits> attachment_samples;
+			if (use_extern_fb)
+			{
+				attachment_format = std::get<1>(_framebuffer).color_attachments[i].format;
+				attachment_samples = std::get<1>(_framebuffer).color_attachments[i].samples;
+			}
+			else
+			{
+				attachment_format = _attachements[i]->format();
+				attachment_samples = _attachements[i]->image()->sampleCount();
+			}
+
 			at_desc[i] = RenderPass::AttachmentDescription2{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
 				.flags = 0,
-				.format = _attachements[i]->format(),
-				.samples = _attachements[i]->image()->sampleCount(),
+				.format = attachment_format,
+				.samples = attachment_samples,
 				.loadOp = load_op,
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -168,11 +192,40 @@ namespace vkl
 		};
 		dependencies.push_back(color_dependency);
 
-		if (_depth_stencil)
+		const bool depth_attachment = [&]() {
+			bool res = false;
+			if (use_extern_fb)
+			{
+				res = std::get<1>(_framebuffer).detph_stencil_attchement.has_value();
+			}
+			else
+			{
+				res = _depth_stencil.operator bool();
+			}
+			return res;
+		}();
+
+		if (depth_attachment)
 		{
 			const bool write_depth = _write_depth.value_or(false);
 
-			const VkImageAspectFlags aspect = _depth_stencil->range().aspectMask;
+			Dyn<VkFormat> depth_stencil_format;
+			Dyn<VkSampleCountFlagBits> depth_stencil_samples;
+			if (use_extern_fb)
+			{
+				ExternFramebufferInfo const& fb = std::get<1>(_framebuffer);
+				assert(fb.detph_stencil_attchement.has_value());
+				depth_stencil_format = fb.detph_stencil_attchement->format;
+				depth_stencil_samples = fb.detph_stencil_attchement->samples;
+			}
+			else
+			{
+				assert(_depth_stencil.operator bool());
+				depth_stencil_format = _depth_stencil->format();
+				depth_stencil_samples = _depth_stencil->image()->sampleCount();
+			}
+
+			VkImageAspectFlags aspect = getImageAspectFromFormat(*depth_stencil_format);
 			const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.has_value();
 			const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.has_value() || _stencil_back_op.has_value());
 			assert(depth || stencil);
@@ -222,8 +275,8 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
 				.flags = 0,
-				.format = _depth_stencil->format(),
-				.samples = _depth_stencil->image()->sampleCount(),
+				.format = depth_stencil_format,
+				.samples = depth_stencil_samples,
 				.loadOp = depth_load_op,
 				.storeOp = depth_store_op,
 				.stencilLoadOp = stencil_load_op,
@@ -261,7 +314,7 @@ namespace vkl
 			.colorAttachmentCount = n_color,
 			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the ptr is copied, assuming the data is copied later
 			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = _depth_stencil ? (at_ref.data() + n_color) : nullptr, // Warning this is unsafe, the ptr is copied, assuming the data is copied later
+			.pDepthStencilAttachment = depth_attachment ? (at_ref.data() + n_color) : nullptr, // Warning this is unsafe, the ptr is copied, assuming the data is copied later
 			.preserveAttachmentCount = 0,
 			.pPreserveAttachments = nullptr,
 		};
@@ -273,23 +326,29 @@ namespace vkl
 			.attachement_ref_per_subpass = {at_ref},
 			.subpasses = {subpass},
 			.dependencies = dependencies,
-			.last_is_depth_stencil = _depth_stencil.operator bool(),
+			.last_is_depth_stencil = depth_attachment,
 		});
 
-		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
-			.app = application(),
-			.name = name() + ".Framebuffer",
-			.render_pass = _render_pass,
-			.targets = _attachements,
-			.depth_stencil = _depth_stencil,
-		});
+		if (!use_extern_fb)
+		{
+			_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+				.app = application(),
+				.name = name() + ".Framebuffer",
+				.render_pass = _render_pass,
+				.targets = _attachements,
+				.depth_stencil = _depth_stencil,
+			});
+		}
 	}
 
 	void GraphicsCommand::populateFramebufferResources(GraphicsCommandNode & node)
 	{
 		node._render_pass = _render_pass->instance();
-		node._framebuffer = _framebuffer->instance();
-		node._depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr;
+		if (_framebuffer.index() == 0)
+		{
+			node._framebuffer = std::get<0>(_framebuffer)->instance();
+			node._depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr;
+		}
 
 		node._clear_color = _clear_color;
 		node._clear_depth_stencil = _clear_depth_stencil;
@@ -360,13 +419,41 @@ namespace vkl
 			gci.line_raster = Pipeline::LineRasterization(_line_raster_mode.value());
 		}
 
-		gci.multisampling = Pipeline::MultisampleOneSample();
+		// TODO from attachements
+		VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+
+		// should be dynamic?
+		gci.multisampling = Pipeline::MultisampleState(samples);
 		gci.program = _program;
 		gci.render_pass = _render_pass;
 
-		if (_depth_stencil)
+		const bool use_extern_fb = _framebuffer.index() == 1;
+		const bool depth_attachment = [&]() {
+			bool res = false;
+			if (use_extern_fb)
+			{
+				res = std::get<1>(_framebuffer).detph_stencil_attchement.has_value();
+			}
+			else
+			{
+				res = _depth_stencil.operator bool();
+			}
+			return res;
+		}();
+		if (depth_attachment)
 		{
-			const VkImageAspectFlags aspect = _depth_stencil->range().aspectMask;
+			const VkImageAspectFlags aspect = [&](){
+				VkImageAspectFlags res = 0;
+				if (use_extern_fb)
+				{
+					res = getImageAspectFromFormat(std::get<1>(_framebuffer).detph_stencil_attchement->format.value());
+				}
+				else
+				{
+					res = _depth_stencil->range().value().aspectMask;
+				}
+				return res;
+			}();
 			const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.has_value();
 			const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.has_value() || _stencil_back_op.has_value());
 			gci.depth_stencil = VkPipelineDepthStencilStateCreateInfo{
@@ -399,17 +486,29 @@ namespace vkl
 
 		if (false)
 		{
-			VkViewport viewport = Pipeline::Viewport(extract(*_framebuffer->extent()));
-			VkRect2D scissor = Pipeline::Scissor(extract(*_framebuffer->extent()));
+			//VkViewport viewport = Pipeline::Viewport(extract(*_framebuffer->extent()));
+			//VkRect2D scissor = Pipeline::Scissor(extract(*_framebuffer->extent()));
 
-			gci.viewports = { viewport };
-			gci.scissors = { scissor };
+			//gci.viewports = { viewport };
+			//gci.scissors = { scissor };
 		}
 		else
 		{
 			gci.dynamic = { VK_DYNAMIC_STATE_VIEWPORT , VK_DYNAMIC_STATE_SCISSOR };
 		}
-		std::vector<VkPipelineColorBlendAttachmentState> blending(_framebuffer->size(), _blending.value_or(Pipeline::BlendAttachementNoBlending()));
+		const size_t n_color = [&]() {
+			size_t res = 0;
+			if (_framebuffer.index() == 0)
+			{
+				res = std::get<0>(_framebuffer)->size();
+			}
+			else if (_framebuffer.index() == 1)
+			{
+				res = std::get<1>(_framebuffer).color_attachments.size();
+			}
+			return res;
+		}();
+		std::vector<VkPipelineColorBlendAttachmentState> blending(n_color, _blending.value_or(Pipeline::BlendAttachementNoBlending()));
 		gci.attachements_blends = blending;
 
 
@@ -429,7 +528,14 @@ namespace vkl
 
 		res |= ShaderCommand::updateResources(ctx);
 
-		_framebuffer->updateResources(ctx);
+		if (_framebuffer.index() == 0)
+		{
+			std::shared_ptr<Framebuffer> fb = std::get<0>(_framebuffer);
+			if (fb)
+			{
+				fb->updateResources(ctx);
+			}
+		}
 
 		return res;
 	}
@@ -762,7 +868,10 @@ namespace vkl
 		
 		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
 		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-	
+		if (di.extern_framebuffer)
+		{
+			node->_framebuffer = di.extern_framebuffer->instance();
+		}
 		populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
 		populateFramebufferResources(*node);
 		populateDrawCallsResources(*node, di);
@@ -988,6 +1097,11 @@ namespace vkl
 		});
 
 		node->setName(name());
+
+		if (di.extern_framebuffer)
+		{
+			node->_framebuffer = di.extern_framebuffer->instance();
+		}
 
 		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
 		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;

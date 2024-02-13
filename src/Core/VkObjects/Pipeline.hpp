@@ -177,6 +177,20 @@ namespace vkl
 			return multisampling;
 		}
 
+		constexpr static VkPipelineMultisampleStateCreateInfo MultisampleState(VkSampleCountFlagBits samples, std::optional<float> sample_shading = {})
+		{
+			VkPipelineMultisampleStateCreateInfo multisampling{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+				.rasterizationSamples = samples,
+				.sampleShadingEnable = sample_shading.has_value() ? VK_TRUE : VK_FALSE,
+				.minSampleShading = sample_shading.value_or(0),
+				.pSampleMask = nullptr,
+				.alphaToCoverageEnable = VK_FALSE,
+				.alphaToOneEnable = VK_FALSE,
+			};
+			return multisampling;
+		}
+
 		constexpr static VkPipelineDepthStencilStateCreateInfo DepthStencilCloser(bool write_depth = true)
 		{
 			VkPipelineDepthStencilStateCreateInfo depth_stencil = {

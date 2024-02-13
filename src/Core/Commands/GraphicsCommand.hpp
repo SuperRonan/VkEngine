@@ -2,6 +2,7 @@
 
 #include "ShaderCommand.hpp"
 #include <Core/Rendering/Drawable.hpp>
+#include <variant>
 
 namespace vkl
 {
@@ -31,6 +32,18 @@ namespace vkl
 
 		virtual void recordDrawCalls(ExecutionContext & ctx) = 0;
 	};
+
+	struct AttachmentInfo
+	{
+		Dyn<VkFormat> format;
+		Dyn<VkSampleCountFlagBits> samples;
+	};
+	struct ExternFramebufferInfo
+	{
+		MyVector<AttachmentInfo> color_attachments;
+		std::optional<AttachmentInfo> detph_stencil_attchement;
+	};
+	
 	class GraphicsCommand : public ShaderCommand
 	{
 	public:
@@ -45,7 +58,7 @@ namespace vkl
 		std::vector<std::shared_ptr<ImageView>> _attachements = {};
 		std::shared_ptr<ImageView> _depth_stencil = nullptr;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
-		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
+		std::variant<std::shared_ptr<Framebuffer>, ExternFramebufferInfo> _framebuffer;
 
 		std::optional<bool> _write_depth = {};
 		std::optional<VkCompareOp> _depth_compare_op = VK_COMPARE_OP_LESS;
@@ -82,6 +95,7 @@ namespace vkl
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
+			std::optional<ExternFramebufferInfo> extern_framebuffer = {};
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			std::optional<bool> write_depth = {};
@@ -191,6 +205,7 @@ namespace vkl
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
+			std::optional<ExternFramebufferInfo> extern_framebuffer = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			std::optional<bool> write_depth = {};
@@ -221,11 +236,14 @@ namespace vkl
 
 			VertexDrawList draw_list = {};
 
+			std::shared_ptr<Framebuffer> extern_framebuffer = nullptr; 
+
 			void clear()
 			{
 				draw_type = DrawType::MAX_ENUM;
 				viewport.reset();
 				draw_list.clear();
+				extern_framebuffer.reset();
 			}
 		};
 		using DI = DrawInfo;
@@ -345,6 +363,7 @@ namespace vkl
 			std::optional<VkLineRasterizationModeEXT> line_raster_mode = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
+			std::optional<ExternFramebufferInfo> extern_framebuffer = {};
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			std::optional<bool> write_depth = {};
@@ -378,6 +397,13 @@ namespace vkl
 			DrawType draw_type;
 			bool dispatch_threads = true;
 			MyVector<DrawCallInfo> draw_list;
+			std::shared_ptr<Framebuffer> extern_framebuffer = nullptr;
+
+			void clear()
+			{
+				draw_list.clear();
+				extern_framebuffer.reset();
+			}
 		};
 		using DI = DrawInfo;
 
