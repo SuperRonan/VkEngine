@@ -279,7 +279,7 @@ namespace vkl
 			return value();
 		}
 
-		T const& valueOr(T const& other)
+		T const& valueOr(T const& other) const
 		{
 			return hasValue() ? value() : other;
 		}
