@@ -538,30 +538,35 @@ namespace vkl
 		assert(found);
 		assert(found->isBuffer());
 		auto & bb = found->resource().buffers;
-		assert(bb.size32() >= (array_index + count));
-
-		for (uint32_t i = 0; i < count; ++i)
+		if (bb.size32() >= (array_index + count)) // enough capacity
 		{
-			const uint32_t binding_array_index = array_index + i;
-			BufferAndRange & binding_bar = bb[binding_array_index];
-			if (binding_bar.buffer)
+			for (uint32_t i = 0; i < count; ++i)
 			{
-				binding_bar.buffer->removeInvalidationCallbacks(this);
-			}
+				const uint32_t binding_array_index = array_index + i;
+				BufferAndRange & binding_bar = bb[binding_array_index];
+				if (binding_bar.buffer)
+				{
+					binding_bar.buffer->removeInvalidationCallbacks(this);
+				}
 			
-			binding_bar = buffers ? buffers[i] : BufferAndRange{};
-			if (binding_bar.buffer)
-			{
-				binding_bar.buffer->addInvalidationCallback(Callback{
-					.callback = [this, found, binding_array_index]() {
-						found->setUpdateStatus(false);
-					},
-					.id = this,
-				});
+				binding_bar = buffers ? buffers[i] : BufferAndRange{};
+				if (binding_bar.buffer)
+				{
+					binding_bar.buffer->addInvalidationCallback(Callback{
+						.callback = [this, found, binding_array_index]() {
+							found->setUpdateStatus(false);
+						},
+						.id = this,
+					});
+				}
 			}
+			found->setUpdateStatus(false);
+			assert(checkIntegrity());
 		}
-		found->setUpdateStatus(false);
-		assert(checkIntegrity());
+		else
+		{
+			// this instance will be renewed, and the desc will be written then
+		}
 	}
 
 	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers)
@@ -574,13 +579,14 @@ namespace vkl
 		auto & bi = found->resource().images;
 		auto & bs = found->samplers();
 
+		uint32_t binding_capacity = 0;
 		if (is_image)
 		{
-			assert(bi.size32() >= (array_index + count));
+			binding_capacity = bi.size32();
 		}
-		if (is_sampler)
+		else if (is_sampler)
 		{
-			assert(bs.size32() >= (array_index + count));
+			binding_capacity = bs.size32();
 		}
 		if (is_image && is_sampler)
 		{
@@ -588,46 +594,53 @@ namespace vkl
 		}
 		assert(views || samplers);
 
-		for (uint32_t i = 0; i < count; ++i)
+		if (binding_capacity >= (array_index + count))
 		{
-			const uint32_t binding_array_index = array_index + i;
-			Callback cb{
-				.callback = [this, found, binding_array_index]() {
-					found->setUpdateStatus(false);
-				},
-				.id = this,
-			};
-
-			if(is_image && views)
+			for (uint32_t i = 0; i < count; ++i)
 			{
-				std::shared_ptr<ImageView> & binding_view = bi[binding_array_index];
-				if (binding_view)
+				const uint32_t binding_array_index = array_index + i;
+				Callback cb{
+					.callback = [this, found, binding_array_index]() {
+						found->setUpdateStatus(false);
+					},
+					.id = this,
+				};
+
+				if(is_image && views)
 				{
-					binding_view->removeInvalidationCallbacks(this);
+					std::shared_ptr<ImageView> & binding_view = bi[binding_array_index];
+					if (binding_view)
+					{
+						binding_view->removeInvalidationCallbacks(this);
+					}
+					binding_view = views[i];
+					if (binding_view)
+					{
+						binding_view->addInvalidationCallback(cb);
+					}
 				}
-				binding_view = views[i];
-				if (binding_view)
+
+				if (is_sampler && samplers)
 				{
-					binding_view->addInvalidationCallback(cb);
+					std::shared_ptr<Sampler> & binding_sampler = bs[binding_array_index];
+					if (binding_sampler)
+					{
+						binding_sampler->removeInvalidationCallbacks(this);
+					}
+					binding_sampler = samplers[i];
+					if (binding_sampler)
+					{
+						binding_sampler->addInvalidationCallback(cb);
+					}
 				}
 			}
-
-			if (is_sampler && samplers)
-			{
-				std::shared_ptr<Sampler> & binding_sampler = bs[binding_array_index];
-				if (binding_sampler)
-				{
-					binding_sampler->removeInvalidationCallbacks(this);
-				}
-				binding_sampler = samplers[i];
-				if (binding_sampler)
-				{
-					binding_sampler->addInvalidationCallback(cb);
-				}
-			}
+			found->setUpdateStatus(false);
+			assert(checkIntegrity());
 		}
-		found->setUpdateStatus(false);
-		assert(checkIntegrity());
+		else
+		{
+			// this instance will be renewed, and the desc will be written then
+		}
 	}
 
 
