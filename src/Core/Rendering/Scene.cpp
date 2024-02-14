@@ -339,7 +339,7 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
-			Dyn<uint32_t> mesh_count = &_mesh_capacity;
+			Dyn<uint32_t> mesh_count = [this](){return _unique_mesh_index_pool.capacity();};
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "SceneMeshHeadersBindings",
@@ -371,7 +371,7 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
-			Dyn<uint32_t> material_count = &_material_capacity;
+			Dyn<uint32_t> material_count = [this](){return _unique_material_index_pool.capacity();};
 			
 			bindings += DescriptorSetLayout::Binding{
 				.name = "ScenePBMaterialsBinding",
@@ -393,12 +393,13 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 			
+			Dyn<uint32_t> texture_2D_count = [this](){return _unique_texture_2D_index_pool.capacity();};
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "SceneTextures2D",
 				.binding = _textures_bindings_base + 0,
 				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.count = &_texture_2D_capacity,
+				.count = texture_2D_count,
 				.stages = VK_SHADER_STAGE_ALL,
 				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -541,53 +542,6 @@ namespace vkl
 		});
 	}
 
-	uint32_t Scene::allocateUniqueMeshID()
-	{
-		if (_unique_mesh_counter >= _mesh_capacity)
-		{
-			_mesh_capacity *= 2;
-		}
-		uint32_t res = _unique_mesh_counter;
-		++_unique_mesh_counter;
-		return res;
-	}
-
-	uint32_t Scene::allocateUniqueModelID()
-	{
-		uint32_t res = _unique_model_counter;
-		++_unique_model_counter;
-		return res;
-	}
-
-	uint32_t Scene::allocateUniqueXformID()
-	{
-		uint32_t res = _unique_xform_counter;
-		++_unique_xform_counter;
-		return res;
-	}
-
-	uint32_t Scene::allocateUniqueMaterialID()
-	{
-		uint32_t res = _unique_material_counter;
-		if (_unique_material_counter >= _material_capacity)
-		{
-			_material_capacity *= 2;
-		}
-		++_unique_material_counter;
-		return res;
-	}
-
-	uint32_t Scene::allocateUniqueTexture2DID()
-	{
-		uint32_t res = _unique_texture_2D_counter;
-		if (_unique_texture_2D_counter >= _texture_2D_capacity)
-		{
-			_texture_2D_capacity *= 2;
-		}
-		++_unique_texture_2D_counter;
-		return res;
-	}
-
 	std::shared_ptr<DescriptorSetAndPool> Scene::set()
 	{
 		return _set;
@@ -645,7 +599,7 @@ namespace vkl
 					{
 						if (!_unique_meshes.contains(mesh.get())) // unknown mesh so far
 						{
-							mesh_unique_id = allocateUniqueMeshID();
+							mesh_unique_id = _unique_mesh_index_pool.allocate();
 							_unique_meshes[mesh.get()] = MeshData{
 								.unique_index = mesh_unique_id,
 							};
@@ -673,7 +627,7 @@ namespace vkl
 						{
 							if (!_unique_textures.contains(albedo_tex.texture.get()))
 							{
-								albedo_texture_id = allocateUniqueTexture2DID();
+								albedo_texture_id = _unique_texture_2D_index_pool.allocate();
 								albedo_tex.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, albedo_texture_id);
 								// TODO 
 								// With this impl, a sampler change will not propagate to the set
@@ -691,7 +645,7 @@ namespace vkl
 						{
 							if (!_unique_textures.contains(normal_tex.texture.get()))
 							{
-								normal_texture_id = allocateUniqueTexture2DID();
+								normal_texture_id = _unique_texture_2D_index_pool.allocate();
 								normal_tex.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, normal_texture_id);
 								_set->setBinding(_textures_bindings_base + 0, normal_texture_id, 1, nullptr, &normal_tex.sampler);
 								_unique_textures[normal_tex.texture.get()] = TextureData{ .unique_index = normal_texture_id };
@@ -706,7 +660,7 @@ namespace vkl
 
 						if (!_unique_materials.contains(pb_material))
 						{
-							material_unique_id = allocateUniqueMaterialID();
+							material_unique_id = _unique_material_index_pool.allocate();
 							_unique_materials[pb_material] = MaterialData{.unique_index = material_unique_id};
 							pb_material->registerToDescriptorSet(_set, _material_bindings_base + 0, material_unique_id, false);
 							set_material = true;
@@ -742,8 +696,8 @@ namespace vkl
 					model_flags |= 1;
 				if (!_unique_models.contains(path))
 				{
-					unique_model_id = allocateUniqueModelID();
-					xform_unique_id = allocateUniqueXformID();
+					unique_model_id = _unique_model_index_pool.allocate();
+					xform_unique_id = _unique_xform_index_pool.allocate();
 					_unique_models[path] = ModelInstance{
 						.model_unique_index = unique_model_id,
 						.xform_unique_index = xform_unique_id,

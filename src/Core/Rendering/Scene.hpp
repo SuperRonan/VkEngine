@@ -12,6 +12,8 @@
 #include <Core/Rendering/Model.hpp>
 #include <Core/Rendering/Light.hpp>
 
+#include <Core/Utils/UniqueIndexAllocator.hpp>
+
 #include <unordered_map>
 
 #include <cassert>
@@ -252,13 +254,6 @@ namespace vkl
 		uint32_t _textures_bindings_base;
 		uint32_t _xforms_bindings_base;
 
-		uint32_t _mesh_capacity = 1024;
-		uint32_t _mesh_count = 0;
-		uint32_t _texture_2D_capacity = 1024;
-		uint32_t _texture_2D_count = 0;
-		uint32_t _material_capacity = 1024;
-		uint32_t _material_count = 0;
-
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
@@ -277,16 +272,13 @@ namespace vkl
 			uint32_t unique_index;
 		};
 
-		uint32_t _unique_mesh_counter = 0;
-		uint32_t allocateUniqueMeshID();
+		UniqueIndexAllocator _unique_mesh_index_pool;
 		std::unordered_map<Mesh*, MeshData> _unique_meshes;
 
-		uint32_t _unique_texture_2D_counter = 0;
-		uint32_t allocateUniqueTexture2DID();
+		UniqueIndexAllocator _unique_texture_2D_index_pool;
 		std::unordered_map<Texture*, TextureData> _unique_textures;
 
-		uint32_t _unique_material_counter = 0;
-		uint32_t allocateUniqueMaterialID();
+		UniqueIndexAllocator _unique_material_index_pool;
 		std::unordered_map<Material*, MaterialData> _unique_materials;
 		std::shared_ptr<HostManagedBuffer> _material_ref_buffer;
 
@@ -310,13 +302,11 @@ namespace vkl
 			uint32_t model_unique_index;
 			uint32_t xform_unique_index;
 		};
-		uint32_t _unique_model_counter = 0;
-		uint32_t allocateUniqueModelID();
+		UniqueIndexAllocator _unique_model_index_pool;
 		std::unordered_map<DAG::RobustNodePath, ModelInstance> _unique_models; 
 		std::shared_ptr<HostManagedBuffer> _model_references_buffer;
 
-		uint32_t _unique_xform_counter = 0;
-		uint32_t allocateUniqueXformID();
+		UniqueIndexAllocator _unique_xform_index_pool;
 		std::shared_ptr<HostManagedBuffer> _xforms_buffer;
 		std::shared_ptr<Buffer> _prev_xforms_buffer;
 		BufferAndRange _xforms_segment;
@@ -338,6 +328,9 @@ namespace vkl
 
 		uint32_t _num_lights;
 		std::shared_ptr<HostManagedBuffer> _lights_buffer;
+
+		VkFormat _light_depth_format = VK_FORMAT_D32_SFLOAT;
+		MyVector<std::shared_ptr<ImageView>> _light_depth_maps;
 
 		UBO getUBO() const;
 
@@ -392,7 +385,7 @@ namespace vkl
 
 		uint32_t objectCount()const
 		{
-			return _unique_model_counter;
+			return _unique_model_index_pool.count();
 		}
 
 		friend class SceneUserInterface;
