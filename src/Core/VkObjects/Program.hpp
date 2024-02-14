@@ -92,7 +92,7 @@ namespace vkl
 
 		virtual ~Program()override;
 
-		void addShadersInvalidationCallbacks();
+		void addInvalidationCallbacks();
 
 		virtual void createInstance() = 0;
 

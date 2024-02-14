@@ -59,13 +59,9 @@ namespace vkl
 			std::string name = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 		};
+		using CI = CreateInfo;
 
-		ShaderCommand(CreateInfo const& ci) :
-			DeviceCommand(ci.app, ci.name),
-			_provided_sets_layouts(ci.sets_layouts)
-		{
-
-		}
+		ShaderCommand(CreateInfo const& ci);
 
 		virtual ~ShaderCommand() override = default;
 

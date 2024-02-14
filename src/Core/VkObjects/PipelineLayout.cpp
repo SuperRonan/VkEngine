@@ -69,7 +69,7 @@ namespace vkl
 		_sets(ci.sets),
 		_push_constants(ci.push_constants)
 	{
-		_is_dynamic = true;
+		_is_dynamic = false;
 		for (size_t i = 0; i < _sets.size(); ++i)
 		{
 			if (_sets[i])
@@ -83,10 +83,11 @@ namespace vkl
 						},
 						.id = this,
 					});
+					_is_dynamic = true;
 				}
 				else
 				{
-					_is_dynamic = false;
+
 				}
 			}
 		}

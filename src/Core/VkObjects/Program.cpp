@@ -400,10 +400,12 @@ namespace vkl
 		}
 	}
 
-	void Program::addShadersInvalidationCallbacks()
+	void Program::addInvalidationCallbacks()
 	{
 		Callback ic{
-			.callback = [this]() {this->destroyInstance();},
+			.callback = [this]() {
+				this->destroyInstance();
+			},
 			.id = this,
 		};
 		for (auto& shader : _shaders)
@@ -553,7 +555,7 @@ namespace vkl
 			_shaders.push_back(_fragment);
 		}
 
-		addShadersInvalidationCallbacks();
+		addInvalidationCallbacks();
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoMesh const& cim) :
@@ -575,7 +577,7 @@ namespace vkl
 			_shaders.push_back(_fragment);
 		}
 
-		addShadersInvalidationCallbacks();
+		addInvalidationCallbacks();
 	}
 
 	GraphicsProgram::~GraphicsProgram()
@@ -670,13 +672,7 @@ namespace vkl
 	{
 		_shaders = { _shader };
 
-		Callback ic{
-			.callback = [&]() {
-				destroyInstance();
-			},
-			.id = this,
-		};
-		_shader->addInvalidationCallback(ic);
+		addInvalidationCallbacks();
 	}
 
 	void ComputeProgram::createInstance()

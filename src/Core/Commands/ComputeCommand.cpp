@@ -83,7 +83,7 @@ namespace vkl
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 			.definitions = _definitions,
 		});
-		
+	
 		_program = std::make_shared<ComputeProgram>(ComputeProgram::CI{
 			.app = application(),
 			.name = shader->name(),
@@ -197,7 +197,7 @@ namespace vkl
 	bool ComputeCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
-
+		
 		res |= ShaderCommand::updateResources(ctx);
 
 		return res;

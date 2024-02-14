@@ -59,6 +59,17 @@ namespace vkl
 		_image_views_to_keep.clear();
 	}
 
+
+
+
+	ShaderCommand::ShaderCommand(CreateInfo const& ci) :
+		DeviceCommand(ci.app, ci.name),
+		_provided_sets_layouts(ci.sets_layouts)
+	{
+		
+	}
+
+
 	void ShaderCommand::populateDescriptorSet(ShaderCommandNode & node, DescriptorSetAndPoolInstance& set, DescriptorSetLayoutInstance const& layout)
 	{
 		const auto& shader_bindings = layout.bindings();
