@@ -65,7 +65,17 @@ namespace vkl
 			return _draw_calls;
 		}
 
+		Array<DrawCallInfo>& drawCalls()
+		{
+			return _draw_calls;
+		}
+
 		const Array<BufferAndRange>& vertexBuffers() const
+		{
+			return _vertex_buffers;
+		}
+
+		Array<BufferAndRange>& vertexBuffers()
 		{
 			return _vertex_buffers;
 		}
