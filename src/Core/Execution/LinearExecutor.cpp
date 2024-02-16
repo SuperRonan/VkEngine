@@ -24,10 +24,6 @@ namespace vkl
 	{
 		static thread_local SynchronizationHelper synch;
 		assert(node->isInUse());
-		if (node->name() == "Renderer.RasterGBuffer")
-		{
-			int _ = 0;
-		}
 		synch.reset(_context);
 		synch.commit(node->resources());
 		synch.record();
