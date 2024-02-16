@@ -84,6 +84,7 @@ namespace vkl
 			std::optional<float> max_anisotropy = {};
 			VkBorderColor border_color = {};
 			VkBool32 unnormalized_coordinates = false;
+			std::optional<VkCompareOp> compare_op = {};
 			bool create_on_construct = false;
 		};
 		using CI = CreateInfo;

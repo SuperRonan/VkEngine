@@ -33,10 +33,10 @@ namespace vkl
 			.mipLodBias = 0,
 			.anisotropyEnable = ci.max_anisotropy.has_value(),
 			.maxAnisotropy = ci.max_anisotropy.value_or(0.0f), 
-			.compareEnable = VK_FALSE,
-			.compareOp = VK_COMPARE_OP_NEVER,
+			.compareEnable = ci.compare_op.has_value() ? VK_TRUE : VK_FALSE,
+			.compareOp = ci.compare_op.value_or(VK_COMPARE_OP_NEVER),
 			.minLod = 0,
-			.maxLod = 1, // TODO
+			.maxLod = 16, // TODO
 			.borderColor = ci.border_color,
 			.unnormalizedCoordinates = ci.unnormalized_coordinates,
 		};
