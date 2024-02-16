@@ -9,7 +9,6 @@ namespace vkl
 		_depth_stencil(ci.depth_stencil),
 		_render_pass(ci.render_pass)
 	{
-		assert(!_textures.empty());
 		std::vector<VkImageView> views(_textures.size());
 		for (size_t i = 0; i < _textures.size(); ++i)	views[i] = *_textures[i];
 		if (_depth_stencil)

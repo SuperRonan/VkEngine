@@ -74,14 +74,28 @@ namespace vkl
 			return textures().size();
 		}
 
-		constexpr size_t layers()const
+		constexpr size_t count()const
 		{
 			return _textures.size();
 		}
 
+		std::shared_ptr<ImageViewInstance> const& depthStencil()const
+		{
+			return _depth_stencil;
+		}
+
 		VkExtent3D extent()const
 		{
-			return _textures[0]->image()->createInfo().extent;
+			VkExtent3D res;
+			if (!_textures.empty() && _textures[0])
+			{
+				res = _textures[0]->image()->createInfo().extent;
+			}
+			else if (_depth_stencil)
+			{
+				res = _depth_stencil->image()->createInfo().extent;
+			}
+			return res;
 		}
 	};
 
