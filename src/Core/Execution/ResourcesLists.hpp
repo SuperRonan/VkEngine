@@ -10,6 +10,7 @@ namespace vkl
 	class Sampler;
 	class DescriptorSetAndPool;
 	class Command;
+	class Framebuffer;
 	class UpdateContext;
 
 	struct ResourcesLists
@@ -19,6 +20,7 @@ namespace vkl
 		std::vector<std::shared_ptr<Sampler>> samplers;
 		std::vector<std::shared_ptr<DescriptorSetAndPool>> sets;
 		std::vector<std::shared_ptr<Command>> commands;
+		std::vector<std::shared_ptr<Framebuffer>> framebuffers;
 
 		ResourcesLists& operator+=(ResourcesLists const& o);
 
@@ -27,6 +29,7 @@ namespace vkl
 		ResourcesLists& operator+=(std::shared_ptr<Sampler> const& sampler);
 		ResourcesLists& operator+=(std::shared_ptr<DescriptorSetAndPool> const& set);
 		ResourcesLists& operator+=(std::shared_ptr<Command> const& cmd);
+		ResourcesLists& operator+=(std::shared_ptr<Framebuffer> const& fb);
 
 
 		ResourcesLists operator+(ResourcesLists const& o) const;
@@ -38,5 +41,7 @@ namespace vkl
 		ResourcesLists operator+(std::shared_ptr<Command> const& cmd) const;
 
 		void update(UpdateContext& context);
+
+		void clear();
 	};
 }

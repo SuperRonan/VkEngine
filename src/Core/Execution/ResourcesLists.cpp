@@ -7,6 +7,7 @@
 #include <Core/VkObjects/Sampler.hpp>
 #include <Core/Commands/Command.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
+#include <Core/VkObjects/Framebuffer.hpp>
 
 namespace vkl
 {
@@ -41,6 +42,22 @@ namespace vkl
 			assert(!!set);
 			const bool invalidated = set->updateResources(context);
 		}
+
+		for (auto& fb : framebuffers)
+		{
+			assert(fb);
+			const bool invalidated = fb->updateResources(context);
+		}
+	}
+
+	void ResourcesLists::clear()
+	{
+		images.clear();
+		buffers.clear();
+		samplers.clear();
+		commands.clear();
+		sets.clear();
+		framebuffers.clear();
 	}
 
 
@@ -79,6 +96,11 @@ namespace vkl
 	ResourcesLists& ResourcesLists::operator+=(std::shared_ptr<Command> const& cmd)
 	{
 		commands.push_back(cmd);
+		return *this;
+	}
+	ResourcesLists& ResourcesLists::operator+=(std::shared_ptr<Framebuffer> const& fb)
+	{
+		framebuffers.push_back(fb);
 		return *this;
 	}
 
