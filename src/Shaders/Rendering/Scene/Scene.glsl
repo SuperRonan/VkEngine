@@ -45,7 +45,7 @@ ScenePBMaterialTextures NoPBMaterialTextures()
 #define SCENE_BINDING SCENE_DESCRIPTOR_BINDING + 0
 
 #define SCENE_LIGHTS_BINDING SCENE_BINDING + 1
-#define SCENE_LIGHTS_NUM_BINDING 1
+#define SCENE_LIGHTS_NUM_BINDING 2
 #ifndef LIGHTS_ACCESS
 #define LIGHTS_ACCESS readonly
 #endif
@@ -95,11 +95,12 @@ layout(SCENE_BINDING + 0) uniform SceneUBOBinding
 
 
 
-layout(SCENE_BINDING + 1) restrict LIGHTS_ACCESS buffer LightsBufferBinding
+layout(SCENE_LIGHTS_BINDING + 0) restrict LIGHTS_ACCESS buffer LightsBufferBinding
 {
 	Light lights[];
 } lights_buffer;
 
+layout(SCENE_LIGHTS_BINDING + 1) uniform texture2D LightsDepth2D[];
 
 
 

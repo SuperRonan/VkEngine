@@ -5,6 +5,8 @@
 #define LIGHTS_ACCESS readonly
 #include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
+layout(SHADER_DESCRIPTOR_BINDING + 6) uniform sampler LightDepthSampler;
+
 vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 {
 	vec3 res = 0..xxx;
@@ -54,6 +56,19 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 						const float attenuation = max(1.0 - dist_to_center, 0);
 						contrib *= attenuation;
 					}
+
+					if(length2(contrib) > 0)
+					{
+						vec2 light_tex_uv =  clipSpaceToUV(clip_uv_in_light);
+						float ref_depth = position_light.z;
+						// float offset
+						ref_depth = intBitsToFloat(floatBitsToInt(ref_depth) - 8);
+						float texture_depth = texture(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), vec3(light_tex_uv, ref_depth));
+						contrib *= texture_depth;
+						// contrib.xy = light_tex_uv * 0;
+						// contrib.z = position_light.z;
+						// contrib.z = (texture_depth - 0.999) * 1000;
+					}
 				}
 
 				diffuse += contrib;
@@ -62,6 +77,15 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 	}
 
 	res += diffuse;
+
+	// {
+	// 	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) / vec2(2731, 1500);
+	// 	//float texture_depth = textureLod(sampler2DShadow(LightsDepth2D[0], LightDepthSampler), vec3(uv, 0.99995), 0).x;
+	// 	float texture_depth = textureLod(sampler2D(LightsDepth2D[0], LightDepthSampler), vec2(uv), 0).x;
+	// 	float range = 1e-4;
+	// 	texture_depth = (texture_depth - (1.0 - range)) / range;
+	// 	res = texture_depth.xxx;
+	// }
 
 	return res;
 }

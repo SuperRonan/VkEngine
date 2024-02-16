@@ -199,7 +199,7 @@ namespace vkl
 						.emission = color,
 						.attenuate = true,
 					});
-					vec3 position = glm::vec3(2, 1, -4);
+					vec3 position = glm::vec3(2, 1, -4 + 4);
 					if (i == 1)
 					{
 						position += glm::vec3(0.5, 0, 0);

@@ -87,6 +87,9 @@ namespace vkl
 		};
 		DeferredPipelineV1 _deferred_pipeline;
 
+		std::shared_ptr<Sampler> _light_depth_sampler = nullptr;
+		std::shared_ptr<VertexCommand> _render_spot_light_depth = nullptr;
+
 		std::shared_ptr<AmbientOcclusion> _ambient_occlusion = nullptr;
 
 		MultiDescriptorSetsLayouts _sets_layouts;

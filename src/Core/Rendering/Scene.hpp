@@ -328,9 +328,19 @@ namespace vkl
 
 		uint32_t _num_lights;
 		std::shared_ptr<HostManagedBuffer> _lights_buffer;
+		UniqueIndexAllocator _unique_light_index_pool;
+		UniqueIndexAllocator _light_depth_map_2D_index_pool;
+		struct LightInstanceData
+		{
+			uint32_t unique_id;
+			std::shared_ptr<ImageView> depth_view;
+			std::shared_ptr<Framebuffer> framebuffer;
+			uint32_t depth_texture_unique_id;
+		};
+		std::unordered_map<DAG::RobustNodePath, LightInstanceData> _unique_light_instances;
 
+		VkSampleCountFlagBits _light_depth_samples = VK_SAMPLE_COUNT_1_BIT;
 		VkFormat _light_depth_format = VK_FORMAT_D32_SFLOAT;
-		MyVector<std::shared_ptr<ImageView>> _light_depth_maps;
 
 		UBO getUBO() const;
 
@@ -388,6 +398,17 @@ namespace vkl
 			return _unique_model_index_pool.count();
 		}
 
+		VkFormat lightDepthFormat() const
+		{
+			return _light_depth_format;
+		}
+
+		VkSampleCountFlagBits lightDepthSamples() const
+		{
+			return _light_depth_samples;
+		}
+
 		friend class SceneUserInterface;
+		friend class SimpleRenderer;
 	};
 }

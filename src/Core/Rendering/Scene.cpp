@@ -293,7 +293,7 @@ namespace vkl
 		if (!_set_layout)
 		{
 			_lights_bindings_base = 1;
-			const uint32_t lights_num_bindings = 1;
+			const uint32_t lights_num_bindings = 2;
 			_objects_binding_base = _lights_bindings_base + lights_num_bindings;
 			const uint32_t objects_num_bindings = 1;
 			_mesh_bindings_base = _objects_binding_base + objects_num_bindings;
@@ -327,6 +327,17 @@ namespace vkl
 				.stages = VK_SHADER_STAGE_ALL,
 				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			};
+
+			Dyn<uint32_t> light_depth_map_2D_count = [this](){return _light_depth_map_2D_index_pool.capacity();};
+			bindings += DescriptorSetLayout::Binding{
+				.name = "LightsDepth2D",
+				.binding = _lights_bindings_base + 1,
+				.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+				.count = light_depth_map_2D_count,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+				.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 			};
 
 			bindings += DescriptorSetLayout::Binding{
@@ -401,7 +412,7 @@ namespace vkl
 				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.count = texture_2D_count,
 				.stages = VK_SHADER_STAGE_ALL,
-				.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 			};
 
@@ -741,10 +752,44 @@ namespace vkl
 			std::shared_ptr<Light> light = node->light();
 			if (light)
 			{
+				LightInstanceData * lid = nullptr;
+				if (_unique_light_instances.contains(path))
+				{
+					lid = &_unique_light_instances.at(path);
+				}
+				else
+				{
+					uint32_t light_unique_index = _unique_light_index_pool.allocate();
+					lid = &_unique_light_instances[path];
+					lid->unique_id = light_unique_index;
+				}
+
+				
+				{
+					if (light->type() == LightType::SPOT && !lid->depth_view)
+					{
+						lid->depth_view = std::make_shared<ImageView>(Image::CI{
+							.app = application(),
+							.name = light->name() + ".depth_view",
+							.type = VK_IMAGE_TYPE_2D,
+							.format = &_light_depth_format,
+							.extent = VkExtent3D{.width = 1024 * 8, .height = 1024 * 8, .depth = 1,},
+							.samples = &_light_depth_samples,
+							.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+							.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+						});
+						lid->depth_texture_unique_id = _light_depth_map_2D_index_pool.allocate();
+						_set->setBinding(_lights_bindings_base + 1, lid->depth_texture_unique_id, 1, &lid->depth_view, nullptr);
+					}
+				}
+
+
+
 				if (visible)
 				{
 					LightGLSL gl = light->getAsGLSL(matrix);
-					_lights_buffer->set(_num_lights, gl);
+					gl.textures.x = lid->depth_texture_unique_id;
+					_lights_buffer->set(lid->unique_id, gl);
 					++_num_lights;
 				}
 			}

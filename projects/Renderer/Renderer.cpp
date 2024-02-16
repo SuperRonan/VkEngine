@@ -43,7 +43,13 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-
+		_light_depth_sampler = std::make_shared<Sampler>(Sampler::CI{
+			.app = application(),
+			.name = name() + "LightDepthSampler",
+			.filter = VK_FILTER_LINEAR,
+			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			.compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,	
+		});
 
 		_ubo_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -130,6 +136,10 @@ namespace vkl
 						.buffer = _ubo_buffer,
 						.binding = 0,
 					},
+					Binding{
+						.sampler = _light_depth_sampler,
+						.binding = 6,
+					},
 				},
 				.color_attachements = {_render_target},
 				.depth_stencil = _depth,
@@ -157,6 +167,10 @@ namespace vkl
 					.buffer = _model_indices_segment.buffer,
 					.buffer_range = _model_indices_segment.range,
 					.binding = 1,
+				},
+				Binding{
+					.sampler = _light_depth_sampler,
+					.binding = 6,
 				},
 			},
 			.color_attachements = {_render_target},
@@ -313,6 +327,10 @@ namespace vkl
 						.view = _render_target,
 						.binding = 5,
 					},
+					Binding{
+						.sampler = _light_depth_sampler,
+						.binding = 6,
+					},
 				},
 				.definitions = [this]()
 				{
@@ -326,7 +344,32 @@ namespace vkl
 				},
 			});
 
-			
+			_render_spot_light_depth = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderSpotLightDepth",
+				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.cull_mode = VK_CULL_MODE_FRONT_BIT, // front because the matrix make the image upside down, which inverts the culling
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _model_indices_segment.buffer,
+						.buffer_range = _model_indices_segment.range,
+						.binding = 1,
+					},
+				},
+				.extern_framebuffer = ExternFramebufferInfo{
+					.detph_stencil_attchement = AttachmentInfo{
+						.format = [this](){return _scene->lightDepthFormat();},
+						.samples = [this](){return _scene->lightDepthSamples();},
+					},
+				},
+				.write_depth = true,
+				.depth_compare_op = VK_COMPARE_OP_LESS,
+				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
+				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
+				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
+			});
+
 		}
 	}
 
@@ -417,7 +460,46 @@ namespace vkl
 			_ambient_occlusion->updateResources(ctx);
 
 			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
+
 		}
+		
+		if (_use_indirect_rendering)
+		{
+			ctx.resourcesToUpdateLater() += _render_spot_light_depth;
+		}
+		else
+		{
+
+		}
+
+		{
+			for (auto& [path, lid] : _scene->_unique_light_instances)
+			{
+				std::shared_ptr<Light> const& light = path.path.back()->light();
+				if (light->type() == LightType::SPOT)
+				{
+					if (!lid.framebuffer)
+					{
+						lid.framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+							.app = application(),
+							.name = lid.depth_view->name(),
+							.render_pass = _render_spot_light_depth->renderPass(),
+							.depth_stencil = lid.depth_view,
+						});
+					}
+				}
+				if (lid.depth_view)
+				{
+					lid.depth_view->updateResource(ctx);
+				}
+				if (lid.framebuffer && _use_indirect_rendering)
+				{
+					ctx.resourcesToUpdateLater() += lid.framebuffer;
+				}
+			}
+		}
+
+		_light_depth_sampler->updateResources(ctx);
 
 		_ubo_buffer->updateResource(ctx);
 	}
@@ -479,6 +561,29 @@ namespace vkl
 			if (exec.framePerfCounters())
 			{
 				exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockv().count();
+			}
+		}
+
+		// Render shadows
+		{
+			if (_use_indirect_rendering)
+			{
+				VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
+				std::shared_ptr<Framebuffer> previous_fb = std::move(my_draw_list.extern_framebuffer);
+				PushConstant previous_pc = std::move(my_draw_list.draw_list.drawCalls().front().pc);
+				for (auto& [path, lid] : _scene->_unique_light_instances)
+				{
+					std::shared_ptr<Light> const& light = path.path.back()->light();
+					if (light->type() == LightType::SPOT)
+					{
+						my_draw_list.draw_list.drawCalls().front().pc = lid.unique_id;
+						my_draw_list.extern_framebuffer = lid.framebuffer;
+						exec(_render_spot_light_depth->with(my_draw_list));
+					}
+				}
+				my_draw_list.extern_framebuffer = std::move(previous_fb);
+				my_draw_list.draw_list.drawCalls().front().pc = std::move(previous_pc);
+
 			}
 		}
 
