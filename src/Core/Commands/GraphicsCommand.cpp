@@ -350,6 +350,11 @@ namespace vkl
 			node._depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr;
 		}
 
+		if (node._framebuffer->depthStencil() && !node._depth_stencil)
+		{
+			node._depth_stencil = node._framebuffer->depthStencil();
+		}
+
 		node._clear_color = _clear_color;
 		node._clear_depth_stencil = _clear_depth_stencil;
 
@@ -654,6 +659,7 @@ namespace vkl
 			.line_raster_mode = ci.line_raster_mode,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
+			.extern_framebuffer = ci.extern_framebuffer,
 			.targets = ci.color_attachements,
 			.depth_stencil = ci.depth_stencil,
 			.write_depth = ci.write_depth,
@@ -972,6 +978,7 @@ namespace vkl
 			.line_raster_mode = ci.line_raster_mode,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
+			.extern_framebuffer = ci.extern_framebuffer,
 			.targets = ci.color_attachements,
 			.depth_stencil = ci.depth_stencil,
 			.write_depth = ci.write_depth,

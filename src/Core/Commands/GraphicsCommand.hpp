@@ -118,6 +118,11 @@ namespace vkl
 		};
 
 		virtual bool updateResources(UpdateContext & ctx) override;
+
+		std::shared_ptr<RenderPass> const& renderPass()const
+		{
+			return _render_pass;
+		}
 	};
 
 
