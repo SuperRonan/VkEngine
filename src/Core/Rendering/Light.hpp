@@ -126,7 +126,7 @@ namespace vkl
 		vec3 _up;
 		float _ratio;
 		float _fov;
-		bool _attenuate;
+		uint8_t _attenuation = 0;
 		float _znear = 1e-4;
 		bool _preserve_intensity_from_fov = false;
 		
@@ -142,7 +142,7 @@ namespace vkl
 			vec3 emission = vec3(0);
 			float aspect_ratio = 1;
 			float fov = glm::radians(90.0f);
-			bool attenuate = false;
+			uint8_t attenuation = 0;
 		};
 		using CI = CreateInfo;
 

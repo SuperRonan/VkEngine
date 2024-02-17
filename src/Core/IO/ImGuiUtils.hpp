@@ -57,6 +57,10 @@ namespace vkl
 		ImGuiListSelection& operator=(ImGuiListSelection const&) = default;
 		ImGuiListSelection& operator=(ImGuiListSelection&&) = default;
 		
+		void setIndex(size_t index)
+		{
+			_index = index;
+		}
 
 		bool declareRadioButtons(bool same_line);
 		

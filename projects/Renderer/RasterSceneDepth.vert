@@ -38,7 +38,6 @@ void main()
 	vec3 m_position = a_position;
 	
 	gl_Position = o2p * vec4(m_position, 1);
-	//gl_Position.xy *= 1;
 
 	// const mat3 normal_matrix = mat3(o2w);
 

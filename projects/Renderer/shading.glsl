@@ -7,6 +7,92 @@
 
 layout(SHADER_DESCRIPTOR_BINDING + 6) uniform sampler LightDepthSampler;
 
+struct LightSample
+{
+	vec3 Le;
+	vec3 direction_to_light;
+};
+
+LightSample getLightSample(uint light_id, vec3 position, vec3 normal, bool back_face_shading)
+{
+	LightSample res;
+	const Light light = lights_buffer.lights[light_id];
+	const uint light_type = light.flags & LIGHT_TYPE_MASK;
+	if(light_type == LIGHT_TYPE_POINT)
+	{
+		const vec3 to_light = light.position - position;
+		const float dist2 = dot(to_light, to_light);
+		const vec3 dir_to_light = normalize(to_light);
+		res.Le = light.emission / dist2;
+		res.direction_to_light = dir_to_light;
+	}
+	else if(light_type == LIGHT_TYPE_DIRECTIONAL)
+	{
+		const vec3 dir_to_light = light.position;
+		const float cos_theta = max(0.0f, dot(normal, dir_to_light));
+		res.Le = light.emission;
+		res.direction_to_light = dir_to_light;
+	}
+	else if (light_type == LIGHT_TYPE_SPOT)
+	{
+		const mat4 light_matrix = light.matrix;
+		vec4 position_light_h = (light_matrix * vec4(position, 1));
+		vec3 position_light = position_light_h.xyz / position_light_h.w;
+		const vec3 to_light = light.position - position;
+		res.direction_to_light = to_light;
+		res.Le = 0..xxx;
+		if(position_light_h.z > 0)
+		{
+			const float dist2 = dot(to_light, to_light);
+			const vec3 dir_to_light = normalize(to_light);
+			const float cos_theta = max(0.0f, dot(normal, dir_to_light));
+			const vec2 clip_uv_in_light = position_light.xy;
+			if(clip_uv_in_light == clamp(clip_uv_in_light, -1.0.xx, 1.0.xx))
+			{
+				res.Le = light.emission / (dist2);// * position_light.z;
+				
+				const uint attenuation_flags = light.flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
+				if((attenuation_flags) != 0)
+				{
+					float attenuation = 0;
+					float dist_to_center;
+					if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_LINEAR)
+					{
+						dist_to_center = length(clip_uv_in_light);
+					}
+					else if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_QUADRATIC)
+					{
+						dist_to_center = length2(clip_uv_in_light);
+					}
+					else if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_ROOT)
+					{
+						dist_to_center = sqrt(length(clip_uv_in_light));
+					}
+					
+					attenuation = max(1.0 - dist_to_center, 0);
+					res.Le *= attenuation;
+				}
+
+				const bool facing_light = dot(normal, res.direction_to_light) > 0.0f;
+				if(length2(res.Le) > 0 && (facing_light || back_face_shading))
+				{
+					vec2 light_tex_uv =  clipSpaceToUV(clip_uv_in_light);
+					float ref_depth = position_light.z;
+					// float offset
+					ref_depth = intBitsToFloat(floatBitsToInt(ref_depth) - 8);
+					float texture_depth = texture(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), vec3(light_tex_uv, ref_depth));
+					res.Le *= texture_depth;
+				}
+			}
+		}
+		else
+		{
+			res.Le = 0..xxx;
+		}
+	}
+	return res;
+}
+
 vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 {
 	vec3 res = 0..xxx;
@@ -15,68 +101,12 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 
 	for(uint l = 0; l < scene_ubo.num_lights; ++l)
 	{
-		const Light light = lights_buffer.lights[l];
-		const uint light_type = light.flags & LIGHT_TYPE_MASK;
-
-		if(light_type == LIGHT_TYPE_POINT)
-		{
-			const vec3 to_light = light.position - position;
-			const float dist2 = dot(to_light, to_light);
-			const vec3 dir_to_light = normalize(to_light);
-			const float cos_theta = max(0.0f, dot(normal, dir_to_light));
-
-			diffuse += cos_theta * albedo * light.emission / dist2;
-		}
-		else if(light_type == LIGHT_TYPE_DIRECTIONAL)
-		{
-			const vec3 dir_to_light = light.position;
-			const float cos_theta = max(0.0f, dot(normal, dir_to_light));
-			diffuse += cos_theta * albedo * light.emission;
-		}
-		else if (light_type == LIGHT_TYPE_SPOT)
-		{
-			const mat4 light_matrix = light.matrix;
-			vec4 position_light_h = (light_matrix * vec4(position, 1));
-			vec3 position_light = position_light_h.xyz / position_light_h.w;
-			if(position_light_h.z > 0)
-			{
-				const vec3 to_light = light.position - position;
-				const float dist2 = dot(to_light, to_light);
-				const vec3 dir_to_light = normalize(to_light);
-				const float cos_theta = max(0.0f, dot(normal, dir_to_light));
-				vec3 contrib = 0..xxx;
-				vec2 clip_uv_in_light = position_light.xy;
-				if(clip_uv_in_light == clamp(clip_uv_in_light, -1.0.xx, 1.0.xx))
-				{
-					contrib = cos_theta * light.emission * albedo / dist2;// * position_light.z;
-					
-					if((light.flags & SPOT_LIGHT_FLAG_ATTENUATION) != 0)
-					{
-						const float dist_to_center = length2(clip_uv_in_light);
-						const float attenuation = max(1.0 - dist_to_center, 0);
-						contrib *= attenuation;
-					}
-
-					if(length2(contrib) > 0)
-					{
-						vec2 light_tex_uv =  clipSpaceToUV(clip_uv_in_light);
-						float ref_depth = position_light.z;
-						// float offset
-						ref_depth = intBitsToFloat(floatBitsToInt(ref_depth) - 8);
-						float texture_depth = texture(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), vec3(light_tex_uv, ref_depth));
-						contrib *= texture_depth;
-						// contrib.xy = light_tex_uv * 0;
-						// contrib.z = position_light.z;
-						// contrib.z = (texture_depth - 0.999) * 1000;
-					}
-				}
-
-				diffuse += contrib;
-			}
-		}
+		const LightSample light_sample = 	getLightSample(l, position, normal, false);
+		const float cos_theta = max(0.0f, dot(normal, light_sample.direction_to_light));
+		diffuse += cos_theta * light_sample.Le; 
 	}
 
-	res += diffuse;
+	res += diffuse * albedo;
 
 	// {
 	// 	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) / vec2(2731, 1500);

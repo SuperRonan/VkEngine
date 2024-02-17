@@ -3,6 +3,8 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 
+#include <Core/IO/ImGuiUtils.hpp>
+
 namespace vkl
 {
 	LightGLSL LightGLSL::MakePoint(vec3 position, vec3 emission)
@@ -163,7 +165,7 @@ namespace vkl
 		_up(glm::normalize(ci.up)),
 		_ratio(ci.aspect_ratio),
 		_fov(ci.fov),
-		_attenuate(ci.attenuate)
+		_attenuation(ci.attenuation)
 	{
 		
 	}
@@ -177,15 +179,14 @@ namespace vkl
 			res.emission *= 1.0 / std::max(_fov, std::numeric_limits<float>::epsilon());
 		}
 		res.flags = _type;
-		if (_attenuate)
 		{
-			res.flags |= (1 << 8);
+			res.flags |= ((uint32_t(_attenuation) & 0b11) << 8);
 		}
 		const mat3 dir_mat = directionMatrix(xform);
 		res.position = vec3(xform * vec4(_position, 1));
 		const vec3 direction = glm::normalize(dir_mat * _direction);
 		const vec3 up = glm::normalize(dir_mat * _up);
-		const mat4 look_at = glm::lookAt(res.position, res.position + direction, up);
+		const mat4 look_at = glm::lookAt(res.position, res.position + direction, -up);
 		const mat4 proj = glm::infinitePerspective<float>(_fov, _ratio, _znear);
 		//const mat4 proj = glm::perspective<float>(_fov, _ratio, _znear, 2 * _znear);
 		res.matrix = (proj * look_at);
@@ -198,7 +199,17 @@ namespace vkl
 		ImGui::PushID(name().c_str());
 		ImGui::SliderAngle("Angle", &_fov, 0, 180);
 		ImGui::Checkbox("Preserve total intensity from angle", &_preserve_intensity_from_fov);
-		ImGui::Checkbox("Attenuation", &_attenuate);
+		static ImGuiListSelection gui_attenuation(ImGuiListSelection::CI{
+			.name = "Attenuation",
+			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.labels = {"None", "Linear", "Quadratic", "Root"},
+			.same_line = true,
+		});
+		gui_attenuation.setIndex(_attenuation);
+		if (gui_attenuation.declare())
+		{
+			_attenuation = gui_attenuation.index();
+		}
 		ImGui::PopID();
 	}
 }
