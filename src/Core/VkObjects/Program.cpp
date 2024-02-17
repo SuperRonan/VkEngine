@@ -68,6 +68,11 @@ namespace vkl
 
 		const bool keep_unused_bindings = false;
 
+		//if (name() == "")
+		//{
+		//	VKL_BREAKPOINT_HANDLE;
+		//}
+
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
 			const ShaderInstance& shader = *_shaders[sh];
@@ -109,9 +114,17 @@ namespace vkl
 							}
 							else
 							{
-								const uint32_t decoration = binding.type_description->decoration_flags;
+								uint32_t d1 = binding.decoration_flags;
+								uint32_t d2 = binding.type_description ? binding.type_description->decoration_flags : 0;
+								uint32_t d3 = binding.block.decoration_flags;
+								uint32_t d4 = binding.block.type_description ? binding.block.type_description->decoration_flags : 0;
+								uint32_t decoration = d1;
+								if (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
+								{
+									decoration = d3;
+								}
 								const bool readonly = decoration & SPV_REFLECT_DECORATION_NON_WRITABLE;
-								const bool writeonly = false; // decoration& SPV_REFLECT_DECORATION_NONE; // TODO add writeonly to spirv reflect
+								const bool writeonly = decoration & SPV_REFLECT_DECORATION_NON_READABLE;
 								if (readonly == writeonly) // Kind of an adge case
 								{
 									res |= VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
@@ -140,10 +153,12 @@ namespace vkl
 									res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 								else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
 								{
-									if (binding_info.access == VK_ACCESS_2_SHADER_READ_BIT)
-										res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-									else
-										res = VK_IMAGE_LAYOUT_GENERAL;
+									// It appears readonly storage image must be in general layout, shader read only optimal is not allowed
+									//if (binding_info.access == VK_ACCESS_2_SHADER_READ_BIT)
+									//	res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+									//else
+									//	res = VK_IMAGE_LAYOUT_GENERAL;
+									res = VK_IMAGE_LAYOUT_GENERAL;
 								}
 							}
 							return res;
@@ -164,7 +179,7 @@ namespace vkl
 					}
 					else
 					{
-						int _ = 0;
+						VKL_BREAKPOINT_HANDLE
 					}
 				}
 			}
