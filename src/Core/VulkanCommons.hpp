@@ -30,10 +30,8 @@
 #define VK_LOG std::cout << "[Vk]: " 
 #define VK_ERROR_LOG std::cerr << "[Vk Error]: "
 
-//#define VK_CHECK(call, msg)				\
-//if (call != VK_SUCCESS) {				\
-//	throw std::runtime_error(msg);		\
-//}										
+#define VKL_BREAKPOINT_HANDLE {int _ = 0;}
+#define VKL_UNUSED(x) ((void)x)
 
 #if _DEBUG
 
