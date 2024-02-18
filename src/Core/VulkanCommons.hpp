@@ -72,6 +72,12 @@ namespace vkl
 {
 	class VkObject;
 
+	struct VkStruct
+	{
+		VkStructureType type;
+		void * pNext;
+	};
+
 	template <class T>
 	using Array = MyVector<T>;
 

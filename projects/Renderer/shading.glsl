@@ -79,7 +79,7 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, bool back_
 					vec2 light_tex_uv =  clipSpaceToUV(clip_uv_in_light);
 					float ref_depth = position_light.z;
 					// float offset
-					ref_depth = intBitsToFloat(floatBitsToInt(ref_depth) - 8);
+					ref_depth = floatOffset(ref_depth, -8);
 					float texture_depth = texture(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), vec3(light_tex_uv, ref_depth));
 					res.Le *= texture_depth;
 				}
