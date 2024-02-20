@@ -293,7 +293,7 @@ namespace vkl
 		if (!_set_layout)
 		{
 			_lights_bindings_base = 1;
-			const uint32_t lights_num_bindings = 2;
+			const uint32_t lights_num_bindings = 3;
 			_objects_binding_base = _lights_bindings_base + lights_num_bindings;
 			const uint32_t objects_num_bindings = 1;
 			_mesh_bindings_base = _objects_binding_base + objects_num_bindings;
@@ -335,6 +335,16 @@ namespace vkl
 				.binding = _lights_bindings_base + 1,
 				.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 				.count = light_depth_map_2D_count,
+				.stages = VK_SHADER_STAGE_ALL,
+				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+				.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+			};
+			Dyn<uint32_t> light_depth_map_cube_count = [this](){return _light_depth_map_cube_index_pool.capacity();};
+			bindings += DescriptorSetLayout::Binding{
+				.name = "LightsDepthCube",
+				.binding = _lights_bindings_base + 2,
+				.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+				.count = light_depth_map_cube_count,
 				.stages = VK_SHADER_STAGE_ALL,
 				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
 				.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -766,20 +776,49 @@ namespace vkl
 
 				
 				{
-					if (light->type() == LightType::SPOT && !lid->depth_view)
+					if (light->enableShadowMap())
 					{
-						lid->depth_view = std::make_shared<ImageView>(Image::CI{
-							.app = application(),
-							.name = light->name() + ".depth_view",
-							.type = VK_IMAGE_TYPE_2D,
-							.format = &_light_depth_format,
-							.extent = VkExtent3D{.width = 1024 * 8, .height = 1024 * 8, .depth = 1,},
-							.samples = &_light_depth_samples,
-							.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-							.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-						});
-						lid->depth_texture_unique_id = _light_depth_map_2D_index_pool.allocate();
-						_set->setBinding(_lights_bindings_base + 1, lid->depth_texture_unique_id, 1, &lid->depth_view, nullptr);
+						if (!lid->depth_view)
+						{
+							uint32_t layers = 1;
+							VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
+							VkImageCreateFlags flags = 0; 
+							if (light->type() == LightType::POINT)
+							{
+								layers = 6;
+								view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+								flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+							}
+							std::shared_ptr<Image> depth_map_img = std::make_shared<Image>(Image::CI{
+								.app = application(),
+								.name = light->name() + ".depth_map",
+								.flags = flags,
+								.type = VK_IMAGE_TYPE_2D,
+								.format = &_light_depth_format,
+								.extent = VkExtent3D{.width = _light_resolion, .height = _light_resolion, .depth = 1,},
+								.layers = layers,
+								.samples = &_light_depth_samples,
+								.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+								.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+							});
+							lid->depth_view = std::make_shared<ImageView>(ImageView::CI{
+								.app = application(),
+								.name = light->name() + ".depth_map_view",
+								.image = depth_map_img,
+								.type = view_type,
+							});
+
+							if (layers == 1)
+							{
+								lid->depth_texture_unique_id = _light_depth_map_2D_index_pool.allocate();
+								_set->setBinding(_lights_bindings_base + 1, lid->depth_texture_unique_id, 1, &lid->depth_view, nullptr);
+							}
+							else if (layers == 6)
+							{
+								lid->depth_texture_unique_id = _light_depth_map_cube_index_pool.allocate();
+								_set->setBinding(_lights_bindings_base + 2, lid->depth_texture_unique_id, 1, &lid->depth_view, nullptr);
+							}
+						}
 					}
 				}
 

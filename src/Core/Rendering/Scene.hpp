@@ -243,6 +243,11 @@ namespace vkl
 		};
 		using DAG = DirectedAcyclicGraph;
 
+		struct LightInstanceSpecificData
+		{
+			virtual ~LightInstanceSpecificData() = default;
+		};
+
 	protected:
 
 		std::shared_ptr<DirectedAcyclicGraph> _tree;
@@ -329,16 +334,19 @@ namespace vkl
 		uint32_t _num_lights;
 		std::shared_ptr<HostManagedBuffer> _lights_buffer;
 		UniqueIndexAllocator _unique_light_index_pool;
-		UniqueIndexAllocator _light_depth_map_2D_index_pool;
+		UniqueIndexAllocator _light_depth_map_2D_index_pool, _light_depth_map_cube_index_pool;
+
+		
 		struct LightInstanceData
 		{
 			uint32_t unique_id;
 			std::shared_ptr<ImageView> depth_view;
-			std::shared_ptr<Framebuffer> framebuffer;
+			std::unique_ptr<LightInstanceSpecificData> specific_data = nullptr;
 			uint32_t depth_texture_unique_id;
 		};
 		std::unordered_map<DAG::RobustNodePath, LightInstanceData> _unique_light_instances;
 
+		uint32_t _light_resolion = 1024 * 2;
 		VkSampleCountFlagBits _light_depth_samples = VK_SAMPLE_COUNT_1_BIT;
 		VkFormat _light_depth_format = VK_FORMAT_D32_SFLOAT;
 
