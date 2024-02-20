@@ -107,6 +107,10 @@ namespace vkl
 		{
 			_textures[i]->addInvalidationCallback(cb);
 		}
+		if (_depth_stencil)
+		{
+			_depth_stencil->addInvalidationCallback(cb);
+		}
 	}
 
 	Framebuffer::~Framebuffer()
@@ -116,6 +120,10 @@ namespace vkl
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
 			_textures[i]->removeInvalidationCallbacks(this);
+		}
+		if (_depth_stencil)
+		{
+			_depth_stencil->removeInvalidationCallbacks(this);
 		}
 	}
 
