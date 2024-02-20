@@ -1,7 +1,17 @@
 #version 460
 
-// #define I_WANT_TO_DEBUG 1
-// #include <ShaderLib:/DebugBuffers.glsl>
+#include <ShaderLib:/Rendering/CubeMap.glsl>
+
+#ifndef TARGET_CUBE
+#define TARGET_CUBE 0
+#endif
+
+#if TARGET_CUBE
+#extension GL_EXT_multiview : require
+#endif
+
+#define I_WANT_TO_DEBUG 0
+#include <ShaderLib:/DebugBuffers.glsl>
 
 #include "IndirectCommon.glsl"
 
@@ -31,7 +41,13 @@ void main()
 	// const vec3 a_tangent = vertex.tangent;
 	// const vec2 a_uv = vertex.uv;
 
-	const mat4 w2p = lights_buffer.lights[_pc.light_id].matrix;
+	const Light light = lights_buffer.lights[_pc.light_id];
+
+#if TARGET_CUBE
+	const mat4 w2p = cubeMapFaceProjection(gl_ViewIndex, light.position, POINT_LIGHT_DEFAULT_Z_NEAR);
+#else
+	const mat4 w2p = light.matrix;
+#endif
 	const mat4 o2w = mat4(vd.matrix);
 	const mat4 o2p = w2p * o2w;
 	

@@ -5,6 +5,8 @@
 #define LIGHTS_ACCESS readonly
 #include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
+#include <ShaderLib:/Rendering/CubeMap.glsl>
+
 layout(SHADER_DESCRIPTOR_BINDING + 6) uniform sampler LightDepthSampler;
 
 struct LightSample
@@ -25,6 +27,32 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, bool back_
 		const vec3 dir_to_light = normalize(to_light);
 		res.Le = light.emission / dist2;
 		res.direction_to_light = dir_to_light;
+
+		const float cos_theta = dot(normal, res.direction_to_light);
+		const bool facing_light = cos_theta > 0.0f;
+		const bool query_shadow_map = ((light.flags & LIGHT_ENABLE_SHADOW_MAP_BIT) != 0) && length2(res.Le) > 0 && (facing_light || back_face_shading) && (light.textures.x != uint(-1));
+		if(query_shadow_map)
+		{
+			float ref_depth = cubeMapDepth(position, light.position, POINT_LIGHT_DEFAULT_Z_NEAR);
+			int offset = 32;
+			//offset = max(offset, int(cos_theta * 2));
+			//ref_depth = floatOffset(ref_depth, -offset);
+			ref_depth = ref_depth * 0.999;
+			float texture_depth = texture(samplerCubeShadow(LightsDepthCube[light.textures.x], LightDepthSampler), vec4(-to_light, ref_depth));
+			res.Le *= texture_depth;
+
+			// Color depending on the face of the cube map
+			// {
+			// 	uint cube_id = findCubeDirectionId(-to_light);
+			// 	vec3 color = 0..xxx;
+			// 	color[cube_id / 2] = 1;
+			// 	if(cube_id % 2 == 1)
+			// 	{
+			// 		color[cube_id / 2] *= 0.5;
+			// 	}
+			// 	res.Le *= color;
+			// }
+		}
 	}
 	else if(light_type == LIGHT_TYPE_DIRECTIONAL)
 	{
@@ -73,13 +101,16 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, bool back_
 					res.Le *= attenuation;
 				}
 
-				const bool facing_light = dot(normal, res.direction_to_light) > 0.0f;
-				if(length2(res.Le) > 0 && (facing_light || back_face_shading))
+				const float cos_theta = dot(normal, res.direction_to_light);
+				const bool facing_light = cos_theta > 0.0f;
+				const bool query_shadow_map = ((light.flags & LIGHT_ENABLE_SHADOW_MAP_BIT) != 0) && length2(res.Le) > 0 && (facing_light || back_face_shading) && (light.textures.x != uint(-1));
+				if(query_shadow_map)
 				{
 					vec2 light_tex_uv =  clipSpaceToUV(clip_uv_in_light);
 					float ref_depth = position_light.z;
-					// float offset
-					ref_depth = floatOffset(ref_depth, -8);
+					int offset = 4;
+					//offset = max(offset, int(cos_theta * 2));
+					ref_depth = floatOffset(ref_depth, -offset);
 					float texture_depth = texture(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), vec3(light_tex_uv, ref_depth));
 					res.Le *= texture_depth;
 				}

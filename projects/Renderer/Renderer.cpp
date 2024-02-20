@@ -370,6 +370,34 @@ namespace vkl
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
 			});
 
+			_render_point_light_depth = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderPointLightDepth",
+				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				.cull_mode = VK_CULL_MODE_NONE, // front because the matrix make the image upside down, which inverts the culling
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _model_indices_segment.buffer,
+						.buffer_range = _model_indices_segment.range,
+						.binding = 1,
+					},
+				},
+				.extern_framebuffer = ExternFramebufferInfo{
+					.detph_stencil_attchement = AttachmentInfo{
+						.format = [this]() {return _scene->lightDepthFormat(); },
+						.samples = [this]() {return _scene->lightDepthSamples(); },
+					},
+					.layers = 1,
+					.multiview = true,
+				},
+				.write_depth = true,
+				.depth_compare_op = VK_COMPARE_OP_LESS,
+				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
+				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
+				.definitions = std::vector{"TARGET_CUBE 1"s},
+				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
+			});
 		}
 	}
 
@@ -401,6 +429,11 @@ namespace vkl
 		};
 		_scene->getTree()->iterateOnDag(add_model);
 	}
+
+	struct LightInstanceData : public Scene::LightInstanceSpecificData
+	{
+		std::shared_ptr<Framebuffer> framebuffer;
+	};
 
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
@@ -466,6 +499,7 @@ namespace vkl
 		if (_use_indirect_rendering)
 		{
 			ctx.resourcesToUpdateLater() += _render_spot_light_depth;
+			ctx.resourcesToUpdateLater() += _render_point_light_depth;
 		}
 		else
 		{
@@ -476,25 +510,51 @@ namespace vkl
 			for (auto& [path, lid] : _scene->_unique_light_instances)
 			{
 				std::shared_ptr<Light> const& light = path.path.back()->light();
-				if (light->type() == LightType::SPOT)
 				{
-					if (!lid.framebuffer)
+					if (!lid.specific_data)
 					{
-						lid.framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
-							.app = application(),
-							.name = lid.depth_view->name(),
-							.render_pass = _render_spot_light_depth->renderPass(),
-							.depth_stencil = lid.depth_view,
-						});
+						lid.specific_data = std::make_unique<LightInstanceData>();
 					}
-				}
-				if (lid.depth_view)
-				{
-					lid.depth_view->updateResource(ctx);
-				}
-				if (lid.framebuffer && _use_indirect_rendering)
-				{
-					ctx.resourcesToUpdateLater() += lid.framebuffer;
+
+					LightInstanceData * my_lid = dynamic_cast<LightInstanceData*>(lid.specific_data.get());
+					if(my_lid)
+					{
+						if (light->enableShadowMap())
+						{
+							if (!my_lid->framebuffer)
+							{
+								std::shared_ptr<RenderPass> render_pass;
+								if (light->type() == LightType::POINT)
+								{
+									render_pass = _render_point_light_depth->renderPass();
+								}
+								else if (light->type() == LightType::SPOT)
+								{
+									render_pass = _render_spot_light_depth->renderPass();
+								}
+								my_lid->framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+									.app = application(),
+									.name = lid.depth_view->name(),
+									.render_pass = render_pass,
+									.depth_stencil = lid.depth_view,
+									.layers = 1,
+								});
+							}
+						}
+						else
+						{
+							my_lid->framebuffer.reset();
+						}
+					}
+
+					if (lid.depth_view)
+					{
+						lid.depth_view->updateResource(ctx);
+					}
+					if (my_lid && my_lid->framebuffer && _use_indirect_rendering)
+					{
+						ctx.resourcesToUpdateLater() += my_lid->framebuffer;
+					}
 				}
 			}
 		}
@@ -568,22 +628,41 @@ namespace vkl
 		{
 			if (_use_indirect_rendering)
 			{
+				bool pushed_label = false;
 				VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
 				std::shared_ptr<Framebuffer> previous_fb = std::move(my_draw_list.extern_framebuffer);
 				PushConstant previous_pc = std::move(my_draw_list.draw_list.drawCalls().front().pc);
 				for (auto& [path, lid] : _scene->_unique_light_instances)
 				{
 					std::shared_ptr<Light> const& light = path.path.back()->light();
-					if (light->type() == LightType::SPOT)
+					LightInstanceData * my_lid = dynamic_cast<LightInstanceData*>(lid.specific_data.get());
+					if (light->enableShadowMap() && my_lid && my_lid->framebuffer)
 					{
 						my_draw_list.draw_list.drawCalls().front().pc = lid.unique_id;
-						my_draw_list.extern_framebuffer = lid.framebuffer;
-						exec(_render_spot_light_depth->with(my_draw_list));
+						my_draw_list.extern_framebuffer = my_lid->framebuffer;
+
+						if (!pushed_label)
+						{
+							exec.pushDebugLabel("RenderShadowMaps");
+							pushed_label = true;
+						}
+						if (light->type() == LightType::SPOT)
+						{
+							exec(_render_spot_light_depth->with(my_draw_list));
+						}
+						else if (light->type() == LightType::POINT)
+						{
+							exec(_render_point_light_depth->with(my_draw_list));
+						}
 					}
 				}
 				my_draw_list.extern_framebuffer = std::move(previous_fb);
 				my_draw_list.draw_list.drawCalls().front().pc = std::move(previous_pc);
 
+				if (pushed_label)
+				{
+					exec.popDebugLabel();
+				}
 			}
 		}
 
