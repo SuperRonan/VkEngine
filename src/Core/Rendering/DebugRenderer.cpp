@@ -62,7 +62,9 @@ namespace vkl
 		std::vector<std::string> defs;
 		using namespace std::containers_append_operators;
 
-		if (application()->availableFeatures().mesh_shader_ext.meshShader)
+		const bool use_mesh_shader = (application()->availableFeatures().mesh_shader_ext.meshShader) && (application()->availableFeatures().mesh_shader_ext.taskShader);
+
+		if (use_mesh_shader)
 		{
 			defs += "MESH_PIPELINE 1"s;
 			_render_strings_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
