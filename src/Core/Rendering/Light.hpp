@@ -26,6 +26,11 @@ namespace vkl
 	struct LightGLSL
 	{
 		vec3 position;
+		// light flags composition:
+		// bits [00..15]: general flags
+		// - bits [00..07]: light type (id)
+		// - bit 8: enable shadow map
+		// bits [16..31]: specific flags
 		uint32_t flags;
 		vec3 emission;
 		int pad0;
@@ -41,10 +46,16 @@ namespace vkl
 
 	class Light : public VkObject
 	{
+	public:
+		static constexpr uint32_t shadowMapBitIndex()
+		{
+			return 8;	
+		}
 	protected:
 
 		LightType _type;
 		vec3 _emission;
+		bool _enable_shadow_map;
 
 	public:
 
@@ -54,6 +65,7 @@ namespace vkl
 			std::string name = {};
 			LightType type = LightType::None;
 			vec3 emission = vec3(0);
+			bool enable_shadow_map = true;
 		};
 		using CI = CreateInfo;
 
@@ -67,6 +79,18 @@ namespace vkl
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const = 0;
 
 		virtual void declareGui(GuiContext & ctx);
+
+		bool enableShadowMap()const
+		{
+			return _enable_shadow_map;
+		}
+
+		void setEnableShadowMap(bool enable = true)
+		{
+			_enable_shadow_map = enable;
+		}
+
+		virtual uint32_t flags() const;
 	};
 
 	class PointLight : public Light
@@ -83,6 +107,7 @@ namespace vkl
 			std::string name = {};
 			vec3 position = vec3(0);
 			vec3 emission = vec3(0);
+			//bool enable_shadow_map = true;
 		};
 		using CI = CreateInfo;
 
@@ -91,6 +116,8 @@ namespace vkl
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const override;
 
 		virtual void declareGui(GuiContext& ctx) override;
+
+		virtual uint32_t flags() const override;
 	};
 
 	class DirectionalLight : public Light
@@ -115,6 +142,8 @@ namespace vkl
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const override;
 
 		virtual void declareGui(GuiContext& ctx) override;
+
+		virtual uint32_t flags() const override;
 	};
 
 	class SpotLight : public Light
@@ -143,6 +172,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float fov = glm::radians(90.0f);
 			uint8_t attenuation = 0;
+			bool enable_shadow_map = true;
 		};
 		using CI = CreateInfo;
 
@@ -151,5 +181,7 @@ namespace vkl
 		virtual LightGLSL getAsGLSL(mat4 const& xform) const override;
 
 		virtual void declareGui(GuiContext& ctx) override;
+
+		virtual uint32_t flags() const override;
 	};
 }

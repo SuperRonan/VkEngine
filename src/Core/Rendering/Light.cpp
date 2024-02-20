@@ -10,9 +10,9 @@ namespace vkl
 	LightGLSL LightGLSL::MakePoint(vec3 position, vec3 emission)
 	{
 		LightGLSL res{
-				.position = position,
-				.flags = LightType::POINT,
-				.emission = emission,
+			.position = position,
+			.flags = LightType::POINT,
+			.emission = emission,
 		};
 		return res;
 	}
@@ -20,9 +20,9 @@ namespace vkl
 	LightGLSL LightGLSL::MakeDirectional(vec3 dir, vec3 emission)
 	{
 		LightGLSL res{
-				.position = dir,
-				.flags = LightType::DIRECTIONAL,
-				.emission = emission,
+			.position = dir,
+			.flags = LightType::DIRECTIONAL,
+			.emission = emission,
 		};
 		return res;
 	}
@@ -57,8 +57,19 @@ namespace vkl
 	Light::Light(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
 		_type(ci.type),
-		_emission(ci.emission)
+		_emission(ci.emission),
+		_enable_shadow_map(ci.enable_shadow_map)
 	{}
+
+	uint32_t Light::flags() const
+	{
+		uint32_t res = _type;
+		if (_enable_shadow_map)
+		{
+			res |= (1 << shadowMapBitIndex());
+		}
+		return res;
+	}
 
 	void Light::declareGui(GuiContext& ctx)
 	{
@@ -92,7 +103,6 @@ namespace vkl
 		
 		ImGui::ColorPicker3("Emission", &_emission.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR);
 
-
 		ImGui::PopID();
 	}
 
@@ -103,6 +113,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::POINT,
 			.emission = ci.emission,
+			.enable_shadow_map = false,//ci.enable_shadow_map,
 		}),
 		_position(ci.position)
 	{}
@@ -111,6 +122,13 @@ namespace vkl
 	{
 		const vec4 hpos = xform * vec4(_position, 1);
 		LightGLSL res = LightGLSL::MakePoint(vec3(hpos), _emission);
+		res.flags = flags();
+		return res;
+	}
+
+	uint32_t PointLight::flags() const
+	{
+		uint32_t res = Light::flags();
 		return res;
 	}
 
@@ -120,8 +138,11 @@ namespace vkl
 
 		ImGui::PushID(name().c_str());
 
+		ImGui::Checkbox("Enable Shadow Map", &_enable_shadow_map);
+
 		ImGui::PopID();
 	}
+
 
 
 	DirectionalLight::DirectionalLight(CreateInfo const& ci):
@@ -130,9 +151,16 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::POINT,
 			.emission = ci.emission,
+			.enable_shadow_map = false,
 		}),
 		_direction(glm::normalize(ci.direction))
 	{}
+
+	uint32_t DirectionalLight::flags()const
+	{
+		uint32_t res = Light::flags();
+		return res;
+	}
 
 	LightGLSL DirectionalLight::getAsGLSL(mat4 const& xform) const
 	{
@@ -159,6 +187,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::SPOT,
 			.emission = ci.emission,
+			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position),
 		_direction(glm::normalize(ci.direction)),
@@ -170,6 +199,13 @@ namespace vkl
 		
 	}
 
+	uint32_t SpotLight::flags()const
+	{
+		uint32_t res = Light::flags();
+		res |= ((uint32_t(_attenuation) & 0b11) << 16);
+		return res;
+	}
+
 	LightGLSL SpotLight::getAsGLSL(mat4 const& xform)const
 	{
 		LightGLSL res;
@@ -178,10 +214,7 @@ namespace vkl
 		{
 			res.emission *= 1.0 / std::max(_fov, std::numeric_limits<float>::epsilon());
 		}
-		res.flags = _type;
-		{
-			res.flags |= ((uint32_t(_attenuation) & 0b11) << 8);
-		}
+		res.flags = SpotLight::flags();
 		const mat3 dir_mat = directionMatrix(xform);
 		res.position = vec3(xform * vec4(_position, 1));
 		const vec3 direction = glm::normalize(dir_mat * _direction);
@@ -210,6 +243,9 @@ namespace vkl
 		{
 			_attenuation = gui_attenuation.index();
 		}
+
+		ImGui::Checkbox("Enable Shadow Map", &_enable_shadow_map);
+
 		ImGui::PopID();
 	}
 }
