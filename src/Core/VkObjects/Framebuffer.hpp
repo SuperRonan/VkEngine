@@ -15,6 +15,7 @@ namespace vkl
 		std::vector<std::shared_ptr<ImageViewInstance>> _textures = {};
 		std::shared_ptr<ImageViewInstance> _depth_stencil = nullptr;
 		std::shared_ptr<RenderPassInstance> _render_pass = nullptr;
+		uint32_t _layers = 1;
 		VkFramebuffer _handle = VK_NULL_HANDLE;
 
 	public:
@@ -26,6 +27,7 @@ namespace vkl
 			std::shared_ptr<RenderPassInstance> render_pass = nullptr;
 			std::vector<std::shared_ptr<ImageViewInstance>> targets = {};
 			std::shared_ptr<ImageViewInstance> depth_stencil = nullptr;
+			uint32_t layers = 1;
 		};
 		using CI = CreateInfo;
 
@@ -69,7 +71,7 @@ namespace vkl
 			return _textures;
 		}
 
-		constexpr size_t size()const
+		constexpr size_t colorSize()const
 		{
 			return textures().size();
 		}
@@ -77,6 +79,11 @@ namespace vkl
 		constexpr size_t count()const
 		{
 			return _textures.size();
+		}
+
+		constexpr uint32_t layers()const
+		{
+			return _layers;
 		}
 
 		std::shared_ptr<ImageViewInstance> const& depthStencil()const
@@ -87,6 +94,7 @@ namespace vkl
 		VkExtent3D extent()const
 		{
 			VkExtent3D res;
+			std::memset(&res, 0, sizeof(res));
 			if (!_textures.empty() && _textures[0])
 			{
 				res = _textures[0]->image()->createInfo().extent;
@@ -107,6 +115,7 @@ namespace vkl
 		// Maybe in a future version of vulkan, depth and stencil can be separate images
 		std::shared_ptr<ImageView> _depth_stencil = nullptr;
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
+		Dyn<uint32_t> _layers;
 
 		void createInstance();
 
@@ -120,6 +129,7 @@ namespace vkl
 			std::shared_ptr<RenderPass> render_pass = nullptr;
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_stencil = nullptr;
+			Dyn<uint32_t> layers = {};
 		};
 
 		using CI = CreateInfo;
@@ -150,15 +160,15 @@ namespace vkl
 			return _textures;
 		}
 
-		constexpr size_t size()const
+		constexpr size_t colorSize()const
 		{
 			return textures().size();
 		}
 
-		constexpr size_t layers()const
-		{
-			return _textures.size();
-		}
+		//constexpr size_t layers()const
+		//{
+		//	return _textures.size();
+		//}
 
 		DynamicValue<VkExtent3D> extent()const
 		{

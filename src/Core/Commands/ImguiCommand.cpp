@@ -193,7 +193,7 @@ namespace vkl
 				.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			};
 		
-			std::vector<VkAttachmentReference2> attachement_reference = { {
+			MyVector<VkAttachmentReference2> attachement_reference = { {
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
 				.pNext = nullptr,
 				.attachment = 0,

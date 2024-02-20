@@ -31,7 +31,7 @@ namespace vkl
 
 		const VkExtent2D render_area = extract(_framebuffer->extent());
 
-		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->size() + 1) : 0;
+		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->colorSize() + 1) : 0;
 
 		std::vector<VkClearValue> clear_values(num_clear_values);
 		if (num_clear_values)
@@ -39,7 +39,7 @@ namespace vkl
 			if (_clear_color.has_value())
 			{
 				const VkClearValue cv = { .color = _clear_color.value() };
-				std::fill_n(clear_values.begin(), _framebuffer->size(), cv);
+				std::fill_n(clear_values.begin(), _framebuffer->colorSize(), cv);
 			}
 			if (_clear_depth_stencil.has_value())
 			{
@@ -122,10 +122,10 @@ namespace vkl
 		const bool use_extern_fb = _framebuffer.index() == 1;
 		const uint32_t n_color = use_extern_fb ? std::get<1>(_framebuffer).color_attachments.size32() : static_cast<uint32_t>(_attachements.size());
 		
-		std::vector<RenderPass::AttachmentDescription2> at_desc(n_color);
-		std::vector<VkAttachmentReference2> at_ref(n_color);
+		MyVector<RenderPass::AttachmentDescription2> at_desc(n_color);
+		MyVector<VkAttachmentReference2> at_ref(n_color);
 
-		std::vector<VkSubpassDependency2> dependencies;
+		MyVector<VkSubpassDependency2> dependencies;
 
 
 		for (size_t i = 0; i < n_color; ++i)
@@ -319,6 +319,11 @@ namespace vkl
 			.pPreserveAttachments = nullptr,
 		};
 
+		bool multiview = false;
+		if (use_extern_fb)
+		{
+			multiview = std::get<1>(_framebuffer).multiview;
+		}
 		_render_pass = std::make_shared <RenderPass>(RenderPass::CI{
 			.app = application(),
 			.name = name() + ".RenderPass",
@@ -327,6 +332,7 @@ namespace vkl
 			.subpasses = {subpass},
 			.dependencies = dependencies,
 			.last_is_depth_stencil = depth_attachment,
+			.multiview = multiview,
 		});
 
 		if (!use_extern_fb)
@@ -358,7 +364,7 @@ namespace vkl
 		node._clear_color = _clear_color;
 		node._clear_depth_stencil = _clear_depth_stencil;
 
-		for (size_t i = 0; i < node._framebuffer->size(); ++i)
+		for (size_t i = 0; i < node._framebuffer->colorSize(); ++i)
 		{
 			const VkAttachmentDescription2 & at_desc = node._render_pass->getAttachementDescriptors2()[i];
 			VkAccessFlags2 access = VK_ACCESS_2_NONE;
@@ -505,7 +511,7 @@ namespace vkl
 			size_t res = 0;
 			if (_framebuffer.index() == 0)
 			{
-				res = std::get<0>(_framebuffer)->size();
+				res = std::get<0>(_framebuffer)->colorSize();
 			}
 			else if (_framebuffer.index() == 1)
 			{

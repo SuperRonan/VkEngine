@@ -42,6 +42,8 @@ namespace vkl
 	{
 		MyVector<AttachmentInfo> color_attachments;
 		std::optional<AttachmentInfo> detph_stencil_attchement;
+		uint32_t layers = 1;
+		bool multiview = false;
 	};
 	
 	class GraphicsCommand : public ShaderCommand

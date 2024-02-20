@@ -7,7 +7,8 @@ namespace vkl
 		AbstractInstance(ci.app, ci.name),
 		_textures(ci.targets),
 		_depth_stencil(ci.depth_stencil),
-		_render_pass(ci.render_pass)
+		_render_pass(ci.render_pass),
+		_layers(ci.layers)
 	{
 		std::vector<VkImageView> views(_textures.size());
 		for (size_t i = 0; i < _textures.size(); ++i)	views[i] = *_textures[i];
@@ -15,6 +16,7 @@ namespace vkl
 		{
 			views.push_back(*_depth_stencil);
 		}
+		VkExtent3D _extent = extent();
 		VkFramebufferCreateInfo vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.pNext = nullptr,
@@ -22,9 +24,9 @@ namespace vkl
 			.renderPass = *_render_pass,
 			.attachmentCount = static_cast<uint32_t>(views.size()),
 			.pAttachments = views.data(),
-			.width = extent().width,
-			.height = extent().height,
-			.layers = 1,
+			.width = _extent.width,
+			.height = _extent.height,
+			.layers = _layers,
 		};
 
 		VK_CHECK(vkCreateFramebuffer(device(), &vk_ci, nullptr, &_handle), "Failed to create a Framebuffer.");
@@ -74,7 +76,8 @@ namespace vkl
 		InstanceHolder<FramebufferInstance>(ci.app, ci.name),
 		_textures(ci.targets),
 		_depth_stencil(ci.depth_stencil),
-		_render_pass(ci.render_pass)
+		_render_pass(ci.render_pass),
+		_layers(ci.layers)
 	{
 		Callback cb{
 			.callback = [&]() {
@@ -83,6 +86,23 @@ namespace vkl
 			.id = this,
 		};
 		_render_pass->addInvalidationCallback(cb);
+
+		if (!_layers.hasValue())
+		{
+			_layers = [this]() {
+				uint32_t res = uint32_t(-1);
+				for (size_t i = 0; i < _textures.size(); ++i)
+				{
+					res = std::min(res, _textures[i]->range().value().layerCount);
+				}
+				if (_depth_stencil)
+				{
+					res = std::min(res, _depth_stencil->range().value().layerCount);
+				}
+				return res;
+			};
+		}
+
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
 			_textures[i]->addInvalidationCallback(cb);
@@ -102,6 +122,20 @@ namespace vkl
 	bool Framebuffer::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
+
+		if (_inst)
+		{
+			const uint32_t new_layers = _layers.value();
+			if (new_layers != _inst->layers())
+			{
+				res = true;
+			}
+
+			if (res)
+			{
+				destroyInstance();
+			}
+		}
 
 		if (!_inst)
 		{

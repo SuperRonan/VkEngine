@@ -11,12 +11,15 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<VkAttachmentDescription2> _attachement_descriptors;
-		std::vector<std::vector<VkAttachmentReference2>> _attachement_ref_per_subpass;
-		std::vector<VkSubpassDescription2> _subpasses;
-		std::vector<VkSubpassDependency2> _dependencies;
+		MyVector<VkAttachmentDescription2> _attachement_descriptors;
+		MyVector<MyVector<VkAttachmentReference2>> _attachement_ref_per_subpass;
+		MyVector<VkSubpassDescription2> _subpasses;
+		MyVector<VkSubpassDependency2> _dependencies;
 
 		bool _last_is_depth_stencil = false;
+		bool _multiview = false;
+
+		VkRenderPassCreateInfo2 _vk_ci2;
 
 		VkRenderPass _handle = VK_NULL_HANDLE;
 
@@ -30,11 +33,12 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<VkAttachmentDescription2> attachement_descriptors = {};
-			std::vector<std::vector<VkAttachmentReference2>> attachement_ref_per_subpass = {};
-			std::vector<VkSubpassDescription2> subpasses = {};
-			std::vector<VkSubpassDependency2> dependencies = {};
+			MyVector<VkAttachmentDescription2> attachement_descriptors = {};
+			MyVector<MyVector<VkAttachmentReference2>> attachement_ref_per_subpass = {};
+			MyVector<VkSubpassDescription2> subpasses = {};
+			MyVector<VkSubpassDependency2> dependencies = {};
 			bool last_is_depth_stencil = false;
+			bool multiview = false;
 		};
 		using CI = CreateInfo;
 
@@ -42,7 +46,7 @@ namespace vkl
 
 		virtual ~RenderPassInstance() override;
 
-		VkRenderPassCreateInfo2 createInfo2();
+		void makeCreateInfo();
 
 		void create(VkRenderPassCreateInfo2 const& ci);
 
@@ -105,10 +109,11 @@ namespace vkl
 
 		using ParentType = InstanceHolder<RenderPassInstance>;
 
-		std::vector<AttachmentDescription2> _attachement_descriptors;
-		std::vector<std::vector<VkAttachmentReference2>> _attachement_ref_per_subpass;
-		std::vector<VkSubpassDescription2> _subpasses;
-		std::vector<VkSubpassDependency2> _dependencies;
+		MyVector<AttachmentDescription2> _attachement_descriptors;
+		MyVector<MyVector<VkAttachmentReference2>> _attachement_ref_per_subpass;
+		MyVector<VkSubpassDescription2> _subpasses;
+		MyVector<VkSubpassDependency2> _dependencies;
+		bool _multiview;
 
 		bool _last_is_depth_stencil = false;
 
@@ -122,11 +127,12 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::vector<AttachmentDescription2> attachement_descriptors = {};
-			std::vector<std::vector<VkAttachmentReference2>> attachement_ref_per_subpass = {};
-			std::vector<VkSubpassDescription2> subpasses = {};
-			std::vector<VkSubpassDependency2> dependencies = {};
+			MyVector<AttachmentDescription2> attachement_descriptors = {};
+			MyVector<MyVector<VkAttachmentReference2>> attachement_ref_per_subpass = {};
+			MyVector<VkSubpassDescription2> subpasses = {};
+			MyVector<VkSubpassDependency2> dependencies = {};
 			bool last_is_depth_stencil = false;
+			bool multiview = false;
 			bool create_on_construct = false;
 		};
 		using CI = CreateInfo;

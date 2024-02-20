@@ -40,7 +40,7 @@ namespace vkl
 		_handle = VK_NULL_HANDLE;
 	}
 
-	VkRenderPassCreateInfo2 RenderPassInstance::createInfo2()
+	void RenderPassInstance::makeCreateInfo()
 	{
 		for (size_t i = 0; i < _subpasses.size(); ++i)
 		{
@@ -54,22 +54,25 @@ namespace vkl
 				// Should be already like this
 				_subpasses[i].pDepthStencilAttachment = nullptr;
 			}
+			if (_multiview)
+			{
+				_subpasses[i].viewMask = 0b111111; // TODO correctly (maybe the caller that fill _subpasses should do it?)
+			}
 		}
 
-		VkRenderPassCreateInfo2 res = {
+		_vk_ci2 = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
 			.pNext = nullptr,
 			.flags = 0,
-			.attachmentCount = (uint32_t)_attachement_descriptors.size(),
+			.attachmentCount = _attachement_descriptors.size32(),
 			.pAttachments = _attachement_descriptors.data(),
-			.subpassCount = (uint32_t)_subpasses.size(),
+			.subpassCount = _subpasses.size32(),
 			.pSubpasses = _subpasses.data(),
-			.dependencyCount = (uint32_t)_dependencies.size(),
+			.dependencyCount = _dependencies.size32(),
 			.pDependencies = _dependencies.data(),
 			.correlatedViewMaskCount = 0,
 			.pCorrelatedViewMasks = nullptr,
 		};
-		return res;
 	}
 
 	RenderPassInstance::RenderPassInstance(CreateInfo const& ci) :
@@ -78,9 +81,11 @@ namespace vkl
 		_attachement_ref_per_subpass(ci.attachement_ref_per_subpass),
 		_subpasses(ci.subpasses),
 		_dependencies(ci.dependencies),
-		_last_is_depth_stencil(ci.last_is_depth_stencil)
+		_last_is_depth_stencil(ci.last_is_depth_stencil),
+		_multiview(ci.multiview)
 	{
-		create(createInfo2());
+		makeCreateInfo();
+		create(_vk_ci2);
 	}
 
 
@@ -99,7 +104,8 @@ namespace vkl
 		_attachement_ref_per_subpass(ci.attachement_ref_per_subpass),
 		_subpasses(ci.subpasses),
 		_dependencies(ci.dependencies),
-		_last_is_depth_stencil(ci.last_is_depth_stencil)
+		_last_is_depth_stencil(ci.last_is_depth_stencil),
+		_multiview(ci.multiview)
 	{
 		if (ci.create_on_construct)
 		{
@@ -116,7 +122,7 @@ namespace vkl
 	{
 		assert(!_inst);
 
-		std::vector<VkAttachmentDescription2> vk_attachements;
+		MyVector<VkAttachmentDescription2> vk_attachements;
 		vk_attachements.resize(_attachement_descriptors.size());
 		for (size_t i = 0; i < vk_attachements.size(); ++i)
 		{
@@ -131,6 +137,7 @@ namespace vkl
 			.subpasses = _subpasses,
 			.dependencies = _dependencies,
 			.last_is_depth_stencil = _last_is_depth_stencil,
+			.multiview = _multiview,
 		});
 	}
 
