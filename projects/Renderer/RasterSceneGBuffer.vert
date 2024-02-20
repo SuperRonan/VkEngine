@@ -30,6 +30,8 @@ void main()
 	const mat4 o2w = mat4(vd.matrix);
 	const mat4 o2p = w2p * o2w;
 	
+
+
 	vec3 m_position = a_position;
 	
 	gl_Position = o2p * vec4(m_position, 1);

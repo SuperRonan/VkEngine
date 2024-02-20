@@ -773,7 +773,8 @@ namespace vkl
 					lid = &_unique_light_instances[path];
 					lid->unique_id = light_unique_index;
 				}
-
+				lid->flags = flags;
+				lid->frame_light_id = _num_lights;
 				
 				{
 					if (light->enableShadowMap())
@@ -795,7 +796,7 @@ namespace vkl
 								.flags = flags,
 								.type = VK_IMAGE_TYPE_2D,
 								.format = &_light_depth_format,
-								.extent = VkExtent3D{.width = _light_resolion, .height = _light_resolion, .depth = 1,},
+								.extent = [this](){return VkExtent3D{.width = _light_resolution, .height = _light_resolution, .depth = 1,}; },
 								.layers = layers,
 								.samples = &_light_depth_samples,
 								.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -828,7 +829,7 @@ namespace vkl
 				{
 					LightGLSL gl = light->getAsGLSL(matrix);
 					gl.textures.x = lid->depth_texture_unique_id;
-					_lights_buffer->set(lid->unique_id, gl);
+					_lights_buffer->set(lid->frame_light_id, gl);
 					++_num_lights;
 				}
 			}

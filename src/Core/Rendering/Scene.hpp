@@ -331,6 +331,7 @@ namespace vkl
 
 		std::shared_ptr<Buffer> _ubo_buffer;
 
+		// Per frame number of lights
 		uint32_t _num_lights;
 		std::shared_ptr<HostManagedBuffer> _lights_buffer;
 		UniqueIndexAllocator _unique_light_index_pool;
@@ -343,10 +344,12 @@ namespace vkl
 			std::shared_ptr<ImageView> depth_view;
 			std::unique_ptr<LightInstanceSpecificData> specific_data = nullptr;
 			uint32_t depth_texture_unique_id;
+			uint32_t frame_light_id;
+			uint32_t flags;
 		};
 		std::unordered_map<DAG::RobustNodePath, LightInstanceData> _unique_light_instances;
 
-		uint32_t _light_resolion = 1024 * 2;
+		uint32_t _light_resolution = 1024 * 2;
 		VkSampleCountFlagBits _light_depth_samples = VK_SAMPLE_COUNT_1_BIT;
 		VkFormat _light_depth_format = VK_FORMAT_D32_SFLOAT;
 

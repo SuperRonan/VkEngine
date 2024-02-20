@@ -204,6 +204,8 @@ namespace vkl
 			ImGui::ColorPicker3("Ambient", &_scene->_ambient.x);
 			ImGui::Checkbox("show world 3D basis", &_show_world_basis);
 			ImGui::Checkbox("show view 3D basis", &_show_view_basis);
+
+			ImGui::InputInt("Base ShadowMap resolution", (int*)&_scene->_light_resolution);
 		}
 
 		if (ImGui::CollapsingHeader("Tree"))

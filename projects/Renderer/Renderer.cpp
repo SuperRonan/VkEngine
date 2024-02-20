@@ -348,7 +348,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".RenderSpotLightDepth",
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				.cull_mode = VK_CULL_MODE_FRONT_BIT, // front because the matrix make the image upside down, which inverts the culling
+				.cull_mode = VK_CULL_MODE_FRONT_BIT, // front because the light matrix make the image flipped, which inverts the culling
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
@@ -374,7 +374,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".RenderPointLightDepth",
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				.cull_mode = VK_CULL_MODE_NONE, // front because the matrix make the image upside down, which inverts the culling
+				.cull_mode = VK_CULL_MODE_FRONT_BIT, // front because the light matrix make the image flipped, which inverts the culling
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
@@ -636,9 +636,9 @@ namespace vkl
 				{
 					std::shared_ptr<Light> const& light = path.path.back()->light();
 					LightInstanceData * my_lid = dynamic_cast<LightInstanceData*>(lid.specific_data.get());
-					if (light->enableShadowMap() && my_lid && my_lid->framebuffer)
+					if (light->enableShadowMap() && my_lid && my_lid->framebuffer && ((lid.flags & 1) != 0))
 					{
-						my_draw_list.draw_list.drawCalls().front().pc = lid.unique_id;
+						my_draw_list.draw_list.drawCalls().front().pc = lid.frame_light_id;
 						my_draw_list.extern_framebuffer = my_lid->framebuffer;
 
 						if (!pushed_label)
