@@ -60,6 +60,7 @@ namespace vkl
 			AppWithImGui::requestFeatures(features);
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 			features.features.fillModeNonSolid = VK_TRUE;
+			features.features_11.multiview = VK_TRUE;
 		}
 
 		virtual std::vector<const char* > getDeviceExtensions() override
@@ -159,33 +160,44 @@ namespace vkl
 			}
 
 			{
-				std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-					.name = "Light",
-					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 1, -1))),
-				});
-
-				if (true)
+				if (false)
 				{
+					std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+						.name = "Light",
+						.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 6, -1))),
+					});
 					light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
 						.app = this,
 						.name = "Light",
 						.direction = glm::vec3(1, 1, -1),
 						.emission = glm::vec3(1, 0.8, 0.6),
 					});
+					root->addChild(light_node);
 				}
 				else
 				{
-					light_node->light() = std::make_shared<PointLight>(PointLight::CI{
+					std::shared_ptr<PointLight> pl = std::make_shared<PointLight>(PointLight::CI{
 						.app = this,
-						.name = "Light",
+						.name = "PointLight",
 						.position = glm::vec3(0, 0, 0),
-						.emission = glm::vec3(1, 0.8, 0.6),
+						.emission = glm::vec3(1, 0.8, 0.6) * 15.0f,
+						.enable_shadow_map = true,
+						
 					});
+					int n_lights = 3;
+					for (int i = 0; i < n_lights; ++i)
+					{
+						std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+							.name = "PointLight" + std::to_string(i),
+							.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3((i - (n_lights / 2)) * 6, 6, 0))),
+						});
+						light_node->light() = pl;
+						root->addChild(light_node);
+					}
 				}
 
 				//light_node->light() = std::make_shared<Light>(Light::MakePoint(glm::vec3(0), glm::vec3(1, 1, 1)));
 
-				root->addChild(light_node);
 
 				for (int i = 0; i < 3; ++i)
 				{
@@ -193,7 +205,7 @@ namespace vkl
 					color[i] = 10;
 					std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
 						.app = this,
-						.name = "SpotLight_" + std::to_string(i),
+						.name = "SpotLight" + std::to_string(i),
 						.direction = glm::vec3(0, 0, -1),
 						.up = glm::vec3(0, 1, 0),
 						.emission = color,
@@ -209,7 +221,7 @@ namespace vkl
 						position += glm::vec3(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
 					}
 					std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-						.name = "SpotLight_" + std::to_string(i),
+						.name = "SpotLight" + std::to_string(i),
 						.matrix = glm::mat4x3(translateMatrix<4, float>(position)),
 					});
 					spot_light_node->light() = spot_light;

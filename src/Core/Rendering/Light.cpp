@@ -113,7 +113,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::POINT,
 			.emission = ci.emission,
-			.enable_shadow_map = false,//ci.enable_shadow_map,
+			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position)
 	{}

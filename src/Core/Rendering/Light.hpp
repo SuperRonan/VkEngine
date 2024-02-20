@@ -107,7 +107,7 @@ namespace vkl
 			std::string name = {};
 			vec3 position = vec3(0);
 			vec3 emission = vec3(0);
-			//bool enable_shadow_map = true;
+			bool enable_shadow_map = true;
 		};
 		using CI = CreateInfo;
 
