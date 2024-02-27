@@ -37,33 +37,31 @@ namespace vkl
 
 	struct KeyState
 	{
-		int key;
 		VWP<int> state = 0;
 
-		KeyState(int key = 0) :
-			key(key)
+		KeyState() 
 		{}
 
 		bool currentlyPressed() const
 		{
-			return state.current == GLFW_PRESS;
+			return state.current == SDL_PRESSED;
 		}
 
 		bool currentlyReleased() const
 		{
-			return state.current == GLFW_RELEASE;
+			return state.current == SDL_RELEASED;
 		}
 
 		bool justPressed() const
 		{
 			return state.delta() > 0;
-			//return state.current == GLFW_PRESS && state.prev == GLFW_RELEASE;
+			//return state.current == PRESSED && state.prev == RELEASED;
 		}
 
 		bool justReleased() const
 		{
 			return state.delta() < 0;
-			//return state.current == GLFW_RELEASE && state.prev == GLFW_PRESS;
+			//return state.current == RELEASED && state.prev == PRESSED;
 		}
 
 		KeyState& operator<<(int new_state)
@@ -73,70 +71,116 @@ namespace vkl
 		}
 	};
 
-	class InputListenerGLFW
+	// There are two types of input listeners:
+	// State based: they query a SDL_Get"device"State each frame
+	// Event based: they receive and process events to update their state
+	// Is it really necessary to have to separate sub classes? 
+
+	class InputListener
 	{
-	protected:
-
-		GLFWwindow* _window = nullptr;
-
 	public:
-
-		InputListenerGLFW(GLFWwindow * window):
-			_window(window)
-		{}
 
 		virtual void update() = 0;
 	};
 
-	class KeyboardListener : public InputListenerGLFW
+	class StateInputListener : public InputListener
+	{
+	public:
+		
+		virtual void update() override = 0;
+	};
+
+	class EventInputListener : public InputListener
+	{
+	public:
+
+		virtual bool eventIsRelevent(SDL_Event const& event) const = 0;
+
+		virtual void processEventAssumeRelevent(SDL_Event const& event) = 0;
+
+		bool processEventCheckRelevent(SDL_Event const& event)
+		{
+			bool res = false;
+			if (eventIsRelevent(event))
+			{
+				res = true;
+				processEventAssumeRelevent(event);
+			}
+			return res;
+		}
+
+		virtual void update() override = 0;
+	};
+
+
+	class KeyboardStateListener : public StateInputListener
 	{
 	protected:
 
+		static constexpr int MaxKey()
+		{
+			return SDL_SCANCODE_RGUI + 1;
+		}
+
 		std::vector<KeyState> _keys;
+		SDL_Window * _focus = nullptr;
 
 	public:
 
-		KeyboardListener(GLFWwindow* window);
+		KeyboardStateListener();
 
-		virtual void update() override;
-
+		virtual void update() override final;
 
 		const KeyState& getKey(int k)const
 		{
+			assert(k < _keys.size());
 			return _keys[k];
+		}
+
+		SDL_Window* focus()const
+		{
+			return _focus;
 		}
 	};
 
-	class MouseListener : public InputListenerGLFW
+	// 
+	class MouseEventListener : public EventInputListener
 	{
 	protected:
 
-		static glm::dvec2 s_scroll;
-
-		static void mouseScrollCallback(GLFWwindow* window, double x, double y);
-
 		VWP<glm::vec2> _scroll = glm::vec2(0);
-
+		glm::vec2 _event_scroll_accumulation = glm::vec2(0);
+		
 		VWP<glm::vec2> _mouse_pos = glm::vec2(0);
+		VWP<glm::vec2> _mouse_motion = glm::vec2(0);
+		glm::vec2 _latest_event_pos = glm::vec2(0);
+		glm::vec2 _event_motion_accumulation = glm::vec2(0);
 
-		VWP<bool> _focus = false;
-		VWP<bool> _hovered = false;
+		struct MyButtonState
+		{
+			KeyState key;
+			glm::vec2 pressed_pos;
+			glm::vec2 released_pos;
+			int latest_event_value;
+		};
 
-		std::vector<KeyState> _keys;
+		std::vector<MyButtonState> _buttons;
 
-		// just preseed and just released
-		std::vector<glm::vec2> _pressed_pos;
-		std::vector<glm::vec2> _released_pos;
+		SDL_Window * _focus = nullptr;
 
 	public:
 
-		MouseListener(GLFWwindow* window);
+		MouseEventListener();
 
-		virtual void update() override;
+		virtual void update() override final;
+
+		virtual bool eventIsRelevent(SDL_Event const& event) const override final;
+
+		virtual void processEventAssumeRelevent(SDL_Event const& event) override final;
 
 		const KeyState& getButton(int b)const
 		{
-			return _keys[b];
+			return _buttons[b].key;
 		}
 
 		const VWP<glm::vec2>& getScroll()const
@@ -149,22 +193,33 @@ namespace vkl
 			return _mouse_pos;
 		}
 
+		const glm::vec2 getMotion()const
+		{
+			return _mouse_motion.current;
+		}
+
 		glm::vec2 getPressedPos(int b)const
 		{
-			return _pressed_pos[b];
+			return _buttons[b].pressed_pos;
 		}
 
 		glm::vec2 getReleasedPos(int b)const
 		{
-			return _released_pos[b];
+			return _buttons[b].released_pos;
+		}
+
+		SDL_Window* focus()const
+		{
+			return _focus;
 		}
 	};
 
-	class GamepadListener : public InputListenerGLFW
+	class GamepadListener : public EventInputListener
 	{
 	protected:
 
-		int _joystick = 0;
+		SDL_GameController * _sdl_handle = nullptr;
+
 		std::vector<KeyState> _buttons;
 		
 		float _deadzone = 1e-1;
@@ -172,7 +227,9 @@ namespace vkl
 
 	public:
 
-		GamepadListener(GLFWwindow* window, int jid);
+		static SDL_GameController* FindController();
+
+		GamepadListener();
 
 
 		virtual void update() override;
@@ -186,5 +243,9 @@ namespace vkl
 		{
 			return _axis[a];
 		}
+
+		virtual bool eventIsRelevent(SDL_Event const& event) const override final;
+
+		virtual void processEventAssumeRelevent(SDL_Event const& event) override final;
 	};
 }

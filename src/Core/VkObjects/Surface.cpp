@@ -6,8 +6,8 @@ namespace vkl
 	void Surface::create()
 	{
 		assert(_surface == VK_NULL_HANDLE);
-
-		VK_CHECK(glfwCreateWindowSurface(_app->instance(), _window, nullptr, &_surface), "Failed to create a surface.");
+		SDL_bool res =  SDL_Vulkan_CreateSurface(_window, _app->instance(), &_surface);
+		assertm(res, "Failed to create a surface.");
 		queryDetails();
 	}
 

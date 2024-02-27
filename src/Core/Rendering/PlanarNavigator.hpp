@@ -22,7 +22,7 @@ namespace vkl
 
 		PlanarNavigator(vec2 const t = vec2(0), Float zoom = 1);
 
-		void update(Float screen_scale, MouseListener * mouse, KeyboardListener * keyboard, GamepadListener * gamepad);
+		void update(Float screen_scale, MouseEventListener * mouse, KeyboardStateListener * keyboard, GamepadListener * gamepad);
 
 		mat3 getWorldToView() const;
 

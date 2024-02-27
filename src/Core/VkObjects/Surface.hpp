@@ -12,7 +12,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			GLFWwindow* window = nullptr;
+			SDL_Window* window = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -25,7 +25,7 @@ namespace vkl
 
 	protected:
 
-		GLFWwindow* _window = nullptr;
+		SDL_Window* _window = nullptr;
 		VkSurfaceKHR _surface = VK_NULL_HANDLE;
 
 		SwapchainSupportDetails _details;

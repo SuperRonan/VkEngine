@@ -174,7 +174,7 @@ namespace vkl
 
 		void queryDescriptorBindingOptions();
 
-		void initGLFW();
+		void initSDL();
 
 		virtual void init();
 

@@ -143,9 +143,10 @@ namespace vkl
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
 	{
-		uint32_t glfw_ext_count = 0;
-		const char** glfw_exts = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
-		std::vector<const char*> extensions(glfw_exts, glfw_exts + glfw_ext_count);
+		uint32_t sdl_ext_count = 0;
+		SDL_Vulkan_GetInstanceExtensions(nullptr, &sdl_ext_count, nullptr);
+		std::vector<const char*> extensions(sdl_ext_count, nullptr);
+		SDL_Vulkan_GetInstanceExtensions(nullptr, &sdl_ext_count, extensions.data());
 		if (_options.enable_validation || _options.enable_object_naming || _options.enable_command_buffer_labels)
 		{
 			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -669,9 +670,18 @@ namespace vkl
 		return _empty_set_layout;
 	}
 
-	void VkApplication::initGLFW()
+	void VkApplication::initSDL()
 	{
-		glfwInit();
+		uint32_t init = 0;
+		init |= SDL_INIT_VIDEO;
+		init |= SDL_INIT_EVENTS;
+		init |= SDL_INIT_GAMECONTROLLER;
+		if (SDL_Init(init) < 0)
+		{
+			std::cout << SDL_GetError() << std::endl;
+			exit(-1);
+		}
+		SDL_Vulkan_LoadLibrary(nullptr);
 	}
 
 	VkApplication::VkApplication(CreateInfo const& ci) :
@@ -726,7 +736,7 @@ namespace vkl
 
 	void VkApplication::init()
 	{
-		initGLFW();
+		initSDL();
 		preChecks();
 
 		requestFeatures(_requested_features);
@@ -777,7 +787,8 @@ namespace vkl
 
 		vkDestroyInstance(_instance, nullptr);
 
-		glfwTerminate();
+		SDL_Vulkan_UnloadLibrary();
+		SDL_Quit();
 		
 		{
 			if (_thread_pool->waitAll())

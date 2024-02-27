@@ -63,37 +63,15 @@ namespace vkl
 
 		uint32_t _width, _height;
 		Mode _window_mode = Mode::MAX_ENUM;
-		GLFWwindow* _window;
+		SDL_Window* _window;
 
 		bool _resizeable = false;
 
 		int _window_pos_x, _window_pos_y;
 		int _latest_windowed_width, _latest_windowed_height;
 
-		struct DetailedMonitor
-		{
-			GLFWmonitor * handle;
-			
-			std::string name;
-			ivec2 position;
-			ivec2 pixel_size;
-			ivec2 physical_size;
-			float2 scale;
-			GLFWvidmode default_vidmode;
-			GLFWvidmode current_vidmode;
-			std::vector<GLFWvidmode> available_video_modes;
-			const GLFWvidmode * video_mode;
-
-			float gamma;
-
-			void query();
-
-			void setGamma(float gamma);
-		};
-
-
-		std::vector<DetailedMonitor> _monitors = {};
-		size_t _selected_monitor_index = 0;
+		int _desired_monitor_index = 0;
+		int _desired_display_mode_index = 0;
 
 		std::shared_ptr<Surface> _surface = nullptr;
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
@@ -106,8 +84,10 @@ namespace vkl
 
 		std::set<uint32_t> _queues_families_indices;
 
-		bool _glfw_resized = false;
+		bool _sdl_resized = false;
 		bool _gui_resized = false;
+
+		bool _should_close = false;
 
 		size_t _current_frame = 0;
 		// Of size swapchain (One per swap image)
@@ -137,9 +117,11 @@ namespace vkl
 		std::chrono::time_point<std::chrono::system_clock> _present_time_point = std::chrono::system_clock::now();
 		size_t _present_frame = 0;
 
-		static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
+		static void frameBufferResizeCallback(SDL_Window* window, int width, int height);
 
-		void initGLFW(std::string const& name, int resizeable);
+		void initSDL();
+
+		void preventFlickerWhenFullscreen();
 
 		void createSwapchain();
 
@@ -158,7 +140,6 @@ namespace vkl
 
 		void saveWindowedAttributes();
 
-
 	public:
 
 
@@ -175,9 +156,16 @@ namespace vkl
 
 		virtual ~VkWindow();
 
-		bool shouldClose()const;
+		bool shouldClose()const
+		{
+			return _should_close;
+		}
 
-		void pollEvents();
+		bool eventIsRelevent(SDL_Event const& event) const;
+
+		bool processEventCheckRelevent(SDL_Event const& event);
+
+		void processEventAssumeRelevent(SDL_Event const& event);
 
 		void updateWindowIFP();
 
@@ -211,12 +199,12 @@ namespace vkl
 			return _swapchain->extent();
 		}
 
-		constexpr operator GLFWwindow* ()const
+		constexpr operator SDL_Window* ()const
 		{
 			return _window;
 		}
 
-		constexpr GLFWwindow* handle()const
+		constexpr SDL_Window* handle()const
 		{
 			return _window;
 		}

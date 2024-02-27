@@ -73,7 +73,7 @@ namespace vkl
 		_gamepad(ci.gamepad)
 	{}
 
-	void FirstPersonCameraController::updateCamera(float dt, MouseListener* mouse, KeyboardListener* keyboard, GamepadListener* gamepad)
+	void FirstPersonCameraController::updateCamera(float dt, MouseEventListener* mouse, KeyboardStateListener* keyboard, GamepadListener* gamepad)
 	{
 		Camera::CameraDelta delta;
 
@@ -118,32 +118,32 @@ namespace vkl
 
 		if (mouse)
 		{
-			if (mouse->getButton(GLFW_MOUSE_BUTTON_LEFT).currentlyPressed())
+			if (mouse->getButton(SDL_BUTTON_LEFT).currentlyPressed())
 			{
 				delta.angle += mouse->getPos().delta() * _mouse_sensitivity;
 			}
-
+			
 			delta.fov *= exp2(-mouse->getScroll().current.y * _fov_sensitivity);
 		}
 
 		if (gamepad)
 		{
-			delta.movement.x += gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_X).current;
-			delta.movement.z -= gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_Y).current;
+			delta.movement.x += gamepad->getAxis(SDL_CONTROLLER_AXIS_LEFTX).current;
+			delta.movement.z -= gamepad->getAxis(SDL_CONTROLLER_AXIS_LEFTY).current;
 
-			if (gamepad->getButton(GLFW_GAMEPAD_BUTTON_CROSS).currentlyPressed())
+			if (gamepad->getButton(SDL_CONTROLLER_BUTTON_A).currentlyPressed())
 			{
 				delta.movement.y += 1;
 			}
-			if (gamepad->getButton(GLFW_GAMEPAD_BUTTON_CIRCLE).currentlyPressed())
+			if (gamepad->getButton(SDL_CONTROLLER_BUTTON_B).currentlyPressed())
 			{
 				delta.movement.y -= 1;
 			}
 
-			delta.angle.x += gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_X).current * dt * _joystick_sensitivity;
-			delta.angle.y += gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_Y).current * dt * _joystick_sensitivity;
+			delta.angle.x += gamepad->getAxis(SDL_CONTROLLER_AXIS_RIGHTX).current * dt * _joystick_sensitivity;
+			delta.angle.y += gamepad->getAxis(SDL_CONTROLLER_AXIS_RIGHTY).current * dt * _joystick_sensitivity;
 
-			float fov_zoom = gamepad->getAxis(GLFW_GAMEPAD_AXIS_LEFT_TRIGGER).current - gamepad->getAxis(GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER).current;
+			float fov_zoom = gamepad->getAxis(SDL_CONTROLLER_AXIS_TRIGGERLEFT).current - gamepad->getAxis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT).current;
 			delta.fov *= exp(fov_zoom * _fov_sensitivity * dt * 1e1);
 		}
 

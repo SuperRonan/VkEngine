@@ -30,16 +30,30 @@ set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${THAT_LIB_INCLUDE_DIR})
 
 
 # GLFW
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(ext/glfw)
+# set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+# set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# add_subdirectory(ext/glfw)
 
-set(GLFW_INCLUDE_DIRS ext/glfw/include)
-set(GLFW_LIBS "glfw")
+# set(GLFW_INCLUDE_DIRS ext/glfw/include)
+# set(GLFW_LIBS "glfw")
 
-set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${GLFW_LIBS})
-set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${GLFW_INCLUDE_DIRS})
+# set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${GLFW_LIBS})
+# set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${GLFW_INCLUDE_DIRS})
+
+# SDL (2)
+# TODO Maybe not require SDL2 -> we can still use the engine, but without any functionality provided by SDL 
+add_subdirectory(ext/SDL)
+# set(SDL_DIRECTX OFF)
+# set(SDL_OPENGL OFF)
+# set(SDL_OPENGLES OFF)
+# set(SDL_RENDER OFF)
+# set(SDL_RENDERD3D OFF)
+# set(SDL_VULKAN ON)
+set(SDL2_LIBRARIES SDL2-static)
+set(SDL2_INCLUDE_DIRS ext/SDL/include)
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${SDL2_LIBRARIES})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${SDL2_INCLUDE_DIRS})
 
 # GLM
 add_subdirectory(ext/glm)
@@ -128,11 +142,11 @@ file(GLOB IMGUI_SOURCES
 "${IMGUI_DIR}imgui_tables.cpp"
 
 "${IMGUI_DIR}backends/imgui_impl_vulkan.cpp"
-"${IMGUI_DIR}backends/imgui_impl_glfw.cpp"
+"${IMGUI_DIR}backends/imgui_impl_sdl2.cpp"
 "${IMGUI_DIR}backends/imgui_impl_win32.cpp"
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES} ${GLFW_INCLUDE_DIRS})
+target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES} ${SDL2_INCLUDE_DIRS})
 
 set(IMGUI_LIBS imgui)
 

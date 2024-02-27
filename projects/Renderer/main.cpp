@@ -1,4 +1,4 @@
-
+#define SDL_MAIN_HANDLED
 
 #include <Core/App/ImGuiApp.hpp>
 
@@ -238,6 +238,7 @@ namespace vkl
 			_desired_window_options.name = PROJECT_NAME;
 			_desired_window_options.queue_families_indices = std::set({ _queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value() });
 			_desired_window_options.resizeable = true;
+			//_desired_window_options.mode = VkWindow::Mode::WindowedFullscreen;
 			createMainWindow();
 			initImGui();
 
@@ -346,31 +347,22 @@ namespace vkl
 			};
 			stat_records.createCommonRecords(frame_counters);
 
-			struct InputState
-			{
-				
-			};
-			InputState input_state;
+			//for (int jid = 0; jid <= GLFW_JOYSTICK_LAST; ++jid)
+			//{
+			//	if (glfwJoystickPresent(jid))
+			//	{
+			//		std::cout << "Joystick " << jid << ": " << glfwGetJoystickName(jid) << std::endl;
+			//	}
+			//}
 
-			for (int jid = 0; jid <= GLFW_JOYSTICK_LAST; ++jid)
-			{
-				if (glfwJoystickPresent(jid))
-				{
-					std::cout << "Joystick " << jid << ": " << glfwGetJoystickName(jid) << std::endl;
-				}
-			}
+			KeyboardStateListener keyboard;
+			MouseEventListener mouse;
+			GamepadListener gamepad;
 
-			KeyboardListener keyboard(*_main_window);
-			MouseListener mouse(*_main_window);
-			GamepadListener gamepad(*_main_window, 0);
+			std::chrono::steady_clock clock;
+			decltype(clock)::time_point clock_zero = clock.now();
 
-			const auto process_input = [&](InputState& state)
-			{
-				if (glfwGetKey(*_main_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-					glfwSetWindowShouldClose(*_main_window, true);
-			};
-
-			double t = glfwGetTime(), dt = 0.0;
+			double t = 0, dt = 0.0;
 			size_t frame_index = 0;
 
 			Camera camera(Camera::CreateInfo{
@@ -389,25 +381,34 @@ namespace vkl
 			while (!_main_window->shouldClose())
 			{
 				{
-					double new_t = glfwGetTime();
+					double new_t = std::chrono::duration<double>(clock.now() - clock_zero).count();
 					dt = new_t - t;
 					t = new_t;
 				}
-				_main_window->pollEvents();
-
 				const auto& imgui_io = ImGui::GetIO();
-				
-				if(!imgui_io.WantCaptureKeyboard)
+				{
+					SDL_Event event;
+					while (SDL_PollEvent(&event))
+					{
+						ImGui_ImplSDL2_ProcessEvent(&event);
+						if(!imgui_io.WantCaptureKeyboard)
+						{
+						}
+						if(!imgui_io.WantCaptureMouse)
+						{
+							mouse.processEventCheckRelevent(event);
+						}
+						gamepad.processEventCheckRelevent(event);
+						_main_window->processEventCheckRelevent(event);
+					}
+				}
+
+				if (!imgui_io.WantCaptureKeyboard)
 				{
 					keyboard.update();
 				}
-				if(!imgui_io.WantCaptureMouse)
-				{
-					mouse.update();
-				}
-				
+				mouse.update();
 				gamepad.update();
-				process_input(input_state);
 				camera_controller.updateCamera(dt);
 
 				{
@@ -452,9 +453,9 @@ namespace vkl
 					endImGuiFrame(gui_ctx);
 				}
 
-				if(mouse.getButton(1).justReleased())
+				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{
-					pip.setPosition(mouse.getReleasedPos(1) / glm::vec2(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
+					pip.setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / glm::vec2(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
 				}
 
 				frame_counters.reset();

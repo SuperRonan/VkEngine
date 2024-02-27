@@ -1147,7 +1147,7 @@ namespace vkl
 	{
 		_cmd = cmd;
 		std::fill(_bound_descriptor_sets.begin(), _bound_descriptor_sets.end(), nullptr);
-		std::fill(_vk_sets.begin(), _vk_sets.end(), VK_NULL_HANDLE);
+		std::fill(_vk_sets.begin(), _vk_sets.end(), VkDescriptorSet(VK_NULL_HANDLE));
 		_bindings_ranges.clear();
 	}
 

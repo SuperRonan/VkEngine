@@ -10,7 +10,7 @@ namespace vkl
 		_zoom(zoom)
 	{}
 
-	void PlanarNavigator::update(Float screen_scale, MouseListener* mouse, KeyboardListener* keyboard, GamepadListener* gamepad)
+	void PlanarNavigator::update(Float screen_scale, MouseEventListener* mouse, KeyboardStateListener* keyboard, GamepadListener* gamepad)
 	{
 		vec2 delta = vec2(0);
 		vec2 zoom_center; // TODO
@@ -21,7 +21,7 @@ namespace vkl
 			float scroll = mouse->getScroll().current.y;
 			zoom_mult *= std::exp2(scroll * 0.1);
 
-			const auto& mouse_left = mouse->getButton(GLFW_MOUSE_BUTTON_LEFT);
+			const auto& mouse_left = mouse->getButton(SDL_BUTTON_LEFT);
 			if (mouse_left.currentlyPressed())
 			{
 				vec2 mouse_delta = mouse->getPos().delta();

@@ -141,7 +141,7 @@ namespace vkl
 			_camera(camera)
 		{}
 
-		virtual void updateCamera(float dt, MouseListener * mouse = nullptr, KeyboardListener * keyboard = nullptr, GamepadListener * gamepad = nullptr) = 0;
+		virtual void updateCamera(float dt, MouseEventListener * mouse = nullptr, KeyboardStateListener * keyboard = nullptr, GamepadListener * gamepad = nullptr) = 0;
 
 	};
 
@@ -149,16 +149,16 @@ namespace vkl
 	{
 	protected:
 
-		KeyboardListener* _keyboard = nullptr;
-		MouseListener* _mouse = nullptr;
+		KeyboardStateListener* _keyboard = nullptr;
+		MouseEventListener* _mouse = nullptr;
 		GamepadListener* _gamepad = nullptr;
 
-		int _key_forward = GLFW_KEY_W;
-		int _key_backward = GLFW_KEY_S;
-		int _key_left = GLFW_KEY_A;
-		int _key_right = GLFW_KEY_D;
-		int _key_upward = GLFW_KEY_SPACE;
-		int _key_downward = GLFW_KEY_LEFT_CONTROL;
+		int _key_forward = SDL_SCANCODE_W;
+		int _key_backward = SDL_SCANCODE_S;
+		int _key_left = SDL_SCANCODE_A;
+		int _key_right = SDL_SCANCODE_D;
+		int _key_upward = SDL_SCANCODE_SPACE;
+		int _key_downward = SDL_SCANCODE_LCTRL;
 
 		float _movement_speed = 1;
 		float _mouse_sensitivity = 5e-3;
@@ -170,8 +170,8 @@ namespace vkl
 		struct CreateInfo
 		{
 			Camera* camera = nullptr;
-			KeyboardListener* keyboard = nullptr;
-			MouseListener* mouse = nullptr;
+			KeyboardStateListener* keyboard = nullptr;
+			MouseEventListener* mouse = nullptr;
 			GamepadListener* gamepad = nullptr;
 		};
 
@@ -182,6 +182,6 @@ namespace vkl
 			return _key_upward;
 		}
 
-		virtual void updateCamera(float dt, MouseListener* mouse = nullptr, KeyboardListener* keyboard = nullptr, GamepadListener* gamepad = nullptr) override;
+		virtual void updateCamera(float dt, MouseEventListener* mouse = nullptr, KeyboardStateListener* keyboard = nullptr, GamepadListener* gamepad = nullptr) override;
 	};
 }

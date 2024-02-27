@@ -1,31 +1,58 @@
 #include "VkWindow.hpp"
 #include "imgui.h"
 #include <algorithm>
+#include <format>
+
+#include <SDL_video.h>
+#include <SDL_syswm.h>
 
 namespace vkl
 {
-	void VkWindow::frameBufferResizeCallback(GLFWwindow* window, int width, int height)
+	void VkWindow::frameBufferResizeCallback(SDL_Window* window, int width, int height)
 	{
-		VkWindow* vk_window = reinterpret_cast<VkWindow*>(glfwGetWindowUserPointer(window));
-		vk_window->_glfw_resized = true;
+		VkWindow* vk_window = reinterpret_cast<VkWindow*>(SDL_GetWindowData(window, nullptr));
+		vk_window->_sdl_resized = true;
 	}
 
-	void VkWindow::initGLFW(std::string const& name, int resizeable)
+
+	void VkWindow::preventFlickerWhenFullscreen()
 	{
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_RESIZABLE, resizeable);
+#if _WIN32
+		// Prevent flickering when changing focus in fullscreen
+		// Thanks to http://forum.lwjgl.org/index.php?topic=4785.0
+		SDL_SysWMinfo info;
+		SDL_VERSION(&info.version);
+		SDL_GetWindowWMInfo(_window, &info);
+		HWND hwnd = info.info.win.window;
+		LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
+		style &= ~WS_POPUP;
+		SetWindowLongPtr(hwnd, GWL_STYLE, style);
+#endif
+	}
 
-		DetailedMonitor & monitor = _monitors[_selected_monitor_index];
-		glfwWindowHint(GLFW_RED_BITS, monitor.default_vidmode.redBits);
-		glfwWindowHint(GLFW_GREEN_BITS, monitor.default_vidmode.greenBits);
-		glfwWindowHint(GLFW_BLUE_BITS, monitor.default_vidmode.blueBits);
-		glfwWindowHint(GLFW_REFRESH_RATE, monitor.default_vidmode.refreshRate);
-		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+	void VkWindow::initSDL()
+	{
+		uint32_t flags = 0;
+		flags |= SDL_WINDOW_VULKAN;
+		if (_resizeable)
+		{
+			flags |= SDL_WINDOW_RESIZABLE;
+		}
+		switch (_window_mode)
+		{
+		case Mode::Fullscreen:
+			flags |= SDL_WINDOW_FULLSCREEN;
+		break;
+		case Mode::WindowedFullscreen:
+			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+		break;
+		}
+		_window = SDL_CreateWindow(name().c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _width, _height, flags);
 
-		_window = glfwCreateWindow(_width, _height, name.c_str(), nullptr, nullptr);
-		glfwSetWindowUserPointer(_window, this); // Map _window to this
-		if (resizeable)
-			glfwSetFramebufferSizeCallback(_window, frameBufferResizeCallback);
+		if (_window_mode != Mode::Windowed)
+		{
+			preventFlickerWhenFullscreen();
+		}
 
 		saveWindowedAttributes();
 
@@ -145,29 +172,6 @@ namespace vkl
 		});
 	}
 
-	void VkWindow::DetailedMonitor::query()
-	{
-		name = glfwGetMonitorName(handle);
-		glfwGetMonitorWorkarea(handle, &position.x, &position.y, &pixel_size.x, &pixel_size.y);
-		glfwGetMonitorPhysicalSize(handle, &physical_size.x, &physical_size.y);
-		glfwGetMonitorContentScale(handle, &scale.x, &scale.y);
-
-		default_vidmode = *glfwGetVideoMode(handle);
-		current_vidmode = default_vidmode;
-
-		int n_modes;
-		const GLFWvidmode * modes = glfwGetVideoModes(handle, &n_modes);
-		available_video_modes.resize(n_modes);
-		std::copy_n(modes, n_modes, available_video_modes.data());
-		video_mode = glfwGetVideoMode(handle);
-	}
-
-	void VkWindow::DetailedMonitor::setGamma(float gamma)
-	{
-		this->gamma = gamma;
-		glfwSetGamma(handle, gamma);
-	}
-
 	void VkWindow::init(CreateInfo const& ci)
 	{
 		_queues_families_indices = ci.queue_families_indices;
@@ -211,15 +215,16 @@ namespace vkl
 		_desired_window_mode = ci.mode;
 
 		{
-			int monitor_count;
-			GLFWmonitor ** monitors = glfwGetMonitors(&monitor_count);
-			_monitors.resize(monitor_count);
-			std::vector<std::string> monitor_names(monitor_count);
-			for (size_t i = 0; i < _monitors.size(); ++i)
-			{
-				_monitors[i].handle = monitors[i];
-				_monitors[i].query();
-			}
+			// TODO
+			//int monitor_count;
+			//GLFWmonitor ** monitors = glfwGetMonitors(&monitor_count);
+			//_monitors.resize(monitor_count);
+			//std::vector<std::string> monitor_names(monitor_count);
+			//for (size_t i = 0; i < _monitors.size(); ++i)
+			//{
+			//	_monitors[i].handle = monitors[i];
+			//	_monitors[i].query();
+			//}
 		}
 
 		_dynamic_extent = [&]() {
@@ -230,7 +235,7 @@ namespace vkl
 			};
 		};
 
-		initGLFW(ci.name, _resizeable);
+		initSDL();
 		
 		setupGuiObjects();
 
@@ -242,7 +247,7 @@ namespace vkl
 	{
 		_latest_windowed_width = _width;
 		_latest_windowed_height = _height;
-		glfwGetWindowPos(_window, &_window_pos_x, &_window_pos_y);
+		//glfwGetWindowPos(_window, &_window_pos_x, &_window_pos_y);
 	}
 
 	void VkWindow::updateWindowIFP()
@@ -265,37 +270,43 @@ namespace vkl
 			vkDeviceWaitIdle(_app->device());
 			if (_desired_window_mode == Mode::Windowed)
 			{
-				glfwSetWindowMonitor(_window, nullptr, _window_pos_x, _window_pos_y, _latest_windowed_width, _latest_windowed_height, 0);
+				SDL_SetWindowFullscreen(_window, 0);
 			}
 			else
 			{
 				saveWindowedAttributes();
 
-				DetailedMonitor& monitor = _monitors[_selected_monitor_index];
-
+				uint32_t flags = 0;
 				if (_desired_window_mode == Mode::WindowedFullscreen)
 				{
-					_width = monitor.default_vidmode.width;
-					_height = monitor.default_vidmode.height;
-					glfwSetWindowMonitor(_window, nullptr, 0, 0, monitor.default_vidmode.width, monitor.default_vidmode.height, monitor.default_vidmode.refreshRate);
-					glfwSetWindowSize(_window, monitor.default_vidmode.width, monitor.default_vidmode.height);
+					flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 				}
+				else if (_desired_window_mode == Mode::Fullscreen)
+				{
+					flags |= SDL_WINDOW_FULLSCREEN;
+				}
+				SDL_SetWindowFullscreen(_window, flags);
+				
+				preventFlickerWhenFullscreen();
+				//SDL_SetWindowBordered(_window, SDL_TRUE);
+				//SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+
+				VKL_BREAKPOINT_HANDLE;
 			}
+			
 			_window_mode = _desired_window_mode;
 			_gui_resized = false;
-			_glfw_resized = false;
+			_sdl_resized = false;
 		}
 		else
 		{
-			if (_glfw_resized)
+			if (_sdl_resized)
 			{
 				int width = 0, height = 0;
-				glfwGetFramebufferSize(_window, &width, &height);
-				while (width == 0 || height == 0)
-				{
-					glfwWaitEvents();
-					glfwGetFramebufferSize(_window, &width, &height);
-				}
+				SDL_GetWindowSize(_window, &width, &height);
+				// What if width of height == 0?
+				//while (width == 0 || height == 0)
+				//	glfwWaitEvents();
 
 				// I don't think it is necessary to do it, but for now we have some validation errors if we don't
 				vkDeviceWaitIdle(_app->device());
@@ -304,7 +315,7 @@ namespace vkl
 
 				_width = width;
 				_height = height;
-				_glfw_resized = false;
+				_sdl_resized = false;
 			}
 			else if (_gui_resized)
 			{
@@ -312,8 +323,8 @@ namespace vkl
 				
 				_width = static_cast<uint32_t>(_desired_resolution[0]);
 				_height = static_cast<uint32_t>(_desired_resolution[1]);
-				glfwSetWindowSize(_window, _desired_resolution[0], _desired_resolution[1]);
-				_glfw_resized = false;
+				SDL_SetWindowSize(_window, _desired_resolution[0], _desired_resolution[1]);
+				_sdl_resized = false;
 				_gui_resized = false;
 			}
 		}
@@ -342,8 +353,10 @@ namespace vkl
 		_surface = nullptr;
 		
 		if (_window)
-			glfwDestroyWindow(_window);
-		_window = nullptr;
+		{
+			SDL_DestroyWindow(_window);
+			_window = nullptr;
+		}
 	}
 
 	VkWindow::VkWindow(CreateInfo const& ci) :
@@ -357,14 +370,61 @@ namespace vkl
 		cleanup();
 	}
 
-	bool VkWindow::shouldClose()const
+	bool VkWindow::eventIsRelevent(SDL_Event const& event) const
 	{
-		return glfwWindowShouldClose(_window);
+		return (event.type == SDL_EventType::SDL_WINDOWEVENT) && (SDL_GetWindowFromID(event.window.windowID) == _window);
 	}
 
-	void VkWindow::pollEvents()
+	bool VkWindow::processEventCheckRelevent(SDL_Event const& event)
 	{
-		glfwPollEvents();
+		bool res = false;
+		if (eventIsRelevent(event))
+		{
+			res = true;
+			processEventAssumeRelevent(event);	
+		}
+		return res;
+	}
+
+	void VkWindow::processEventAssumeRelevent(SDL_Event const& event)
+	{
+		SDL_WindowEvent const& wevent = event.window;
+		switch (wevent.event)
+		{
+		case SDL_WindowEventID::SDL_WINDOWEVENT_CLOSE:
+			_should_close = true;
+			break;
+		case SDL_WINDOWEVENT_RESIZED:
+			_desired_resolution = glm::ivec2(wevent.data1, wevent.data2);
+			_sdl_resized = true;
+		break;
+		}
+
+		//if (false)
+		//{
+		//	const char * events_name[] = { 
+		//		"SDL_WINDOWEVENT_NONE",   
+		//		"SDL_WINDOWEVENT_SHOWN",          
+		//		"SDL_WINDOWEVENT_HIDDEN",         
+		//		"SDL_WINDOWEVENT_EXPOSED",        
+		//		"SDL_WINDOWEVENT_MOVED",          
+		//		"SDL_WINDOWEVENT_RESIZED",        
+		//		"SDL_WINDOWEVENT_SIZE_CHANGED",   
+		//		"SDL_WINDOWEVENT_MINIMIZED",      
+		//		"SDL_WINDOWEVENT_MAXIMIZED",      
+		//		"SDL_WINDOWEVENT_RESTORED",       
+		//		"SDL_WINDOWEVENT_ENTER",          
+		//		"SDL_WINDOWEVENT_LEAVE",          
+		//		"SDL_WINDOWEVENT_FOCUS_GAINED",   
+		//		"SDL_WINDOWEVENT_FOCUS_LOST",     
+		//		"SDL_WINDOWEVENT_CLOSE",          
+		//		"SDL_WINDOWEVENT_TAKE_FOCUS",     
+		//		"SDL_WINDOWEVENT_HIT_TEST",       
+		//		"SDL_WINDOWEVENT_ICCPROF_CHANGED",
+		//		"SDL_WINDOWEVENT_DISPLAY_CHANGED" 
+		//	};
+		//	std::cout << "Window event: " << events_name[wevent.event] << std::endl;
+		//}
 	}
 
 	std::shared_ptr<Image> VkWindow::image(uint32_t index)
@@ -456,7 +516,7 @@ namespace vkl
 				const int fps = (1000 * (_current_frame - _present_frame)) / float(dt_ms.count());
 
 				std::string name_to_set = name() + " [" + std::to_string(fps) + " fps]";
-				glfwSetWindowTitle(_window, name_to_set.c_str());
+				SDL_SetWindowTitle(_window, name_to_set.c_str());
 				_present_time_point = now;
 				_present_frame = _current_frame;
 
@@ -474,6 +534,33 @@ namespace vkl
 
 		res |= _swapchain->updateResources(ctx);
 		return res;
+	}
+
+	std::string GetSDLDisplayModeAsStringWithFormat(SDL_DisplayMode const dm)
+	{
+		const char * fmt_name = SDL_GetPixelFormatName(dm.format);
+		std::string res = std::format("{}, {}x{} @ {}Hz", fmt_name, dm.w, dm.h, dm.refresh_rate);
+		return res;
+	}
+
+	std::string GetSDLDisplayModeAsString(SDL_DisplayMode const dm)
+	{
+		std::string res = std::format("{}x{} @ {}Hz", dm.w, dm.h, dm.refresh_rate);
+		return res;
+	}
+
+	std::string GetSDLDisplayModeAsString(SDL_Window * w)
+	{
+		SDL_DisplayMode dm;
+		SDL_GetWindowDisplayMode(w, &dm);
+		return GetSDLDisplayModeAsString(dm);
+	}
+
+	std::string GetSDLDisplayModeAsString(int display_index, int mode_index)
+	{
+		SDL_DisplayMode dm;
+		SDL_GetDisplayMode(display_index, mode_index, &dm);
+		return GetSDLDisplayModeAsString(dm);
 	}
 
 	void VkWindow::declareGui(GuiContext & ctx)
@@ -541,6 +628,55 @@ namespace vkl
 					_target_format = (sd.formats[_gui_formats.index()]);
 				}
 			}
+			
+			const bool display_mode_read_only = (_window_mode == Mode::Windowed) || true;
+			if (display_mode_read_only)
+			{
+				ImGui::BeginDisabled();
+			}
+			if (ImGui::BeginCombo("Display Mode", GetSDLDisplayModeAsString(_window).c_str()))
+			{
+				int display_index = SDL_GetWindowDisplayIndex(_window);
+				int num_display_mode = SDL_GetNumDisplayModes(display_index);
+				for (int i = 0; i < num_display_mode; ++i)
+				{
+					if (ImGui::Selectable(GetSDLDisplayModeAsString(display_index, i).c_str(), _desired_display_mode_index == i))
+					{
+						_desired_display_mode_index = i;
+					}
+				}
+				ImGui::EndCombo();
+			}
+			if (display_mode_read_only)
+			{
+				ImGui::EndDisabled();
+			}
+
+			int display_index = SDL_GetWindowDisplayIndex(_window);
+			int num_displays = SDL_GetNumVideoDisplays();
+			const bool display_read_only = (_window_mode == Mode::Windowed) || true;
+			if (display_read_only)
+			{
+				ImGui::BeginDisabled();
+			}
+			changed = false;
+			if (ImGui::BeginCombo("Display", SDL_GetDisplayName(display_index)))
+			{
+				for (int i = 0; i < num_displays; ++i)
+				{
+					const bool active = display_index == i;
+					if (ImGui::Selectable(SDL_GetDisplayName(i), active))
+					{
+						_desired_monitor_index = i;
+					}
+				}
+				ImGui::EndCombo();
+			}
+			if (display_read_only)
+			{
+				ImGui::EndDisabled();
+			}
+
 		}
 		ImGui::PopID();
 	}

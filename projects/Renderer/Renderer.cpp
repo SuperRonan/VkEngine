@@ -12,10 +12,7 @@ namespace vkl
 	{
 
 		const bool can_multi_draw_indirect = application()->availableFeatures().features.multiDrawIndirect;
-		if (!can_multi_draw_indirect)
-		{
-			_use_indirect_rendering = false;
-		}
+		_use_indirect_rendering = can_multi_draw_indirect;
 
 		createInternalResources();
 		
@@ -589,6 +586,10 @@ namespace vkl
 		
 		if (_use_indirect_rendering)
 		{
+			if (_cached_draw_list.empty())
+			{
+				_cached_draw_list.operator[](0);
+			}
 			FillBuffer & fill_buffer = application()->getPrebuiltTransferCommands().fill_buffer;
 			exec(fill_buffer.with(FillBuffer::FillInfo{
 				.buffer = _atomic_counter_segment.buffer,

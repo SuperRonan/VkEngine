@@ -1,4 +1,6 @@
 
+#define SDL_MAIN_HANDLED
+
 #include <Core/Utils/stl_extension.hpp>
 #include <Core/DynamicValue.hpp>
 #include <Core/VulkanCommons.hpp>
