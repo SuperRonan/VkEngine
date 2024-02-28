@@ -44,6 +44,11 @@
 
 namespace vkl
 {
+	const char* GetProjectName()
+	{
+		return PROJECT_NAME;
+	}
+
 	class RendererApp : public AppWithImGui
 	{
 	public:
@@ -241,8 +246,6 @@ namespace vkl
 			//_desired_window_options.mode = VkWindow::Mode::WindowedFullscreen;
 			createMainWindow();
 			initImGui();
-
-			std::filesystem::path shaders = PROJECT_SRC_PATH;
 
 			ResourcesLists script_resources;
 

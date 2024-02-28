@@ -7,11 +7,15 @@
 
 #include <Core/Commands/PrebuiltTransferCommands.hpp>
 
+#include <Core/IO/File.hpp>
+
 #include <argparse/argparse.hpp>
 
 #include <exception>
 #include <set>
 #include <limits>
+#include <fstream>
+
 
 namespace vkl
 {
@@ -736,6 +740,7 @@ namespace vkl
 
 	void VkApplication::init()
 	{
+		loadMountingPoints();
 		initSDL();
 		preChecks();
 
@@ -759,6 +764,7 @@ namespace vkl
 		});
 
 		_prebuilt_transfer_commands = std::make_unique<PrebuilTransferCommands>(this);
+
 	}
 
 	void VkApplication::cleanup()
@@ -826,5 +832,82 @@ namespace vkl
 	VkApplication::~VkApplication()
 	{
 		cleanup();
+	}
+
+	void VkApplication::loadMountingPoints()
+	{
+		const std::filesystem::path current_path = std::filesystem::current_path();
+		const std::filesystem::path exe_path = GetCurrentExecutableAbsolutePath();
+		const std::filesystem::path exe_folder = exe_path.parent_path();
+
+		// Default values
+		_mounting_points["exec"] = exe_folder.string();
+		_mounting_points["ShaderLib"] = exe_folder.string() + "/ShaderLib/";
+		
+		_mounting_points["gen"] = exe_folder.string() + "/gen/";
+
+		std::filesystem::path mp_file_path = exe_folder / "MountingPoints.txt";
+
+		if (std::filesystem::exists(mp_file_path))
+		{
+			try 
+			{
+				const std::string file = ReadFileToString(mp_file_path);
+				const std::vector<std::string> parsed = [&]()
+				{
+					std::vector<std::string> res;
+					size_t it = 0;
+					while (it < file.size())
+					{
+						size_t open_dq = file.find('\"', it);
+						size_t close_dq = file.find('\"', open_dq + 1);
+						if (open_dq < file.size() && close_dq < file.size())
+						{
+							res.push_back(file.substr(open_dq + 1, close_dq - open_dq - 1));
+							it = close_dq + 1;
+						}
+						else
+						{
+							break;
+						}
+					}
+					// Must be even
+					if ((res.size() % 2) == 1)
+					{
+
+					}
+					return res;
+				}();
+
+				for (size_t i = 0; i < parsed.size(); i += 2)
+				{
+					std::string const& key = parsed[i];
+					std::string const& value = parsed[i + 1];
+					std::filesystem::path path = value;
+					if (path.is_relative())
+					{
+						path = exe_folder / path;
+					}
+					_mounting_points[key] = path.string();
+				}
+
+				// Special case when developping:
+				if(_mounting_points.contains("DevProjectsFolder"))
+				{
+					if (!_mounting_points.contains("ProjectShaders"))
+					{
+						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] + GetProjectName() + "/Shaders/"s;
+					}
+				}
+			}
+			catch (std::exception const& e)
+			{
+				std::cout << "Could not find the Mounting Points file. Using Executable folder in place." << std::endl;
+			};
+		}
+		if (!_mounting_points.contains("ProjectShaders"))
+		{
+			_mounting_points["ProjectShaders"] = exe_folder.string() + "/Shaders/";
+		}
 	}
 }

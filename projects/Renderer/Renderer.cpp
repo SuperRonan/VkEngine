@@ -93,7 +93,7 @@ namespace vkl
 			model_layout[model_type] = Model::setLayout(application(), Model::SetLayoutOptions{ .type = model_type, .bind_mesh = true, .bind_material = true, });
 		}
 
-		const std::filesystem::path shaders = PROJECT_SRC_PATH;
+		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
 
 		_prepare_draw_list = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),

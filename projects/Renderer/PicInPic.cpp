@@ -9,7 +9,7 @@ namespace vkl
 		_target(ci.target),
 		_sets_layouts(ci.sets_layouts)
 	{
-		const std::filesystem::path common_shaders = ENGINE_SRC_PATH "/Shaders/";
+		const std::filesystem::path common_shaders = application()->mountingPoints()["ShaderLib"];
 
 		_definitions = [&]() -> std::vector<std::string> {
 			DetailedVkFormat detailed_format = DetailedVkFormat::Find(_target->format().value());

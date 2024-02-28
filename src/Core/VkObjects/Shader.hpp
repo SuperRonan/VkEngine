@@ -3,19 +3,16 @@
 #include <Core/App/VkApplication.hpp>
 #include <string>
 #include <shaderc/shaderc.hpp>
-#include <filesystem>
 #include <SPIRV-Reflect/spirv_reflect.h>
 #include "DescriptorSetLayout.hpp"
 #include "AbstractInstance.hpp"
 #include <set>
 #include <unordered_map>
 #include <Core/Execution/UpdateContext.hpp>
+#include <filesystem>
 
 namespace vkl
 {
-	std::vector<uint8_t> readFile(std::filesystem::path const& path);
-	
-	std::string readFileToString(std::filesystem::path const& path);
 
 	class ShaderInstance : public AbstractInstance
 	{

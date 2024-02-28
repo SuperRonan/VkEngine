@@ -23,7 +23,7 @@ namespace vkl
 	void GammaCorrection::createInternalResources()
 	{
 		const bool use_separate_src = _src != _dst;
-		const std::filesystem::path folder = ENGINE_SRC_PATH "/Shaders/ToneMap/";
+		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/ToneMap/";
 
 		ShaderBindings bindings;
 		bindings.push_back(Binding{

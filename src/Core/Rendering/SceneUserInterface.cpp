@@ -32,7 +32,7 @@ namespace vkl
 
 	void SceneUserInterface::createInternalResources()
 	{
-		const std::filesystem::path shader_lib = ENGINE_SRC_PATH "/Shaders/";
+		const std::filesystem::path shader_lib = application()->mountingPoints()["ShaderLib"];
 		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
 			.name = name() + ".Show3DBasis",

@@ -28,7 +28,11 @@ namespace vkl
 
 	void ResourcesManager::populateCommonObjects()
 	{
-		(*_mounting_points)["ShaderLib"] = ENGINE_SRC_PATH "shaders/";
+		// Copy common mounting points
+		for (auto it : application()->mountingPoints())
+		{
+			(*_mounting_points).insert(it);
+		}
 
 		VulkanFeatures const& features = application()->availableFeatures();
 		VulkanDeviceProps const& props = application()->deviceProperties();

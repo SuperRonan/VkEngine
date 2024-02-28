@@ -25,6 +25,10 @@ namespace argparse
 
 namespace vkl
 {
+	// This is provided by the project
+	// It works only if VkEngine is statically linked with the project exec
+	extern const char * GetProjectName();
+	
 	class StagingPool;
 	class CommandPool;
 	class DescriptorSetLayout;
@@ -141,6 +145,8 @@ namespace vkl
 
 		std::unique_ptr<PrebuilTransferCommands> _prebuilt_transfer_commands = nullptr;
 
+		MountingPoints _mounting_points;
+
 		virtual void requestFeatures(VulkanFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
@@ -180,6 +186,7 @@ namespace vkl
 
 		virtual void cleanup();
 
+		void loadMountingPoints();
 
 	public:
 
@@ -305,6 +312,16 @@ namespace vkl
 		{
 			assert(_prebuilt_transfer_commands);
 			return *_prebuilt_transfer_commands;
+		}
+
+		MountingPoints& mountingPoints()
+		{
+			return _mounting_points;
+		}
+
+		MountingPoints const & mountingPoints()const
+		{
+			return _mounting_points;
 		}
 	};
 

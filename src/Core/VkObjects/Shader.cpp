@@ -1,82 +1,25 @@
 #include "Shader.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <exception>
 #include <cassert>
 #include <sstream>
 #include <string_view>
-#include <iostream>
 #include <format>
 #include <thread>
 
+#include <Core/IO/File.hpp>
+
 namespace vkl
 {
-	std::vector<uint8_t> readFile(std::filesystem::path const& path)
-	{
-		std::ifstream file(path, std::ios::ate | std::ios::binary);
-		if (!file.is_open())
-		{
-			throw std::runtime_error("Could not open file: " + path.string());
-		}
-
-		size_t size = file.tellg();
-		std::vector<uint8_t> res;
-		res.resize(size);
-		file.seekg(0);
-		file.read((char*)res.data(), size);
-		file.close();
-		return res;
-	}
-
-	std::string readFileToString(std::filesystem::path const& path)
-	{
-		std::ifstream file;
-		int tries = 0;
-		const int max_tries = 1;
-		do
-		{
-			if (tries)
-			{
-				std::this_thread::sleep_for(1us);
-			}
-			file = std::ifstream(path, std::ios::ate | std::ios::binary);
-			++tries;
-		}
-		while (!file.is_open() && tries != max_tries);
-
-		if (!file.is_open())
-		{
-			throw std::runtime_error("Could not open file: " + path.string());
-		}
-
-		size_t size = file.tellg();
-		std::string res;
-		res.resize(size);
-		file.seekg(0);
-		file.read((char*)res.data(), size);
-		file.close();
-		return res;
-	}
-	
-	void writeFile(std::filesystem::path const& path, ObjectView const& view)
-	{
-		std::ofstream file(path, std::ios::ate | std::ios::binary);
-		if (!file.is_open())
-		{
-			throw std::runtime_error("Could not open file: " + path.string());
-		}
-
-		file.write((const char *)view.data(), view.size());
-		file.close();
-	}
-
 	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level)
 	{
 		_dependencies.push_back(path);
 		std::string content;
 		try
 		{
-			content = readFileToString(path);
+			content = ReadFileToString(path);
 		}
 		catch (std::exception const& e)
 		{
@@ -578,7 +521,7 @@ namespace vkl
 		const bool dump_spv = _stage == false;
 		if (dump_spv)
 		{
-			writeFile(ENGINE_SRC_PATH "../gen/shader.spv.bin", _spv_code);
+			WriteFile(application()->mountingPoints()["gen"] + "/shader.spv.bin", _spv_code);
 		}
 		
 		VkShaderModuleCreateInfo module_ci{

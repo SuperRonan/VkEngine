@@ -202,9 +202,11 @@ source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/src/ FILES ${VK_ENGINE_SOURCE})
 
 source_group("SPIRV-Reflect" FILES ${SPV_REFLECT_SOURCE})
 
+set(ENGINE_SRC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/")
+
 add_library(VkEngine STATIC ${VK_ENGINE_SOURCE} ${SPV_REFLECT_SOURCE})
 set_target_properties(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
-target_compile_definitions(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/src/\"")
+target_compile_definitions(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${ENGINE_SRC_PATH}\"")
 
 target_include_directories(VkEngine PUBLIC ${VK_ENGINE_INCLUDE_DIRS}) 
 

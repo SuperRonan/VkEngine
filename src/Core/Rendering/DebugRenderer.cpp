@@ -57,7 +57,7 @@ namespace vkl
 
 	void DebugRenderer::createRenderShader()
 	{
-		const std::filesystem::path shaders = ENGINE_SRC_PATH "/Shaders/RenderDebugStrings.glsl";
+		const std::filesystem::path shaders = application()->mountingPoints()["ShaderLib"] + "/RenderDebugStrings.glsl";
 
 		std::vector<std::string> defs;
 		using namespace std::containers_append_operators;
@@ -182,7 +182,7 @@ namespace vkl
 
 	void DebugRenderer::loadFont(ExecutionRecorder& exec)
 	{
-		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(ENGINE_SRC_PATH "/Core/Rendering/16x16_linear.png");
+		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(application()->mountingPoints()["ShaderLib"] + "/16x16_linear.png");
 
 		//{
 		//	img::Image<img::io::byte> font_with_new_layout(16, 16 * 256);
