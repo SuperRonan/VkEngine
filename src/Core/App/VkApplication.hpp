@@ -55,6 +55,7 @@ namespace vkl
 			bool enable_validation = false;
 			bool enable_object_naming = false;
 			bool enable_command_buffer_labels = false;
+			uint32_t gpu_id = uint32_t(-1);
 		};
 
 		static void FillArgs(argparse::ArgumentParser & args_parser);
@@ -269,14 +270,14 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetLayoutCache> & getDescSetLayoutCache(uint32_t s)
 		{
-			assert(s < deviceProperties().props.limits.maxBoundDescriptorSets);
+			assert(s < deviceProperties().props2.properties.limits.maxBoundDescriptorSets);
 			return _desc_set_layout_caches[s];
 		}
 
 		template <class MakeCacheFunction>
 		std::shared_ptr<DescriptorSetLayoutCache> getDescSetLayoutCacheOrEmplace(uint32_t s, MakeCacheFunction const& make_cache_function)
 		{
-			assert(s < deviceProperties().props.limits.maxBoundDescriptorSets);
+			assert(s < deviceProperties().props2.properties.limits.maxBoundDescriptorSets);
 			std::unique_lock lock(_mutex);
 			std::shared_ptr<DescriptorSetLayoutCache> & res = _desc_set_layout_caches[s];
 			if (!res)

@@ -17,9 +17,9 @@ namespace vkl
 		VulkanFeatures res;
 
 		VkBool32ArrayOp(
-			&res.features.robustBufferAccess,
-			&requested.features.robustBufferAccess,
-			&available.features.robustBufferAccess,
+			&res.features2.features.robustBufferAccess,
+			&requested.features2.features.robustBufferAccess,
+			&available.features2.features.robustBufferAccess,
 			(offsetof(VkPhysicalDeviceFeatures, inheritedQueries) - offsetof(VkPhysicalDeviceFeatures, robustBufferAccess)) / sizeof(VkBool32) + 1,
 			op_and
 		);

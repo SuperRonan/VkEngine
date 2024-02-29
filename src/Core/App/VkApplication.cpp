@@ -58,6 +58,12 @@ namespace vkl
 			.help("Set the number of helper threads, 'all' to use all available threads, 'none' to run single thread, -n to use all threads minus n")
 			.default_value("all"s)
 		;
+
+		args.add_argument("--gpu")
+			.help("Select the index of the gpu to use")
+			.default_value(-1)
+			.scan<'d', int>()
+		;
 	}
 
 
@@ -106,12 +112,12 @@ namespace vkl
 		const VkBool32 t = VK_TRUE;
 		const VkBool32 f = VK_FALSE;
 		features.features_13.synchronization2 = t;
-		features.features.geometryShader = t;
+		features.features2.features.geometryShader = t;
 		
-		features.features.samplerAnisotropy = t;
+		features.features2.features.samplerAnisotropy = t;
 		features.features_12.samplerMirrorClampToEdge = t;
 
-		features.features.multiDrawIndirect = t;
+		features.features2.features.multiDrawIndirect = t;
 		features.features_11.shaderDrawParameters = t;
 
 
@@ -438,14 +444,10 @@ namespace vkl
 	{
 		int64_t res = 0;
 
-		VkPhysicalDeviceProperties2 props{
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-			.pNext = nullptr, // TODO with new vulkan versions
-		};
+		VulkanDeviceProps props;
 		VulkanFeatures features;
-		VkPhysicalDeviceFeatures2 features2 = features.link();
-		vkGetPhysicalDeviceProperties2(device, &props);
-		vkGetPhysicalDeviceFeatures2(device, &features2);
+		vkGetPhysicalDeviceProperties2(device, &props.link());
+		vkGetPhysicalDeviceFeatures2(device, &features.link());
 
 		bool suitable = isDeviceSuitable(device);
 		if (!suitable)
@@ -453,15 +455,22 @@ namespace vkl
 			return std::numeric_limits<int64_t>::min();
 		}
 
-		int64_t discrete_multiplicator = (props.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 8 : 1;
+		uint32_t min_version = VK_MAKE_VERSION(1, 3, 0);
+
+		int64_t discrete_multiplicator = (props.props2.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 2 : 1;
 
 		// TODO count the available requested features
 
 		res = 1;
 
+		if (props.props2.properties.apiVersion < min_version)
+		{
+			res = 0;
+		}
+
 		res *= discrete_multiplicator;
 
-		VK_LOG << "Rated " << props.properties.deviceName << ": " << res << "\n";
+		VK_LOG << "Rated " << props.props2.properties.deviceName << ": " << res << "\n";
 
 		return res;
 	}
@@ -479,20 +488,30 @@ namespace vkl
 		std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
 		vkEnumeratePhysicalDevices(_instance, &physical_device_count, physical_devices.data());
 
-		VK_LOG << "Found " << physical_device_count << " physical device(s)\n";
+		VK_LOG << "Found " << physical_device_count << " physical device(s):\n";
+		for (size_t i=0; i < physical_devices.size(); ++i)
+		{
+			VulkanDeviceProps props;
+			vkGetPhysicalDeviceProperties2(physical_devices[i], &props.link());
+			VK_LOG << " - " << i << ": " << props.props2.properties.deviceName << std::endl;
+		}
 
-		auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), [&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
-		_physical_device = *it;
-		size_t device_index = it - physical_devices.cbegin();
-		//_physical_device = physical_devices[1];
+		if (_options.gpu_id < physical_device_count)
+		{
+			_physical_device = physical_devices[_options.gpu_id];
+		}
+		else
+		{
+			auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), [&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+			_physical_device = *it;
 
-		VkPhysicalDeviceProperties2 _physical_device_propeties = _device_props.link();
-		vkGetPhysicalDeviceProperties2(_physical_device, &_physical_device_propeties);
-		_device_props.props = _physical_device_propeties.properties;
+		}
+
+		vkGetPhysicalDeviceProperties2(_physical_device, &_device_props.link());
 		uint32_t supported_extensions = checkDeviceExtensionSupport(_physical_device);
 		_queue_family_indices = findQueueFamilies(_physical_device);
 
-		VK_LOG << "Using " << _physical_device_propeties.properties.deviceName << " as physical device.\n";
+		VK_LOG << "Using " << _device_props.props2.properties.deviceName << " as physical device.\n";
 	}
 
 	void VkApplication::createLogicalDevice()
@@ -522,9 +541,7 @@ namespace vkl
 		}
 
 		VulkanFeatures exposed_device_features;
-		VkPhysicalDeviceFeatures2 physical_device_features2 = exposed_device_features.link();
-		vkGetPhysicalDeviceFeatures2(_physical_device, &physical_device_features2);
-		exposed_device_features.features = physical_device_features2.features;
+		vkGetPhysicalDeviceFeatures2(_physical_device, &exposed_device_features.link());
 
 		_available_features = filterFeatures(_requested_features, exposed_device_features);
 
@@ -650,8 +667,8 @@ namespace vkl
 	void VkApplication::queryDescriptorBindingOptions()
 	{
 		_descriptor_binding_options.use_push_descriptors = false;//hasDeviceExtension(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
-		_descriptor_binding_options.set_bindings.resize(_device_props.props.limits.maxBoundDescriptorSets);
-		_desc_set_layout_caches.resize(_device_props.props.limits.maxBoundDescriptorSets);
+		_descriptor_binding_options.set_bindings.resize(_device_props.props2.properties.limits.maxBoundDescriptorSets);
+		_desc_set_layout_caches.resize(_device_props.props2.properties.limits.maxBoundDescriptorSets);
 		for (size_t i = 0; i < _descriptor_binding_options.set_bindings.size(); ++i)
 		{
 			_descriptor_binding_options.set_bindings[i] = BindingIndex{.set = static_cast<uint32_t>(i), .binding = 0};
@@ -706,6 +723,7 @@ namespace vkl
 			.enable_validation = intToBool(ci.args.get<int>("--validation")),
 			.enable_object_naming = intToBool(ci.args.get<int>("--name_vk_objects")),
 			.enable_command_buffer_labels = intToBool(ci.args.get<int>("--cmd_labels")),
+			.gpu_id = static_cast<uint32_t>(ci.args.get<int>("--gpu")),
 		};
 
 		bool mt = true;

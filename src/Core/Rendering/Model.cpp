@@ -267,7 +267,7 @@ namespace vkl
 				std::shared_ptr<Sampler> sampler = info.app->getSamplerLibrary().getSampler({
 					.filter = VK_FILTER_LINEAR,
 					.address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-					.max_anisotropy = info.app->deviceProperties().props.limits.maxSamplerAnisotropy,
+					.max_anisotropy = info.app->deviceProperties().props2.properties.limits.maxSamplerAnisotropy,
 				});
 
 				std::filesystem::path albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname;

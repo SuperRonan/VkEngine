@@ -503,8 +503,8 @@ namespace vkl
 
 		const MeshHeader header = getHeader();
 
-		const size_t ssbo_align = application()->deviceProperties().props.limits.minStorageBufferOffsetAlignment;
-		const size_t ubo_align = application()->deviceProperties().props.limits.minUniformBufferOffsetAlignment;
+		const size_t ssbo_align = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
+		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
 		
 		_device.header_size = std::alignUp(sizeof(header), ssbo_align);
 		if (_host.use_full_vertices)

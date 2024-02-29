@@ -175,7 +175,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".Sampler",
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-			.max_anisotropy = application()->deviceProperties().props.limits.maxSamplerAnisotropy,
+			.max_anisotropy = application()->deviceProperties().props2.properties.limits.maxSamplerAnisotropy,
 		});
 		
 	}

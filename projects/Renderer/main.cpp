@@ -64,7 +64,7 @@ namespace vkl
 		{
 			AppWithImGui::requestFeatures(features);
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
-			features.features.fillModeNonSolid = VK_TRUE;
+			features.features2.features.fillModeNonSolid = VK_TRUE;
 			features.features_11.multiview = VK_TRUE;
 		}
 

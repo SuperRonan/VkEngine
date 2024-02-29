@@ -1111,7 +1111,7 @@ namespace vkl
 	DescriptorSetsTacker::DescriptorSetsTacker(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
 		_pipeline_binding(ci.pipeline_binding),
-		_bound_descriptor_sets(application()->deviceProperties().props.limits.maxBoundDescriptorSets, nullptr)
+		_bound_descriptor_sets(application()->deviceProperties().props2.properties.limits.maxBoundDescriptorSets, nullptr)
 	{
 	
 	}

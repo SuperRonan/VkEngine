@@ -11,7 +11,7 @@ namespace vkl
 		_output_target(ci.target) 
 	{
 
-		const bool can_multi_draw_indirect = application()->availableFeatures().features.multiDrawIndirect;
+		const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
 		_use_indirect_rendering = can_multi_draw_indirect;
 
 		createInternalResources();
@@ -60,7 +60,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".draw_indirect_buffer",
 			.size = [this](){
-				const size_t align = application()->deviceProperties().props.limits.minStorageBufferOffsetAlignment;
+				const size_t align = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
 				return std::alignUp(_model_capacity * (sizeof(VkDrawIndirectCommand) + sizeof(uint32_t)), align) + 4 * sizeof(uint32_t);
 			},
 			.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -750,7 +750,7 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
-			const bool can_multi_draw_indirect = application()->availableFeatures().features.multiDrawIndirect;
+			const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
 			ImGui::BeginDisabled(!can_multi_draw_indirect);
 			ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
 			ImGui::EndDisabled();
