@@ -109,8 +109,8 @@ add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 
 set(VULKAN_LIBS "vulkan-1")
 
-set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OGLCompiler;HLSL;OSDependent")
-set(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OGLCompilerd;HLSLd;OSDependentd")
+set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OSDependent")
+set(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OSDependentd")
 
 set(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
 set(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
