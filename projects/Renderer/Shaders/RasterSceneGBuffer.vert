@@ -35,6 +35,16 @@ void main()
 	vec3 m_position = a_position;
 	
 	gl_Position = o2p * vec4(m_position, 1);
+	if(false)
+	{
+		// Some tests to alter the projection
+		//gl_Position.xy *= (clamp(z, 1, 10));
+		//gl_Position.xy = gl_Position.xy;
+		//gl_Position.z = 1.5;
+		//gl_Position.xy = quantize(gl_Position.xy, 1.0 / 64);
+		//gl_Position.z /= gl_Position.w;
+		//gl_Position.w = 1;
+	}
 
 	const mat3 normal_matrix = mat3(o2w);
 

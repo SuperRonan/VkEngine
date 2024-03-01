@@ -1,4 +1,5 @@
 #include "Camera.hpp"
+#include <Core/Maths/Transforms.hpp>
 
 namespace vkl
 {
@@ -7,7 +8,16 @@ namespace vkl
 		_near(ci.znear),
 		_far(ci.zfar)
 	{
-
+		_gui_type = ImGuiListSelection::CI{
+			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.labels = {
+				"Perspective",
+				"Orthographic",
+				//"ReversedPerspective"
+			},
+			.default_index = 0,
+			.same_line = true,
+		};
 	}
 
 	Ray Camera::getRay(vec2 uv) const
@@ -17,6 +27,36 @@ namespace vkl
 			.origin = _position,
 			.direction = glm::normalize(_direction + cp.x * _right * _aspect - cp.y * _up),
 		};
+	}
+
+	mat4 Camera::getCamToProj()const
+	{
+		mat4 res;
+		if (_type == Type::Perspective)
+		{
+			if (_infinite_perspective)
+			{
+				res = glm::infinitePerspective(_fov, _aspect, _near);
+			}
+			else
+			{
+				res = glm::perspective(_fov, _aspect, _near, _far);
+			}
+		}
+		else if (_type == Type::Orthographic)
+		{
+			res = glm::ortho<float>(-_ortho_size * _aspect, _ortho_size * _aspect, -_ortho_size, _ortho_size, _near, _far);
+		}
+		else if (_type == Type::ReversedPerspective)
+		{
+			mat4 p = glm::perspective(_fov, _aspect, _near, _far);
+			mat4 r = glm::rotate(mat4(1), glm::radians(180.0f), _up);
+			mat4 t = p;
+			res = p * r * t;
+		}
+		// Could remove this and flip the culling
+		res[1][1] *= -1;
+		return res;
 	}
 
 	void Camera::update(CameraDelta const& delta)
@@ -43,8 +83,16 @@ namespace vkl
 		_direction = rotate(_direction, _right, -y_angle);
 		//computeInternal();
 
-		_fov *= delta.fov;
-		_fov = std::clamp(_fov, glm::radians(1e-1f), glm::radians(179.0f));
+		if (_type == Type::Perspective)
+		{
+			_fov *= delta.fov;
+			_fov = std::clamp(_fov, glm::radians(1e-1f), glm::radians(179.0f));
+		}
+		else if (_type == Type::Orthographic)
+		{
+			_ortho_size *= delta.fov;
+			_ortho_size = std::max(1e-3f, _ortho_size);
+		}
 
 		if (_resolution_ifp.hasValue())
 		{
@@ -57,8 +105,37 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader("Camera"))
 		{
-			ImGui::SliderFloat("near plane", &_near, 0, _far);
-			ImGui::SliderFloat("far plane", &_far, _near, 1e4 * _near);
+			ImGui::Checkbox("Infinite perspective", &_infinite_perspective);
+			float f;
+			f = _near;
+			if (ImGui::SliderFloat("near plane", &f, 0, _far))
+			{
+				_near = f;
+			}
+			
+			f = _far;
+			if (ImGui::SliderFloat("far plane", &f, _near, 1e4 * _near))
+			{
+				_far = f;
+			}
+
+			if (_gui_type.declare())
+			{
+				_type = Type(_gui_type.index());
+			}
+
+			if (_type == Type::Perspective)
+			{
+				f = _fov;
+				if (ImGui::SliderAngle("FOV", &f, 0, 180))
+				{
+					_fov = f;
+				}
+			}
+			else if (_type == Type::Orthographic)
+			{
+
+			}
 		}
 	}
 

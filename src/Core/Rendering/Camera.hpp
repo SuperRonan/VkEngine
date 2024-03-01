@@ -2,11 +2,21 @@
 
 #include <Core/Rendering/RenderObjects.hpp>
 #include <Core/IO/GuiContext.hpp>
+#include <Core/IO/ImGuiUtils.hpp>
 
 namespace vkl
 {
 	class Camera : public VkObject
 	{
+	public:
+
+		enum class Type
+		{
+			Perspective,
+			Orthographic,
+			ReversedPerspective,
+		};
+
 	protected:
 
 		vec3 _position = vec3(0);
@@ -20,6 +30,14 @@ namespace vkl
 		float _fov = glm::radians(90.0);
 		float _near = 0.1;
 		float _far = 10.0;
+
+		float _ortho_size = 1;
+
+		bool _infinite_perspective = false;
+
+		Type _type = Type::Perspective;
+
+		ImGuiListSelection _gui_type;
 
 	public:
 
@@ -42,12 +60,7 @@ namespace vkl
 
 		Camera(CreateInfo const& ci);
 
-		mat4 getCamToProj()const
-		{
-			mat4 res = glm::perspective(_fov, _aspect, _near, _far);
-			res[1][1] *= -1;
-			return res;
-		}
+		mat4 getCamToProj()const;
 
 		mat4 getWorldToCam() const
 		{

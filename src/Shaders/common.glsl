@@ -205,6 +205,26 @@ float floatOffset(float f, int o)
 	return intBitsToFloat(floatBitsToInt(f) + o);
 }
 
+float quantize(float x, float q)
+{
+	return x - mod(x, q);
+}
+
+vec2 quantize(vec2 x, float q)
+{
+	return x - mod(x, q);
+}
+
+vec3 quantize(vec3 x, float q)
+{
+	return x - mod(x, q);
+}
+
+vec4 quantize(vec4 x, float q)
+{
+	return x - mod(x, q);
+}
+
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI (PI / 2.0)
 #define QUART_PI (PI / 4.0)
