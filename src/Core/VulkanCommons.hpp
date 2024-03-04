@@ -181,28 +181,16 @@ namespace vkl
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_ext = {};
 		VkPhysicalDeviceRobustness2FeaturesEXT robustness2_ext = {};
 
-		VkPhysicalDeviceFeatures2& link()
-		{
-			features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-			features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-			features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-			features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-			
-			line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
-			index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
-			mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
-			robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
-
-			features2.pNext = &features_11;
-			features_11.pNext = &features_12;
-			features_12.pNext = &features_13;
-			features_13.pNext = &line_raster_ext;
-			line_raster_ext.pNext = &index_uint8_ext;
-			index_uint8_ext.pNext = &mesh_shader_ext;
-			mesh_shader_ext.pNext = &robustness2_ext;
-			robustness2_ext.pNext = nullptr;
-			return features2;
-		}
+		
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_khr = {};
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_khr = {};
+		VkPhysicalDeviceRayQueryFeaturesKHR ray_query_khr = {};
+		VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR ray_tracing_maintenance1_khr = {};
+		
+		VkPhysicalDeviceRayTracingMotionBlurFeaturesNV ray_tracing_motion_blur_nv = {};
+		VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV ray_tracing_invocation_reorder_nv = {};
+		
+		VkPhysicalDeviceFeatures2& link();
 	};
 
 	extern VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available);
@@ -216,28 +204,14 @@ namespace vkl
 
 		VkPhysicalDeviceLineRasterizationPropertiesEXT line_raster_ext = {};
 		VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_ext = {};
-		VkPhysicalDeviceRobustness2PropertiesEXT robustness2 = {};
+		VkPhysicalDeviceRobustness2PropertiesEXT robustness2_ext = {};
 
-		VkPhysicalDeviceProperties2& link()
-		{
-			props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-			props_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
-			props_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-			props_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
+		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_khr = {};
+		VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_pipeline_khr = {};
 
-			line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_PROPERTIES_EXT;
-			mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
-			robustness2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
-			
-			props2.pNext = &props_11,
-			props_11.pNext = &props_12;
-			props_12.pNext = &props_13;
-			props_13.pNext = &line_raster_ext;
-			line_raster_ext.pNext = &mesh_shader_ext;
-			mesh_shader_ext.pNext = &robustness2;
-			robustness2.pNext = nullptr;
-			return props2;
-		}
+		VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV ray_tracing_invocation_reorder_nv = {};
+
+		VkPhysicalDeviceProperties2& link();
 	};
 
 	struct VertexInputDescription

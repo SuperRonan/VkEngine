@@ -10,6 +10,85 @@ namespace vkl
 
 	using namespace std::string_literals;
 
+
+	VkPhysicalDeviceFeatures2& VulkanFeatures::link()
+	{
+		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+		features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+		features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
+		index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
+		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+		robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+
+		acceleration_structure_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+		ray_query_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+		ray_tracing_maintenance1_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
+
+		ray_tracing_motion_blur_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV;
+		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV;
+
+		features2.pNext = &features_11;
+		features_11.pNext = &features_12;
+		features_12.pNext = &features_13;
+		features_13.pNext = &line_raster_ext;
+
+		line_raster_ext.pNext = &index_uint8_ext;
+		index_uint8_ext.pNext = &mesh_shader_ext;
+		mesh_shader_ext.pNext = &robustness2_ext;
+		robustness2_ext.pNext = nullptr;
+
+		robustness2_ext.pNext = &acceleration_structure_khr;
+		acceleration_structure_khr.pNext = &ray_tracing_pipeline_khr;
+		ray_tracing_pipeline_khr.pNext = &ray_query_khr;
+		ray_query_khr.pNext = &ray_tracing_maintenance1_khr;
+		ray_tracing_maintenance1_khr.pNext = nullptr;
+
+		ray_tracing_maintenance1_khr.pNext = &ray_tracing_motion_blur_nv;
+		ray_tracing_motion_blur_nv.pNext = &ray_tracing_invocation_reorder_nv;
+		ray_tracing_invocation_reorder_nv.pNext = nullptr;
+
+		return features2;
+	}
+
+	VkPhysicalDeviceProperties2& VulkanDeviceProps::link()
+	{
+		props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+		props_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
+		props_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+		props_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
+
+		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_PROPERTIES_EXT;
+		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
+		robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
+
+		acceleration_structure_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+
+		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
+
+		props2.pNext = &props_11;
+		props_11.pNext = &props_12;
+		props_12.pNext = &props_13;
+		props_13.pNext = &line_raster_ext;
+		line_raster_ext.pNext = &mesh_shader_ext;
+		mesh_shader_ext.pNext = &robustness2_ext;
+		robustness2_ext.pNext = nullptr;
+
+		robustness2_ext.pNext = &acceleration_structure_khr;
+		acceleration_structure_khr.pNext = &ray_tracing_pipeline_khr;
+		ray_tracing_pipeline_khr.pNext = nullptr;
+
+		ray_tracing_pipeline_khr.pNext = &ray_tracing_invocation_reorder_nv;
+		ray_tracing_invocation_reorder_nv.pNext = nullptr;
+
+		return props2;
+	}
+
+
 	VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available)
 	{
 		const auto op_and = [](VkBool32 a, VkBool32 b) {return a & b; };
