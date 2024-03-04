@@ -118,31 +118,30 @@ namespace vkl
 
 #undef FILTER_VK_FEATURES
 
-		VkBool32ArrayOp(
-			&res.line_raster_ext.rectangularLines,
-			&requested.line_raster_ext.rectangularLines,
-			&available.line_raster_ext.rectangularLines,
-			(offsetof(VkPhysicalDeviceLineRasterizationFeaturesEXT, stippledSmoothLines) - offsetof(VkPhysicalDeviceLineRasterizationFeaturesEXT, rectangularLines)) / sizeof(VkBool32) + 1,
-			op_and
-		);
+#define FILTER_VK_FEATURES(StructName, variableName, firstFeature, lastFeature) \
+		VkBool32ArrayOp( \
+			&res. variableName . firstFeature, \
+			&requested. variableName . firstFeature, \
+			&available. variableName . firstFeature, \
+			(offsetof(StructName, lastFeature) - offsetof(StructName, firstFeature)) / sizeof(VkBool32) + 1, \
+			op_and \
+		)
+		//FILTER_VK_FEATURES(VkPhysicalDevice, , , );
 
+		FILTER_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		res.index_uint8_ext.indexTypeUint8 = requested.index_uint8_ext.indexTypeUint8 & available.index_uint8_ext.indexTypeUint8;
+		FILTER_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);
+		FILTER_VK_FEATURES(VkPhysicalDeviceRobustness2FeaturesEXT, robustness2_ext, robustBufferAccess2, nullDescriptor);
+		
+		FILTER_VK_FEATURES(VkPhysicalDeviceAccelerationStructureFeaturesKHR, acceleration_structure_khr, accelerationStructure, descriptorBindingAccelerationStructureUpdateAfterBind);
+		FILTER_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);
+		res.ray_query_khr.rayQuery = requested.ray_query_khr.rayQuery & available.ray_query_khr.rayQuery;
+		FILTER_VK_FEATURES(VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR, ray_tracing_maintenance1_khr, rayTracingMaintenance1, rayTracingPipelineTraceRaysIndirect2);
+		
+		FILTER_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
+		res.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorder = requested.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorder & available.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorder;
 
-		VkBool32ArrayOp(
-			&res.mesh_shader_ext.taskShader,
-			&requested.mesh_shader_ext.taskShader,
-			&available.mesh_shader_ext.taskShader,
-			(offsetof(VkPhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries) - offsetof(VkPhysicalDeviceMeshShaderFeaturesEXT, taskShader)) / sizeof(VkBool32) + 1,
-			op_and
-		);
-
-		VkBool32ArrayOp(
-			&res.robustness2_ext.robustBufferAccess2,
-			&requested.robustness2_ext.robustBufferAccess2,
-			&available.robustness2_ext.robustBufferAccess2,
-			(offsetof(VkPhysicalDeviceRobustness2FeaturesEXT, nullDescriptor) - offsetof(VkPhysicalDeviceRobustness2FeaturesEXT, robustBufferAccess2)) / sizeof(VkBool32) + 1,
-			op_and
-		);
+#undef FILTER_VK_FEATURES
 
 		return res;
 	}
