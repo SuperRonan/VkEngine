@@ -34,6 +34,8 @@ namespace vkl
 		VmaAllocator _allocator = VMA_NULL;
 		VmaAllocation _alloc = VMA_NULL;
 
+		VkDeviceAddress _address = 0;
+
 		struct InternalStates
 		{
 			struct PosAndState
@@ -80,11 +82,16 @@ namespace vkl
 
 		virtual ~BufferInstance() override;
 
-		void map();
+		void* map();
 
 		void unMap();
 
 		void flush();
+
+		VkDeviceAddress deviceAddress() const
+		{
+			return _address;
+		}
 
 		constexpr void* data()
 		{

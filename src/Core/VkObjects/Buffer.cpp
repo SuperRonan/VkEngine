@@ -27,6 +27,11 @@ namespace vkl
 	void BufferInstance::create()
 	{
 		assert(!_buffer);
+		bool can_device_address = application()->availableFeatures().features_12.bufferDeviceAddress;
+		if (!can_device_address)
+		{
+			_ci.usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		}
 		VK_CHECK(vmaCreateBuffer(_allocator, &_ci, &_aci, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
 
 		InternalStates is;
@@ -37,6 +42,17 @@ namespace vkl
 		_states[0] = std::move(is);
 
 		setVkName();
+
+
+		if (_ci.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+		{
+			VkBufferDeviceAddressInfo info{
+				.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+				.pNext = nullptr,
+				.buffer = _buffer,
+			};
+			_address = vkGetBufferDeviceAddress(device(), &info);
+		}
 	}
 
 	void BufferInstance::destroy()
@@ -85,10 +101,11 @@ namespace vkl
 	}
 
 
-	void BufferInstance::map()
+	void * BufferInstance::map()
 	{
 		assert(_buffer != VK_NULL_HANDLE);
 		vmaMapMemory(_allocator, _alloc, &_data);
+		return _data;
 	}
 
 	void BufferInstance::unMap()
