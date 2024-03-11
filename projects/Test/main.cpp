@@ -11,6 +11,40 @@
 
 #include <Core/Execution/ThreadPool.hpp>
 
+#include <Core/Utils/UniqueIndexAllocator.hpp>
+#include <random>
+
+
+void TestUniqueIdAllocator()
+{
+	vkl::UniqueIndexAllocator pool(vkl::UniqueIndexAllocator::Policy::FitCapacity);
+
+	while (true)
+	{
+		int i;
+		std::cin >> i;
+		
+		if (i >= 0)
+		{
+			if (pool.isAllocated(i))
+			{
+				pool.release(i);
+			}
+			else
+			{
+				std::cout << "Can't release an unallocated index" << std::endl;
+			}
+		}
+		else
+		{
+			i = pool.allocate();
+			std::cout << "Allocated " << i << std::endl;
+		}
+
+		pool.print(std::cout);
+		std::cout << std::endl;
+	}
+}
 
 template <class T, std::concepts::Container<T> C>
 const T* f(C const& c)
@@ -50,6 +84,8 @@ int main(int argc, const char** argv)
 	using namespace vkl;
 	using namespace std::containers_append_operators;
 	using namespace std::string_literals;
+
+	TestUniqueIdAllocator();
 
 	Dyn<VkExtent3D> ex = makeZeroExtent3D();
 

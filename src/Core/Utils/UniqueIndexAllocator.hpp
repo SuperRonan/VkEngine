@@ -20,10 +20,11 @@ namespace vkl
 
 	protected:
 
-		using Segment = AlignedAxisBoundingBox<1, Index>;
+		using Segment = Range<Index>;
 
 		Policy _policy = Policy::FastButWasteful;
 
+		// Sorted
 		std::deque<Segment> _free_segments;
 
 		Index _count = 0;
@@ -37,7 +38,13 @@ namespace vkl
 
 		Index allocate();
 
+		Index allocate(Index count);
+
 		void release(Index index);
+
+		void release(Index index, Index count);
+
+		bool isAllocated(Index index) const;
 
 		Index count()const
 		{
@@ -48,5 +55,9 @@ namespace vkl
 		{
 			return _capacity;
 		}
+
+		bool checkIntegrity() const;
+		
+		void print(std::ostream & stream);
 	};
 }
