@@ -110,12 +110,32 @@ namespace vkl
 		struct ExtFunctionsPtr
 		{
 			PFN_vkCmdDrawMeshTasksEXT _vkCmdDrawMeshTasksEXT = nullptr;
+			PFN_vkCmdDrawMeshTasksIndirectEXT _vkCmdDrawMeshTasksIndirectEXT = nullptr;
+			PFN_vkCmdDrawMeshTasksIndirectCountEXT _vkCmdDrawMeshTasksIndirectCountEXT = nullptr;
 			
 			PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
 			
 			PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT = nullptr;
 			PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT = nullptr;
 			PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
+
+			PFN_vkCreateAccelerationStructureKHR _vkCreateAccelerationStructureKHR = nullptr;
+			PFN_vkDestroyAccelerationStructureKHR _vkDestroyAccelerationStructureKHR = nullptr;
+			PFN_vkCmdBuildAccelerationStructuresKHR _vkCmdBuildAccelerationStructuresKHR = nullptr;
+			PFN_vkCmdBuildAccelerationStructuresIndirectKHR _vkCmdBuildAccelerationStructuresIndirectKHR = nullptr;
+			PFN_vkBuildAccelerationStructuresKHR _vkBuildAccelerationStructuresKHR = nullptr;
+			PFN_vkCopyAccelerationStructureKHR _vkCopyAccelerationStructureKHR = nullptr;
+			PFN_vkCopyAccelerationStructureToMemoryKHR _vkCopyAccelerationStructureToMemoryKHR = nullptr;
+			PFN_vkCopyMemoryToAccelerationStructureKHR _vkCopyMemoryToAccelerationStructureKHR = nullptr;
+			PFN_vkWriteAccelerationStructuresPropertiesKHR _vkWriteAccelerationStructuresPropertiesKHR = nullptr;
+			PFN_vkCmdCopyAccelerationStructureKHR _vkCmdCopyAccelerationStructureKHR = nullptr;
+			PFN_vkCmdCopyAccelerationStructureToMemoryKHR _vkCmdCopyAccelerationStructureToMemoryKHR = nullptr;
+			PFN_vkCmdCopyMemoryToAccelerationStructureKHR _vkCmdCopyMemoryToAccelerationStructureKHR = nullptr;
+			PFN_vkGetAccelerationStructureDeviceAddressKHR _vkGetAccelerationStructureDeviceAddressKHR = nullptr;
+			PFN_vkCmdWriteAccelerationStructuresPropertiesKHR _vkCmdWriteAccelerationStructuresPropertiesKHR = nullptr;
+			PFN_vkGetDeviceAccelerationStructureCompatibilityKHR _vkGetDeviceAccelerationStructureCompatibilityKHR = nullptr;
+			PFN_vkGetAccelerationStructureBuildSizesKHR _vkGetAccelerationStructureBuildSizesKHR = nullptr;
+
 		};
 
 		ExtFunctionsPtr _ext_functions;

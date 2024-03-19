@@ -591,6 +591,8 @@ namespace vkl
 		if (_available_features.mesh_shader_ext.meshShader)
 		{
 			_ext_functions._vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksEXT"));
+			_ext_functions._vkCmdDrawMeshTasksIndirectEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksIndirectEXT"));
+			_ext_functions._vkCmdDrawMeshTasksIndirectCountEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
 		}
 
 		const bool has_debug_utils_ext = hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -619,6 +621,26 @@ namespace vkl
 			{
 				_options.enable_command_buffer_labels = false;
 			}
+		}
+
+		if (_available_features.acceleration_structure_khr.accelerationStructure)
+		{
+			_ext_functions._vkCreateAccelerationStructureKHR = reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkCreateAccelerationStructureKHR"));
+			_ext_functions._vkDestroyAccelerationStructureKHR = reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkDestroyAccelerationStructureKHR"));
+			_ext_functions._vkCmdBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(_device, "vkCmdBuildAccelerationStructuresKHR"));
+			_ext_functions._vkCmdBuildAccelerationStructuresIndirectKHR = reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresIndirectKHR>(vkGetDeviceProcAddr(_device, "vkCmdBuildAccelerationStructuresIndirectKHR"));
+			_ext_functions._vkBuildAccelerationStructuresKHR = reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(_device, "vkBuildAccelerationStructuresKHR"));
+			_ext_functions._vkCopyAccelerationStructureKHR = reinterpret_cast<PFN_vkCopyAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkCopyAccelerationStructureKHR"));
+			_ext_functions._vkCopyAccelerationStructureToMemoryKHR = reinterpret_cast<PFN_vkCopyAccelerationStructureToMemoryKHR>(vkGetDeviceProcAddr(_device, "vkCopyAccelerationStructureToMemoryKHR"));
+			_ext_functions._vkCopyMemoryToAccelerationStructureKHR = reinterpret_cast<PFN_vkCopyMemoryToAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkCopyMemoryToAccelerationStructureKHR"));
+			_ext_functions._vkWriteAccelerationStructuresPropertiesKHR = reinterpret_cast<PFN_vkWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(_device, "vkWriteAccelerationStructuresPropertiesKHR"));
+			_ext_functions._vkCmdCopyAccelerationStructureKHR = reinterpret_cast<PFN_vkCmdCopyAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkCmdCopyAccelerationStructureKHR"));
+			_ext_functions._vkCmdCopyAccelerationStructureToMemoryKHR = reinterpret_cast<PFN_vkCmdCopyAccelerationStructureToMemoryKHR>(vkGetDeviceProcAddr(_device, "vkCmdCopyAccelerationStructureToMemoryKHR"));
+			_ext_functions._vkCmdCopyMemoryToAccelerationStructureKHR = reinterpret_cast<PFN_vkCmdCopyMemoryToAccelerationStructureKHR>(vkGetDeviceProcAddr(_device, "vkCmdCopyMemoryToAccelerationStructureKHR"));
+			_ext_functions._vkGetAccelerationStructureDeviceAddressKHR = reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(_device, "vkGetAccelerationStructureDeviceAddressKHR"));
+			_ext_functions._vkCmdWriteAccelerationStructuresPropertiesKHR = reinterpret_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
+			_ext_functions._vkGetDeviceAccelerationStructureCompatibilityKHR = reinterpret_cast<PFN_vkGetDeviceAccelerationStructureCompatibilityKHR>(vkGetDeviceProcAddr(_device, "vkGetDeviceAccelerationStructureCompatibilityKHR"));
+			_ext_functions._vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(_device, "vkGetAccelerationStructureBuildSizesKHR"));
 		}
 	}
 
