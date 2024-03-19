@@ -18,6 +18,7 @@
 #include <vector>
 #include <deque>
 #include <list>
+#include <bit>
 
 #include "DynamicValue.hpp"
 
@@ -838,10 +839,17 @@ namespace std
 		}
 	};
 
+	// returns true for 0
 	template <integral Uint>
 	constexpr bool isPowerOf2(Uint i)
 	{
 		return ((i - 1) & i) == 0;
+	}
+
+	template <integral Uint>
+	constexpr bool isPo2(Uint i)
+	{
+		return isPowerOf2(i);
 	}
 
 	template <integral Uint>
@@ -852,12 +860,13 @@ namespace std
 	}
 
 	template <integral Uint>
-	constexpr Uint alignUpAssumeP2(Uint n, Uint a_p2)
+	constexpr Uint alignUpAssumePo2(Uint n, Uint a_p2)
 	{
 		assert(isPowerOf2(a_p2));
 		assert(a_p2 > 1);
 		const Uint a_mask = a_p2 - 1;
 		const Uint res = (n | a_mask) + 1;
+		assert(res == alignUp(n, a_p2));
 		return res;
 	}
 
@@ -868,12 +877,27 @@ namespace std
 	}
 
 	template <integral Uint>
-	constexpr Uint alignDownAssumeP2(Uint n, Uint a_p2)
+	constexpr Uint alignDownAssumePo2(Uint n, Uint a_p2)
 	{
 		assert(isPowerOf2(a_p2));
 		assert(a_p2 > 1);
 		const Uint a_mask = a_p2 - 1;
 		const Uint res = n & ~a_mask;
+		assert(res == alignDown(n, a_p2));
+		return res;
+	}
+
+	// returns p such as:
+	// p >= n &&
+	// isPowerOf2(p) == true
+	template <integral Uint>
+	constexpr Uint roundToNextPo2(Uint n)
+	{
+		Uint res = n;
+		if (!isPowerOf2(n))
+		{
+			res = std::bit_ceil(n);
+		}
 		return res;
 	}
 }
