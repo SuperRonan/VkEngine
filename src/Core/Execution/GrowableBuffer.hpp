@@ -45,5 +45,21 @@ namespace vkl
 		{
 			return _capacity;
 		}
+
+		BufferAndRange fullBufferAndRange()const
+		{
+			return BufferAndRange{
+				.buffer = _buffer,
+				// No range meanse full range
+			};
+		}
+
+		BufferAndRangeInstance fullBufferAndRangeInstance()const
+		{
+			return BufferAndRangeInstance{
+				.buffer = _buffer->instance(),
+				.range = _buffer->instance()->fullRange(),
+			};
+		}
 	};
 }

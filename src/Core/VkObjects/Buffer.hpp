@@ -143,7 +143,13 @@ namespace vkl
 			return _unique_id;
 		}
 
-		
+		Range fullRange()const
+		{
+			return Range{
+				.begin = 0,
+				.len = _ci.size,
+			};
+		}
 
 		struct ResourceKey
 		{
@@ -256,6 +262,25 @@ namespace vkl
 	{
 		std::shared_ptr<BufferInstance> buffer = {};
 		Buffer::Range range = {};
+
+		operator bool()const
+		{
+			return buffer.operator bool();
+		}
+
+		VkDeviceAddress deviceAddress() const
+		{
+			VkDeviceAddress res = 0;
+			if(buffer)	res = buffer->deviceAddress() + range.begin;
+			return res;
+		}
+
+		size_t size() const
+		{
+			size_t res = range.len;
+			if(res == 0)	res = buffer->createInfo().size;
+			return res;
+		}
 	};
 
 	struct BufferAndRange
@@ -270,6 +295,11 @@ namespace vkl
 			if(buffer)	res.buffer = buffer->instance();
 			if(range.hasValue())	res.range = range.value();
 			return res;
+		}
+
+		operator bool()const
+		{
+			return buffer.operator bool();
 		}
 	};
 }
