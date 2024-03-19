@@ -77,6 +77,7 @@
 	- [ ] Fullscreen
 	- [x] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
+- [ ] Add a mode to use the GENERAL image layout instead of the specialized layout and measure the performance of doing so 
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib
