@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Core/VulkanCommons.hpp>
+
 #include <cmath>
 #include "Types.hpp"
 //#include <glm/gtc/matrix_transform.hpp>
@@ -110,5 +112,19 @@ namespace vkl
 	Matrix3<Float> directionMatrix(Matrix4x3<Float> const& mat)
 	{
 		return directionMatrix(Matrix3<Float>(mat));
+	}
+
+	inline VkTransformMatrixKHR convertXFormToVk(Matrix4x3f const mat)
+	{
+		// glm::mat4x3 is stored as 4 vec3, so can't directly memcpy :(
+		VkTransformMatrixKHR res;
+		for (uint32_t i = 0; i < 3; ++i)
+		{
+			for (uint32_t j = 0; j < 4; ++j)
+			{
+				res.matrix[i][j] = mat[i][j];
+			}
+		}
+		return res;
 	}
 }
