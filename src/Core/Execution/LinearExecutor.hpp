@@ -7,7 +7,8 @@
 #include <Core/Commands/TransferCommand.hpp>
 #include <Core/Commands/GraphicsTransferCommands.hpp>
 #include <Core/Commands/ImguiCommand.hpp>
-#include "StagingPool.hpp"
+
+#include <Core/Execution/BufferPool.hpp>
 
 namespace vkl
 {
@@ -72,7 +73,7 @@ namespace vkl
 
 		std::shared_ptr<VkWindow> _window = nullptr;
 
-		StagingPool _staging_pool;
+		BufferPool _staging_pool;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::shared_ptr<ImguiCommand> _render_gui = nullptr;

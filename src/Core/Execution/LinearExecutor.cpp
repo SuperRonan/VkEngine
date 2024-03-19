@@ -97,9 +97,9 @@ namespace vkl
 			.use_ray_tracing_pipeline = ci.use_ray_tracing,
 		}),
 		_window(ci.window),
-		_staging_pool(StagingPool::CI{
+		_staging_pool(BufferPool::CI{
 			.app = application(),
-			.name = name() + ".StagingPool",
+			.name = name() + ".BufferPool",
 			.allocator = application()->allocator(),
 		}),
 		_context(ExecutionContext::CI{

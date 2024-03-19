@@ -1,16 +1,18 @@
-#include "StagingPool.hpp"
+#include <Core/Execution/BufferPool.hpp>
 #include <cassert>
 #include <iostream>
 
 namespace vkl
 {
-	StagingPool::StagingPool(CreateInfo const& ci):
+	BufferPool::BufferPool(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
+		_minimum_size(ci.min_size),
 		_usage(ci.usage),
+		_mem_usage(ci.mem_usage),
 		_allocator(ci.allocator)
 	{}
 
-	StagingPool::~StagingPool()
+	BufferPool::~BufferPool()
 	{
 		clearFreeBuffers();
 
@@ -30,7 +32,7 @@ namespace vkl
 		//_mutex.unlock();
 	}
 
-	std::shared_ptr<BufferInstance> StagingPool::getStagingBuffer(size_t size)
+	std::shared_ptr<BufferInstance> BufferPool::get(size_t size)
 	{
 		std::unique_lock lock(_mutex);
 		
@@ -50,20 +52,20 @@ namespace vkl
 
 		if (it == end) // Did not find any: allocate a new one (Maybe re allocate a too small one if available)
 		{
-			size_t buffer_size = std::alignUp(size, size_t(1024));
+			size_t buffer_size = std::alignUp(size, _minimum_size);
 			VkBufferCreateInfo ci{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
 				.size = buffer_size,
-				.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
+				.usage = _usage,
 			};
 			VmaAllocationCreateInfo aci{
-				.usage = _usage,
+				.usage = _mem_usage,
 			};
 			res = std::make_shared<BufferInstance>(BufferInstance::CI{
 				.app = _app,
-				.name = name() + ".StagingBuffer",
+				.name = name() + ".PooledBuffer",
 				.ci = ci,
 				.aci = aci,
 				.allocator = application()->allocator(),
@@ -77,24 +79,24 @@ namespace vkl
 		return res;
 	}
 
-	void StagingPool::releaseStagingBuffer(std::shared_ptr<BufferInstance> staging_buffer)
+	void BufferPool::release(std::shared_ptr<BufferInstance> const& b)
 	{
 		std::unique_lock lock(_mutex);
 		auto it = _free_buffers.begin(), end = _free_buffers.end();
-		// TODO faster insertion
+		// TODO faster insertion (sorted)
 		while (it != end)
 		{
-			if (staging_buffer->createInfo().size <= (*it)->createInfo().size)
+			if (b->createInfo().size <= (*it)->createInfo().size)
 			{
 				break;
 			}
 			++it;
 		}
 
-		_free_buffers.insert(it, staging_buffer);
+		_free_buffers.insert(it, b);
 	}
 
-	void StagingPool::clearFreeBuffers()
+	void BufferPool::clearFreeBuffers()
 	{
 		_mutex.lock();
 		{	

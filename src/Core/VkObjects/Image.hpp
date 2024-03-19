@@ -326,6 +326,6 @@ namespace vkl
 
 		bool updateResource(UpdateContext & ctx);
 
-		//StagingPool::StagingBuffer* copyToStaging2D(StagingPool& pool, void* data, uint32_t elem_size);
+		//BufferPool::PooledBuffer* copyToStaging2D(BufferPool& pool, void* data, uint32_t elem_size);
 	};
 }

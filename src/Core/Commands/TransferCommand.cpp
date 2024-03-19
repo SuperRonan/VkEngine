@@ -694,7 +694,7 @@ namespace vkl
 		std::shared_ptr<BufferInstance> _dst = nullptr;
 		bool _use_update = false;
 		// optional
-		std::shared_ptr<StagingBuffer> _staging_buffer = nullptr;
+		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 		Buffer::Range _range; // Merged range of all sources
 
 		// Cached execute() variable
@@ -758,7 +758,7 @@ namespace vkl
 
 			if (!_use_update && ctx.stagingPool())
 			{
-				_staging_buffer = std::make_shared<StagingBuffer>(ctx.stagingPool(), buffer_range.len);
+				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), buffer_range.len);
 				
 				resources() += BufferUsage{
 					.bari = {_staging_buffer->buffer(), Buffer::Range{.begin = 0, .len = buffer_range.len}},
@@ -802,7 +802,7 @@ namespace vkl
 			}
 			else // Use Staging Buffer
 			{
-				std::shared_ptr<StagingBuffer> sb;
+				std::shared_ptr<PooledBuffer> sb;
 				const bool extern_sb = _staging_buffer.operator bool();
 				if (extern_sb)
 				{
@@ -811,7 +811,7 @@ namespace vkl
 				}
 				else
 				{
-					sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), _range.len);
+					sb = std::make_shared<PooledBuffer>(ctx.stagingPool(), _range.len);
 					{
 						InlineSynchronizeBuffer(ctx, 
 							BufferAndRangeInstance{
@@ -976,7 +976,7 @@ namespace vkl
 		uint32_t _buffer_row_length = 0;
 		uint32_t _buffer_image_height = 0;
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
-		std::shared_ptr<StagingBuffer> _staging_buffer = nullptr;
+		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 
 		void populate(RecordContext& ctx, UploadImage::UploadInfo const& ui)
 		{
@@ -997,7 +997,7 @@ namespace vkl
 
 			if (ctx.stagingPool())
 			{
-				_staging_buffer = std::make_shared<StagingBuffer>(ctx.stagingPool(), _src.size());
+				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), _src.size());
 				resources() += BufferUsage{
 					.bari = {_staging_buffer->buffer(), Buffer::Range{.begin = 0, .len = _src.size()}},
 					.begin_state = ResourceState2{
@@ -1028,7 +1028,7 @@ namespace vkl
 		{
 			CommandBuffer& cmd = *ctx.getCommandBuffer();
 
-			std::shared_ptr<StagingBuffer> sb;
+			std::shared_ptr<PooledBuffer> sb;
 			const bool extern_sb = _staging_buffer.operator bool();
 			if (extern_sb)
 			{
@@ -1037,7 +1037,7 @@ namespace vkl
 			}
 			else
 			{
-				sb = std::make_shared<StagingBuffer>(ctx.stagingPool(), _src.size());
+				sb = std::make_shared<PooledBuffer>(ctx.stagingPool(), _src.size());
 
 				InlineSynchronizeBuffer(ctx,
 					BufferAndRangeInstance{
@@ -1201,7 +1201,7 @@ namespace vkl
 
 		// Assuming no aliasing between resources
 		ResourcesToUpload _upload_list = {};
-		std::shared_ptr<StagingBuffer> _staging_buffer = nullptr;
+		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 		MyVector<BufferUploadExtraInfo> _extra_buffer_info;
 
 		void populate(RecordContext& ctx, UploadResources::UploadInfo const& ui)

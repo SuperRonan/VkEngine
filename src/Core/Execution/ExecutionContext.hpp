@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/App/VkApplication.hpp>
+
 #include <Core/VkObjects/CommandBuffer.hpp>
 #include <Core/VkObjects/Pipeline.hpp>
 #include <Core/VkObjects/DescriptorSet.hpp>
@@ -9,7 +10,8 @@
 #include <Core/VkObjects/Sampler.hpp>
 #include <Core/VkObjects/RenderPass.hpp>
 #include <Core/VkObjects/Framebuffer.hpp>
-#include <Core/Execution/StagingPool.hpp>
+
+#include <Core/Execution/BufferPool.hpp>
 #include <Core/Execution/ResourceState.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/FramePerformanceCounters.hpp>
@@ -30,7 +32,7 @@ namespace vkl
 		DescriptorSetsTacker _compute_bound_sets;
 		DescriptorSetsTacker _ray_tracing_bound_sets;
 
-		StagingPool * _staging_pool = nullptr;
+		BufferPool * _staging_pool = nullptr;
 
 	public:
 
@@ -38,7 +40,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name;
-			StagingPool * staging_pool = nullptr;
+			BufferPool * staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -61,7 +63,7 @@ namespace vkl
 
 		DescriptorSetsTacker& getBoundSets(VkPipelineBindPoint pipeline);
 
-		StagingPool* stagingPool()const
+		BufferPool* stagingPool()const
 		{
 			return _staging_pool;
 		}
@@ -85,7 +87,7 @@ namespace vkl
 
 		MyVector<std::shared_ptr<VkObject>> _objects_to_keep = {};
 
-		StagingPool* _staging_pool = nullptr;
+		BufferPool* _staging_pool = nullptr;
 
 		DescriptorSetsManager _graphics_bound_sets;
 		DescriptorSetsManager _compute_bound_sets;
@@ -105,7 +107,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<CommandBuffer> cmd = nullptr;
 			size_t resource_tid = 0;
-			StagingPool* staging_pool = nullptr;
+			BufferPool* staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -150,7 +152,7 @@ namespace vkl
 			return _objects_to_keep;
 		}
 
-		StagingPool* stagingPool()
+		BufferPool* stagingPool()
 		{
 			return _staging_pool;
 		}

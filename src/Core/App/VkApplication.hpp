@@ -29,7 +29,7 @@ namespace vkl
 	// It works only if VkEngine is statically linked with the project exec
 	extern const char * GetProjectName();
 	
-	class StagingPool;
+	class BufferPool;
 	class CommandPool;
 	class DescriptorSetLayout;
 	class DescriptorSetLayoutInstance;
@@ -250,7 +250,7 @@ namespace vkl
 
 		Pools const& pools()const;
 
-		//StagingPool& stagingPool();
+		//BufferPool& stagingPool();
 
 		void nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
 

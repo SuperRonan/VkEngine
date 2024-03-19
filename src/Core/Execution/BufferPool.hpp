@@ -6,15 +6,21 @@
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/Execution/ResourceState.hpp>
 
+#include <Core/Execution/BufferPool.hpp>
+
 namespace vkl
 {
-	class StagingPool : public VkObject
+	// TODO: Maybe allocate BufferAndRange rather than a single buffer
+	//
+	class BufferPool : public VkObject
 	{
 	public:
 		
 	protected:
 
-		VmaMemoryUsage _usage;
+		size_t _minimum_size = 1024;
+		VkBufferUsageFlags _usage;
+		VmaMemoryUsage _mem_usage;
 
 		VmaAllocator _allocator = nullptr;
 
@@ -32,48 +38,50 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VmaAllocator allocator = nullptr;
-			VmaMemoryUsage usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
+			VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_BITS;
+			VmaMemoryUsage mem_usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
+			size_t min_size = 1024;
 		};
 		using CI = CreateInfo;
 
-		StagingPool(CreateInfo const& ci);
+		BufferPool(CreateInfo const& ci);
 
-		virtual ~StagingPool() override;
+		virtual ~BufferPool() override;
 
-		std::shared_ptr<BufferInstance> getStagingBuffer(size_t size);
+		std::shared_ptr<BufferInstance> get(size_t size);
 
-		void releaseStagingBuffer(std::shared_ptr<BufferInstance> staging_buffer);
+		void release(std::shared_ptr<BufferInstance> const& b);
 
 		void clearFreeBuffers();
 
 	};
 
-	class StagingBuffer : public VkObject
+	class PooledBuffer : public VkObject
 	{
 	protected:
 
-		StagingPool* _pool;
+		BufferPool* _pool;
 		std::shared_ptr<BufferInstance> _buffer;
 
 	public:
 
-		StagingBuffer(StagingPool* pool, size_t size) :
+		PooledBuffer(BufferPool* pool, size_t size) :
 			VkObject(pool->application(), ""s),
 			_pool(pool)
 		{
 			assert(size);
-			_buffer = _pool->getStagingBuffer(size);
+			_buffer = _pool->get(size);
 		}
 
-		StagingBuffer(StagingPool* pool, std::shared_ptr<BufferInstance> buffer) :
+		PooledBuffer(BufferPool* pool, std::shared_ptr<BufferInstance> buffer) :
 			VkObject(pool->application(), ""s),
 			_pool(pool),
 			_buffer(buffer)
 		{}
 
-		virtual ~StagingBuffer() override
+		virtual ~PooledBuffer() override
 		{
-			_pool->releaseStagingBuffer(_buffer);
+			_pool->release(_buffer);
 		}
 
 		std::shared_ptr<BufferInstance> const& buffer()const

@@ -345,17 +345,17 @@ namespace vkl
 
 	
 
-	//StagingPool::StagingBuffer * Buffer::copyToStaging(void* data, size_t size)
+	//BufferPool::PooledBuffer * Buffer::copyToStaging(void* data, size_t size)
 	//{
 	//	if (size == 0)	size = _size;
-	//	StagingPool::StagingBuffer* sb = _app->stagingPool().getStagingBuffer(size);
+	//	BufferPool::PooledBuffer* sb = _app->stagingPool().getStagingBuffer(size);
 
 	//	std::memcpy(sb->data, data, size);
 
 	//	return sb;
 	//}
 
-	//void Buffer::recordCopyStagingToBuffer(VkCommandBuffer cmd, StagingPool::StagingBuffer* sb)
+	//void Buffer::recordCopyStagingToBuffer(VkCommandBuffer cmd, BufferPool::PooledBuffer* sb)
 	//{
 	//	VkBufferCopy copy{
 	//		.srcOffset = 0,
