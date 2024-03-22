@@ -774,6 +774,12 @@ namespace vkl
 				if (!(access_already_synch && stage_already_synch && same_layout))
 				{
 					synch_from = prev.write_state;
+					// If layout transition:
+					// Then we need to wait also for the last read only usage
+					if (!same_layout)
+					{
+						synch_from = synch_from | prev.read_only_state;
+					}
 					synch_from.layout = prev.read_only_state.layout;
 					add_barrier = true;
 				}
@@ -924,6 +930,12 @@ namespace vkl
 						if (!(access_already_synch && stage_already_synch && same_layout))
 						{
 							synch_from = prev.write_state;
+							// If layout transition:
+							// Then we need to wait also for the last read only usage
+							if (!same_layout)
+							{
+								synch_from = synch_from | prev.read_only_state;
+							}
 							synch_from.layout = prev.read_only_state.layout;
 							add_barrier = true;
 						}
