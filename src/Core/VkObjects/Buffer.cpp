@@ -32,6 +32,7 @@ namespace vkl
 		{
 			_ci.usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		}
+		assert(_allocator);
 		VK_CHECK(vmaCreateBuffer(_allocator, &_ci, &_aci, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
 
 		InternalStates is;

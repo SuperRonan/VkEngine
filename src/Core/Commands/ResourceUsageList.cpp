@@ -4,6 +4,7 @@ namespace vkl
 {
 	void FullyMergedBufferUsageList::add(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state, VkBufferUsageFlags2KHR usages)
 	{
+		assert(bari);
 		BufferSubRangeState& bsrs = _buffers[bari.buffer];
 		Buffer::Range range = bari.range;
 		if (range.len == 0)

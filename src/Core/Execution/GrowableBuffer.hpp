@@ -2,12 +2,11 @@
 
 #include <Core/VkObjects/Buffer.hpp>
 
-#include <Core/Execution/Executor.hpp>
-
-#include <Core/Commands/TransferCommand.hpp>
-
 namespace vkl
 {	
+	class ExecutionRecorder;
+	
+
 	class GrowableBuffer : public VkObject
 	{
 	protected:
@@ -28,7 +27,8 @@ namespace vkl
 
 		virtual void recordTransferIFN(ExecutionRecorder & exec);
 
-		CopyBuffer::CopyInfoInstance consumeSynchCopyInfo();
+		template <class CopyInfo>
+		CopyInfo consumeSynchCopyInfo();
 
 		bool needsTransfer() const
 		{

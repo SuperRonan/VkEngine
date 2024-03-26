@@ -90,6 +90,7 @@ namespace vkl
 
 		VkDeviceAddress deviceAddress() const
 		{
+			assert(_ci.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
 			return _address;
 		}
 
@@ -278,7 +279,7 @@ namespace vkl
 		size_t size() const
 		{
 			size_t res = range.len;
-			if(res == 0)	res = buffer->createInfo().size;
+			if(res == 0)	res = (buffer->createInfo().size - range.begin);
 			return res;
 		}
 	};

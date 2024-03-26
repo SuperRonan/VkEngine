@@ -1,5 +1,6 @@
 #include "GrowableBuffer.hpp"
 #include <Core/Commands/PrebuiltTransferCommands.hpp>
+#include <Core/Execution/Executor.hpp>
 
 namespace vkl
 {
@@ -44,16 +45,7 @@ namespace vkl
 		}
 	}
 
-	void GrowableBuffer::recordTransferIFN(ExecutionRecorder& exec)
-	{
-		if (needsTransfer())
-		{
-			CopyBuffer & cp = application()->getPrebuiltTransferCommands().copy_buffer;
-
-			exec(cp.with(consumeSynchCopyInfo()));
-		}
-	}
-
+	template <>
 	CopyBuffer::CopyInfoInstance GrowableBuffer::consumeSynchCopyInfo()
 	{
 		assert(needsTransfer());
@@ -67,4 +59,16 @@ namespace vkl
 
 		return res;
 	}
+
+	void GrowableBuffer::recordTransferIFN(ExecutionRecorder& exec)
+	{
+		if (needsTransfer())
+		{
+			CopyBuffer & cp = application()->getPrebuiltTransferCommands().copy_buffer;
+
+			exec(cp.with(consumeSynchCopyInfo<CopyBuffer::CopyInfoInstance>()));
+		}
+	}
+
+	
 }

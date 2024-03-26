@@ -2,6 +2,8 @@
 
 #include <Core/Commands/PrebuiltTransferCommands.hpp>
 
+#include <Core/Execution/Executor.hpp>
+
 namespace vkl
 {
 	HostManagedBuffer::HostManagedBuffer(CreateInfo const& ci) :
