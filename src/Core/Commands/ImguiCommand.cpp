@@ -274,7 +274,15 @@ namespace vkl
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
 			.UseDynamicRendering = _render_pass ? false : true,
-			.ColorAttachmentFormat = VK_FORMAT_B8G8R8A8_UNORM,
+			.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+				.pNext = nullptr,
+				.viewMask = 0,
+				.colorAttachmentCount = 1,
+				.pColorAttachmentFormats = &_imgui_init_format,
+				.depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+				.stencilAttachmentFormat = VK_FORMAT_UNDEFINED,
+			},
 		};
 		
 		ImGui_ImplVulkan_Init(&ii);

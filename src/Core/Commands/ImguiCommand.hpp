@@ -19,6 +19,7 @@ namespace vkl
 		std::shared_ptr<DescriptorPool> _desc_pool = nullptr;
 
 		VkFormat _imgui_format = VK_FORMAT_MAX_ENUM;
+		VkFormat _imgui_init_format = VK_FORMAT_B8G8R8A8_UNORM;
 
 		Dyn<size_t> _index;
 
