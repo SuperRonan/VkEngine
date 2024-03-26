@@ -41,6 +41,15 @@ namespace vkl
 		{
 			_common_definitions->setDefinition("SHADER_FP16_AVAILABLE", "1");
 		}
+
+		if (features.ray_query_khr.rayQuery)
+		{
+			_common_definitions->setDefinition("SHADER_RAY_QUERY_AVAILABLE", "1");
+		}
+		if (features.ray_tracing_pipeline_khr.rayTracingPipeline)
+		{
+			_common_definitions->setDefinition("SHADER_RAY_TRACING_AVAILABLE", "1");
+		}
 	}
 
 

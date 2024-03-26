@@ -149,7 +149,7 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 	// }
 
 	{
-#if GL_EXT_ray_query
+#if SHADER_RAY_QUERY_AVAILABLE
 		RayQuery_t rq;
 		rayQueryInitializeEXT(rq, SceneTLAS, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, position, EPSILON * 8 * 8, normal, 10000);
 		while(rayQueryProceedEXT(rq))
