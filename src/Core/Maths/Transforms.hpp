@@ -122,7 +122,7 @@ namespace vkl
 		{
 			for (uint32_t j = 0; j < 4; ++j)
 			{
-				res.matrix[i][j] = mat[i][j];
+				res.matrix[i][j] = mat[j][i];
 			}
 		}
 		return res;
