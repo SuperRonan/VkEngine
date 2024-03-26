@@ -17,6 +17,8 @@
 
 #include "AmbientOcclusion.hpp"
 
+#include <Core/Commands/AccelerationStructureCommands.hpp>
+
 #include <unordered_map>
 #include <map>
 
@@ -117,6 +119,14 @@ namespace vkl
 		void generateVertexDrawList(MultiVertexDrawCallList & res);
 
 		void createInternalResources();
+
+		bool _maintain_rt = false;
+
+		std::shared_ptr<BuildAccelerationStructureCommand> _build_as = nullptr;
+		BuildAccelerationStructureCommand::BuildInfo _blas_build_list;
+
+		void FillASBuildLists();
+
 
 	public:
 

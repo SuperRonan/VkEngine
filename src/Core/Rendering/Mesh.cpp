@@ -186,7 +186,7 @@ namespace vkl
 		const bool index_uint8_t_available = application()->availableFeatures().index_uint8_ext.indexTypeUint8;
 		const size_t vs = _host.numVertices();
 		const size_t is = _host.indicesSize();
-		const bool can8 = vs <= UINT8_MAX && index_uint8_t_available;
+		const bool can8 = vs <= UINT8_MAX && index_uint8_t_available && false; // causes too many issues (not compatible with BLAS, NSight can't read them)
 		const bool can16 = vs <= UINT16_MAX;
 		const bool can32 = vs <= UINT32_MAX;
 		VkIndexType & idxt = _host.index_type;
@@ -522,11 +522,17 @@ namespace vkl
 		_device.num_vertices = header.num_vertices;
 		_device.index_type = _host.index_type;
 		
+		bool enable_blas = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		VkBufferUsageFlags buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		if (enable_blas)
+		{
+			buffer_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+		}
 		_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = _app,
 			.name = name() + ".mesh_buffer",
 			.size = &_device.total_buffer_size,
-			.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.usage =  buffer_usage,
 			.queues = queues,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -560,6 +566,32 @@ namespace vkl
 			.buffer = _device.mesh_buffer,
 			.range = Buffer::Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
 		};
+
+
+		if(enable_blas)
+		{
+			_blas = std::make_shared<BLAS>(BLAS::CI{
+				.app = application(),
+				.name = name() + ".BLAS",
+				.geometry_flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+				.build_flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+				.geometries = {
+					BLAS::Geometry{
+						.vertex_buffer = _device.vertex_buffer,
+						.vertex_description = VertexDescriptionAS{
+							.format = VK_FORMAT_R32G32B32_SFLOAT,
+							.stride = sizeof(Vertex),
+						},
+						.index_buffer = _device.index_buffer,
+						.index_type = _device.index_type,
+						.capacity = BLAS::Geometry::Capacity{
+							.max_vertex = header.num_vertices,
+							.max_primitives = header.num_primitives,
+						},
+					}
+				}
+			});
+		}
 	}
 
 	//void RigidMesh::recordBindAndDraw(ExecutionContext & ctx)
@@ -733,6 +765,11 @@ namespace vkl
 					callResourceUpdateCallbacks();
 				}
 			}
+
+			if (isReadyToDraw() && _blas)
+			{
+				_blas->updateResources(ctx);
+			}
 		}
 	}
 
@@ -797,57 +834,6 @@ namespace vkl
 
 		ImGui::PopID();
 	}
-
-	//void RigidMesh::recordSynchForDraw(SynchronizationHelper& synch, std::shared_ptr<Pipeline> const& pipeline)
-	//{
-	//	//const bool separate_resource = false;
-	//	//if (separate_resource)
-	//	//{
-	//	//	return Resources{
-	//	//		Resource{
-	//	//			._buffer = _device.mesh_buffer,
-	//	//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size},
-	//	//			._begin_state = ResourceState2{
-	//	//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-	//	//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-	//	//			},
-	//	//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-	//	//		},
-	//	//		Resource{
-	//	//			._buffer = _device.mesh_buffer,
-	//	//			._buffer_range = Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
-	//	//			._begin_state = ResourceState2{
-	//	//				.access = VK_ACCESS_2_INDEX_READ_BIT,
-	//	//				.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-	//	//			},
-	//	//			._buffer_usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-	//	//		},
-	//	//	};
-	//	//}
-	//	//else
-	//	//{
-	//	//	return Resources{
-	//	//		Resource{
-	//	//			._buffer = _device.mesh_buffer,
-	//	//			._buffer_range = Range{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
-	//	//			._begin_state = ResourceState2{
-	//	//				.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
-	//	//				.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT | VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-	//	//			},
-	//	//			._buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-	//	//		},
-	//	//	};
-	//	//}
-	//
-	//	synch.addSynch(Resource{
-	//		._buffer = _device.mesh_buffer,
-	//		._buffer_range = Range_st{.begin = _device.header_size, .len = _device.vertices_size + _device.indices_size},
-	//		._begin_state = ResourceState2{
-	//			.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_2_INDEX_READ_BIT,
-	//			.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT | VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-	//		},
-	//	});
-	//}1
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square2DMakeInfo const& smi)
 	{

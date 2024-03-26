@@ -104,6 +104,15 @@ namespace vkl
 			VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
 			VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
 			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+			
+			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+			VK_KHR_RAY_QUERY_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME,
+
+			VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
+			VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME,
 		};
 	}
 
@@ -144,11 +153,17 @@ namespace vkl
 		features.mesh_shader_ext.meshShader = t;
 		features.mesh_shader_ext.taskShader = t;
 		features.mesh_shader_ext.multiviewMeshShader = t;
-		features.mesh_shader_ext.primitiveFragmentShadingRateMeshShader = t;
+		//features.mesh_shader_ext.primitiveFragmentShadingRateMeshShader = t;
 
 		features.robustness2_ext.nullDescriptor = t;
 
 		features.features_13.dynamicRendering = t;
+
+		features.features_12.bufferDeviceAddress = t;
+		features.acceleration_structure_khr.accelerationStructure = t;
+		features.acceleration_structure_khr.descriptorBindingAccelerationStructureUpdateAfterBind = t;
+
+		features.ray_query_khr.rayQuery = t;
 	}
 
 	std::vector<const char*> VkApplication::getInstanceExtensions()
@@ -655,7 +670,13 @@ namespace vkl
 
 	void VkApplication::createAllocator()
 	{
+		VmaAllocatorCreateFlags flags = 0;
+		if (availableFeatures().features_12.bufferDeviceAddress)
+		{
+			flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+		}
 		VmaAllocatorCreateInfo alloc_ci{
+			.flags = flags,
 			.physicalDevice = _physical_device,
 			.device = _device,
 			.instance = _instance,

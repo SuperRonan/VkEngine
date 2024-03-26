@@ -21,6 +21,7 @@ namespace vkl
 		bool update_storage_image = false;
 		bool update_storage_buffer = false;
 		bool update_sampled_image = false;
+		bool update_tlas = false;
 
 		for (size_t i = 0; i < _writes.size(); ++i)
 		{
@@ -43,6 +44,7 @@ namespace vkl
 					// Not supported yet
 					uintptr_t index = (uintptr_t)_writes[i].pTexelBufferView;
 				}
+				break;
 				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
 				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -59,7 +61,10 @@ namespace vkl
 				break;
 				case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
 				{
-					// TODO
+					const std::uintptr_t as_write_index = (std::uintptr_t)_writes[i].pNext;
+					_writes[i].pNext = _tlas_writes.data() + as_write_index;
+					const std::uintptr_t tlas_index = (std::uintptr_t)_tlas_writes[as_write_index].pAccelerationStructures;
+					_tlas_writes[as_write_index].pAccelerationStructures = _tlas.data() + tlas_index;
 				}
 				break;
 			}
@@ -68,28 +73,23 @@ namespace vkl
 			{
 				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
 				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-				{
 					update_uniform_buffer = true;
-				}
 				break;
 				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
 				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-				{
 					update_storage_buffer = true;
-				}
 				break;
 				case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-				{
 					update_storage_image = true;
-				}
 				break;
 				case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 				case VK_DESCRIPTOR_TYPE_SAMPLER:
 				case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 				case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-				{
 					update_sampled_image = true;
-				}
+				break;
+				case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+					update_tlas = true;
 				break;
 			}
 		}
@@ -97,7 +97,8 @@ namespace vkl
 		if (!_writes.empty())
 		{
 			bool wait = false;
-			const auto& features12 = application()->availableFeatures().features_12;
+			const auto & features = application()->availableFeatures();
+			const auto& features12 = features.features_12;
 			if (update_uniform_buffer && features12.descriptorBindingUniformBufferUpdateAfterBind == VK_FALSE)
 			{
 				wait = true;
@@ -114,6 +115,10 @@ namespace vkl
 			{
 				wait = true;
 			}
+			if (update_tlas && features.acceleration_structure_khr.descriptorBindingAccelerationStructureUpdateAfterBind == VK_FALSE)
+			{
+				wait = true;
+			}
 
 			if (wait)
 			{
@@ -127,5 +132,7 @@ namespace vkl
 		_writes.clear();
 		_images.clear();
 		_buffers.clear();
+		_tlas_writes.clear();
+		_tlas.clear();
 	}
 }

@@ -9,6 +9,10 @@
 #include <imgui/imgui.h>
 #include <Core/IO/ImGuiUtils.hpp>
 
+#include <Core/Execution/Executor.hpp>
+
+#include <Core/Maths/Transforms.hpp>
+
 namespace vkl
 {
 
@@ -256,6 +260,11 @@ namespace vkl
 		std::shared_ptr<Node> root = std::make_shared<Node>(Node::CI{.name = "root"});
 		_tree = std::make_shared<DirectedAcyclicGraph>(root);
 
+		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		{
+			_maintain_rt = true;
+		}
+
 		createSet();
 	}
 
@@ -304,7 +313,8 @@ namespace vkl
 			const uint32_t textures_num_bindings = 1;
 			_xforms_bindings_base = _textures_bindings_base + textures_num_bindings;
 			const uint32_t xforms_num_bindings = 2;
-
+			_tlas_binding_base = _xforms_bindings_base + xforms_num_bindings;
+			const uint32_t tlas_num_bindings = 1;
 
 			std::vector<DescriptorSetLayout::Binding> bindings;
 			using namespace std::containers_append_operators;
@@ -448,6 +458,20 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
+
+			if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+			{
+				bindings += DescriptorSetLayout::Binding{
+					.name = "SceneTLAS",
+					.binding = _tlas_binding_base,
+					.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+					.count = 1,
+					.stages = VK_SHADER_STAGE_ALL,
+					.access = 0,
+					.usage = 0,
+				};
+			}
+
 			_set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
 				.app = application(),
 				.name = name() + ".SetLayout",
@@ -514,6 +538,20 @@ namespace vkl
 		_prev_xforms_segment = BufferAndRange{
 			.buffer = _prev_xforms_buffer,
 		};
+
+		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		{
+			_tlas = std::make_shared<TopLevelAccelerationStructure>(TopLevelAccelerationStructure::CI{
+				.app = application(),
+				.name = name() + ".TLAS",
+				.geometry_flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+				.build_flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+			});
+			_build_tlas = std::make_shared<BuildAccelerationStructureCommand>(BuildAccelerationStructureCommand::CI{
+				.app = application(),
+				.name = name() + ".BuildTLAS",
+			});
+		}
 	}
 
 	void Scene::createSet()
@@ -554,6 +592,14 @@ namespace vkl
 			.buffer_range = _prev_xforms_segment.range,
 			.binding = _xforms_bindings_base + 1,
 		};
+
+		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		{
+			bindings += Binding{
+				.tlas = _tlas,
+				.binding = _tlas_binding_base + 0,
+			};
+		}
 
 		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
 			.app = application(),
@@ -757,7 +803,35 @@ namespace vkl
 				{
 					_xforms_buffer->set<Mat3x4>(xform_unique_id, model_matrix);
 				}
+				
+				if (_maintain_rt)
+				{
+					Mesh * mesh = model->mesh().get();
+					if (mesh && mesh->isReadyToDraw())
+					{
+						bool register_to_tlas = true;
+						if (unique_model_id < _tlas->blases().size())
+						{
+							if (_tlas->blases()[unique_model_id].blas == mesh->blas())
+							{
+								register_to_tlas = false;
+							}
+						}
+						if (register_to_tlas)
+						{
+							_tlas->registerBLAS(unique_model_id, TLAS::BLASInstance{
+								.blas = mesh->blas(),
+								.xform = convertXFormToVk(matrix),
+								.instanceCustomIndex = unique_model_id,
+								.mask = 0xFF,
+								.instanceShaderBindingTableRecordOffset = 0,
+								.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR,
+							});
+						}
+					}
+				}
 			}
+
 
 			std::shared_ptr<Light> light = node->light();
 			if (light)
@@ -857,6 +931,11 @@ namespace vkl
 			node->updateResources(ctx);
 		});
 
+		if (_tlas)
+		{
+			_tlas->updateResources(ctx);
+		}
+
 		if (_set_layout)
 		{
 			_set_layout->updateResources(ctx);
@@ -886,5 +965,19 @@ namespace vkl
 		_lights_buffer->recordTransferIFN(exec);
 		_model_references_buffer->recordTransferIFN(exec);
 		_material_ref_buffer->recordTransferIFN(exec);
+	}
+
+	void Scene::buildTLAS(ExecutionRecorder& exec)
+	{
+		if (_tlas)
+		{
+			_tlas->recordTransferIFN(exec);
+			_tlas_build_info.pushIFN(_tlas);
+			if (!_tlas_build_info.empty())
+			{
+				exec(_build_tlas->with(_tlas_build_info));
+			}
+			_tlas_build_info.clear();
+		}
 	}
 }

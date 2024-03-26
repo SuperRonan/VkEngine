@@ -7,6 +7,8 @@
 
 #include <ShaderLib:/Rendering/Materials/PBMaterial.glsl>
 
+#include <ShaderLib:/RayTracingCommon.glsl>
+
 #ifndef BIND_SCENE
 #define BIND_SCENE 0
 #endif
@@ -79,6 +81,9 @@ ScenePBMaterialTextures NoPBMaterialTextures()
 #ifndef SCENE_XFORM_ACCESS
 #define SCENE_XFORM_ACCESS readonly
 #endif
+
+#define SCENE_TLAS_BINDING SCENE_XFORM_BINDING + SCENE_XFORM_NUM_BINDING
+#define SCENE_TLAS_NUM_BINDING 1
 
 
 layout(SCENE_BINDING + 0) uniform SceneUBOBinding
@@ -215,6 +220,9 @@ layout(SCENE_XFORM_BINDING + 1) buffer restrict SCENE_XFORM_ACCESS ScenePrevXFor
 } scene_prev_xforms;
 
 
+#if CAN_BIND_TLAS
+layout(SCENE_TLAS_BINDING + 0) uniform TLAS_t SceneTLAS;
+#endif
 
 
 #endif

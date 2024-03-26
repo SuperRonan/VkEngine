@@ -15,6 +15,8 @@
 
 namespace vkl
 {
+	class TopLevelAccelerationStructure;
+	
 	struct CombinedImageSampler
 	{
 		std::shared_ptr<ImageView> view = {};
@@ -29,6 +31,7 @@ namespace vkl
 		std::shared_ptr<ImageView>	view = nullptr;
 		std::shared_ptr<Sampler>	sampler = nullptr;
 		Array<CombinedImageSampler> image_array = {};
+		std::shared_ptr<TopLevelAccelerationStructure> tlas = nullptr;
 		std::string					name = {};
 		uint32_t					binding = uint32_t(-1);
 	};

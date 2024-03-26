@@ -148,5 +148,28 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 	// 	res = texture_depth.xxx;
 	// }
 
+	{
+#if GL_EXT_ray_query
+		RayQuery_t rq;
+		rayQueryInitializeEXT(rq, SceneTLAS, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, position, EPSILON * 8 * 8, normal, 10000);
+		while(rayQueryProceedEXT(rq))
+		{
+			if (rayQueryGetIntersectionTypeEXT(rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT)
+			{
+				rayQueryConfirmIntersectionEXT(rq);
+			}
+		}
+
+		if(rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT)
+		{
+			res *= vec3(1, 0, 0);
+		}
+		else
+		{
+			res *= vec3(0, 1, 0);
+		}
+#endif
+	}
+
 	return res;
 }

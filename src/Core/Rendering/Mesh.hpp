@@ -16,6 +16,7 @@
 #include <Core/IO/GuiContext.hpp>
 
 #include <Core/Maths/AlignedAxisBoundingBox.hpp>
+#include <Core/VkObjects/AccelerationStructure.hpp>
 
 #include <vector>
 
@@ -87,6 +88,8 @@ namespace vkl
 
 		AABB3f _aabb;
 
+		std::shared_ptr<BottomLevelAccelerationStructure> _blas = nullptr;
+
 		MyVector<DescriptorSetAndPool::Registration> _registered_sets = {};
 
 	public:
@@ -148,6 +151,11 @@ namespace vkl
 		const AABB3f& getAABB()const
 		{
 			return _aabb;
+		}
+
+		std::shared_ptr<BLAS> const& blas()const
+		{
+			return _blas;
 		}
 	};
 

@@ -16,6 +16,10 @@ namespace vkl
 
 		createInternalResources();
 		
+		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		{
+			//_maintain_rt = true;
+		}
 	}
 
 	void SimpleRenderer::createInternalResources()
@@ -396,11 +400,39 @@ namespace vkl
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
 			});
 		}
+
+		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		{
+			_build_as = std::make_shared<BuildAccelerationStructureCommand>(BuildAccelerationStructureCommand::CI{
+				.app = application(),
+				.name = name() + ".BuildAS",
+			});
+		}
+	}
+
+	void SimpleRenderer::FillASBuildLists()
+	{
+		_blas_build_list.clear();
+		
+		auto process_mesh = [&](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
+		{
+			if (node->visible() && node->model() && node->model()->isReadyToDraw())
+			{
+				std::shared_ptr<Mesh> const& mesh = node->model()->mesh();
+				if (mesh->isReadyToDraw() && mesh->blas())
+				{
+					_blas_build_list.pushIFN(mesh->blas());
+				}
+			}
+			return node->visible();
+		};
+		_scene->getTree()->iterateOnDag(process_mesh);
 	}
 
 	void SimpleRenderer::generateVertexDrawList(MultiVertexDrawCallList & res)
 	{
 		VertexDrawCallInfo vr;
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
 		auto add_model = [&res, &vr](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
 			if (node->visible() && node->model() && node->model()->isReadyToDraw())
@@ -435,6 +467,11 @@ namespace vkl
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
 		bool update_all_anyway = ctx.updateAnyway();
+
+		//if (ctx.updateTick() == 256)
+		//{
+		//	_maintain_rt = true;
+		//}
 
 		_render_target->updateResource(ctx);
 		_depth->updateResource(ctx);
@@ -625,6 +662,17 @@ namespace vkl
 			}
 		}
 
+		if (_maintain_rt)
+		{
+			assert(application()->availableFeatures().acceleration_structure_khr.accelerationStructure);
+			FillASBuildLists();
+			if (!_blas_build_list.empty())
+			{
+				exec(_build_as->with(_blas_build_list));
+			}
+			_scene->buildTLAS(exec);
+		}
+
 		// Render shadows
 		{
 			if (_use_indirect_rendering)
@@ -764,6 +812,10 @@ namespace vkl
 					_ambient_occlusion->declareGui(ctx);
 				}
 			}
+
+			ImGui::BeginDisabled(application()->availableFeatures().acceleration_structure_khr.accelerationStructure == VK_FALSE);
+			ImGui::Checkbox("Ray Tracing", &_maintain_rt);
+			ImGui::EndDisabled();
 		}
 	}
 }

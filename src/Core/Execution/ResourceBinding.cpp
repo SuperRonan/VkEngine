@@ -49,6 +49,11 @@ namespace vkl
 				desc.sampler,
 			};
 		}
+		if (desc.tlas)
+		{
+			_tlas = {desc.tlas, };
+			_type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		}
 	}
 
 	ResourceBinding::ResourceBinding(ShaderBindingDescription && desc) :
@@ -96,6 +101,11 @@ namespace vkl
 			_samplers = {
 				std::move(desc.sampler),
 			};
+		}
+		if (desc.tlas)
+		{
+			_tlas = { std::move(desc.tlas), };
+			_type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 		}
 	}
 }

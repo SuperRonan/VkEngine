@@ -5,6 +5,7 @@
 #include <Core/VkObjects/DescriptorPool.hpp>
 #include <Core/VkObjects/DescriptorSet.hpp>
 #include <Core/VkObjects/CommandBuffer.hpp>
+#include <Core/VkObjects/AccelerationStructure.hpp>
 
 namespace vkl
 {
@@ -107,8 +108,7 @@ namespace vkl
 		// *view == nullptr -> set the binding to nullptr
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views = nullptr, const std::shared_ptr<Sampler>* samplers = nullptr);
 
-		//void setBinding(ResourceBinding const& b);
-		
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure> * tlas = nullptr);
 	};
 
 	class DescriptorSetAndPool : public InstanceHolder<DescriptorSetAndPoolInstance>
@@ -180,6 +180,8 @@ namespace vkl
 		// views == nullptr -> does not set the binding
 		// *view == nullptr -> set the binding to nullptr
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView> * views = nullptr, const std::shared_ptr<Sampler> * samplers = nullptr);
+
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure>* tlas = nullptr);
 
 		void waitForInstanceCreationIFN();
 	};

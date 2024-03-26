@@ -4,6 +4,7 @@
 #include <Core/VulkanCommons.hpp>
 #include "Resource.hpp"
 #include <Core/VkObjects/Sampler.hpp>
+#include <Core/VkObjects/AccelerationStructure.hpp>
 
 namespace vkl
 {
@@ -17,6 +18,7 @@ namespace vkl
 		
 		Resource _resource = {};
 		Array<std::shared_ptr<Sampler>> _samplers = {};
+		Array<std::shared_ptr<TLAS>> _tlas = {};
 		
 		uint32_t _binding = uint32_t(-1);
 
@@ -100,6 +102,21 @@ namespace vkl
 			return
 				_type == VK_DESCRIPTOR_TYPE_SAMPLER ||
 				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		}
+
+		constexpr bool isAS()const
+		{
+			return _type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		}
+
+		constexpr const auto& tlas()const
+		{
+			return _tlas;
+		}
+
+		constexpr auto& tlas()
+		{
+			return _tlas;
 		}
 
 		constexpr const auto& samplers()const

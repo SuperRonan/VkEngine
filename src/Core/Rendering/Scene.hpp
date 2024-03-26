@@ -4,6 +4,7 @@
 
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/VkObjects/ImageView.hpp>
+#include <Core/VkObjects/AccelerationStructure.hpp>
 
 #include <Core/Execution/DescriptorSetsManager.hpp>
 #include <Core/Execution/GrowableBuffer.hpp>
@@ -13,6 +14,8 @@
 #include <Core/Rendering/Light.hpp>
 
 #include <Core/Utils/UniqueIndexAllocator.hpp>
+
+#include <Core/Commands/AccelerationStructureCommands.hpp>
 
 #include <unordered_map>
 
@@ -258,6 +261,7 @@ namespace vkl
 		uint32_t _material_bindings_base;
 		uint32_t _textures_bindings_base;
 		uint32_t _xforms_bindings_base;
+		uint32_t _tlas_binding_base;
 
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
@@ -353,6 +357,14 @@ namespace vkl
 		VkSampleCountFlagBits _light_depth_samples = VK_SAMPLE_COUNT_1_BIT;
 		VkFormat _light_depth_format = VK_FORMAT_D32_SFLOAT;
 
+
+
+		bool _maintain_rt = false;
+		std::shared_ptr<TLAS> _tlas = nullptr;
+		std::shared_ptr<BuildAccelerationStructureCommand> _build_tlas;
+		BuildAccelerationStructureCommand::BuildInfo _tlas_build_info;
+		
+		
 		UBO getUBO() const;
 
 		void createInternalBuffers();
@@ -397,6 +409,8 @@ namespace vkl
 		virtual void updateResources(UpdateContext & ctx);
 
 		virtual void prepareForRendering(ExecutionRecorder & exec);
+
+		virtual void buildTLAS(ExecutionRecorder & exec);
 
 		//static std::shared_ptr<DescriptorSetLayout> SetLayout(VkApplication * app, SetLayoutOptions const& options);
 

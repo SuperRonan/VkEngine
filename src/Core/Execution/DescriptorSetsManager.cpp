@@ -112,9 +112,19 @@ namespace vkl
 				binding.setUpdateStatus(true);
 			}
 		}
+		else if(binding.isAS())
+		{
+			for (size_t i = 0; i < binding.tlas().size(); ++i)
+			{
+				if (binding.tlas()[i])
+				{
+					binding.tlas()[i]->addInvalidationCallback(cb);
+				}
+			}
+		}
 		else
 		{
-			assert(false);
+			NOT_YET_IMPLEMENTED;
 		}
 	}
 
@@ -148,6 +158,16 @@ namespace vkl
 				if (binding.samplers()[i])
 				{
 					binding.samplers()[i]->removeInvalidationCallbacks(this);
+				}
+			}
+		}
+		if (binding.isAS())
+		{
+			for (size_t i = 0; i < binding.tlas().size(); ++i)
+			{
+				if (binding.tlas()[i])
+				{
+					binding.tlas()[i]->removeInvalidationCallbacks(this);
 				}
 			}
 		}
@@ -481,9 +501,27 @@ namespace vkl
 						}
 					}
 				}
+				else if(b.isAS())
+				{
+					if (!b.tlas().empty())
+					{
+						VkAccelerationStructureKHR * p_as = writer.addTLAS(dst, b.tlas().size());
+						for (size_t i = 0; i < b.tlas().size(); ++i)
+						{
+							if (b.tlas()[i] && b.tlas()[i]->instance())
+							{
+								p_as[i] = b.tlas()[i]->instance()->handle();
+							}
+							else
+							{
+								p_as[i] = VK_NULL_HANDLE;
+							}
+						}
+					}
+				}
 				else
 				{
-					assert(false);
+					NOT_YET_IMPLEMENTED;
 				}
 				b.setUpdateStatus(true);
 			}
@@ -645,7 +683,34 @@ namespace vkl
 
 
 
+	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure>* tlas)
+	{
+		ResourceBinding* found = findBinding(binding);
+		assert(found);
+		assert(found->isAS());
+		auto & b_tlas = found->tlas();
+		if (b_tlas.size32() >= (array_index + count)) // enough capacity
+		{
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				const uint32_t binding_array_index = array_index + i;
+				b_tlas[i] = tlas ? tlas[i] : nullptr;
+				if (b_tlas[i])
+				{
+					b_tlas[i]->addInvalidationCallback(Callback{
+						.callback = [this, found, binding_array_index]() {
+							found->setUpdateStatus(false);
+						},
+						.id = this,
+					});
+				}
+			}
+		}
+		else // this instance will be renewed, no need to write now
+		{
 
+		}
+	}
 
 
 
@@ -1069,6 +1134,27 @@ namespace vkl
 		if (_inst)
 		{
 			_inst->setBinding(binding, array_index, count, views, samplers);
+		}
+	}
+
+	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure>* tlas)
+	{
+		ResourceBinding & rb = *findBindingOrEmplace(binding);
+		auto & b_tlas = rb.tlas();
+		
+		if (b_tlas.size32() <= (array_index + count))
+		{
+			b_tlas.resize(array_index + count); 
+		}
+
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			b_tlas[i] = tlas ? tlas[i] : nullptr;
+		}
+
+		if (_inst)
+		{
+			_inst->setBinding(binding, array_index, count, tlas);
 		}
 	}
 

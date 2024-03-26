@@ -11,9 +11,11 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<VkWriteDescriptorSet> _writes;
-		std::vector<VkDescriptorImageInfo> _images;
-		std::vector<VkDescriptorBufferInfo> _buffers;
+		MyVector<VkWriteDescriptorSet> _writes;
+		MyVector<VkDescriptorImageInfo> _images;
+		MyVector<VkDescriptorBufferInfo> _buffers;
+		MyVector<VkWriteDescriptorSetAccelerationStructureKHR> _tlas_writes;
+		MyVector<VkAccelerationStructureKHR> _tlas;
 
 	public:
 
@@ -214,6 +216,37 @@ namespace vkl
 		void add(WriteDestination const& dst, std::vector<VkDescriptorImageInfo> const& image_infos)
 		{
 			addImages(dst, image_infos.cbegin(), image_infos.cend());
+		}
+
+		VkAccelerationStructureKHR* addTLAS(WriteDestination const& dst, uint32_t count = 1)
+		{
+			assert(count > 0);
+			assert(dst.type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR);
+			_writes.push_back(VkWriteDescriptorSet{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = dst.set,
+				.dstBinding = dst.binding,
+				.dstArrayElement = dst.index,
+				.descriptorCount = count,
+				.descriptorType = dst.type,
+				.pImageInfo = nullptr,
+				.pBufferInfo = nullptr,
+				.pTexelBufferView = nullptr,
+			});
+			std::uintptr_t & pn_index = (std::uintptr_t&)_writes.back().pNext;
+			pn_index = _tlas_writes.size();
+			_tlas_writes.push_back(VkWriteDescriptorSetAccelerationStructureKHR{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+				.pNext = nullptr,
+				.accelerationStructureCount = count,
+				.pAccelerationStructures = 0,
+			});
+			const size_t o = _tlas.size();
+			std::uintptr_t & index = (std::uintptr_t&)_tlas_writes.back().pAccelerationStructures;
+			index = o;
+			_tlas.resize(o + count);
+			return _tlas.data() + o;
 		}
 
 		void record();
