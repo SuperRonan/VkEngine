@@ -511,16 +511,24 @@ namespace vkl
 		{
 			_blases.resize(index + 1);
 		}
+		const bool new_blas = _blases[index].blas != blas_instance.blas;
+		if (new_blas && _blases[index].blas)
+		{
+			_blases[index].blas->removeInvalidationCallbacks(this);
+		}
 		_blases[index] = blas_instance;
-		_blases[index].blas->addInvalidationCallback(Callback{
-			.callback = [this, index]() {
-				_blases[index]._mark_for_update = true;
-			},
-			.id = this,
-		});
+		if (new_blas && _blases[index].blas)
+		{
+			_blases[index].blas->addInvalidationCallback(Callback{
+				.callback = [this, index]() {
+					_blases[index]._mark_for_update = true;
+				},
+				.id = this,
+			});
+		}
 		if (_inst)
 		{
-			_inst->requireRebuild();
+			_inst->requireUpdate();
 		}
 	}
 }

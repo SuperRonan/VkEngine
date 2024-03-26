@@ -405,6 +405,11 @@ namespace vkl
 			return _blases;
 		}
 
+		MyVector<BLASInstance> & blases()
+		{
+			return _blases;
+		}
+
 		void registerBLAS(uint32_t index, BLASInstance const& blas_instance);
 	};
 	using TLAS = TopLevelAccelerationStructure;

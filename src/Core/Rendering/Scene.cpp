@@ -756,6 +756,7 @@ namespace vkl
 
 				bool set_model_reference = false;
 				bool set_xform = false;
+				bool changed_xform = false;
 				uint32_t unique_model_id;
 				uint32_t model_flags = 0;
 				Mat3x4 model_matrix = glm::transpose(matrix);
@@ -786,7 +787,8 @@ namespace vkl
 						(mr.xform_id != xform_unique_id);
 
 					const Mat3x4 & registed_matrix = _xforms_buffer->get<Mat3x4>(xform_unique_id);
-					set_xform |= (registed_matrix != model_matrix);
+					changed_xform = (registed_matrix != model_matrix);
+					set_xform |= changed_xform;
 				}
 
 				if (set_model_reference)
@@ -827,6 +829,10 @@ namespace vkl
 								.instanceShaderBindingTableRecordOffset = 0,
 								.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR,
 							});
+						}
+						else if (changed_xform)
+						{
+							_tlas->blases()[unique_model_id].setXForm(matrix);
 						}
 					}
 				}
