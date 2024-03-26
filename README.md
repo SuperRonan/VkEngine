@@ -1,8 +1,8 @@
 # TODO List:
 - [x] Fill UBO transfer command
-- [ ] SDL backend?
-	- [ ] SDL Window
-	- [ ] SDL Input listeners
+- [x] SDL backend?
+	- [x] SDL Window
+	- [x] SDL Input listeners
 	- [ ] SDL Audio
 - [x] CPU Parallel task executions
 	- [x] Task executor
@@ -27,7 +27,7 @@
 		- [ ] Animated Mesh with skeleton
 		- [ ] Terrain
 		- [ ] ??? 
-	- [ ] .obj loader
+	- [x] .obj loader
 	- [ ] Simple mesh generation
 		- [ ] Platonic solids
 		- [x] Box
@@ -37,9 +37,9 @@
 		- [ ] Mesh attribs from reflection
 	- [ ] Mesh compression?
 	- [ ] Meshlets ? 
-- [ ] Scene
+- [x] Scene
 - [ ] VkRayTracingKHR
-	- [ ] TLAS
+	- [x] TLAS
 	- [ ] SBT
 - [x] Modules
 - [ ] Multi layer swapchain (for VR)
@@ -48,7 +48,7 @@
 - [x] Input manager
 - [ ] Improve CMake
 	- [x] AddProject function
-	- [ ] Separate list for .exe
+	- [x] Separate list for .exe
 	- [x] Option to build .exe
 	- [ ] Correctly import Vulkan
 - [x] Better ResourceStateTracker
@@ -67,9 +67,9 @@
 - [ ] CmdBuffer bindings (pipeline + desc sets)
 	- [ ] Bind pipeline -> reset desc bindings?
 - [x] DescSetLayout cache managed by the application
-- [ ] Accumulate all descriptor updates in the UpdateContext
+- [x] Accumulate all descriptor updates in the UpdateContext
 - [ ] Multi window mode (independent of ImGui)
-- [ ] Buffer / Image on recreate instance command policy (copy content)
+- [x] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
 - [ ] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
 - [ ] Window:
@@ -78,6 +78,8 @@
 	- [x] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
 - [ ] Add a mode to use the GENERAL image layout instead of the specialized layout and measure the performance of doing so 
+- [ ] Refactor ResourceBinding and remove Resource 
+- [ ] Remove ext features from the device requested feature chain when the extension is not used (it now generates a validation error)
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib
@@ -104,15 +106,19 @@ There should be two types of resources, synch ones and asynch ones.
 # Resources management / Execution refactor
 Objectives:
 - [ ] Synchronize multiple times the same resources for the same or different usages (refactor of SynchHelper)
+	- [x] Simple Resource usage list with one usage per resources (works for now)
 - [x] Have more dynamic descriptor sets (adding or removing descriptors "on the fly")
 - [x] Resource management: have resources be managed by their owner ifp, else by the script manager, instead of only by the executor
 - [x] Execute host tasks in parallel (such as shader compilation, resources loading)
 - [ ] Load scene (mesh, textures) asynch
+	- [x] Asynch Textures
+	- [ ] Asynch Mesh
+	- [ ] Asynch Mesh group
 - [x] Refactor the Executor (and linearExecutor): issue an ExecThread to record commands in
 - [ ] Add a transfer queue to the LinearExecutor to load assets
 - [x] Refactor command execition:
 	- [x] Command execution issue an execution object declaring the resources on which it will interact and how, synchronization of said resources will be done externaly by the executor. This allows for ASAP synch, rather than the current mandatory ALAP
 	- [ ] Auto Build an execution graph from these execution objects (nodes) and their resources (edges)
 - [x] Explicitely instancify Resources
-- [ ] ExecutionNodes are Command's instances, as such, they should only reference resources instances. 
+- [x] ExecutionNodes are Command's instances, as such, they should only reference resources instances. 
 - [ ] Have a separate render thread
