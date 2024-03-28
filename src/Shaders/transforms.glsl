@@ -183,3 +183,27 @@ mat4 infinitePerspectiveProjFromFOV(float fov, float aspect, float z_near)
 	const float tan_half_fov = tan(fov * 0.5);
 	return infinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near);
 }
+
+// Assume dir is normalized
+mat3 basisFromDir(vec3 dir)
+{
+	const vec3 Z = dir;
+	mat3 res;
+	res[2] = Z;
+	vec3 o;
+	o = vec3(1, 0, 0);
+	const float l = 0.5;
+	if(dot(o, Z) >= l)
+	{
+		o = vec3(0, 1, 0);
+		// if(dot(o, Z) >= l)
+		// {
+		// 	o = vec3(0, 0, 1);
+		// }
+	}
+	const vec3 X = normalize(cross(o, Z));
+	const vec3 Y = cross(X, Z);
+	res[0] = X;
+	res[1] = Y;
+	return res;
+}
