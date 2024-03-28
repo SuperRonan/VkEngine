@@ -170,7 +170,10 @@ namespace vkl
 		ImGui::InputInt("Samples", &_ao_samples);
 		ImGui::SliderFloat("Radius", &_radius, 0, 0.2);
 
-		ImGui::InputInt("Downscale", &_downscale, 1, 16);
+		if (ImGui::InputInt("Downscale", &_downscale))
+		{
+			_downscale = std::max(_downscale, 1);
+		}
 
 		ImGui::InputInt("Seed", (int*)(&_seed));
 

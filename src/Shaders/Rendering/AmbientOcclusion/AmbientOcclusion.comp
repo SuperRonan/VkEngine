@@ -130,7 +130,8 @@ float computeRQAO(inout rng_t rng, vec2 uv)
 {
 	float res = 0;
 #if SHADER_RAY_QUERY_AVAILABLE
-	const vec3 wcenter_position = textureLod(in_world_position, uv, 0).xyz;
+	// const vec3 wcenter_position = textureLod(in_world_position, uv, 0).xyz;
+	const vec3 wcenter_position = texelFetch(in_world_position, ivec2(uv * textureSize(in_world_position, 0).xy), 0).xyz;
 	//const vec3 wcenter_normal = normalize(textureLod(in_world_normal, uv, 0).xyz);
 	vec3 wcenter_normal = texelFetch(in_world_normal, ivec2(uv * textureSize(in_world_normal, 0).xy), 0).xyz;
 	wcenter_normal = normalize(wcenter_normal);
@@ -159,7 +160,7 @@ float computeRQAO(inout rng_t rng, vec2 uv)
 		const vec3 sampled_dir_w = world_basis * sampled_dir_;
 		
 		RayQuery_t rq;
-		const float t_min = rayTMin(wcenter_position, sampled_dir_w, wcenter_normal) * 1024;
+		const float t_min = rayTMin(wcenter_position, sampled_dir_w, wcenter_normal);
 		rayQueryInitializeEXT(rq, SceneTLAS, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, wcenter_position, t_min, sampled_dir_w, world_radius);
 		while(rayQueryProceedEXT(rq))
 		{

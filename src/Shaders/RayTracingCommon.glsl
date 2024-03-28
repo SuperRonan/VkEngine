@@ -21,6 +21,15 @@
 
 float rayTMin(vec3 src, vec3 direction, vec3 normal)
 {
-    // TODO
-    return EPSILON * 8;
+	// Not perfect, but good enough
+	float res = 0;
+	const float d = abs(dot(direction, normal));
+	for(uint i=0; i < 3; ++i)
+	{
+		res = max(res, abs(src[i]));
+	}
+	res /= (1 << 20);
+	res *= 16 * (2.0 - d);
+	res = max(res, EPSILON * 64);
+	return res;
 }
