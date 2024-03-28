@@ -274,14 +274,21 @@ namespace vkl
 		
 		if (scratch_buffer_size > 0)
 		{
+			// TODO Check alignment of provided scratch buffer
 			if (!bi.scratch_buffer || (bi.scratch_buffer.size() < scratch_buffer_size))
 			{
-				node->_pooled_scratch_buffer = std::make_shared<PooledBuffer>(&_scratch_buffer_pool, scratch_buffer_size);
+				node->_pooled_scratch_buffer = std::make_shared<PooledBuffer>(&_scratch_buffer_pool, scratch_buffer_size + scratch_align);
 				node->_scratch_buffer.buffer = node->_pooled_scratch_buffer->buffer();
 				node->_scratch_buffer.range = Buffer::Range{
 					.begin = 0,
 					.len = scratch_buffer_size,
 				};
+				// Garanty the ScratchData pointer is correctly aligned
+				const size_t align_offset = node->_scratch_buffer.deviceAddress() % scratch_align;
+				if (align_offset > 0)
+				{
+					node->_scratch_buffer.range.begin += (scratch_align - align_offset);
+				}
 			}
 			else
 			{
