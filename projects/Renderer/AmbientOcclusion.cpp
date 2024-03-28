@@ -12,7 +12,7 @@ namespace vkl
 		_gui_method(ImGuiListSelection::CI{
 			.name = "Method",
 			.mode = ImGuiListSelection::Mode::Dropdown,
-			.labels = {"SSAO", "RQAO"},
+			.labels = {"SSAO", "RTAO"},
 		})
 	{
 		_gui_method.setIndex(ci.default_method);
