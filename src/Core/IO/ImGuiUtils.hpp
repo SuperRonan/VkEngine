@@ -94,6 +94,16 @@ namespace vkl
 			return _index;
 		}
 
+		const auto& Options()const
+		{
+			return _options;
+		}
+
+		void enableOptions(size_t index, bool enable = true)
+		{
+			assert(index < _options.size());
+			_options[index].disable = !enable;
+		}
 	};
 
 	class ImGuiTransform3D
