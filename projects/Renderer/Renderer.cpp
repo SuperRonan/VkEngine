@@ -14,12 +14,12 @@ namespace vkl
 		const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
 		_use_indirect_rendering = can_multi_draw_indirect;
 
-		createInternalResources();
-		
 		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
 		{
-			//_maintain_rt = true;
+			_maintain_rt = true;
 		}
+
+		createInternalResources();
 	}
 
 	void SimpleRenderer::createInternalResources()
@@ -288,6 +288,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.positions = _deferred_pipeline._position,
 				.normals = _deferred_pipeline._normal,
+				.can_rt = _maintain_rt,
 			});
 
 			std::shared_ptr<Sampler> bilinear_sampler = application()->getSamplerLibrary().getSampler(SamplerLibrary::SamplerInfo{

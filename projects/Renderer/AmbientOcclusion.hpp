@@ -74,6 +74,7 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::shared_ptr<ImageView> positions = nullptr;
 			std::shared_ptr<ImageView> normals = nullptr;
+			bool can_rt = false;
 			uint32_t default_method = 1;
 		};
 		using CI = CreateInfo;

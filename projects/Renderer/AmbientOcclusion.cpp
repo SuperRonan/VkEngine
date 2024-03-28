@@ -8,6 +8,7 @@ namespace vkl
 		_sets_layouts(ci.sets_layouts),
 		_positions(ci.positions),
 		_normals(ci.normals),
+		_can_rt(ci.can_rt),
 		_gui_method(ImGuiListSelection::CI{
 			.name = "Method",
 			.mode = ImGuiListSelection::Mode::Dropdown,
