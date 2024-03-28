@@ -86,12 +86,20 @@ vec2 randomVec2_01(inout RANDOM_TEMPLATE_rng_t rng)
 	return vec2(randomFloat01(rng), randomFloat01(rng));
 }
 
-vec2 randomUniformPolar(inout RANDOM_TEMPLATE_rng_t rng)
+vec2 randomUniformPointInUnitDiskFromPolar(inout RANDOM_TEMPLATE_rng_t rng)
 {
 	vec2 xi = randomVec2_01(rng);
 	float r = sqrt(xi.x);
 	float t = TWO_PI * xi.y;
 	return r * vec2(cos(t), sin(t));
+}
+
+vec3 randomCosineDirOnHemisphere(inout RANDOM_TEMPLATE_rng_t rng)
+{
+	const vec2 xy = randomUniformPointInUnitDiskFromPolar(rng);
+	const float z = sqrt(1 - length2(xy));
+	const vec3 res = vec3(xy, z);
+	return res;
 }
 
 vec3 randomRGB(inout RANDOM_TEMPLATE_rng_t rng)
