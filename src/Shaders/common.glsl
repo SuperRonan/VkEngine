@@ -239,3 +239,5 @@ vec4 quantize(vec4 x, float q)
 #define EPSILON_d double(2.22045e-16)
 #define EPSILON_h float16_t(1e-3) // TODO
 #define EPSILON EPSILON_f
+#define POSITIVE_INF_f (1.0f / 0.0f)
+#define NEGATIVE_INF_f (-1.0f / 0.f)

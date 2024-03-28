@@ -159,18 +159,11 @@ float computeRQAO(inout rng_t rng, vec2 uv)
 		const vec3 sampled_dir_ = randomCosineDirOnHemisphere(rng);
 		const vec3 sampled_dir_w = world_basis * sampled_dir_;
 		
-		RayQuery_t rq;
-		const float t_min = rayTMin(wcenter_position, sampled_dir_w, wcenter_normal);
-		rayQueryInitializeEXT(rq, SceneTLAS, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, wcenter_position, t_min, sampled_dir_w, world_radius);
-		while(rayQueryProceedEXT(rq))
-		{
-			if (rayQueryGetIntersectionTypeEXT(rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT)
-			{
-				rayQueryConfirmIntersectionEXT(rq);
-			}
-		}
+		Ray ray = Ray(wcenter_position, sampled_dir_w);
+		const float t_min = rayTMin(ray, wcenter_normal);
+		
 
-		if(rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT)
+		if(QueryVisibilityRayOpaqueOnlyTriangles(SceneTLAS, ray, vec2(t_min, world_radius)))
 		{
 			// The PDF cancels the contribution
 			res += 1;

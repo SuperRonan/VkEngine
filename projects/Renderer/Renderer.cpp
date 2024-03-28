@@ -10,6 +10,16 @@ namespace vkl
 		_scene(ci.scene),
 		_output_target(ci.target) 
 	{
+		
+		_shadow_method = ImGuiListSelection::CI{
+			.name = "Shadows",
+			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.labels = {"None", "Shadow Maps", "Ray Tracing"},
+			.default_index = 1,
+			.same_line = true,
+		};
+		_shadow_method_glsl_def = "SHADING_SHADOW_METHOD 0";
+		_use_ao_glsl_def = "USE_AO 0";
 
 		const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
 		_use_indirect_rendering = can_multi_draw_indirect;
@@ -148,6 +158,7 @@ namespace vkl
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "render.vert",
 				.fragment_shader_path = shaders / "render.frag",
+				.definitions = [this](){std::vector<std::string> res; res.push_back(_shadow_method_glsl_def); return res;},
 				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
@@ -180,6 +191,7 @@ namespace vkl
 			.depth_compare_op = VK_COMPARE_OP_LESS,
 			.vertex_shader_path = shaders / "RenderIndirect.vert",
 			.fragment_shader_path = shaders / "RenderIndirect.frag",
+			.definitions = [this]() {std::vector<std::string> res; res.push_back(_shadow_method_glsl_def); return res; },
 			.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 			.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 		});
@@ -336,12 +348,10 @@ namespace vkl
 				},
 				.definitions = [this]()
 				{
-					std::vector<std::string> res;
-					res.push_back("USE_AO 0");
-					if (_ambient_occlusion->enable())
-					{
-						res.back().back() = '1';
-					}
+					std::vector<std::string> res = {
+						_use_ao_glsl_def,
+						_shadow_method_glsl_def,
+					};
 					return res;
 				},
 			});
@@ -468,11 +478,16 @@ namespace vkl
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
 		bool update_all_anyway = ctx.updateAnyway();
+		
+		_shadow_method.enableOptions(size_t(ShadowMethod::RayTraced), _maintain_rt);
+		if (!_maintain_rt && _shadow_method.index() == size_t(ShadowMethod::RayTraced))
+		{
+			_shadow_method.setIndex(size_t(ShadowMethod::ShadowMap));
+		}
 
-		//if (ctx.updateTick() == 256)
-		//{
-		//	_maintain_rt = true;
-		//}
+		_use_ao_glsl_def.back() = '0' + (_ambient_occlusion->enable() ? 1 : 0);
+		_shadow_method_glsl_def.back() = '0' + _shadow_method.index();
+
 
 		_render_target->updateResource(ctx);
 		_depth->updateResource(ctx);
@@ -676,6 +691,7 @@ namespace vkl
 		}
 
 		// Render shadows
+		if(_shadow_method.index() == size_t(ShadowMethod::ShadowMap))
 		{
 			if (_use_indirect_rendering)
 			{
@@ -818,6 +834,9 @@ namespace vkl
 
 			ImGui::BeginDisabled(application()->availableFeatures().acceleration_structure_khr.accelerationStructure == VK_FALSE);
 			ImGui::Checkbox("Ray Tracing", &_maintain_rt);
+			ImGui::PushID("shadow");
+			_shadow_method.declare();
+			ImGui::PopID();
 			ImGui::EndDisabled();
 		}
 	}

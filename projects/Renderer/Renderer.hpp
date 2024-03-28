@@ -26,6 +26,15 @@ namespace vkl
 {
 	class SimpleRenderer : public Module
 	{
+	public:
+
+		enum class ShadowMethod
+		{
+			None = 0,
+			ShadowMap = 1,
+			RayTraced = 2,
+		};
+
 	protected:
 
 		std::shared_ptr<Scene> _scene = nullptr;
@@ -124,6 +133,10 @@ namespace vkl
 
 		std::shared_ptr<BuildAccelerationStructureCommand> _build_as = nullptr;
 		BuildAccelerationStructureCommand::BuildInfo _blas_build_list;
+
+		ImGuiListSelection _shadow_method;
+		std::string _shadow_method_glsl_def;
+		std::string _use_ao_glsl_def;
 
 		void FillASBuildLists();
 
