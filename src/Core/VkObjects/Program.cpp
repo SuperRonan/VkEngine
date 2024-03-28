@@ -105,12 +105,15 @@ namespace vkl
 								res |= VK_ACCESS_2_UNIFORM_READ_BIT;
 							}
 							else if ( // Must be read only
-								type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR ||
 								type == VK_DESCRIPTOR_TYPE_SAMPLER ||
 								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
 								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
 							) {
 								res |= VK_ACCESS_2_SHADER_READ_BIT;
+							}
+							else if (type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+							{
+								res |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 							}
 							else
 							{

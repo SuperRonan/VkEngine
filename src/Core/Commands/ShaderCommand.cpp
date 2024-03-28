@@ -130,6 +130,38 @@ namespace vkl
 					}
 				}
 			}
+			else if (resource_binding.isAS())
+			{
+				BufferUsage bu{
+					.begin_state = begin_state,
+					.usage = meta.usage,
+				};
+				for (auto& tlas : resource_binding.tlas())
+				{
+					if (tlas && tlas->instance())
+					{
+						bu.bari = tlas->instance()->storageBuffer();
+						node.resources() += bu;
+						// We also have to synch the BLASes referenced by the TLAS
+						// By since the TLAS was build, these BLASes were synched to read only
+						// The access is synched (if the same access for tlas build and tlas access (AS Read)
+						// The shader stage is not synched by the tlas build, but does it make a difference? (maybe synch each blas in the tlas build to all shader stages too)
+						// It also assumes that the tlases were not modified since, but that would invalidate the tlas anyway
+						// For now: disable it (it does not seem to bother even the picky synch validation)
+						if (false)
+						{
+							for (auto& bi : tlas->blases())
+							{
+								if (bi.blas)
+								{
+									bu.bari = bi.blas->instance()->storageBuffer();
+									node.resources() += bu;
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
