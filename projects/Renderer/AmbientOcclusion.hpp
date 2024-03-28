@@ -6,14 +6,22 @@
 #include <Core/Commands/ComputeCommand.hpp>
 
 #include <Core/IO/GuiContext.hpp>
+#include <Core/IO/ImGuiUtils.hpp>
 
 #include <Core/Rendering/Camera.hpp>
+
 
 namespace vkl
 {
 	class AmbientOcclusion : public Module
 	{
 	public:
+
+		enum class Method
+		{
+			SSAO = 0,
+			RQAO = 1,
+		};
 		
 		struct UBO
 		{
@@ -22,12 +30,18 @@ namespace vkl
 
 	protected:
 
+		bool _can_rt = false;
 		bool _enable = true;
 		int _ao_samples = 16;
 		float _radius = 0.02;
 		int _downscale = 2;
+		uint32_t _seed = 0;
+
+		ImGuiListSelection _gui_method;
 
 		MultiDescriptorSetsLayouts _sets_layouts = {};
+
+		std::string _method_glsl;
 
 		std::shared_ptr<ComputeCommand> _command = nullptr;
 
@@ -36,6 +50,7 @@ namespace vkl
 			glm::vec3 camera_position;
 			uint32_t flags;
 			float radius;
+			uint32_t seed;
 		};
 
 		std::shared_ptr<Sampler> _sampler = {};
@@ -59,6 +74,7 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::shared_ptr<ImageView> positions = nullptr;
 			std::shared_ptr<ImageView> normals = nullptr;
+			uint32_t default_method = 1;
 		};
 		using CI = CreateInfo;
 
@@ -71,6 +87,7 @@ namespace vkl
 
 		void declareGui(GuiContext & ctx);
 
+		bool setCanRT(bool can_rt);
 
 		const std::shared_ptr<ImageView>& target()const
 		{

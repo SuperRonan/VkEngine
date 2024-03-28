@@ -524,6 +524,7 @@ namespace vkl
 				}
 			}
 
+			_ambient_occlusion->setCanRT(_maintain_rt);
 			_ambient_occlusion->updateResources(ctx);
 
 			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
@@ -810,6 +811,7 @@ namespace vkl
 				if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
 				{
 					_ambient_occlusion->declareGui(ctx);
+					ImGui::Separator();
 				}
 			}
 

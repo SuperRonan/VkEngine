@@ -7,12 +7,38 @@ namespace vkl
 		Module(ci.app, ci.name),
 		_sets_layouts(ci.sets_layouts),
 		_positions(ci.positions),
-		_normals(ci.normals)
+		_normals(ci.normals),
+		_gui_method(ImGuiListSelection::CI{
+			.name = "Method",
+			.mode = ImGuiListSelection::Mode::Dropdown,
+			.labels = {"SSAO", "RQAO"},
+		})
 	{
-		
+		_gui_method.setIndex(ci.default_method);
+		if (!_can_rt)
+		{
+			_gui_method.enableOptions(1, false);
+			_gui_method.setIndex(0);
+		}
 		assert(!!_positions);
 
 		createInternalResources();
+	}
+
+	bool AmbientOcclusion::setCanRT(bool can_rt)
+	{
+		bool res = false;
+		if (can_rt != _can_rt)
+		{
+			_gui_method.enableOptions(1, can_rt);
+			if (_gui_method.index() == 1)
+			{
+				_gui_method.setIndex(0);
+			}
+			_can_rt = can_rt;
+			res = true;
+		}
+		return res;
 	}
 
 	void AmbientOcclusion::createInternalResources()
@@ -49,12 +75,13 @@ namespace vkl
 		});
 
 		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/Rendering/AmbientOcclusion/";
-
+		_method_glsl = "AO_METHOD 0";
 		Dyn<std::vector<std::string>> defs = [this]()
 		{
 			std::vector<std::string> res;
 			res.push_back("OUT_FORMAT "s + _format_glsl);
 			res.push_back("AO_SAMPLES "s + std::to_string(_ao_samples));
+			res.push_back(_method_glsl);
 			return res;
 		};
 
@@ -97,8 +124,11 @@ namespace vkl
 		_target->updateResource(ctx);
 		if (_enable)
 		{
+			_method_glsl.back() = '0' + _gui_method.index();
 			_sampler->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _command;
+
+			++_seed;
 		}
 	}
 
@@ -119,6 +149,7 @@ namespace vkl
 				.camera_position = camera.position(),
 				.flags = flags, 
 				.radius = _radius,
+				.seed = uint32_t(std::hash<uint32_t>()(_seed)),
 			};
 
 			recorder(_command->with(ComputeCommand::SingleDispatchInfo{
@@ -134,10 +165,13 @@ namespace vkl
 		ImGui::PushID(name().c_str());
 
 		ImGui::Checkbox("Enable", &_enable);
+		_gui_method.declare();
 		ImGui::InputInt("Samples", &_ao_samples);
 		ImGui::SliderFloat("Radius", &_radius, 0, 0.2);
 
 		ImGui::InputInt("Downscale", &_downscale, 1, 16);
+
+		ImGui::InputInt("Seed", (int*)(&_seed));
 
 		ImGui::PopID();
 	}

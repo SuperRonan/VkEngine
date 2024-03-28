@@ -1,7 +1,16 @@
-#version 450
+#version 460
+
+// #define I_WANT_TO_DEBUG 1
+// #include <ShaderLib:/DebugBuffers.glsl>
+
+#define BIND_SCENE 1
+#include <ShaderLib:/Rendering/Scene/scene.glsl>
+
+#include "AO_Common.glsl"
 
 #include <ShaderLib:/common.glsl>
 #include <ShaderLib:/random.glsl>
+#include <ShaderLib:/transforms.glsl>
 
 
 layout(local_size_x = 16, local_size_y = 16) in;
@@ -15,48 +24,51 @@ layout(SHADER_DESCRIPTOR_BINDING + 0, OUT_FORMAT) uniform writeonly restrict ima
 layout(SHADER_DESCRIPTOR_BINDING + 1) uniform sampler2D in_world_position; 
 layout(SHADER_DESCRIPTOR_BINDING + 2) uniform sampler2D in_world_normal; 
 
-#define USE_NORMAL_TEXTURE_BIT 0x1
+#ifndef AO_METHOD
+#define AO_METHOD AO_METHOD_SSAO
+#endif
 
 layout(push_constant) uniform PushConstant
 {
 	vec3 camera_position;
 	uint flags;
 	float radius;
+	uint seed;
 } _pc;
 
 #ifndef AO_SAMPLES
 #define AO_SAMPLES 16 * 4
 #endif
 
-float computeAO_0(inout rng_t rng, vec2 uv, vec2 ratio)
-{
-	float res = 0;
+// float computeAO_0(inout rng_t rng, vec2 uv, vec2 ratio)
+// {
+// 	float res = 0;
 
-	const vec3 wcenter = textureLod(in_world_position, uv, 0).xyz;
-	//const vec3 wcenter_normal = readNormal(in_world_position, world_normal, uv, use_normal_texture);
+// 	const vec3 wcenter = textureLod(in_world_position, uv, 0).xyz;
+// 	//const vec3 wcenter_normal = readNormal(in_world_position, world_normal, uv, use_normal_texture);
 
-	const vec3 camera_pos = _pc.camera_position;
-	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
+// 	const vec3 camera_pos = _pc.camera_position;
+// 	const float center_dist_to_cam2 = distance2(wcenter, camera_pos);
 
-	for(int i=0; i < AO_SAMPLES; ++i)
-	{
-		const vec2 point_on_circle = randomUniformPolar(rng);
+// 	for(int i=0; i < AO_SAMPLES; ++i)
+// 	{
+// 		const vec2 point_on_circle = randomUniformPointInUnitDiskFromPolar(rng);
 		
-		float pdf = 1;
+// 		float pdf = 1;
 
-		const vec2 point_uv = uv + point_on_circle * ratio;
-		const vec3 point_wpos = textureLod(in_world_position, point_uv, 0).xyz;
-		const float point_dist_to_cam2 = distance2(point_wpos, camera_pos);
+// 		const vec2 point_uv = uv + point_on_circle * ratio;
+// 		const vec3 point_wpos = textureLod(in_world_position, point_uv, 0).xyz;
+// 		const float point_dist_to_cam2 = distance2(point_wpos, camera_pos);
 
-		if(point_dist_to_cam2 >= center_dist_to_cam2)
-		{
-			res += 1.0 / pdf;
-		}
+// 		if(point_dist_to_cam2 >= center_dist_to_cam2)
+// 		{
+// 			res += 1.0 / pdf;
+// 		}
 		
-	}
-	res /= float(AO_SAMPLES);
-	return res;
-}
+// 	}
+// 	res /= float(AO_SAMPLES);
+// 	return res;
+// }
 
 float computeAO_1(inout rng_t rng, vec2 uv, vec2 ratio)
 {
@@ -78,7 +90,7 @@ float computeAO_1(inout rng_t rng, vec2 uv, vec2 ratio)
 
 	for(int i=0; i < AO_SAMPLES; ++i)
 	{
-		const vec2 point_on_circle = randomUniformPolar(rng);
+		const vec2 point_on_circle = randomUniformPointInUnitDiskFromPolar(rng);
 		
 		float pdf = 1;
 
@@ -112,6 +124,62 @@ float computeAO_1(inout rng_t rng, vec2 uv, vec2 ratio)
 	return res;
 }
 
+
+
+float computeRQAO(inout rng_t rng, vec2 uv)
+{
+	float res = 0;
+#if SHADER_RAY_QUERY_AVAILABLE
+	const vec3 wcenter_position = textureLod(in_world_position, uv, 0).xyz;
+	//const vec3 wcenter_normal = normalize(textureLod(in_world_normal, uv, 0).xyz);
+	vec3 wcenter_normal = texelFetch(in_world_normal, ivec2(uv * textureSize(in_world_normal, 0).xy), 0).xyz;
+	wcenter_normal = normalize(wcenter_normal);
+	const mat3 world_basis = basisFromDir(wcenter_normal);
+
+	// TODO
+	const float world_radius = _pc.radius * 10;
+
+	// ivec2 debug_pix = ivec2(200, 100);
+	// if(gl_GlobalInvocationID.xy == debug_pix)
+	// {
+	// 	Caret c = Caret2D(debug_pix * 2, 0);
+	// 	c = pushToDebugPixLn(wcenter_normal, c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(length2(wcenter_normal), c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(length2(world_basis[0]), c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(length2(world_basis[1]), c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(length2(world_basis[2]), c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(dot(world_basis[0], world_basis[1]), c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(dot(world_basis[1], world_basis[2]), c, vec4(1, 0, 1, 1));
+	// 	c = pushToDebugPixLn(dot(world_basis[0], world_basis[2]), c, vec4(1, 0, 1, 1));	
+	// }
+
+	for(int i=0; i < AO_SAMPLES; ++i)
+	{
+		const vec3 sampled_dir_ = randomCosineDirOnHemisphere(rng);
+		const vec3 sampled_dir_w = world_basis * sampled_dir_;
+		
+		RayQuery_t rq;
+		const float t_min = rayTMin(wcenter_position, sampled_dir_w, wcenter_normal) * 1024;
+		rayQueryInitializeEXT(rq, SceneTLAS, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, wcenter_position, t_min, sampled_dir_w, world_radius);
+		while(rayQueryProceedEXT(rq))
+		{
+			if (rayQueryGetIntersectionTypeEXT(rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT)
+			{
+				rayQueryConfirmIntersectionEXT(rq);
+			}
+		}
+
+		if(rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT)
+		{
+			// The PDF cancels the contribution
+			res += 1;
+		}
+	}
+	res /= float(AO_SAMPLES);
+#endif
+	return res;
+}
+
 void main()
 {
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
@@ -120,14 +188,20 @@ void main()
 	{
 		float res = 1;
 		const vec2 uv = pixelToUV(pixel, dims);
-		rng_t rng = hash(pixel);
+		rng_t rng = hash(pixel) ^ _pc.seed;
 
 		const bool use_normal_texture = (_pc.flags & USE_NORMAL_TEXTURE_BIT) == USE_NORMAL_TEXTURE_BIT;
 
 		vec2 ratio = vec2(_pc.radius);
 		ratio.x *= float(dims.x) / float(dims.y);
 
+		// Compile time selection:
+		// Different methods may use a different number of registers -> Different scheduling
+#if AO_METHOD == AO_METHOD_SSAO
 		res = computeAO_1(rng, uv, ratio);
+#elif AO_METHOD == AO_METHOD_RQAO
+		res = computeRQAO(rng, uv);
+#endif
 
 		imageStore(ao_image, pixel, res.xxxx);
 	}
