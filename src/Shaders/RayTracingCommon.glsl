@@ -1,17 +1,19 @@
+#pragma once
 #include "common.glsl"
 
 #if SHADER_RAY_QUERY_AVAILABLE || SHADER_RAY_TRACING_AVAILABLE
 #define CAN_BIND_TLAS 1
-#extension GL_EXT_ray_flags_primitive_culling : warn
+#extension GL_EXT_ray_flags_primitive_culling : require
 #else
 #define CAN_BIND_TLAS 0
 #endif
 
 #if SHADER_RAY_QUERY_AVAILABLE
-#extension GL_EXT_ray_query : enable
+#extension GL_EXT_ray_query : require
 #endif
+
 #if SHADER_RAY_TRACING_AVAILABLE
-#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_tracing : require
 #endif
 
 #define TLAS_t accelerationStructureEXT
