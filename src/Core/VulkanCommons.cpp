@@ -9,7 +9,11 @@ namespace vkl
 
 
 	using namespace std::string_literals;
-
+	
+	VulkanFeatures::VulkanFeatures()
+	{
+		std::memset(this, 0, sizeof(VulkanFeatures));
+	}
 
 	VkPhysicalDeviceFeatures2& VulkanFeatures::link()
 	{
@@ -31,27 +35,34 @@ namespace vkl
 		ray_tracing_motion_blur_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV;
 		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV;
 
-		features2.pNext = &features_11;
-		features_11.pNext = &features_12;
-		features_12.pNext = &features_13;
-		features_13.pNext = &line_raster_ext;
+		pNextChain chain = &features2;
 
-		line_raster_ext.pNext = &index_uint8_ext;
-		index_uint8_ext.pNext = &mesh_shader_ext;
-		mesh_shader_ext.pNext = &robustness2_ext;
-		robustness2_ext.pNext = nullptr;
+		chain += &features_11;
+		chain += &features_12;
+		chain += &features_13;
+		chain += &line_raster_ext;
 
-		robustness2_ext.pNext = &acceleration_structure_khr;
-		acceleration_structure_khr.pNext = &ray_tracing_pipeline_khr;
-		ray_tracing_pipeline_khr.pNext = &ray_query_khr;
-		ray_query_khr.pNext = &ray_tracing_maintenance1_khr;
-		ray_tracing_maintenance1_khr.pNext = nullptr;
+		chain += &index_uint8_ext;
+		chain += &mesh_shader_ext;
+		chain += &robustness2_ext;
+		chain += nullptr;
 
-		ray_tracing_maintenance1_khr.pNext = &ray_tracing_motion_blur_nv;
-		ray_tracing_motion_blur_nv.pNext = &ray_tracing_invocation_reorder_nv;
-		ray_tracing_invocation_reorder_nv.pNext = nullptr;
+		chain += &acceleration_structure_khr;
+		chain += &ray_tracing_pipeline_khr;
+		chain += &ray_query_khr;
+		chain += &ray_tracing_maintenance1_khr;
+		chain += nullptr;
+
+		chain += &ray_tracing_motion_blur_nv;
+		chain += &ray_tracing_invocation_reorder_nv;
+		chain += nullptr;
 
 		return features2;
+	}
+
+	VulkanDeviceProps::VulkanDeviceProps()
+	{
+		std::memset(this, 0, sizeof(VulkanDeviceProps));
 	}
 
 	VkPhysicalDeviceProperties2& VulkanDeviceProps::link()
@@ -70,20 +81,22 @@ namespace vkl
 
 		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
 
-		props2.pNext = &props_11;
-		props_11.pNext = &props_12;
-		props_12.pNext = &props_13;
-		props_13.pNext = &line_raster_ext;
-		line_raster_ext.pNext = &mesh_shader_ext;
-		mesh_shader_ext.pNext = &robustness2_ext;
-		robustness2_ext.pNext = nullptr;
+		pNextChain chain = &props2;
 
-		robustness2_ext.pNext = &acceleration_structure_khr;
-		acceleration_structure_khr.pNext = &ray_tracing_pipeline_khr;
-		ray_tracing_pipeline_khr.pNext = nullptr;
+		chain += &props_11;
+		chain += &props_12;
+		chain += &props_13;
+		chain += &line_raster_ext;
+		chain += &mesh_shader_ext;
+		chain += &robustness2_ext;
+		chain += nullptr;
 
-		ray_tracing_pipeline_khr.pNext = &ray_tracing_invocation_reorder_nv;
-		ray_tracing_invocation_reorder_nv.pNext = nullptr;
+		chain += &acceleration_structure_khr;
+		chain += &ray_tracing_pipeline_khr;
+		chain += nullptr;
+
+		chain += &ray_tracing_invocation_reorder_nv;
+		chain += nullptr;
 
 		return props2;
 	}

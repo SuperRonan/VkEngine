@@ -75,8 +75,34 @@ namespace vkl
 
 	struct VkStruct
 	{
-		VkStructureType type;
+		VkStructureType sType;
 		void * pNext;
+	};
+
+	struct pNextChain
+	{
+		VkStruct * current = nullptr;
+
+		pNextChain(void * vk_struct):
+			current(reinterpret_cast<VkStruct*>(vk_struct))
+		{}
+
+		pNextChain& link(void* vk_struct)
+		{
+			if (current)
+			{
+				current->pNext = vk_struct;
+			}
+			if (vk_struct)
+			{
+				current = reinterpret_cast<VkStruct*>(vk_struct);
+			}
+			return *this;
+		}
+		pNextChain& operator+=(void* vk_struct)
+		{
+			return link(vk_struct);
+		}
 	};
 
 	template <class T>
@@ -191,6 +217,8 @@ namespace vkl
 		VkPhysicalDeviceRayTracingMotionBlurFeaturesNV ray_tracing_motion_blur_nv = {};
 		VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV ray_tracing_invocation_reorder_nv = {};
 		
+		VulkanFeatures();
+
 		VkPhysicalDeviceFeatures2& link();
 	};
 
@@ -211,6 +239,8 @@ namespace vkl
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_pipeline_khr = {};
 
 		VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV ray_tracing_invocation_reorder_nv = {};
+
+		VulkanDeviceProps();
 
 		VkPhysicalDeviceProperties2& link();
 	};
