@@ -56,6 +56,18 @@ namespace vkl
 			bool enable_object_naming = false;
 			bool enable_command_buffer_labels = false;
 			uint32_t gpu_id = uint32_t(-1);
+			// bit field per image usage (VkImageUsageFlagBits)
+			uint64_t use_general_image_layout_bits = 0;
+
+			constexpr VkImageLayout getLayout(VkImageLayout optimal_layout, VkImageUsageFlags usage) const
+			{
+				VkImageLayout res = optimal_layout;
+				if (use_general_image_layout_bits & usage)
+				{
+					res = VK_IMAGE_LAYOUT_GENERAL;
+				}
+				return res;
+			}
 		};
 
 		static void FillArgs(argparse::ArgumentParser & args_parser);

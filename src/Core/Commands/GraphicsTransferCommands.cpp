@@ -28,6 +28,8 @@ namespace vkl
 
 		std::shared_ptr<ImageViewInstance> _src = nullptr;
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
+		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		MyVector<VkImageBlit2> _regions = {};
 		VkFilter _filter = VK_FILTER_MAX_ENUM;
 
@@ -35,6 +37,8 @@ namespace vkl
 		{
 			_src = bi.src->instance();
 			_dst = bi.dst->instance();
+			_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 			_regions = bi.regions;
 			_filter = bi.filter;
 
@@ -42,7 +46,7 @@ namespace vkl
 				.ivi = _src,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-					.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.layout = _src_layout,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
@@ -52,7 +56,7 @@ namespace vkl
 				.ivi = _dst,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.layout = _dst_layout,
 					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -95,9 +99,9 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
 				.pNext = nullptr,
 				.srcImage = _src->image()->handle(),
-				.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.srcImageLayout = _src_layout,
 				.dstImage = _dst->image()->handle(),
-				.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.dstImageLayout = _dst_layout,
 				.regionCount = n_regions,
 				.pRegions = regions,
 				.filter = _filter,
@@ -169,11 +173,14 @@ namespace vkl
 		{}
 
 		MyVector<AsynchMipsCompute> _targets = {};
+		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		void populate(ComputeMips::ExecInfo const& ei)
 		{
 			_targets = ei.targets;
-
+			_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 
 			for (size_t i = 0; i < _targets.size(); ++i)
@@ -182,7 +189,7 @@ namespace vkl
 					.ivi = _targets[i].target,
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT, // ??? Why transfer write (without it there is a synch validation hazard)
-						.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						.layout = _src_layout,
 						.stage = mips_blit_stage,
 					},
 					.usage = VK_IMAGE_USAGE_TRANSFER_BITS,
@@ -278,8 +285,8 @@ namespace vkl
 							.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
 							.dstStageMask = mips_blit_stage,
 							.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-							.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-							.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							.oldLayout = _src_layout,
+							.newLayout = _dst_layout,
 							.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 							.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 							.image = tg.img->handle(),
@@ -302,8 +309,8 @@ namespace vkl
 								.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 								.dstStageMask = mips_blit_stage,
 								.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-								.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-								.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+								.oldLayout = _dst_layout,
+								.newLayout = _src_layout,
 								.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 								.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 								.image = tg.img->handle(),
@@ -372,9 +379,9 @@ namespace vkl
 							.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2,
 							.pNext = nullptr,
 							.srcImage = tg.img->handle(),
-							.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							.srcImageLayout = _src_layout,
 							.dstImage = tg.img->handle(),
-							.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							.dstImageLayout = _dst_layout,
 							.regionCount = 1,
 							.pRegions = &region,
 							.filter = VK_FILTER_LINEAR,
@@ -399,8 +406,8 @@ namespace vkl
 					.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 					.dstStageMask = mips_blit_stage,
 					.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					.oldLayout = _dst_layout,
+					.newLayout = _src_layout,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.image = tg.img->handle(),
@@ -484,22 +491,25 @@ namespace vkl
 			ExecutionNode(ExecutionNode::CI{
 				.app = ci.app,
 				.name = ci.name,
-				})
+			})
 		{}
 
 		std::shared_ptr<ImageViewInstance> _target = nullptr;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkClearValue _value = {};
 
 		void populate(ClearImage::ClearInfo const& ci)
 		{
 			_target = ci.view->instance();
+			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+
 			_value = ci.value.value();
 
 			resources() += ImageViewUsage{
 				.ivi = _target,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.layout = _dst_layout,
 					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -529,7 +539,7 @@ namespace vkl
 				vkCmdClearColorImage(
 					*cmd,
 					_target->image()->handle(),
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					_dst_layout,
 					&value.color,
 					1,
 					&range
@@ -540,7 +550,7 @@ namespace vkl
 				vkCmdClearDepthStencilImage(
 					*cmd,
 					_target->image()->handle(),
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					_dst_layout,
 					&value.depthStencil,
 					1,
 					&range

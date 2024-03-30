@@ -769,6 +769,8 @@ namespace vkl
 			.gpu_id = static_cast<uint32_t>(ci.args.get<int>("--gpu")),
 		};
 
+		_options.use_general_image_layout_bits = uint64_t(-1);
+
 		bool mt = true;
 		size_t n_threads = 0;
 		bool log = true;

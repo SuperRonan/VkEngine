@@ -28,6 +28,7 @@ namespace vkl
 		std::shared_ptr<SwapchainInstance> _swapchain;
 		std::shared_ptr<DescriptorPool> _desc_pool;
 		size_t _index = 0;
+		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		virtual void clear() override
 		{
@@ -77,10 +78,10 @@ namespace vkl
 					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
 					.pNext = nullptr,
 					.imageView = _target->handle(),
-					.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.imageLayout = _layout,
 					.resolveMode = VK_RESOLVE_MODE_NONE,
 					.resolveImageView = VK_NULL_HANDLE,
-					.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					.resolveImageLayout = _layout,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
 					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				};
@@ -179,6 +180,7 @@ namespace vkl
 		}
 		else
 		{
+			const VkImageLayout layout = application()->options().getLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 			RenderPass::AttachmentDescription2 attachement_desc{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
@@ -189,15 +191,15 @@ namespace vkl
 				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.initialLayout = layout,
+				.finalLayout = layout,
 			};
 		
 			MyVector<VkAttachmentReference2> attachement_reference = { {
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
 				.pNext = nullptr,
 				.attachment = 0,
-				.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.layout = layout,
 			} };
 
 			VkSubpassDescription2 subpass = {
@@ -327,13 +329,21 @@ namespace vkl
 		node->_desc_pool = _desc_pool;
 		node->_index = ei.index;
 		
-
+		VkImageLayout layout;
+		if (node->_render_pass)
+		{
+			layout = node->_render_pass->getAttachementDescriptors2().front().initialLayout;
+		}
+		else
+		{
+			layout = application()->options().getLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+		}
 		node->resources() += 
 			ImageViewUsage{
 				.ivi = node->_target,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-					.layout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+					.layout = layout,
 					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
 				},
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,

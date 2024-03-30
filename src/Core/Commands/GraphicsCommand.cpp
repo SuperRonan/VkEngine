@@ -133,7 +133,7 @@ namespace vkl
 			const std::optional<VkClearColorValue> & clear_color = _clear_color;
 			const std::optional<VkPipelineColorBlendAttachmentState> & opt_blending = _blending;
 
-			VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			const VkImageLayout layout = application()->options().getLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 			VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 
 			if (clear_color.has_value())	load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -238,6 +238,7 @@ namespace vkl
 			{
 				layout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
 			}
+			layout = application()->options().getLayout(layout, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 			VkAttachmentLoadOp depth_load_op = VK_ATTACHMENT_LOAD_OP_LOAD, stencil_load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			VkAttachmentStoreOp depth_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE, stencil_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;

@@ -158,7 +158,6 @@ namespace vkl
 			.count = 1,
 			.stages = VK_SHADER_STAGE_ALL,
 			.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-			.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		};
 
@@ -169,7 +168,6 @@ namespace vkl
 			.count = 1,
 			.stages = VK_SHADER_STAGE_ALL,
 			.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
-			.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
 		};
 

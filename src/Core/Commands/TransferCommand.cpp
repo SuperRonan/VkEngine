@@ -15,6 +15,8 @@ namespace vkl
 	{
 		std::shared_ptr<ImageViewInstance> _src = nullptr;
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
+		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		Array<VkImageCopy> _regions = {};
 
 		struct CreateInfo
@@ -43,6 +45,7 @@ namespace vkl
 
 		virtual void execute(ExecutionContext & ctx) override
 		{
+			// TODO move to CopyImage2
 			std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
 
 			const VkImageCopy* regions = _regions.data();
@@ -62,8 +65,8 @@ namespace vkl
 			}
 
 			vkCmdCopyImage(*cmd,
-				*_src->image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				*_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				*_src->image(), _src_layout,
+				*_dst->image(), _dst_layout,
 				n_regions, regions
 			);
 		}
@@ -82,22 +85,24 @@ namespace vkl
 		node->setName(name());
 
 		node->_src = ci.src->instance();
+		node->_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 		node->resources() += ImageViewUsage{
 			.ivi = node->_src,
 			.begin_state = ResourceState2{
 				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				.layout = node->_src_layout,
 				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 			},
 			.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		};
 
 		node->_dst = ci.dst->instance();
+		node->_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 		node->resources() += ImageViewUsage{
 			.ivi = node->_dst,
 			.begin_state = ResourceState2{
 				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.layout = node->_dst_layout,
 				.stage = VK_PIPELINE_STAGE_2_COPY_BIT
 			},
 			.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -163,6 +168,7 @@ namespace vkl
 		std::shared_ptr<BufferInstance> _src = nullptr;
 		Buffer::Range _range;
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		Array<VkBufferImageCopy> _regions = {};
 		uint32_t _default_buffer_row_length = 0;
 		uint32_t _default_buffer_image_height = 0;
@@ -202,7 +208,7 @@ namespace vkl
 
 			vkCmdCopyBufferToImage(
 				*cmd,
-				*_src, *_dst->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				*_src, *_dst->image(), _dst_layout,
 				n_regions, p_regions
 			);
 		}
@@ -221,6 +227,7 @@ namespace vkl
 		node->_src = ci.src->instance();
 		node->_range = ci.range;
 		node->_dst = ci.dst->instance();
+		node->_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 		node->_regions = ci.regions;
 		node->_default_buffer_row_length = ci.default_buffer_row_length;
 		node->_default_buffer_image_height = ci.default_buffer_image_height;
@@ -238,7 +245,7 @@ namespace vkl
 			.ivi = node->_dst,
 			.begin_state = ResourceState2{
 				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.layout = node->_dst_layout,
 				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 			},
 			.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -976,6 +983,7 @@ namespace vkl
 		uint32_t _buffer_row_length = 0;
 		uint32_t _buffer_image_height = 0;
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 
 		void populate(RecordContext& ctx, UploadImage::UploadInfo const& ui)
@@ -984,12 +992,13 @@ namespace vkl
 			_buffer_row_length = ui.buffer_row_length;
 			_buffer_image_height = ui.buffer_image_height;
 			_dst = ui.dst->instance();
+			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 			resources() += ImageViewUsage{
 				.ivi = _dst,
 				.begin_state = {
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.layout = _dst_layout,
 					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -1118,7 +1127,7 @@ namespace vkl
 				.pNext = nullptr,
 				.srcBuffer = sb->buffer()->handle(),
 				.dstImage = _dst->image()->handle(),
-				.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				.dstImageLayout = _dst_layout,
 				.regionCount = 1,
 				.pRegions = &region,
 			};
@@ -1203,12 +1212,15 @@ namespace vkl
 		ResourcesToUpload _upload_list = {};
 		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 		MyVector<BufferUploadExtraInfo> _extra_buffer_info;
+		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		void populate(RecordContext& ctx, UploadResources::UploadInfo const& ui)
 		{
 			_upload_list = ui.upload_list;
 			
 			_extra_buffer_info.resize(_upload_list.buffers.size());
+
+			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 			for (size_t i = 0; i < _upload_list.buffers.size(); ++i)
 			{
@@ -1277,7 +1289,7 @@ namespace vkl
 					.ivi = image_upload.dst,
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-						.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						.layout = _dst_layout,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
 					.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -1332,6 +1344,7 @@ namespace vkl
 				}
 			}
 
+			image_uploader._dst_layout = _dst_layout;
 			for (auto& image_upload : resources.images)
 			{
 				image_uploader.clear();

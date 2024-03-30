@@ -80,6 +80,8 @@
 - [ ] Add a mode to use the GENERAL image layout instead of the specialized layout and measure the performance of doing so 
 - [ ] Refactor ResourceBinding and remove Resource 
 - [ ] Remove ext features from the device requested feature chain when the extension is not used (it now generates a validation error)
+- [ ] Separate DescriptorSet and DescriptorPool
+	- [ ] Use one pool for many descriptor sets (for model resources)
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib

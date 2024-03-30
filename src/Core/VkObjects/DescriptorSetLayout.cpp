@@ -165,9 +165,16 @@ namespace vkl
 				if (_bindings[i].layout == VK_IMAGE_LAYOUT_UNDEFINED)
 				{
 					VkImageLayout induced_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-					if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || _bindings[i].access == VK_ACCESS_2_SHADER_READ_BIT)
+					if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
 					{
-						induced_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						induced_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT);
+					}
+					else if (type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+					{
+						// What if a depth attachement?
+						// What if a shared sampled / attachment layout?
+						// Plus this layout has to match the one in the RenderPass
+						induced_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
 					}
 					else 
 					{

@@ -115,8 +115,16 @@ namespace vkl
 							{
 								res |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 							}
-							else
+							else if (type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
 							{
+								res |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
+							}
+							else if(
+								type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER || 
+								type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC || 
+								type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || 
+								type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
+							) {
 								uint32_t d1 = binding.decoration_flags;
 								uint32_t d2 = binding.type_description ? binding.type_description->decoration_flags : 0;
 								uint32_t d3 = binding.block.decoration_flags;
@@ -128,7 +136,7 @@ namespace vkl
 								}
 								const bool readonly = decoration & SPV_REFLECT_DECORATION_NON_WRITABLE;
 								const bool writeonly = decoration & SPV_REFLECT_DECORATION_NON_READABLE;
-								if (readonly == writeonly) // Kind of an adge case
+								if (readonly == writeonly) // Kind of an edge case
 								{
 									res |= VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 								}
@@ -141,28 +149,38 @@ namespace vkl
 									res |= VK_ACCESS_2_SHADER_WRITE_BIT;
 								}
 							}
+							else
+							{
+								NOT_YET_IMPLEMENTED;
+							}
 							return res;
 						}();
 						binding_info.layout = [&]()
 						{
+							// Note: with VK_EXT_attachment_feedback_loop_layout, the layout may be VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
+							// TODO handle this case (maybe manually do it, since this case would be very rare)
 							VkImageLayout res = VK_IMAGE_LAYOUT_MAX_ENUM;
 							VkDescriptorType type = binding_info.type;
 							if ( // Is image
 								type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||
-								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-								type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+								type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
 							) {
-								if (type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER || type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE)
-									res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-								else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-								{
-									// It appears readonly storage image must be in general layout, shader read only optimal is not allowed
-									//if (binding_info.access == VK_ACCESS_2_SHADER_READ_BIT)
-									//	res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-									//else
-									//	res = VK_IMAGE_LAYOUT_GENERAL;
-									res = VK_IMAGE_LAYOUT_GENERAL;
-								}
+								res = application()->options().getLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT);
+							}
+							else if (type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+							{
+								// color or depth attachment does not seem to matter here
+								// Plus this layout has to match the one in the RenderPass
+								res = application()->options().getLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT);
+							}
+							else if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+							{
+								// It appears readonly storage image must be in general layout, shader read only optimal is not allowed
+								//if (binding_info.access == VK_ACCESS_2_SHADER_READ_BIT)
+								//	res = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+								//else
+								//	res = VK_IMAGE_LAYOUT_GENERAL;
+								res = VK_IMAGE_LAYOUT_GENERAL;
 							}
 							return res;
 						}();
