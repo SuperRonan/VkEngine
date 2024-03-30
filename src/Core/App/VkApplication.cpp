@@ -64,6 +64,11 @@ namespace vkl
 			.default_value(-1)
 			.scan<'d', int>()
 		;
+
+		args.add_argument("--image_layout")
+			.help("Select which image layout to use, possible values are: 'specific', 'general', 'auto' or a bit mask per usage (0 for specfic, 1 for general)")
+			.default_value("specific")
+		;
 	}
 
 
@@ -769,7 +774,27 @@ namespace vkl
 			.gpu_id = static_cast<uint32_t>(ci.args.get<int>("--gpu")),
 		};
 
-		_options.use_general_image_layout_bits = uint64_t(-1);
+		std::string arg_image_layout = ci.args.get<std::string>("image_layout");
+		_options.use_general_image_layout_bits = 0;
+		if (arg_image_layout == "specific")
+		{
+			_options.use_general_image_layout_bits = 0;
+		}
+		else if (arg_image_layout == "general")
+		{
+			_options.use_general_image_layout_bits = uint64_t(-1);
+		}
+		else if (arg_image_layout == "auto")
+		{
+			// For now same as auto
+			// TODO mask based on the physical device
+		}
+		else
+		{	
+			// TODO use a better parsing function (check error and parse hex)
+			uint64_t mask = std::atoll(arg_image_layout.c_str());
+			_options.use_general_image_layout_bits = mask;
+		}
 
 		bool mt = true;
 		size_t n_threads = 0;

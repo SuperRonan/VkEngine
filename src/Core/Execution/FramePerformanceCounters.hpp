@@ -22,6 +22,11 @@ namespace vkl
 		size_t transfer_calls = 0;
 		size_t total_upload_size = 0;
 
+		size_t pipeline_barriers = 0;
+		size_t buffer_barriers = 0;
+		size_t image_barriers = 0;
+		size_t layout_transitions = 0;
+
 		void reset()
 		{
 			memset(this, 0, sizeof(FramePerfCounters));

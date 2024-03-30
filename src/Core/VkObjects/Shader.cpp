@@ -724,7 +724,12 @@ namespace vkl
 		if (!_inst)
 		{
 			std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
-			int packed_capcity = capacity.empty() ? 32 : std::atoi(capacity.c_str());
+			uint32_t packed_capcity = 32;
+			if(!capacity.empty())
+			{	
+				// TODO use a better function that checks the result and can parse hex
+				uint32_t u = std::atoi(capacity.c_str());
+			}
 			createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
 			res = true;
 		}

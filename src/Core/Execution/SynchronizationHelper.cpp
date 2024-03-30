@@ -1010,6 +1010,21 @@ namespace vkl
 			};
 
 			vkCmdPipelineBarrier2(_ctx->getCommandBuffer()->handle(), &dependecy);
+
+			if (_ctx->framePerfCounters())
+			{
+				FramePerfCounters & fpc = *_ctx->framePerfCounters();
+				fpc.pipeline_barriers += 1;
+				fpc.buffer_barriers += _buffers.size();
+				fpc.image_barriers += _images.size();
+				for (size_t i = 0; i < _images.size(); ++i)
+				{
+					if (_images[i].oldLayout != _images[i].newLayout)
+					{
+						fpc.layout_transitions += 1;
+					}
+				}
+			}
 		}
 	}
 
