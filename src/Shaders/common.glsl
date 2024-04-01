@@ -225,6 +225,28 @@ vec4 quantize(vec4 x, float q)
 	return x - mod(x, q);
 }
 
+ivec3 cross(ivec3 a, ivec3 b)
+{
+	// return ivec3(
+	// 	a.y * b.z - a.z * b.y,
+	// 	a.z * b.x - a.x * b.z,
+	// 	a.x * b.y - a.y * b.x
+	// );
+	return a.yzx * b.zxy - a.zxy * b.yzx; 
+}
+
+uvec3 cross(uvec3 a, uvec3 b)
+{
+	// return uvec3(
+	// 	a.y * b.z - a.z * b.y,
+	// 	a.z * b.x - a.x * b.z,
+	// 	a.x * b.y - a.y * b.x
+	// );
+	return a.yzx * b.zxy - a.zxy * b.yzx; 
+}
+
+
+
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI (PI / 2.0)
 #define QUART_PI (PI / 4.0)
