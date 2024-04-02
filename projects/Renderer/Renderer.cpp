@@ -834,10 +834,10 @@ namespace vkl
 
 			ImGui::BeginDisabled(application()->availableFeatures().acceleration_structure_khr.accelerationStructure == VK_FALSE);
 			ImGui::Checkbox("Ray Tracing", &_maintain_rt);
+			ImGui::EndDisabled();
 			ImGui::PushID("shadow");
 			_shadow_method.declare();
 			ImGui::PopID();
-			ImGui::EndDisabled();
 		}
 	}
 }

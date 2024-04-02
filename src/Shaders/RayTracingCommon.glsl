@@ -10,8 +10,6 @@
 #define CAN_BIND_TLAS 0
 #endif
 
-#define SHADER_RAY_QUERY_AVAILABLE 1
-
 #if SHADER_RAY_QUERY_AVAILABLE
 #extension GL_EXT_ray_query : require
 #endif
