@@ -19,6 +19,10 @@
 #include <deque>
 #include <list>
 #include <bit>
+#include <set>
+#include <unordered_set>
+#include <map>
+#include <unordered_map>
 
 #include "DynamicValue.hpp"
 
@@ -69,6 +73,14 @@ template <class T, class Allocator>
 struct std::ContainerUseCommonAppendConcatAndOperators<std::list<T, Allocator>> : public std::true_type
 {};
 
+template <class T, typename Less, class Allocator>
+struct std::SetUseCommonOperators<std::set<T, Less, Allocator>> : public std::true_type
+{};
+
+template <class T, class H, class Eq, class Allocator>
+struct std::SetUseCommonOperators<std::unordered_set<T, H, Eq, Allocator>> : public std::true_type
+{};
+
 namespace vkl
 {
 	class VkObject;
@@ -104,6 +116,21 @@ namespace vkl
 			return link(vk_struct);
 		}
 	};
+
+	template <::std::concepts::Set<std::string_view> S>
+	MyVector<const char*> flatten(S const& s)
+	{
+		MyVector<const char*> res(s.size());
+		auto it = s.begin();
+		for (size_t i = 0; i < res.size(); ++i)
+		{
+			res[i] = it->data();
+			++it;
+		}
+		return res;
+	}
+
+	class VulkanExtensionsSet;
 
 	template <class T>
 	using Array = MyVector<T>;
@@ -219,7 +246,7 @@ namespace vkl
 		
 		VulkanFeatures();
 
-		VkPhysicalDeviceFeatures2& link();
+		VkPhysicalDeviceFeatures2& link(std::function<bool(std::string_view ext_name)> const& filter_extensions);
 	};
 
 	extern VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available);
@@ -242,7 +269,7 @@ namespace vkl
 
 		VulkanDeviceProps();
 
-		VkPhysicalDeviceProperties2& link();
+		VkPhysicalDeviceProperties2& link(std::function<bool(std::string_view ext_name)> const& filter_extensions);
 	};
 
 	struct VertexInputDescription

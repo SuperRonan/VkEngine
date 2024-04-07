@@ -15,7 +15,7 @@ namespace vkl
 		std::memset(this, 0, sizeof(VulkanFeatures));
 	}
 
-	VkPhysicalDeviceFeatures2& VulkanFeatures::link()
+	VkPhysicalDeviceFeatures2& VulkanFeatures::link(std::function<bool(std::string_view ext_name)> const& filter_extensions)
 	{
 		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 		features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
@@ -37,24 +37,35 @@ namespace vkl
 
 		pNextChain chain = &features2;
 
+		// TODO check Vulkan version here
 		chain += &features_11;
 		chain += &features_12;
 		chain += &features_13;
-		chain += &line_raster_ext;
 
-		chain += &index_uint8_ext;
-		chain += &mesh_shader_ext;
-		chain += &robustness2_ext;
+		if(filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
+			chain += &line_raster_ext;
+		if(filter_extensions(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME))
+			chain += &index_uint8_ext;
+		if(filter_extensions(VK_EXT_MESH_SHADER_EXTENSION_NAME))
+			chain += &mesh_shader_ext;
+		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
+			chain += &robustness2_ext;
 		chain += nullptr;
 
-		chain += &acceleration_structure_khr;
-		chain += &ray_tracing_pipeline_khr;
-		chain += &ray_query_khr;
-		chain += &ray_tracing_maintenance1_khr;
+		if(filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
+			chain += &acceleration_structure_khr;
+		if(filter_extensions(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
+			chain += &ray_tracing_pipeline_khr;
+		if(filter_extensions(VK_KHR_RAY_QUERY_EXTENSION_NAME))
+			chain += &ray_query_khr;
+		if(filter_extensions(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME))
+			chain += &ray_tracing_maintenance1_khr;
 		chain += nullptr;
 
-		chain += &ray_tracing_motion_blur_nv;
-		chain += &ray_tracing_invocation_reorder_nv;
+		if(filter_extensions(VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME))
+			chain += &ray_tracing_motion_blur_nv;
+		if(filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
+			chain += &ray_tracing_invocation_reorder_nv;
 		chain += nullptr;
 
 		return features2;
@@ -65,7 +76,7 @@ namespace vkl
 		std::memset(this, 0, sizeof(VulkanDeviceProps));
 	}
 
-	VkPhysicalDeviceProperties2& VulkanDeviceProps::link()
+	VkPhysicalDeviceProperties2& VulkanDeviceProps::link(std::function<bool(std::string_view ext_name)> const& filter_extensions)
 	{
 		props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 		props_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
@@ -83,19 +94,27 @@ namespace vkl
 
 		pNextChain chain = &props2;
 
+		// TODO check Vulkan version here
 		chain += &props_11;
 		chain += &props_12;
 		chain += &props_13;
-		chain += &line_raster_ext;
-		chain += &mesh_shader_ext;
-		chain += &robustness2_ext;
+
+		if (filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
+			chain += &line_raster_ext;
+		if (filter_extensions(VK_EXT_MESH_SHADER_EXTENSION_NAME))
+			chain += &mesh_shader_ext;
+		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
+			chain += &robustness2_ext;
 		chain += nullptr;
 
-		chain += &acceleration_structure_khr;
-		chain += &ray_tracing_pipeline_khr;
+		if (filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
+			chain += &acceleration_structure_khr;
+		if (filter_extensions(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
+			chain += &ray_tracing_pipeline_khr;
 		chain += nullptr;
 
-		chain += &ray_tracing_invocation_reorder_nv;
+		if (filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
+			chain += &ray_tracing_invocation_reorder_nv;
 		chain += nullptr;
 
 		return props2;
