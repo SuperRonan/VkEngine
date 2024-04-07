@@ -1,4 +1,5 @@
 #include "Pipeline.hpp"
+#include <Core/VkObjects/VulkanExtensionsSet.hpp>
 
 namespace vkl
 {
@@ -50,7 +51,7 @@ namespace vkl
 				.pDynamicStates = dynamic.data(),
 			};
 
-			if (line_raster.has_value() && app->hasDeviceExtension(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
+			if (line_raster.has_value() && app->deviceExtensions().contains(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			{
 				rasterization.pNext = &line_raster.value();
 			}

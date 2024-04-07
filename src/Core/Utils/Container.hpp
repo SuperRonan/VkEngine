@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <iterator>
+#include <concepts>
 
 
 namespace std
@@ -75,8 +76,64 @@ namespace std
 		};
 		template <class ContainerType, class T>
 		concept GrowableContainerMaybeRef = GrowableContainer<typename std::remove_reference<ContainerType>::type, T>;
-	}
-	
 
-	// TODO some tests
+
+
+	
+		template <class Str>
+		concept StringLike = std::convertible_to<Str, std::string_view>;
+
+
+
+
+		template <class SetType>
+		concept GenericSet = GenericContainer<SetType> && requires(SetType& a, const SetType b, typename SetType::value_type & x)
+		{
+			{a.contains(x)} -> std::convertible_to<bool>;
+		};
+
+		template <class SetTypeMaybeRef>
+		concept GenericSetMaybeRef = GenericSet<typename std::remove_reference<SetTypeMaybeRef>::type>;
+
+		template <class SetType, class T>
+		concept Set = requires(SetType s)
+		{
+			requires GenericSet<SetType>;
+			requires std::same_as<T, typename SetType::value_type>;
+		};
+
+		template <class SetTypeMaybeRef, class T>
+		concept SetMaybeRef = Set<typename std::remove_reference<SetTypeMaybeRef>::type, T>;
+
+		template <class SetType, class ReferenceSetType>
+		concept ConvertibleSet = requires
+		{
+			requires GenericContainer<ReferenceSetType>;
+			requires GenericContainer<SetType>;
+			requires std::convertible_to<typename SetType::value_type, typename ReferenceSetType::value_type>;
+		};
+		template <class SetTypeMaybeRef, class ReferenceSetType>
+		concept ConvertibleSetMaybeRef = ConvertibleSet<typename std::remove_reference<SetTypeMaybeRef>::type, ReferenceSetType>;
+
+
+		template <class SetType>
+		concept GenericGrowableSet = requires(SetType s, typename SetType::value_type v)
+		{
+			requires GenericSet<SetType>;
+			{s.insert(v)};
+		};
+
+		template <class SetTypeMaybeRef>
+		concept GenericGrowableSetMaybeRef = GenericGrowableSet<typename std::remove_reference<SetTypeMaybeRef>::type>;
+	
+		template <class SetType, class T>
+		concept GrowableSet = requires(SetType s)
+		{
+			requires GenericGrowableSet<SetType>;
+			requires std::same_as<T, typename SetType::value_type>;
+		};
+
+		template <class SetTypeMaybeRef, class T>
+		concept GrowableSetMaybeRef = GrowableSet<typename std::remove_reference<SetTypeMaybeRef>::type, T>;
+	}
 }

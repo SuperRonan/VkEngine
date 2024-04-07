@@ -5,6 +5,8 @@
 #include <Core/Rendering/TextureFromFile.hpp>
 #include <Core/VkObjects/DescriptorSetLayout.hpp>
 
+#include <Core/VkObjects/VulkanExtensionsSet.hpp>
+
 #include <Core/Commands/PrebuiltTransferCommands.hpp>
 
 #include <Core/IO/File.hpp>
@@ -91,14 +93,14 @@ namespace vkl
 		}
 	}
 
-	std::vector<const char*> VkApplication::getValidLayers()
+	std::set<std::string_view> VkApplication::getValidLayers()
 	{
 		return {
 			"VK_LAYER_KHRONOS_validation"
 		};
 	}
 
-	std::vector<const char* > VkApplication::getDeviceExtensions()
+	std::set<std::string_view> VkApplication::getDeviceExtensions()
 	{
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
@@ -171,19 +173,21 @@ namespace vkl
 		features.ray_query_khr.rayQuery = t;
 	}
 
-	std::vector<const char*> VkApplication::getInstanceExtensions()
+	std::set<std::string_view> VkApplication::getInstanceExtensions()
 	{
 		uint32_t sdl_ext_count = 0;
 		SDL_Vulkan_GetInstanceExtensions(nullptr, &sdl_ext_count, nullptr);
-		std::vector<const char*> extensions(sdl_ext_count, nullptr);
+		MyVector<const char*> extensions(sdl_ext_count, nullptr);
 		SDL_Vulkan_GetInstanceExtensions(nullptr, &sdl_ext_count, extensions.data());
+		std::set<std::string_view> res(extensions.begin(), extensions.end());
+		
 		if (_options.enable_validation || _options.enable_object_naming || _options.enable_command_buffer_labels)
 		{
-			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			res.insert(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
-		extensions.push_back(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
+		res.insert(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
 		
-		return extensions;
+		return res;
 	}
 
 
@@ -213,11 +217,11 @@ namespace vkl
 
 		const auto valid_layers = getValidLayers();
 
-		bool res = std::all_of(valid_layers.cbegin(), valid_layers.cend(), [&available_layers](const char* layer_name)
+		bool res = std::all_of(valid_layers.cbegin(), valid_layers.cend(), [&available_layers](std::string_view layer_name)
 			{
 				return available_layers.cend() != std::find_if(available_layers.cbegin(), available_layers.cend(), [&layer_name](VkLayerProperties const& layer_prop)
 					{
-						return strcmp(layer_name, layer_prop.layerName) == 0;
+						return strcmp(layer_name.data(), layer_prop.layerName) == 0;
 					});
 			});
 
@@ -261,35 +265,25 @@ namespace vkl
 			.apiVersion = VK_API_VERSION_1_3,
 		};
 
-		auto extensions = getInstanceExtensions();
+		auto desired_extensions = getInstanceExtensions();
+		_instance_extensions = std::make_unique<VulkanExtensionsSet>(desired_extensions, static_cast<VkPhysicalDevice>(VK_NULL_HANDLE), nullptr);
 		// TODO check that extensions are available
 		VkInstanceCreateInfo create_info{
 			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 			.pApplicationInfo = &app_info,
-			.enabledExtensionCount = (uint32_t)extensions.size(),
-			.ppEnabledExtensionNames = extensions.data(),
+			.enabledExtensionCount = _instance_extensions->pExts().size32(),
+			.ppEnabledExtensionNames = _instance_extensions->pExts().data(),
 		};
-		_instance_extensions.resize(extensions.size());
-		for (size_t i = 0; i < extensions.size(); ++i)
-		{
-			// TODO automatically someday
-			if (strcmp(extensions[i], VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
-			{
-				_instance_extensions.push_back(VkExtensionProperties{
-					.extensionName = VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-					.specVersion = VK_EXT_DEBUG_UTILS_SPEC_VERSION,
-				});
-			}
-		}
 
 		VkDebugUtilsMessengerCreateInfoEXT instance_debug_create_info{};
 
 		const auto valid_layers = getValidLayers();
+		MyVector<const char*> p_valid_layers = flatten(valid_layers);
 
 		if (_options.enable_validation)
 		{
-			create_info.enabledLayerCount = valid_layers.size();
-			create_info.ppEnabledLayerNames = valid_layers.data();
+			create_info.enabledLayerCount = p_valid_layers.size32();
+			create_info.ppEnabledLayerNames = p_valid_layers.data();
 
 			populateDebugMessengerCreateInfo(instance_debug_create_info);
 			create_info.pNext = &instance_debug_create_info;
@@ -369,72 +363,6 @@ namespace vkl
 		return indices;
 	}
 
-	uint32_t VkApplication::checkDeviceExtensionSupport(VkPhysicalDevice const& device)
-	{
-		const auto requested_extensions = getDeviceExtensions();
-
-		uint32_t extension_count;
-		std::vector<VkExtensionProperties> queried_extensions;
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
-		queried_extensions.resize(extension_count);
-		vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, queried_extensions.data());
-
-		_device_extensions.clear();
-
-		uint32_t present = 0;
-		uint32_t missing = 0;
-		for (size_t i = 0; i < requested_extensions.size(); ++i)
-		{
-			size_t j = [&]() {
-				for (size_t j = 0; j < queried_extensions.size(); ++j)
-				{
-					if (std::string_view(requested_extensions[i]) == std::string_view(queried_extensions[j].extensionName))
-					{
-						return j;
-					}
-				}
-				return size_t(-1);
-			}();
-			if (j != -1)
-			{
-				++present;
-				_device_extensions.push_back(queried_extensions[j]);
-			}
-			else
-			{
-				++missing;
-			}
-		}
-		
-		return present;
-	}
-
-	uint32_t VkApplication::getDeviceExtVersion(std::string_view ext_name) const
-	{
-		// TODO use a map
-		for (const auto& ext : _device_extensions)
-		{
-			if (ext.extensionName == ext_name)
-			{
-				return ext.specVersion;
-			}
-		}
-		return EXT_NONE;
-	}
-
-	uint32_t VkApplication::getInstanceExtVersion(std::string_view ext_name) const
-	{
-		// TODO use a map
-		for (const auto& ext : _instance_extensions)
-		{
-			if (ext.extensionName == ext_name)
-			{
-				return ext.specVersion;
-			}
-		}
-		return EXT_NONE;
-	}
-
 	bool VkApplication::isDeviceSuitable(VkPhysicalDevice const& device)
 	{
 		bool res = true;
@@ -460,14 +388,19 @@ namespace vkl
 		return res;
 	}
 
-	int64_t VkApplication::ratePhysicalDevice(VkPhysicalDevice const& device)
+	int64_t VkApplication::ratePhysicalDevice(VkPhysicalDevice const& device, std::set<std::string_view> const& desired_extensions, VulkanFeatures const& desired_features)
 	{
 		int64_t res = 0;
+		
+		// TODO add pLayerName
+		VulkanExtensionsSet available_extensions(device);
+
+		std::function<bool(std::string_view)> filter_extensions = [&](std::string_view ext_name){return available_extensions.contains(ext_name);};
 
 		VulkanDeviceProps props;
 		VulkanFeatures features;
-		vkGetPhysicalDeviceProperties2(device, &props.link());
-		vkGetPhysicalDeviceFeatures2(device, &features.link());
+		vkGetPhysicalDeviceProperties2(device, &props.link(filter_extensions));
+		vkGetPhysicalDeviceFeatures2(device, &features.link(filter_extensions));
 
 		bool suitable = isDeviceSuitable(device);
 		if (!suitable)
@@ -479,10 +412,18 @@ namespace vkl
 
 		int64_t discrete_multiplicator = (props.props2.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 2 : 1;
 
-		// TODO count the available requested features
-
 		res = 1;
 
+		for (std::string_view const& desired_ext_name : desired_extensions)
+		{
+			if (available_extensions.contains(desired_ext_name))
+			{
+				res += 1;
+			}
+		}
+
+		// TODO count the available requested features
+		
 		if (props.props2.properties.apiVersion < min_version)
 		{
 			res = 0;
@@ -497,6 +438,9 @@ namespace vkl
 
 	void VkApplication::pickPhysicalDevice()
 	{
+		const auto desired_extensions = getDeviceExtensions();
+		requestFeatures(_requested_features);
+
 		uint32_t physical_device_count = 0;
 		vkEnumeratePhysicalDevices(_instance, &physical_device_count, nullptr);
 
@@ -511,9 +455,9 @@ namespace vkl
 		VK_LOG << "Found " << physical_device_count << " physical device(s):\n";
 		for (size_t i=0; i < physical_devices.size(); ++i)
 		{
-			VulkanDeviceProps props;
-			vkGetPhysicalDeviceProperties2(physical_devices[i], &props.link());
-			VK_LOG << " - " << i << ": " << props.props2.properties.deviceName << std::endl;
+			VkPhysicalDeviceProperties props;
+			vkGetPhysicalDeviceProperties(physical_devices[i], &props);
+			VK_LOG << " - " << i << ": " << props.deviceName << std::endl;
 		}
 
 		if (_options.gpu_id < physical_device_count)
@@ -522,13 +466,18 @@ namespace vkl
 		}
 		else
 		{
-			auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), [&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d); });
+			auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), 
+				[&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d, desired_extensions, _requested_features); }
+			);
 			_physical_device = *it;
 
 		}
 
-		vkGetPhysicalDeviceProperties2(_physical_device, &_device_props.link());
-		uint32_t supported_extensions = checkDeviceExtensionSupport(_physical_device);
+		_device_extensions = std::make_unique<VulkanExtensionsSet>(desired_extensions, _physical_device);
+		VkPhysicalDeviceProperties2 & physical_device_props = _device_props.link(
+			[this](std::string_view ext_name) {return _device_extensions->contains(ext_name); }
+		);
+		vkGetPhysicalDeviceProperties2(_physical_device, &physical_device_props);
 		_queue_family_indices = findQueueFamilies(_physical_device);
 
 		VK_LOG << "Using " << _device_props.props2.properties.deviceName << " as physical device.\n";
@@ -560,12 +509,14 @@ namespace vkl
 			queue_create_infos.push_back(queue_create_info);
 		}
 
+		auto filter_extensions = [this](std::string_view ext_name){return _device_extensions->contains(ext_name); };
+
 		VulkanFeatures exposed_device_features;
-		vkGetPhysicalDeviceFeatures2(_physical_device, &exposed_device_features.link());
+		vkGetPhysicalDeviceFeatures2(_physical_device, &exposed_device_features.link(filter_extensions));
 
 		_available_features = filterFeatures(_requested_features, exposed_device_features);
 
-		VkPhysicalDeviceFeatures2 features2 = _available_features.link();
+		VkPhysicalDeviceFeatures2 features2 = _available_features.link(filter_extensions);
 
 		VkDeviceCreateInfo device_create_info{};
 		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -574,19 +525,15 @@ namespace vkl
 		device_create_info.queueCreateInfoCount = queue_create_infos.size();
 		device_create_info.pEnabledFeatures = nullptr;
 
-		device_create_info.enabledExtensionCount = _device_extensions.size();
-		std::vector<const char*> device_extensions(_device_extensions.size());
-		for (size_t e = 0; e < device_extensions.size(); ++e)
-		{
-			device_extensions[e] = _device_extensions[e].extensionName;
-		}
-		device_create_info.ppEnabledExtensionNames = device_extensions.data();
+		device_create_info.enabledExtensionCount = _device_extensions->pExts().size32();
+		device_create_info.ppEnabledExtensionNames = _device_extensions->pExts().data();
 
 		const auto valid_layers = getValidLayers();
+		MyVector<const char*> p_valid_layers = flatten(valid_layers);
 		if (_options.enable_validation)
 		{
-			device_create_info.enabledLayerCount = valid_layers.size();
-			device_create_info.ppEnabledLayerNames = valid_layers.data();
+			device_create_info.enabledLayerCount = p_valid_layers.size32();
+			device_create_info.ppEnabledLayerNames = p_valid_layers.data();
 		}
 		else
 		{
@@ -615,7 +562,7 @@ namespace vkl
 			_ext_functions._vkCmdDrawMeshTasksIndirectCountEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
 		}
 
-		const bool has_debug_utils_ext = hasInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		const bool has_debug_utils_ext = instanceExtensions().contains(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 		if (_options.enable_object_naming)
 		{
@@ -831,8 +778,6 @@ namespace vkl
 		loadMountingPoints();
 		initSDL();
 		preChecks();
-
-		requestFeatures(_requested_features);
 
 		initInstance(_name);
 		initValidLayers();

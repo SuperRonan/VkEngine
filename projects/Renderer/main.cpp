@@ -68,10 +68,10 @@ namespace vkl
 			features.features_11.multiview = VK_TRUE;
 		}
 
-		virtual std::vector<const char* > getDeviceExtensions() override
+		virtual std::set<std::string_view> getDeviceExtensions() override
 		{
-			std::vector<const char* > res = AppWithImGui::getDeviceExtensions();
-			res.push_back(VK_NV_FILL_RECTANGLE_EXTENSION_NAME);
+			std::set<std::string_view> res = AppWithImGui::getDeviceExtensions();
+			res.insert(VK_NV_FILL_RECTANGLE_EXTENSION_NAME);
 			return res;
 		}
 

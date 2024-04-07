@@ -1,5 +1,6 @@
 
 #include "ImguiCommand.hpp"
+#include <Core/VkObjects/VulkanExtensionsSet.hpp>
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -173,7 +174,7 @@ namespace vkl
 	void ImguiCommand::createRenderPassIFP()
 	{
 		// ImGui require the ext, vk 1.3 is not enough for now (event though the ext has been promoted to core in 1.3)
-		const bool can_use_dynamic_rendering = application()->availableFeatures().features_13.dynamicRendering && application()->hasDeviceExtension(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+		const bool can_use_dynamic_rendering = application()->availableFeatures().features_13.dynamicRendering && application()->deviceExtensions().contains(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 		if (false && can_use_dynamic_rendering)
 		{
 

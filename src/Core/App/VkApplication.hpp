@@ -101,12 +101,10 @@ namespace vkl
 		Options _options = {};
 
 		VkInstance _instance = VK_NULL_HANDLE;
-		std::vector<VkExtensionProperties> _instance_extensions = {};
 		VkDebugUtilsMessengerEXT _debug_messenger = VK_NULL_HANDLE;
 		VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
 		VulkanDeviceProps _device_props = {};
 		VkDevice _device = VK_NULL_HANDLE;
-		std::vector<VkExtensionProperties> _device_extensions = {};
 
 		VmaAllocator _allocator = nullptr;
 
@@ -117,7 +115,9 @@ namespace vkl
 		Pools _pools = {};
 
 
-		
+		std::unique_ptr<VulkanExtensionsSet> _instance_extensions;
+		std::unique_ptr<VulkanExtensionsSet> _device_extensions;
+
 
 		struct ExtFunctionsPtr
 		{
@@ -154,11 +154,11 @@ namespace vkl
 
 		void loadExtFunctionsPtr();
 
-		virtual std::vector<const char*> getValidLayers();
+		virtual std::set<std::string_view> getValidLayers();
 
-		virtual std::vector<const char*> getDeviceExtensions(); 
+		virtual std::set<std::string_view> getDeviceExtensions();
 
-		virtual std::vector<const char*> getInstanceExtensions();
+		virtual std::set<std::string_view> getInstanceExtensions();
 
 		std::string _name = {};
 
@@ -196,12 +196,9 @@ namespace vkl
 
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
 
-		// Returns number of extensions 
-		uint32_t checkDeviceExtensionSupport(VkPhysicalDevice const& device);
-
 		virtual bool isDeviceSuitable(VkPhysicalDevice const& device);
 
-		virtual int64_t ratePhysicalDevice(VkPhysicalDevice const& device);
+		virtual int64_t ratePhysicalDevice(VkPhysicalDevice const& device, std::set<std::string_view> const& desired_extensions, VulkanFeatures const& desired_features);
 
 		void pickPhysicalDevice();
 
@@ -278,16 +275,15 @@ namespace vkl
 			return _device_props;
 		}
 
-		static const constexpr uint32_t EXT_NONE = uint32_t(0);
-		uint32_t getDeviceExtVersion(std::string_view ext_name) const;
-		bool hasDeviceExtension(std::string_view ext_name) const
+		
+		const VulkanExtensionsSet& instanceExtensions() const
 		{
-			return getDeviceExtVersion(ext_name) != EXT_NONE;
+			return *_instance_extensions;
 		}
-		uint32_t getInstanceExtVersion(std::string_view ext_name)const;
-		bool hasInstanceExtension(std::string_view ext_name)const
+
+		const VulkanExtensionsSet& deviceExtensions() const
 		{
-			return getInstanceExtVersion(ext_name) != EXT_NONE;
+			return *_device_extensions;
 		}
 
 		const ExtFunctionsPtr& extFunctions()
