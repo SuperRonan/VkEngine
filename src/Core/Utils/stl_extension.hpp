@@ -82,6 +82,10 @@ namespace std
 	struct ContainerUseCommonAppendConcatAndOperators : public std::false_type
 	{};
 
+	template <concepts::GenericGrowableSetMaybeRef Set>
+	struct SetUseCommonOperators : public std::false_type
+	{};
+
 	namespace concepts
 	{
 		template <class C>
@@ -96,6 +100,20 @@ namespace std
 		{
 			requires GrowableContainerMaybeRef<C, T>;
 			requires ContainerUseCommonAppendConcatAndOperators<typename std::remove_reference<C>::type>::value;
+		};
+
+		template <class S>
+		concept GenericSetNeedingCommonOperators = requires
+		{
+			requires GenericGrowableSetMaybeRef<S>;
+			requires SetUseCommonOperators<typename std::remove_reference<S>::type>::value;
+		};
+
+		template <class S, class T>
+		concept SetNeedingCommonOperators = requires
+		{
+			requires GrowableSetMaybeRef<S, T>;
+			requires SetUseCommonOperators<typename std::remove_reference<S>::type>::value;
 		};
 	}
 
@@ -141,10 +159,22 @@ namespace std
 			return std::append(c, std::forward<T>(b));
 		}
 
+		template<class T, ::std::concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
+		C& operator|=(C& c, T&& b)
+		{
+			return c+= std::forward<T>(b);
+		}
+
 		template <::std::concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, ::std::concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
 		C& operator+=(C& a, CC const& b)
 		{
 			return std::append(a, b);
+		}
+
+		template <::std::concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, ::std::concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
+		C& operator|=(C& a, CC const& b)
+		{
+			return a += b;
 		}
 
 		template <class T, ::std::concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
@@ -153,10 +183,55 @@ namespace std
 			return std::concat(std::forward<C>(c), std::forward<T>(t));
 		}
 
+		template <class T, ::std::concepts::ContainerNeedingCommonAppendConcatAndOperator<T> C>
+		C operator|(C&& c, T&& t)
+		{
+			return std::forward<C>(c) + std::forward<T>(t);
+		}
+
 		template <::std::concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, ::std::concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
 		C operator+(C&& c, CC const& cc)
 		{
 			return std::concat(std::forward<C>(c), cc);
+		}
+
+		template <::std::concepts::GenericContainerNeedingCommonAppendConcatAndOperator C, ::std::concepts::ConvertibleContainerMaybeRef<typename std::remove_reference<C>::type> CC>
+		C operator|(C&& c, CC const& cc)
+		{
+			return std::forward<C>(c) + cc;
+		}
+
+
+
+
+		template <::std::concepts::GenericSetNeedingCommonOperators S, std::convertible_to<typename S::value_type> T>
+		S& operator|=(S& s, T&& t)
+		{
+			s.insert(std::forward<T>(t));
+			return s;
+		}
+
+		template <::std::concepts::GenericSetNeedingCommonOperators S, std::convertible_to<typename S::value_type> T>
+		S operator|(S&& s, T&& t)
+		{
+			S res = std::forward<S>(s);
+			res |= std::forward<T>(t);
+			return res;
+		}
+
+		template <::std::concepts::GenericSetNeedingCommonOperators S, ::std::concepts::ConvertibleSetMaybeRef<typename std::remove_reference<S>::type> Q>
+		S& operator|=(S& s, Q&& q)
+		{
+			s.insert(q.begin(), q.end());
+			return s;
+		}
+
+		template <::std::concepts::GenericSetNeedingCommonOperators S, ::std::concepts::ConvertibleSetMaybeRef<typename std::remove_reference<S>::type> Q>
+		S operator|(S&& s, Q&& q)
+		{
+			S res = std::forward<S>(s);
+			res |= std::forward<Q>(q);
+			return res;
 		}
 
 		//template<class T>
