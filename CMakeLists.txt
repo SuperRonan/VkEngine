@@ -1,18 +1,21 @@
 
 cmake_minimum_required(VERSION 3.18.0)
 
+set(CMAKE_CONFIGURATION_TYPES Debug FastDebug RelWithDebInfo Release MinSizeRel)
+
 set(Project_Name "VkEngine")
 project(${Project_Name})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# set(CMAKE_CXX_FLAGS_DEBUG	"/MD")
-# set(CMAKE_CXX_FLAGS_RELEASE	"/MD")
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
+set(CMAKE_CXX_FLAGS_FASTDEBUG ${CMAKE_CXX_FLAGS_DEBUG} )
+set(VK_ENGINE_LINK_OPTIONS "")
+set(VK_ENGINE_LINK_OPTIONS ${VK_ENGINE_LINK_OPTIONS} "$<$<CONFIG:FastDebug>:/DEBUG>")
 
 set(VK_ENGINE_INCLUDE_DIRS "")
 set(VK_ENGINE_LINK_LIBS "")
@@ -28,18 +31,6 @@ set(THAT_LIB_INCLUDE_DIR ext/thatlib)
 set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${THAT_LIB})
 set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${THAT_LIB_INCLUDE_DIR})
 
-
-# GLFW
-# set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-# set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-# set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-# add_subdirectory(ext/glfw)
-
-# set(GLFW_INCLUDE_DIRS ext/glfw/include)
-# set(GLFW_LIBS "glfw")
-
-# set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${GLFW_LIBS})
-# set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${GLFW_INCLUDE_DIRS})
 
 # SDL (2)
 # TODO Maybe not require SDL2 -> we can still use the engine, but without any functionality provided by SDL 
@@ -207,7 +198,6 @@ set(ENGINE_SRC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/")
 add_library(VkEngine STATIC ${VK_ENGINE_SOURCE} ${SPV_REFLECT_SOURCE})
 set_target_properties(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_definitions(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${ENGINE_SRC_PATH}\"")
-
 target_include_directories(VkEngine PUBLIC ${VK_ENGINE_INCLUDE_DIRS}) 
 
 target_link_libraries(VkEngine PUBLIC ${VK_ENGINE_LINK_LIBS})
@@ -227,3 +217,8 @@ endif()
 
 install(TARGETS VkEngine DESTINATION lib)
 
+# message(${STATIC_LIBRARY_FLAGS_DEBUG})
+# message(${LINK_FLAGS_FASTDEBUG})
+# message(${LINK_FLAGS_RELWITHDEBINFO})
+# message(${LINK_FLAGS_RELEASE})
+# message(${LINK_FLAGS_MINSIZEREL})

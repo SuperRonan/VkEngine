@@ -51,6 +51,7 @@
 	- [x] AddProject function
 	- [x] Separate list for .exe
 	- [x] Option to build .exe
+	- [x] FastDebug build (Same as Debug, with IDL=0)
 	- [ ] Correctly import Vulkan
 - [x] Better ResourceStateTracker
 	- [x] Remake the interface

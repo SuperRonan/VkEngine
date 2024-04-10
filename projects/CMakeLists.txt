@@ -14,6 +14,8 @@ function(AddProject p_name)
 	target_compile_definitions(${p_name} PRIVATE "PROJECT_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/${folder}/\"")
 
 	target_link_libraries(${p_name} PUBLIC VkEngine)
+
+	set_target_properties(${p_name} PROPERTIES LINK_OPTIONS ${VK_ENGINE_LINK_OPTIONS})
 	
 	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
 	set(EXECUTABLES ${EXECUTABLES} ${p_name})
@@ -41,3 +43,5 @@ set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${ENGINE_SRC_PATH}/../pro
 file(GENERATE OUTPUT "$<CONFIG>/MountingPoints.txt" CONTENT ${MP_CONTENT})
 
 install(TARGETS ${EXECUTABLES} DESTINATION bin)
+
+# message(${LINK_FLAGS_DEBUG})
