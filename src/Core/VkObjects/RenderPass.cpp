@@ -99,7 +99,7 @@ namespace vkl
 
 
 	RenderPass::RenderPass(CreateInfo const& ci) :
-		ParentType(ci.app, ci.name),
+		ParentType(ci.app, ci.name, ci.hold_instance),
 		_attachement_descriptors(ci.attachement_descriptors),
 		_attachement_ref_per_subpass(ci.attachement_ref_per_subpass),
 		_subpasses(ci.subpasses),
@@ -115,7 +115,7 @@ namespace vkl
 
 	RenderPass::~RenderPass()
 	{
-		destroyInstance();
+		
 	}
 
 	void RenderPass::createInstance()
@@ -141,51 +141,48 @@ namespace vkl
 		});
 	}
 
-	void RenderPass::destroyInstance()
-	{
-		callInvalidationCallbacks();
-		_inst = nullptr;
-	}
-
 	bool RenderPass::updateResources(UpdateContext& ctx)
 	{
 		bool res = false;
 
-		if (_inst)
+		if (checkHoldInstance())
 		{
-			if (_attachement_descriptors.size() == _inst->_attachement_descriptors.size())
+			if (_inst)
 			{
-				for (size_t i = 0; i < _attachement_descriptors.size(); ++i)
+				if (_attachement_descriptors.size() == _inst->_attachement_descriptors.size())
 				{
-					const VkFormat new_format = _attachement_descriptors[i].format.value();
-					if (new_format != _inst->_attachement_descriptors[i].format)
+					for (size_t i = 0; i < _attachement_descriptors.size(); ++i)
 					{
-						res = true;
-						break;
-					}
-					const VkSampleCountFlagBits new_samples = _attachement_descriptors[i].samples.value();
-					if (new_samples != _inst->_attachement_descriptors[i].samples)
-					{
-						res = true;
-						break;
+						const VkFormat new_format = _attachement_descriptors[i].format.value();
+						if (new_format != _inst->_attachement_descriptors[i].format)
+						{
+							res = true;
+							break;
+						}
+						const VkSampleCountFlagBits new_samples = _attachement_descriptors[i].samples.value();
+						if (new_samples != _inst->_attachement_descriptors[i].samples)
+						{
+							res = true;
+							break;
+						}
 					}
 				}
+				else
+				{
+					res = true;
+				}
+
+				if (res)
+				{
+					destroyInstanceIFN();
+				}
 			}
-			else
+
+			if (!_inst)
 			{
 				res = true;
+				createInstance();
 			}
-
-			if (res)
-			{
-				destroyInstance();
-			}
-		}
-
-		if (!_inst)
-		{
-			res = true;
-			createInstance();
 		}
 
 		return res;

@@ -119,8 +119,6 @@ namespace vkl
 
 		void createInstance();
 
-		void destroyInstance();
-
 	public:
 
 		struct CreateInfo
@@ -134,6 +132,7 @@ namespace vkl
 			bool last_is_depth_stencil = false;
 			bool multiview = false;
 			bool create_on_construct = false;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -142,14 +141,6 @@ namespace vkl
 		virtual ~RenderPass()override;
 
 		bool updateResources(UpdateContext & ctx);
-
-		void destroyInstanceIFP()
-		{
-			if (_inst)
-			{
-				destroyInstance();
-			}
-		}
 
 		constexpr const auto& getAttachementDescriptors2()const
 		{

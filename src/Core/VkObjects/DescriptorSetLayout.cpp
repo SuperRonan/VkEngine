@@ -144,7 +144,7 @@ namespace vkl
 	}
 	
 	DescriptorSetLayout::DescriptorSetLayout(CreateInfo const& ci) :
-		ParentType(ci.app, ci.name),
+		ParentType(ci.app, ci.name, ci.hold_instance),
 		_is_dynamic(ci.is_dynamic),
 		_bindings(ci.bindings),
 		_flags(ci.flags),
@@ -191,15 +191,6 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetLayout::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
-	}
-
 	void DescriptorSetLayout::createInstance()
 	{
 		assert(!_inst);
@@ -221,8 +212,8 @@ namespace vkl
 	}
 
 	DescriptorSetLayout::~DescriptorSetLayout()
-	{
-		destroyInstance();
+	{	
+		
 	}
 	
 	bool DescriptorSetLayout::updateResources(UpdateContext& ctx)
@@ -233,27 +224,29 @@ namespace vkl
 			if (ctx.updateTick() > _update_tick)
 			{
 				_update_tick = ctx.updateTick();
-				if (_inst)
+				if (checkHoldInstance())
 				{
-					bool destroy_instance = false;
-					for (size_t i = 0; i < _bindings.size(); ++i)
+					if (_inst)
 					{
-						if (_bindings[i].count.value() != _inst->_bindings[i].descriptorCount)
+						bool destroy_instance = false;
+						for (size_t i = 0; i < _bindings.size(); ++i)
 						{
-							destroy_instance = true;
-							break;
+							if (_bindings[i].count.value() != _inst->_bindings[i].descriptorCount)
+							{
+								destroy_instance = true;
+								break;
+							}
+						}
+						if (destroy_instance)
+						{
+							destroyInstanceIFN();
 						}
 					}
-					if (destroy_instance)
+					if (!_inst)
 					{
-						destroyInstance();
+						createInstance();
+						res = true;
 					}
-				}
-
-				if (!_inst)
-				{
-					createInstance();
-					res = true;
 				}
 			}
 		}

@@ -68,8 +68,6 @@ namespace vkl
 
 		void createInstance();
 
-		void destroyInstance();
-
 		VkSamplerCreateInfo _vk_ci = {};
 
 	public:
@@ -86,6 +84,7 @@ namespace vkl
 			VkBool32 unnormalized_coordinates = false;
 			std::optional<VkCompareOp> compare_op = {};
 			bool create_on_construct = false;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 

@@ -668,14 +668,10 @@ namespace vkl
 		}
 	}
 
-	void Shader::destroyInstance()
+	void Shader::destroyInstanceIFN()
 	{
 		waitForInstanceCreationIFN();
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
+		ParentType::destroyInstanceIFN();
 	}
 
 	bool Shader::updateResources(UpdateContext & ctx)
@@ -683,62 +679,65 @@ namespace vkl
 		using namespace std::containers_append_operators;
 		bool res = false;
 
-		std::vector<std::string> definitions = *_definitions;
-		definitions += ctx.commonDefinitions()->collapsed();
-		SpecializationKey new_key;
-		// TODO use a string stream (probably faster)
-		new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
+		if (checkHoldInstance())
 		{
-			return a + "\n"s + b;
-		});
-		
-		if (ctx.checkShadersTick() > _check_tick)
-		{
-			waitForInstanceCreationIFN();
-			for (const auto& dep : _dependencies)
+			std::vector<std::string> definitions = *_definitions;
+			definitions += ctx.commonDefinitions()->collapsed();
+			SpecializationKey new_key;
+			// TODO use a string stream (probably faster)
+			new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
 			{
-				const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
-				if (new_time > _instance_time)
+				return a + "\n"s + b;
+			});
+		
+			if (ctx.checkShadersTick() > _check_tick)
+			{
+				waitForInstanceCreationIFN();
+				for (const auto& dep : _dependencies)
 				{
-					_specializations.clear();
-					res = true;
-					break;
+					const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
+					if (new_time > _instance_time)
+					{
+						_specializations.clear();
+						res = true;
+						break;
+					}
 				}
+				_check_tick = ctx.checkShadersTick();
 			}
-			_check_tick = ctx.checkShadersTick();
-		}
 		
-		const bool use_different_spec = new_key != _current_key;
-		if (use_different_spec)
-		{
-			_current_key = new_key;
-			res = true;
-		}
+			const bool use_different_spec = new_key != _current_key;
+			if (use_different_spec)
+			{
+				_current_key = new_key;
+				res = true;
+			}
 
-		if (res)
-		{
-			destroyInstance();
-		}
-		
-		
-		if (!_inst)
-		{
-			std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
-			uint32_t packed_capcity = 32;
-			if(!capacity.empty())
-			{	
-				// TODO use a better function that checks the result and can parse hex
-				uint32_t u = std::atoi(capacity.c_str());
+			if (res)
+			{
+				destroyInstanceIFN();
 			}
-			createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
-			res = true;
+		
+		
+			if (!_inst)
+			{
+				std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
+				uint32_t packed_capcity = 32;
+				if(!capacity.empty())
+				{	
+					// TODO use a better function that checks the result and can parse hex
+					uint32_t u = std::atoi(capacity.c_str());
+				}
+				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
+				res = true;
+			}
 		}
 
 		return res;
 	}
 
 	Shader::Shader(CreateInfo const& ci):
-		ParentType(ci.app, ci.name),
+		ParentType(ci.app, ci.name, ci.hold_instance),
 		_path(ci.source_path),
 		_stage(ci.stage),
 		_definitions(ci.definitions)
@@ -748,7 +747,8 @@ namespace vkl
 
 	Shader::~Shader()
 	{
-		destroyInstance();
+		// TODO can cancel task
+		destroyInstanceIFN();
 	}
 
 	void Shader::waitForInstanceCreationIFN()

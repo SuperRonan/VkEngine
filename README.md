@@ -79,6 +79,7 @@
 	- [x] Fullscreen
 	- [x] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
+- [x] InstanceHolders (aka Descriptors) have an option to not hold and instance (mostly to free memory for Images and Buffers)
 - [x] Add a mode to use the GENERAL image layout instead of the specialized layout and measure the performance of doing so 
 - [x] Refactor ResourceBinding and remove Resource 
 - [x] Remove ext features from the device requested feature chain when the extension is not used (it now generates a validation error)

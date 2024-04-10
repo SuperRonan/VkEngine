@@ -420,9 +420,15 @@ namespace vkl
 		});
 	}
 
+	Program::Program(CreateInfo const& ci):
+		ParentType(ci.app, ci.name, ci.hold_instance),
+		_provided_sets_layouts(ci.sets_layouts)
+	{}
+
 	Program::~Program()
 	{
-		destroyInstance();
+		// TODO can cancel task
+		destroyInstanceIFN();
 		for (auto& shader : _shaders)
 		{
 			shader->removeInvalidationCallbacks(this);
@@ -440,7 +446,7 @@ namespace vkl
 	{
 		Callback ic{
 			.callback = [this]() {
-				this->destroyInstance();
+				this->destroyInstanceIFN();
 			},
 			.id = this,
 		};
@@ -457,30 +463,31 @@ namespace vkl
 		}
 	}
 
-	void Program::destroyInstance()
+	void Program::destroyInstanceIFN()
 	{
 		waitForInstanceCreationIFN();
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
+		ParentType::destroyInstanceIFN();
 	}
 
 	bool Program::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
-		
+
+		bool can_create = true;
+
 		for (auto& shader : _shaders)
 		{
 			res |= shader->updateResources(ctx);
+			can_create &= shader->hasInstanceOrIsPending();
 		}
 		
-		if (!_inst)
+		if (checkHoldInstance())
 		{
-			createInstance();
-			res = true;
-
+			if (!_inst && can_create)
+			{
+				createInstanceIFP();
+				res = true;
+			}
 		}
 
 		return res;
@@ -563,7 +570,12 @@ namespace vkl
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoVertex const& civ) :
-		Program(civ.app, civ.name, civ.sets_layouts),
+		Program(Program::CI{
+			.app = civ.app, 
+			.name = civ.name, 
+			.sets_layouts = civ.sets_layouts,
+			.hold_instance = civ.hold_instance,
+		}),
 		_vertex(civ.vertex),
 		_tess_control(civ.tess_control),
 		_tess_eval(civ.tess_eval),
@@ -595,7 +607,12 @@ namespace vkl
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoMesh const& cim) :
-		Program(cim.app, cim.name, cim.sets_layouts),
+		Program(Program::CI{
+			.app = cim.app,
+			.name = cim.name,
+			.sets_layouts = cim.sets_layouts,
+			.hold_instance = cim.hold_instance,
+		}),
 		_task(cim.task),
 		_mesh(cim.mesh),
 		_fragment(cim.fragment)
@@ -621,7 +638,7 @@ namespace vkl
 
 	}
 
-	void GraphicsProgram::createInstance()
+	void GraphicsProgram::createInstanceIFP()
 	{
 		// Maybe deduce the priority from the shaders
 		waitForInstanceCreationIFN();
@@ -629,7 +646,7 @@ namespace vkl
 		if (_vertex || _geometry)
 		{
 			assert(_vertex);
-
+				
 			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 				.name = "Creating Program " + name(),
 				.priority = TaskPriority::ASAP(),
@@ -651,11 +668,11 @@ namespace vkl
 				.dependencies = getShadersTasksDependencies(),
 			});
 			application()->threadPool().pushTask(_create_instance_task);
+				
 		}
 		else
 		{
 			assert(!!_mesh);
-
 			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 				.name = "Creating Program " + name(),
 				.priority = TaskPriority::ASAP(),
@@ -703,7 +720,12 @@ namespace vkl
 	}
 
 	ComputeProgram::ComputeProgram(CreateInfo const& ci) :
-		Program(ci.app, ci.name, ci.sets_layouts),
+		Program(Program::CI{
+			.app = ci.app, 
+			.name = ci.name, 
+			.sets_layouts = ci.sets_layouts,
+			.hold_instance = ci.hold_instance,
+		}),
 		_shader(ci.shader)
 	{
 		_shaders = { _shader };
@@ -711,7 +733,7 @@ namespace vkl
 		addInvalidationCallbacks();
 	}
 
-	void ComputeProgram::createInstance()
+	void ComputeProgram::createInstanceIFP()
 	{
 		waitForInstanceCreationIFN();
 		assert(_shader);
@@ -736,7 +758,6 @@ namespace vkl
 
 	ComputeProgram::~ComputeProgram()
 	{
-		_shader->removeInvalidationCallbacks(this);
 	}
 
 }

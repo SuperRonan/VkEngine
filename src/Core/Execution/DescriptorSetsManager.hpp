@@ -126,7 +126,7 @@ namespace vkl
 
 		std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
-		void destroyInstance();
+		void destroyInstanceIFN() override;
 
 		ResourceBindings resolveBindings(AsynchTask::ReturnType& result);
 
@@ -144,6 +144,7 @@ namespace vkl
 			std::shared_ptr<Program> program = nullptr;
 			uint32_t target_set = uint32_t(-1);
 			ShaderBindings bindings = {};
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 

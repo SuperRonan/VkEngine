@@ -83,6 +83,7 @@ namespace vkl
 			std::string name = {};
 			std::vector<std::shared_ptr<DescriptorSetLayout>> sets = {};
 			std::vector<VkPushConstantRange> push_constants = {};
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -91,8 +92,6 @@ namespace vkl
 		virtual ~PipelineLayout() override;
 
 		void createInstance();
-
-		void destroyInstance();
 
 		bool updateResources(UpdateContext & ctx);
 

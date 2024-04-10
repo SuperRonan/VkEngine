@@ -154,6 +154,7 @@ namespace vkl
 			Dyn<VkGeometryFlagsKHR> geometry_flags = 0;
 			VkBuildAccelerationStructureFlagsKHR build_flags = 0;
 			BufferAndRange storage_buffer;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -162,8 +163,6 @@ namespace vkl
 		virtual ~AccelerationStructure() override;
 
 		virtual void updateResources(UpdateContext& ctx) = 0;
-
-		virtual void destroyInstance();
 	};
 
 
@@ -252,6 +251,7 @@ namespace vkl
 			VkBuildAccelerationStructureFlagsKHR build_flags = 0;
 			MyVector<Geometry> geometries = {};
 			BufferAndRange storage_buffer;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 		
@@ -382,6 +382,7 @@ namespace vkl
 			Dyn<VkGeometryFlagsKHR> geometry_flags = 0;
 			VkBuildAccelerationStructureFlagsKHR build_flags = 0;
 			BufferAndRange storage_buffer;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 

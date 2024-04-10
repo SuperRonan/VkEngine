@@ -122,6 +122,7 @@ namespace vkl
 			VkComponentMapping components = defaultComponentMapping();
 			Dyn<VkImageSubresourceRange> range = {};
 			bool create_on_construct = false;
+			Dyn<bool> hold_instance = true;
 		};
 
 		using CI = CreateInfo;
@@ -150,8 +151,6 @@ namespace vkl
 		virtual ~ImageView() override;
 
 		void createInstance();
-
-		void destroyInstance();
 
 		constexpr const auto& image()const
 		{

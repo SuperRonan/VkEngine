@@ -105,6 +105,7 @@ namespace vkl
 			Dyn<VkPresentModeKHR> target_present_mode = {};
 			bool clipped = true;
 			std::shared_ptr<Swapchain> old_swapchain = nullptr;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -122,7 +123,7 @@ namespace vkl
 
 		void createInstance();
 
-		void destroyInstance();
+		virtual void destroyInstanceIFN() override;
 
 	public:
 

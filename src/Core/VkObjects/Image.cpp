@@ -332,7 +332,7 @@ namespace vkl
 
 
 	Image::Image(CreateInfo const& ci) : 
-		InstanceHolder<ImageInstance>(ci.app, ci.name),
+		InstanceHolder<ImageInstance>(ci.app, ci.name, ci.hold_instance),
 		_flags(ci.flags),
 		_type(ci.type),
 		_format(ci.format),
@@ -347,22 +347,19 @@ namespace vkl
 		_initial_layout(ci.initial_layout),
 		_mem_usage(ci.mem_usage)
 	{
-		if(ci.create_on_construct)
+		if(ci.create_on_construct && holdInstance().value())
 			createInstance();
 	}
 
 	Image::Image(AssociateInfo const& assos):
-		InstanceHolder<ImageInstance>(assos.instance->application(), assos.instance->name())
+		InstanceHolder<ImageInstance>(assos.instance->application(), assos.instance->name(), true)
 	{
 		associateImage(assos);
 	}
 
 	void Image::createInstance()
 	{
-		if (_inst)
-		{
-			destroyInstance();
-		}
+		assert(!_inst);
 		uint32_t n_queues = 0;
 		uint32_t* p_queues = nullptr;
 		if (_sharing_mode == VK_SHARING_MODE_CONCURRENT)
@@ -438,15 +435,6 @@ namespace vkl
 		_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?+
 	}
 
-	void Image::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
-	}
-
 
 	bool Image::updateResource(UpdateContext & ctx)
 	{
@@ -455,54 +443,57 @@ namespace vkl
 			return _latest_update_res;
 		}
 		_latest_update_tick = ctx.updateTick();
-
-		using namespace vk_operators;
 		bool & res = _latest_update_res = false;
-		if (_inst)
+
+		if (checkHoldInstance())
 		{
-			if (_inst->ownership())
+			using namespace vk_operators;
+			if (_inst)
 			{
-				const VkImageCreateInfo & inst_ci = _inst->createInfo();
-				const VkExtent3D new_extent = *_extent;
-				if (new_extent != inst_ci.extent)
+				if (_inst->ownership())
 				{
-					res = true;
-				}
-				const uint32_t new_mips = *_mips;
-				if (new_mips != inst_ci.mipLevels)
-				{
-					if (!(new_mips == uint32_t(-1) && _inst_all_mips))
+					const VkImageCreateInfo & inst_ci = _inst->createInfo();
+					const VkExtent3D new_extent = *_extent;
+					if (new_extent != inst_ci.extent)
 					{
 						res = true;
 					}
-				}
-				const VkFormat new_format = *_format;
-				if (new_format != inst_ci.format)
-				{
-					res = true;
-				}
-				const uint32_t new_layers = *_layers;
-				if (new_layers != inst_ci.arrayLayers)
-				{
-					res = true;
-				}
-				const VkSampleCountFlagBits new_samples = *_samples;
-				if (new_samples != inst_ci.samples)
-				{
-					res = true;
-				}
+					const uint32_t new_mips = *_mips;
+					if (new_mips != inst_ci.mipLevels)
+					{
+						if (!(new_mips == uint32_t(-1) && _inst_all_mips))
+						{
+							res = true;
+						}
+					}
+					const VkFormat new_format = *_format;
+					if (new_format != inst_ci.format)
+					{
+						res = true;
+					}
+					const uint32_t new_layers = *_layers;
+					if (new_layers != inst_ci.arrayLayers)
+					{
+						res = true;
+					}
+					const VkSampleCountFlagBits new_samples = *_samples;
+					if (new_samples != inst_ci.samples)
+					{
+						res = true;
+					}
 
-				if (res)
-				{
-					destroyInstance();
+					if (res)
+					{
+						destroyInstanceIFN();
+					}
 				}
 			}
-		}
 
-		if (!_inst)
-		{
-			createInstance();
-			res = true;
+			if (!_inst)
+			{
+				createInstance();
+				res = true;
+			}
 		}
 
 		return res;

@@ -192,6 +192,8 @@ namespace vkl
 
 			VmaAllocator allocator = nullptr;
 			bool create_on_construct = false;
+
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -203,20 +205,13 @@ namespace vkl
 		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
 		VmaAllocator _allocator = nullptr;
-
 		
-
-		void destroyInstance();
 
 	public:
 
 		using Range = typename BufferInstance::Range;
 
 		Buffer(CreateInfo const& ci);
-
-		Buffer(VkApplication * app=nullptr) noexcept:
-			InstanceHolder<BufferInstance>(app, ""sv)
-		{}
 
 		virtual ~Buffer() override;
 

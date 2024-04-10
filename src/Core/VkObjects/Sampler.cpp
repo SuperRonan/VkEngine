@@ -18,7 +18,7 @@ namespace vkl
 	}
 
 	Sampler::Sampler(CreateInfo const& ci) :
-		InstanceHolder<SamplerInstance>(ci.app, ci.name)
+		InstanceHolder<SamplerInstance>(ci.app, ci.name, ci.hold_instance)
 	{
 		_vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -49,12 +49,12 @@ namespace vkl
 
 	Sampler::~Sampler()
 	{
-		destroyInstance();
+		
 	}
 
 	void Sampler::createInstance()
 	{
-		destroyInstance();
+		assert(!_inst);
 		
 		_inst = std::make_shared<SamplerInstance>(SamplerInstance::CI{
 			.app = application(),
@@ -63,23 +63,16 @@ namespace vkl
 		});
 	}
 
-	void Sampler::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
-	}
-
 	bool Sampler::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
-
-		if (!_inst)
+		if (checkHoldInstance())
 		{
-			createInstance();
-			res = true;
+			if (!_inst)
+			{
+				createInstance();
+				res = true;
+			}
 		}
 
 		return res;

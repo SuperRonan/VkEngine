@@ -186,6 +186,7 @@ namespace vkl
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
 			VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			bool create_on_construct = false;
+			Dyn<bool> hold_instance = true;
 		};
 
 		struct AssociateInfo
@@ -253,10 +254,6 @@ namespace vkl
 		virtual ~Image() override {};
 
 		void createInstance();
-
-		
-
-		void destroyInstance();
 
 		constexpr VkImageCreateFlags flags()const
 		{

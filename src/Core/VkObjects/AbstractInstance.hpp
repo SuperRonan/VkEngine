@@ -51,60 +51,46 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<Callback> _invalidation_callbacks = {};
+		MyVector<Callback> _invalidation_callbacks = {};
 		mutable std::mutex _mutex;
+
+		Dyn<bool> _hold_instance = true;
 
 	public:
 
 		template <class StringLike>
-		constexpr AbstractInstanceHolder(VkApplication * app, StringLike && name = "") :
-			VkObject(app, std::forward<StringLike>(name))
+		constexpr AbstractInstanceHolder(VkApplication * app, StringLike && name, Dyn<bool> hold_instance) :
+			VkObject(app, std::forward<StringLike>(name)),
+			_hold_instance(hold_instance)
 		{}
 
-		virtual ~AbstractInstanceHolder() override
-		{}
+		virtual ~AbstractInstanceHolder() override = default;
 
-		void callInvalidationCallbacks()
-		{	
-			std::unique_lock lock(_mutex);
-			for (auto& ic : _invalidation_callbacks)
-			{
-				ic.callback();
-			}
-		}
+		void callInvalidationCallbacks();
 
-		void addInvalidationCallback(Callback const& ic)
+		void addInvalidationCallback(Callback const& ic);
+
+		void removeInvalidationCallbacks(const VkObject* ptr);
+
+		bool checkHoldInstance();
+
+		constexpr const Dyn<bool>& holdInstance() const
 		{
-			std::unique_lock lock(_mutex);
-			assert(ic.callback.operator bool());
-			_invalidation_callbacks.push_back(ic);
+			return _hold_instance;
 		}
 
-		void removeInvalidationCallbacks(const VkObject* ptr)
+		constexpr Dyn<bool>& holdInstance()
 		{
-			std::unique_lock lock(_mutex);
-			auto it = _invalidation_callbacks.begin();
-			while (it != _invalidation_callbacks.end())
-			{
-				if (it->id == ptr)
-				{
-					// erase and advance
-					it = _invalidation_callbacks.erase(it);
-				}
-				else
-				{
-					++it;
-				}
-			}
+			return _hold_instance;
 		}
+
+		virtual void destroyInstanceIFN() = 0;
 	};
 
-	template <class Instance>
+	template <std::derived_from<AbstractInstance> Instance>
 	class InstanceHolder : public AbstractInstanceHolder
 	{
 	protected:
-
-		static_assert(std::is_base_of<AbstractInstance, Instance>::value, "Instance must derive from AbstracInstance");
 
 		SPtr<Instance> _inst = nullptr;
 		
@@ -112,9 +98,9 @@ namespace vkl
 
 		using InstanceType = Instance;
 
-		template <class StringLike = std::string>
-		constexpr InstanceHolder(VkApplication* app, StringLike&& name = {}) :
-			AbstractInstanceHolder(app, std::forward<StringLike>(name))
+		template <std::concepts::StringLike StringLike>
+		constexpr InstanceHolder(VkApplication* app, StringLike&& name, Dyn<bool> hold_instance) :
+			AbstractInstanceHolder(app, std::forward<StringLike>(name), hold_instance)
 		{}
 
 		constexpr SPtr<Instance> const& instance()const
@@ -123,8 +109,23 @@ namespace vkl
 		}
 
 		virtual ~InstanceHolder() override
-		{}
+		{
+			if (_invalidation_callbacks)
+			{
+				VKL_BREAKPOINT_HANDLE;
+			}
+			destroyInstanceIFN();
+		}
 
+
+		virtual void destroyInstanceIFN() override
+		{
+			if (_inst)
+			{
+				callInvalidationCallbacks();
+				_inst = nullptr;
+			}
+		}
 	};
 
 

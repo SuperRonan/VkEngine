@@ -161,7 +161,7 @@ namespace vkl
 
 		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points);
 
-		void destroyInstance();
+		virtual void destroyInstanceIFN() override;
 
 		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
@@ -174,6 +174,7 @@ namespace vkl
 			std::filesystem::path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DynamicValue<std::vector<std::string>> definitions;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -182,6 +183,11 @@ namespace vkl
 		virtual ~Shader() override;
 
 		bool updateResources(UpdateContext & ctx);
+
+		bool hasInstanceOrIsPending() const
+		{
+			return _inst || _create_instance_task;
+		}
 		
 		void waitForInstanceCreationIFN();
 

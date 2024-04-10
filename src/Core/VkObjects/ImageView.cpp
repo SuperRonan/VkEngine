@@ -56,10 +56,7 @@ namespace vkl
 
 	void ImageView::createInstance()
 	{
-		if (_inst)
-		{
-			destroyInstance();
-		}
+		assert(!_inst);
 		VkImageViewCreateInfo ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.viewType = _type,
@@ -76,30 +73,20 @@ namespace vkl
 		});
 	}
 
-	void ImageView::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
-	}
-
 	ImageView::~ImageView()
 	{
-		destroyInstance();
 		_image->removeInvalidationCallbacks(this);
 	}
 
 	void ImageView::constructorBody(bool create_instance)
 	{
 		_image->addInvalidationCallback(Callback{
-				.callback = [&]()
-				{
-					this->destroyInstance();
-				},
-				.id = this,
-			});
+			.callback = [&]()
+			{
+				this->destroyInstanceIFN();
+			},
+			.id = this,
+		});
 		if (create_instance)
 		{
 			createInstance();
@@ -107,7 +94,7 @@ namespace vkl
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
-		InstanceHolder<ImageViewInstance>((ci.app ? ci.app : ci.image->application()), ci.name),
+		InstanceHolder<ImageViewInstance>((ci.app ? ci.app : ci.image->application()), ci.name, ci.hold_instance),
 		_image(ci.image),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format.hasValue() ? ci.format : _image->format()),
@@ -118,7 +105,7 @@ namespace vkl
 	}
 
 	ImageView::ImageView(Image::CreateInfo const& ci):
-		InstanceHolder<ImageViewInstance>(ci.app, ci.name),
+		InstanceHolder<ImageViewInstance>(ci.app, ci.name, ci.hold_instance),
 		_image(std::make_shared<Image>(ci)),
 		_type(getDefaultViewTypeFromImageType(_image->type())),
 		_format(_image->format()),
@@ -136,35 +123,37 @@ namespace vkl
 			return _latest_update_res;
 		}
 		_latest_update_tick = ctx.updateTick();
-
 		bool & res = _latest_update_res = false;
-		const bool updated = _image->updateResource(ctx);
-		res = updated;
+		if (checkHoldInstance())
+		{
+			const bool updated = _image->updateResource(ctx);
+			res = updated;
 		
-		if (_inst)
-		{
-			const VkImageViewCreateInfo & inst_ci = _inst->createInfo();
-			const VkFormat new_format = *_format;
-			if (inst_ci.format != new_format)
+			if (_inst)
 			{
-				res = true;
-			}
-			const VkImageSubresourceRange range = *_range;
-			if (inst_ci.subresourceRange != range)
-			{
-				res = true;
+				const VkImageViewCreateInfo & inst_ci = _inst->createInfo();
+				const VkFormat new_format = *_format;
+				if (inst_ci.format != new_format)
+				{
+					res = true;
+				}
+				const VkImageSubresourceRange range = *_range;
+				if (inst_ci.subresourceRange != range)
+				{
+					res = true;
+				}
+
+				if (res)
+				{
+					destroyInstanceIFN();
+				}
 			}
 
-			if (res)
+			if (!_inst)
 			{
-				destroyInstance();
+				createInstance();
+				res = true;
 			}
-		}
-
-		if (!_inst)
-		{
-			createInstance();
-			res = true;
 		}
 
 		return res;

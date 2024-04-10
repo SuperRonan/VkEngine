@@ -120,10 +120,10 @@ namespace vkl
 		VK_CHECK(vkCreateComputePipelines(_app->device(), nullptr, 1, &ci, nullptr, &_handle), "Failed to create a compute pipeline.");
 	}
 
-	void Pipeline::createInstance()
+	void Pipeline::createInstanceIFP()
 	{
 		waitForInstanceCreationIFN();
-
+		assert(_program->hasInstanceOrIsPending());
 		std::vector<std::shared_ptr<AsynchTask>> dependecies;
 		if (_program->creationTask())
 		{
@@ -180,17 +180,14 @@ namespace vkl
 		application()->threadPool().pushTask(_create_instance_task);
 	}
 
-	void Pipeline::destroyInstance()
+	void Pipeline::destroyInstanceIFN()
 	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
+		waitForInstanceCreationIFN();
+		ParentType::destroyInstanceIFN();
 	}
 
 	Pipeline::Pipeline(GraphicsCreateInfo const& gci) :
-		ParentType(gci.app, gci.name),
+		ParentType(gci.app, gci.name, gci.hold_instance),
 		_gci(gci),
 		_binding(VK_PIPELINE_BIND_POINT_GRAPHICS),
 		_render_pass(gci.render_pass),
@@ -198,7 +195,7 @@ namespace vkl
 	{
 		Callback cb{
 			.callback = [&]() {
-				destroyInstance();
+				destroyInstanceIFN();
 			},
 			.id = this,
 		};
@@ -208,14 +205,14 @@ namespace vkl
 	}
 
 	Pipeline::Pipeline(ComputeCreateInfo const& cci) :
-		ParentType(cci.app, cci.name),
+		ParentType(cci.app, cci.name, cci.hold_instance),
 		_cci(cci),
 		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
 		_program(cci.program)
 	{
 		_program->addInvalidationCallback({
 			.callback = [&]() {
-				destroyInstance();
+				destroyInstanceIFN();
 			},
 			.id = this,
 		});
@@ -223,8 +220,8 @@ namespace vkl
 
 	Pipeline::~Pipeline()
 	{
-		waitForInstanceCreationIFN();
-		destroyInstance();
+		// TODO can cancel task
+		destroyInstanceIFN();
 		if (_gci.render_pass)
 		{
 			_gci.render_pass->removeInvalidationCallbacks(this);
@@ -236,14 +233,23 @@ namespace vkl
 	{
 		bool res = false;
 
-		res |= _program->updateResources(ctx);
+		bool can_create = true;
 
-		if (!_inst)
+		res |= _program->updateResources(ctx);
+		can_create &= _program->hasInstanceOrIsPending();
+		if (_render_pass)
 		{
-			createInstance();
-			res = true;
+			can_create &= _render_pass->instance().operator bool();
 		}
 
+		if (checkHoldInstance())
+		{
+			if (!_inst && can_create)
+			{
+				createInstanceIFP();
+				res = true;
+			}
+		}
 		return res;
 	}
 

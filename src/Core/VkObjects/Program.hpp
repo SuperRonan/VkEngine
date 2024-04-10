@@ -85,18 +85,24 @@ namespace vkl
 
 		std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
-		Program(VkApplication* app, std::string const& name, MultiDescriptorSetsLayouts const& sets_layouts):
-			ParentType(app, name),
-			_provided_sets_layouts(sets_layouts)
-		{}
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			MultiDescriptorSetsLayouts sets_layouts;
+			Dyn<bool> hold_instance = true;
+		};
+		using CI = CreateInfo;
+
+		Program(CreateInfo const& ci);
 
 		virtual ~Program()override;
 
 		void addInvalidationCallbacks();
 
-		virtual void createInstance() = 0;
+		virtual void createInstanceIFP() = 0;
 
-		void destroyInstance();
+		virtual void destroyInstanceIFN() override;
 
 	public:
 
@@ -111,6 +117,11 @@ namespace vkl
 		}
 
 		bool updateResources(UpdateContext & ctx);
+
+		bool hasInstanceOrIsPending() const
+		{
+			return _inst || _create_instance_task;
+		}
 
 		void waitForInstanceCreationIFN();
 
@@ -193,6 +204,7 @@ namespace vkl
 			std::shared_ptr<Shader> tess_eval = nullptr;
 			std::shared_ptr<Shader> geometry = nullptr;
 			std::shared_ptr<Shader> fragment = nullptr;
+			Dyn<bool> hold_instance = true;
 		};
 		using CIV = CreateInfoVertex;
 
@@ -204,6 +216,7 @@ namespace vkl
 			std::shared_ptr<Shader> task = nullptr;
 			std::shared_ptr<Shader> mesh = nullptr;
 			std::shared_ptr<Shader> fragment = nullptr;
+			Dyn<bool> hold_instance = true;
 		};
 
 	protected:
@@ -218,7 +231,7 @@ namespace vkl
 
 		std::shared_ptr<Shader> _fragment = nullptr;
 
-		virtual void createInstance() override;
+		virtual void createInstanceIFP() override;
 
 	public:
 
@@ -276,7 +289,7 @@ namespace vkl
 
 		std::shared_ptr<Shader> _shader = nullptr;
 
-		virtual void createInstance() override;
+		virtual void createInstanceIFP() override;
 
 	public:
 
@@ -286,6 +299,7 @@ namespace vkl
 			std::string name = {};
 			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<Shader> shader = nullptr;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 

@@ -117,9 +117,8 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		Dyn<uint32_t> _layers;
 
-		void createInstance();
+		void createInstanceIFP();
 
-		void destroyInstance();
 	public:
 
 		struct CreateInfo
@@ -130,6 +129,7 @@ namespace vkl
 			std::vector<std::shared_ptr<ImageView>> targets = {};
 			std::shared_ptr<ImageView> depth_stencil = nullptr;
 			Dyn<uint32_t> layers = {};
+			Dyn<bool> hold_instance = true;
 		};
 
 		using CI = CreateInfo;

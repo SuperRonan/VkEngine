@@ -274,7 +274,7 @@ namespace vkl
 
 
 	Buffer::Buffer(CreateInfo const& ci) :
-		InstanceHolder<BufferInstance>(ci.app, ci.name),
+		InstanceHolder<BufferInstance>(ci.app, ci.name, ci.hold_instance),
 		_size(ci.size),
 		_usage(ci.usage),
 		_queues(std::filterRedundantValues(ci.queues)),
@@ -282,7 +282,7 @@ namespace vkl
 		_mem_usage(ci.mem_usage),
 		_allocator(ci.allocator ? ci.allocator : _app->allocator())
 	{
-		if (ci.create_on_construct)
+		if (ci.create_on_construct && holdInstance().value())
 		{
 			createInstance();
 		}
@@ -315,30 +315,30 @@ namespace vkl
 		_inst = std::make_shared<BufferInstance>(ci);
 	}
 
-	void Buffer::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
-	}
-
 	bool Buffer::updateResource(UpdateContext & ctx)
 	{
 		bool res = false;
-		if (_inst)
-		{
-			if (_inst->createInfo().size != *_size)
-			{
-				destroyInstance();
-			}
-		}
 
-		if (!_inst)
+		if (checkHoldInstance())
 		{
-			createInstance();
-			res = true;
+			if (_inst)
+			{
+				if (_inst->createInfo().size != *_size)
+				{
+					res = true;
+				}
+			
+				if (res)
+				{
+					destroyInstanceIFN();
+				}
+			}
+
+			if (!_inst)
+			{
+				createInstance();
+				res = true;
+			}
 		}
 
 		return res;

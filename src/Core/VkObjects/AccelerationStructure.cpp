@@ -112,7 +112,7 @@ namespace vkl
 	
 
 	AccelerationStructure::AccelerationStructure(CreateInfo const& ci):
-		InstanceHolder<AccelerationStructureInstance>(ci.app, ci.name),
+		InstanceHolder<AccelerationStructureInstance>(ci.app, ci.name, ci.hold_instance),
 		_type(ci.type),
 		_geometry_flags(ci.geometry_flags),
 		_build_flags(ci.build_flags),
@@ -123,16 +123,7 @@ namespace vkl
 
 	AccelerationStructure::~AccelerationStructure()
 	{
-		destroyInstance();
-	}
-
-	void AccelerationStructure::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
+		
 	}
 
 
@@ -235,37 +226,41 @@ namespace vkl
 		}
 		_update_tick = ctx.updateTick();
 
+		
 		if (_storage_buffer)
 		{
 			_storage_buffer.buffer->updateResource(ctx);
 		}
 
-		bool res = false;
-
-		if (_inst)
+		if (checkHoldInstance())
 		{
-			BottomLevelAccelerationStructureInstance & inst = *instance();
-			if (inst.triangleMeshGeometries().size() != _geometries.size())
-			{
-				res = true;
-			}
-			else
-			{
-				for (size_t i = 0; i < _geometries.size(); ++i)
-				{
-					// TODO
+			bool res = false;
 
+			if (_inst)
+			{
+				BottomLevelAccelerationStructureInstance & inst = *instance();
+				if (inst.triangleMeshGeometries().size() != _geometries.size())
+				{
+					res = true;
+				}
+				else
+				{
+					for (size_t i = 0; i < _geometries.size(); ++i)
+					{
+						// TODO
+
+					}
 				}
 			}
-		}
-		if (res)
-		{
-			destroyInstance();
-		}
+			if (res)
+			{
+				destroyInstanceIFN();
+			}
 
-		if (!_inst)
-		{
-			createInstance();
+			if (!_inst)
+			{
+				createInstance();
+			}
 		}
 	}
 
@@ -278,6 +273,7 @@ namespace vkl
 			.geometry_flags = ci.geometry_flags,
 			.build_flags = ci.build_flags,
 			.storage_buffer = ci.storage_buffer,
+			.hold_instance = ci.hold_instance,
 		}),
 		_geometries(ci.geometries)
 	{
@@ -287,7 +283,7 @@ namespace vkl
 		{
 			Callback cb{
 				.callback = [this]() {
-					destroyInstance();
+					destroyInstanceIFN();
 				},
 				.id = this,
 			};
@@ -397,6 +393,7 @@ namespace vkl
 			.geometry_flags = ci.geometry_flags,
 			.build_flags = ci.build_flags,
 			.storage_buffer = ci.storage_buffer,
+			.hold_instance = ci.hold_instance,
 		}),
 		_instances_buffer(HostManagedBuffer::CI{
 			.app = application(),
@@ -408,7 +405,7 @@ namespace vkl
 		// register blas callback
 		_instances_buffer.buffer()->addInvalidationCallback(Callback{
 			.callback = [this]() {
-				destroyInstance();
+				destroyInstanceIFN();
 			},
 			.id = this,
 		});
@@ -431,57 +428,59 @@ namespace vkl
 		{
 			return;
 		}
-
 		_update_tick = ctx.updateTick();
 
-		size_t compact_counter = 0;
-		VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
-		for (size_t i = 0; i < _blases.size(); ++i)
+		if (checkHoldInstance())
 		{
-			BLASInstance & bi = _blases[i];
-			if (bi.blas && bi.blas->instance())
+			size_t compact_counter = 0;
+			VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
+			for (size_t i = 0; i < _blases.size(); ++i)
 			{
-				bool write = false;
-				if (compact_counter != bi._compact_id)
+				BLASInstance & bi = _blases[i];
+				if (bi.blas && bi.blas->instance())
 				{
-					// Relocate
-					bi._compact_id = compact_counter;
-					write = true;
+					bool write = false;
+					if (compact_counter != bi._compact_id)
+					{
+						// Relocate
+						bi._compact_id = compact_counter;
+						write = true;
+					}
+					else if(bi._mark_for_update)
+					{
+						write = true;
+					}
+					if (write)
+					{
+						_instances_buffer.set<VkAccelerationStructureInstanceKHR>(compact_counter, VkAccelerationStructureInstanceKHR{
+							.transform = bi.xform,
+							.instanceCustomIndex = bi.instanceCustomIndex,
+							.mask = bi.mask,
+							.instanceShaderBindingTableRecordOffset = bi.instanceShaderBindingTableRecordOffset,
+							.flags = bi.flags,
+							.accelerationStructureReference = bi.blas->instance()->address(),
+						});
+						build_mode = std::min(build_mode, VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR);
+					}
+					++compact_counter;
 				}
-				else if(bi._mark_for_update)
-				{
-					write = true;
-				}
-				if (write)
-				{
-					_instances_buffer.set<VkAccelerationStructureInstanceKHR>(compact_counter, VkAccelerationStructureInstanceKHR{
-						.transform = bi.xform,
-						.instanceCustomIndex = bi.instanceCustomIndex,
-						.mask = bi.mask,
-						.instanceShaderBindingTableRecordOffset = bi.instanceShaderBindingTableRecordOffset,
-						.flags = bi.flags,
-						.accelerationStructureReference = bi.blas->instance()->address(),
-					});
-					build_mode = std::min(build_mode, VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR);
-				}
-				++compact_counter;
 			}
-		}
 		
 
-		_instances_buffer.updateResources(ctx);
+			_instances_buffer.updateResources(ctx);
 		
-		if (!_inst)
-		{
-			createInstance();
-		}
+			if (!_inst)
+			{
+				createInstance();
+			}
 
-		if (_inst)
-		{
-			TLASI * inst = reinterpret_cast<TLASI*>(_inst.get());
-			inst->requireBuildMode(build_mode);
-			inst->setPrimitiveCountIFN(compact_counter);
-			inst->link();
+			if (_inst)
+			{
+				TLASI * inst = reinterpret_cast<TLASI*>(_inst.get());
+				inst->requireBuildMode(build_mode);
+				inst->setPrimitiveCountIFN(compact_counter);
+				inst->link();
+			}
 		}
 	}
 

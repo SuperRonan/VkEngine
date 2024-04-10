@@ -162,6 +162,7 @@ namespace vkl
 			bool is_dynamic = false;
 			std::vector<Binding> bindings = {};
 			VkDescriptorBindingFlags binding_flags = 0;
+			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;
 
@@ -170,8 +171,6 @@ namespace vkl
 		virtual ~DescriptorSetLayout() override;
 
 		bool updateResources(UpdateContext & ctx);
-
-		void destroyInstance();
 
 		void createInstance();
 		

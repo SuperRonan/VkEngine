@@ -42,12 +42,10 @@ namespace vkl
 
 
 
-	void Framebuffer::createInstance()
+	void Framebuffer::createInstanceIFP()
 	{
-		if (_inst)
-		{
-			destroyInstance();
-		}
+		assert(!_inst);
+
 		FramebufferInstance::CreateInfo ci{
 			.app = application(),
 			.name = name(),
@@ -55,25 +53,20 @@ namespace vkl
 			.depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr,
 		};
 		ci.targets.resize(_textures.size());
+		bool create = _render_pass->instance().operator bool();
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
 			ci.targets[i] = _textures[i]->instance();
+			create &= _textures[i]->instance().operator bool();
 		}
-		_inst = std::make_shared<FramebufferInstance>(ci);
-	}
-
-
-	void Framebuffer::destroyInstance()
-	{
-		if (_inst)
+		if (create)
 		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
+			_inst = std::make_shared<FramebufferInstance>(ci);
 		}
 	}
 
 	Framebuffer::Framebuffer(CreateInfo const& ci):
-		InstanceHolder<FramebufferInstance>(ci.app, ci.name),
+		InstanceHolder<FramebufferInstance>(ci.app, ci.name, ci.hold_instance),
 		_textures(ci.targets),
 		_depth_stencil(ci.depth_stencil),
 		_render_pass(ci.render_pass),
@@ -81,7 +74,7 @@ namespace vkl
 	{
 		Callback cb{
 			.callback = [&]() {
-				destroyInstance();
+				destroyInstanceIFN();
 			},
 			.id = this,
 		};
@@ -115,7 +108,6 @@ namespace vkl
 
 	Framebuffer::~Framebuffer()
 	{
-		destroyInstance();
 		_render_pass->removeInvalidationCallbacks(this);
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
@@ -130,24 +122,27 @@ namespace vkl
 	bool Framebuffer::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
-
-		if (_inst)
+		
+		if (checkHoldInstance())
 		{
-			const uint32_t new_layers = _layers.value();
-			if (new_layers != _inst->layers())
+			if (_inst)
 			{
-				res = true;
+				const uint32_t new_layers = _layers.value();
+				if (new_layers != _inst->layers())
+				{
+					res = true;
+				}
+
+				if (res)
+				{
+					destroyInstanceIFN();
+				}
 			}
 
-			if (res)
+			if (!_inst)
 			{
-				destroyInstance();
+				createInstanceIFP();
 			}
-		}
-
-		if (!_inst)
-		{
-			createInstance();
 		}
 
 		return res;

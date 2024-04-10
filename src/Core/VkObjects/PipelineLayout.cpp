@@ -65,7 +65,7 @@ namespace vkl
 
 
 	PipelineLayout::PipelineLayout(CreateInfo const& ci) :
-		ParentType(ci.app, ci.name),
+		ParentType(ci.app, ci.name, ci.hold_instance),
 		_sets(ci.sets),
 		_push_constants(ci.push_constants)
 	{
@@ -79,7 +79,7 @@ namespace vkl
 					_sets[i]->addInvalidationCallback(Callback{
 						.callback = [this]()
 						{
-							destroyInstance();
+							destroyInstanceIFN();
 						},
 						.id = this,
 					});
@@ -102,8 +102,6 @@ namespace vkl
 				_sets[i]->removeInvalidationCallbacks(this);
 			}
 		}
-
-		destroyInstance();	
 	}
 
 	void PipelineLayout::createInstance()
@@ -122,15 +120,6 @@ namespace vkl
 		});
 	}
 
-	void PipelineLayout::destroyInstance()
-	{
-		if (_inst)
-		{
-			callInvalidationCallbacks();
-			_inst = nullptr;
-		}
-	}
-
 	bool PipelineLayout::updateResources(UpdateContext& ctx)
 	{
 		bool res = false;
@@ -139,19 +128,22 @@ namespace vkl
 			if (ctx.updateTick() > _update_tick)
 			{
 				_update_tick = ctx.updateTick();
-				for (size_t i = 0; i < _sets.size(); ++i)
+				if (checkHoldInstance())
 				{
-					if (_sets[i])
+					for (size_t i = 0; i < _sets.size(); ++i)
 					{
-						res |= _sets[i]->updateResources(ctx);
+						if (_sets[i])
+						{
+							res |= _sets[i]->updateResources(ctx);
+						}
+					}
+
+					if (!_inst)
+					{
+						createInstance();
+						res = true;
 					}
 				}
-			}
-
-			if (!_inst)
-			{
-				createInstance();
-				res = true;
 			}
 		}
 

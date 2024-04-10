@@ -259,6 +259,7 @@ namespace vkl
 
 			std::vector<VkDynamicState> dynamic;
 
+			Dyn<bool> hold_instance = true;
 		};
 		
 		struct ComputeCreateInfo
@@ -266,6 +267,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<ComputeProgram> program = nullptr;
+			Dyn<bool> hold_instance = true;
 		};
 
 	protected:
@@ -284,9 +286,9 @@ namespace vkl
 		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
 
-		void createInstance();
+		void createInstanceIFP();
 
-		void destroyInstance();
+		virtual void destroyInstanceIFN() override;
 
 	public:
 
@@ -302,6 +304,11 @@ namespace vkl
 		}
 
 		bool updateResources(UpdateContext & ctx);
+
+		bool hasInstanceOrIsPending() const
+		{
+			return _inst || _create_instance_task;
+		}
 
 		void waitForInstanceCreationIFN();
 
