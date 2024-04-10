@@ -36,7 +36,8 @@
 	- [ ] Mesh renderer, Mesh representation
 		- [ ] Mesh attribs from reflection
 	- [ ] Mesh compression?
-	- [ ] Meshlets ? 
+	- [ ] Meshlets? 
+	- [ ] Separate positions from other vertex data?
 - [x] Scene
 - [ ] VkRayTracingKHR
 	- [x] TLAS
@@ -72,13 +73,13 @@
 - [x] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
 - [ ] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
-- [ ] Window:
+- [x] Window:
 	- [x] Correct HDR support (also ImGui)
-	- [ ] Fullscreen
+	- [x] Fullscreen
 	- [x] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
 - [x] Add a mode to use the GENERAL image layout instead of the specialized layout and measure the performance of doing so 
-- [ ] Refactor ResourceBinding and remove Resource 
+- [x] Refactor ResourceBinding and remove Resource 
 - [x] Remove ext features from the device requested feature chain when the extension is not used (it now generates a validation error)
 - [ ] Separate DescriptorSet and DescriptorPool
 	- [ ] Use one pool for many descriptor sets (for model resources)
