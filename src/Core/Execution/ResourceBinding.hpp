@@ -2,7 +2,6 @@
 
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/VulkanCommons.hpp>
-#include "Resource.hpp"
 #include <Core/VkObjects/Sampler.hpp>
 #include <Core/VkObjects/AccelerationStructure.hpp>
 
@@ -14,174 +13,286 @@ namespace vkl
 	{
 	public:
 
+
+#ifndef VKL_RESOURCE_BINDING_USE_UNION
+#define VKL_RESOURCE_BINDING_USE_UNION 0
+#endif
+
+		// Probably should use a std::variant, a bare union is not enough 
+		// (type is not always set to identify the union)
+		// But is it worth it?
+#if VKL_RESOURCE_BINDING_USE_UNION
+		union
+		{
+#endif
+		Array<BufferSegment> buffers = {};
+		Array<CombinedImageSampler> images_samplers;
+		Array<std::shared_ptr<TLAS>> tlases;
+#if VKL_RESOURCE_BINDING_USE_UNION
+		};
+#endif
+		
+		ResourceState2 begin_state;
+		std::optional<ResourceState2> end_state = {};
+		VkFlags64 usage = 0;
+		
+		uint32_t binding = uint32_t(-1);
+
+		uint32_t resolved_binding = uint32_t(-1);
+		std::string name = {};
+		VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+
+		// .len == 0 -> no update_range
+		// .len == -1 -> should update all range
+		Range32u update_range = {};
+
 	protected:
-		
-		Resource _resource = {};
-		Array<std::shared_ptr<Sampler>> _samplers = {};
-		Array<std::shared_ptr<TLAS>> _tlas = {};
-		
-		uint32_t _binding = uint32_t(-1);
 
-		uint32_t _resolved_binding = uint32_t(-1);
-		std::string _name = "";
-		VkDescriptorType _type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-
-		bool _updated = false;
+		constexpr uint32_t unionIndex()const
+		{
+			uint32_t res = 0;
+			if(hasImage() || hasSampler())	res = 1;
+			if(isAS())	res = 2;
+			return res;
+		}
 
 	public:
 		
 		ResourceBinding()
 		{}
 
+		~ResourceBinding();
+
+		ResourceBinding(ResourceBinding const& other);
+
+		ResourceBinding(ResourceBinding && other) noexcept;
+
+		ResourceBinding& operator=(ResourceBinding const& other);
+
+		ResourceBinding& operator=(ResourceBinding&& other) noexcept
+		{
+			swap(other);
+			return *this;
+		}
+
 		ResourceBinding(ShaderBindingDescription const& desc);
 		ResourceBinding(ShaderBindingDescription && desc);
 
 		constexpr void resolve(uint32_t b)
 		{
-			_resolved_binding = b;
+			resolved_binding = b;
 		}
 
 		constexpr bool isResolved()const
 		{
-			return _resolved_binding != uint32_t(-1);
+			return resolved_binding != uint32_t(-1);
 		}
 
 		constexpr void unResolve()
 		{
-			_resolved_binding = uint32_t(-1);
+			resolved_binding = uint32_t(-1);
 		}
 
 		constexpr void setBinding(uint32_t b)
 		{
-			_binding = b;
+			binding = b;
 		}
 
 		constexpr bool resolveWithName()const
 		{
-			return _binding == uint32_t(-1);
-		}
-
-		constexpr const std::string& name()const
-		{
-			return _name;
-		}
-
-		template <class StringLike>
-		constexpr void setName(StringLike&& name)
-		{
-			_name = std::forward<StringLike>(name);
-		}
-
-		constexpr auto type()const
-		{
-			return _type;
-		}
-
-		constexpr void setType(VkDescriptorType type)
-		{
-			_type = type;
+			return binding == uint32_t(-1);
 		}
 
 		constexpr bool isBuffer()const
 		{
 			return
-				_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
-				_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ||
+				type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		}
 
 		constexpr bool isImage()const
 		{
 			return
-				_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
-				_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ||
-				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ||
+				type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		}
 
 		constexpr bool isSampler()const
 		{
-			return
-				_type == VK_DESCRIPTOR_TYPE_SAMPLER ||
-				_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			return type == VK_DESCRIPTOR_TYPE_SAMPLER;
+		}
+
+		constexpr bool isCombinedImageSampler() const
+		{
+			return type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		}
+		
+		constexpr bool hasImage() const
+		{
+			return isImage() || isCombinedImageSampler();
+		}
+		
+		constexpr bool hasSampler() const
+		{
+			return isSampler() || isCombinedImageSampler();
 		}
 
 		constexpr bool isAS()const
 		{
-			return _type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-		}
-
-		constexpr const auto& tlas()const
-		{
-			return _tlas;
-		}
-
-		constexpr auto& tlas()
-		{
-			return _tlas;
-		}
-
-		constexpr const auto& samplers()const
-		{
-			return _samplers;
-		}
-
-		constexpr auto& samplers()
-		{
-			return _samplers;
+			return type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 		}
 
 		constexpr VkDescriptorType vkType()const
 		{
-			return (VkDescriptorType)_type;
-		}
-
-		constexpr auto binding()const
-		{
-			return _binding;
-		}
-
-		constexpr auto resolvedBinding()const
-		{
-			return _resolved_binding;
-		}
-
-		constexpr const auto& resource()const
-		{
-			return _resource;
-		}
-
-		constexpr auto& resource()
-		{
-			return _resource;
+			return (VkDescriptorType)type;
 		}
 
 		constexpr void release()
 		{
-			_resolved_binding = uint32_t(-1);
+			resolved_binding = uint32_t(-1);
 		}
 
-		constexpr bool updated()const
+		void invalidate(Range32u range = Range32u{.begin = 0, .len = uint32_t(-1)})
 		{
-			return _updated;
+			//invalidateAll();
+			//return;
+			if (update_range.len == 0)
+			{
+				update_range = range;
+			}
+			else
+			{
+				update_range |= range;
+			}
 		}
 
-		constexpr void setUpdateStatus(bool status)
+		void invalidate(uint32_t i)
 		{
-			_updated = status;
+			invalidate(Range32u{.begin = i, .len = 1});
 		}
+
+		void invalidateAll()
+		{
+			update_range.begin = 0;
+			update_range.len = uint32_t(-1);
+		}
+
+		void resetUpdateRange()
+		{
+			memset(&update_range, 0, sizeof(update_range));
+		}
+
+		size_t size()const
+		{
+			size_t res = 0;
+			if (isBuffer())
+			{
+				res = buffers.size();
+			}
+			else if (hasImage() || hasSampler())
+			{
+				res = images_samplers.size();
+			}
+			else if (isAS())
+			{
+				res = tlases.size();
+			}
+			return res;
+		}
+
+		template <std::convertible_to<std::function<std::function<void(void)>(uint32_t)>> CallbackGenerator>
+		void installCallbacks(CallbackGenerator const& f, VkObject * id)
+		{
+			Callback cb{
+				.id = id,
+			};
+			if (isBuffer())
+			{
+				for (size_t i = 0; i < buffers.size(); ++i)
+				{
+					if (buffers[i])
+					{
+						cb.callback = f(i);
+						buffers[i].buffer->addInvalidationCallback(cb);
+					}
+				}
+			}
+			else if (hasImage() || hasSampler())
+			{
+				for (size_t i = 0; i < images_samplers.size(); ++i)
+				{
+					if (images_samplers[i].image)
+					{
+						cb.callback = f(i);
+						images_samplers[i].image->addInvalidationCallback(cb);
+					}
+					if (images_samplers[i].sampler)
+					{
+						cb.callback = f(i);
+						images_samplers[i].sampler->addInvalidationCallback(cb);
+					}
+				}
+			}
+			else if (isAS())
+			{
+				for (size_t i = 0; i < tlases.size(); ++i)
+				{
+					if (tlases[i])
+					{
+						cb.callback = f(i);
+						tlases[i]->addInvalidationCallback(cb);
+					}
+				}
+			}
+			else
+			{
+				NOT_YET_IMPLEMENTED;
+			}
+		}
+
+		void installCallback(Callback& cb)
+		{
+			installCallbacks([&](uint32_t){return cb.callback;}, cb.id);
+		}
+
+		void removeCallback(VkObject* id);
+
+		void resize(size_t size)
+		{
+			if (isBuffer())
+			{
+				buffers.resize(size);
+			}
+			else if (hasImage() || hasSampler())
+			{
+				images_samplers.resize(size);
+			}
+			else if (isAS())
+			{
+				tlases.resize(size);
+			}
+		}
+
+		void swap(ResourceBinding& other) noexcept;
 
 		std::string_view nameFromResourceIFP() const
-		{
+		{ 
 			std::string_view res;
-			if (isBuffer() || isImage())
+			if (isBuffer())
 			{
-				res = _resource.nameIFP();
+				res = buffers.front().buffer->name();
+			}
+			else if (isImage())
+			{
+				res = images_samplers.front().image->name();
 			}
 			else if (isSampler())
 			{
-				if (_samplers && _samplers.front())
-				{
-					res = _samplers.front()->name();
-				}
+				res = images_samplers.front().sampler->name();
+			}
+			else if (isAS())
+			{
+				res = tlases.front()->name();
 			}
 			return res;
 		}
@@ -213,4 +324,12 @@ namespace vkl
 	};
 
 	using ResourceBindings = std::vector<ResourceBinding>;
+}
+
+namespace std
+{
+	inline void swap(vkl::ResourceBinding& a, vkl::ResourceBinding& b)
+	{
+		a.swap(b);
+	}
 }

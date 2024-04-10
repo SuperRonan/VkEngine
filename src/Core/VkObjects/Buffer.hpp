@@ -283,6 +283,7 @@ namespace vkl
 			return res;
 		}
 	};
+	using BufferSegmentInstance = BufferAndRangeInstance;
 
 	struct BufferAndRange
 	{
@@ -303,4 +304,5 @@ namespace vkl
 			return buffer.operator bool();
 		}
 	};
+	using BufferSegment = BufferAndRange;
 }

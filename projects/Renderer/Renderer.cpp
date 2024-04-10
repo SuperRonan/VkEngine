@@ -116,18 +116,15 @@ namespace vkl
 			.sets_layouts = _sets_layouts,
 			.bindings = {
 				Binding{
-					.buffer = _vk_draw_params_segment.buffer,
-					.buffer_range = _vk_draw_params_segment.range,
+					.buffer = _vk_draw_params_segment,
 					.binding = 0,
 				},
 				Binding{
-					.buffer = _model_indices_segment.buffer,
-					.buffer_range = _model_indices_segment.range,
+					.buffer = _model_indices_segment,
 					.binding = 1,
 				},
 				Binding{
-					.buffer = _atomic_counter_segment.buffer,
-					.buffer_range = _atomic_counter_segment.range,
+					.buffer = _atomic_counter_segment,
 					.binding = 2,
 				},
 			},
@@ -176,8 +173,7 @@ namespace vkl
 					.binding = 0,
 				},
 				Binding{
-					.buffer = _model_indices_segment.buffer,
-					.buffer_range = _model_indices_segment.range,
+					.buffer = _model_indices_segment,
 					.binding = 1,
 				},
 				Binding{
@@ -279,8 +275,7 @@ namespace vkl
 						.binding = 0,
 					},
 					Binding{
-						.buffer = _model_indices_segment.buffer,
-						.buffer_range = _model_indices_segment.range,
+						.buffer = _model_indices_segment,
 						.binding = 1,
 					},
 				},
@@ -317,28 +312,28 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.view = _deferred_pipeline._albedo,
+						.image = _deferred_pipeline._albedo,
 						.binding = 0,
 					},
 					Binding{
-						.view = _deferred_pipeline._position,
+						.image = _deferred_pipeline._position,
 						.binding = 1,
 					},
 					Binding{
-						.view = _deferred_pipeline._normal,
+						.image = _deferred_pipeline._normal,
 						.binding = 2,
 					},
 					Binding{
-						.view = _deferred_pipeline._tangent,
+						.image = _deferred_pipeline._tangent,
 						.binding = 3,
 					},
 					Binding{
-						.view = _ambient_occlusion->target(),
+						.image = _ambient_occlusion->target(),
 						.sampler = bilinear_sampler,
 						.binding = 4,
 					},
 					Binding{
-						.view = _render_target,
+						.image = _render_target,
 						.binding = 5,
 					},
 					Binding{
@@ -364,8 +359,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.buffer = _model_indices_segment.buffer,
-						.buffer_range = _model_indices_segment.range,
+						.buffer = _model_indices_segment,
 						.binding = 1,
 					},
 				},
@@ -390,8 +384,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.buffer = _model_indices_segment.buffer,
-						.buffer_range = _model_indices_segment.range,
+						.buffer = _model_indices_segment,
 						.binding = 1,
 					},
 				},

@@ -160,23 +160,48 @@ namespace vkl
 			return i >= begin && i < (begin + len);
 		}
 
+		template <class Q>
+		constexpr bool contains(Range<Q> const& r) const
+		{
+			return r.begin >= begin && r.end() <= end();
+		}
+
 		constexpr UInt end()const
 		{
 			return begin + len;
 		}
 
+		// Assume ranges are valid
 		constexpr Range& operator|=(Range const& o)
 		{
-			UInt end = std::max(end(), o.end());
+			UInt end = std::max(this->end(), o.end());
 			begin = std::min(begin, o.begin);
 			len = end - begin;
 			return *this;
 		}
 
+		// Assume ranges are valid
 		constexpr Range operator|(Range const& o) const
 		{
 			Range res = *this;
 			res |= o;
+			return res;
+		}
+
+		// Assume ranges are valid
+		constexpr Range& operator|=(UInt u)
+		{
+			UInt end = std::max(this->end(), u);
+			begin = std::min(begin, u);
+			len = end - begin;
+			return *this;
+		}
+
+		// Assume ranges are valid
+		constexpr Range operator|(UInt u) const
+		{
+			Range res = *this;
+			res |= u;
 			return res;
 		}
 	};

@@ -88,11 +88,11 @@ namespace vkl
 
 		ShaderBindings bindings = {
 			Binding{
-				.view = _target,
+				.image = _target,
 				.binding = 0,
 			},
 			Binding{
-				.view = _positions,
+				.image = _positions,
 				.sampler = _sampler,
 				.binding = 1,
 			},
@@ -101,7 +101,7 @@ namespace vkl
 		if (_normals)
 		{
 			bindings.push_back(Binding{
-				.view = _normals,
+				.image = _normals,
 				.sampler = _sampler,
 				.binding = 2,
 			});

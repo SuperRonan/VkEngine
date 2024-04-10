@@ -8,7 +8,6 @@
 #include <Core/VkObjects/Buffer.hpp>
 #include <Core/VkObjects/CommandBuffer.hpp>
 
-#include <Core/Execution/Resource.hpp>
 #include <Core/Execution/ResourcesHolder.hpp>
 
 #include <Core/Rendering/Drawable.hpp>

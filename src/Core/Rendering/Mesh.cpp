@@ -671,23 +671,23 @@ namespace vkl
 		assert(!!_device.mesh_buffer);
 		using namespace std::containers_append_operators;
 		ShaderBindings res;
-		res += ShaderBindingDescription{
-			.buffer = _device.mesh_buffer,
-			.buffer_range = Range_st{.begin = 0, .len = _device.header_size},
-			.binding = offset + 0,
-		};
+		if (_device.loaded())
+		{
+			res += ShaderBindingDescription{
+				.buffer = _device.header_buffer,
+				.binding = offset + 0,
+			};
 
-		res += ShaderBindingDescription{
-			.buffer = _device.mesh_buffer,
-			.buffer_range = Range_st{ .begin = _device.header_size, .len = _device.vertices_size },
-			.binding = offset + 1,
-		};
+			res += ShaderBindingDescription{
+				.buffer = _device.vertex_buffer,
+				.binding = offset + 1,
+			};
 
-		res += ShaderBindingDescription{
-			.buffer = _device.mesh_buffer,
-			.buffer_range = Range_st{ .begin = _device.header_size + _device.vertices_size, .len = _device.indices_size },
-			.binding = offset + 2,
-		};
+			res += ShaderBindingDescription{
+				.buffer = _device.index_buffer,
+				.binding = offset + 2,
+			};
+		}
 		return res;
 	}
 

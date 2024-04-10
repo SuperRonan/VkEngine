@@ -30,10 +30,6 @@ namespace vkl
 
 		void sortBindings();
 
-		void installInvalidationCallback(ResourceBinding & binding, Callback & cb);
-
-		void removeInvalidationCallbacks(ResourceBinding & binding);
-
 		void installInvalidationCallbacks();
 
 	public:

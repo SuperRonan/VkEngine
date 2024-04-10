@@ -26,7 +26,7 @@ namespace vkl
 			.sets_layouts = _sets_layouts,
 			.bindings = {
 				Binding{
-					.view = _target,
+					.image = _target,
 					.binding = 0,
 				},
 			},

@@ -582,14 +582,12 @@ namespace vkl
 		};
 
 		bindings += Binding{
-			.buffer = _xforms_segment.buffer,
-			.buffer_range = _xforms_segment.range,
+			.buffer = _xforms_segment,
 			.binding = _xforms_bindings_base + 0,
 		};
 
 		bindings += Binding{
-			.buffer = _prev_xforms_segment.buffer,
-			.buffer_range = _prev_xforms_segment.range,
+			.buffer = _prev_xforms_segment,
 			.binding = _xforms_bindings_base + 1,
 		};
 

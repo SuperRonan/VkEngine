@@ -74,7 +74,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.view = _font,
+						.image = _font,
 						.sampler = _sampler,
 						.binding = 0,
 					},
@@ -98,7 +98,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.view = _font,
+						.image = _font,
 						.sampler = _sampler,
 						.binding = 0,
 					},

@@ -27,7 +27,7 @@ namespace vkl
 
 		ShaderBindings bindings;
 		bindings.push_back(Binding{
-			.view = _dst,
+			.image = _dst,
 			.binding = 0,
 		});
 
@@ -40,7 +40,7 @@ namespace vkl
 				});
 			}
 			bindings.push_back(Binding{
-				.view = _src,
+				.image = _src,
 				.sampler = _sampler,
 				.binding = 1,
 			});

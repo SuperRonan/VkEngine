@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Core/Execution/Resource.hpp>
 #include <Core/Execution/ExecutionContext.hpp>
 #include <Core/Commands/ResourceUsageList.hpp>
 

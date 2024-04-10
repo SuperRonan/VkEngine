@@ -19,168 +19,11 @@ namespace vkl
 		installInvalidationCallbacks();
 	}
 
-	void DescriptorSetAndPoolInstance::installInvalidationCallback(ResourceBinding& binding, Callback& cb)
-	{
-		Resource & rs = binding.resource();
-		// For now, one element in the binding is invalidated -> all the binding is invalidated
-		// TODO invalidated only the element
-		// For buffers, the Dyn<Range> cannot be invalidated like this, so maybe no invalidation callback
-		if (binding.isBuffer())
-		{
-			bool all_null = true;
-			bool any_null = false;
-			for (size_t i = 0; i < rs.buffers.size(); ++i)
-			{
-				if (rs.buffers[i].buffer)
-				{
-					all_null = false;
-					// TODO invalidate on range change (probably in the write function)
-					rs.buffers[i].buffer->addInvalidationCallback(cb);
-				}
-				else
-				{
-					any_null = true;
-				}
-			}
-
-			if (any_null)
-			{
-				assert(_allow_null_bindings);
-			}
-			if(all_null)
-			{
-				binding.setUpdateStatus(true);
-			}
-		}
-		else if (binding.isImage() || binding.isSampler())
-		{
-			int null_desc = 0;
-			if (binding.isImage())
-			{
-				bool all_null = true;
-				bool any_null = false;
-				for (size_t i = 0; i < rs.images.size(); ++i)
-				{
-					if (rs.images[i])
-					{
-						all_null = false;
-						rs.images[i]->addInvalidationCallback(cb);
-					}
-					else
-					{
-						any_null = true;
-					}
-				}
-
-				if (any_null)
-				{
-					assert(_allow_null_bindings);
-				}
-				if(all_null)
-				{
-					++null_desc;
-				}
-			}
-			if (binding.isSampler())
-			{
-				bool all_null = true;
-				bool any_null = false;
-				for (size_t i = 0; i < binding.samplers().size(); ++i)
-				{
-					if (binding.samplers()[i])
-					{
-						all_null = false;
-						binding.samplers()[i]->addInvalidationCallback(cb);
-					}
-					else
-					{
-						any_null = true;
-					}
-				}
-
-				if (any_null)
-				{
-					assert(_allow_null_bindings);
-				}
-				if (all_null)
-				{
-					++null_desc;
-				}
-			}
-			if (binding.isImage() && binding.isSampler() && null_desc == 2)
-			{
-				binding.setUpdateStatus(true);
-			}
-		}
-		else if(binding.isAS())
-		{
-			for (size_t i = 0; i < binding.tlas().size(); ++i)
-			{
-				if (binding.tlas()[i])
-				{
-					binding.tlas()[i]->addInvalidationCallback(cb);
-				}
-			}
-		}
-		else
-		{
-			NOT_YET_IMPLEMENTED;
-		}
-	}
-
-	void DescriptorSetAndPoolInstance::removeInvalidationCallbacks(ResourceBinding& binding)
-	{
-		Resource& rs = binding.resource();
-		if (binding.isBuffer())
-		{
-			for (size_t i = 0; i < rs.buffers.size(); ++i)
-			{
-				if (rs.buffers[i].buffer)
-				{
-					rs.buffers[i].buffer->removeInvalidationCallbacks(this);
-				}
-			}
-		}
-		if (binding.isImage())
-		{
-			for (size_t i = 0; i < rs.images.size(); ++i)
-			{
-				if (rs.images[i])
-				{
-					rs.images[i]->removeInvalidationCallbacks(this);
-				}
-			}
-		}
-		if (binding.isSampler())
-		{
-			for (size_t i = 0; i < binding.samplers().size(); ++i)
-			{
-				if (binding.samplers()[i])
-				{
-					binding.samplers()[i]->removeInvalidationCallbacks(this);
-				}
-			}
-		}
-		if (binding.isAS())
-		{
-			for (size_t i = 0; i < binding.tlas().size(); ++i)
-			{
-				if (binding.tlas()[i])
-				{
-					binding.tlas()[i]->removeInvalidationCallbacks(this);
-				}
-			}
-		}
-	}
-
 	DescriptorSetAndPoolInstance::~DescriptorSetAndPoolInstance()
 	{
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
-			ResourceBinding& binding = _bindings[i];
-			{
-				removeInvalidationCallbacks(binding);
-			}
+			_bindings[i].removeCallback(this);
 		}
 
 	}
@@ -191,7 +34,8 @@ namespace vkl
 		size_t res = end / 2;
 		while (true)
 		{
-			const uint32_t rb = _bindings[res].resolvedBinding();
+			const uint32_t rb = _bindings[res].resolved_binding;
+			assert(rb != uint32_t(-1));
 			if (rb == b)
 			{
 				break;
@@ -216,27 +60,14 @@ namespace vkl
 
 	void DescriptorSetAndPoolInstance::sortBindings()
 	{
-		std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b){return a.resolvedBinding() < b.resolvedBinding();});
+		std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b){return a.resolved_binding < b.resolved_binding;});
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			// Ensure descriptor arrays are fixed, pointers to it won't be invalidated
 			ResourceBinding & rb = _bindings[i];
 			const VkDescriptorSetLayoutBinding & vkb = _layout->bindings()[i];
-			if (rb.isBuffer())
-			{
-				rb.resource().buffers.resize(vkb.descriptorCount);
-			}
-			else if (rb.isImage() || rb.isBuffer())
-			{
-				if (rb.isImage())
-				{
-					rb.resource().images.resize(vkb.descriptorCount);
-				}
-				if (rb.isSampler())
-				{
-					rb.samplers().resize(vkb.descriptorCount);
-				}
-			}
+			rb.resize(vkb.descriptorCount);
+			rb.invalidateAll();
 		}
 		if (_layout && _bindings.size() != _layout->bindings().size())
 		{
@@ -251,7 +82,7 @@ namespace vkl
 					ResourceBinding* res = nullptr;
 					while (j != tmp.size())
 					{
-						const uint32_t jb = tmp[j].resolvedBinding();
+						const uint32_t jb = tmp[j].resolved_binding;
 						if (jb == lb)
 						{
 							res = tmp.data() + j;
@@ -268,14 +99,13 @@ namespace vkl
 				if (corresponding_binding)
 				{
 					_bindings[i] = *corresponding_binding;
-					_bindings[i].setUpdateStatus(true);
+					_bindings[i].resetUpdateRange();
 				}
 				else
 				{
 					_bindings[i].resolve(lb);
-					_bindings[i].setType(_layout->bindings()[i].descriptorType);
-
-					_bindings[i].setUpdateStatus(false);
+					_bindings[i].type = _layout->bindings()[i].descriptorType;
+					_bindings[i].invalidateAll();
 				}
 			}
 		}
@@ -286,14 +116,26 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding & binding = _bindings[i];
-			{
-				Callback cb{
-					.callback = [i,  this]() {
-						_bindings[i].setUpdateStatus(false);
-					},
-					.id = this,
-				};
-				installInvalidationCallback(binding, cb);
+			{	
+				if (false)
+				{
+					Callback cb{
+						.callback = [i,  this]() {
+							_bindings[i].invalidateAll();
+						},
+						.id = this,
+					};
+					binding.installCallback(cb);
+				}
+				else
+				{
+					binding.installCallbacks([i, this](uint32_t index) {
+						return [i, this, index]()
+						{
+							_bindings[i].invalidate(Range32u{.begin = index, .len = 1});
+						};
+					}, this);
+				}
 			}
 		}
 	}
@@ -318,45 +160,18 @@ namespace vkl
 			assert(res);
 
 			const uint32_t lc = _layout->bindings()[i].descriptorCount;
-
-			if (_bindings[i].isBuffer())
-			{
-				res &= (_bindings[i].resource().buffers.size32() <= lc);
-				assert(res);
-			}
-			else if (_bindings[i].isSampler() || _bindings[i].isImage())
-			{
-				uint32_t image_count = 0;
-				uint32_t sampler_count = 0;
-				if (_bindings[i].isImage())
-				{
-					image_count = _bindings[i].resource().images.size32();
-				}
-				if (_bindings[i].isSampler())
-				{
-					sampler_count = _bindings[i].samplers().size32();
-				}
-				if (_bindings[i].vkType() == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-				{
-					res &= image_count == sampler_count;
-					assert(res);
-				}
-
-				res &= (std::max(image_count, sampler_count) <= lc);
-				assert(res);
-			}
+			res &= _bindings[i].size() <= lc;
 			assert(res);
 
 			// Check isSorted
 			if(i != _bindings.size() -1)
 			{
-				if (_bindings[i].resolvedBinding() >= _bindings[i + 1].resolvedBinding())
+				if (_bindings[i].resolved_binding >= _bindings[i + 1].resolved_binding)
 				{
 					res &= false;
-					assert(false);
+					assert(res);
 				}
 			}
-			
 		}
 		return res;
 	}
@@ -397,29 +212,28 @@ namespace vkl
 			const VkDescriptorSetLayoutBinding & layout_binding = _layout->bindings()[i];
 			ResourceBinding& b = _bindings[i];
 			assert(b.isResolved());
-			// TODO probably scan all buffers to check any range change (e.g. the updated flag is useless for buffers?)
-			if (!b.updated())
+			// TODO scan all buffers to check any range change (e.g. the updated flag is useless for buffers?)
+			if (b.update_range.len != 0)
 			{
 				bool do_write = false;
 				DescriptorWriter::WriteDestination dst{
 					.set = *_set,
-					.binding = b.resolvedBinding(),
-					.index = 0,
+					.binding = b.resolved_binding,
+					.index = b.update_range.begin,
 					.type = b.vkType(),
 				};
 
 				if (b.isBuffer())
 				{
-					// For now write all elems in the binding
-					// TODO later write only the updated elems
-					if (b.resource().buffers)
+					const uint32_t n = std::min(b.update_range.len, b.buffers.size32() - b.update_range.begin);
+					if (n > 0)
 					{
-						VkDescriptorBufferInfo* infos = writer.addBuffers(dst, b.resource().buffers.size());
+						VkDescriptorBufferInfo* infos = writer.addBuffers(dst, n);
 						bool any_null = false;
-						for (size_t i = 0; i < b.resource().buffers.size(); ++i)
+						for (uint32_t i = 0; i < n; ++i)
 						{
-							const BufferAndRange & bar = b.resource().buffers[i];
-							if (bar.buffer)
+							const BufferAndRange & bar = b.buffers[i + b.update_range.begin];
+							if (bar.buffer && bar.buffer->instance())
 							{
 								BufferAndRangeInstance bari = bar.getInstance();
 								if (bari.range.len == 0)
@@ -448,37 +262,36 @@ namespace vkl
 						}
 					}
 				}
-				else if (b.isImage() || b.isSampler())
+				else if (b.hasImage() || b.hasSampler())
 				{
-					// For now write all elems in the binding
-					// TODO later write only the updated elems
-					const size_t count = std::max(b.resource().images.size(), b.samplers().size());
-					if (count > 0)
+					const uint32_t n = std::min(b.update_range.len, b.images_samplers.size32() - b.update_range.begin);
+					if (n > 0)
 					{
-						VkDescriptorImageInfo * infos = writer.addImages(dst, count);
-						for (size_t i = 0; i < count; ++i)
+						VkDescriptorImageInfo * infos = writer.addImages(dst, n);
+						for (uint32_t i = 0; i < n; ++i)
 						{
 							VkDescriptorImageInfo & info = infos[i];
 							info.sampler = VK_NULL_HANDLE;
 							info.imageView = VK_NULL_HANDLE;
-							info.imageLayout = b.resource().begin_state.layout;
+							info.imageLayout = b.begin_state.layout;
 							bool any_null = false;
-							if (b.isImage())
+							CombinedImageSampler & cis = b.images_samplers[i + b.update_range.begin];
+							if (b.hasImage())
 							{
 								assert(info.imageLayout != VK_IMAGE_LAYOUT_UNDEFINED);
 								assert(info.imageLayout != VK_IMAGE_LAYOUT_MAX_ENUM);
-								if (b.resource().images[i])
+								if (cis.image && cis.image->instance())
 								{
-									info.imageView = b.resource().images[i]->instance()->handle();
+									info.imageView = cis.image->instance()->handle();
 								}
 								else
 									any_null = true;
 							}
-							if (b.isSampler())
+							if (b.hasSampler())
 							{
-								if (b.samplers()[i])
+								if (cis.sampler && cis.sampler->instance())
 								{
-									info.sampler = b.samplers()[i]->instance()->handle();
+									info.sampler = cis.sampler->instance()->handle();
 								}
 								else
 								{
@@ -503,14 +316,16 @@ namespace vkl
 				}
 				else if(b.isAS())
 				{
-					if (!b.tlas().empty())
+					const uint32_t n = std::min(b.update_range.len, b.tlases.size32() - b.update_range.begin);
+					if (n > 0)
 					{
-						VkAccelerationStructureKHR * p_as = writer.addTLAS(dst, b.tlas().size());
-						for (size_t i = 0; i < b.tlas().size(); ++i)
+						VkAccelerationStructureKHR * p_as = writer.addTLAS(dst, n);
+						for (uint32_t i = 0; i < n; ++i)
 						{
-							if (b.tlas()[i] && b.tlas()[i]->instance())
+							const std::shared_ptr<TLAS> & tlas = b.tlases[i + b.update_range.begin];
+							if(tlas && tlas->instance())
 							{
-								p_as[i] = b.tlas()[i]->instance()->handle();
+								p_as[i] = tlas->instance()->handle();
 							}
 							else
 							{
@@ -523,7 +338,7 @@ namespace vkl
 				{
 					NOT_YET_IMPLEMENTED;
 				}
-				b.setUpdateStatus(true);
+				b.resetUpdateRange();
 			}
 		}
 
@@ -570,12 +385,18 @@ namespace vkl
 	//	assert(checkIntegrity());
 	//}
 
+	// A note on registered resources invalidation callbacks:
+	// "this" is not enough as an id an can create a bug, the binding and array index should also be included
+	// If a buffer is registered at multiple bindings / array_index, then removeInvalidationCallbacks(this) will
+	// remove the cb of all registering although it should not.
+	// TODO Maybe extend the cb id (add an extra uint64_t id (pack binding and array_index))
+
 	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)
 	{
 		ResourceBinding* found = findBinding(binding);
 		assert(found);
 		assert(found->isBuffer());
-		auto & bb = found->resource().buffers;
+		auto & bb = found->buffers;
 		if (bb.size32() >= (array_index + count)) // enough capacity
 		{
 			for (uint32_t i = 0; i < count; ++i)
@@ -592,13 +413,13 @@ namespace vkl
 				{
 					binding_bar.buffer->addInvalidationCallback(Callback{
 						.callback = [this, found, binding_array_index]() {
-							found->setUpdateStatus(false);
+							found->invalidate(binding_array_index);
 						},
 						.id = this,
 					});
 				}
 			}
-			found->setUpdateStatus(false);
+			found->invalidate(Range32u{.begin = array_index, .len = count});
 			assert(checkIntegrity());
 		}
 		else
@@ -611,25 +432,10 @@ namespace vkl
 	{
 		ResourceBinding* found = findBinding(binding);
 		assert(found);
-		const bool is_image = found->isImage();
-		const bool is_sampler = found->isSampler();
-		assert(is_image || is_sampler);
-		auto & bi = found->resource().images;
-		auto & bs = found->samplers();
+		assert(found->hasImage() || found->hasSampler());
+		auto & is = found->images_samplers;
 
-		uint32_t binding_capacity = 0;
-		if (is_image)
-		{
-			binding_capacity = bi.size32();
-		}
-		else if (is_sampler)
-		{
-			binding_capacity = bs.size32();
-		}
-		if (is_image && is_sampler)
-		{
-			assert(bi.size() == bs.size());
-		}
+		const uint32_t binding_capacity = found->images_samplers.size32();
 		assert(views || samplers);
 
 		if (binding_capacity >= (array_index + count))
@@ -637,16 +443,17 @@ namespace vkl
 			for (uint32_t i = 0; i < count; ++i)
 			{
 				const uint32_t binding_array_index = array_index + i;
+				CombinedImageSampler & cis = found->images_samplers[binding_array_index];
 				Callback cb{
 					.callback = [this, found, binding_array_index]() {
-						found->setUpdateStatus(false);
+						found->invalidate(binding_array_index);
 					},
 					.id = this,
 				};
 
-				if(is_image && views)
+				if(found->hasImage() && views)
 				{
-					std::shared_ptr<ImageView> & binding_view = bi[binding_array_index];
+					std::shared_ptr<ImageView> & binding_view = cis.image;
 					if (binding_view)
 					{
 						binding_view->removeInvalidationCallbacks(this);
@@ -658,9 +465,9 @@ namespace vkl
 					}
 				}
 
-				if (is_sampler && samplers)
+				if (found->hasSampler() && samplers)
 				{
-					std::shared_ptr<Sampler> & binding_sampler = bs[binding_array_index];
+					std::shared_ptr<Sampler> & binding_sampler = cis.sampler;
 					if (binding_sampler)
 					{
 						binding_sampler->removeInvalidationCallbacks(this);
@@ -672,7 +479,7 @@ namespace vkl
 					}
 				}
 			}
-			found->setUpdateStatus(false);
+			found->invalidate(Range32u{.begin = array_index, .len = count});
 			assert(checkIntegrity());
 		}
 		else
@@ -688,23 +495,28 @@ namespace vkl
 		ResourceBinding* found = findBinding(binding);
 		assert(found);
 		assert(found->isAS());
-		auto & b_tlas = found->tlas();
-		if (b_tlas.size32() >= (array_index + count)) // enough capacity
+		if (found->tlases.size32() >= (array_index + count)) // enough capacity
 		{
 			for (uint32_t i = 0; i < count; ++i)
 			{
 				const uint32_t binding_array_index = array_index + i;
-				b_tlas[i] = tlas ? tlas[i] : nullptr;
-				if (b_tlas[i])
+				std::shared_ptr<TLAS> & f_tlas = found->tlases[i];
+				if (f_tlas)
 				{
-					b_tlas[i]->addInvalidationCallback(Callback{
+					f_tlas->removeInvalidationCallbacks(this);
+				}
+				f_tlas = tlas ? tlas[i] : nullptr;
+				if (f_tlas)
+				{
+					f_tlas->addInvalidationCallback(Callback{
 						.callback = [this, found, binding_array_index]() {
-							found->setUpdateStatus(false);
+							found->invalidate(binding_array_index);
 						},
 						.id = this,
 					});
 				}
 			}
+			found->invalidate(Range32u{.begin = array_index, .len = count});
 		}
 		else // this instance will be renewed, no need to write now
 		{
@@ -819,9 +631,9 @@ namespace vkl
 								if (_bindings[j].resolveWithName())
 								{
 									std::string_view name;
-									if(!_bindings[j].name().empty())
+									if(!_bindings[j].name.empty())
 									{
-										name = _bindings[j].name();
+										name = _bindings[j].name;
 									}
 									else
 									{
@@ -834,7 +646,7 @@ namespace vkl
 								}
 								else
 								{
-									if (_bindings[j].binding() == vkb.binding)
+									if (_bindings[j].binding == vkb.binding)
 									{
 										return j;
 									}
@@ -848,13 +660,13 @@ namespace vkl
 					{
 						ResourceBinding & resource = _bindings[corresponding_resource_index];
 						resource.resolve(vkb.binding);
-						resource.setType(vkb.descriptorType);
-						resource.resource().begin_state = ResourceState2{
+						resource.type = vkb.descriptorType;
+						resource.begin_state = ResourceState2{
 							.access = meta.access,
 							.layout = meta.layout,
 							.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
 						};
-						resource.setUpdateStatus(false);
+						resource.invalidateAll();
 
 						res.push_back(resource);
 					}
@@ -877,7 +689,7 @@ namespace vkl
 			const bool fill_missing_bindings_with_null = _allow_missing_bindings;
 			assert(!!_layout->instance());
 			DescriptorSetLayoutInstance & layout = *_layout->instance();
-			std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b) {return a.binding() < b.binding(); });
+			std::sort(_bindings.begin(), _bindings.end(), [](ResourceBinding const& a, ResourceBinding const& b) {return a.binding < b.binding; });
 			if (_bindings.size() != layout.bindings().size())
 			{
 				if(!fill_missing_bindings_with_null)
@@ -912,11 +724,11 @@ namespace vkl
 									j = -1;
 									return j;
 								}
-								else if (_bindings[j].binding() == b)
+								else if (_bindings[j].binding == b)
 								{
 									return j;
 								}
-								else if (_bindings[j].binding() < b)
+								else if (_bindings[j].binding < b)
 								{
 									++j;
 								}
@@ -938,12 +750,12 @@ namespace vkl
 								.binding = layout.bindings()[i].binding,
 							};							
 							new_bindings[i] = null_binding;
-							new_bindings[i].resource().begin_state = ResourceState2{
+							new_bindings[i].begin_state = ResourceState2{
 								.access = layout.metas()[i].access,
 								.layout = layout.metas()[i].layout,
 								.stage = getPipelineStageFromShaderStage2(layout.bindings()[i].stageFlags),
 							};
-							new_bindings[i].setType(layout.bindings()[i].descriptorType);
+							new_bindings[i].type = layout.bindings()[i].descriptorType;
 						}
 					}
 
@@ -957,10 +769,10 @@ namespace vkl
 			{
 				const auto& meta = layout.metas()[j];
 				const auto& vkb = layout.bindings()[j];
-				assert(_bindings[j].binding() == vkb.binding);
-				_bindings[j].resolve(_bindings[j].binding());
-				_bindings[j].setType(vkb.descriptorType);
-				_bindings[j].resource().begin_state.layout = meta.layout;
+				assert(_bindings[j].binding == vkb.binding);
+				_bindings[j].resolve(_bindings[j].binding);
+				_bindings[j].type = vkb.descriptorType;
+				_bindings[j].begin_state.layout = meta.layout;
 			}
 			
 			res = _bindings;
@@ -1034,7 +846,7 @@ namespace vkl
 		// TODO sort when resolve
 		while (it != _bindings.end())
 		{
-			const uint32_t b = it->binding();
+			const uint32_t b = it->binding;
 			if (b == binding)
 			{
 				break;
@@ -1081,7 +893,7 @@ namespace vkl
 	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)
 	{
 		ResourceBinding & rb = *findBindingOrEmplace(binding);
-		auto & bb = rb.resource().buffers;
+		auto & bb = rb.buffers;
 		if (bb.size32() <= (array_index + count))
 		{
 			bb.resize(array_index + count);
@@ -1100,34 +912,24 @@ namespace vkl
 	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers)
 	{
 		ResourceBinding & rb = *findBindingOrEmplace(binding);
-		auto & bi = rb.resource().images;
-		auto & bs = rb.samplers();
+		auto & cis = rb.images_samplers;
 		
-		if (views)
+		if (cis.size32() <= (array_index + count))
 		{
-			if (bi.size32() <= (array_index + count))
-			{
-				bi.resize(array_index + count);
-			}
-		}
-		if (samplers)
-		{
-			if (bs.size32() <= (array_index + count))
-			{
-				bs.resize(array_index + count);
-			}
+			cis.resize(array_index + count);
 		}
 		
 
 		for (uint32_t i = 0; i < count; ++i)
 		{
+			auto & cis_ = cis[array_index + i];
 			if (views)
 			{
-				bi[array_index + i] = views[i];
+				cis_.image = views[i];
 			}
 			if (samplers)
 			{
-				bs[array_index + i] = samplers[i];
+				cis_.sampler = samplers[i];
 			}
 		}
 
@@ -1140,7 +942,7 @@ namespace vkl
 	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure>* tlas)
 	{
 		ResourceBinding & rb = *findBindingOrEmplace(binding);
-		auto & b_tlas = rb.tlas();
+		auto & b_tlas = rb.tlases;
 		
 		if (b_tlas.size32() <= (array_index + count))
 		{

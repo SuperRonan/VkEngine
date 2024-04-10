@@ -79,7 +79,7 @@ namespace vkl
 		{
 			const VkDescriptorSetLayoutBinding& binding = shader_bindings[i];
 			const uint32_t b = binding.binding;
-			while (set_bindings[set_it].resolvedBinding() < b)
+			while (set_bindings[set_it].resolved_binding < b)
 			{
 				++set_it;
 				if (set_it == set_bindings.size())
@@ -88,15 +88,13 @@ namespace vkl
 				}
 			}
 			ResourceBinding& resource_binding = set_bindings[set_it];
-			assertm(resource_binding.resolvedBinding() == b, "Shader binding not found in bound set!");
+			assertm(resource_binding.resolved_binding == b, "Shader binding not found in bound set!");
 			const auto& meta = layout.metas()[i];
 			ResourceState2 begin_state{
 				.access = meta.access,
 				.layout = meta.layout,
 				.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
 			};
-			Resource & resource = resource_binding.resource();
-			// No end state
 
 			if (resource_binding.isBuffer())
 			{
@@ -104,7 +102,7 @@ namespace vkl
 					.begin_state = begin_state,
 					.usage = meta.usage,
 				};
-				for (auto& bar : resource.buffers)
+				for (auto& bar : resource_binding.buffers)
 				{
 					bu.bari = bar.getInstance();
 					if (bu.bari.buffer)
@@ -113,17 +111,17 @@ namespace vkl
 					}
 				}
 			}
-			else if (resource_binding.isImage())
+			else if (resource_binding.hasImage())
 			{
 				ImageViewUsage ivu{
 					.begin_state = begin_state,
 					.usage = static_cast<VkImageUsageFlags>(meta.usage),
 				};
-				for (auto& iv : resource.images)
+				for (auto& cis : resource_binding.images_samplers)
 				{
-					if (iv)
+					if (cis.image && cis.image->instance())
 					{
-						ivu.ivi = iv->instance();
+						ivu.ivi = cis.image->instance();
 						node.resources() += ivu;
 						// Don't forget to keep alive the ivi during the execution of the node
 						node._image_views_to_keep.push_back(ivu.ivi);
@@ -136,7 +134,7 @@ namespace vkl
 					.begin_state = begin_state,
 					.usage = meta.usage,
 				};
-				for (auto& tlas : resource_binding.tlas())
+				for (auto& tlas : resource_binding.tlases)
 				{
 					if (tlas && tlas->instance())
 					{
