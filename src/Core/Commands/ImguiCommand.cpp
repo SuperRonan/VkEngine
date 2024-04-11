@@ -138,7 +138,7 @@ namespace vkl
 
 		initImGui();
 		
-		_swapchain->addInvalidationCallback({
+		_swapchain->setInvalidationCallback({
 			.callback = [this]() {
 				_framebuffers.clear();
 			},
@@ -148,7 +148,7 @@ namespace vkl
 
 	ImguiCommand::~ImguiCommand()
 	{
-		_swapchain->removeInvalidationCallbacks(this);
+		_swapchain->removeInvalidationCallback(this);
 		
 		shutdownImGui();
 		_desc_pool = nullptr;

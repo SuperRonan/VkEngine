@@ -78,7 +78,7 @@ namespace vkl
 			},
 			.id = this,
 		};
-		_render_pass->addInvalidationCallback(cb);
+		_render_pass->setInvalidationCallback(cb);
 
 		if (!_layers.hasValue())
 		{
@@ -98,24 +98,24 @@ namespace vkl
 
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
-			_textures[i]->addInvalidationCallback(cb);
+			_textures[i]->setInvalidationCallback(cb);
 		}
 		if (_depth_stencil)
 		{
-			_depth_stencil->addInvalidationCallback(cb);
+			_depth_stencil->setInvalidationCallback(cb);
 		}
 	}
 
 	Framebuffer::~Framebuffer()
 	{
-		_render_pass->removeInvalidationCallbacks(this);
+		_render_pass->removeInvalidationCallback(this);
 		for (size_t i = 0; i < _textures.size(); ++i)
 		{
-			_textures[i]->removeInvalidationCallbacks(this);
+			_textures[i]->removeInvalidationCallback(this);
 		}
 		if (_depth_stencil)
 		{
-			_depth_stencil->removeInvalidationCallbacks(this);
+			_depth_stencil->removeInvalidationCallback(this);
 		}
 	}
 

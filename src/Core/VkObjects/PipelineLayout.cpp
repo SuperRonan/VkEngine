@@ -76,7 +76,7 @@ namespace vkl
 			{
 				if (_sets[i]->isDynamic())
 				{
-					_sets[i]->addInvalidationCallback(Callback{
+					_sets[i]->setInvalidationCallback(Callback{
 						.callback = [this]()
 						{
 							destroyInstanceIFN();
@@ -99,7 +99,7 @@ namespace vkl
 		{
 			if (_sets[i] && _sets[i]->isDynamic())
 			{
-				_sets[i]->removeInvalidationCallbacks(this);
+				_sets[i]->removeInvalidationCallback(this);
 			}
 		}
 	}

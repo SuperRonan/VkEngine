@@ -140,7 +140,7 @@ namespace vkl
 	struct Callback
 	{
 		std::function<void(void)> callback;
-		VkObject* id = nullptr;
+		const void * id = nullptr;
 	};
 
 	template <class UInt>

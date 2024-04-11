@@ -34,7 +34,7 @@ namespace vkl
 			_destruction_callbacks.push_back(ic);
 		}
 
-		void removeDestructionCallbacks(const VkObject* ptr)
+		void removeDestructionCallbacks(const void * ptr)
 		{
 			for (auto it = _destruction_callbacks.begin(); it < _destruction_callbacks.end(); ++it)
 			{
@@ -51,7 +51,7 @@ namespace vkl
 	{
 	protected:
 
-		MyVector<Callback> _invalidation_callbacks = {};
+		std::map<uintptr_t, std::function<void(void)>> _invalidation_callbacks = {};
 		mutable std::mutex _mutex;
 
 		Dyn<bool> _hold_instance = true;
@@ -68,9 +68,11 @@ namespace vkl
 
 		void callInvalidationCallbacks();
 
-		void addInvalidationCallback(Callback const& ic);
+		void setInvalidationCallback(Callback const& ic);
 
-		void removeInvalidationCallbacks(const VkObject* ptr);
+		void removeInvalidationCallback(const void* id);
+
+		//void removeInvalidationCallbacks(const void* id);
 
 		bool checkHoldInstance();
 
@@ -110,7 +112,7 @@ namespace vkl
 
 		virtual ~InstanceHolder() override
 		{
-			if (_invalidation_callbacks)
+			if (!_invalidation_callbacks.empty())
 			{
 				VKL_BREAKPOINT_HANDLE;
 			}

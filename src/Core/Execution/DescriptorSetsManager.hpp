@@ -19,6 +19,7 @@ namespace vkl
 		std::shared_ptr<DescriptorSetLayoutInstance> _layout = nullptr;
 
 		// sorted and at the size of layout.bindings -> can keep a pointer on a binding
+		// arrays in bindings are also at the right size -> can keep a pointer on a array elem
 		ResourceBindings _bindings = {};
 
 		std::shared_ptr<DescriptorPool> _pool = nullptr;

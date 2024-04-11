@@ -431,18 +431,18 @@ namespace vkl
 		destroyInstanceIFN();
 		for (auto& shader : _shaders)
 		{
-			shader->removeInvalidationCallbacks(this);
+			shader->removeInvalidationCallback(this);
 		}
 		for (size_t i = 0; i < _provided_sets_layouts.size(); ++i)
 		{
 			if (_provided_sets_layouts[i])
 			{
-				_provided_sets_layouts[i]->removeInvalidationCallbacks(this);
+				_provided_sets_layouts[i]->removeInvalidationCallback(this);
 			}
 		}
 	}
 
-	void Program::addInvalidationCallbacks()
+	void Program::setInvalidationCallbacks()
 	{
 		Callback ic{
 			.callback = [this]() {
@@ -452,13 +452,13 @@ namespace vkl
 		};
 		for (auto& shader : _shaders)
 		{
-			shader->addInvalidationCallback(ic);
+			shader->setInvalidationCallback(ic);
 		}
 		for (size_t i = 0; i < _provided_sets_layouts.size(); ++i)
 		{
 			if (_provided_sets_layouts[i])
 			{
-				_provided_sets_layouts[i]->addInvalidationCallback(ic);
+				_provided_sets_layouts[i]->setInvalidationCallback(ic);
 			}
 		}
 	}
@@ -603,7 +603,7 @@ namespace vkl
 			_shaders.push_back(_fragment);
 		}
 
-		addInvalidationCallbacks();
+		setInvalidationCallbacks();
 	}
 
 	GraphicsProgram::GraphicsProgram(CreateInfoMesh const& cim) :
@@ -630,7 +630,7 @@ namespace vkl
 			_shaders.push_back(_fragment);
 		}
 
-		addInvalidationCallbacks();
+		setInvalidationCallbacks();
 	}
 
 	GraphicsProgram::~GraphicsProgram()
@@ -730,7 +730,7 @@ namespace vkl
 	{
 		_shaders = { _shader };
 
-		addInvalidationCallbacks();
+		setInvalidationCallbacks();
 	}
 
 	void ComputeProgram::createInstanceIFP()

@@ -323,7 +323,7 @@ namespace vkl
 		}
 	}
 
-	void ResourceBinding::removeCallback(VkObject* id)
+	void ResourceBinding::removeCallbacks()
 	{
 		if (isBuffer())
 		{
@@ -331,7 +331,7 @@ namespace vkl
 			{
 				if (buffers[i])
 				{
-					buffers[i].buffer->removeInvalidationCallbacks(id);
+					buffers[i].buffer->removeInvalidationCallback(buffers.data() + i);
 				}
 			}
 		}
@@ -341,11 +341,11 @@ namespace vkl
 			{
 				if (images_samplers[i].image)
 				{
-					images_samplers[i].image->removeInvalidationCallbacks(id);
+					images_samplers[i].image->removeInvalidationCallback(images_samplers.data() + i);
 				}
 				if (images_samplers[i].sampler)
 				{
-					images_samplers[i].sampler->removeInvalidationCallbacks(id);
+					images_samplers[i].sampler->removeInvalidationCallback(images_samplers.data() + i);
 				}
 			}
 		}
@@ -355,7 +355,7 @@ namespace vkl
 			{
 				if (tlases[i])
 				{
-					tlases[i]->removeInvalidationCallbacks(id);
+					tlases[i]->removeInvalidationCallback(tlases.data() + i);
 				}
 			}
 		}

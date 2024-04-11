@@ -75,12 +75,12 @@ namespace vkl
 
 	ImageView::~ImageView()
 	{
-		_image->removeInvalidationCallbacks(this);
+		_image->removeInvalidationCallback(this);
 	}
 
 	void ImageView::constructorBody(bool create_instance)
 	{
-		_image->addInvalidationCallback(Callback{
+		_image->setInvalidationCallback(Callback{
 			.callback = [&]()
 			{
 				this->destroyInstanceIFN();

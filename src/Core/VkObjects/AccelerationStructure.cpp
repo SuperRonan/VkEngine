@@ -288,10 +288,10 @@ namespace vkl
 				.id = this,
 			};
 			Geometry & g = _geometries[i];
-			g.vertex_buffer.buffer->addInvalidationCallback(cb);
+			g.vertex_buffer.buffer->setInvalidationCallback(cb);
 			if (g.index_buffer && g.index_buffer.buffer != g.vertex_buffer.buffer)
 			{
-				g.index_buffer.buffer->addInvalidationCallback(cb);
+				g.index_buffer.buffer->setInvalidationCallback(cb);
 			}
 		}
 	}
@@ -301,10 +301,10 @@ namespace vkl
 		for (size_t i = 0; i < _geometries.size(); ++i)
 		{
 			Geometry& g = _geometries[i];
-			g.vertex_buffer.buffer->removeInvalidationCallbacks(this);
+			g.vertex_buffer.buffer->removeInvalidationCallback(this);
 			if (g.index_buffer && g.index_buffer.buffer != g.vertex_buffer.buffer)
 			{
-				g.index_buffer.buffer->removeInvalidationCallbacks(this);
+				g.index_buffer.buffer->removeInvalidationCallback(this);
 			}
 		}
 	}
@@ -403,7 +403,7 @@ namespace vkl
 		})
 	{
 		// register blas callback
-		_instances_buffer.buffer()->addInvalidationCallback(Callback{
+		_instances_buffer.buffer()->setInvalidationCallback(Callback{
 			.callback = [this]() {
 				destroyInstanceIFN();
 			},
@@ -414,12 +414,12 @@ namespace vkl
 	TopLevelAccelerationStructure::~TopLevelAccelerationStructure()
 	{
 		// unregister blas callback
-		_instances_buffer.buffer()->removeInvalidationCallbacks(this);
+		_instances_buffer.buffer()->removeInvalidationCallback(this);
 
-		for (size_t i = 0; i < _blases.size(); ++i)
-		{
-			_blases[i].blas->removeInvalidationCallbacks(this);
-		}
+		//for (size_t i = 0; i < _blases.size(); ++i)
+		//{
+		//	_blases[i].blas->removeInvalidationCallback(this);
+		//}
 	}
 
 	void TopLevelAccelerationStructure::updateResources(UpdateContext& ctx)
@@ -440,6 +440,11 @@ namespace vkl
 				if (bi.blas && bi.blas->instance())
 				{
 					bool write = false;
+					if (bi.blas->instance() != _blases[i]._blas_instance)
+					{
+						_blases[i]._blas_instance = bi.blas->instance();
+						write = true;
+					}
 					if (compact_counter != bi._compact_id)
 					{
 						// Relocate
@@ -458,10 +463,11 @@ namespace vkl
 							.mask = bi.mask,
 							.instanceShaderBindingTableRecordOffset = bi.instanceShaderBindingTableRecordOffset,
 							.flags = bi.flags,
-							.accelerationStructureReference = bi.blas->instance()->address(),
+							.accelerationStructureReference = _blases[i]._blas_instance->address(),
 						});
 						build_mode = std::min(build_mode, VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR);
 					}
+					bi._mark_for_update = false;
 					++compact_counter;
 				}
 			}
@@ -511,20 +517,20 @@ namespace vkl
 			_blases.resize(index + 1);
 		}
 		const bool new_blas = _blases[index].blas != blas_instance.blas;
-		if (new_blas && _blases[index].blas)
-		{
-			_blases[index].blas->removeInvalidationCallbacks(this);
-		}
+		//if (new_blas && _blases[index].blas)
+		//{
+		//	_blases[index].blas->removeInvalidationCallback(this);
+		//}
 		_blases[index] = blas_instance;
-		if (new_blas && _blases[index].blas)
-		{
-			_blases[index].blas->addInvalidationCallback(Callback{
-				.callback = [this, index]() {
-					_blases[index]._mark_for_update = true;
-				},
-				.id = this,
-			});
-		}
+		//if (new_blas && _blases[index].blas)
+		//{
+		//	_blases[index].blas->setInvalidationCallback(Callback{
+		//		.callback = [this, index]() {
+		//			_blases[index]._mark_for_update = true;
+		//		},
+		//		.id = this,
+		//	});
+		//}
 		if (_inst)
 		{
 			_inst->requireUpdate();

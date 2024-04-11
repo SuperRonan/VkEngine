@@ -45,7 +45,7 @@ namespace vkl
 			}
 		}
 
-		void addInvalidationCallback(Callback const& ic)
+		void setInvalidationCallback(Callback const& ic)
 		{
 			_invalidation_callbacks.push_back(ic);
 		}

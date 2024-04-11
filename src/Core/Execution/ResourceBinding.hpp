@@ -201,11 +201,9 @@ namespace vkl
 		}
 
 		template <std::convertible_to<std::function<std::function<void(void)>(uint32_t)>> CallbackGenerator>
-		void installCallbacks(CallbackGenerator const& f, VkObject * id)
+		void installCallbacks(CallbackGenerator const& f)
 		{
-			Callback cb{
-				.id = id,
-			};
+			Callback cb;
 			if (isBuffer())
 			{
 				for (size_t i = 0; i < buffers.size(); ++i)
@@ -213,7 +211,8 @@ namespace vkl
 					if (buffers[i])
 					{
 						cb.callback = f(i);
-						buffers[i].buffer->addInvalidationCallback(cb);
+						cb.id = buffers.data() + i;
+						buffers[i].buffer->setInvalidationCallback(cb);
 					}
 				}
 			}
@@ -224,12 +223,14 @@ namespace vkl
 					if (images_samplers[i].image)
 					{
 						cb.callback = f(i);
-						images_samplers[i].image->addInvalidationCallback(cb);
+						cb.id = images_samplers.data() + i;
+						images_samplers[i].image->setInvalidationCallback(cb);
 					}
 					if (images_samplers[i].sampler)
 					{
 						cb.callback = f(i);
-						images_samplers[i].sampler->addInvalidationCallback(cb);
+						cb.id = images_samplers.data() + i;
+						images_samplers[i].sampler->setInvalidationCallback(cb);
 					}
 				}
 			}
@@ -240,7 +241,8 @@ namespace vkl
 					if (tlases[i])
 					{
 						cb.callback = f(i);
-						tlases[i]->addInvalidationCallback(cb);
+						cb.id = tlases.data() + i;
+						tlases[i]->setInvalidationCallback(cb);
 					}
 				}
 			}
@@ -252,10 +254,10 @@ namespace vkl
 
 		void installCallback(Callback& cb)
 		{
-			installCallbacks([&](uint32_t){return cb.callback;}, cb.id);
+			installCallbacks([&](uint32_t){return cb.callback;});
 		}
 
-		void removeCallback(VkObject* id);
+		void removeCallbacks();
 
 		void resize(size_t size)
 		{

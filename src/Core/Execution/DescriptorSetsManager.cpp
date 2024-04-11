@@ -23,7 +23,7 @@ namespace vkl
 	{
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
-			_bindings[i].removeCallback(this);
+			_bindings[i].removeCallbacks();
 		}
 
 	}
@@ -116,26 +116,24 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding & binding = _bindings[i];
-			{	
-				if (false)
-				{
-					Callback cb{
-						.callback = [i,  this]() {
-							_bindings[i].invalidateAll();
-						},
-						.id = this,
+			if (false)
+			{
+				Callback cb{
+					.callback = [i,  this]() {
+						_bindings[i].invalidateAll();
+					},
+					.id = this,
+				};
+				binding.installCallback(cb);
+			}
+			else
+			{
+				binding.installCallbacks([i, this](uint32_t index) {
+					return [i, this, index]()
+					{
+						_bindings[i].invalidate(Range32u{.begin = index, .len = 1});
 					};
-					binding.installCallback(cb);
-				}
-				else
-				{
-					binding.installCallbacks([i, this](uint32_t index) {
-						return [i, this, index]()
-						{
-							_bindings[i].invalidate(Range32u{.begin = index, .len = 1});
-						};
-					}, this);
-				}
+				});
 			}
 		}
 	}
@@ -390,6 +388,10 @@ namespace vkl
 	// If a buffer is registered at multiple bindings / array_index, then removeInvalidationCallbacks(this) will
 	// remove the cb of all registering although it should not.
 	// TODO Maybe extend the cb id (add an extra uint64_t id (pack binding and array_index))
+	// Note:
+	// Found a better (?) solution:
+	// Identify the callback by the addr of the registered resource
+	// No need to change the callback system
 
 	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)
 	{
@@ -405,17 +407,17 @@ namespace vkl
 				BufferAndRange & binding_bar = bb[binding_array_index];
 				if (binding_bar.buffer)
 				{
-					binding_bar.buffer->removeInvalidationCallbacks(this);
+					binding_bar.buffer->removeInvalidationCallback(bb.data() + binding_array_index);
 				}
 			
 				binding_bar = buffers ? buffers[i] : BufferAndRange{};
 				if (binding_bar.buffer)
 				{
-					binding_bar.buffer->addInvalidationCallback(Callback{
+					binding_bar.buffer->setInvalidationCallback(Callback{
 						.callback = [this, found, binding_array_index]() {
 							found->invalidate(binding_array_index);
 						},
-						.id = this,
+						.id = bb.data() + binding_array_index,
 					});
 				}
 			}
@@ -448,7 +450,7 @@ namespace vkl
 					.callback = [this, found, binding_array_index]() {
 						found->invalidate(binding_array_index);
 					},
-					.id = this,
+					.id = is.data() + binding_array_index,
 				};
 
 				if(found->hasImage() && views)
@@ -456,12 +458,12 @@ namespace vkl
 					std::shared_ptr<ImageView> & binding_view = cis.image;
 					if (binding_view)
 					{
-						binding_view->removeInvalidationCallbacks(this);
+						binding_view->removeInvalidationCallback(cb.id);
 					}
 					binding_view = views[i];
 					if (binding_view)
 					{
-						binding_view->addInvalidationCallback(cb);
+						binding_view->setInvalidationCallback(cb);
 					}
 				}
 
@@ -470,12 +472,12 @@ namespace vkl
 					std::shared_ptr<Sampler> & binding_sampler = cis.sampler;
 					if (binding_sampler)
 					{
-						binding_sampler->removeInvalidationCallbacks(this);
+						binding_sampler->removeInvalidationCallback(cb.id);
 					}
 					binding_sampler = samplers[i];
 					if (binding_sampler)
 					{
-						binding_sampler->addInvalidationCallback(cb);
+						binding_sampler->setInvalidationCallback(cb);
 					}
 				}
 			}
@@ -500,19 +502,19 @@ namespace vkl
 			for (uint32_t i = 0; i < count; ++i)
 			{
 				const uint32_t binding_array_index = array_index + i;
-				std::shared_ptr<TLAS> & f_tlas = found->tlases[i];
+				std::shared_ptr<TLAS> & f_tlas = found->tlases[binding_array_index];
 				if (f_tlas)
 				{
-					f_tlas->removeInvalidationCallbacks(this);
+					f_tlas->removeInvalidationCallback(found->tlases.data() + binding_array_index);
 				}
 				f_tlas = tlas ? tlas[i] : nullptr;
 				if (f_tlas)
 				{
-					f_tlas->addInvalidationCallback(Callback{
+					f_tlas->setInvalidationCallback(Callback{
 						.callback = [this, found, binding_array_index]() {
 							found->invalidate(binding_array_index);
 						},
-						.id = this,
+						.id = found->tlases.data() + binding_array_index,
 					});
 				}
 			}
@@ -556,7 +558,7 @@ namespace vkl
 		}
 		if (_prog)
 		{
-			_prog->addInvalidationCallback({
+			_prog->setInvalidationCallback({
 				.callback = [&]() {destroyInstanceIFN(); },
 				.id = this,
 			});
@@ -569,7 +571,7 @@ namespace vkl
 
 		if (_layout)
 		{
-			_layout->addInvalidationCallback({
+			_layout->setInvalidationCallback({
 				.callback = [&]() {destroyInstanceIFN(); },
 				.id = this,
 			});
@@ -585,11 +587,11 @@ namespace vkl
 	{
 		if (_prog)
 		{
-			_prog->removeInvalidationCallbacks(this);
+			_prog->removeInvalidationCallback(this);
 		}
 		if (!_layout_from_prog)
 		{
-			_layout->removeInvalidationCallbacks(this);
+			_layout->removeInvalidationCallback(this);
 		}
 	}
 

@@ -98,7 +98,7 @@ namespace vkl
 
 		virtual ~Program()override;
 
-		void addInvalidationCallbacks();
+		void setInvalidationCallbacks();
 
 		virtual void createInstanceIFP() = 0;
 

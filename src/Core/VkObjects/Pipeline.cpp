@@ -199,8 +199,8 @@ namespace vkl
 			},
 			.id = this,
 		};
-		_program->addInvalidationCallback(cb);
-		_gci.render_pass->addInvalidationCallback(cb);
+		_program->setInvalidationCallback(cb);
+		_gci.render_pass->setInvalidationCallback(cb);
 		
 	}
 
@@ -210,7 +210,7 @@ namespace vkl
 		_binding(VK_PIPELINE_BIND_POINT_COMPUTE),
 		_program(cci.program)
 	{
-		_program->addInvalidationCallback({
+		_program->setInvalidationCallback({
 			.callback = [&]() {
 				destroyInstanceIFN();
 			},
@@ -224,9 +224,9 @@ namespace vkl
 		destroyInstanceIFN();
 		if (_gci.render_pass)
 		{
-			_gci.render_pass->removeInvalidationCallbacks(this);
+			_gci.render_pass->removeInvalidationCallback(this);
 		}
-		_program->removeInvalidationCallbacks(this);
+		_program->removeInvalidationCallback(this);
 	}
 
 	bool Pipeline::updateResources(UpdateContext & ctx)

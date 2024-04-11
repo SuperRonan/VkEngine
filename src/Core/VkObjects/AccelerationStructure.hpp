@@ -356,6 +356,7 @@ namespace vkl
 			VkGeometryInstanceFlagsKHR    flags : 8;
 			bool _mark_for_update = false;
 			uint32_t _compact_id = uint32_t(-1);
+			std::shared_ptr<BottomLevelAccelerationStructureInstance> _blas_instance = nullptr;
 
 			void setXForm(Matrix4x3f const& m)
 			{

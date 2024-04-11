@@ -5,36 +5,43 @@ namespace vkl
 	void AbstractInstanceHolder::callInvalidationCallbacks()
 	{
 		std::unique_lock lock(_mutex);
-		for (auto& ic : _invalidation_callbacks)
+		for (auto & [a, ic] : _invalidation_callbacks)
 		{
-			ic.callback();
+			ic();
 		}
 	}
 
-	void AbstractInstanceHolder::addInvalidationCallback(Callback const& ic)
+	void AbstractInstanceHolder::setInvalidationCallback(Callback const& ic)
 	{
 		std::unique_lock lock(_mutex);
 		assert(ic.callback.operator bool());
-		_invalidation_callbacks.push_back(ic);
+		_invalidation_callbacks[reinterpret_cast<uintptr_t>(ic.id)] = ic.callback;
 	}
 
-	void AbstractInstanceHolder::removeInvalidationCallbacks(const VkObject* ptr)
+	void AbstractInstanceHolder::removeInvalidationCallback(const void* id)
 	{
 		std::unique_lock lock(_mutex);
-		auto it = _invalidation_callbacks.begin();
-		while (it != _invalidation_callbacks.end())
-		{
-			if (it->id == ptr)
-			{
-				// erase and advance
-				it = _invalidation_callbacks.erase(it);
-			}
-			else
-			{
-				++it;
-			}
-		}
+		assert(_invalidation_callbacks.contains(reinterpret_cast<uintptr_t>(id)));
+		_invalidation_callbacks.erase(reinterpret_cast<uintptr_t>(id));
 	}
+
+	//void AbstractInstanceHolder::removeInvalidationCallbacks(const void* id)
+	//{
+	//	std::unique_lock lock(_mutex);
+	//	auto it = _invalidation_callbacks.begin();
+	//	while (it != _invalidation_callbacks.end())
+	//	{
+	//		if (it->id == id)
+	//		{
+	//			// erase and advance
+	//			it = _invalidation_callbacks.erase(it);
+	//		}
+	//		else
+	//		{
+	//			++it;
+	//		}
+	//	}
+	//}
 
 	bool AbstractInstanceHolder::checkHoldInstance()
 	{
