@@ -11,7 +11,7 @@
 #endif
 
 #define I_WANT_TO_DEBUG 0
-#include <ShaderLib:/DebugBuffers.glsl>
+#include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #include "IndirectCommon.glsl"
 

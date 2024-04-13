@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common.glsl"
-#include "interop_cpp.glsl"
+#include <ShaderLib:/common.glsl>
+#include <ShaderLib:/interop_cpp.glsl>
 
 #ifndef I_WANT_TO_DEBUG
 #define I_WANT_TO_DEBUG 0

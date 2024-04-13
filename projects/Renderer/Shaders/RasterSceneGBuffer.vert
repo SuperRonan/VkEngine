@@ -1,8 +1,5 @@
 #version 460
 
-// #define I_WANT_TO_DEBUG 1
-// #include <ShaderLib:/DebugBuffers.glsl>
-
 #include "IndirectCommon.glsl"
 
 // layout(location = 0) in vec3 a_position;

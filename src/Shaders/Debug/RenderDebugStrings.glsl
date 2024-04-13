@@ -3,8 +3,7 @@
 #define I_WANT_TO_DEBUG 1
 #define DEBUG_BUFFER_ACCESS_readonly 1
 
-#include "common.glsl"
-#include "interop_cpp.glsl"
+#include <ShaderLib:/common.glsl>
 #include "debugBuffers.glsl"
 
 #if SHADER_SEMANTIC_VERTEX

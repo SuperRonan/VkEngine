@@ -70,7 +70,7 @@ namespace vkl
 
 	void DebugRenderer::createRenderShader()
 	{
-		const std::filesystem::path shaders = application()->mountingPoints()["ShaderLib"] + "/RenderDebugStrings.glsl";
+		const std::filesystem::path shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugStrings.glsl";
 
 		std::vector<std::string> defs;
 		using namespace std::containers_append_operators;

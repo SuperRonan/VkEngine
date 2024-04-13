@@ -1,7 +1,7 @@
 #pragma once
 
 #include "string.glsl"
-#include "common.glsl"
+#include <ShaderLib:/common.glsl>
 
 // Should be constant accross all shaders (contrary to the shader string capacity)
 #ifndef BUFFER_STRING_CAPACITY
