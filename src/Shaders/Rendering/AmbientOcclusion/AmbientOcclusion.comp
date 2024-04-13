@@ -1,5 +1,7 @@
 #version 460
 
+#define I_WANT_TO_DEBUG 0
+#include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #define BIND_SCENE 1
 #include <ShaderLib:/Rendering/Scene/scene.glsl>

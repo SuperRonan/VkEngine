@@ -76,7 +76,7 @@ namespace vkl
 		std::vector<std::string> defs;
 		using namespace std::containers_append_operators;
 
-		const bool use_mesh_shader = false && (application()->availableFeatures().mesh_shader_ext.meshShader) && (application()->availableFeatures().mesh_shader_ext.taskShader);
+		const bool use_mesh_shader = (application()->availableFeatures().mesh_shader_ext.meshShader) && (application()->availableFeatures().mesh_shader_ext.taskShader);
 
 		const VkCompareOp cmp = _depth ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_ALWAYS;
 
