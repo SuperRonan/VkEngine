@@ -165,7 +165,7 @@ void main()
 	const uint wid = gl_WorkGroupID.x;
 	const uint gid = gl_GlobalInvocationID.x;
 
-	bool emit_string = gid < DEBUG_BUFFER_STRING_SIZE;
+	bool emit_string = gid < debugStringsCapacity();
 
 	const uint index = gid;
 	const uint len = emit_string ? (_debug.strings[index].meta.len) : 0;

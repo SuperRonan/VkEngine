@@ -3,10 +3,6 @@
 #include "string.glsl"
 #include "common.glsl"
 
-#ifndef DEBUG_BUFFER_STRING_SIZE
-#define DEBUG_BUFFER_STRING_SIZE 16384
-#endif
-
 // Should be constant accross all shaders (contrary to the shader string capacity)
 #ifndef BUFFER_STRING_CAPACITY
 // In Number of uint32_t
@@ -19,14 +15,15 @@
 
 #define BUFFER_STRING_PACKED_CAPACITY (BUFFER_STRING_CAPACITY / 4)
 
+// TODO optimize memory (mainly fp16 for colors)
 struct BufferStringMeta
 {
 	vec4 position;
-	uint layer;
-	uint len;
-	vec2 glyph_size;
 	vec4 color;
 	vec4 back_color;
+	vec2 glyph_size;
+	uint layer;
+	uint len;
 	uint flags;
 };
 
@@ -35,6 +32,16 @@ struct BufferString
 	BufferStringMeta meta;
 	// Store in uvec4 for 128 bit memory transactions?
 	uint32_t data[BUFFER_STRING_PACKED_CAPACITY];
+};
+
+struct BufferDebugLine
+{
+	vec4 p1;
+	vec4 p2;
+	vec4 color1;
+	vec4 color2;
+	uint layer;
+	uint flags;
 };
 
 #define DEBUG_ENABLE_MASK	0x1
@@ -63,21 +70,83 @@ struct BufferString
 #define DEBUG_BUFFER_ACCESS
 #endif
 
-layout(DEBUG_BUFFER_BINDING) restrict DEBUG_BUFFER_ACCESS buffer DebugStringBuffer
+// sizeof: 4 * 4 * u32
+struct DebugBufferHeader
 {
-	uint string_counter;
+	uint max_strings;
+	uint max_lines;
 	uint pad1;
 	uint pad2;
-	uint pad3;
-	BufferString strings[DEBUG_BUFFER_STRING_SIZE];
+	// Store the two counters on a separate cache line for now (TODO test the perf)
+	uint strings_counter;
+	uint ppad1;
+	uint ppad2;
+	uint ppad3;
+	
+	uint lines_counter;
+	uint ppad4;
+	uint ppad5;
+	uint ppad6;
+	
+	uvec4 pad;
+};
+
+layout(DEBUG_BUFFER_BINDING + 0) restrict DEBUG_BUFFER_ACCESS buffer DebugStringBuffer
+{
+	DebugBufferHeader header;
+	BufferString strings
+#ifdef DEBUG_BUFFER_STRINGS_CAPACITY
+		[DEBUG_BUFFER_STRINGS_CAPACITY];
+#else 
+		[];
+#endif 
 } _debug;
 
+layout(DEBUG_BUFFER_BINDING + 1) restrict DEBUG_BUFFER_ACCESS buffer DebugLinesBuffer
+{
+	BufferDebugLine lines
+#ifdef DEBUG_BUFFER_LINES_CAPACITY
+		[DEBUG_BUFFER_LINES_CAPACITY];
+#else
+		[];
 #endif
+} _debug_lines;
+
+#endif
+
+uint debugStringsCapacity()
+{
+#ifdef DEBUG_BUFFER_STRINGS_CAPACITY
+	const uint m = DEBUG_BUFFER_STRINGS_CAPACITY;
+#elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly 
+	const uint m = _debug.header.max_strings;
+#else 
+	const uint m = 0;
+#endif
+	return m;
+}
+
+uint debugLinesCapacity()
+{
+#ifdef DEBUG_BUFFER_LINES_CAPACITY
+	const uint m = DEBUG_BUFFER_LINES_CAPACITY;
+#elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly 
+	const uint m = _debug.header.max_lines;
+#else 
+	const uint m = 0;
+#endif
+	return m;
+}
 
 uint allocateDebugStrings(uint n)
 {
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
-	return atomicAdd(_debug.string_counter, n) % DEBUG_BUFFER_STRING_SIZE;
+#ifdef DEBUG_BUFFER_STRINGS_CAPACITY
+	const uint m = DEBUG_BUFFER_STRINGS_CAPACITY;
+#else
+	const uint m = _debug.header.max_strings;
+#endif
+	return atomicAdd(_debug.header.strings_counter, n) % m;
 #endif
 	return 0;
 }
@@ -85,6 +154,24 @@ uint allocateDebugStrings(uint n)
 uint allocateDebugString()
 {
 	return allocateDebugStrings(1);
+}
+
+uint allocateDebugLines(uint n)
+{
+#if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
+#ifdef DEBUG_BUFFER_LINES_CAPACITY
+	const uint m = DEBUG_BUFFER_LINES_CAPACITY;
+#else
+	const uint m = _debug.header.max_lines;
+#endif
+	return atomicAdd(_debug.header.lines_counter, n) % m;
+#endif
+	return 0;
+}
+
+uint allocateDebugLine()
+{
+	return allocateDebugLines(1);
 }
 
 struct DebugStringCaret

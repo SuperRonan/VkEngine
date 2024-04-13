@@ -9,19 +9,11 @@ namespace vkl
 	void Executor::buildCommonSetLayout()
 	{
 		using namespace std::containers_append_operators;
-		std::vector<DescriptorSetLayout::Binding> bindings;
+		MyVector<DescriptorSetLayout::Binding> bindings;
 
 		if (_use_debug_renderer)
 		{
-			bindings += DescriptorSetLayout::Binding{
-				.name = "DebugBuffer",
-				.binding = 0,
-				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.count = 1,
-				.stages = VK_SHADER_STAGE_ALL,
-				.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-			};
+			bindings += DebugRenderer::getLayoutBindings(0);
 		}
 
 		_common_set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{

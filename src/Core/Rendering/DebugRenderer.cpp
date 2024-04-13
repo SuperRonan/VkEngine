@@ -40,6 +40,14 @@ namespace vkl
 		}
 	}
 
+	DebugRenderer::~DebugRenderer()
+	{
+		if (_debug_buffer)
+		{
+			_debug_buffer->removeInvalidationCallback(this);
+		}
+	}
+
 	void DebugRenderer::declareCommonDefinitions()
 	{
 		if (_common_definitions)
@@ -47,11 +55,16 @@ namespace vkl
 			auto& common_defs = *_common_definitions;
 			common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
 			common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
-			common_defs.setDefinition("DEBUG_BUFFER_STRING_SIZE", std::to_string(_number_of_debug_strings));
 			common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
 			common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
 			common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
 			common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
+
+			if (_define_capacity)
+			{
+				common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
+				common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
+			}
 		}
 	}
 
@@ -74,7 +87,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.image = _font,
+						.image = _font->getView(),
 						.sampler = _sampler,
 						.binding = 0,
 					},
@@ -98,7 +111,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.image = _font,
+						.image = _font->getView(),
 						.sampler = _sampler,
 						.binding = 0,
 					},
@@ -119,57 +132,65 @@ namespace vkl
 
 	void DebugRenderer::createResources()
 	{
-		//struct BufferStringMeta
-		//{
-		//	vec2 position;
-		//	uint layer;
-		//	uint len;
-		//	vec2 glyph_size;
-		//	vec4 color;
-		//	vec4 back_color;
-		//	uint flags; 
-		//};
-		// Larger than reality to be sure
-		Dyn<VkDeviceSize> buffer_size = [&]() {
-			const uint32_t meta_size = (2 + 1 + 1 + 2 + 4 + 4 + 1) * 2;
-			const VkDeviceSize full_size = _number_of_debug_strings * (meta_size + _buffer_string_capacity) * 4 + 16;
-			return _enable_debug ? full_size : 256;
+		const VkDeviceSize alignement = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
+		Dyn<VkDeviceSize> buffer_header_strings_size = [this, alignement]() {
+			// Sizes in number of u32/f32
+			const uint32_t header_size = 16;
+			const uint32_t string_meta_size = 20;
+			const uint32_t string_content_size = _buffer_string_capacity;
+			VkDeviceSize full_size = (header_size + _number_of_debug_strings * (string_meta_size + string_content_size)) * 4;
+			full_size = std::alignUp(full_size, alignement);
+			return full_size;
 		};
 
-		_string_buffer = std::make_shared<Buffer>(Buffer::CI{
+		Dyn<VkDeviceSize> buffer_lines_size = [this, alignement]() {
+			const uint32_t line_size = 20;
+			VkDeviceSize full_size = (line_size * _number_of_debug_lines) * 4;
+			full_size = std::alignUp(full_size, alignement);
+			return full_size;
+		};
+
+		Dyn<VkDeviceSize> buffer_size = buffer_header_strings_size + buffer_lines_size;
+
+		_debug_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
-			.name = name() + ".DebugStringBuffer",
+			.name = name() + ".DebugBuffer",
 			.size = buffer_size,
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			.hold_instance = &_enable_debug,
 		});
 
+		_debug_buffer_header_and_strings = BufferSegment{
+			.buffer = _debug_buffer,
+			.range = [=](){return Buffer::Range{.begin = 0, .len = buffer_header_strings_size.value()}; },
+		};	
 
-		_clear_buffer = std::make_shared<FillBuffer>(FillBuffer::CI{
-			.app = application(),
-			.name = name() + ".ClearBuffer",
-			.buffer = _string_buffer,
+		_debug_buffer_lines = BufferSegment{
+			.buffer = _debug_buffer,
+			.range = [=]() {return Buffer::Range{.begin = buffer_header_strings_size.value(), .len = buffer_lines_size.value()}; },
+		};
+
+		_debug_buffer->setInvalidationCallback(Callback{
+			.callback = [this](){_should_write_header = true; },
+			.id = this,
 		});
 
-		std::shared_ptr<Image> font_img = std::make_shared<Image>(Image::CI{
+		const std::filesystem::path font_path = application()->mountingPoints()["ShaderLib"] + "/16x16_linear.png";
+
+		_font = std::make_shared<TextureFromFile>(TextureFromFile::CI{
 			.app = application(),
-			.name = name() + ".Font",
-			.type = VK_IMAGE_TYPE_2D,
-			.format = VK_FORMAT_R8_UNORM,
-			.extent = [&]() {return VkExtent3D{.width = _glyph_size.x, .height = _glyph_size.y, .depth = 1}; },
-			.mips = 1,
+			.name = name() + ".font",
+			.path = font_path,
+			.desired_format = VK_FORMAT_R8_UNORM,
+			.synch = true,
+			.mips = Texture::MipsOptions::None,
 			.layers = 256,
-			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		_font = std::make_shared<ImageView>(ImageView::CI{
-			.app = application(),
-			.name = name() + ".Font",
-			.image = font_img,
-			.type = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-		});
-
+		const VkExtent3D extent = _font->getView()->image()->extent().value();
+		_glyph_size.x = extent.width;
+		_glyph_size.y = extent.height;
 
 		_sampler = std::make_shared<Sampler>(Sampler::CI{
 			.app = application(),
@@ -180,41 +201,39 @@ namespace vkl
 		
 	}
 
-	void DebugRenderer::loadFont(ExecutionRecorder& exec)
-	{
-		img::Image<img::io::byte> host_font = img::io::read<img::io::byte>(application()->mountingPoints()["ShaderLib"] + "/16x16_linear.png");
+	//void DebugRenderer::loadFont(ExecutionRecorder& exec)
+	//{
+	//	//{
+	//	//	img::Image<img::io::byte> font_with_new_layout(16, 16 * 256);
+	//	//	for (size_t x = 0; x < 16; ++x)
+	//	//	{
+	//	//		for (size_t y = 0; y < 16; ++y)
+	//	//		{
+	//	//			for (size_t l = 0; l < 256; ++l)
+	//	//			{
+	//	//				font_with_new_layout(x, y + 16 * l) = host_font(x + (l % 16) * 16, y + (l / 16) * 16);
+	//	//			}
+	//	//		}
+	//	//	}
+	//	//	std::filesystem::path save_path = ENGINE_SRC_PATH "/Core/Modules/16x16_linear.png";
+	//	//	img::io::write(font_with_new_layout, save_path, img::io::WriteInfo{.is_default = false, .magic_number = 2 });
+	//	//}
+	//	//UploadImage& uploader = application()->getPrebuiltTransferCommands().upload_image;
+	//	//exec(uploader.with(UploadImage::UploadInfo{
+	//	//	.src = ObjectView(host_font.data(), host_font.byteSize()),
+	//	//	.dst = _font,
+	//	//}));
 
-		//{
-		//	img::Image<img::io::byte> font_with_new_layout(16, 16 * 256);
-		//	for (size_t x = 0; x < 16; ++x)
-		//	{
-		//		for (size_t y = 0; y < 16; ++y)
-		//		{
-		//			for (size_t l = 0; l < 256; ++l)
-		//			{
-		//				font_with_new_layout(x, y + 16 * l) = host_font(x + (l % 16) * 16, y + (l / 16) * 16);
-		//			}
-		//		}
-		//	}
-		//	std::filesystem::path save_path = ENGINE_SRC_PATH "/Core/Modules/16x16_linear.png";
-		//	img::io::write(font_with_new_layout, save_path, img::io::WriteInfo{.is_default = false, .magic_number = 2 });
-		//}
-		UploadImage& uploader = application()->getPrebuiltTransferCommands().upload_image;
-		exec(uploader.with(UploadImage::UploadInfo{
-			.src = ObjectView(host_font.data(), host_font.byteSize()),
-			.dst = _font,
-		}));
+	//	//UploadImage upload(UploadImage::CI{
+	//	//	.app = application(),
+	//	//	.name = name() + ".UploadBuffer",
+	//	//	.src = ObjectView(host_font.data(), host_font.byteSize()),
+	//	//	.dst = _font,
+	//	//});
+	//	//exec(upload);
 
-		//UploadImage upload(UploadImage::CI{
-		//	.app = application(),
-		//	.name = name() + ".UploadBuffer",
-		//	.src = ObjectView(host_font.data(), host_font.byteSize()),
-		//	.dst = _font,
-		//});
-		//exec(upload);
-
-		_font_loaded = true;
-	}
+	//	//_font_loaded = true;
+	//}
 
 	void DebugRenderer::setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth)
 	{
@@ -226,9 +245,37 @@ namespace vkl
 
 	void DebugRenderer::updateResources(UpdateContext& ctx)
 	{
-		_font->updateResource(ctx);
+		_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
+		_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
+		
+		_font->updateResources(ctx);
 		_sampler->updateResources(ctx);
-		_string_buffer->updateResource(ctx);
+		_debug_buffer->updateResource(ctx);
+
+
+		if (_should_write_header && _debug_buffer->instance())
+		{
+			struct Header {
+				uint32_t num_debug_strings;
+				uint32_t num_debug_lines;
+				uint32_t pad1;
+				uint32_t pad2;
+			};
+			Header header{
+				.num_debug_strings = _number_of_debug_strings,
+				.num_debug_lines = _number_of_debug_lines,
+			};	
+			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
+				.sources = {
+					PositionedObjectView{
+						.obj = header,
+						.pos = 0,
+					},
+				},
+				.dst = _debug_buffer->instance(),
+			};
+			_should_write_header = false;
+		}
 
 		if (_render_strings_with_geometry)
 		{
@@ -244,12 +291,6 @@ namespace vkl
 	{
 		if (_enable_debug)
 		{
-
-			if (!_font_loaded)
-			{
-				loadFont(exec);
-			}
-
 			struct PC 
 			{
 				alignas(16) glm::uvec3 resolution;
@@ -282,7 +323,16 @@ namespace vkl
 				}));
 			}
 
-			exec(_clear_buffer);
+
+			Buffer::Range clear_range = _debug_buffer->instance()->fullRange();
+			const size_t excluded = 4 * sizeof(uint32_t); // Don't fill the first part of the header
+			clear_range.begin += excluded;
+			clear_range.len -= excluded;
+			exec(application()->getPrebuiltTransferCommands().fill_buffer.with(FillBuffer::FillInfo{
+				.buffer = _debug_buffer,
+				.range = clear_range,
+				.value = 0,
+			}));
 		}
 	}
 
@@ -333,6 +383,64 @@ namespace vkl
 				{
 					common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
 				}
+
+				changed = ImGui::Checkbox("#define capacities", &_define_capacity);
+				if (changed)
+				{
+					if (_define_capacity)
+					{
+						common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
+						common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
+					}
+					else
+					{
+						common_defs.removeDefinition("DEBUG_BUFFER_STRINGS_CAPACITY");
+						common_defs.removeDefinition("DEBUG_BUFFER_LINES_CAPACITY");
+					}
+				}
+
+				changed = ImGui::InputInt("log2(Total Strings Capacity)", (int*) & _log2_number_of_debug_strings);
+				if (changed)
+				{
+					_should_write_header = true;
+					_log2_number_of_debug_strings = std::max<int>(_log2_number_of_debug_strings, 0);
+					_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
+					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
+				}
+				ImGui::Text("Total Strings Capacity: %d", _number_of_debug_strings);
+				
+				changed = ImGui::InputInt("log2(Total Lines Capacity)", (int*)&_log2_number_of_debug_lines);
+				if (changed)
+				{
+					_should_write_header = true;
+					_log2_number_of_debug_lines = std::max<int>(_log2_number_of_debug_lines, 0);
+					_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
+					if (_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
+				}
+				ImGui::Text("Total Lines Capacity: %d", _number_of_debug_lines);
+			}
+
+			size_t size = 0;
+			if (_enable_debug)
+			{
+				size = _debug_buffer->size().value();
+			}
+			if (size < 1024)
+			{
+				ImGui::Text("DebugBuffer memory consumption: %dB", size);
+			}
+			else
+			{
+				uint32_t i = -1;
+				double dec;
+				const char * units[3] = {"KiB", "MiB", "GiB"};
+				do
+				{
+					dec = size / 1024.0;
+					size /= 1024;
+					++i;
+				} while(size > 1024 && i < 3);
+				ImGui::Text("DebugBuffer memory consumption: %.3f %s", dec, units[i]);
 			}
 		}
 	}
@@ -341,9 +449,37 @@ namespace vkl
 	{
 		ShaderBindings res = {
 			Binding{
-				.buffer = _string_buffer,
+				.buffer = _debug_buffer_header_and_strings,
 				.binding = 0,
 			},
+			Binding{
+				.buffer = _debug_buffer_lines,
+				.binding = 1,
+			},
+		};
+		return res;
+	}
+
+	MyVector<DescriptorSetLayout::Binding> DebugRenderer::getLayoutBindings(uint32_t offset)
+	{
+		MyVector<DescriptorSetLayout::Binding> res;
+		res += DescriptorSetLayout::Binding{
+			.name = "DebugBufferStrings",
+			.binding = offset + 0,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		};
+		res += DescriptorSetLayout::Binding{
+			.name = "DebugBufferLines",
+			.binding = offset + 1,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		};
 		return res;
 	}
