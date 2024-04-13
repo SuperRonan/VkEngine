@@ -91,6 +91,7 @@ struct DebugBufferHeader
 	uvec4 pad;
 };
 
+// TODO maybe store the capacities in a separate UBO (maybe even inline UBO)?
 layout(DEBUG_BUFFER_BINDING + 0) restrict DEBUG_BUFFER_ACCESS buffer DebugStringBuffer
 {
 	DebugBufferHeader header;
@@ -138,6 +139,10 @@ uint debugLinesCapacity()
 	return m;
 }
 
+#ifndef DEBUG_BUFFER_ASSUME_Po2_CAPACITIES
+#define DEBUG_BUFFER_ASSUME_Po2_CAPACITIES 1
+#endif
+
 uint allocateDebugStrings(uint n)
 {
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
@@ -146,7 +151,11 @@ uint allocateDebugStrings(uint n)
 #else
 	const uint m = _debug.header.max_strings;
 #endif
+#if DEBUG_BUFFER_ASSUME_Po2_CAPACITIES
+	return atomicAdd(_debug.header.strings_counter, n) & (m - 1);
+#else
 	return atomicAdd(_debug.header.strings_counter, n) % m;
+#endif
 #endif
 	return 0;
 }
@@ -164,7 +173,11 @@ uint allocateDebugLines(uint n)
 #else
 	const uint m = _debug.header.max_lines;
 #endif
+#if DEBUG_BUFFER_ASSUME_Po2_CAPACITIES
+	return atomicAdd(_debug.header.lines_counter, n) & (m - 1);
+#else
 	return atomicAdd(_debug.header.lines_counter, n) % m;
+#endif
 #endif
 	return 0;
 }
