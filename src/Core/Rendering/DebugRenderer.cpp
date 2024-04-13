@@ -70,12 +70,15 @@ namespace vkl
 
 	void DebugRenderer::createRenderShader()
 	{
-		const std::filesystem::path shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugStrings.glsl";
+		const std::filesystem::path string_shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugStrings.glsl";
+		const std::filesystem::path lines_shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugLines.glsl";
 
 		std::vector<std::string> defs;
 		using namespace std::containers_append_operators;
 
-		const bool use_mesh_shader = (application()->availableFeatures().mesh_shader_ext.meshShader) && (application()->availableFeatures().mesh_shader_ext.taskShader);
+		const bool use_mesh_shader = false && (application()->availableFeatures().mesh_shader_ext.meshShader) && (application()->availableFeatures().mesh_shader_ext.taskShader);
+
+		const VkCompareOp cmp = _depth ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_ALWAYS;
 
 		if (use_mesh_shader)
 		{
@@ -95,9 +98,25 @@ namespace vkl
 				.color_attachements = { _target },
 				.depth_stencil = _depth,
 				.write_depth = false,
-				.depth_compare_op = VK_COMPARE_OP_ALWAYS,
-				.mesh_shader_path = shaders,
-				.fragment_shader_path = shaders,
+				.depth_compare_op = cmp,
+				.mesh_shader_path = string_shaders,
+				.fragment_shader_path = string_shaders,
+				.definitions = defs,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+			});
+			_render_lines_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderLines",
+				.dispatch_threads = true,
+				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.sets_layouts = _sets_layouts,
+				.bindings = {},
+				.color_attachements = { _target },
+				.depth_stencil = _depth,
+				.write_depth = false,
+				.depth_compare_op = cmp,
+				.mesh_shader_path = lines_shaders,
+				.fragment_shader_path = lines_shaders,
 				.definitions = defs,
 				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 			});
@@ -119,14 +138,29 @@ namespace vkl
 				.color_attachements = { _target },
 				.depth_stencil = _depth,
 				.write_depth = false,
-				.depth_compare_op = VK_COMPARE_OP_ALWAYS,
-				.vertex_shader_path = shaders,
-				.geometry_shader_path = shaders,
-				.fragment_shader_path = shaders,
+				.depth_compare_op = cmp,
+				.vertex_shader_path = string_shaders,
+				.geometry_shader_path = string_shaders,
+				.fragment_shader_path = string_shaders,
 				.definitions = defs,
 				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
 			});
-
+			_render_lines_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
+				.app = application(),
+				.name = name() + ".RenderLines",
+				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.sets_layouts = _sets_layouts,
+				.bindings = {},
+				.color_attachements = { _target },
+				.depth_stencil = _depth,
+				.write_depth = false,
+				.depth_compare_op = cmp,
+				.vertex_shader_path = lines_shaders,
+				.geometry_shader_path = lines_shaders,
+				.fragment_shader_path = lines_shaders,
+				.definitions = defs,
+				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+			});
 		}
 	}
 
@@ -281,10 +315,12 @@ namespace vkl
 		if (_render_strings_with_geometry)
 		{
 			ctx.resourcesToUpdateLater() += _render_strings_with_geometry;
+			ctx.resourcesToUpdateLater() += _render_lines_with_geometry;
 		}
 		if (_render_strings_with_mesh)
 		{
 			ctx.resourcesToUpdateLater() += _render_strings_with_mesh;
+			ctx.resourcesToUpdateLater() += _render_lines_with_mesh;
 		}
 	}
 
@@ -304,24 +340,29 @@ namespace vkl
 			};
 			if (_render_strings_with_mesh)
 			{
-				VkExtent3D extent = { .width = _number_of_debug_strings, .height = 1, .depth = 1 };
-				exec(_render_strings_with_mesh->with(MeshCommand::DrawInfo{
+				MeshCommand::DrawInfo draw_info{
 					.draw_type = DrawType::Draw,
 					.dispatch_threads = true,
 					.draw_list = {
 						MeshCommand::DrawCallInfo{
 							.pc = pc,
-							.extent = extent,
+							.extent = {.width = _number_of_debug_strings, .height = 1, .depth = 1 },
 						},
-					}
-				}));
+					},
+				};
+				exec(_render_strings_with_mesh->with(draw_info));
+				draw_info.draw_list.front().extent.width = _number_of_debug_lines;
+				exec(_render_lines_with_mesh->with(draw_info));
 			}
 			else
 			{
-				exec(_render_strings_with_geometry->with(VertexCommand::SingleDrawInfo{
+				VertexCommand::SingleDrawInfo draw_info{
 					.draw_count = _number_of_debug_strings,
 					.pc = pc,
-				}));
+				};
+				exec(_render_strings_with_geometry->with(draw_info));
+				draw_info.draw_count = _number_of_debug_lines;
+				exec(_render_lines_with_geometry->with(draw_info));
 			}
 
 

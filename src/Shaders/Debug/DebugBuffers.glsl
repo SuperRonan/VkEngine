@@ -48,9 +48,9 @@ struct BufferDebugLine
 #define DEBUG_ENABLE_BIT	0x1
 
 #define DEBUG_SPACE_MASK		(0x3 << 1)
-#define DEBUG_PIXEL_SPACE_BIT	(0x0 << 1)
+#define DEBUG_CLIP_SPACE_BIT	(0x0 << 1)
 #define DEBUG_UV_SPACE_BIT		(0x1 << 1)
-#define DEBUG_CLIP_SPACE_BIT	(0x2 << 1)
+#define DEBUG_PIXEL_SPACE_BIT	(0x2 << 1)
 
 #ifndef BIND_DEBUG_BUFFERS
 #define BIND_DEBUG_BUFFERS (I_WANT_TO_DEBUG & GLOBAL_ENABLE_GLSL_DEBUG)
@@ -365,3 +365,57 @@ DECLARE_pushToDebug_gvec_all_types
 
 DECLARE_pushToDebug_all_type
 DECLARE_pushToDebug_type_all_vec
+
+
+
+
+void pushDebugLine(vec4 p1, vec4 p2, uint layer, vec4 c1, vec4 c2, uint flags)
+{
+#if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
+	const uint index = allocateDebugLine();
+	BufferDebugLine line;
+	line.p1 = p1;
+	line.p2 = p2;
+	line.color1 = fp16vec4IFP(c1);
+	line.color2 = fp16vec4IFP(c2);
+	line.layer = layer;
+	line.flags = line.flags | 0x1;
+	_debug_lines.lines[index] = line;
+#endif
+}
+
+void pushDebugLineUV(vec2 p1, vec2 p2, uint layer, vec4 c1, vec4 c2, uint flags)
+{
+	flags |= DEBUG_UV_SPACE_BIT;
+	pushDebugLine(vec4(p1, 0, 1), vec4(p2, 0, 1), layer, c1, c2, flags);
+}
+
+void pushDebugLinePix(vec2 p1, vec2 p2, uint layer, vec4 c1, vec4 c2, uint flags)
+{
+	flags |= DEBUG_PIXEL_SPACE_BIT;
+	pushDebugLine(vec4(p1, 0, 1), vec4(p2, 0, 1), layer, c1, c2, flags);
+}
+
+void pushDebugLine(mat4 xform, vec3 p1, vec3 p2, uint layer, vec4 c1, vec4 c2, uint flags)
+{
+	const vec4 a = xform * vec4(p1, 1);
+	const vec4 b = xform * vec4(p2, 1);
+	flags |= DEBUG_CLIP_SPACE_BIT;
+	pushDebugLine(a, b, layer, c1, c2, flags);
+}
+
+
+void pushDebugLineUV(vec2 p1, vec2 p2, uint layer, vec3 c1, vec3 c2, uint flags)
+{
+	pushDebugLineUV(p1, p2, layer, vec4(c1, 1), vec4(c2, 1), flags);
+}
+
+void pushDebugLinePix(vec2 p1, vec2 p2, uint layer, vec3 c1, vec3 c2, uint flags)
+{
+	pushDebugLinePix(p1, p2, layer, vec4(c1, 1), vec4(c2, 1), flags);
+}
+
+void pushDebugLine(mat4 xform, vec3 p1, vec3 p2, uint layer, vec3 c1, vec3 c2, uint flags)
+{
+	pushDebugLine(xform, p1, p2, layer, vec4(c1, 1), vec4(c2, 1), flags);
+}

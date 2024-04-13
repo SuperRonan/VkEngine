@@ -1,7 +1,5 @@
 #version 460
 
-// #define I_WANT_TO_DEBUG 1
-// #include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #define BIND_SCENE 1
 #include <ShaderLib:/Rendering/Scene/scene.glsl>
@@ -162,12 +160,27 @@ float computeRQAO(inout rng_t rng, vec2 uv)
 		Ray ray = Ray(wcenter_position, sampled_dir_w);
 		const float t_min = rayTMin(ray, wcenter_normal);
 		
+		vec3 color = vec3(0);
 
 		if(QueryVisibilityRayOpaqueOnlyTriangles(SceneTLAS, ray, vec2(t_min, world_radius)))
 		{
 			// The PDF cancels the contribution
 			res += 1;
+			color = vec3(0, 1, 0);
 		}
+		else
+		{
+			color = vec3(1, 0, 0);
+		}
+
+#if I_WANT_TO_DEBUG
+		if(gl_GlobalInvocationID.xy == ivec2(500, 500))
+		{
+			const mat4 proj_matrix = mat4(1);
+			pushDebugLine(proj_matrix, ray.origin, sampleRay(ray, world_radius), 0, color, color, 0);
+		}
+#endif
+		
 	}
 	res /= float(AO_SAMPLES);
 #endif
