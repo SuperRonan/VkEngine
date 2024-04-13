@@ -11,6 +11,14 @@ namespace vkl
 {
 	class Texture : public VkObject
 	{
+	public:
+		enum class MipsOptions
+		{
+			None = 0,
+			Auto = 1,
+			Load = 2,
+			MAX_ENUM,
+		};
 	protected:
 
 		bool _is_ready = false;

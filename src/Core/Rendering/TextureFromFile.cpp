@@ -77,37 +77,64 @@ namespace vkl
 	{
 		if (!_host_image.empty())
 		{
-			uint32_t layers = 1;
+			VkExtent3D extent = VkExtent3D{ .width = static_cast<uint32_t>(_host_image.width()), .height = static_cast<uint32_t>(_host_image.height()), .depth = 1 };
+			if (_desired_layers > 1)
+			{
+				// Assume layers are store as rows of a single column
+				extent.height = extent.height / _desired_layers;
+			}
+			uint32_t mips = 1;
+			if (_desired_mips == MipsOptions::Auto)
+			{
+				mips = Image::ALL_MIPS;
+			}
 			_image = std::make_shared<Image>(Image::CI{
 				.app = application(),
 				.name = name(),
 				.type = VK_IMAGE_TYPE_2D,
 				.format = _image_format.vk_format,
-				.extent = VkExtent3D{.width = static_cast<uint32_t>(_host_image.width()), .height = static_cast<uint32_t>(_host_image.height()), .depth = 1},
-				.mips = Image::ALL_MIPS,
-				.layers = layers,
+				.extent = extent,
+				.mips = mips,
+				.layers = _desired_layers,
 				.usage = _image_usages,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
+
+			// TODO better (good enough for now)
+			// Consider: what is an image2D is 1D_ARRAY? Deduce from the file, one layer can be array if we want to, ...
+			VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM; // same as auto
+			if (_desired_layers > 1)
+			{
+				view_type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			}
 
 			_all_mips_view = std::make_shared<ImageView>(ImageView::CI{
 				.app = application(),
 				.name = name() + "_all_mip"s,
 				.image = _image,
+				.type = view_type,
 			});
 
-			_top_mip_view = std::make_shared<ImageView>(ImageView::CI{
-				.app = application(),
-				.name = name() + "_top_mip"s,
-				.image = _image,
-				.range = VkImageSubresourceRange{
-					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-					.baseMipLevel = 0,
-					.levelCount = 1,
-					.baseArrayLayer = 0,
-					.layerCount = layers,
-				},
-			});
+			if (mips > 1)
+			{
+				_top_mip_view = std::make_shared<ImageView>(ImageView::CI{
+					.app = application(),
+					.name = name() + "_top_mip"s,
+					.image = _image,
+					.type = view_type,
+					.range = VkImageSubresourceRange{
+						.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+						.baseMipLevel = 0,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = _desired_layers,
+					},
+				});
+			}
+			else
+			{
+				_top_mip_view = _all_mips_view;
+			}
 
 			_should_upload = true;
 		}
@@ -138,7 +165,9 @@ namespace vkl
 			.name = ci.name,
 		}),
 		_path(ci.path),
-		_is_synch(ci.synch)
+		_is_synch(ci.synch),
+		_desired_mips(ci.mips),
+		_desired_layers(ci.layers)
 	{
 		if (ci.desired_format.has_value())
 		{
@@ -150,6 +179,7 @@ namespace vkl
 		{
 			loadHostImage();
 			createDeviceImage();
+			_view = _all_mips_view;
 		}
 		else
 		{

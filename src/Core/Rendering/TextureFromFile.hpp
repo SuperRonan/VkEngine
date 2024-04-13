@@ -27,6 +27,9 @@ namespace vkl
 
 		std::shared_ptr<AsynchTask> _load_image_task = nullptr;
 
+		MipsOptions _desired_mips;
+		uint32_t _desired_layers;
+
 		DetailedVkFormat _desired_format;
 		DetailedVkFormat _image_format;
 
@@ -53,6 +56,8 @@ namespace vkl
 			std::filesystem::path path = {};
 			std::optional<VkFormat> desired_format = {};
 			bool synch = false;
+			MipsOptions mips = MipsOptions::Auto;
+			uint32_t layers = 1;
 		};
 		using CI = CreateInfo;
 
