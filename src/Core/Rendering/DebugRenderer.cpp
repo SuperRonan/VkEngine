@@ -133,18 +133,19 @@ namespace vkl
 	void DebugRenderer::createResources()
 	{
 		const VkDeviceSize alignement = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
-		Dyn<VkDeviceSize> buffer_header_strings_size = [this, alignement]() {
+		const bool can_fp16 = application()->availableFeatures().features_12.shaderFloat16;
+		const uint32_t string_meta_size = can_fp16 ? 12 : 20;
+		Dyn<VkDeviceSize> buffer_header_strings_size = [this, alignement, string_meta_size]() {
 			// Sizes in number of u32/f32
 			const uint32_t header_size = 16;
-			const uint32_t string_meta_size = 20;
 			const uint32_t string_content_size = _buffer_string_capacity;
 			VkDeviceSize full_size = (header_size + _number_of_debug_strings * (string_meta_size + string_content_size)) * 4;
 			full_size = std::alignUp(full_size, alignement);
 			return full_size;
 		};
 
-		Dyn<VkDeviceSize> buffer_lines_size = [this, alignement]() {
-			const uint32_t line_size = 20;
+		const uint32_t line_size = can_fp16 ? 16 : 20;
+		Dyn<VkDeviceSize> buffer_lines_size = [this, alignement, line_size]() {
 			VkDeviceSize full_size = (line_size * _number_of_debug_lines) * 4;
 			full_size = std::alignUp(full_size, alignement);
 			return full_size;

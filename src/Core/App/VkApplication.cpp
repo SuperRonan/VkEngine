@@ -138,6 +138,7 @@ namespace vkl
 
 
 		features.features_12.shaderInt8 = t;
+		features.features_12.shaderFloat16 = t;
 	
 		features.features_12.descriptorBindingPartiallyBound = t;
 		features.features_12.descriptorBindingUniformBufferUpdateAfterBind = t;

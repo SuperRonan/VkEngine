@@ -19,9 +19,9 @@
 struct BufferStringMeta
 {
 	vec4 position;
-	vec4 color;
-	vec4 back_color;
-	vec2 glyph_size;
+	fp16vec4IFP color;
+	fp16vec4IFP back_color;
+	fp16vec2IFP glyph_size;
 	uint layer;
 	uint len;
 	uint flags;
@@ -38,8 +38,8 @@ struct BufferDebugLine
 {
 	vec4 p1;
 	vec4 p2;
-	vec4 color1;
-	vec4 color2;
+	fp16vec4IFP color1;
+	fp16vec4IFP color2;
 	uint layer;
 	uint flags;
 };
@@ -118,7 +118,7 @@ uint debugStringsCapacity()
 {
 #ifdef DEBUG_BUFFER_STRINGS_CAPACITY
 	const uint m = DEBUG_BUFFER_STRINGS_CAPACITY;
-#elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly 
+#elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_writeonly 
 	const uint m = _debug.header.max_strings;
 #else 
 	const uint m = 0;
@@ -130,7 +130,7 @@ uint debugLinesCapacity()
 {
 #ifdef DEBUG_BUFFER_LINES_CAPACITY
 	const uint m = DEBUG_BUFFER_LINES_CAPACITY;
-#elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly 
+#elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_writeonly
 	const uint m = _debug.header.max_lines;
 #else 
 	const uint m = 0;
@@ -271,9 +271,9 @@ Caret pushToDebug(const in ShaderString str, Caret c, bool ln, vec4 ft_color, ve
 	meta.position = c.pos;
 	meta.layer = c.layer;
 	meta.len = getShaderStringLength(str);
-	meta.glyph_size = glyph_size;
-	meta.color = ft_color;
-	meta.back_color = bg_color;
+	meta.glyph_size = fp16vec2IFP(glyph_size);
+	meta.color = fp16vec4IFP(ft_color);
+	meta.back_color = fp16vec4IFP(bg_color);
 	meta.flags = flags;
 
 	const uint index = allocateDebugString();
@@ -287,11 +287,11 @@ Caret pushToDebug(const in ShaderString str, Caret c, bool ln, vec4 ft_color, ve
 	Caret res = c;
 	if(ln)
 	{
-		res.pos.y += meta.glyph_size.y;
+		res.pos.y += glyph_size.y;
 	}
 	else
 	{
-		res.pos.x += meta.glyph_size.x * meta.len;
+		res.pos.x += glyph_size.x * meta.len;
 	}
 	return res;
 #else
