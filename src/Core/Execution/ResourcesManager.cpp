@@ -68,6 +68,7 @@ namespace vkl
 		_common_definitions->setDefinition("SHADER_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS", std::to_string(props.props2.properties.limits.maxGeometryTotalOutputComponents));
 
 		_common_definitions->setDefinition("SHADER_FP16_AVAILABLE", tod(features.features_12.shaderFloat16));
+		_common_definitions->setDefinition("SHADER_SSBO_16BITS_ACCESS", tod(features.features_11.storageBuffer16BitAccess));
 
 		_common_definitions->setDefinition("SHADER_MAX_COMPUTE_WORKGROUP_SUBGROUPS", std::to_string(props.props_13.maxComputeWorkgroupSubgroups));
 		_common_definitions->setDefinition("SHADER_MAX_COMPUTE_LOCAL_SIZE", std::to_string(props.props2.properties.limits.maxComputeWorkGroupInvocations));

@@ -15,13 +15,22 @@
 
 #define BUFFER_STRING_PACKED_CAPACITY (BUFFER_STRING_CAPACITY / 4)
 
+// TODO if not available: use packHalf2x16
+#if SHADER_FP16_AVAILABLE && SHADER_SSBO_16BITS_ACCESS
+#define DebugBufferVec4 fp16vec4IFP
+#define DebugBufferVec2 fp16vec2IFP
+#else 
+#define DebugBufferVec4 vec4
+#define DebugBufferVec2 vec2
+#endif
+
 // TODO optimize memory (mainly fp16 for colors)
 struct BufferStringMeta
 {
 	vec4 position;
-	fp16vec4IFP color;
-	fp16vec4IFP back_color;
-	fp16vec2IFP glyph_size;
+	DebugBufferVec4 color;
+	DebugBufferVec4 back_color;
+	DebugBufferVec2 glyph_size;
 	uint layer;
 	uint len;
 	uint flags;
@@ -38,8 +47,8 @@ struct BufferDebugLine
 {
 	vec4 p1;
 	vec4 p2;
-	fp16vec4IFP color1;
-	fp16vec4IFP color2;
+	DebugBufferVec4 color1;
+	DebugBufferVec4 color2;
 	uint layer;
 	uint flags;
 };
@@ -284,9 +293,9 @@ Caret pushToDebug(const in ShaderString str, Caret c, bool ln, vec4 ft_color, ve
 	meta.position = c.pos;
 	meta.layer = c.layer;
 	meta.len = getShaderStringLength(str);
-	meta.glyph_size = fp16vec2IFP(glyph_size);
-	meta.color = fp16vec4IFP(ft_color);
-	meta.back_color = fp16vec4IFP(bg_color);
+	meta.glyph_size = DebugBufferVec2(glyph_size);
+	meta.color = DebugBufferVec4(ft_color);
+	meta.back_color = DebugBufferVec4(bg_color);
 	meta.flags = flags;
 
 	const uint index = allocateDebugString();
@@ -376,8 +385,8 @@ void pushDebugLine(vec4 p1, vec4 p2, uint layer, vec4 c1, vec4 c2, uint flags)
 	BufferDebugLine line;
 	line.p1 = p1;
 	line.p2 = p2;
-	line.color1 = fp16vec4IFP(c1);
-	line.color2 = fp16vec4IFP(c2);
+	line.color1 = DebugBufferVec4(c1);
+	line.color2 = DebugBufferVec4(c2);
 	line.layer = layer;
 	line.flags = line.flags | 0x1;
 	_debug_lines.lines[index] = line;

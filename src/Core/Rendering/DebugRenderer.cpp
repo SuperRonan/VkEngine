@@ -167,7 +167,7 @@ namespace vkl
 	void DebugRenderer::createResources()
 	{
 		const VkDeviceSize alignement = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
-		const bool can_fp16 = application()->availableFeatures().features_12.shaderFloat16;
+		const bool can_fp16 = application()->availableFeatures().features_12.shaderFloat16 && application()->availableFeatures().features_11.storageBuffer16BitAccess;
 		const uint32_t string_meta_size = can_fp16 ? 12 : 20;
 		Dyn<VkDeviceSize> buffer_header_strings_size = [this, alignement, string_meta_size]() {
 			// Sizes in number of u32/f32
