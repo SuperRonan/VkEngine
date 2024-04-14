@@ -38,7 +38,19 @@ namespace vkl
 		if (!definitions.empty())
 		{
 			const size_t version_begin = content.find("#version", copied_so_far);
-			assertm(version_begin < content.size(), "missing glsl version!");
+			if (!(version_begin < content.size()))
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: No declared #version"s,
+					.error_message =
+						"Error while preprocessing shader: No declared #version \n"s +
+						"Main Shader: "s + _main_path.string() + ":\n"s +
+						"In file "s + path.string() + ":\n"s,
+				};
+				return std::string();
+			}
 			const size_t version_end = content.find("\n", version_begin);
 
 			oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);
@@ -206,7 +218,7 @@ namespace vkl
 				}
 				else
 				{
-					int _ = 0;
+					VKL_BREAKPOINT_HANDLE;
 				}
 				copied_so_far = line_end;
 
@@ -360,7 +372,28 @@ namespace vkl
 			.mounting_points = mounting_points,
 		};
 		_dependencies.clear();
-		std::string full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0);
+		std::string full_source;
+		try
+		{
+			full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0);
+		}
+		catch (std::exception const& e)
+		{
+			if (e.what() == "string too long"s)
+			{
+				// There appears to be a bug in the includer:
+				// When the last line of the of the file #include <path>, this exception is thrown
+				// TODO fix it
+				_creation_result = AsynchTask::ReturnType{
+				.success = false,
+				.can_retry = true,
+				.error_title = "Shader Compilation Error: Preprocess Includes"s,
+				.error_message =
+					"Error while preprocessing shader: "s + _main_path.string() + "\n"s + 
+					"Bug in the includer : Check that a file does not finish by an #include directive (add a new line after to fix)",
+				};
+			}
+		}
 
 		if (_creation_result.success == false && _creation_result.error_message.empty())
 		{
@@ -375,7 +408,7 @@ namespace vkl
 			};
 			return {};
 		}
-
+		
 		std::string final_source = preprocessStrings(full_source);
 		if (_creation_result.success == false)
 		{
@@ -559,7 +592,7 @@ namespace vkl
 		defines += ci.definitions;
 
 		_preprocessed_source = preprocess(ci.source_path, defines, ci.mounting_points);
-
+		
 		if (_creation_result.success)
 		{
 			compile_time = std::chrono::file_clock::now();
