@@ -21,7 +21,7 @@ namespace std
 		TimePoint _tick = {};
 		TimePoint _tock = {};
 
-#if _DEBUG
+#if VKL_BUILD_ANY_DEBUG
 		mutable Duration _duration = {};
 #endif
 
@@ -48,7 +48,7 @@ namespace std
 
 		Duration duration()const
 		{
-#if !_DEBUG
+#if !VKL_BUILD_ANY_DEBUG
 			Duration
 #endif
 			_duration = (_tock - _tick);

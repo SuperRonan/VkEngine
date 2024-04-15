@@ -38,7 +38,9 @@
 #define VKL_BREAKPOINT_HANDLE {int _ = 0;}
 #define VKL_UNUSED(x) ((void)x)
 
-#if _DEBUG
+#define VKL_BUILD_ANY_DEBUG (VKL_BUILD_DEBUG || VKL_BUILD_FAST_DEBUG)
+
+#if VKL_BUILD_ANY_DEBUG
 
 #define VK_CHECK(call, msg)				\
 if (call != VK_SUCCESS) {				\

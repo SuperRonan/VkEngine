@@ -32,7 +32,7 @@ namespace vkl
 		int default_name_vk_objects = 0;
 		int default_cmd_labels = 0;
 
-#if _DEBUG
+#if VKL_BUILD_ANY_DEBUG
 		default_validation = 1;
 		default_name_vk_objects = 1;
 		default_cmd_labels = 1;
