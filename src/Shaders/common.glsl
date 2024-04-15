@@ -366,6 +366,45 @@ uvec3 cross(uvec3 a, uvec3 b)
 }
 
 
+float sinc(float x)
+{
+	return sin(x) / x;
+}
+
+vec2 sinc(vec2 x)
+{
+	return sin(x) / x;
+}
+
+vec3 sinc(vec3 x)
+{
+	return sin(x) / x;
+}
+
+vec4 sinc(vec4 x)
+{
+	return sin(x) / x;
+}
+
+float sinch(float x)
+{
+	return sinh(x) / x;
+}
+
+vec2 sinch(vec2 x)
+{
+	return sinh(x) / x;
+}
+
+vec3 sinch(vec3 x)
+{
+	return sinh(x) / x;
+}
+
+vec4 sinch(vec4 x)
+{
+	return sinh(x) / x;
+}
 
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI (PI / 2.0)

@@ -88,10 +88,7 @@ COMPLEX_TEMPLATE_complex_t cx_mul(COMPLEX_TEMPLATE_complex_t a, COMPLEX_TEMPLATE
 
 COMPLEX_TEMPLATE_complex_t complex_rcp(COMPLEX_TEMPLATE_complex_t z)
 {
-	COMPLEX_TEMPLATE_complex_t res;
-	const COMPLEX_TEMPLATE_scalar_t m = COMPLEX_TEMPLATE_scalar_t(Modulus2(z));
-	res.x = Real(z) / m;
-	res.y = -Imaginary(z) / m;
+	COMPLEX_TEMPLATE_complex_t res = Conjugate(z) / Modulus2(z);
 	return res;
 }
 
