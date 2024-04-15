@@ -110,6 +110,18 @@ COMPLEX_TEMPLATE_complex_t cx_div(COMPLEX_TEMPLATE_complex_t a, COMPLEX_TEMPLATE
 	return complex_div(a, b);
 }
 
+COMPLEX_TEMPLATE_complex_t complex_sqr(COMPLEX_TEMPLATE_complex_t z)
+{
+	return complex_mul(z, z);
+}
+
+COMPLEX_TEMPLATE_complex_t cx_sqr(COMPLEX_TEMPLATE_complex_t z)
+{
+	return complex_sqr(z);
+}
+
+
+
 #if COMPLEX_TEMPLATE_CONTINUOUS
 
 struct COMPLEX_TEMPLATE_polar_complex_t
@@ -332,6 +344,57 @@ COMPLEX_TEMPLATE_polar_complex_t cx_log(COMPLEX_TEMPLATE_polar_complex_t z)
 {
 	return complex_log(z);
 }
+
+COMPLEX_TEMPLATE_polar_complex_t complex_sqr(COMPLEX_TEMPLATE_polar_complex_t z)
+{
+	COMPLEX_TEMPLATE_polar_complex_t res;
+	res.rho = sqr(z.rho);
+	res.phi *= 2;
+	return res;
+}
+
+COMPLEX_TEMPLATE_polar_complex_t cx_sqr(COMPLEX_TEMPLATE_polar_complex_t z)
+{
+	return complex_sqr(z);
+}
+
+COMPLEX_TEMPLATE_polar_complex_t complex_sqrt(COMPLEX_TEMPLATE_polar_complex_t z)
+{
+	COMPLEX_TEMPLATE_polar_complex_t res;
+	res.rho = sqrt(z.rho);
+	res.phi = z.phi / 2;
+	return res;
+}
+
+COMPLEX_TEMPLATE_polar_complex_t cx_sqrt(COMPLEX_TEMPLATE_polar_complex_t z)
+{
+	return complex_sqrt(z);
+}
+
+COMPLEX_TEMPLATE_polar_complex_t complex_convert_sqrt(COMPLEX_TEMPLATE_complex_t z)
+{
+	return complex_sqrt(ConvertToPolarComplex(z));
+}
+
+COMPLEX_TEMPLATE_polar_complex_t cx_convert_sqrt(COMPLEX_TEMPLATE_complex_t z)
+{
+	return complex_convert_sqrt(z);
+}
+
+COMPLEX_TEMPLATE_complex_t complex_sqrt(COMPLEX_TEMPLATE_complex_t z)
+{
+	COMPLEX_TEMPLATE_complex_t res;
+	const COMPLEX_TEMPLATE_real_t m = Modulus(z);
+	res.x = sqrt(0.5 * (m + Real(z)));
+	res.y = sign(Imaginary(z)) * sqrt(0.5 * (m - Real(z)));
+	return res;
+}
+
+COMPLEX_TEMPLATE_complex_t cx_sqrt(COMPLEX_TEMPLATE_complex_t z)
+{
+	return complex_sqrt(z);
+}
+
 
 #endif
 
