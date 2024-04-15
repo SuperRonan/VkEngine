@@ -10,7 +10,7 @@
 
 #include <ShaderLib:/common.glsl>
 #include <ShaderLib:/random.glsl>
-#include <ShaderLib:/transforms.glsl>
+#include <ShaderLib:/Maths/transforms.glsl>
 
 
 layout(local_size_x = 16, local_size_y = 16) in;

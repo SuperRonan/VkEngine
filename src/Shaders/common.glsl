@@ -90,6 +90,66 @@ float16_t rcp(float16_t f)
 }
 #endif
 
+uint dot(uvec2 u, uvec2 v)
+{
+	uint res = 0;
+	for(uint i=0; i < 2; ++i)
+	{
+		res += u[i] * v[i];
+	}
+	return res;
+}
+
+uint dot(uvec3 u, uvec3 v)
+{
+	uint res = 0;
+	for(uint i=0; i < 3; ++i)
+	{
+		res += u[i] * v[i];
+	}
+	return res;
+}
+
+uint dot(uvec4 u, uvec4 v)
+{
+	uint res = 0;
+	for(uint i=0; i < 4; ++i)
+	{
+		res += u[i] * v[i];
+	}
+	return res;
+}
+
+int dot(ivec2 u, ivec2 v)
+{
+	int res = 0;
+	for(uint i=0; i < 2; ++i)
+	{
+		res += u[i] * v[i];
+	}
+	return res;
+}
+
+int dot(ivec3 u, ivec3 v)
+{
+	int res = 0;
+	for(uint i=0; i < 3; ++i)
+	{
+		res += u[i] * v[i];
+	}
+	return res;
+}
+
+int dot(ivec4 u, ivec4 v)
+{
+	int res = 0;
+	for(uint i=0; i < 4; ++i)
+	{
+		res += u[i] * v[i];
+	}
+	return res;
+}
+
 float length2(vec2 v)
 {
 	return dot(v, v);
@@ -103,6 +163,66 @@ float length2(vec3 v)
 float length2(vec4 v)
 {
 	return dot(v, v);
+}
+
+uint length2(uvec2 v)
+{
+	return dot(v, v);
+}
+
+uint length2(uvec3 v)
+{
+	return dot(v, v);
+}
+
+uint length2(uvec4 v)
+{
+	return dot(v, v);
+}
+
+uint length2(ivec2 v)
+{
+	return dot(v, v);
+}
+
+uint length2(ivec3 v)
+{
+	return dot(v, v);
+}
+
+uint length2(ivec4 v)
+{
+	return dot(v, v);
+}
+
+float length(uvec2 v)
+{
+	return sqrt(float(length2(v)));
+}
+
+float length(uvec3 v)
+{
+	return sqrt(float(length2(v)));
+}
+
+float length(uvec4 v)
+{
+	return sqrt(float(length2(v)));
+}
+
+float length(ivec2 v)
+{
+	return sqrt(float(length2(v)));
+}
+
+float length(ivec3 v)
+{
+	return sqrt(float(length2(v)));
+}
+
+float length(ivec4 v)
+{
+	return sqrt(float(length2(v)));
 }
 
 float distance2(vec2 a, vec2 b)

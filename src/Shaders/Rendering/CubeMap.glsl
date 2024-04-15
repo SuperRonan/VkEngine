@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ShaderLib:/common.glsl>
-#include <ShaderLib:/transforms.glsl>
+#include <ShaderLib:/Maths/transforms.glsl>
 
 vec3 cubeMapFaceDirection(uint id)
 {
