@@ -79,6 +79,7 @@
 	- [x] Fullscreen
 	- [x] Resized by the application
 - [ ] UpdateResources takes a priority as parameter, so for instance shaders that will not be used can still be updated, but with a lower priority
+	- For now, AsynchTasks are executed asynch, but are joined synch, which allows them to have side effect (store their result in the object emmiting the task). It should be forbiden, as it might create bugs, especially with an asynch joining of tasks. 
 - [x] InstanceHolders (aka Descriptors) have an option to not hold and instance (mostly to free memory for Images and Buffers)
 - [x] Add a mode to use the GENERAL image layout instead of the specialized layout and measure the performance of doing so 
 - [x] Refactor ResourceBinding and remove Resource 
@@ -104,9 +105,14 @@
 
 
 # Loose Ideas:
+October 2023:
 There should be two types of resources, synch ones and asynch ones.
 - Synch resources (curent implementation) are intended to be "script resources", in a limited number, updated by the main thread, always loaded and ready to use
 - Asynch resources are intended to be meshes, textures, etc, in a large number, managed (loaded, updated) by asynch threads and can be not avaible yet, partially available, or complitely available
+April 2024: 
+The distinction has kind of been implemented now.
+Problem: automatic synchronization of all the scene resources is expesive. But all these resources are synched the "same" way, the synchronization work can be done once and shared to all these resources.
+Maybe create a distinction between two synch regimes: Auto and Manual. 
 
 # Resources management / Execution refactor
 Objectives:
