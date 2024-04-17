@@ -20,7 +20,8 @@ namespace vkl
 		if (ci.binding_flags)
 		{
 			VkDescriptorBindingFlags common_bindings_flags = ci.binding_flags;
-			const auto& features12 = application()->availableFeatures().features_12;
+			const VulkanFeatures & features = application()->availableFeatures();
+			const auto& features12 = features.features_12;
 			if (features12.descriptorBindingUpdateUnusedWhilePending == VK_FALSE)
 			{
 				common_bindings_flags = common_bindings_flags & ~VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
@@ -61,6 +62,12 @@ namespace vkl
 				case VK_DESCRIPTOR_TYPE_SAMPLER:
 				case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
 					if (features12.descriptorBindingSampledImageUpdateAfterBind == VK_FALSE)
+					{
+						remove_update_after_bind = true;
+					}
+					break;
+				case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+					if (features.acceleration_structure_khr.descriptorBindingAccelerationStructureUpdateAfterBind == VK_FALSE)
 					{
 						remove_update_after_bind = true;
 					}
