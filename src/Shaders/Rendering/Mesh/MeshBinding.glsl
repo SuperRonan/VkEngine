@@ -36,6 +36,7 @@ Vertex MakeVertex(in const StorageVertex sv)
 	return res;
 }
 
+// TODO add NONE
 #define MESH_FLAG_INDEX_TYPE_UINT16 0
 #define MESH_FLAG_INDEX_TYPE_UINT32 1
 #define MESH_FLAG_INDEX_TYPE_UINT8  2

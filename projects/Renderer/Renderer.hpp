@@ -55,12 +55,7 @@ namespace vkl
 		std::shared_ptr<ComputeCommand> _prepare_draw_list = nullptr;
 		
 
-		ImGuiListSelection _pipeline_selection = ImGuiListSelection::CI{
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.labels = {"Direct V1"s, "Deferred V1"s},
-			.default_index = 1,
-			.same_line = true,
-		};
+		ImGuiListSelection _pipeline_selection;
 		bool _use_indirect_rendering = false;
 
 		std::vector<uint32_t> _model_types;
@@ -98,6 +93,18 @@ namespace vkl
 		};
 		DeferredPipelineV1 _deferred_pipeline;
 
+		struct PathTracer
+		{
+			std::shared_ptr<ComputeCommand> _path_trace;
+
+			struct UBO
+			{
+				
+			};
+			BufferAndRange _ubo;
+		};
+		PathTracer _path_tracer;
+
 		std::shared_ptr<Sampler> _light_depth_sampler = nullptr;
 		std::shared_ptr<VertexCommand> _render_spot_light_depth = nullptr;
 		std::shared_ptr<VertexCommand> _render_point_light_depth = nullptr;
@@ -106,8 +113,8 @@ namespace vkl
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 
-		std::shared_ptr<Buffer> _ubo_buffer = nullptr;
-
+		std::shared_ptr<HostManagedBuffer> _ubo_buffer;
+		BufferAndRange _ubo;
 		struct UBO
 		{
 			float time;

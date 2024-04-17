@@ -136,6 +136,10 @@ Vertex interpolateSceneVertex(uint mesh_id, uvec3 vertex_ids, vec2 triangle_uv)
 {
 	const vec3 bary = triangleUVToBarycentric(triangle_uv);
 	Vertex res;
+	res.position = 0..xxx;
+	res.normal = 0..xxx;
+	res.tangent = 0..xxx;
+	res.uv = 0..xx;
 	for(uint i=0; i<3; ++i)
 	{
 		const Vertex src = readSceneVertex(mesh_id, vertex_ids[i]);
@@ -182,7 +186,14 @@ uint readSceneMeshIndex(uint mesh_id, uint index_id, uint flags)
 	return res;
 }
 
-
+uvec3 getSceneMeshTriangleVerticexIndices(uint mesh_id, uint primitive_id, uint flags)
+{
+	uvec3 res = uvec3(0);
+	res.x = readSceneMeshIndex(mesh_id, primitive_id * 3 + 0, flags);
+	res.y = readSceneMeshIndex(mesh_id, primitive_id * 3 + 1, flags);
+	res.z = readSceneMeshIndex(mesh_id, primitive_id * 3 + 2, flags);
+	return res;
+}
 
 
 layout(SCENE_MATERIAL_BINDING + 0) buffer restrict SCENE_MATERIAL_ACCESS ScenePBMaterialsBinding

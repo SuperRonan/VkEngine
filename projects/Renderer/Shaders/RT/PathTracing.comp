@@ -1,0 +1,198 @@
+#version 460
+
+#define I_WANT_TO_DEBUG 0
+#include <ShaderLib:/Debug/DebugBuffers.glsl>
+
+#include "../common.glsl"
+
+#include <ShaderLib:/RayTracingCommon.glsl>
+
+#define SHADING_SHADOW_METHOD SHADING_SHADOW_RAY_TRACE
+#include "../shading.glsl"
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(SHADER_DESCRIPTOR_BINDING + 1) uniform PT_UBO
+{
+	uint value;
+} pt_ubo;
+
+layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict writeonly image2D Target;
+
+layout(push_constant) uniform PushConstant
+{
+	uint value;
+} _pc;
+
+#define MAX_DEPTH 4
+#define LIGHT_SAMPLES 8
+
+struct PBMaterialData
+{
+	vec3 albedo;
+	vec3 normal;
+};
+
+PBMaterialData readMaterial(uint material_id, vec2 uv)
+{
+	PBMaterialData res;
+	res.albedo = 0..xxx;
+	res.normal = vec3(0, 0, 1);
+	const ScenePBMaterialTextures textures = scene_pb_materials_textures.ids[material_id];
+	if(textures.albedo_texture_id != uint(-1))
+	{
+		res.albedo = texture(SceneTextures2D[textures.albedo_texture_id], uv).xyz;
+	}
+	else
+	{
+		res.albedo = scene_pb_materials[material_id].props.albedo;
+	}
+
+	return res;
+}
+
+uint drawLight(inout rng_t rng, out float pdf)
+{	
+	pdf = 0;
+	const uint num_lights = scene_ubo.num_lights;
+	uint res = randomU32(rng) % num_lights;
+	pdf = 1.0 / float(num_lights);
+	return res;
+}
+
+vec3 drawLightSample(const in Vertex vertex, const in PBMaterialData material, inout rng_t rng)
+{
+	vec3 res = 0..xxx;
+	float pdf;
+	uint light_id = drawLight(rng, pdf);
+	LightSample light_sample = getLightSample(light_id, vertex.position, vertex.normal, 0);
+	const float bsdf = max(dot(vertex.normal, light_sample.direction_to_light), 0);
+	res = light_sample.Le * bsdf * material.albedo / pdf;
+
+	if(length2(res) > 0)
+	{
+		res *= computeShadow(vertex.position, vertex.normal, light_sample);
+	}
+
+	return res;
+}
+
+Vertex transformVertex(mat4x3 matrix, mat3 dir_mat, Vertex v)
+{
+	Vertex res;
+	res.position = matrix * vec4(v.position, 1);
+	res.normal = dir_mat * v.normal;
+	res.tangent = dir_mat * v.tangent;
+	res.uv = v.uv;
+	return res;
+}
+
+Vertex transformVertex(mat4x3 matrix, Vertex v)
+{
+	return transformVertex(matrix, directionMatrix(mat3(matrix)), v);
+}
+
+Vertex normalize(Vertex v)
+{
+	v.normal = normalize(v.normal);
+	v.tangent = normalize(v.tangent);
+	return v;
+}
+
+vec3 trace(Ray ray, inout rng_t rng)
+{
+	vec3 res = 0..xxx;
+	RayQuery_t rq;
+	const uint ray_flags = gl_RayFlagsSkipAABBEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+	const uint cull_mask = 0xFF;
+	vec2 range = vec2(0, 1000);
+
+	vec3 throughput = 1..xxx;
+
+	int depth = 0;
+	while(depth < MAX_DEPTH)
+	{
+		rayQueryInitializeEXT(rq, SceneTLAS, ray_flags, cull_mask, ray.origin, range.x, ray.direction, range.y);
+		rayQueryProceedEXT(rq);		
+
+		if(rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT)
+		{
+			break;
+		}
+		else
+		{
+			const uint geometry_index = rayQueryGetIntersectionInstanceIdEXT(rq, true);
+			const int primitive_id = rayQueryGetIntersectionPrimitiveIndexEXT(rq, true);
+			const vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rq, true);
+			const mat4x3 object_to_world = rayQueryGetIntersectionObjectToWorldEXT(rq, true);
+
+
+			SceneObjectReference hit_object_ref = scene_objects_table.table[geometry_index];
+			
+			const MeshHeader mesh_header = scene_mesh_headers[hit_object_ref.mesh_id].headers;
+			const uvec3 vertices_id = getSceneMeshTriangleVerticexIndices(hit_object_ref.mesh_id, primitive_id, mesh_header.flags);
+			const Vertex vertex = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, barycentrics);
+			const Vertex world_vertex = normalize(transformVertex(object_to_world, vertex));
+			PBMaterialData material = readMaterial(hit_object_ref.material_id, vertex.uv);
+
+			vec3 light_samples = 0..xxx;
+			for(uint l = 0; l < LIGHT_SAMPLES; ++l)
+			{
+				light_samples += drawLightSample(world_vertex, material, rng);
+			}
+			res += throughput * (light_samples / LIGHT_SAMPLES);
+
+			if(depth < (MAX_DEPTH - 1))
+			{
+				const vec3 bt = cross(world_vertex.tangent, world_vertex.normal);
+				const mat3 TBN = mat3(world_vertex.tangent, bt, world_vertex.normal);
+
+				vec3 next_dir = randomCosineDirOnHemisphere(rng);
+				float pdf = next_dir.z;
+				vec3 next_dir_world = TBN * next_dir;
+				ray.origin = world_vertex.position;
+				ray.direction = next_dir_world;
+				range.x = rayTMin(ray, world_vertex.normal);
+
+				throughput *= (next_dir.z * material.albedo);
+			}
+
+			if(length2(throughput) <= 0)
+			{
+				break;
+			}
+		}
+		++depth;
+	}
+	return res;
+}
+
+
+void main()
+{
+	const uvec2 gid = uvec2(gl_GlobalInvocationID.xy);
+	const uvec2 pixel = gid;
+	const uvec2 dims = imageSize(Target);
+	if(all(lessThan(pixel, dims)))
+	{
+		rng_t rng = hash(pixel) ^ hash(ubo.frame_idx);
+		vec3 res = 0..xxx;
+		const vec2 uv = pixelToUV(pixel, dims);
+
+		const mat4 w2p = ubo.world_to_proj;
+		const mat4 p2w = inverse(w2p);
+		
+		const vec4 camera_pos_h = inverse(ubo.world_to_camera) * vec4(0, 0, 0, 1);
+		const vec3 camera_pos = camera_pos_h.xyz / camera_pos_h.w; 
+
+		vec4 dir_h = p2w * vec4(UVToClipSpace(uv), 1, 1);
+
+		Ray ray = Ray(camera_pos, dir_h.xyz / dir_h.w);
+
+
+		res = trace(ray, rng);
+		
+
+		imageStore(Target, ivec2(pixel), vec4(res, 1));
+	}
+}

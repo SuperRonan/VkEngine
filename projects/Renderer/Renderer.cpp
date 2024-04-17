@@ -10,7 +10,13 @@ namespace vkl
 		_scene(ci.scene),
 		_output_target(ci.target) 
 	{
-		
+		_pipeline_selection = ImGuiListSelection::CI{
+			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.labels = {"Direct V1"s, "Deferred V1"s, "Path Tacing"s},
+			.default_index = 1,
+			.same_line = true,
+		};
+
 		_shadow_method = ImGuiListSelection::CI{
 			.name = "Shadows",
 			.mode = ImGuiListSelection::Mode::RadioButtons,
@@ -62,13 +68,19 @@ namespace vkl
 			.compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,	
 		});
 
-		_ubo_buffer = std::make_shared<Buffer>(Buffer::CI{
+		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
+
+		_ubo_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
 			.name = name() + ".ubo",
-			.size = sizeof(UBO),
-			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			.size = std::alignUp(sizeof(UBO), ubo_align) + std::alignUp(sizeof(PathTracer::UBO), ubo_align),
+			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
+		_ubo = BufferSegment{
+			.buffer = _ubo_buffer->buffer(),
+			.range = Buffer::Range{.begin = 0, .len = std::alignUp(sizeof(UBO), ubo_align)},
+		};
 		
 		_draw_indexed_indirect_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -141,7 +153,7 @@ namespace vkl
 				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 				.bindings = {
 					Binding{
-						.buffer = _ubo_buffer,
+						.buffer = _ubo,
 						.binding = 0,
 					},
 					Binding{
@@ -169,7 +181,7 @@ namespace vkl
 			.sets_layouts = _sets_layouts,
 			.bindings = {
 				Binding{
-					.buffer = _ubo_buffer,
+					.buffer = _ubo,
 					.binding = 0,
 				},
 				Binding{
@@ -248,7 +260,7 @@ namespace vkl
 					.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 					.bindings = {
 						Binding{
-							.buffer = _ubo_buffer,
+							.buffer = _ubo,
 							.binding = 0,
 						},
 					},
@@ -271,7 +283,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.buffer = _ubo_buffer,
+						.buffer = _ubo,
 						.binding = 0,
 					},
 					Binding{
@@ -411,6 +423,34 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".BuildAS",
 			});
+
+			_path_tracer._ubo = BufferSegment{
+				.buffer = _ubo_buffer->buffer(),
+				.range = Buffer::Range{.begin = std::alignUp(sizeof(UBO), ubo_align), .len = std::alignUp(sizeof(PathTracer::UBO), ubo_align)},
+			};
+
+			_path_tracer._path_trace = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = application(),
+				.name = name() + ".PathTracer",
+				.shader_path = shaders / "RT/PathTracing.comp",
+				.extent = _render_target->image()->extent(),
+				.dispatch_threads = true,
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 0,
+					},
+					Binding{
+						.buffer = _path_tracer._ubo,
+						.binding = 1,
+					},
+					Binding{
+						.image = _render_target,
+						.binding = 2,
+					},
+				},
+			});
 		}
 	}
 
@@ -472,6 +512,11 @@ namespace vkl
 	{
 		bool update_all_anyway = ctx.updateAnyway();
 		
+		_pipeline_selection.enableOptions(2, _maintain_rt);
+		if (!_maintain_rt && _pipeline_selection.index() == 2)
+		{
+			_pipeline_selection.setIndex(1);
+		}
 		_shadow_method.enableOptions(size_t(ShadowMethod::RayTraced), _maintain_rt);
 		if (!_maintain_rt && _shadow_method.index() == size_t(ShadowMethod::RayTraced))
 		{
@@ -539,6 +584,10 @@ namespace vkl
 			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
 
 		}
+		if ((_pipeline_selection.index() == 2 || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		{
+			_path_tracer._path_trace->updateResources(ctx);
+		}
 		
 		if (_use_indirect_rendering)
 		{
@@ -605,12 +654,13 @@ namespace vkl
 
 		_light_depth_sampler->updateResources(ctx);
 
-		_ubo_buffer->updateResource(ctx);
+		_ubo_buffer->updateResources(ctx);
 	}
 
 	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
 	{
 		exec.pushDebugLabel(name() + ".execute()");
+
 		UBO ubo{
 			.time = time,
 			.delta_time = dt,
@@ -620,18 +670,17 @@ namespace vkl
 			.camera_to_proj = camera.getCamToProj(),
 			.world_to_proj = camera.getWorldToProj(),
 		};
+		_ubo_buffer->set(0, &ubo, sizeof(ubo));
 
-		UpdateBuffer & updater = application()->getPrebuiltTransferCommands().update_buffer;
-
-		exec(updater.with(UpdateBuffer::UpdateInfo{
-			.src = ubo,
-			.dst = _ubo_buffer,
-		}));
+		_ubo_buffer->recordTransferIFN(exec);
 
 		std::TickTock_hrc tick_tock;
 		MultiVertexDrawCallList & draw_list = _cached_draw_list;
+
+		const bool generate_indirect_draw_list = _pipeline_selection.index() < 2 && _use_indirect_rendering;
+		const bool generate_host_draw_list = _pipeline_selection.index() < 2 && !_use_indirect_rendering;
 		
-		if (_use_indirect_rendering)
+		if (generate_indirect_draw_list)
 		{
 			if (_cached_draw_list.empty())
 			{
@@ -662,7 +711,7 @@ namespace vkl
 				.indirect_draw_stride = sizeof(VkDrawIndirectCommand),
 			});
 		}
-		else
+		else if(generate_host_draw_list)
 		{
 			tick_tock.tick();
 			generateVertexDrawList(draw_list);
@@ -683,8 +732,8 @@ namespace vkl
 			_scene->buildTLAS(exec);
 		}
 
-		// Render shadows
-		if(_shadow_method.index() == size_t(ShadowMethod::ShadowMap))
+		const bool render_shadows = _pipeline_selection.index() < 2 && _shadow_method.index() == size_t(ShadowMethod::ShadowMap);
+		if(render_shadows)
 		{
 			if (_use_indirect_rendering)
 			{
@@ -726,7 +775,7 @@ namespace vkl
 			}
 		}
 
-		if (!draw_list.empty())
+		if (!draw_list.empty() && _pipeline_selection.index() < 2)
 		{
 			const size_t selected_pipeline = _pipeline_selection.index();
 			if (selected_pipeline == 0)
@@ -791,6 +840,11 @@ namespace vkl
 				
 				exec.popDebugLabel();
 			}
+		}
+
+		if (_pipeline_selection.index() == 2)
+		{
+			exec(_path_tracer._path_trace);
 		}
 
 		{
