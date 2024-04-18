@@ -24,7 +24,7 @@ layout(push_constant) uniform PushConstant
 	uint value;
 } _pc;
 
-#define MAX_DEPTH 4
+#define MAX_DEPTH 5
 #define LIGHT_SAMPLES 8
 
 struct PBMaterialData
@@ -180,14 +180,18 @@ void main()
 		const vec2 uv = pixelToUV(pixel, dims);
 
 		const mat4 w2p = ubo.world_to_proj;
+		const mat4 p2c = inverse(ubo.camera_to_proj);
+		const mat4 c2w = inverse(ubo.world_to_camera);
+		const mat3 c2w_dir = inverse(mat3(ubo.world_to_camera));
 		const mat4 p2w = inverse(w2p);
 		
 		const vec4 camera_pos_h = inverse(ubo.world_to_camera) * vec4(0, 0, 0, 1);
 		const vec3 camera_pos = camera_pos_h.xyz / camera_pos_h.w; 
 
-		vec4 dir_h = p2w * vec4(UVToClipSpace(uv), 1, 1);
+		vec4 dir_h = normalize(p2c * vec4(UVToClipSpace(uv), 1, 1));
+		dir_h.xyz = c2w_dir * dir_h.xyz;
 
-		Ray ray = Ray(camera_pos, dir_h.xyz / dir_h.w);
+		Ray ray = Ray(camera_pos, dir_h.xyz);
 
 
 		res = trace(ray, rng);
