@@ -52,6 +52,53 @@
 
 #define lerp mix
 
+float sum(vec2 v)
+{
+	return v.x + v.y;
+}
+
+float sum(vec3 v)
+{
+	return v.x + v.y + v.z;
+}
+
+float sum(vec4 v)
+{
+	return v.x + v.y + v.z + v.w;
+}
+
+
+uint sum(uvec2 v)
+{
+	return v.x + v.y;
+}
+
+uint sum(uvec3 v)
+{
+	return v.x + v.y + v.z;
+}
+
+uint sum(uvec4 v)
+{
+	return v.x + v.y + v.z + v.w;
+}
+
+
+int sum(ivec2 v)
+{
+	return v.x + v.y;
+}
+
+int sum(ivec3 v)
+{
+	return v.x + v.y + v.z;
+}
+
+int sum(ivec4 v)
+{
+	return v.x + v.y + v.z + v.w;
+}
+
 
 
 float sqr(float x)
@@ -404,6 +451,16 @@ vec3 sinch(vec3 x)
 vec4 sinch(vec4 x)
 {
 	return sinh(x) / x;
+}
+
+float Luminance(vec3 rgb)
+{
+	return dot(rgb, vec3(0.299, 0.587, 0.114));
+}
+
+float Grey(vec3 rgb)
+{
+	return sum(rgb) / 3;
 }
 
 #define PI 3.1415926535897932384626433832795

@@ -157,7 +157,7 @@ vec3 trace(Ray ray, inout rng_t rng)
 				throughput *= (next_dir.z * material.albedo);
 			}
 
-			if(length2(throughput) <= 0)
+			if(sum(throughput) <= 0)
 			{
 				break;
 			}
