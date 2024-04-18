@@ -16,6 +16,7 @@
 #include <Core/IO/GuiContext.hpp>
 
 #include "AmbientOcclusion.hpp"
+#include "TemporalAntiAliasingAndUpscaler.hpp"
 
 #include <Core/Commands/AccelerationStructureCommands.hpp>
 
@@ -105,6 +106,8 @@ namespace vkl
 		};
 		PathTracer _path_tracer;
 
+		std::shared_ptr<TemporalAntiAliasingAndUpscaler> _taau;
+
 		std::shared_ptr<Sampler> _light_depth_sampler = nullptr;
 		std::shared_ptr<VertexCommand> _render_spot_light_depth = nullptr;
 		std::shared_ptr<VertexCommand> _render_point_light_depth = nullptr;
@@ -175,6 +178,11 @@ namespace vkl
 		std::shared_ptr<ImageView> const& renderTarget() const
 		{
 			return _render_target;
+		}
+
+		std::shared_ptr<ImageView> const& output()const
+		{
+			return _taau->output();
 		}
 
 		std::shared_ptr<ImageView> getAmbientOcclusionTargetIFP() const

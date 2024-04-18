@@ -1,0 +1,48 @@
+#version 460
+
+#include "../common.glsl"
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+#ifndef IMAGE_FORMAT
+#error "IMAGE_FORMAT not defined"
+#endif
+
+layout(SHADER_DESCRIPTOR_BINDING + 1, IMAGE_FORMAT) uniform readonly restrict image2D Input;
+
+layout(SHADER_DESCRIPTOR_BINDING + 2, IMAGE_FORMAT) uniform restrict image2D Output;
+
+#define TAAU_FLAG_RESET_BIT 0x1
+
+layout(push_constant) uniform PushConstant
+{
+	float alpha;
+	uint flags;
+} _pc;
+
+void main()
+{
+	const uvec2 gid = uvec2(gl_GlobalInvocationID.xy);
+	const uvec2 pixel = gid;
+	const uvec2 dims = imageSize(Output);
+	if(all(lessThan(pixel, dims)))
+	{
+		const vec4 new_data = imageLoad(Input, ivec2(pixel));
+		const vec4 old_data = imageLoad(Output, ivec2(pixel));
+
+		const float alpha = _pc.alpha;
+
+		vec4 result;
+		if((_pc.flags & TAAU_FLAG_RESET_BIT) != 0)
+		{
+			result = new_data;
+		}
+		else
+		{
+			result.xyz = lerp(new_data.xyz, old_data.xyz, alpha);
+			result.w = 1;
+		}
+
+		imageStore(Output, ivec2(pixel), result);
+	}
+}

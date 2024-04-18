@@ -50,6 +50,13 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
+		_taau = std::make_shared<TemporalAntiAliasingAndUpscaler>(TemporalAntiAliasingAndUpscaler::CI{
+			.app = application(),
+			.name = name() + "TAAU",
+			.input = _render_target,
+			.sets_layouts = _sets_layouts,
+		});
+
 		_depth = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".depth",
@@ -526,7 +533,7 @@ namespace vkl
 		_use_ao_glsl_def.back() = '0' + (_ambient_occlusion->enable() ? 1 : 0);
 		_shadow_method_glsl_def.back() = '0' + _shadow_method.index();
 
-
+		_taau->updateResources(ctx);
 		_render_target->updateResource(ctx);
 		_depth->updateResource(ctx);
 
@@ -847,6 +854,8 @@ namespace vkl
 			exec(_path_tracer._path_trace);
 		}
 
+		_taau->execute(exec, camera);
+
 		{
 			// Clear the cached draw list
 			for (auto& [vt, vl] : _cached_draw_list)
@@ -861,6 +870,7 @@ namespace vkl
 
 	void SimpleRenderer::declareGui(GuiContext & ctx)
 	{
+		ImGui::PushID(this);
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
 			const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
@@ -882,9 +892,19 @@ namespace vkl
 			ImGui::BeginDisabled(application()->availableFeatures().acceleration_structure_khr.accelerationStructure == VK_FALSE);
 			ImGui::Checkbox("Ray Tracing", &_maintain_rt);
 			ImGui::EndDisabled();
+			
 			ImGui::PushID("shadow");
 			_shadow_method.declare();
 			ImGui::PopID();
+
+			ImGui::Separator();
+
+			if (ImGui::CollapsingHeader("TAAU"))
+			{
+				_taau->declareGui(ctx);
+				ImGui::Separator();
+			}
 		}
+		ImGui::PopID();
 	}
 }

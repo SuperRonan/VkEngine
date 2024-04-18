@@ -330,6 +330,7 @@ namespace vkl
 				.app = this,
 				.name = "ImagePicker",
 				.sources = {
+					renderer.output(),
 					renderer.renderTarget(),
 					renderer.getAmbientOcclusionTargetIFP(),
 					renderer.getAlbedoImage(),
