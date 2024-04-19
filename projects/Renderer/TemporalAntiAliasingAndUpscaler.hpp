@@ -23,6 +23,8 @@ namespace vkl
 		bool _enable = true;
 		float _alpha = 0.9;
 
+		bool _reset = true;
+
 		std::string _format_glsl;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
@@ -50,6 +52,8 @@ namespace vkl
 		using CI = CreateInfo;
 
 		TemporalAntiAliasingAndUpscaler(CreateInfo const& ci);
+
+		virtual ~TemporalAntiAliasingAndUpscaler() override;
 
 		void updateResources(UpdateContext& ctx);
 

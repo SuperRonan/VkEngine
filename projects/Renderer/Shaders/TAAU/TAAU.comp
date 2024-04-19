@@ -28,17 +28,18 @@ void main()
 	if(all(lessThan(pixel, dims)))
 	{
 		const vec4 new_data = imageLoad(Input, ivec2(pixel));
-		const vec4 old_data = imageLoad(Output, ivec2(pixel));
+		
 
 		const float alpha = _pc.alpha;
 
-		vec4 result;
+		vec4 result = 0..xxxx;
 		if((_pc.flags & TAAU_FLAG_RESET_BIT) != 0)
 		{
-			result = new_data;
+		 	result = new_data;
 		}
 		else
 		{
+			const vec4 old_data = imageLoad(Output, ivec2(pixel));
 			result.xyz = lerp(new_data.xyz, old_data.xyz, alpha);
 			result.w = 1;
 		}

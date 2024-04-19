@@ -29,6 +29,11 @@ namespace vkl
 
 		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
 
+		_input->setInvalidationCallback(Callback{
+			.callback = [this](){_reset = true;},
+			.id = this,
+		});
+
 		_taau_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
 			.name = name() + ".Command",
@@ -50,6 +55,11 @@ namespace vkl
 		});
 	}
 
+	TemporalAntiAliasingAndUpscaler::~TemporalAntiAliasingAndUpscaler()
+	{
+		_input->removeInvalidationCallback(this);
+	}
+
 	void TemporalAntiAliasingAndUpscaler::setFormat()
 	{
 		DetailedVkFormat detailed_format = DetailedVkFormat::Find(_output->format().value());
@@ -63,7 +73,7 @@ namespace vkl
 
 		if (_enable || ctx.updateAnyway())
 		{
-			_taau_command->updateResources(ctx);
+			ctx.resourcesToUpdateLater() += _taau_command;
 		}
 	}
 
@@ -76,11 +86,13 @@ namespace vkl
 				.alpha = _alpha,
 				.flags = 0,
 			};
-			if (new_matrix != _matrix)
+			_reset |= new_matrix != _matrix;
+			if (_reset)
 			{
 				pc.flags |= 0x1;
 				_matrix = new_matrix;
 			}
+			_reset = false;
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _output->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
@@ -108,6 +120,9 @@ namespace vkl
 			{
 				_alpha = 1.0 - one_minus_alpha;
 			}
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 0, 1));
+			_reset |= ImGui::Button("Reset");
+			ImGui::PopStyleColor();
 			
 		}
 		ImGui::PopID();
