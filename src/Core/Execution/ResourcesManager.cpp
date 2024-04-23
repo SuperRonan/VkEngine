@@ -51,6 +51,18 @@ namespace vkl
 		_common_definitions->setDefinition("SHADER_MAX_BOUND_DESCRIPTOR_SETS", std::to_string(props.props2.properties.limits.maxBoundDescriptorSets));
 		_common_definitions->setDefinition("SHADER_MAX_PUSH_CONSTANT_SIZE", std::to_string(props.props2.properties.limits.maxPushConstantsSize));
 
+		_common_definitions->setDefinition("SHADER_STORAGE_IMAGE_READ_WITHOUT_FORMAT", tod(features.features2.features.shaderStorageImageReadWithoutFormat));
+		_common_definitions->setDefinition("SHADER_STORAGE_IMAGE_WRITE_WITHOUT_FORMAT", tod(features.features2.features.shaderStorageImageWriteWithoutFormat));
+		_common_definitions->setDefinition("SHADER_IMAGE_GATHER_EXTENDED", tod(features.features2.features.shaderImageGatherExtended));
+		_common_definitions->setDefinition("SHADER_STORAGE_IMAGE_EXTENDED_FORMATS", tod(features.features2.features.shaderStorageImageExtendedFormats));
+		_common_definitions->setDefinition("SHADER_STORAGE_IMAGE_MULTISAMPLE", tod(features.features2.features.shaderStorageImageMultisample));
+
+		_common_definitions->setDefinition("SHADER_CLIP_DISTANCE_AVAILABLE", tod(features.features2.features.shaderClipDistance));
+		_common_definitions->setDefinition("SHADER_CULL_DISTANCE_AVAILABLE", tod(features.features2.features.shaderCullDistance));
+		_common_definitions->setDefinition("SHADER_FP64_AVAILABLE", tod(features.features2.features.shaderFloat64));
+		_common_definitions->setDefinition("SHADER_INT64_AVAILABLE", tod(features.features2.features.shaderInt64));
+		_common_definitions->setDefinition("SHADER_INT16_AVAILABLE", tod(features.features2.features.shaderInt16));
+
 		_common_definitions->setDefinition("SHADER_POINT_SIZE_RANGE_MIN", std::to_string(props.props2.properties.limits.pointSizeRange[0]));
 		_common_definitions->setDefinition("SHADER_POINT_SIZE_RANGE_MAX", std::to_string(props.props2.properties.limits.pointSizeRange[1]));
 		_common_definitions->setDefinition("SHADER_POINT_SIZE_GRANULARITY", std::to_string(props.props2.properties.limits.pointSizeGranularity));
@@ -66,6 +78,8 @@ namespace vkl
 		_common_definitions->setDefinition("SHADER_MAX_GEOMETRY_OUTPUT_VERTICES", std::to_string(props.props2.properties.limits.maxGeometryOutputVertices));
 		_common_definitions->setDefinition("SHADER_MAX_GEOMETRY_SHADER_INVOCATIONS", std::to_string(props.props2.properties.limits.maxGeometryShaderInvocations));
 		_common_definitions->setDefinition("SHADER_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS", std::to_string(props.props2.properties.limits.maxGeometryTotalOutputComponents));
+
+		_common_definitions->setDefinition("SHADER_TESSELATION_AVAILABLE", tod(features.features2.features.tessellationShader));
 
 		_common_definitions->setDefinition("SHADER_FP16_AVAILABLE", tod(features.features_12.shaderFloat16));
 		_common_definitions->setDefinition("SHADER_SSBO_16BITS_ACCESS", tod(features.features_11.storageBuffer16BitAccess));
