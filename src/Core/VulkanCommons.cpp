@@ -10,12 +10,19 @@ namespace vkl
 
 	using namespace std::string_literals;
 	
+	uint32_t vkGetPhysicalDeviceAPIVersion(VkPhysicalDevice device)
+	{
+		VkPhysicalDeviceProperties props;
+		vkGetPhysicalDeviceProperties(device, &props);
+		return props.apiVersion;
+	}
+
 	VulkanFeatures::VulkanFeatures()
 	{
 		std::memset(this, 0, sizeof(VulkanFeatures));
 	}
 
-	VkPhysicalDeviceFeatures2& VulkanFeatures::link(std::function<bool(std::string_view ext_name)> const& filter_extensions)
+	VkPhysicalDeviceFeatures2& VulkanFeatures::link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions)
 	{
 		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 		features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
@@ -37,10 +44,12 @@ namespace vkl
 
 		pNextChain chain = &features2;
 
-		// TODO check Vulkan version here
-		chain += &features_11;
-		chain += &features_12;
-		chain += &features_13;
+		if(version >= VK_MAKE_VERSION(1, 1, 0))
+			chain += &features_11;
+		if (version >= VK_MAKE_VERSION(1, 2, 0))
+			chain += &features_12;
+		if (version >= VK_MAKE_VERSION(1, 3, 0))
+			chain += &features_13;
 
 		if(filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			chain += &line_raster_ext;
@@ -76,7 +85,7 @@ namespace vkl
 		std::memset(this, 0, sizeof(VulkanDeviceProps));
 	}
 
-	VkPhysicalDeviceProperties2& VulkanDeviceProps::link(std::function<bool(std::string_view ext_name)> const& filter_extensions)
+	VkPhysicalDeviceProperties2& VulkanDeviceProps::link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions)
 	{
 		props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 		props_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
@@ -94,10 +103,12 @@ namespace vkl
 
 		pNextChain chain = &props2;
 
-		// TODO check Vulkan version here
-		chain += &props_11;
-		chain += &props_12;
-		chain += &props_13;
+		if (version >= VK_MAKE_VERSION(1, 1, 0))
+			chain += &props_11;
+		if (version >= VK_MAKE_VERSION(1, 2, 0))
+			chain += &props_12;
+		if (version >= VK_MAKE_VERSION(1, 3, 0))
+			chain += &props_13;
 
 		if (filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			chain += &line_raster_ext;

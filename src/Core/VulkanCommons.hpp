@@ -249,6 +249,7 @@ namespace vkl
 	};
 	using DispatchType = DrawType;
 	
+	extern uint32_t vkGetPhysicalDeviceAPIVersion(VkPhysicalDevice device);
 	
 	struct VulkanFeatures
 	{
@@ -273,7 +274,7 @@ namespace vkl
 		
 		VulkanFeatures();
 
-		VkPhysicalDeviceFeatures2& link(std::function<bool(std::string_view ext_name)> const& filter_extensions);
+		VkPhysicalDeviceFeatures2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
 	};
 
 	extern VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available);
@@ -296,7 +297,7 @@ namespace vkl
 
 		VulkanDeviceProps();
 
-		VkPhysicalDeviceProperties2& link(std::function<bool(std::string_view ext_name)> const& filter_extensions);
+		VkPhysicalDeviceProperties2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
 	};
 
 	struct VertexInputDescription

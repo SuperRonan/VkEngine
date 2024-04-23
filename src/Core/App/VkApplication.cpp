@@ -401,15 +401,16 @@ namespace vkl
 
 		VulkanDeviceProps props;
 		VulkanFeatures features;
-		vkGetPhysicalDeviceProperties2(device, &props.link(filter_extensions));
-		vkGetPhysicalDeviceFeatures2(device, &features.link(filter_extensions));
+		const uint32_t version = vkGetPhysicalDeviceAPIVersion(device);
+		vkGetPhysicalDeviceProperties2(device, &props.link(version, filter_extensions));
+		vkGetPhysicalDeviceFeatures2(device, &features.link(version, filter_extensions));
 
 		bool suitable = isDeviceSuitable(device);
 		if (!suitable)
 		{
 			return std::numeric_limits<int64_t>::min();
 		}
-
+		
 		uint32_t min_version = VK_MAKE_VERSION(1, 3, 0);
 
 		int64_t discrete_multiplicator = (props.props2.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 2 : 1;
@@ -477,6 +478,7 @@ namespace vkl
 
 		_device_extensions = std::make_unique<VulkanExtensionsSet>(desired_extensions, _physical_device);
 		VkPhysicalDeviceProperties2 & physical_device_props = _device_props.link(
+			vkGetPhysicalDeviceAPIVersion(_physical_device),
 			[this](std::string_view ext_name) {return _device_extensions->contains(ext_name); }
 		);
 		vkGetPhysicalDeviceProperties2(_physical_device, &physical_device_props);
@@ -514,11 +516,11 @@ namespace vkl
 		auto filter_extensions = [this](std::string_view ext_name){return _device_extensions->contains(ext_name); };
 
 		VulkanFeatures exposed_device_features;
-		vkGetPhysicalDeviceFeatures2(_physical_device, &exposed_device_features.link(filter_extensions));
+		vkGetPhysicalDeviceFeatures2(_physical_device, &exposed_device_features.link(vkGetPhysicalDeviceAPIVersion(_physical_device), filter_extensions));
 
 		_available_features = filterFeatures(_requested_features, exposed_device_features);
 
-		VkPhysicalDeviceFeatures2 features2 = _available_features.link(filter_extensions);
+		VkPhysicalDeviceFeatures2 features2 = _available_features.link(vkGetPhysicalDeviceAPIVersion(_physical_device), filter_extensions);
 
 		VkDeviceCreateInfo device_create_info{};
 		device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
