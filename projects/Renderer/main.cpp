@@ -475,6 +475,7 @@ namespace vkl
 					}
 
 					exec.updateResources(*update_context);
+					renderer.preUpdate(*update_context);
 					{
 						std::TickTock_hrc update_scene_tt;
 						update_scene_tt.tick();

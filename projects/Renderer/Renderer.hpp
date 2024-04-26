@@ -29,6 +29,13 @@ namespace vkl
 	{
 	public:
 
+		enum class RenderPipeline
+		{
+			Forward = 0,
+			Deferred = 1,
+			PathTaced = 2,
+		};
+
 		enum class ShadowMethod
 		{
 			None = 0,
@@ -139,6 +146,8 @@ namespace vkl
 
 		void createInternalResources();
 
+		void updateMaintainRT();
+		
 		bool _maintain_rt = false;
 
 		std::shared_ptr<BuildAccelerationStructureCommand> _build_as = nullptr;
@@ -163,6 +172,8 @@ namespace vkl
 		using CI = CreateInfo;
 
 		SimpleRenderer(CreateInfo const& ci);
+
+		void preUpdate(UpdateContext& ctx);
 
 		void updateResources(UpdateContext & ctx);
 

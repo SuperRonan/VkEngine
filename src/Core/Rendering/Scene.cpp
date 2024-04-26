@@ -546,6 +546,7 @@ namespace vkl
 				.name = name() + ".TLAS",
 				.geometry_flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
 				.build_flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+				.hold_instance = &_maintain_rt,
 			});
 			_build_tlas = std::make_shared<BuildAccelerationStructureCommand>(BuildAccelerationStructureCommand::CI{
 				.app = application(),
@@ -914,6 +915,11 @@ namespace vkl
 			
 			return true;
 		});
+	}
+
+	void Scene::setMaintainRT(bool value)
+	{
+		_maintain_rt = value;
 	}
 
 	void Scene::updateResources(UpdateContext& ctx)

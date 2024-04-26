@@ -99,5 +99,20 @@ namespace vkl
 		{
 			return _enable;
 		}
+
+		// 1 -> need RT
+		// 2 -> need RQ
+		uint32_t needRTOrRQ()const
+		{
+			uint32_t res = 0;
+			if (enable())
+			{
+				if (_gui_method.index() == 1)
+				{
+					res |= 2;
+				}
+			}
+			return res;
+		}
 	};
 }

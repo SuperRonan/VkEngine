@@ -433,6 +433,8 @@ namespace vkl
 			return _light_depth_samples;
 		}
 
+		void setMaintainRT(bool maintain_rt);
+
 		friend class SceneUserInterface;
 		friend class SimpleRenderer;
 	};

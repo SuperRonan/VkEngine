@@ -12,7 +12,7 @@ namespace vkl
 	{
 		_pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.labels = {"Direct V1"s, "Deferred V1"s, "Path Tacing"s},
+			.labels = {"Forward V1"s, "Deferred V1"s, "Path Tacing"s},
 			.default_index = 1,
 			.same_line = true,
 		};
@@ -30,16 +30,66 @@ namespace vkl
 		const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
 		_use_indirect_rendering = can_multi_draw_indirect;
 
-		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+		
+		_pipeline_selection.enableOptions(2, can_as && (can_rq || can_rt));
+		if (!can_as && (can_rq || can_rt) && RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
 		{
-			_maintain_rt = true;
+			_pipeline_selection.setIndex(1);
 		}
+		_shadow_method.enableOptions(size_t(ShadowMethod::RayTraced), can_as && (can_rq || can_rt));
+		if (!can_as && (can_rq || can_rt) && _shadow_method.index() == size_t(ShadowMethod::RayTraced))
+		{
+			_shadow_method.setIndex(size_t(ShadowMethod::ShadowMap));
+		}
+
+		_maintain_rt = false;
 
 		createInternalResources();
 	}
 
+	void SimpleRenderer::updateMaintainRT()
+	{
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+		
+		bool need_rq = false;
+		bool need_rt = false;
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
+		{
+			need_rq |= true;
+		}
+		if (_ambient_occlusion)
+		{
+			uint32_t ao_needs = _ambient_occlusion->needRTOrRQ();
+			need_rt |= (ao_needs & 0x1) != 0;
+			need_rq |= (ao_needs & 0x2) != 0;
+		}
+		if (_shadow_method.index() == size_t(ShadowMethod::RayTraced))
+		{
+			need_rq |= true;
+		}
+
+		
+		if (can_as && (need_rq || need_rt))
+		{
+			_maintain_rt = true;
+		}
+		else
+		{
+			_maintain_rt = false;
+		}
+	}
+
 	void SimpleRenderer::createInternalResources()
 	{
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+
 		_render_target = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".render_target",
@@ -314,7 +364,7 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.positions = _deferred_pipeline._position,
 				.normals = _deferred_pipeline._normal,
-				.can_rt = _maintain_rt,
+				.can_rt = can_as && (can_rt || can_rq),
 			});
 
 			std::shared_ptr<Sampler> bilinear_sampler = application()->getSamplerLibrary().getSampler(SamplerLibrary::SamplerInfo{
@@ -515,20 +565,15 @@ namespace vkl
 		std::shared_ptr<Framebuffer> framebuffer;
 	};
 
+	void SimpleRenderer::preUpdate(UpdateContext& ctx)
+	{
+		updateMaintainRT();
+		_scene->setMaintainRT(_maintain_rt);
+	}
+
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
 		bool update_all_anyway = ctx.updateAnyway();
-		
-		_pipeline_selection.enableOptions(2, _maintain_rt);
-		if (!_maintain_rt && _pipeline_selection.index() == 2)
-		{
-			_pipeline_selection.setIndex(1);
-		}
-		_shadow_method.enableOptions(size_t(ShadowMethod::RayTraced), _maintain_rt);
-		if (!_maintain_rt && _shadow_method.index() == size_t(ShadowMethod::RayTraced))
-		{
-			_shadow_method.setIndex(size_t(ShadowMethod::ShadowMap));
-		}
 
 		_use_ao_glsl_def.back() = '0' + (_ambient_occlusion->enable() ? 1 : 0);
 		_shadow_method_glsl_def.back() = '0' + _shadow_method.index();
@@ -551,7 +596,7 @@ namespace vkl
 			ctx.resourcesToUpdateLater() += _prepare_draw_list;
 		}
 
-		if (_pipeline_selection.index() == 0 || update_all_anyway)
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Forward || update_all_anyway)
 		{
 			if (_use_indirect_rendering || update_all_anyway)
 			{
@@ -565,7 +610,7 @@ namespace vkl
 				}
 			}
 		}
-		if (_pipeline_selection.index() == 1 || update_all_anyway)
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Deferred || update_all_anyway)
 		{
 			_deferred_pipeline._albedo->updateResource(ctx);
 			_deferred_pipeline._position->updateResource(ctx);
@@ -585,13 +630,12 @@ namespace vkl
 				}
 			}
 
-			_ambient_occlusion->setCanRT(_maintain_rt);
 			_ambient_occlusion->updateResources(ctx);
 
 			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
 
 		}
-		if ((_pipeline_selection.index() == 2 || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		if ((RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
 		{
 			_path_tracer._path_trace->updateResources(ctx);
 		}
@@ -684,8 +728,9 @@ namespace vkl
 		std::TickTock_hrc tick_tock;
 		MultiVertexDrawCallList & draw_list = _cached_draw_list;
 
-		const bool generate_indirect_draw_list = _pipeline_selection.index() < 2 && _use_indirect_rendering;
-		const bool generate_host_draw_list = _pipeline_selection.index() < 2 && !_use_indirect_rendering;
+		const bool needs_draw_list = _pipeline_selection.index() <= size_t(RenderPipeline::Deferred);
+		const bool generate_indirect_draw_list = needs_draw_list && _use_indirect_rendering;
+		const bool generate_host_draw_list = needs_draw_list && !_use_indirect_rendering;
 		
 		if (generate_indirect_draw_list)
 		{
@@ -849,7 +894,7 @@ namespace vkl
 			}
 		}
 
-		if (_pipeline_selection.index() == 2)
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
 		{
 			exec(_path_tracer._path_trace);
 		}
@@ -880,7 +925,7 @@ namespace vkl
 
 			_pipeline_selection.declare();
 
-			if (_pipeline_selection.index() == 1)
+			if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Deferred)
 			{
 				if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
 				{
@@ -888,9 +933,14 @@ namespace vkl
 					ImGui::Separator();
 				}
 			}
-
-			ImGui::BeginDisabled(application()->availableFeatures().acceleration_structure_khr.accelerationStructure == VK_FALSE);
+			
+			ImGui::BeginDisabled(true);
+			ImVec4 color;
+			color = _maintain_rt ? ImVec4(0, 0.8, 0, 1) : ImVec4(0.8, 0, 0, 1);
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+			ImGui::PushStyleColor(ImGuiCol_Text, color);
 			ImGui::Checkbox("Ray Tracing", &_maintain_rt);
+			ImGui::PopStyleColor(2);
 			ImGui::EndDisabled();
 			
 			ImGui::PushID("shadow");
