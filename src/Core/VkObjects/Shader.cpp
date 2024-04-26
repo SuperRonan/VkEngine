@@ -712,16 +712,22 @@ namespace vkl
 		using namespace std::containers_append_operators;
 		bool res = false;
 
+		static thread_local DefinitionsList definitions;
+		static thread_local SpecializationKey new_key;
+
 		if (checkHoldInstance())
 		{
-			DefinitionsList definitions = *_definitions;
+			definitions.clear();
+			new_key.clear();
+			
+			definitions = *_definitions;
 			definitions += ctx.commonDefinitions()->collapsed();
-			SpecializationKey new_key;
-			// TODO use a string stream (probably faster)
-			new_key.definitions = std::accumulate(definitions.begin(), definitions.end(), ""s, [](std::string const& a, std::string const& b)
+			
+			for (std::string const& def : definitions)
 			{
-				return a + "\n"s + b;
-			});
+				new_key.definitions += def;
+				new_key.definitions += '\n';
+			}
 		
 			if (ctx.checkShadersTick() > _check_tick)
 			{

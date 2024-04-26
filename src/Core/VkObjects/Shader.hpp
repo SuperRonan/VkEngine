@@ -131,6 +131,10 @@ namespace vkl
 				return definitions != o.definitions;
 			}
 
+			void clear()
+			{
+				definitions.clear();
+			}
 		};
 
 		struct SpecKeyHasher
