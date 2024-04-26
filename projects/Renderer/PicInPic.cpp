@@ -11,7 +11,7 @@ namespace vkl
 	{
 		const std::filesystem::path common_shaders = application()->mountingPoints()["ShaderLib"];
 
-		_definitions = [&]() -> std::vector<std::string> {
+		_definitions = [&]() -> DefinitionsList {
 			DetailedVkFormat detailed_format = DetailedVkFormat::Find(_target->format().value());
 			std::string glsl_format = detailed_format.getGLSLName();
 			return {glsl_format, };

@@ -4,6 +4,7 @@
 #include <string>
 #include "imgui.h"
 #include <Core/Maths/Types.hpp>
+#include <Core/VulkanCommons.hpp>
 
 namespace vkl
 {
@@ -31,7 +32,7 @@ namespace vkl
 		Mode _mode = Mode::Combo;
 
 		size_t _index = 0;
-		std::vector<Option> _options = {};
+		MyVector<Option> _options = {};
 		
 		bool _same_line = false;
 
@@ -42,9 +43,9 @@ namespace vkl
 			std::string name = {};
 			Mode mode = Mode::Combo;
 			// labels xor options
-			std::vector<std::string> labels;
+			MyVector<std::string> labels;
 			// labels xor options
-			std::vector<Option> options;
+			MyVector<Option> options;
 			size_t default_index = 0;
 			bool same_line = false;
 		};

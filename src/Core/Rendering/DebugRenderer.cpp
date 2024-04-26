@@ -73,7 +73,7 @@ namespace vkl
 		const std::filesystem::path string_shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugStrings.glsl";
 		const std::filesystem::path lines_shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugLines.glsl";
 
-		std::vector<std::string> defs;
+		DefinitionsList defs;
 		using namespace std::containers_append_operators;
 
 		const bool use_mesh_shader = (application()->availableFeatures().mesh_shader_ext.meshShader) && (application()->availableFeatures().mesh_shader_ext.taskShader);

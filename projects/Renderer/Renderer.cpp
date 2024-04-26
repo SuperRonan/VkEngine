@@ -174,7 +174,7 @@ namespace vkl
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "render.vert",
 				.fragment_shader_path = shaders / "render.frag",
-				.definitions = [this](){std::vector<std::string> res; res.push_back(_shadow_method_glsl_def); return res;},
+				.definitions = [this](){DefinitionsList res; res.push_back(_shadow_method_glsl_def); return res;},
 				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
@@ -206,7 +206,7 @@ namespace vkl
 			.depth_compare_op = VK_COMPARE_OP_LESS,
 			.vertex_shader_path = shaders / "RenderIndirect.vert",
 			.fragment_shader_path = shaders / "RenderIndirect.frag",
-			.definitions = [this]() {std::vector<std::string> res; res.push_back(_shadow_method_glsl_def); return res; },
+			.definitions = [this]() {DefinitionsList res; res.push_back(_shadow_method_glsl_def); return res; },
 			.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
 			.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 		});
@@ -362,7 +362,7 @@ namespace vkl
 				},
 				.definitions = [this]()
 				{
-					std::vector<std::string> res = {
+					DefinitionsList res = {
 						_use_ao_glsl_def,
 						_shadow_method_glsl_def,
 					};
@@ -419,7 +419,7 @@ namespace vkl
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
 				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
-				.definitions = std::vector{"TARGET_CUBE 1"s},
+				.definitions = MyVector{"TARGET_CUBE 1"s},
 				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
 			});
 		}

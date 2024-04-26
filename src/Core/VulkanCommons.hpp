@@ -856,6 +856,8 @@ namespace vkl
 		ObjectView obj = {};
 		size_t pos = 0;
 	};
+
+	using DefinitionsList = MyVector<std::string>;
 }
 
 template<class Stream>

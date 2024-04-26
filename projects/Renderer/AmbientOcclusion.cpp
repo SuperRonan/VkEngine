@@ -77,9 +77,9 @@ namespace vkl
 
 		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/Rendering/AmbientOcclusion/";
 		_method_glsl = "AO_METHOD 0";
-		Dyn<std::vector<std::string>> defs = [this]()
+		Dyn<DefinitionsList> defs = [this]()
 		{
-			std::vector<std::string> res;
+			DefinitionsList res;
 			res.push_back("OUT_FORMAT "s + _format_glsl);
 			res.push_back("AO_SAMPLES "s + std::to_string(_ao_samples));
 			res.push_back(_method_glsl);

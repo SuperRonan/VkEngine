@@ -42,7 +42,7 @@ namespace vkl
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 
-		Dyn<std::vector<std::string>> _definitions;
+		Dyn<DefinitionsList> _definitions;
 
 	public:
 

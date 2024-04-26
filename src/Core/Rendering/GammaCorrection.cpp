@@ -46,9 +46,9 @@ namespace vkl
 			});
 		}
 
-		Dyn<std::vector<std::string>> definitions = [this]() -> std::vector<std::string>
+		Dyn<DefinitionsList> definitions = [this]() -> DefinitionsList
 		{
-			std::vector<std::string> res(2);
+			DefinitionsList res(2);
 			res[0] = "USE_SEPARATE_SOURCE "s + ((_src == _dst) ? "0"s : "1"s);
 			res[1] = "DST_FORMAT "s + _dst_glsl_format;
 			return res;

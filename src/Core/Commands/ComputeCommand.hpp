@@ -44,7 +44,7 @@ namespace vkl
 			bool dispatch_threads = false;
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
-			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
+			DynamicValue<DefinitionsList> definitions = DefinitionsList();
 		};
 		using CI = CreateInfo;
 
@@ -66,7 +66,7 @@ namespace vkl
 	protected:
 
 		std::filesystem::path _shader_path;
-		DynamicValue<std::vector<std::string>> _definitions;
+		DynamicValue<DefinitionsList> _definitions;
 
 		std::shared_ptr<ComputeProgram> _program = nullptr;
 		DynamicValue<VkExtent3D> _extent = {};

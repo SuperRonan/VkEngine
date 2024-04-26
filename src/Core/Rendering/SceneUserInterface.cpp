@@ -54,7 +54,7 @@ namespace vkl
 			.wireframe = true,
 		});
 		
-		std::vector<std::string> render_box_3D_defs = {
+		DefinitionsList render_box_3D_defs = {
 			"DIMENSIONS 3",
 		};
 		_render_3D_box = std::make_shared<VertexCommand>(VertexCommand::CI{

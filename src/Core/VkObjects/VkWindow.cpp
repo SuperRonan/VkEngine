@@ -103,7 +103,7 @@ namespace vkl
 		// Format
 		if (!_extern_target_format.hasValue())
 		{
-			std::vector<std::string> formats(sd.formats.size());
+			MyVector<std::string> formats(sd.formats.size());
 			std::transform(sd.formats.begin(), sd.formats.end(), formats.begin(), [](VkSurfaceFormatKHR f)
 			{
 				return getVkFormatName(f.format) + ", "s + getVkColorSpaceKHRName(f.colorSpace);
@@ -123,7 +123,7 @@ namespace vkl
 		// Present Mode
 		if (!_extern_present_mode.hasValue())
 		{
-			std::vector<ImGuiListSelection::Option> present_modes(sd.present_modes.size());
+			MyVector<ImGuiListSelection::Option> present_modes(sd.present_modes.size());
 			for (size_t i = 0; i < present_modes.size(); ++i)
 			{
 				const VkPresentModeKHR vkp = sd.present_modes[i];

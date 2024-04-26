@@ -14,7 +14,7 @@ namespace vkl
 		using MapType = std::unordered_map<std::string, std::string>;
 		MapType _definitions;
 
-		std::vector<std::string> _collapsed;
+		DefinitionsList _collapsed;
 
 		std::vector<Callback> _invalidation_callbacks;
 
@@ -32,7 +32,7 @@ namespace vkl
 
 		void update();
 
-		std::vector<std::string> const& collapsed()const
+		DefinitionsList const& collapsed()const
 		{
 			return _collapsed;
 		}

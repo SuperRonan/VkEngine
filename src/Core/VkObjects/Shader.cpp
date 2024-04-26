@@ -13,7 +13,7 @@
 
 namespace vkl
 {
-	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level)
+	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, DefinitionsList const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level)
 	{
 		_dependencies.push_back(path);
 		std::string content;
@@ -366,7 +366,7 @@ namespace vkl
 		return _res;
 	}
 
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints* mounting_points)
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, DefinitionsList const& definitions, const MountingPoints* mounting_points)
 	{
 		PreprocessingState preprocessing_state = {
 			.mounting_points = mounting_points,
@@ -588,7 +588,7 @@ namespace vkl
 		std::filesystem::file_time_type compile_time = std::chrono::file_clock::now();
 
 		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
-		std::vector<std::string> defines = { semantic_definition };
+		DefinitionsList defines = { semantic_definition };
 		defines += ci.definitions;
 
 		_preprocessed_source = preprocess(ci.source_path, defines, ci.mounting_points);
@@ -655,7 +655,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points)
+	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points)
 	{
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
@@ -665,7 +665,7 @@ namespace vkl
 		else {
 
 			using namespace std::containers_append_operators;
-			std::vector<std::string> definitions = (*_definitions);
+			DefinitionsList definitions = (*_definitions);
 			definitions += common_definitions;
 
 			SpecializationKey lkey = key;
@@ -714,7 +714,7 @@ namespace vkl
 
 		if (checkHoldInstance())
 		{
-			std::vector<std::string> definitions = *_definitions;
+			DefinitionsList definitions = *_definitions;
 			definitions += ctx.commonDefinitions()->collapsed();
 			SpecializationKey new_key;
 			// TODO use a string stream (probably faster)

@@ -37,7 +37,7 @@ namespace vkl
 			const MountingPoints * mounting_points;
 		};
 
-		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, std::vector<std::string> const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level);
+		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level);
 
 		std::string preprocessStrings(std::string const& glsl);
 
@@ -49,7 +49,7 @@ namespace vkl
 			std::string name = {};
 			std::filesystem::path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
-			std::vector<std::string> const& definitions = {};
+			DefinitionsList const& definitions = {};
 			size_t shader_string_packed_capacity = 32;
 			const MountingPoints * mounting_points = nullptr;
 		};
@@ -67,7 +67,7 @@ namespace vkl
 
 
 
-		std::string preprocess(std::filesystem::path const& path, std::vector<std::string> const& definitions, const MountingPoints * mounting_points);
+		std::string preprocess(std::filesystem::path const& path, DefinitionsList const& definitions, const MountingPoints * mounting_points);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 
@@ -152,14 +152,14 @@ namespace vkl
 		size_t _check_tick = 0;
 		std::filesystem::path _path;
 		VkShaderStageFlagBits _stage;
-		DynamicValue<std::vector<std::string>> _definitions;
+		DynamicValue<DefinitionsList> _definitions;
 		std::vector<Dependecy> _dependencies;
 		std::chrono::file_time<std::chrono::file_clock::duration> _instance_time;
 
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key, std::vector<std::string> const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points);
+		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points);
 
 		virtual void destroyInstanceIFN() override;
 
@@ -173,7 +173,7 @@ namespace vkl
 			std::string name = {};
 			std::filesystem::path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
-			DynamicValue<std::vector<std::string>> definitions;
+			DynamicValue<DefinitionsList> definitions;
 			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;

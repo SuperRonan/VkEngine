@@ -13,7 +13,7 @@ namespace vkl
 			.name = name() + ".Blitter",
 		});
 
-		std::vector<std::string> src_labels(_sources.size());
+		MyVector<std::string> src_labels(_sources.size());
 		for (size_t i = 0; i < _sources.size(); ++i)
 		{
 			if (_sources[i])

@@ -186,7 +186,7 @@ namespace vkl
 			std::filesystem::path tess_eval_path;
 			std::filesystem::path geometry_path;
 			std::filesystem::path fragment_path;
-			DynamicValue<std::vector<std::string>> definitions;
+			DynamicValue<DefinitionsList> definitions;
 		};
 
 		ShaderPaths _shaders;
@@ -224,7 +224,7 @@ namespace vkl
 			std::filesystem::path tess_eval_shader_path = {};
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
-			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
+			DynamicValue<DefinitionsList> definitions = DefinitionsList();
 			
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
@@ -344,7 +344,7 @@ namespace vkl
 			std::filesystem::path task_path;
 			std::filesystem::path mesh_path;
 			std::filesystem::path fragment_path;
-			DynamicValue<std::vector<std::string>> definitions;
+			DynamicValue<DefinitionsList> definitions;
 		};
 
 		ShaderPaths _shaders;
@@ -380,7 +380,7 @@ namespace vkl
 			std::filesystem::path task_shader_path = {};
 			std::filesystem::path mesh_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
-			DynamicValue<std::vector<std::string>> definitions = std::vector<std::string>();
+			DynamicValue<DefinitionsList> definitions = DefinitionsList();
 
 			std::optional<VkClearColorValue> clear_color = {};
 			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
@@ -483,7 +483,7 @@ namespace vkl
 			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 			std::shared_ptr<ImageView> depth_buffer = nullptr;
 			std::filesystem::path fragment_shader_path = {};
-			DynamicValue<std::vector<std::string>> definitions;
+			DynamicValue<DefinitionsList> definitions;
 		};
 
 		using CI = CreateInfo;
