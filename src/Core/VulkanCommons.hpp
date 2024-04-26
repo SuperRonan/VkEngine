@@ -275,9 +275,18 @@ namespace vkl
 		VulkanFeatures();
 
 		VkPhysicalDeviceFeatures2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
+
+		VulkanFeatures operator&&(VulkanFeatures const& other) const;
+
+		VulkanFeatures operator||(VulkanFeatures const& other) const;
+
+		uint32_t count() const;
 	};
 
-	extern VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available);
+	inline extern VulkanFeatures filterFeatures(VulkanFeatures const& requested, VulkanFeatures const& available)
+	{
+		return requested && available;
+	}
 
 	struct VulkanDeviceProps
 	{
@@ -594,8 +603,8 @@ namespace vkl
 		return res;
 	}
 
-	template <class Op>
-	void VkBool32ArrayOp(VkBool32 *res, const VkBool32* a, const VkBool32 * b, size_t n, Op const& op)
+	template <std::convertible_to<std::function<VkBool32(VkBool32, VkBool32)>> BinOp>
+	void VkBool32ArrayOp(VkBool32 *res, const VkBool32* a, const VkBool32 * b, size_t n, BinOp const& op)
 	{
 		for (size_t i = 0; i < n; ++i)
 		{
