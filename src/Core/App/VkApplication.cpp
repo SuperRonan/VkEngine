@@ -417,22 +417,23 @@ namespace vkl
 
 		res = 1;
 
+		uint32_t ext_count = 0;
 		for (std::string_view const& desired_ext_name : desired_extensions)
 		{
 			if (available_extensions.contains(desired_ext_name))
 			{
-				res += 1;
+				ext_count += 1;
 			}
 		}
 
-		// TODO count the available requested features
-		
+		uint32_t num_features = (features && desired_features).count();
+
+		res = (1 + ext_count + num_features) * discrete_multiplicator;
+
 		if (props.props2.properties.apiVersion < min_version)
 		{
 			res = 0;
 		}
-
-		res *= discrete_multiplicator;
 
 		VK_LOG << "Rated " << props.props2.properties.deviceName << ": " << res << "\n";
 
