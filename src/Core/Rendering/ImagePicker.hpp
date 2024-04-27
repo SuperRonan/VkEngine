@@ -29,7 +29,7 @@ namespace vkl
 
 		std::shared_ptr<BlitImage> _blitter = nullptr;
 
-		ImGuiListSelection _gui_fiter;
+		ImGuiListSelection _gui_filter;
 
 		VkFilter _filter = VK_FILTER_NEAREST;
 

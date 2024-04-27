@@ -32,7 +32,7 @@ namespace vkl
 			.default_index = ci.index,
 		};
 
-		_gui_fiter = ImGuiListSelection::CI{
+		_gui_filter = ImGuiListSelection::CI{
 			.name = "Filter",
 			.options = {
 				ImGuiListSelection::Option{
@@ -99,13 +99,13 @@ namespace vkl
 			const char * dst_name = _dst ? _dst->name().c_str() : "No Image";
 			ImGui::Text("Destination: %s", dst_name);
 
-			if(_gui_fiter.declare())
+			if(_gui_filter.declare())
 			{
-				switch (_gui_fiter.index())
+				switch (_gui_filter.index())
 				{
 					case 0:
 					case 1:
-						_filter = static_cast<VkFilter>(_gui_fiter.index());
+						_filter = static_cast<VkFilter>(_gui_filter.index());
 					break;
 					case 2:
 						_filter = VK_FILTER_CUBIC_EXT;
