@@ -95,12 +95,19 @@ namespace vkl
 
 			void setValue(T const& t)
 			{
+				assert(canSetValue());
 				_value = t;
 			}
 
 			void setValue(T && t)
 			{
+				assert(canSetValue());
 				_value = std::move(t);
+			}
+
+			virtual bool canSetValue() const
+			{
+				return true;
 			}
 		};
 
@@ -122,6 +129,12 @@ namespace vkl
 			{
 				DynamicValueInstance<T>::_value = *_ptr;
 				return DynamicValueInstance<T>::_value;
+			}
+
+			// this one could be true (could be implemented), but it would be very dangerous
+			virtual bool canSetValue() const override
+			{
+				return false;
 			}
 		};
 
@@ -149,12 +162,48 @@ namespace vkl
 
 			virtual T const& value() const override
 			{
-				// TODO cache
 				DynamicValueInstance<T>::_value = _lambda();
 				return DynamicValueInstance<T>::_value;
 			}
 
+			virtual bool canSetValue() const override
+			{
+				return false;
+			}
+		};
 
+		template <class T>
+		class LambdaValueInstanceByRef : public DynamicValueInstance<T>
+		{
+		public:
+			using LambdaType = std::function<void(T&)>;
+
+		protected:
+			LambdaType _lambda;
+
+		public:
+
+			//template <class Lambda>
+			//LambdaValue(Lambda && l):
+			//    DynamicValue(),
+			//    _lambda(l)
+			//{}
+
+			LambdaValueInstanceByRef(LambdaType const& lambda) :
+				DynamicValueInstance<T>(),
+				_lambda(lambda)
+			{}
+
+			virtual T const& value() const override
+			{
+				_lambda(DynamicValueInstance<T>::_value);
+				return DynamicValueInstance<T>::_value;
+			}
+
+			virtual bool canSetValue() const override
+			{
+				return false;
+			}
 		};
 	}
 
@@ -180,24 +229,24 @@ namespace vkl
 		{}
 
 		DynamicValue(T const& t):
-			_inst(new impl::DynamicValueInstance<T>(t))
+			_inst(std::make_shared<impl::DynamicValueInstance<T>>(t))
 		{}
 
 		DynamicValue(T && t) :
-			_inst(new impl::DynamicValueInstance<T>(std::move(t)))
+			_inst(std::make_shared<impl::DynamicValueInstance<T>>(std::move(t)))
 		{}
 
 		DynamicValue(const T * ptr):
-			_inst(new impl::PointedValueInstance<T>(ptr))
+			_inst(std::make_shared<impl::PointedValueInstance<T>>(ptr))
 		{}
 
 		DynamicValue(T* ptr) :
-			_inst(new impl::PointedValueInstance<T>(ptr))
+			_inst(std::make_shared<impl::PointedValueInstance<T>>(ptr))
 		{}
 
 		template <TLike<T> Q>
 		DynamicValue(DynamicValue<Q> const& q) :
-			_inst(new impl::LambdaValueInstance<T>([=]() {return T(q.value()); }))
+			_inst(std::make_shared<impl::LambdaValueInstance<T>>([=]() {return T(q.value()); }))
 		{}
 
 		template <TLike<T> Q>
@@ -208,6 +257,16 @@ namespace vkl
 		template <LambdaLike<T> L>
 		DynamicValue(L const& l):
 			_inst(std::make_shared<impl::LambdaValueInstance<T>>(l))
+		{}
+
+		template <std::convertible_to<typename impl::LambdaValueInstanceByRef<T>::LambdaType> L>
+		DynamicValue(L const& l):
+			_inst(std::make_shared<impl::LambdaValueInstanceByRef<T>>(l))
+		{}
+
+		template <TLike<T> Q, LambdaLike<Q> L>
+		explicit DynamicValue(L const l):
+			_inst(std::make_shared<impl::LambdaValueInstance<T>>([=](){ return T(l()); }))
 		{}
 
 		DynamicValue& operator=(DynamicValue const& other)
@@ -266,6 +325,12 @@ namespace vkl
 			return *this;
 		}
 
+		template <std::convertible_to<typename impl::LambdaValueInstanceByRef<T>::LambdaType> L>
+		DynamicValue& operator=(L const& l)
+		{
+			_inst = std::make_shared<impl::LambdaValueInstanceByRef>(l);
+		}
+
 
 
 		T const& value()const
@@ -306,6 +371,10 @@ namespace vkl
 			_inst->setValue(std::move(t));
 		}
 
+		bool canSetValue() const
+		{
+			return _inst ? _inst->canSetValue() : false;
+		}
 	};
 
 #define DECLARE_BINARY_OPERATOR_WRAPPER(op_name) \

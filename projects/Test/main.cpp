@@ -99,7 +99,11 @@ int main(int argc, const char** argv)
 	Dyn<std::string> rts = "fedcba";
 	Dyn concat = str + rts;
 
-
+	Dyn<MyVector<int>> dyn_list = [](MyVector<int>& res)
+	{
+		res.clear();
+		res.push_back(rand());
+	};
 
 	std::vector<std::string> a = { "a" };
 	std::vector<std::string> bc = { "b", "c"};
