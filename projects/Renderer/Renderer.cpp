@@ -936,7 +936,7 @@ namespace vkl
 			
 			ImGui::BeginDisabled(true);
 			ImVec4 color;
-			color = _maintain_rt ? ImVec4(0, 0.8, 0, 1) : ImVec4(0.8, 0, 0, 1);
+			color = _maintain_rt ? ctx.style().valid_green : ctx.style().invalid_red;
 			ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
 			ImGui::PushStyleColor(ImGuiCol_Text, color);
 			ImGui::Checkbox("Ray Tracing", &_maintain_rt);

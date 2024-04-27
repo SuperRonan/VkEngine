@@ -87,11 +87,11 @@ namespace vkl
 
 			if (_latest_success)
 			{
-				ImGui::TextColored(ImVec4(0, 1, 0, 1), "Success");
+				ImGui::TextColored(ctx.style().valid_green, "Success");
 			}
 			else
 			{
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), "Fail");
+				ImGui::TextColored(ctx.style().invalid_red, "Fail");
 			}
 			
 			_gui_source.declare();

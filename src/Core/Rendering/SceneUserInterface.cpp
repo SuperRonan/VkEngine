@@ -310,9 +310,13 @@ namespace vkl
 				ImGui::Text(node->name().c_str());
 
 				ImGui::SameLine();
-				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8, 0, 0, 1));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9, 0, 0, 1));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.95, 0, 0, 1));
+				ImVec4 c = ctx.style().invalid_red;
+				c.x *= 0.8;
+				ImGui::PushStyleColor(ImGuiCol_Button, c);
+				c.x *= 1.1;
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, c);
+				c.x *= 1.1;
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, c);
 				bool clicked = ImGui::Button("Close");
 				ImGui::PopStyleColor(3);
 				if (clicked)

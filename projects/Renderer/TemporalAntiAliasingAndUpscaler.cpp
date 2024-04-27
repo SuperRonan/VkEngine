@@ -120,7 +120,7 @@ namespace vkl
 			{
 				_alpha = 1.0 - one_minus_alpha;
 			}
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 0, 1));
+			ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
 			_reset |= ImGui::Button("Reset");
 			ImGui::PopStyleColor();
 			
