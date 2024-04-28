@@ -3,6 +3,14 @@
 #include "string.glsl"
 #include <ShaderLib:/common.glsl>
 
+#ifndef DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+#define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
+#endif 
+
+#if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+bool _g_debug_signal = false;
+#endif
+
 // Should be constant accross all shaders (contrary to the shader string capacity)
 #ifndef BUFFER_STRING_CAPACITY
 // In Number of uint32_t
