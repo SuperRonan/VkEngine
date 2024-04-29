@@ -60,14 +60,17 @@ uint drawLight(inout rng_t rng, out float pdf)
 	return res;
 }
 
+// TODO add geometry normal
 vec3 drawLightSample(const in Vertex vertex, const in PBMaterialData material, inout rng_t rng)
 {
 	vec3 res = 0..xxx;
 	float pdf;
 	uint light_id = drawLight(rng, pdf);
 	LightSample light_sample = getLightSample(light_id, vertex.position, vertex.normal, 0);
-	const float bsdf = max(dot(vertex.normal, light_sample.direction_to_light), 0);
-	res = light_sample.Le * bsdf * material.albedo / pdf;
+	const float cos_theta = dot(vertex.normal, light_sample.direction_to_light);
+	const float abs_cos_theta = abs(cos_theta);
+	const float bsdf = cos_theta > 0 ? 1 : -1;
+	res = light_sample.Le * bsdf * abs_cos_theta * material.albedo / pdf;
 
 	if(length2(res) > 0)
 	{

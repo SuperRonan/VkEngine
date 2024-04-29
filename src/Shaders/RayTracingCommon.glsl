@@ -36,14 +36,19 @@ float rayTMin(vec3 src)
 	return res;
 }
 
-float rayTMin(Ray ray, vec3 normal)
+float rayTMin(Ray ray, float cos_theta)
 {
 	// Not perfect, but good enough
 	float res = rayTMin(ray.origin);
-	const float d = abs(dot(ray.direction, normal));
-	res *= 16 * (2.0 - d);
+	res *= 16 * (2.0 - cos_theta);
 	res = max(res, EPSILON * 64);
 	return res;
+}
+
+float rayTMin(Ray ray, vec3 normal)
+{
+	const float cos_theta = abs(dot(ray.direction, normal));
+	return rayTMin(ray, cos_theta);
 }
 
 #if SHADER_RAY_QUERY_AVAILABLE

@@ -75,12 +75,20 @@ vec3 quantifyOnCubeDirection(vec3 direction)
 	return res;
 }
 
-float cubeMapDepth(vec3 position, vec3 center, float z_near)
+vec4 cubeMapDirectionAndDepth(vec3 position, vec3 center, float z_near)
 {
 	vec3 direction = position - center;
 	uint cube_id = findCubeDirectionId(direction);
 	mat4 matrix = cubeMapFaceProjection(cube_id, center, z_near);
 	vec4 h_pos = matrix * vec4(position, 1);
-	float res = h_pos.z / h_pos.w;
+	float depth = h_pos.z / h_pos.w;
+	vec4 res;
+	res.xyz = cubeMapFaceDirection(cube_id);
+	res.w = depth;
 	return res;
+}
+
+float cubeMapDepth(vec3 position, vec3 center, float z_near)
+{
+	return cubeMapDirectionAndDepth(position, center, z_near).w;
 }

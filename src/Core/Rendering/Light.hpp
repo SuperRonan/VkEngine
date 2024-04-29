@@ -32,9 +32,15 @@ namespace vkl
 		// - bit 8: enable shadow map
 		// bits [16..31]: specific flags
 		uint32_t flags;
+		
 		vec3 emission;
-		int pad0;
+		uint32_t shadow_bias_data;
+		
 		uvec4 textures;
+		
+		vec3 direction;
+		int pad;
+		
 		mat4 matrix;
 
 		static LightGLSL MakePoint(vec3 position, vec3 emission);
@@ -51,11 +57,28 @@ namespace vkl
 		{
 			return 8;	
 		}
+
+		enum class ShadowBiasMode
+		{
+			None = 0,
+			Offset = 1,
+			FloatMult = 2,
+			FloatAdd = 3,
+			MAX_ENUM,
+		};
+
 	protected:
 
 		LightType _type;
 		vec3 _emission;
 		bool _enable_shadow_map;
+		ShadowBiasMode _shadow_bias_mode = ShadowBiasMode::FloatMult;
+		bool _shadow_bias_include_cos_theta = true;
+		union
+		{
+			int _int_shadow_bias;
+			float _float_shadow_bias = 0.99999;
+		};
 
 	public:
 
@@ -95,9 +118,17 @@ namespace vkl
 
 	class PointLight : public Light
 	{
+	public:
+
+		static constexpr float DefaultZNear()
+		{
+			return 0.1;
+		}
+
 	protected:
 
 		vec3 _position;
+		float _z_near = DefaultZNear();
 
 	public:
 
@@ -108,6 +139,7 @@ namespace vkl
 			vec3 position = vec3(0);
 			vec3 emission = vec3(0);
 			bool enable_shadow_map = true;
+			float z_near = DefaultZNear();
 		};
 		using CI = CreateInfo;
 

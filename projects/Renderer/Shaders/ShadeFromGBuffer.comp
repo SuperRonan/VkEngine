@@ -1,5 +1,9 @@
 #version 460
 
+// #define I_WANT_TO_DEBUG 1
+// #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
+// #include <ShaderLib:/Debug/DebugBuffers.glsl>
+
 #include "common.glsl"
 
 #include "shading.glsl"
@@ -42,6 +46,13 @@ void main()
 
 		const vec3 position = imageLoad(PositionTexture, pixel).xyz;
 		const vec3 normal = imageLoad(NormalTexture, pixel).xyz;
+
+#if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+		if(pixel == ivec2(100, 100))
+		{
+			_g_debug_signal = true;
+		}
+#endif
 
 		vec3 res = shade(albedo, position, normal);
 
