@@ -197,6 +197,21 @@ int dot(ivec4 u, ivec4 v)
 	return res;
 }
 
+float adot(vec2 u, vec2 v)
+{
+	return abs(dot(u, v));
+}
+
+float adot(vec3 u, vec3 v)
+{
+	return abs(dot(u, v));
+}
+
+float adot(vec4 u, vec4 v)
+{
+	return abs(dot(u, v));
+}
+
 float length2(vec2 v)
 {
 	return dot(v, v);
