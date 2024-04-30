@@ -612,7 +612,7 @@ namespace vkl
 				.bari = {_dst, Buffer::Range{.begin = _offset, .len = _src.size()}},
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
 				},
 				.usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR,
 			};
@@ -736,6 +736,8 @@ namespace vkl
 			buffer_range.len = buffer_range.len - buffer_range.begin;
 			_range = buffer_range;
 
+			const VkPipelineStageFlags2 stage = _use_update ? VK_PIPELINE_STAGE_2_CLEAR_BIT : VK_PIPELINE_STAGE_2_COPY_BIT;
+
 			const bool merge_synch = true;
 			if (merge_synch)
 			{
@@ -743,7 +745,7 @@ namespace vkl
 					.bari = {_dst, buffer_range},
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+						.stage = stage,
 					},
 					.usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR,
 				};
@@ -756,7 +758,7 @@ namespace vkl
 						.bari = {_dst, Buffer::Range{.begin = src.pos, .len = src.obj.size()}},
 						.begin_state = {
 							.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-							.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+							.stage = stage,
 						},
 						.usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR,
 					};
@@ -775,7 +777,7 @@ namespace vkl
 					},
 					.end_state = ResourceState2{
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+						.stage = stage,
 					},
 					.usage = VK_BUFFER_USAGE_2_TRANSFER_BITS_KHR,
 				};
@@ -1222,6 +1224,7 @@ namespace vkl
 
 			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
+
 			for (size_t i = 0; i < _upload_list.buffers.size(); ++i)
 			{
 				const auto& buffer_upload = _upload_list.buffers[i];
@@ -1240,6 +1243,7 @@ namespace vkl
 					}
 					return res;
 				}();
+				const VkPipelineStageFlags2 stage = use_update ? VK_PIPELINE_STAGE_2_CLEAR_BIT : VK_PIPELINE_STAGE_2_COPY_BIT;
 
 				// first consider .len as .end
 				Buffer::Range buffer_range{ .begin = size_t(-1), .len = 0 };
@@ -1263,7 +1267,7 @@ namespace vkl
 						.bari = {buffer_upload.dst, buffer_range},
 						.begin_state = {
 							.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-							.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+							.stage = stage,
 						},
 						.usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR,
 					};
@@ -1276,7 +1280,7 @@ namespace vkl
 							.bari = {buffer_upload.dst, Buffer::Range{.begin = src.pos, .len = src.obj.size()}},
 							.begin_state = {
 								.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-								.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+								.stage = stage,
 							},
 							.usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR,
 						};
