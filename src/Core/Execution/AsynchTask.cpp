@@ -62,10 +62,6 @@ namespace vkl
 
 	void AsynchTask::cancel(bool lock_mutex, bool verbose)
 	{
-		if (_name == "Texture1.albedo_texture.loadHostImage()")
-		{
-			int _ = 0;
-		}
 		if (lock_mutex)
 		{
 			_mutex.lock();
