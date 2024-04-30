@@ -31,11 +31,16 @@ namespace vkl
 		int default_validation = 0;
 		int default_name_vk_objects = 0;
 		int default_cmd_labels = 0;
+		int default_verbosity = 0;
 
 #if VKL_BUILD_ANY_DEBUG
 		default_validation = 1;
 		default_name_vk_objects = 1;
 		default_cmd_labels = 1;
+		default_verbosity = 3;
+#endif
+#if VKL_BUILD_RELEASE_WITH_DEBUG_INFO
+		default_verbosity = 2;
 #endif
 
 		args.add_argument("--validation")
@@ -70,6 +75,12 @@ namespace vkl
 		args.add_argument("--image_layout")
 			.help("Select which image layout to use, possible values are: 'specific', 'general', 'auto' or a bit mask per usage (0 for specfic, 1 for general)")
 			.default_value("specific")
+		;
+
+		args.add_argument("--verbosity")
+			.help("Set the console verbosity level (int)")
+			.default_value(default_verbosity)
+			.scan<'d', int>()
 		;
 	}
 
@@ -750,7 +761,7 @@ namespace vkl
 
 		bool mt = true;
 		size_t n_threads = 0;
-		bool log = true;
+		int verbosity = ci.args.get<int>("--verbosity");
 
 		std::string arg_helper_threads = ci.args.get<std::string>("--helper_threads");
 		if (arg_helper_threads == "all")
@@ -774,7 +785,7 @@ namespace vkl
 		_thread_pool = std::unique_ptr<DelayedTaskExecutor>(DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
 			.multi_thread = mt,
 			.n_threads = n_threads,
-			.log_actions = log,
+			.log_level = verbosity,
 		}));
 	}
 

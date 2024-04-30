@@ -15,6 +15,7 @@ namespace vkl
 	
 	AsynchTask::AsynchTask(CreateInfo const& ci) :
 		_name(ci.name),
+		_verbosity(ci.verbosity),
 		_priority(ci.priority),
 		_status(Status::Pending),
 		_lambda(ci.lambda),
@@ -91,7 +92,7 @@ namespace vkl
 		}
 	}
 
-	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(bool verbose)
+	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(int verbosity)
 	{
 		assert(_lambda);
 		Status prev_satus = _status;
@@ -106,7 +107,7 @@ namespace vkl
 		{
 			std::unique_lock lock(_mutex);
 			// Cancel
-			if (verbose)
+			if (verbosity >= _verbosity)
 			{
 				std::unique_lock lock(g_mutex);
 				std::cout << "Canceling task: " << name() << std::endl;
@@ -133,7 +134,7 @@ namespace vkl
 			ReturnType res;
 			try
 			{
-				if (verbose)
+				if (verbosity >= _verbosity)
 				{
 					if(!g_mutex_locked)
 						g_mutex.lock();

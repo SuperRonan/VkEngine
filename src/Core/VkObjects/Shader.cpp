@@ -672,6 +672,7 @@ namespace vkl
 			
 			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 				.name = "Compiling shader " + _path.string(),
+				.verbosity = AsynchTask::Verbosity::Medium,
 				.priority = TaskPriority::ASAP(),
 				.lambda = [this, definitions, mounting_points, string_packed_capacity, lkey]() {
 

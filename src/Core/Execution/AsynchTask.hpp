@@ -48,6 +48,14 @@ namespace vkl
 			MAX_ENUM,
 		};
 
+		enum Verbosity
+		{
+			None = 0,
+			Low = 1,
+			Medium = 2,
+			High = 3,
+		};
+
 		static bool StatusIsFinish(Status status)
 		{
 			return (status == Status::Success) || (status == Status::AbsoluteFail) || (status == Status::Canceled);
@@ -68,6 +76,7 @@ namespace vkl
 	protected:
 
 		std::string _name = {};
+		int _verbosity = 0;
 		TaskPriority _priority;
 		Status _status = Status::MAX_ENUM;
 
@@ -93,6 +102,7 @@ namespace vkl
 		struct CreateInfo
 		{
 			std::string name = {};
+			int verbosity = 0;
 			TaskPriority priority = {};
 			LambdaType lambda = nullptr;
 			std::vector<std::shared_ptr<AsynchTask>> dependencies = {};
@@ -146,7 +156,7 @@ namespace vkl
 
 		bool isReadyOrSoonToBe()const;
 
-		std::vector<std::shared_ptr<AsynchTask>> run(bool verbose);
+		std::vector<std::shared_ptr<AsynchTask>> run(int verbosity);
 
 		void wait();
 

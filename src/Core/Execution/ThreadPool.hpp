@@ -13,11 +13,11 @@ namespace vkl
 	class DelayedTaskExecutor
 	{
 	protected:
-		bool _log_actions;
+		int _log_level;
 	public:
 
-		DelayedTaskExecutor(bool log_actions):
-			_log_actions(log_actions)
+		DelayedTaskExecutor(int log_level):
+			_log_level(log_level)
 		{}
 
 		virtual ~DelayedTaskExecutor()
@@ -42,7 +42,7 @@ namespace vkl
 		{
 			bool multi_thread = true;
 			size_t n_threads = 0;
-			bool log_actions = true;
+			int log_level = 0;
 		};
 		static DelayedTaskExecutor * MakeNew(MakeInfo const& mi);
 	};
@@ -59,7 +59,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
-			bool log_actions = true;
+			int log_level = 0;
 		};
 		using CI = CreateInfo;
 
@@ -141,7 +141,7 @@ namespace vkl
 		struct CreateInfo
 		{
 			size_t n = 0;
-			bool log_actions = true;
+			int log_level = 0;
 		};
 		using CI = CreateInfo;
 
