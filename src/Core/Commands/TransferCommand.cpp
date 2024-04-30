@@ -1208,22 +1208,32 @@ namespace vkl
 		{
 			bool use_update = false;
 			Buffer::Range range = {};
+			size_t staging_offset = 0;
+		};
+
+		struct ImageUploadExtraInfo
+		{
+			size_t staging_offset = 0;
 		};
 
 		// Assuming no aliasing between resources
 		ResourcesToUpload _upload_list = {};
 		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 		MyVector<BufferUploadExtraInfo> _extra_buffer_info;
+		MyVector<ImageUploadExtraInfo> _extra_image_info;
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		size_t _total_staging_size = 0;
 
 		void populate(RecordContext& ctx, UploadResources::UploadInfo const& ui)
 		{
 			_upload_list = ui.upload_list;
 			
 			_extra_buffer_info.resize(_upload_list.buffers.size());
+			_extra_image_info.resize(_upload_list.images.size());
 
 			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
+			size_t staging_offset = 0;
 
 			for (size_t i = 0; i < _upload_list.buffers.size(); ++i)
 			{
@@ -1245,12 +1255,16 @@ namespace vkl
 				}();
 				const VkPipelineStageFlags2 stage = use_update ? VK_PIPELINE_STAGE_2_CLEAR_BIT : VK_PIPELINE_STAGE_2_COPY_BIT;
 
+				// TODO check for range intersection
+
 				// first consider .len as .end
 				Buffer::Range buffer_range{ .begin = size_t(-1), .len = 0 };
+				size_t total_upload_size = 0;
 				for (const auto& src : buffer_upload.sources)
 				{
 					buffer_range.begin = std::min(buffer_range.begin, src.pos);
 					buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
+					total_upload_size += src.obj.size();
 				}
 				// now .len is .len
 				buffer_range.len = buffer_range.len - buffer_range.begin;
@@ -1259,7 +1273,13 @@ namespace vkl
 				_extra_buffer_info[i] = {
 					.use_update = use_update,
 					.range = buffer_range,
+					.staging_offset = staging_offset,
 				};
+
+				if (!use_update)
+				{
+					staging_offset += std::alignUp(std::min(buffer_range.len, total_upload_size), size_t(4));
+				}
 
 				if (merge_synch)
 				{
@@ -1287,8 +1307,16 @@ namespace vkl
 					}
 				}
 			}
-			for (const auto& image_upload : _upload_list.images)
+			// TODO
+			const size_t image_align = 128;
+			staging_offset = std::alignUp(staging_offset, image_align);
+			for (size_t i = 0; i < _upload_list.images.size(); ++i)
 			{
+				const auto& image_upload = _upload_list.images[i];
+
+				_extra_image_info[i].staging_offset = staging_offset;
+				staging_offset += std::alignUp(image_upload.src.size(), image_align);
+
 				resources() += ImageViewUsage{
 					.ivi = image_upload.dst,
 					.begin_state = {
@@ -1299,6 +1327,35 @@ namespace vkl
 					.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 				};
 			}
+
+			_total_staging_size = staging_offset;
+			if (_staging_buffer)
+			{
+				if (_staging_buffer->buffer()->createInfo().size < _total_staging_size)
+				{
+					_staging_buffer = nullptr;
+				}
+			}
+			if (!_staging_buffer && _total_staging_size > 0 && ctx.stagingPool())
+			{
+				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), _total_staging_size);
+			}
+			if (_staging_buffer)
+			{
+				// Note on staging buffers synch:
+				// I think it is useless to declare we need them for host access (VK_PIPELINE_STAGE_2_HOST_BIT / VK_ACCESS_2_HOST_WRITE_BIT) and then do an inline barrier for the copy
+				// Because this host access corresponds to the memcpy() in execute()
+				// But these memcpy() are processed before the CmdBuffer is submitted, so synching from whatever to host access is useless now
+				// It should instead be done when releasing the staging buffer, ready for its next utilisation. 
+				// It was not an issue so far, probably because enough passes for a staging buffer to be recycled for a synch problem to appear.
+				resources() += BufferUsage{
+					.bari = BufferAndRangeInstance{.buffer = _staging_buffer->buffer(), .range = _staging_buffer->buffer()->fullRange(),},
+					.begin_state = {
+						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+					},
+				};
+			}
 		}
 
 		virtual void clear() override
@@ -1307,68 +1364,133 @@ namespace vkl
 			_upload_list.clear();
 			_staging_buffer.reset();
 			_extra_buffer_info.clear();
+			_extra_image_info.clear();
+			_buffer_regions.clear();
+			_total_staging_size = 0;
 		}
+
+
+		MyVector<VkBufferCopy2> _buffer_regions;
 
 		virtual void execute(ExecutionContext& ctx)
 		{
 			const ResourcesToUpload& resources = _upload_list;
+			VkCommandBuffer cmd = ctx.getCommandBuffer()->handle();
 
-			UploadImageNode image_uploader(UploadImageNode::CI{
-				.app = application(),
-				.name = name() + ".ImageUploader",
-			});
+			if (_total_staging_size > 0 && !_staging_buffer)
+			{
+				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), _total_staging_size);
+				InlineSynchronizeBuffer(ctx, BufferAndRangeInstance{ .buffer = _staging_buffer->buffer(), .range = _staging_buffer->buffer()->fullRange(), },
+					ResourceState2{
+						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				});
+			}
 
-			UploadBufferNode buffer_uploader(UploadBufferNode::CI{
-				.app = application(),
-				.name = name() + ".BufferUploader",
-			});
+			uint8_t* data = nullptr;
+			if (_staging_buffer)
+			{
+				_buffer_regions.clear();
+				data = static_cast<uint8_t*>(_staging_buffer->buffer()->map());
+			}
 
 			std::shared_ptr<CallbackHolder> completion_callbacks;
-
-			// TODO use a single staging buffer 
-			// TODO rewrite this function someday (not rely on other commands to be more efficient)
+			const auto pushCallbackIFN = [&](CompletionCallback const& cb)
+			{
+				if (cb)
+				{
+					if (!completion_callbacks)
+					{
+						completion_callbacks = std::make_shared<CallbackHolder>();
+					}
+					completion_callbacks->callbacks.push_back(cb);
+				}
+			};
 
 			for (size_t i = 0; i < resources.buffers.size(); ++i)
 			{
-				auto& buffer_upload = resources.buffers[i];
-
-				buffer_uploader.clear();
-				buffer_uploader._sources = buffer_upload.sources,
-				buffer_uploader._dst = buffer_upload.dst;
-				buffer_uploader._use_update = _extra_buffer_info[i].use_update;
-				buffer_uploader._staging_buffer = nullptr;
-				buffer_uploader._range = _extra_buffer_info[i].range;
-
-				buffer_uploader.execute(ctx);
-
-				if (buffer_upload.completion_callback)
+				if (_extra_buffer_info[i].use_update)
 				{
-					if (!completion_callbacks) completion_callbacks = std::make_shared<CallbackHolder>();
-					completion_callbacks->callbacks.push_back(buffer_upload.completion_callback);
+					for (size_t j = 0; j < resources.buffers[i].sources.size(); ++j)
+					{
+						vkCmdUpdateBuffer(cmd, 
+							resources.buffers[i].dst->handle(), 
+							resources.buffers[i].sources[j].pos, 
+							resources.buffers[i].sources[j].obj.size(), 
+							resources.buffers[i].sources[j].obj.data()
+						);
+					}
 				}
+				else
+				{
+					assert(data);
+					size_t s = 0;
+					_buffer_regions.resize(resources.buffers[i].sources.size());
+					for (size_t j = 0; j < resources.buffers[i].sources.size(); ++j)
+					{
+						const size_t sb_offset = _extra_buffer_info[i].staging_offset + s;
+						uint8_t * dst = data + sb_offset;
+						const void * src = resources.buffers[i].sources[j].obj.data();
+						const size_t size = resources.buffers[i].sources[j].obj.size();
+						std::memcpy(dst, src, size);
+						_buffer_regions[j] = VkBufferCopy2{
+							.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+							.pNext = nullptr,
+							.srcOffset = sb_offset,
+							.dstOffset = resources.buffers[i].sources[j].pos,
+							.size = size,
+						};
+						s += resources.buffers[i].sources[j].obj.size();
+
+					}
+					const VkCopyBufferInfo2 info{
+						.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+						.pNext = nullptr,
+						.srcBuffer = _staging_buffer->buffer()->handle(),
+						.dstBuffer = resources.buffers[i].dst->handle(),
+						.regionCount = _buffer_regions.size32(),
+						.pRegions = _buffer_regions.data(),
+					};
+
+					vkCmdCopyBuffer2(cmd, &info);
+				}
+				pushCallbackIFN(resources.buffers[i].completion_callback);
 			}
-
-			image_uploader._dst_layout = _dst_layout;
-			for (auto& image_upload : resources.images)
+			for (size_t i = 0; i < resources.images.size(); ++i)
 			{
-				image_uploader.clear();
-				image_uploader._src = image_upload.src;
-				image_uploader._buffer_row_length = image_upload.buffer_row_length;
-				image_uploader._buffer_image_height = image_upload.buffer_image_height;
-				image_uploader._dst = image_upload.dst;
-				image_uploader.execute(ctx);
-
-				if (image_upload.completion_callback)
-				{
-					if (!completion_callbacks) completion_callbacks = std::make_shared<CallbackHolder>();
-					completion_callbacks->callbacks.push_back(image_upload.completion_callback);
-				}
+				std::memcpy(data + _extra_image_info[i].staging_offset, resources.images[i].src.data(), resources.images[i].src.size());
+				const VkBufferImageCopy2 region{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+					.pNext = nullptr,
+					.bufferOffset = _extra_image_info[i].staging_offset,
+					.bufferRowLength = resources.images[i].buffer_row_length,
+					.bufferImageHeight = resources.images[i].buffer_image_height,
+					.imageSubresource = getImageLayersFromRange(resources.images[i].dst->createInfo().subresourceRange), // Copy to base mip only
+					.imageOffset = makeZeroOffset3D(),
+					.imageExtent = resources.images[i].dst->image()->createInfo().extent,
+				};
+				const VkCopyBufferToImageInfo2 info{
+					.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+					.pNext = nullptr,
+					.srcBuffer = _staging_buffer->buffer()->handle(),
+					.dstImage = resources.images[i].dst->image()->handle(),
+					.dstImageLayout = _dst_layout,
+					.regionCount = 1,
+					.pRegions = &region,
+				};
+				vkCmdCopyBufferToImage2(cmd, &info);
+				pushCallbackIFN(resources.images[i].completion_callback);
+			}
+			if (_staging_buffer)
+			{
+				_staging_buffer->buffer()->unMap();
+				_staging_buffer->buffer()->flush();
 			}
 
 			if (completion_callbacks.operator bool() && !completion_callbacks->callbacks.empty())
 			{
 				ctx.keepAlive(completion_callbacks);
-			}
+			}			
 		}
 	};
 
