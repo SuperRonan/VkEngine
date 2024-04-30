@@ -40,6 +40,29 @@ namespace vkl
 			res |= o;
 			return res;
 		}
+
+		constexpr ResourceState2& operator&=(ResourceState2 const& o)
+		{
+			access &= o.access;
+			stage &= o.stage;
+			// Keep this layout
+			return *this;
+		}
+
+		constexpr ResourceState2 operator& (ResourceState2 const& o) const
+		{
+			ResourceState2 res = *this;
+			res &= o;
+			return res;
+		}
+
+		constexpr static ResourceState2 Full()
+		{
+			return ResourceState2{
+				.access = VkAccessFlags2(size_t(-1)),
+				.stage = VkPipelineStageFlags2(size_t(-1)),
+			};
+		}
 	};
 
 	struct DoubleResourceState2
@@ -51,6 +74,12 @@ namespace vkl
 		{
 			return write_state == o.write_state && read_only_state == o.read_only_state;
 		}
+	};
+
+	struct DoubleDoubleResourceState2
+	{
+		DoubleResourceState2 additive;
+		DoubleResourceState2 multiplicative;
 	};
 
 	constexpr bool accessIsWrite1(VkAccessFlags access)

@@ -122,7 +122,7 @@ namespace vkl
 		vmaFlushAllocation(_allocator, _alloc, 0, _ci.size);
 	}
 
-	DoubleResourceState2 BufferInstance::getState(size_t tid, Range r) const
+	DoubleDoubleResourceState2 BufferInstance::getState(size_t tid, Range r) const
 	{
 		assert(statesAreSorted(tid));
 
@@ -133,9 +133,12 @@ namespace vkl
 		const size_t range_end = r.begin + r.len;
 		assert(_states.contains(tid));
 		const InternalStates & is = _states.at(tid);
+		assert(!is.states.empty());
 		assert(is.states[0].pos == 0);
 
-		DoubleResourceState2  res;
+		DoubleDoubleResourceState2  res;
+		res.multiplicative.write_state = ResourceState2::Full();
+		res.multiplicative.read_only_state = ResourceState2::Full();
 
 		for (size_t i = 0; i < is.states.size(); ++i)
 		{
@@ -158,8 +161,11 @@ namespace vkl
 			const ResourceState2 & ro_state = is.states[i].read_only_state;
 
 			// The sub range intersects with the requested range
-			res.write_state |= rw_state;
-			res.read_only_state |= ro_state;
+			res.additive.write_state |= rw_state;
+			res.additive.read_only_state |= ro_state;
+
+			res.multiplicative.write_state &= rw_state;
+			res.multiplicative.read_only_state &= ro_state;
 		}
 
 		return res;

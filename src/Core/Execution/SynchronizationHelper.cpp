@@ -1,5 +1,7 @@
 #include "SynchronizationHelper.hpp"
 
+#include <vulkan/vk_enum_string_helper.h>
+
 namespace vkl
 {
 	//void SynchronizationHelperV1::addSynch(const ResourceInstance& r)
@@ -687,29 +689,50 @@ namespace vkl
 	//	}
 	//}
 
+	template <class Stream>
+	Stream& logBufferBarrier(Stream & stream, BufferAndRangeInstance const& bari, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
+	{
+		stream << "Barrier from (" << string_VkAccessFlags2(synch_from.access) << ", " << string_VkPipelineStageFlags2(synch_from.stage) <<
+			") -> (" << string_VkAccessFlags2(synch_to.access) << ", " << string_VkPipelineStageFlags2(synch_to.stage) << 
+			") on Buffer: " << bari.buffer->handle() << " (" << bari.buffer->name() << "), Range("
+			<< bari.range.begin << ", " << bari.range.len << ")";
+		return stream;
+	}
+
+	template <class Stream>
+	Stream logImageBarrier(Stream & stream, std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
+	{
+		stream << "Barrier from (" << string_VkAccessFlags2(synch_from.access) << ", " << string_VkPipelineStageFlags2(synch_from.stage) << ", " << string_VkImageLayout(synch_from.layout) <<
+			") -> (" << string_VkAccessFlags2(synch_to.access) << ", " << string_VkPipelineStageFlags2(synch_to.stage) << ", " << string_VkImageLayout(synch_to.layout) <<
+			") on Image: " << ii->handle() << " (" << ii->name() << "), Range: "
+			<< string_VkImageAspectFlags(range.aspectMask)  << ", mips Range(" << range.baseMipLevel << ", " << range.levelCount << 
+			"), layers Range(" << range.baseArrayLayer << ", " << range.layerCount << ")" << std::endl;
+		return stream;
+	}
+
 
 	bool InlineSynchronizeBuffer(ExecutionContext& ctx, BufferAndRangeInstance const& bari, ResourceState2 const& begin_state, std::optional<ResourceState2> const& opt_end_state)
 	{
 		assert(bari.buffer);
 
-		const DoubleResourceState2 prev = bari.buffer->getState(ctx.resourceThreadId(), bari.range);
+		const DoubleDoubleResourceState2 prev = bari.buffer->getState(ctx.resourceThreadId(), bari.range);
 		const bool synch_to_readonly = accessIsReadonly2(begin_state.access);
 		bool add_barrier = false;
 		ResourceState2 synch_from;
 
 		if (synch_to_readonly)
 		{
-			const bool access_already_synch = (begin_state.access & prev.read_only_state.access) == begin_state.access;
-			const bool stage_already_synch = (begin_state.stage & prev.read_only_state.stage) == begin_state.stage;
+			const bool access_already_synch = (begin_state.access & prev.multiplicative.read_only_state.access) == begin_state.access;
+			const bool stage_already_synch = (begin_state.stage & prev.multiplicative.read_only_state.stage) == begin_state.stage;
 			if (!access_already_synch || !stage_already_synch)
 			{
-				synch_from = prev.write_state;
+				synch_from = prev.additive.write_state;
 				add_barrier = true;
 			}
 		}
 		else
 		{
-			synch_from = prev.read_only_state | prev.write_state;
+			synch_from = prev.additive.read_only_state | prev.additive.write_state;
 			add_barrier = true;
 		}
 
@@ -854,24 +877,24 @@ namespace vkl
 			{
 				const BufferSubRangeState & state = states[i];
 				const ResourceState2 & begin_state = state.state;
-				const DoubleResourceState2 prev = bi->getState(_ctx->resourceThreadId(), state.range);
+				const DoubleDoubleResourceState2 prev = bi->getState(_ctx->resourceThreadId(), state.range);
 				const bool synch_to_readonly = accessIsReadonly2(begin_state.access);
 				bool add_barrier = false;
 				ResourceState2 synch_from;
 
 				if (synch_to_readonly)
 				{
-					const bool access_already_synch = (begin_state.access & prev.read_only_state.access) == begin_state.access;
-					const bool stage_already_synch = (begin_state.stage & prev.read_only_state.stage) == begin_state.stage;
+					const bool access_already_synch = (begin_state.access & prev.multiplicative.read_only_state.access) == begin_state.access;
+					const bool stage_already_synch = (begin_state.stage & prev.multiplicative.read_only_state.stage) == begin_state.stage;
 					if (!access_already_synch || !stage_already_synch)
 					{
-						synch_from = prev.write_state;
+						synch_from = prev.additive.write_state;
 						add_barrier = true;
 					}
 				}
 				else
 				{
-					synch_from = prev.read_only_state | prev.write_state;
+					synch_from = prev.additive.read_only_state | prev.additive.write_state;
 					add_barrier = true;
 				}
 

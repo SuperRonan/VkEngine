@@ -171,7 +171,7 @@ namespace vkl
 			return getResourceKey(Range{.begin = 0, .len = _ci.size, });
 		}
 
-		DoubleResourceState2 getState(size_t tid, Range range)const;
+		DoubleDoubleResourceState2 getState(size_t tid, Range range)const;
 
 		void setState(size_t tid, Range range, ResourceState2 const& state);
 
