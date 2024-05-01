@@ -145,7 +145,6 @@ namespace vkl
 	CopyBufferToImage::CopyBufferToImage(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
-		_range(ci.range),
 		_dst(ci.dst),
 		_regions(ci.regions)
 	{}
@@ -165,19 +164,17 @@ namespace vkl
 			})
 		{}
 
-		std::shared_ptr<BufferInstance> _src = nullptr;
-		Buffer::Range _range;
+		BufferAndRangeInstance _src = {};
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		Array<VkBufferImageCopy> _regions = {};
+		Array<VkBufferImageCopy2> _regions = {};
 		uint32_t _default_buffer_row_length = 0;
 		uint32_t _default_buffer_image_height = 0;
 
 		virtual void clear() override
 		{
 			ExecutionNode::clear();
-			_src.reset();
-			_range = {};
+			_src = {};
 			_dst.reset();
 			_regions.clear();
 			_default_buffer_row_length = 0;
@@ -189,13 +186,15 @@ namespace vkl
 			std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
 
 			uint32_t n_regions = _regions.size32();
-			const VkBufferImageCopy* p_regions = _regions.data();
-			VkBufferImageCopy _reg;
+			const VkBufferImageCopy2* p_regions = _regions.data();
+			VkBufferImageCopy2 _reg;
 			if (n_regions == 0)
 			{
 				const VkExtent3D extent = _dst->image()->createInfo().extent;
-				_reg = VkBufferImageCopy{
-					.bufferOffset = 0,
+				_reg = VkBufferImageCopy2{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+					.pNext = nullptr,
+					.bufferOffset = _src.range.begin,
 					.bufferRowLength = _default_buffer_row_length,   // 0 => tightly packed
 					.bufferImageHeight = _default_buffer_image_height, // 0 => tightly packed
 					.imageSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
@@ -206,11 +205,17 @@ namespace vkl
 				n_regions = 1;
 			}
 
-			vkCmdCopyBufferToImage(
-				*cmd,
-				*_src, *_dst->image(), _dst_layout,
-				n_regions, p_regions
-			);
+			const VkCopyBufferToImageInfo2 info{
+				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
+				.pNext = nullptr,
+				.srcBuffer = _src.buffer->handle(),
+				.dstImage = _dst->image()->handle(),
+				.dstImageLayout = _dst_layout,
+				.regionCount = n_regions,
+				.pRegions = p_regions,
+			};
+
+			vkCmdCopyBufferToImage2(*cmd, &info);
 		}
 	};
 
@@ -224,8 +229,7 @@ namespace vkl
 		});
 		node->setName(name());
 
-		node->_src = ci.src->instance();
-		node->_range = ci.range;
+		node->_src = ci.src.getInstance();
 		node->_dst = ci.dst->instance();
 		node->_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 		node->_regions = ci.regions;
@@ -233,7 +237,7 @@ namespace vkl
 		node->_default_buffer_image_height = ci.default_buffer_image_height;
 
 		node->resources() += BufferUsage{
-			.bari = {node->_src, node->_range},
+			.bari = node->_src,
 			.begin_state = ResourceState2{
 				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
@@ -265,7 +269,6 @@ namespace vkl
 		{
 			const CopyInfo cinfo{
 				.src = info.src ? info.src : _src,
-				.range = info.range.len ? info.range : _range.value(),
 				.dst = info.dst ? info.dst : _dst,
 				.regions = info.regions.empty() ? _regions : info.regions,
 				.default_buffer_row_length = info.default_buffer_row_length,
@@ -274,6 +277,148 @@ namespace vkl
 			return getExecutionNode(context, cinfo);
 		};
 	}
+
+
+
+
+
+	CopyImageToBuffer::CopyImageToBuffer(CreateInfo const& ci) :
+		TransferCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_regions(ci.regions)
+	{}
+
+	struct CopyImageToBufferNode : public ExecutionNode
+	{
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+		CopyImageToBufferNode(CreateInfo const& ci) :
+			ExecutionNode(ExecutionNode::CI{
+				.app = ci.app,
+				.name = ci.name
+				})
+		{}
+
+		std::shared_ptr<ImageViewInstance> _src = nullptr;
+		BufferAndRangeInstance _dst = {};
+		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		Array<VkBufferImageCopy2> _regions = {};
+		uint32_t _default_buffer_row_length = 0;
+		uint32_t _default_buffer_image_height = 0;
+
+		virtual void clear() override
+		{
+			ExecutionNode::clear();
+			_src.reset();
+			_dst = {};
+			_regions.clear();
+			_default_buffer_row_length = 0;
+			_default_buffer_image_height = 0;
+		}
+
+		virtual void execute(ExecutionContext& ctx) override
+		{
+			std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
+
+			uint32_t n_regions = _regions.size32();
+			const VkBufferImageCopy2* p_regions = _regions.data();
+			VkBufferImageCopy2 _reg;
+			if (n_regions == 0)
+			{
+				const VkExtent3D extent = _src->image()->createInfo().extent;
+				_reg = VkBufferImageCopy2{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+					.pNext = nullptr,
+					.bufferOffset = _dst.range.begin,
+					.bufferRowLength = _default_buffer_row_length,   // 0 => tightly packed
+					.bufferImageHeight = _default_buffer_image_height, // 0 => tightly packed
+					.imageSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
+					.imageOffset = makeZeroOffset3D(),
+					.imageExtent = extent,
+				};
+				p_regions = &_reg;
+				n_regions = 1;
+			}
+
+			const VkCopyImageToBufferInfo2 info{
+				.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2,
+				.pNext = nullptr,
+				.srcImage = _src->image()->handle(),
+				.srcImageLayout = _src_layout,
+				.dstBuffer = _dst.buffer->handle(),
+				.regionCount = n_regions,
+				.pRegions = p_regions,
+			};
+
+			vkCmdCopyImageToBuffer2(*cmd, &info);
+		}
+	};
+
+	std::shared_ptr<ExecutionNode> CopyImageToBuffer::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
+	{
+		std::shared_ptr<CopyImageToBufferNode> node = _exec_node_cache.getCleanNode<CopyImageToBufferNode>([&]() {
+			return std::make_shared<CopyImageToBufferNode>(CopyImageToBufferNode::CI{
+				.app = application(),
+				.name = name(),
+				});
+			});
+		node->setName(name());
+
+		node->_src = ci.src->instance();
+		node->_dst = ci.dst.getInstance();
+		node->_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+		node->_regions = ci.regions;
+		node->_default_buffer_row_length = ci.default_buffer_row_length;
+		node->_default_buffer_image_height = ci.default_buffer_image_height;
+
+		node->resources() += ImageViewUsage{
+			.ivi = node->_src,
+			.begin_state = ResourceState2{
+				.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+				.layout = node->_src_layout,
+				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+			},
+			.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		};
+		
+		node->resources() += BufferUsage{
+			.bari = node->_dst,
+			.begin_state = ResourceState2{
+				.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+				.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+			},
+			.usage = VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR,
+		};
+
+		return node;
+	}
+
+	std::shared_ptr<ExecutionNode> CopyImageToBuffer::getExecutionNode(RecordContext& ctx)
+	{
+		return getExecutionNode(ctx, getDefaultCopyInfo());
+	}
+
+	Executable CopyImageToBuffer::with(CopyInfo const& info)
+	{
+		return [this, info](RecordContext& context)
+			{
+				const CopyInfo cinfo{
+					.src = info.src ? info.src : _src,
+					.dst = info.dst ? info.dst : _dst,
+					.regions = info.regions.empty() ? _regions : info.regions,
+					.default_buffer_row_length = info.default_buffer_row_length,
+					.default_buffer_image_height = info.default_buffer_image_height,
+				};
+				return getExecutionNode(context, cinfo);
+			};
+	}
+
+
 
 
 

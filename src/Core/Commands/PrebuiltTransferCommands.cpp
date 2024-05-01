@@ -11,6 +11,10 @@ namespace vkl
 			.app = app,
 			.name = "CopyBufferToImage",
 		}),
+		copy_image_to_buffer(CopyImageToBuffer::CI{
+			.app = app,
+			.name = "CopyImageToBuffer",
+		}),
 		copy_buffer(CopyBuffer::CI{
 			.app = app,
 			.name = "CopyBuffer",

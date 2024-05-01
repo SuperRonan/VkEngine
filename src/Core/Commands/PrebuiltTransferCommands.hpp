@@ -12,6 +12,7 @@ namespace vkl
 
 		CopyImage copy_image;
 		CopyBufferToImage copy_buffer_to_image;
+		CopyImageToBuffer copy_image_to_buffer;
 		CopyBuffer copy_buffer;
 		FillBuffer fill_buffer;
 		UpdateBuffer update_buffer;

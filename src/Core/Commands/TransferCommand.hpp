@@ -76,10 +76,9 @@ namespace vkl
 	{
 	protected:
 
-		std::shared_ptr<Buffer> _src = nullptr;
-		DynamicValue<Buffer::Range> _range = {};
+		BufferAndRange _src = {};
 		std::shared_ptr<ImageView> _dst = nullptr;
-		Array<VkBufferImageCopy> _regions = {};
+		Array<VkBufferImageCopy2> _regions = {};
 
 	public:
 
@@ -87,19 +86,17 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::shared_ptr<Buffer> src = nullptr;
-			DynamicValue<Buffer::Range> range = {};
+			BufferAndRange src = {};
 			std::shared_ptr<ImageView> dst = nullptr;
-			Array<VkBufferImageCopy> regions = {};
+			Array<VkBufferImageCopy2> regions = {};
 		};
 		using CI = CreateInfo;
 
 		struct CopyInfo
 		{
-			std::shared_ptr<Buffer> src = nullptr;
-			Buffer::Range range;
+			BufferAndRange src = {};
 			std::shared_ptr<ImageView> dst = nullptr;
-			Array<VkBufferImageCopy> regions = {};
+			Array<VkBufferImageCopy2> regions = {};
 			uint32_t default_buffer_row_length = 0;
 			uint32_t default_buffer_image_height = 0;
 		};
@@ -121,7 +118,58 @@ namespace vkl
 		{
 			return CopyInfo {
 				.src = _src,
-				.range = _range.value(),
+				.dst = _dst,
+				.regions = _regions,
+			};
+		}
+	};
+
+	class CopyImageToBuffer : public TransferCommand
+	{
+	protected:
+
+		std::shared_ptr<ImageView> _src = nullptr;
+		BufferAndRange _dst = {};
+		Array<VkBufferImageCopy2> _regions = {};
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ImageView> src = nullptr;
+			BufferAndRange dst = {};
+			Array<VkBufferImageCopy2> regions = {};
+		};
+		using CI = CreateInfo;
+
+		struct CopyInfo
+		{
+			std::shared_ptr<ImageView> src = nullptr;
+			BufferAndRange dst = {};
+			Array<VkBufferImageCopy2> regions = {};
+			uint32_t default_buffer_row_length = 0;
+			uint32_t default_buffer_image_height = 0;
+		};
+
+		CopyImageToBuffer(CreateInfo const& ci);
+
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, CopyInfo const& ci);
+
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
+
+		Executable with(CopyInfo const& cinfo);
+
+		Executable operator()(CopyInfo const& cinfo)
+		{
+			return with(cinfo);
+		}
+
+		CopyInfo getDefaultCopyInfo()
+		{
+			return CopyInfo{
+				.src = _src,
 				.dst = _dst,
 				.regions = _regions,
 			};
