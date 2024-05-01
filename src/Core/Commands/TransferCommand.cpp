@@ -1423,7 +1423,7 @@ namespace vkl
 
 				if (!use_update)
 				{
-					staging_offset += std::alignUp(std::min(buffer_range.len, total_upload_size), size_t(4));
+					staging_offset += std::alignUp(total_upload_size, size_t(4));
 				}
 
 				if (merge_synch)
@@ -1521,6 +1521,7 @@ namespace vkl
 		{
 			const ResourcesToUpload& resources = _upload_list;
 			VkCommandBuffer cmd = ctx.getCommandBuffer()->handle();
+			
 
 			if (_total_staging_size > 0 && !_staging_buffer)
 			{
@@ -1635,7 +1636,8 @@ namespace vkl
 			if (completion_callbacks.operator bool() && !completion_callbacks->callbacks.empty())
 			{
 				ctx.keepAlive(completion_callbacks);
-			}			
+			}
+			ctx.keepAlive(_staging_buffer);
 		}
 	};
 
