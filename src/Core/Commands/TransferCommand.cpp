@@ -17,7 +17,7 @@ namespace vkl
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
 		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		Array<VkImageCopy> _regions = {};
+		Array<VkImageCopy2> _regions = {};
 
 		struct CreateInfo
 		{
@@ -48,12 +48,14 @@ namespace vkl
 			// TODO move to CopyImage2
 			std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
 
-			const VkImageCopy* regions = _regions.data();
+			const VkImageCopy2* regions = _regions.data();
 			uint32_t n_regions = _regions.size32();
-			VkImageCopy _region;
+			VkImageCopy2 _region;
 			if (_regions.empty())
 			{
-				_region = VkImageCopy{
+				_region = VkImageCopy2{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
+					.pNext = nullptr,
 					.srcSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
 					.srcOffset = makeZeroOffset3D(),
 					.dstSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
@@ -64,11 +66,17 @@ namespace vkl
 				n_regions = 1;
 			}
 
-			vkCmdCopyImage(*cmd,
-				*_src->image(), _src_layout,
-				*_dst->image(), _dst_layout,
-				n_regions, regions
-			);
+			const VkCopyImageInfo2 info{
+				.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2,
+				.pNext = nullptr,
+				.srcImage = _src->image()->handle(),
+				.srcImageLayout = _src_layout,
+				.dstImage = _dst->image()->handle(),
+				.dstImageLayout = _dst_layout,
+				.regionCount = n_regions,
+				.pRegions = regions,
+			};
+			vkCmdCopyImage2(*cmd, &info);
 		}
 	};
 

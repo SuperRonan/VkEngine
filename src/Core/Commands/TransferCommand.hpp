@@ -27,7 +27,7 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<ImageView> _src, _dst;
-		std::vector<VkImageCopy> _regions;
+		MyVector<VkImageCopy2> _regions;
 
 
 	public:
@@ -38,7 +38,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<ImageView> src = nullptr;
 			std::shared_ptr<ImageView> dst = nullptr;
-			std::vector<VkImageCopy> regions = {};
+			MyVector<VkImageCopy2> regions = {};
 		};
 		using CI = CreateInfo;
 
@@ -46,7 +46,7 @@ namespace vkl
 		{
 			std::shared_ptr<ImageView> src = nullptr;
 			std::shared_ptr<ImageView> dst = nullptr;
-			std::vector<VkImageCopy> regions = {};
+			MyVector<VkImageCopy2> regions = {};
 		};
 
 		CopyImage(CreateInfo const& ci);
