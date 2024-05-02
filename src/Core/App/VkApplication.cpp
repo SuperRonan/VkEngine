@@ -31,13 +31,13 @@ namespace vkl
 		int default_validation = 0;
 		int default_name_vk_objects = 0;
 		int default_cmd_labels = 0;
-		int default_verbosity = 0;
+		int default_verbosity = 3;
 
 #if VKL_BUILD_ANY_DEBUG
 		default_validation = 1;
 		default_name_vk_objects = 1;
 		default_cmd_labels = 1;
-		default_verbosity = 3;
+		default_verbosity = 0;
 #endif
 #if VKL_BUILD_RELEASE_WITH_DEBUG_INFO
 		default_verbosity = 2;

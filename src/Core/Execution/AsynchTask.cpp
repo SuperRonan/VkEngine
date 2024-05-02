@@ -98,6 +98,7 @@ namespace vkl
 		Status prev_satus = _status;
 		setRunning();
 		_begin_time = Clock::now();
+		const bool can_log = _verbosity >= verbosity;
 
 		bool all_success = std::all_of(_dependencies.begin(), _dependencies.end(), [](std::shared_ptr<AsynchTask> const& dep) {
 			return dep->getStatus() == Status::Success;
@@ -107,7 +108,7 @@ namespace vkl
 		{
 			std::unique_lock lock(_mutex);
 			// Cancel
-			if (verbosity >= _verbosity)
+			if (can_log)
 			{
 				std::unique_lock lock(g_mutex);
 				std::cout << "Canceling task: " << name() << std::endl;
@@ -134,7 +135,7 @@ namespace vkl
 			ReturnType res;
 			try
 			{
-				if (verbosity >= _verbosity)
+				if (can_log)
 				{
 					if(!g_mutex_locked)
 						g_mutex.lock();
