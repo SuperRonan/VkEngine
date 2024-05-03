@@ -48,6 +48,11 @@ namespace vkl
 
 		void wait(uint64_t timeout = UINT64_MAX);
 
+		VkResult getStatus()const
+		{
+			return vkGetFenceStatus(device(), _handle);
+		}
+
 		void reset();
 
 		void waitAndReset();

@@ -115,7 +115,7 @@ namespace vkl
 	{
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+			VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME,
 			VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
 			VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
 			VK_EXT_MESH_SHADER_EXTENSION_NAME,
@@ -139,6 +139,7 @@ namespace vkl
 		const VkBool32 t = VK_TRUE;
 		const VkBool32 f = VK_FALSE;
 		features.features_13.synchronization2 = t;
+		features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
 		features.features2.features.geometryShader = t;
 		
 		features.features2.features.samplerAnisotropy = t;
@@ -199,6 +200,8 @@ namespace vkl
 			res.insert(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 		res.insert(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
+		res.insert(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+		res.insert(VK_EXT_SURFACE_MAINTENANCE_1_EXTENSION_NAME);
 		
 		return res;
 	}
@@ -215,7 +218,7 @@ namespace vkl
 		{
 			VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
 
- 			int _ = 0;
+ 			VKL_BREAKPOINT_HANDLE;
 		}
 		return VK_FALSE;
 	}

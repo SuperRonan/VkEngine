@@ -484,11 +484,12 @@ namespace vkl
 		return AquireResult(image_index);
 	}
 
-	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores)
+	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores, VkFence fence)
 	{
 		VkSwapchainKHR swapchain = *_swapchain->instance();
 		VkPresentInfoKHR presentation{
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+			.pNext = nullptr,
 			.waitSemaphoreCount = num_semaphores,
 			.pWaitSemaphores = semaphores,
 			.swapchainCount = 1,
@@ -496,6 +497,22 @@ namespace vkl
 			.pImageIndices = &_current_frame_info.index,
 			.pResults = nullptr,
 		};
+		VkSwapchainPresentFenceInfoEXT present_fence;
+
+		if (fence)
+		{
+			if (application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1)
+			{
+				present_fence = VkSwapchainPresentFenceInfoEXT{
+					.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT,
+					.pNext = nullptr,
+					.swapchainCount = 1,
+					.pFences = &fence,
+				};
+				presentation.pNext = &present_fence;
+			}
+		}
+
 		VkResult present_res = vkQueuePresentKHR(_app->queues().present, &presentation);
 		if (present_res == VK_ERROR_OUT_OF_DATE_KHR || present_res == VK_SUBOPTIMAL_KHR)
 		{

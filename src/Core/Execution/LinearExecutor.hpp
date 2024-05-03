@@ -111,20 +111,26 @@ namespace vkl
 
 			uint32_t finish_counter = 0;			
 
-			Event(VkApplication* app, std::string const& name, Type type, bool create_synch):
+			Event(VkApplication* app, std::string const& name, Type type, bool create_fence, bool create_semaphore):
 				VkObject(app, name),
 				type(type)
 			{
-				if (create_synch)
+				if (create_fence)
+				{
+					signal_fence = std::make_shared<Fence>(application(), this->name() + ".SignalFence");
+				}
+				if (create_semaphore)
 				{
 					signal_semaphore = std::make_shared<Semaphore>(application(), this->name() + ".SignalSemaphore");
-					signal_fence = std::make_shared<Fence>(application(), this->name() + ".SignalFence");
 				}
 			}
 
 			virtual ~Event() override
 			{
-				int _ = 0;
+				cb.reset();
+				swapchain.reset();
+				wait_semaphores.clear();
+				signal_semaphore.reset();
 			}
 		};
 

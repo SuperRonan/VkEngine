@@ -29,6 +29,8 @@ namespace vkl
 		features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 		features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 
+		swapchain_maintenance1_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT;
+
 		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
 		index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
 		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
@@ -50,6 +52,9 @@ namespace vkl
 			chain += &features_12;
 		if (version >= VK_MAKE_VERSION(1, 3, 0))
 			chain += &features_13;
+
+		if(filter_extensions(VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME))
+			chain += &swapchain_maintenance1_ext;
 
 		if(filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			chain += &line_raster_ext;
@@ -162,6 +167,8 @@ namespace vkl
 
 		//COMBINE_VK_FEATURES(VkPhysicalDevice, , , );
 
+		COMBINE_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
+
 		COMBINE_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);
@@ -224,6 +231,8 @@ namespace vkl
 
 		//res += COUNT_VK_FEATURES(VkPhysicaldevice, , , );
 		
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
+
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);

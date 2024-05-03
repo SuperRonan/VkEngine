@@ -185,13 +185,20 @@ namespace vkl
 	{
 		++_frame_index;
 
-
-		std::shared_ptr<Event> event = std::make_shared<Event>(application(), name() + ".AquireFrame_" + std::to_string(_frame_index), Event::Type::SwapchainAquire, true);
+		std::shared_ptr<Event> event = std::make_shared<Event>(application(), name() + ".AquireFrame_" + std::to_string(_frame_index), Event::Type::SwapchainAquire, true, true);
 
 		VkWindow::AquireResult aquired = _window->aquireNextImage(event->signal_semaphore, event->signal_fence);
 		event->swapchain = _window->swapchain()->instance();
 		event->aquired_id = aquired.swap_index;
-		if (_latest_present_event)
+		if (_latest_synch_cb && _latest_synch_cb->signal_semaphore)
+		{
+			event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
+		}
+		if (_latest_aquire_event && _latest_aquire_event->signal_semaphore)
+		{
+			event->wait_semaphores.push_back(_latest_aquire_event->signal_semaphore);
+		}
+		if (_latest_present_event && _latest_present_event->signal_semaphore)
 		{
 			event->wait_semaphores.push_back(_latest_present_event->signal_semaphore); // Hopefully avoid a Validation Error that the semaphore is destroyed to early
 		}
@@ -240,11 +247,31 @@ namespace vkl
 	{
 		//std::cout << "Present: " << std::endl;
 		//std::cout << "Waiting on semaphore " << _latest_synch_cb->signal_semaphore->name() << std::endl;
-		_latest_present_event = std::make_shared<Event>(application(), "Present"s, Event::Type::Present, false);
+		VkResult status = VkResult::VK_RESULT_MAX_ENUM;
+		if (_latest_present_event)
+		{
+			if (_latest_present_event->signal_fence)
+			{
+				status = _latest_present_event->signal_fence->getStatus();
+			}
+		}
+		const bool create_fence = application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1;
+		_latest_present_event = std::make_shared<Event>(application(), "Present"s, Event::Type::Present, create_fence, false);
 		_latest_present_event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
+
+		static thread_local MyVector<VkSemaphore> vk_semaphores;
+		vk_semaphores.resize(_latest_present_event->wait_semaphores.size());
+		for (size_t i = 0; i < _latest_present_event->wait_semaphores.size(); ++i)
+		{
+			vk_semaphores[i] = _latest_present_event->wait_semaphores[i]->handle();
+		}
+		VkFence fence = VK_NULL_HANDLE;
+		if (create_fence)
+		{
+			fence = _latest_present_event->signal_fence->handle();
+		}
+		_window->present(vk_semaphores.size32(), vk_semaphores.data(), fence);
 		_previous_events.push(_latest_present_event);
-		VkSemaphore sem_to_wait = _latest_synch_cb->signal_semaphore->handle();
-		_window->present(1, &sem_to_wait);
 	}
 
 	void LinearExecutor::execute(Command& cmd)
@@ -320,7 +347,7 @@ namespace vkl
 		_context.setCommandBuffer(cb);
 
 
-		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true);
+		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true, true);
 		event->cb = cb;
 		event->queue = application()->queues().graphics;
 		if (_latest_synch_cb && _latest_synch_cb->queue != event->queue) // No need to synch with a semaphore on the same queue
@@ -405,12 +432,12 @@ namespace vkl
 		while (!_previous_events.empty())
 		{
 			std::shared_ptr<Event> event = _previous_events.front();
-			
+			// TODO correctly handle present event when no fence
 			const VkResult res = [&](){
 				VkResult r = VK_SUCCESS;
 				if (event->signal_fence)
 				{
-					r = vkGetFenceStatus(device(), event->signal_fence->handle());
+					r = event->signal_fence->getStatus();
 				}
 				return r;
 			}();
@@ -423,8 +450,7 @@ namespace vkl
 				// TODO check device lost
 				assert(res == VK_SUCCESS);
 
-				// For safety, it tends to create a validation error (signal semaphore destroyed while being used by a cb) it is destroyed to early, but I don't get why yet
-				if (event->finish_counter > 1)
+				if (event->finish_counter >= 0)
 				{
 					_previous_events.pop();
 				}
@@ -443,8 +469,8 @@ namespace vkl
 		recyclePreviousEvents();
 		
 		_mutex.lock();
-		std::vector<VkSemaphore> sem_to_wait;
-		std::vector<VkPipelineStageFlags> stage_to_wait;
+		static thread_local std::vector<VkSemaphore> sem_to_wait;
+		static thread_local std::vector<VkPipelineStageFlags> stage_to_wait;
 		for (size_t i = 0; i < _pending_cbs.size(); ++i)
 		{
 			const std::shared_ptr<Event> & pending = _pending_cbs[i];
@@ -477,6 +503,7 @@ namespace vkl
 			assert(pending->queue);
 			VkResult res = vkQueueSubmit(pending->queue, 1, &submission, fence_to_signal);
 			VK_CHECK(res, "Failed submission");
+			//vkDeviceWaitIdle(device());
 			_previous_events.push(pending);
 		}
 		_pending_cbs.clear();

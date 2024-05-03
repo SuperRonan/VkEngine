@@ -226,7 +226,7 @@ namespace vkl
 
 		AquireResult aquireNextImage(std::shared_ptr<Semaphore> semaphore_to_signal, std::shared_ptr<Fence> fence_to_signal);
 
-		void present(uint32_t num_semaphores, VkSemaphore* semaphores);
+		void present(uint32_t num_semaphores, VkSemaphore* semaphores, VkFence fence = VK_NULL_HANDLE);
 
 		bool updateResources(UpdateContext & ctx);
 
