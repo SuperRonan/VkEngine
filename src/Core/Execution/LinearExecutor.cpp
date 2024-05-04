@@ -124,10 +124,27 @@ namespace vkl
 		{
 			createDebugRenderer();
 		}
+
+		if (_window && application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1 == VK_FALSE)
+		{
+			_window->swapchain()->setInvalidationCallback(Callback{
+				.callback = [this]() {
+					// Maybe redudant
+					vkDeviceWaitIdle(device());
+					_previous_events.clear();
+				},
+				.id = this,
+			});
+		}
 	}
 
 	LinearExecutor::~LinearExecutor()
 	{
+		vkDeviceWaitIdle(device());
+		if (_window && application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1 == VK_FALSE)
+		{
+			_window->swapchain()->removeInvalidationCallback(this);
+		}
 		if (_render_gui)
 		{
 			//ImGui_ImplVulkan_DestroyDeviceObjects();
@@ -206,7 +223,7 @@ namespace vkl
 		_latest_aquire_event = event;
 		
 		_mutex.lock();
-		_previous_events.push(std::move(event));
+		_previous_events.push_back(std::move(event));
 
 		_mutex.unlock();
 		int _ = 0;
@@ -270,8 +287,10 @@ namespace vkl
 		{
 			fence = _latest_present_event->signal_fence->handle();
 		}
+		_latest_present_event->swapchain = _latest_aquire_event->swapchain;
+		_latest_present_event->aquired_id = _latest_aquire_event->aquired_id;
 		_window->present(vk_semaphores.size32(), vk_semaphores.data(), fence);
-		_previous_events.push(_latest_present_event);
+		_previous_events.push_back(_latest_present_event);
 	}
 
 	void LinearExecutor::execute(Command& cmd)
@@ -432,12 +451,35 @@ namespace vkl
 		while (!_previous_events.empty())
 		{
 			std::shared_ptr<Event> event = _previous_events.front();
-			// TODO correctly handle present event when no fence
 			const VkResult res = [&](){
-				VkResult r = VK_SUCCESS;
+				VkResult r = VK_NOT_READY;
 				if (event->signal_fence)
 				{
 					r = event->signal_fence->getStatus();
+				}
+				else if (event->type == Event::Type::Present)
+				{
+					// https://github.com/KhronosGroup/Vulkan-Docs/blob/main/proposals/VK_EXT_swapchain_maintenance1.adoc#11-recycling-present-semaphores
+					// To ensure this present event is "finished", find the next aquire on the same swapchain with the same index
+					// Warning: if the swapchain is renewed, this code cannot work, and will block, _previous_events will grow
+					// So the invalidation callback from the executor on the swapchain solves this issue
+					auto it = _previous_events.begin();
+					if (it != _previous_events.end())
+					{
+						++it;
+						while (it != _previous_events.end())
+						{
+							if ((*it)->type == Event::Type::SwapchainAquire)
+							{
+								if ((*it)->swapchain == event->swapchain && (*it)->aquired_id == event->aquired_id)
+								{
+									r = ((*it)->signal_fence->getStatus());
+									break;			
+								}
+							}
+							++it;
+						}
+					}
 				}
 				return r;
 			}();
@@ -449,16 +491,7 @@ namespace vkl
 			{
 				// TODO check device lost
 				assert(res == VK_SUCCESS);
-
-				if (event->finish_counter >= 0)
-				{
-					_previous_events.pop();
-				}
-				else
-				{
-					event->finish_counter++;
-				}
-				//std::cout << "Event " << event->name() << " is Finished!" << std::endl;
+				_previous_events.pop_front();
 			}
 		}
 		_mutex.unlock();
@@ -504,7 +537,7 @@ namespace vkl
 			VkResult res = vkQueueSubmit(pending->queue, 1, &submission, fence_to_signal);
 			VK_CHECK(res, "Failed submission");
 			//vkDeviceWaitIdle(device());
-			_previous_events.push(pending);
+			_previous_events.push_back(pending);
 		}
 		_pending_cbs.clear();
 		_mutex.unlock();
@@ -518,7 +551,7 @@ namespace vkl
 		{
 			Event& event = *_previous_events.front();
 			//event.signal_fence->wait(timeout);
-			_previous_events.pop();
+			_previous_events.pop_front();
 		}
 	}
 }

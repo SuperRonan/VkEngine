@@ -134,7 +134,7 @@ namespace vkl
 			}
 		};
 
-		std::queue<std::shared_ptr<Event>> _previous_events = {};
+		std::deque<std::shared_ptr<Event>> _previous_events = {};
 
 		std::vector<std::shared_ptr<Event>> _pending_cbs = {};
 		
