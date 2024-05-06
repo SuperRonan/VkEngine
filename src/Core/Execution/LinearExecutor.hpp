@@ -12,6 +12,9 @@
 
 namespace vkl
 {
+	
+	struct QueueEvent;
+
 	class ExecutionThread : public ExecutionRecorder
 	{
 	protected:
@@ -84,63 +87,13 @@ namespace vkl
 
 		ExecutionThread* _current_thread = nullptr;
 
-		// Event is not a good name imo (means something else in vulkan)
-		struct Event : public VkObject
-		{	
-			enum class Type {
-				CommandBuffer,
-				SwapchainAquire,
-				Present,
-				MAX_ENUM,
-			};
-			Type type = Type::MAX_ENUM;
-			
-			std::shared_ptr<CommandBuffer> cb = nullptr;
-			VkQueue queue = VK_NULL_HANDLE;
-			
-			std::shared_ptr<SwapchainInstance> swapchain = nullptr;
-			uint32_t aquired_id = -1;
+		std::deque<std::shared_ptr<QueueEvent>> _previous_events = {};
 
-			std::vector<std::shared_ptr<Semaphore>> wait_semaphores = {};
-			std::shared_ptr<Semaphore> signal_semaphore = nullptr;
-
-			//std::vector<std::shared_ptr<Fence>> wait_fences = {};
-			std::shared_ptr<Fence> signal_fence = nullptr;
-
-			std::vector<std::shared_ptr<VkObject>> dependecies = {};
-
-			uint32_t finish_counter = 0;			
-
-			Event(VkApplication* app, std::string const& name, Type type, bool create_fence, bool create_semaphore):
-				VkObject(app, name),
-				type(type)
-			{
-				if (create_fence)
-				{
-					signal_fence = std::make_shared<Fence>(application(), this->name() + ".SignalFence");
-				}
-				if (create_semaphore)
-				{
-					signal_semaphore = std::make_shared<Semaphore>(application(), this->name() + ".SignalSemaphore");
-				}
-			}
-
-			virtual ~Event() override
-			{
-				cb.reset();
-				swapchain.reset();
-				wait_semaphores.clear();
-				signal_semaphore.reset();
-			}
-		};
-
-		std::deque<std::shared_ptr<Event>> _previous_events = {};
-
-		std::vector<std::shared_ptr<Event>> _pending_cbs = {};
+		std::vector<std::shared_ptr<QueueEvent>> _pending_cbs = {};
 		
-		std::shared_ptr<Event> _latest_synch_cb = nullptr;
-		std::shared_ptr<Event> _latest_aquire_event = nullptr;
-		std::shared_ptr<Event> _latest_present_event = nullptr;
+		std::shared_ptr<QueueEvent> _latest_synch_cb = nullptr;
+		std::shared_ptr<QueueEvent> _latest_aquire_event = nullptr;
+		std::shared_ptr<QueueEvent> _latest_present_event = nullptr;
 
 		void recyclePreviousEvents();
 

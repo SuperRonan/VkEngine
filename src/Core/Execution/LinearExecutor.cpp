@@ -88,6 +88,74 @@ namespace vkl
 	}
 
 
+
+
+
+	struct QueueEvent : public VkObject
+	{
+		enum class Type {
+			CommandBuffer,
+			SwapchainAquire,
+			Present,
+			MAX_ENUM,
+		};
+		Type type = Type::MAX_ENUM;
+
+		std::shared_ptr<CommandBuffer> cb = nullptr;
+		VkQueue queue = VK_NULL_HANDLE;
+
+		std::shared_ptr<SwapchainInstance> swapchain = nullptr;
+		uint32_t aquired_id = -1;
+
+		std::vector<std::shared_ptr<Semaphore>> wait_semaphores = {};
+		std::shared_ptr<Semaphore> signal_semaphore = nullptr;
+
+		//std::vector<std::shared_ptr<Fence>> wait_fences = {};
+		std::shared_ptr<Fence> signal_fence = nullptr;
+
+		std::vector<std::shared_ptr<VkObject>> dependecies = {};
+
+		uint32_t finish_counter = 0;
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			Type type = Type::MAX_ENUM;
+			bool create_fence = false;
+			bool create_semaphore = false;
+		};
+		using CI = CreateInfo;
+
+		QueueEvent(CreateInfo const& ci) :
+			VkObject(ci.app, ci.name),
+			type(ci.type)
+		{
+			if (ci.create_fence)
+			{
+				signal_fence = std::make_shared<Fence>(application(), this->name() + ".SignalFence");
+			}
+			if (ci.create_semaphore)
+			{
+				signal_semaphore = std::make_shared<Semaphore>(application(), this->name() + ".SignalSemaphore");
+			}
+		}
+
+		virtual ~QueueEvent() override
+		{
+			cb.reset();
+			swapchain.reset();
+			wait_semaphores.clear();
+			signal_semaphore.reset();
+		}
+	};
+
+
+
+
+
+
+
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
 		Executor(Executor::CI{
 			.app = ci.app ? ci.app : ci.window->application(), 
@@ -202,7 +270,13 @@ namespace vkl
 	{
 		++_frame_index;
 
-		std::shared_ptr<Event> event = std::make_shared<Event>(application(), name() + ".AquireFrame_" + std::to_string(_frame_index), Event::Type::SwapchainAquire, true, true);
+		std::shared_ptr<QueueEvent> event = std::make_shared<QueueEvent>(QueueEvent::CI{ 
+			.app = application(), 
+			.name = name() + ".AquireFrame_" + std::to_string(_frame_index), 
+			.type = QueueEvent::Type::SwapchainAquire, 
+			.create_fence = true, 
+			.create_semaphore = true,
+		});
 
 		VkWindow::AquireResult aquired = _window->aquireNextImage(event->signal_semaphore, event->signal_fence);
 		event->swapchain = _window->swapchain()->instance();
@@ -273,7 +347,13 @@ namespace vkl
 			}
 		}
 		const bool create_fence = application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1;
-		_latest_present_event = std::make_shared<Event>(application(), "Present"s, Event::Type::Present, create_fence, false);
+		_latest_present_event = std::make_shared<QueueEvent>(QueueEvent::CI{
+			.app = application(), 
+			.name = "Present"s, 
+			.type = QueueEvent::Type::Present, 
+			.create_fence = create_fence, 
+			.create_semaphore = false,
+		});
 		_latest_present_event->wait_semaphores.push_back(_latest_synch_cb->signal_semaphore);
 
 		static thread_local MyVector<VkSemaphore> vk_semaphores;
@@ -366,7 +446,13 @@ namespace vkl
 		_context.setCommandBuffer(cb);
 
 
-		std::shared_ptr<Event> event = std::make_shared<Event>(application(), cb->name(), Event::Type::CommandBuffer, true, true);
+		std::shared_ptr<QueueEvent> event = std::make_shared<QueueEvent>(QueueEvent::CI{
+			.app = application(), 
+			.name = cb->name(), 
+			.type = QueueEvent::Type::CommandBuffer, 
+			.create_fence = true, 
+			.create_semaphore = true,
+		});
 		event->cb = cb;
 		event->queue = application()->queues().graphics;
 		if (_latest_synch_cb && _latest_synch_cb->queue != event->queue) // No need to synch with a semaphore on the same queue
@@ -450,14 +536,14 @@ namespace vkl
 		// Removed finished Events
 		while (!_previous_events.empty())
 		{
-			std::shared_ptr<Event> event = _previous_events.front();
+			std::shared_ptr<QueueEvent> event = _previous_events.front();
 			const VkResult res = [&](){
 				VkResult r = VK_NOT_READY;
 				if (event->signal_fence)
 				{
 					r = event->signal_fence->getStatus();
 				}
-				else if (event->type == Event::Type::Present)
+				else if (event->type == QueueEvent::Type::Present)
 				{
 					// https://github.com/KhronosGroup/Vulkan-Docs/blob/main/proposals/VK_EXT_swapchain_maintenance1.adoc#11-recycling-present-semaphores
 					// To ensure this present event is "finished", find the next aquire on the same swapchain with the same index
@@ -469,7 +555,7 @@ namespace vkl
 						++it;
 						while (it != _previous_events.end())
 						{
-							if ((*it)->type == Event::Type::SwapchainAquire)
+							if ((*it)->type == QueueEvent::Type::SwapchainAquire)
 							{
 								if ((*it)->swapchain == event->swapchain && (*it)->aquired_id == event->aquired_id)
 								{
@@ -506,7 +592,7 @@ namespace vkl
 		static thread_local std::vector<VkPipelineStageFlags> stage_to_wait;
 		for (size_t i = 0; i < _pending_cbs.size(); ++i)
 		{
-			const std::shared_ptr<Event> & pending = _pending_cbs[i];
+			const std::shared_ptr<QueueEvent> & pending = _pending_cbs[i];
 			//std::cout << "Submit: " <<std::endl;
 			//std::cout << "Signaling semaphore: " << pending->signal_semaphore->name() <<std::endl;
 			//std::cout << "Waiting on semaphores: ";
@@ -549,7 +635,7 @@ namespace vkl
 		vkDeviceWaitIdle(device());
 		while (!_previous_events.empty())
 		{
-			Event& event = *_previous_events.front();
+			QueueEvent& event = *_previous_events.front();
 			//event.signal_fence->wait(timeout);
 			_previous_events.pop_front();
 		}
