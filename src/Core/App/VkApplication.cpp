@@ -248,15 +248,15 @@ namespace vkl
 	{
 		uint32_t extensionCount = 0;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-		VK_LOG << extensionCount << " extensions supported\n";
+		//VK_LOG << extensionCount << " extensions supported\n";
 
 		std::vector<VkExtensionProperties> available_extensions(extensionCount);
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, available_extensions.data());
 
-		for (const auto& e : available_extensions)
-		{
-			VK_LOG << '\t' << e.extensionName << '\n';
-		}
+		//for (const auto& e : available_extensions)
+		//{
+		//	VK_LOG << '\t' << e.extensionName << '\n';
+		//}
 
 
 		if (_options.enable_validation)
