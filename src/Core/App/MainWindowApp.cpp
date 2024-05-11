@@ -36,4 +36,11 @@ namespace vkl
 		_desired_window_options.app = this;
 		_main_window = std::make_shared<VkWindow>(_desired_window_options);
 	}
+
+	VkApplication::DesiredQueuesInfo MainWindowApp::getDesiredQueuesInfo()
+	{
+		DesiredQueuesInfo res = VkApplication::getDesiredQueuesInfo();
+		res.need_presentation = true;
+		return res;
+	}
 }

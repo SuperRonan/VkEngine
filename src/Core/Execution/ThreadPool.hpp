@@ -34,6 +34,8 @@ namespace vkl
 			pushTasks(tasks.data(), tasks.size());
 		}
 
+		virtual bool isMultiThreaded() const = 0;
+
 		// Returns true if all tasks were completed
 		// Returns false if some task could not be launched because some dependencies could not be completed
 		virtual bool waitAll() = 0;
@@ -75,6 +77,11 @@ namespace vkl
 		virtual bool waitAll() override
 		{
 			return _pending_tasks.empty();
+		}
+
+		virtual bool isMultiThreaded() const override
+		{
+			return false;
 		}
 
 	};
@@ -154,6 +161,11 @@ namespace vkl
 		virtual void pushTasks(const std::shared_ptr<AsynchTask> * tasks, size_t n) override;
 
 		virtual bool waitAll() override;
+
+		virtual bool isMultiThreaded() const override
+		{
+			return true;
+		}
 
 	};
 } // namespace vkl

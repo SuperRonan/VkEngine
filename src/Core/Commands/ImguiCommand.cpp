@@ -132,6 +132,7 @@ namespace vkl
 
 	ImguiCommand::ImguiCommand(CreateInfo const& ci) :
 		DeviceCommand(ci.app, ci.name),
+		_queue(ci.queue),
 		_swapchain(ci.swapchain)
 	{
 		createRenderPassIFP();
@@ -270,8 +271,8 @@ namespace vkl
 			.Instance = _app->instance(),
 			.PhysicalDevice = _app->physicalDevice(),
 			.Device = device(),
-			.QueueFamily = _app->getQueueFamilyIndices().graphics_family.value(),
-			.Queue = _app->queues().graphics,
+			.QueueFamily = _queue->familyIndex(),
+			.Queue = _queue->handle(),
 			.DescriptorPool = *_desc_pool,
 			.MinImageCount = static_cast<uint32_t>(2),
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 

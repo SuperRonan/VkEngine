@@ -80,13 +80,13 @@ namespace vkl
 		TaskPriority _priority;
 		Status _status = Status::MAX_ENUM;
 
-		 LambdaType _lambda = {};
+		LambdaType _lambda = {};
 
-		 std::chrono::time_point<Clock> _creation_time;
-		 std::chrono::time_point<Clock> _begin_time;
-		 Clock::duration _duration;
+		std::chrono::time_point<Clock> _creation_time;
+		std::chrono::time_point<Clock> _begin_time;
+		Clock::duration _duration;
 
-		 bool _cancel_while_running = false;
+		bool _cancel_while_running = false;
 
 		// Callbacks on completion?
 

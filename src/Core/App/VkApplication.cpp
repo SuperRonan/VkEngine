@@ -1,11 +1,14 @@
 
 #include "VkApplication.hpp"
-#include <Core/VkObjects/CommandBuffer.hpp>
-#include <Core/Execution/SamplerLibrary.hpp>
-#include <Core/Rendering/TextureFromFile.hpp>
-#include <Core/VkObjects/DescriptorSetLayout.hpp>
 
+#include <Core/VkObjects/CommandBuffer.hpp>
+#include <Core/VkObjects/Queue.hpp>
+#include <Core/VkObjects/DescriptorSetLayout.hpp>
 #include <Core/VkObjects/VulkanExtensionsSet.hpp>
+
+#include <Core/Execution/SamplerLibrary.hpp>
+
+#include <Core/Rendering/TextureFromFile.hpp>
 
 #include <Core/Commands/PrebuiltTransferCommands.hpp>
 
@@ -116,6 +119,9 @@ namespace vkl
 		return {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME,
+			VK_KHR_PRESENT_ID_EXTENSION_NAME,
+			VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+
 			VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
 			VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
 			VK_EXT_MESH_SHADER_EXTENSION_NAME,
@@ -206,10 +212,17 @@ namespace vkl
 		return res;
 	}
 
-
-	bool VkApplication::QueueFamilyIndices::isComplete()const
+	VkApplication::DesiredQueuesInfo VkApplication::getDesiredQueuesInfo()
 	{
-		return graphics_family.has_value() && transfer_family.has_value() && present_family.has_value() && compute_family.has_value();
+		DesiredQueuesInfo res;
+		res.need_presentation = false;
+		res.queues.push_back(DesiredQueueInfo{
+			.flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
+			.priority = 1,
+			.required = true,
+			.name = "MainQueue",
+		});
+		return res;
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL VkApplication::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
@@ -334,130 +347,168 @@ namespace vkl
 		}
 	}
 
-	VkApplication::QueueFamilyIndices VkApplication::findQueueFamilies(VkPhysicalDevice device)
+	VkQueueFlags VkApplication::DesiredQueuesInfo::totalFlags()const
 	{
-		QueueFamilyIndices indices;
+		VkQueueFlags res = 0;
+		for (const auto& q : queues)
+		{
+			res |= q.flags;
+		}
+		return res;
+	}
+
+	VkApplication::DeviceCandidateQueues VkApplication::findQueueFamilies(VkPhysicalDevice device, DesiredQueuesInfo const& desired)
+	{
+		DeviceCandidateQueues res;
 
 		uint32_t queue_family_count = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
 
 		//VK_LOG << "Found " << queue_family_count << " queue(s).\n";
 
-		std::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+		MyVector<VkQueueFamilyProperties> queue_families(queue_family_count);
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
 
-		uint32_t i = 0;
-		for (const auto& queue_family : queue_families)
+		res.queues.resize(queue_family_count);
+		for (uint32_t i = 0; i < queue_family_count; ++i)
 		{
-			if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-			{
-				indices.graphics_family = i;
-			}
-			if ((queue_family.queueFlags & VK_QUEUE_TRANSFER_BIT) && !((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) || (queue_family.queueFlags & VK_QUEUE_COMPUTE_BIT)))
-			{
-				indices.transfer_family = i;
-			}
-			if ((queue_family.queueFlags & VK_QUEUE_COMPUTE_BIT) && !(queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT))
-			{
-				indices.compute_family = i;
-			}
-			if (vkGetPhysicalDeviceWin32PresentationSupportKHR(device, i) && !indices.present_family.has_value())
-			{
-				indices.present_family = i;
-			}
-
-			if (indices.isComplete())
-				break;
-
-			++i;
-		}
-		if (!indices.isComplete())
-		{
-			VK_LOG << "Warning, failed to find all the queue\n";
+			res.queues[i].props = queue_families[i];
+			res.total_flags |= queue_families[i].queueFlags;
 		}
 
-		return indices;
+		res.desired_to_info.resize(desired.queues.size());
+		for (size_t j = 0; j < desired.queues.size(); ++j)
+		{
+			const auto & desired_queue = desired.queues[j];
+			assert(desired_queue.flags != 0);
+			uint32_t best_matching_id = uint32_t(-1);
+			uint32_t best_matching_flags = std::numeric_limits<uint32_t>::max();
+			const uint32_t expected_flags_count = std::popcount(desired_queue.flags);
+			for (uint32_t i = 0; i < queue_family_count; ++i)
+			{
+				const VkQueueFlags inter = desired_queue.flags & queue_families[i].queueFlags;
+				const uint32_t count = std::popcount(inter);
+				const bool enough = count >= expected_flags_count;
+				if (enough && (count < best_matching_flags)) // Find the queue with just enough flags
+				{
+					best_matching_id = i;
+					best_matching_flags = count;
+				}
+			}
+			res.desired_to_info[j].family = best_matching_id;
+			if (best_matching_id < res.queues.size32())
+			{
+				res.desired_to_info[j].index = res.queues[best_matching_id].priorities.size32();
+				res.queues[best_matching_id].priorities.push_back(desired_queue.priority);
+				res.queues[best_matching_id].names.push_back(desired_queue.name);
+			}
+			else if(desired_queue.required)
+			{
+				res.all_required &= false;
+			}
+		}
+		
+		for (uint32_t i = 0; i < queue_family_count; ++i)
+		{
+			const uint32_t capacity = res.queues[i].props.queueCount;
+			const uint32_t wanted = res.queues[i].priorities.size32();
+			if (wanted > capacity)
+			{
+				// TODO merge queues
+				NOT_YET_IMPLEMENTED;
+			}
+		}
+		if (desired.need_presentation)
+		{
+			for (uint32_t i = 0; i < queue_family_count; ++i)
+			{
+				bool can_present = false;
+#if _WINDOWS
+				can_present = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, i);
+#endif
+				if (can_present)
+				{
+					res.present_queues.push_back(i);
+				}
+			}
+		}
+		return res;
 	}
 
-	bool VkApplication::isDeviceSuitable(VkPhysicalDevice const& device)
-	{
+	bool VkApplication::isDeviceSuitable(CandidatePhysicalDevice const& candidate, DesiredDeviceInfo const& desired) {
 		bool res = true;
 
 		VkBool32 present_support = false;
-		QueueFamilyIndices indices = findQueueFamilies(device);
+		DeviceCandidateQueues candidate_queues = findQueueFamilies(candidate.device, desired.queues);
 
-		//res = indices.isComplete();
-
-		if (res)
+		if (desired.queues.need_presentation && candidate_queues.present_queues.empty())
 		{
-			//vkGetPhysicalDeviceSurfaceSupportKHR(device, indices.present_family.value(), _surface, &present_support);
-			res = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, indices.present_family.value());
+			res = false;
 		}
 
-		if (res)
-		{
-			VkPhysicalDeviceFeatures features;
-			vkGetPhysicalDeviceFeatures(device, &features);
-			//res = features.samplerAnisotropy;
-		}
+		const VkQueueFlags total_queue_desired_flags = desired.queues.totalFlags();
+		const VkQueueFlags total_queue_candidate_falgs = candidate.queues.total_flags;
+		res &= ((total_queue_desired_flags & total_queue_candidate_falgs) !=0);
+		res &= candidate.queues.all_required;
+
+		// Check for known necessary features
+		//const uint32_t min_version = VK_MAKE_VERSION(1, 3, 0);
+		const uint32_t min_version = VK_MAKE_API_VERSION(1, 3, 0, 0);
+		res &= candidate.props.props2.properties.apiVersion >= min_version;
+
+		res &= candidate.features.features_13.synchronization2 != VK_FALSE;
 
 		return res;
 	}
 
-	int64_t VkApplication::ratePhysicalDevice(VkPhysicalDevice const& device, std::set<std::string_view> const& desired_extensions, VulkanFeatures const& desired_features)
-	{
+	int64_t VkApplication::ratePhysicalDevice(VkPhysicalDevice device, DesiredDeviceInfo const& desired) {
 		int64_t res = 0;
 		
+		CandidatePhysicalDevice candidate;
+		candidate.device = device;
 		// TODO add pLayerName
-		VulkanExtensionsSet available_extensions(device);
-
-		std::function<bool(std::string_view)> filter_extensions = [&](std::string_view ext_name){return available_extensions.contains(ext_name);};
-
-		VulkanDeviceProps props;
-		VulkanFeatures features;
+		candidate.extensions = VulkanExtensionsSet(device);
 		const uint32_t version = vkGetPhysicalDeviceAPIVersion(device);
-		vkGetPhysicalDeviceProperties2(device, &props.link(version, filter_extensions));
-		vkGetPhysicalDeviceFeatures2(device, &features.link(version, filter_extensions));
 
-		bool suitable = isDeviceSuitable(device);
+		std::function<bool(std::string_view)> filter_extensions = [&](std::string_view ext_name){return candidate.extensions.contains(ext_name);};
+
+		vkGetPhysicalDeviceProperties2(device, &candidate.props.link(version, filter_extensions));
+		vkGetPhysicalDeviceFeatures2(device, &candidate.features.link(version, filter_extensions));
+
+		bool suitable = isDeviceSuitable(candidate, desired);
 		if (!suitable)
 		{
 			return std::numeric_limits<int64_t>::min();
 		}
 		
-		uint32_t min_version = VK_MAKE_VERSION(1, 3, 0);
-
-		int64_t discrete_multiplicator = (props.props2.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 2 : 1;
+		int64_t discrete_multiplicator = (candidate.props.props2.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ? 2 : 1;
 
 		res = 1;
 
 		uint32_t ext_count = 0;
-		for (std::string_view const& desired_ext_name : desired_extensions)
+		for (std::string_view const& desired_ext_name : desired.extensions)
 		{
-			if (available_extensions.contains(desired_ext_name))
+			if (candidate.extensions.contains(desired_ext_name))
 			{
 				ext_count += 1;
 			}
 		}
 
-		uint32_t num_features = (features && desired_features).count();
+		uint32_t num_features = (candidate.features && desired.features).count();
 
 		res = (1 + ext_count + num_features) * discrete_multiplicator;
 
-		if (props.props2.properties.apiVersion < min_version)
-		{
-			res = 0;
-		}
-
-		VK_LOG << "Rated " << props.props2.properties.deviceName << ": " << res << "\n";
+		VK_LOG << "Rated " << candidate.props.props2.properties.deviceName << ": " << res << "\n";
 
 		return res;
 	}
 
 	void VkApplication::pickPhysicalDevice()
 	{
-		const auto desired_extensions = getDeviceExtensions();
-		requestFeatures(_requested_features);
+		DesiredDeviceInfo desired;
+		desired.extensions = getDeviceExtensions();
+		requestFeatures(desired.features);
+		desired.queues = getDesiredQueuesInfo();
 
 		uint32_t physical_device_count = 0;
 		vkEnumeratePhysicalDevices(_instance, &physical_device_count, nullptr);
@@ -485,47 +536,43 @@ namespace vkl
 		else
 		{
 			auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), 
-				[&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d, desired_extensions, _requested_features); }
+				[&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d, desired); }
 			);
 			_physical_device = *it;
 
 		}
 
-		_device_extensions = std::make_unique<VulkanExtensionsSet>(desired_extensions, _physical_device);
+		_device_extensions = std::make_unique<VulkanExtensionsSet>(desired.extensions, _physical_device);
 		VkPhysicalDeviceProperties2 & physical_device_props = _device_props.link(
 			vkGetPhysicalDeviceAPIVersion(_physical_device),
 			[this](std::string_view ext_name) {return _device_extensions->contains(ext_name); }
 		);
 		vkGetPhysicalDeviceProperties2(_physical_device, &physical_device_props);
-		_queue_family_indices = findQueueFamilies(_physical_device);
 
 		VK_LOG << "Using " << _device_props.props2.properties.deviceName << " as physical device.\n";
 	}
 
 	void VkApplication::createLogicalDevice()
 	{
-		QueueFamilyIndices& indices = _queue_family_indices;
+		const DesiredQueuesInfo desired_queues = getDesiredQueuesInfo();
+		DeviceCandidateQueues device_queues = findQueueFamilies(_physical_device, desired_queues);
 
 		std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-		std::set<uint32_t> unique_queue_families;
-		const auto addQueueIFP = [&](std::optional<uint32_t> const& i)
+		queue_create_infos.reserve(device_queues.queues.size());
+		
+		for (size_t i=0; i < device_queues.queues.size(); ++i)
 		{
-			if (i.has_value())	unique_queue_families.insert(unique_queue_families.end(), i.value());
-		};
-		addQueueIFP(indices.graphics_family);
-		addQueueIFP(indices.transfer_family);
-		addQueueIFP(indices.present_family);
-		addQueueIFP(indices.compute_family);
-
-		float priority = 1;
-		for (uint32_t unique_queue_family : unique_queue_families)
-		{
-			VkDeviceQueueCreateInfo queue_create_info{};
-			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queue_create_info.queueFamilyIndex = unique_queue_family;
-			queue_create_info.queueCount = 1;
-			queue_create_info.pQueuePriorities = &priority;
-			queue_create_infos.push_back(queue_create_info);
+			if (!device_queues.queues[i].priorities.empty())
+			{
+				queue_create_infos.push_back(VkDeviceQueueCreateInfo{
+					.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = 0,
+					.queueFamilyIndex = static_cast<uint32_t>(i),
+					.queueCount = device_queues.queues[i].priorities.size32(),
+					.pQueuePriorities = device_queues.queues[i].priorities.data(),
+				});
+			}
 		}
 
 		auto filter_extensions = [this](std::string_view ext_name){return _device_extensions->contains(ext_name); };
@@ -533,7 +580,9 @@ namespace vkl
 		VulkanFeatures exposed_device_features;
 		vkGetPhysicalDeviceFeatures2(_physical_device, &exposed_device_features.link(vkGetPhysicalDeviceAPIVersion(_physical_device), filter_extensions));
 
-		_available_features = filterFeatures(_requested_features, exposed_device_features);
+		VulkanFeatures requested_features;
+		requestFeatures(requested_features);
+		_available_features = filterFeatures(requested_features, exposed_device_features);
 
 		VkPhysicalDeviceFeatures2 features2 = _available_features.link(vkGetPhysicalDeviceAPIVersion(_physical_device), filter_extensions);
 
@@ -561,13 +610,28 @@ namespace vkl
 
 		VK_CHECK(vkCreateDevice(_physical_device, &device_create_info, nullptr, &_device), "Failed to create the logical device!");
 
-		if (indices.graphics_family.has_value()) vkGetDeviceQueue(_device, indices.graphics_family.value(), 0, &_queues.graphics);
-		if (indices.present_family.has_value()) vkGetDeviceQueue(_device, indices.present_family.value(), 0, &_queues.present);
-		if (indices.transfer_family.has_value()) vkGetDeviceQueue(_device, indices.transfer_family.value(), 0, &_queues.transfer);
-		if (indices.compute_family.has_value()) vkGetDeviceQueue(_device, indices.compute_family.value(), 0, &_queues.compute);
-
-
 		loadExtFunctionsPtr();
+		{
+			_queues_by_family.resize(device_queues.queues.size());
+			for (uint32_t i = 0; i < _queues_by_family.size32(); ++i)
+			{
+				_queues_by_family[i].resize(device_queues.queues[i].priorities.size());
+				for (uint32_t j = 0; j < _queues_by_family[i].size32(); ++j)
+				{
+					_queues_by_family[i][j] = std::make_shared<Queue>(Queue::CI{
+						.app = this,
+						.name = device_queues.queues[i].names[j],
+						.flags = 0,
+						.family_index = i,
+						.index = j,
+						.properties = device_queues.queues[i].props,
+						.priority = device_queues.queues[i].priorities[j],
+					});
+				}
+			}
+			_queues_by_desired = device_queues.desired_to_info;
+		}
+
 
 		queryDescriptorBindingOptions();
 	}
@@ -634,9 +698,23 @@ namespace vkl
 	void VkApplication::createCommandPools()
 	{
 		const VkCommandPoolCreateFlags flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		if (_queue_family_indices.graphics_family.has_value()) _pools.graphics = std::make_shared<CommandPool>(this, _queue_family_indices.graphics_family.value(), flags);
-		if (_queue_family_indices.transfer_family.has_value()) _pools.transfer = std::make_shared<CommandPool>(this, _queue_family_indices.transfer_family.value(), flags);
-		if (_queue_family_indices.compute_family.has_value()) _pools.compute = std::make_shared<CommandPool>(this, _queue_family_indices.compute_family.value(), flags);
+		_command_pools.resize(_queues_by_family.size());
+		for (uint32_t i = 0; i < _queues_by_family.size32(); ++i)
+		{
+			if (!_queues_by_family[i].empty())
+			{
+				_command_pools[i] = std::make_shared<CommandPool>(CommandPool::CI{
+					.app = this,
+					.name = "Command_Pool_" + std::to_string(i),
+					.queue_family = i,
+					.flags = flags,
+				});
+			}
+			else
+			{
+				_command_pools[i] = nullptr;
+			}
+		}
 	}
 
 	void VkApplication::createAllocator()
@@ -823,13 +901,14 @@ namespace vkl
 	{
 		_prebuilt_transfer_commands.reset();
 		_texture_file_cache.reset();
-		_sampler_library.reset();;
+		_sampler_library.reset();
 
 		_empty_set_layout = nullptr;
 
-		_pools.graphics = nullptr;
-		_pools.transfer = nullptr;
-		_pools.compute = nullptr;
+		_command_pools.clear();
+
+		_queues_by_family.clear();
+		_queues_by_desired.clear();
 
 		_desc_set_layout_caches.clear();
 
@@ -859,21 +938,6 @@ namespace vkl
 			}
 			_thread_pool = nullptr;
 		}
-	}
-
-	VkApplication::QueueFamilyIndices const& VkApplication::getQueueFamilyIndices()const
-	{
-		return _queue_family_indices;
-	}
-
-	VkApplication::Queues const& VkApplication::queues()const
-	{
-		return _queues;
-	}
-
-	VkApplication::Pools const& VkApplication::pools()const
-	{
-		return _pools;
 	}
 
 	//BufferPool& VkApplication::stagingPool()

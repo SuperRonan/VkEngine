@@ -22,6 +22,8 @@ namespace vkl
 
 		void createMainWindow();
 
+		virtual DesiredQueuesInfo getDesiredQueuesInfo() override;
+
 	public:
 
 		struct CreateInfo

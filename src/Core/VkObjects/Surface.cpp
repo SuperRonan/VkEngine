@@ -15,7 +15,7 @@ namespace vkl
 	{
 		VkPhysicalDevice device = application()->physicalDevice();
 		VkBool32 present_support;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, _app->getQueueFamilyIndices().present_family.value(), _surface, &present_support);
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, _target_queue_family, _surface, &present_support);
 		if (present_support == 0)
 		{
 			throw std::runtime_error("Physical device cannot present!");
@@ -53,7 +53,8 @@ namespace vkl
 
 	Surface::Surface(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
-		_window(ci.window)
+		_window(ci.window),
+		_target_queue_family(ci.target_queue_family)
 	{
 		create();
 	}

@@ -484,63 +484,72 @@ namespace vkl
 		return AquireResult(image_index);
 	}
 
-	void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores, VkFence fence)
+	//void VkWindow::present(uint32_t num_semaphores, VkSemaphore* semaphores, VkFence fence)
+	//{
+	//	VkSwapchainKHR swapchain = *_swapchain->instance();
+	//	VkPresentInfoKHR presentation{
+	//		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+	//		.pNext = nullptr,
+	//		.waitSemaphoreCount = num_semaphores,
+	//		.pWaitSemaphores = semaphores,
+	//		.swapchainCount = 1,
+	//		.pSwapchains = &swapchain,
+	//		.pImageIndices = &_current_frame_info.index,
+	//		.pResults = nullptr,
+	//	};
+	//	VkSwapchainPresentFenceInfoEXT present_fence;
+
+	//	if (fence)
+	//	{
+	//		if (application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1)
+	//		{
+	//			present_fence = VkSwapchainPresentFenceInfoEXT{
+	//				.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT,
+	//				.pNext = nullptr,
+	//				.swapchainCount = 1,
+	//				.pFences = &fence,
+	//			};
+	//			presentation.pNext = &present_fence;
+	//		}
+	//	}
+
+	//	VkResult present_res = vkQueuePresentKHR(_app->queues().present, &presentation);
+	//	if (present_res == VK_ERROR_OUT_OF_DATE_KHR || present_res == VK_SUBOPTIMAL_KHR)
+	//	{
+	//		_surface->queryDetails();
+	//		//_swapchain->updateResources();
+	//	}
+	//	else if (present_res != VK_SUCCESS)
+	//	{
+	//		throw std::runtime_error("Failed to present a swapchain image.");
+	//	}
+
+	//	{
+	//		const decltype(_present_time_point) now = std::chrono::system_clock::now();
+	//		const auto dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - _present_time_point);
+	//		const std::chrono::milliseconds period = 1000ms;
+	//		if (dt_ms > period)
+	//		{
+	//			const int fps = (1000 * (_current_frame - _present_frame)) / float(dt_ms.count());
+
+	//			std::string name_to_set = name() + " [" + std::to_string(fps) + " fps]";
+	//			SDL_SetWindowTitle(_window, name_to_set.c_str());
+	//			_present_time_point = now;
+	//			_present_frame = _current_frame;
+
+	//		}
+	//	}
+
+	//	_current_frame = (_current_frame + 1);
+	//}
+
+	void VkWindow::presentWrongResult(VkResult present_res)
 	{
-		VkSwapchainKHR swapchain = *_swapchain->instance();
-		VkPresentInfoKHR presentation{
-			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-			.pNext = nullptr,
-			.waitSemaphoreCount = num_semaphores,
-			.pWaitSemaphores = semaphores,
-			.swapchainCount = 1,
-			.pSwapchains = &swapchain,
-			.pImageIndices = &_current_frame_info.index,
-			.pResults = nullptr,
-		};
-		VkSwapchainPresentFenceInfoEXT present_fence;
-
-		if (fence)
-		{
-			if (application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1)
-			{
-				present_fence = VkSwapchainPresentFenceInfoEXT{
-					.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT,
-					.pNext = nullptr,
-					.swapchainCount = 1,
-					.pFences = &fence,
-				};
-				presentation.pNext = &present_fence;
-			}
-		}
-
-		VkResult present_res = vkQueuePresentKHR(_app->queues().present, &presentation);
 		if (present_res == VK_ERROR_OUT_OF_DATE_KHR || present_res == VK_SUBOPTIMAL_KHR)
 		{
 			_surface->queryDetails();
 			//_swapchain->updateResources();
 		}
-		else if (present_res != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to present a swapchain image.");
-		}
-
-		{
-			const decltype(_present_time_point) now = std::chrono::system_clock::now();
-			const auto dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - _present_time_point);
-			const std::chrono::milliseconds period = 1000ms;
-			if (dt_ms > period)
-			{
-				const int fps = (1000 * (_current_frame - _present_frame)) / float(dt_ms.count());
-
-				std::string name_to_set = name() + " [" + std::to_string(fps) + " fps]";
-				SDL_SetWindowTitle(_window, name_to_set.c_str());
-				_present_time_point = now;
-				_present_frame = _current_frame;
-
-			}
-		}
-
-		_current_frame = (_current_frame + 1);
 	}
 
 	bool VkWindow::updateResources(UpdateContext & ctx)

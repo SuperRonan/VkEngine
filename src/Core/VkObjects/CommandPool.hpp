@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/App/VkApplication.hpp>
+#include <mutex>
 
 namespace vkl
 {
@@ -8,26 +9,28 @@ namespace vkl
 	{
 	protected:
 
-		uint32_t _queue_family_index = 0;
+		uint32_t _queue_family = 0;
 		VkCommandPoolCreateFlags _flags = 0;
 		VkCommandPool _handle = VK_NULL_HANDLE;
 
+		std::mutex _mutex;
+
+		void setVkNameIFP();
+
 	public:
 
-		constexpr CommandPool(VkApplication * app = nullptr) noexcept:
-			VkObject(app)
-		{}
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			uint32_t queue_family = 0;
+			VkCommandPoolCreateFlags flags = 0;
+		};
+		using CI = CreateInfo;
 
-		constexpr CommandPool(VkApplication* app, VkCommandPool handle, uint32_t qfi, VkCommandPoolCreateFlags flags = 0) noexcept :
-			VkObject(app),
-			_queue_family_index(qfi),
-			_flags(flags),
-			_handle(handle)
-		{}
+		CommandPool(CreateInfo const& ci);
 
-		CommandPool(VkApplication* app, uint32_t index, VkCommandPoolCreateFlags flags = 0);
-
-		~CommandPool();
+		virtual ~CommandPool() override;
 
 		void create(VkCommandPoolCreateInfo const& ci);
 
@@ -43,9 +46,9 @@ namespace vkl
 			return _handle;
 		}
 
-		constexpr uint32_t index()const
+		constexpr uint32_t queueFamily()const
 		{
-			return _queue_family_index;
+			return _queue_family;
 		}
 
 		constexpr VkCommandPoolCreateFlags flags()const
@@ -53,7 +56,10 @@ namespace vkl
 			return _flags;
 		}
 		
-
+		std::mutex& mutex()
+		{
+			return _mutex;
+		}
 	};
 
 } // namespace vkl

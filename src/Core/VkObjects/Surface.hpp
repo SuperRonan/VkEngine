@@ -13,6 +13,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			SDL_Window* window = nullptr;
+			uint32_t target_queue_family = 0;
 		};
 		using CI = CreateInfo;
 
@@ -28,6 +29,7 @@ namespace vkl
 		SDL_Window* _window = nullptr;
 		VkSurfaceKHR _surface = VK_NULL_HANDLE;
 
+		uint32_t _target_queue_family = 0;
 		SwapchainSupportDetails _details;
 
 		void create();

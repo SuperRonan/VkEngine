@@ -259,6 +259,8 @@ namespace vkl
 		VkPhysicalDeviceVulkan13Features features_13 = {};
 
 		VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT swapchain_maintenance1_ext = {};
+		VkPhysicalDevicePresentIdFeaturesKHR present_id_khr = {};
+		VkPhysicalDevicePresentWaitFeaturesKHR present_wait_khr = {};
 
 		VkPhysicalDeviceLineRasterizationFeaturesEXT line_raster_ext = {};
 		VkPhysicalDeviceIndexTypeUint8FeaturesEXT index_uint8_ext = {};

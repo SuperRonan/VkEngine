@@ -30,6 +30,8 @@ namespace vkl
 		features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 
 		swapchain_maintenance1_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT;
+		present_id_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+		present_wait_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR;
 
 		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
 		index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
@@ -55,6 +57,10 @@ namespace vkl
 
 		if(filter_extensions(VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME))
 			chain += &swapchain_maintenance1_ext;
+		if(filter_extensions(VK_KHR_PRESENT_ID_EXTENSION_NAME))
+			chain += &present_id_khr;
+		if(filter_extensions(VK_KHR_PRESENT_WAIT_EXTENSION_NAME))
+			chain += &present_wait_khr;
 
 		if(filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			chain += &line_raster_ext;
@@ -168,6 +174,8 @@ namespace vkl
 		//COMBINE_VK_FEATURES(VkPhysicalDevice, , , );
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
+		COMBINE_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
+		COMBINE_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
@@ -232,6 +240,8 @@ namespace vkl
 		//res += COUNT_VK_FEATURES(VkPhysicaldevice, , , );
 		
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
+		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
+		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
 
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);

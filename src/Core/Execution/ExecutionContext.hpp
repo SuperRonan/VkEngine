@@ -86,6 +86,7 @@ namespace vkl
 		size_t _resource_tid = 0;
 
 		MyVector<std::shared_ptr<VkObject>> _objects_to_keep = {};
+		MyVector<CompletionCallback> _completion_callbacks = {};
 
 		BufferPool* _staging_pool = nullptr;
 
@@ -145,6 +146,26 @@ namespace vkl
 		auto& objectsToKeepAlive()
 		{
 			return _objects_to_keep;
+		}
+
+		void addCompletionCallback(CompletionCallback const& cb)
+		{
+			_completion_callbacks.push_back(cb);
+		}
+
+		void addCompletionCallback(CompletionCallback && cb)
+		{
+			_completion_callbacks.push_back(std::move(cb));
+		}
+
+		MyVector<CompletionCallback> const& completionCallbacks() const
+		{
+			return _completion_callbacks;
+		}
+
+		MyVector<CompletionCallback> & completionCallbacks()
+		{
+			return _completion_callbacks;
 		}
 
 		const auto& objectsToKeepAlive() const

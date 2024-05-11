@@ -1,16 +1,21 @@
 #pragma once
 
 #include <Core/Execution/ExecutionContext.hpp>
+
 #include <Core/Commands/DeviceCommand.hpp>
+
 #include <Core/VkObjects/RenderPass.hpp>
 #include <Core/VkObjects/DescriptorPool.hpp>
 #include <Core/VkObjects/Swapchain.hpp>
+#include <Core/VkObjects/Queue.hpp>
 
 namespace vkl
 {
 	class ImguiCommand : public DeviceCommand
 	{
 	protected:
+
+		std::shared_ptr<Queue> _queue = nullptr;
 
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		std::vector<std::shared_ptr<Framebuffer>> _framebuffers = {};
@@ -38,6 +43,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<Swapchain> swapchain = nullptr;
+			std::shared_ptr<Queue> queue = nullptr;
 		};
 		using CI = CreateInfo;
 

@@ -12,6 +12,11 @@ namespace vkl
         }
     }
 
+    void CommandPool::setVkNameIFP()
+    {
+        application()->nameVkObjectIFP(VK_OBJECT_TYPE_COMMAND_POOL, reinterpret_cast<uint64_t>(_handle), name());
+    }
+
     void CommandPool::create(VkCommandPoolCreateInfo const& ci)
     {
         assert(!_handle);
@@ -24,17 +29,18 @@ namespace vkl
         vkDestroyCommandPool(_app->device(), _handle, nullptr);
     }
 
-    CommandPool::CommandPool(VkApplication* app, uint32_t index, VkCommandPoolCreateFlags flags) :
-        VkObject(app),
-        _queue_family_index(index),
-        _flags(flags)
+    CommandPool::CommandPool(CreateInfo const& ci) :
+        VkObject(ci.app, ci.name),
+        _queue_family(ci.queue_family),
+        _flags(ci.flags)
     {
-        VkCommandPoolCreateInfo ci{
+        VkCommandPoolCreateInfo vk_ci{
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = nullptr,
             .flags = _flags,
-            .queueFamilyIndex = _queue_family_index,
+            .queueFamilyIndex = _queue_family,
         };
-        create(ci);
+        create(vk_ci);
+        setVkNameIFP();
     }
 }

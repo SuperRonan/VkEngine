@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Core/VulkanCommons.hpp>
+#include <Core/VkObjects/VulkanExtensionsSet.hpp>
 
 #include <iostream>
 #include <vector>
@@ -30,6 +31,7 @@ namespace vkl
 	extern const char * GetProjectName();
 	
 	class BufferPool;
+	class Queue;
 	class CommandPool;
 	class DescriptorSetLayout;
 	class DescriptorSetLayoutInstance;
@@ -72,24 +74,41 @@ namespace vkl
 
 		static void FillArgs(argparse::ArgumentParser & args_parser);
 		
-		struct QueueFamilyIndices
+		struct DesiredQueueInfo
 		{
-			std::optional<uint32_t> graphics_family = {};
-			std::optional<uint32_t> transfer_family = {};
-			std::optional<uint32_t> present_family = {};
-			std::optional<uint32_t> compute_family = {};
+			VkQueueFlags flags = 0;
+			float priority = 0;
+			bool required = false;
+			std::string name = {};
 
-			bool isComplete()const;
+			//constexpr bool operator==(DesiredQueueInfo const& other) const noexcept
+			//{
+			//	return (flags == other.flags) && (priority == other.priority) && (required == other.required);
+			//}
+
+			//constexpr size_t hash()const noexcept
+			//{
+			//	std::hash<VkQueueFlags> hi;
+			//	std::hash<bool> hb;
+			//	std::hash<float> hf;
+			//	std::hash<size_t> hs;
+			//	return hs(hi(flags) ^ hf(priority) ^ hb(required));
+			//}
+			//static_assert(std::concepts::HashableFromMethod<DesiredQueueInfo>);
 		};
 
-		struct Queues
+		struct DesiredQueuesInfo
 		{
-			VkQueue graphics = VK_NULL_HANDLE, transfer = VK_NULL_HANDLE, present = VK_NULL_HANDLE, compute = VK_NULL_HANDLE;
+			MyVector<DesiredQueueInfo> queues = {};
+			bool need_presentation = false;
+
+			VkQueueFlags totalFlags()const;
 		};
 
-		struct Pools
+		struct QueueIndex
 		{
-			SPtr<CommandPool> graphics = nullptr, transfer = nullptr, compute = nullptr;
+			uint32_t family = 0;
+			uint32_t index = 0;
 		};
 
 	protected:
@@ -108,11 +127,10 @@ namespace vkl
 
 		VmaAllocator _allocator = nullptr;
 
-		Queues _queues = {};
-
-		QueueFamilyIndices _queue_family_indices = {};
-
-		Pools _pools = {};
+		MyVector<MyVector<std::shared_ptr<Queue>>> _queues_by_family = {};
+		MyVector<std::shared_ptr<CommandPool>> _command_pools = {};
+		// Might be sparse (some elements might be nullptr)
+		MyVector<QueueIndex> _queues_by_desired = {};
 
 
 		std::unique_ptr<VulkanExtensionsSet> _instance_extensions;
@@ -159,10 +177,11 @@ namespace vkl
 		virtual std::set<std::string_view> getDeviceExtensions();
 
 		virtual std::set<std::string_view> getInstanceExtensions();
+		
+		virtual DesiredQueuesInfo getDesiredQueuesInfo();
 
 		std::string _name = {};
 
-		VulkanFeatures _requested_features = {};
 		VulkanFeatures _available_features = {};
 
 		mutable std::shared_mutex _mutex;
@@ -194,12 +213,50 @@ namespace vkl
 
 		void initValidLayers();
 
-		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+		struct DeviceCandidateQueues
+		{
+			struct QueueInfo
+			{
+				VkQueueFamilyProperties props;
+				MyVector<float> priorities;
+				MyVector<std::string> names;
+			};
+			// Indexed by queue family id
+			MyVector<QueueInfo> queues;
+			MyVector<uint32_t> present_queues;
+			MyVector<QueueIndex> desired_to_info;
+			VkQueueFlags total_flags = 0;
+			bool all_required = true;
+		};
 
-		virtual bool isDeviceSuitable(VkPhysicalDevice const& device);
+		struct DesiredDeviceInfo
+		{
+			std::set<std::string_view> extensions;
+			VulkanFeatures features;
+			DesiredQueuesInfo queues;
+		};
 
-		virtual int64_t ratePhysicalDevice(VkPhysicalDevice const& device, std::set<std::string_view> const& desired_extensions, VulkanFeatures const& desired_features);
+		struct CandidatePhysicalDevice
+		{
+			VkPhysicalDevice device;
+			
+			VulkanExtensionsSet extensions;
+			VulkanFeatures features;
+			DeviceCandidateQueues queues;
+			VulkanDeviceProps props;
+		};
 
+		DeviceCandidateQueues findQueueFamilies(VkPhysicalDevice device, DesiredQueuesInfo const& desired_queues);
+
+		virtual bool isDeviceSuitable(CandidatePhysicalDevice const& candiate, DesiredDeviceInfo const& desired);
+
+		virtual int64_t ratePhysicalDevice(VkPhysicalDevice device, DesiredDeviceInfo const& desired);
+
+		// fills:
+		// - _physical_device
+		// - _device_extensions
+		// - _device_props
+		// 
 		void pickPhysicalDevice();
 
 		void createLogicalDevice();
@@ -253,13 +310,21 @@ namespace vkl
 			return _allocator;
 		}
 
-		QueueFamilyIndices const& getQueueFamilyIndices()const;
 
-		Queues const& queues()const;
+		const auto& queuesByFamily()const
+		{
+			return _queues_by_family;
+		}
 
-		Pools const& pools()const;
+		const auto& desiredQueuesIndices()const
+		{
+			return _queues_by_desired;
+		}
 
-		//BufferPool& stagingPool();
+		const auto& commandPools()const
+		{
+			return _command_pools;
+		}
 
 		void nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT const& object_to_name);
 

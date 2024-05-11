@@ -241,7 +241,7 @@ namespace vkl
 			VkApplication::init();
 
 			_desired_window_options.name = PROJECT_NAME;
-			_desired_window_options.queue_families_indices = std::set({ _queue_family_indices.graphics_family.value(), _queue_family_indices.present_family.value() });
+			_desired_window_options.queue_families_indices = std::set<uint32_t>({desiredQueuesIndices()[0].family});
 			_desired_window_options.resizeable = true;
 			//_desired_window_options.mode = VkWindow::Mode::WindowedFullscreen;
 			createMainWindow();

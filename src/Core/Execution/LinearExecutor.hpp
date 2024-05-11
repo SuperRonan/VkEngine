@@ -2,18 +2,24 @@
 
 #include "Executor.hpp"
 #include "ExecutionContext.hpp"
-#include <Core/VkObjects/VkWindow.hpp>
+
 #include <queue>
+
 #include <Core/Commands/TransferCommand.hpp>
 #include <Core/Commands/GraphicsTransferCommands.hpp>
 #include <Core/Commands/ImguiCommand.hpp>
+
+#include <Core/VkObjects/VkWindow.hpp>
+#include <Core/VkObjects/Queue.hpp>
 
 #include <Core/Execution/BufferPool.hpp>
 
 namespace vkl
 {
 	
-	struct QueueEvent;
+	// "Events"
+	struct CommandBufferSubmission;
+	struct SwapchainEvent;
 
 	class ExecutionThread : public ExecutionRecorder
 	{
@@ -76,6 +82,9 @@ namespace vkl
 
 		std::shared_ptr<VkWindow> _window = nullptr;
 
+		std::shared_ptr<Queue> _main_queue = nullptr;
+		std::shared_ptr<Queue> _present_queue = nullptr;
+
 		BufferPool _staging_pool;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
@@ -87,17 +96,24 @@ namespace vkl
 
 		ExecutionThread* _current_thread = nullptr;
 
-		std::deque<std::shared_ptr<QueueEvent>> _previous_events = {};
+		std::deque<std::shared_ptr<CommandBufferSubmission>> _previous_cbs = {};
+		std::deque<std::shared_ptr<SwapchainEvent>> _previous_swapchain_events = {};
 
-		std::vector<std::shared_ptr<QueueEvent>> _pending_cbs = {};
+		MyVector<std::shared_ptr<CommandBufferSubmission>> _pending_cbs = {};
 		
-		std::shared_ptr<QueueEvent> _latest_synch_cb = nullptr;
-		std::shared_ptr<QueueEvent> _latest_aquire_event = nullptr;
-		std::shared_ptr<QueueEvent> _latest_present_event = nullptr;
+		std::shared_ptr<CommandBufferSubmission> _latest_synch_cb = nullptr;
+		std::shared_ptr<SwapchainEvent> _latest_swapchain_event = nullptr;
 
+		std::shared_ptr<AsynchTask> _previous_recycle_task;
+
+		MyVector<std::shared_ptr<CommandBuffer>> _trash_cbs;
 		void recyclePreviousEvents();
 
-		std::mutex _mutex;
+		std::mutex _cb_mutex;
+		std::mutex _trash_mutex;
+		std::mutex _swapchain_mutex;
+
+		bool useSpecificPresentSignalFence() const;
 
 	public:
 
@@ -150,6 +166,10 @@ namespace vkl
 		virtual void execute(std::shared_ptr<Command> cmd);
 
 		virtual void execute(Executable const& executable);
+
+		void waitOnCommandCompletion(bool global_wait = false, uint64_t timeout = UINT64_MAX);
+
+		void waitOnSwapchainCompletion(bool global_wait = false, uint64_t timeout = UINT64_MAX);
 
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) override final;
 	};
