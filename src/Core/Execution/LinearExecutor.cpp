@@ -421,6 +421,10 @@ namespace vkl
 		static MyVector<uint32_t> indices;
 		static MyVector<VkResult> results;
 		static MyVector<VkFence> fences;
+		static MyVector<uint64_t> present_ids;
+
+		const bool use_signal_fence = useSpecificPresentSignalFence();
+		const bool use_present_id = application()->availableFeatures().present_id_khr.presentId;
 		
 		_latest_swapchain_event->present_wait_semaphores.push_back(_latest_synch_cb->signal_semaphores[0]);
 
@@ -437,9 +441,13 @@ namespace vkl
 		swapchains.resize(n);
 		indices.resize(n);
 		results.resize(n);
-		if (useSpecificPresentSignalFence())
+		if (use_signal_fence)
 		{
 			fences.resize(n);
+		}
+		if (use_present_id)
+		{
+			present_ids.resize(n);
 		}
 
 		
@@ -448,12 +456,17 @@ namespace vkl
 			swapchains[i] = targets[i]->swapchain->handle();
 			indices[i] = targets[i]->index;
 			results[i] = VK_RESULT_MAX_ENUM;
-			if (useSpecificPresentSignalFence())
+			if (use_signal_fence)
 			{
 				assert(targets[i]->present_signal_fence);
 				fences[i] = targets[i]->present_signal_fence->handle();
 			}
 			targets[i]->present_queue = _present_queue.get();
+			if (use_present_id)
+			{
+				targets[i]->present_id = targets[i]->swapchain->getNextPresentId();
+				present_ids[i] = targets[i]->present_id;
+			}
 		}
 
 		VkPresentInfoKHR presentation{
@@ -468,7 +481,7 @@ namespace vkl
 		};
 		pNextChain chain = &presentation;
 		VkSwapchainPresentFenceInfoEXT present_fence;
-		if (useSpecificPresentSignalFence())
+		if (use_signal_fence)
 		{
 			present_fence = VkSwapchainPresentFenceInfoEXT{
 				.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_FENCE_INFO_EXT,
@@ -478,6 +491,18 @@ namespace vkl
 			};
 			chain += &present_fence;
 		}
+		VkPresentIdKHR vk_present_id;
+		if (use_present_id)
+		{
+			vk_present_id = VkPresentIdKHR{
+				.sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR,
+				.pNext = nullptr,
+				.swapchainCount = n,
+				.pPresentIds = present_ids.data(),
+			};
+			chain += &vk_present_id;
+		}
+
 		assert(_present_queue);
 		_present_queue->mutex().lock();
 		VkResult present_res = vkQueuePresentKHR(_present_queue->handle(), &presentation);

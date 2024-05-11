@@ -25,6 +25,8 @@ namespace vkl
 		VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
 		size_t _unique_id = 0;
 
+		uint64_t _present_id_counter = 0;
+
 		void create();
 
 		void destroy();
@@ -84,6 +86,17 @@ namespace vkl
 			return _views;
 		}
 
+		constexpr uint64_t presentIdCounter() const
+		{
+			return _present_id_counter;
+		}
+
+		constexpr uint64_t getNextPresentId()
+		{
+			uint64_t res = _present_id_counter;
+			++_present_id_counter;
+			return res;
+		}
 	};
 
 	class Swapchain : public InstanceHolder<SwapchainInstance>

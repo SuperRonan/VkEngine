@@ -144,8 +144,11 @@ namespace vkl
 	{
 		const VkBool32 t = VK_TRUE;
 		const VkBool32 f = VK_FALSE;
+		
 		features.features_13.synchronization2 = t;
 		features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
+		features.present_id_khr.presentId = t;
+
 		features.features2.features.geometryShader = t;
 		
 		features.features2.features.samplerAnisotropy = t;
