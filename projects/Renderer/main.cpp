@@ -382,6 +382,9 @@ namespace vkl
 				.gamepad = &gamepad,
 			});
 
+			std::TickTock_hrc frame_tick_tock;
+			frame_tick_tock.tick();
+
 			while (!_main_window->shouldClose())
 			{
 				{
@@ -535,7 +538,8 @@ namespace vkl
 					++frame_index;
 				}
 				frame_counters.render_time = render_tick_tock.tockv().count();
-
+				frame_counters.frame_time = frame_tick_tock.tockv().count();
+				frame_tick_tock.tick();
 				{
 					stat_records.advance();
 				}

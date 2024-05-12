@@ -4,6 +4,8 @@ namespace vkl
 {
     struct FramePerfCounters
 	{
+		size_t frame_time = 0;
+
 		size_t update_time = 0;
 		size_t render_time = 0;
 
