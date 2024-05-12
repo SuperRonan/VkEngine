@@ -508,16 +508,12 @@ namespace vkl
 		VkResult present_res = vkQueuePresentKHR(_present_queue->handle(), &presentation);
 		_present_queue->mutex().unlock();
 		
-		if (present_res != VK_SUCCESS)
+		for (uint32_t i = 0; i < n; ++i)
 		{
-			_window->presentWrongResult(results[0]);
-			// TODO
-			for (uint32_t i = 0; i < n; ++i)
+			// TODO keep a list of windows
+			if (i == 0)
 			{
-				if (results[i] != VK_SUCCESS)
-				{
-
-				}
+				_window->notifyPresentResult(results[i]);
 			}
 		}
 

@@ -229,7 +229,7 @@ namespace vkl
 
 		//void present(uint32_t num_semaphores, VkSemaphore* semaphores, VkFence fence = VK_NULL_HANDLE);
 
-		void presentWrongResult(VkResult res);
+		void notifyPresentResult(VkResult res);
 
 		bool updateResources(UpdateContext & ctx);
 

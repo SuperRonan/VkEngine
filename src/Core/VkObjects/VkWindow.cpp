@@ -543,13 +543,31 @@ namespace vkl
 	//	_current_frame = (_current_frame + 1);
 	//}
 
-	void VkWindow::presentWrongResult(VkResult present_res)
+	void VkWindow::notifyPresentResult(VkResult present_res)
 	{
 		if (present_res == VK_ERROR_OUT_OF_DATE_KHR || present_res == VK_SUBOPTIMAL_KHR)
 		{
 			_surface->queryDetails();
 			//_swapchain->updateResources();
 		}
+
+		{
+			const decltype(_present_time_point) now = std::chrono::system_clock::now();
+			const auto dt_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - _present_time_point);
+			const std::chrono::milliseconds period = 1000ms;
+			if (dt_ms > period)
+			{
+				const int fps = (1000 * (_current_frame - _present_frame)) / float(dt_ms.count());
+
+				std::string name_to_set = name() + " [" + std::to_string(fps) + " fps]";
+				SDL_SetWindowTitle(_window, name_to_set.c_str());
+				_present_time_point = now;
+				_present_frame = _current_frame;
+
+			}
+		}
+
+		_current_frame = (_current_frame + 1);
 	}
 
 	bool VkWindow::updateResources(UpdateContext & ctx)
