@@ -23,6 +23,7 @@
 #include <unordered_set>
 #include <map>
 #include <unordered_map>
+#include <concepts>
 
 #include "DynamicValue.hpp"
 
@@ -93,15 +94,31 @@ namespace vkl
 		void * pNext;
 	};
 
+	namespace concepts
+	{
+		template <typename S>
+		concept VkStructLike = requires(S s)
+		{
+			{ s.sType } -> std::same_as<VkStructureType&>;
+			{ s.pNext } -> std::convertible_to<const void*>;
+			requires offsetof(S, sType) == offsetof(VkStruct, sType);
+			requires offsetof(S, pNext) == offsetof(VkStruct, pNext);
+		};
+	}
+
 	struct pNextChain
 	{
 		VkStruct * current = nullptr;
 
-		pNextChain(void * vk_struct):
+		template <concepts::VkStructLike VkStructLike>
+		constexpr pNextChain(VkStructLike * vk_struct):
 			current(reinterpret_cast<VkStruct*>(vk_struct))
 		{}
 
-		pNextChain& link(void* vk_struct)
+		constexpr pNextChain(nullptr_t n = nullptr) {};
+
+		template <concepts::VkStructLike VkStructLike>
+		constexpr pNextChain& link(VkStructLike* vk_struct)
 		{
 			if (current)
 			{
@@ -113,9 +130,25 @@ namespace vkl
 			}
 			return *this;
 		}
-		pNextChain& operator+=(void* vk_struct)
+
+		template <concepts::VkStructLike VkStructLike>
+		constexpr pNextChain& operator+=(VkStructLike* vk_struct)
 		{
 			return link(vk_struct);
+		}
+
+		constexpr pNextChain& link(nullptr_t)
+		{
+			if (current)
+			{
+				current->pNext = nullptr;
+			}
+			return *this;
+		}
+
+		constexpr pNextChain& operator+=(nullptr_t)
+		{
+			return link(nullptr);
 		}
 	};
 
