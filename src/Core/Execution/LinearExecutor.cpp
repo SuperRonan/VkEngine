@@ -210,16 +210,10 @@ namespace vkl
 			.use_ray_tracing_pipeline = ci.use_ray_tracing,
 		}),
 		_window(ci.window),
-		_staging_pool(BufferPool::CI{
-			.app = application(),
-			.name = name() + ".BufferPool",
-			.allocator = application()->allocator(),
-		}),
 		_context(ExecutionContext::CI{
 			.app = application(),
 			.name = name() + ".exec_context",
 			.resource_tid = 0,
-			.staging_pool = &_staging_pool,
 		})
 	{
 		// TODO better later

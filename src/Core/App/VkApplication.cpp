@@ -735,7 +735,6 @@ namespace vkl
 			.vulkanApiVersion = VK_API_VERSION_1_3,
 		};
 		vmaCreateAllocator(&alloc_ci, &_allocator);
-		//_staging_pool = std::make_unique<BufferPool>(this, _allocator);
 	}
 
 	void VkApplication::nameVkObjectIFP(VkDebugUtilsObjectNameInfoEXT const& object_to_name)
@@ -942,11 +941,6 @@ namespace vkl
 			_thread_pool = nullptr;
 		}
 	}
-
-	//BufferPool& VkApplication::stagingPool()
-	//{
-	//	return *_staging_pool;
-	//}
 
 	VkApplication::~VkApplication()
 	{

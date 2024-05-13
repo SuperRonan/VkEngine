@@ -832,7 +832,8 @@ namespace vkl
 		_src(ci.src),
 		_dst(ci.dst),
 		_offset(ci.offset),
-		_use_update_buffer_ifp(ci.use_update_buffer_ifp)
+		_use_update_buffer_ifp(ci.use_update_buffer_ifp),
+		_staging_pool(ci.staging_pool)
 	{}
 
 	struct UploadBufferNode : public ExecutionNode
@@ -860,7 +861,7 @@ namespace vkl
 		// Cached execute() variable
 		MyVector<VkBufferCopy2> _regions;
 
-		void populate(RecordContext & ctx, UploadBuffer::UploadInfo const& ui)
+		void populate(RecordContext & ctx, UploadBuffer::UploadInfo const& ui, BufferPool * pool)
 		{
 			_sources = ui.sources;
 			_dst = ui.dst->instance();
@@ -918,19 +919,22 @@ namespace vkl
 				}
 			}
 
-			if (!_use_update && ctx.stagingPool())
+			if (!_use_update)
 			{
-				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), buffer_range.len);
-				
+				assert(pool);
+				_staging_buffer = std::make_shared<PooledBuffer>(pool, buffer_range.len);
+
+				// The staging buffer synch is somewhat "reversed"
+				// The end stage is set	to host write for the next usage of the staging buffer
 				resources() += BufferUsage{
 					.bari = {_staging_buffer->buffer(), Buffer::Range{.begin = 0, .len = buffer_range.len}},
 					.begin_state = ResourceState2{
-						.access = VK_ACCESS_2_HOST_WRITE_BIT,
-						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
 					.end_state = ResourceState2{
-						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-						.stage = stage,
+						.access = VK_ACCESS_2_HOST_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
 					},
 					.usage = VK_BUFFER_USAGE_2_TRANSFER_BITS_KHR,
 				};
@@ -964,29 +968,8 @@ namespace vkl
 			}
 			else // Use Staging Buffer
 			{
-				std::shared_ptr<PooledBuffer> sb;
-				const bool extern_sb = _staging_buffer.operator bool();
-				if (extern_sb)
-				{
-					// Assume externally synched
-					sb = _staging_buffer;
-				}
-				else
-				{
-					sb = std::make_shared<PooledBuffer>(ctx.stagingPool(), _range.len);
-					{
-						InlineSynchronizeBuffer(ctx, 
-							BufferAndRangeInstance{
-								.buffer = sb->buffer(), 
-								.range = Buffer::Range{.begin = 0, .len = _range.len}
-							},
-							ResourceState2{
-								.access = VK_ACCESS_2_HOST_WRITE_BIT ,
-								.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
-							}
-						);
-					}
-				}
+				std::shared_ptr<PooledBuffer> & sb = _staging_buffer;
+				
 				// Copy to Staging Buffer
 				{
 					sb->buffer()->map();
@@ -997,49 +980,6 @@ namespace vkl
 					vmaFlushAllocation(sb->buffer()->allocator(), sb->buffer()->allocation(), 0, _range.len);
 					// Flush each subrange individually? probably slow
 					sb->buffer()->unMap();
-				}
-
-				if (extern_sb)
-				{
-					// Assume externally .end_state
-					VkBufferMemoryBarrier2 sb_barrier{
-						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-						.pNext = nullptr,
-						.srcStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
-						.srcAccessMask = VK_ACCESS_2_HOST_WRITE_BIT,
-						.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
-						.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = sb->buffer()->handle(),
-						.offset = 0,
-						.size = _range.len,
-					};
-					VkDependencyInfo dependency{
-						.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-						.pNext = nullptr,
-						.dependencyFlags = 0,
-						.memoryBarrierCount = 0,
-						.pMemoryBarriers = nullptr,
-						.bufferMemoryBarrierCount = 1,
-						.pBufferMemoryBarriers = &sb_barrier,
-						.imageMemoryBarrierCount = 0,
-						.pImageMemoryBarriers = nullptr,
-					};
-					vkCmdPipelineBarrier2(cmd, &dependency);
-				}
-				else
-				{
-					InlineSynchronizeBuffer(ctx,
-						BufferAndRangeInstance{
-							.buffer = sb->buffer(),
-							.range = Buffer::Range{.begin = 0, .len = _range.len}
-						},
-						ResourceState2{
-							.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-							.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-						}
-					);
 				}
 
 				_regions.resize(_sources.size());
@@ -1065,7 +1005,36 @@ namespace vkl
 
 				vkCmdCopyBuffer2(cmd, &copy);
 
-				if (!extern_sb)
+				// Synch staging buffer for next usage
+				{
+					// Assume externally .end_state
+					VkBufferMemoryBarrier2 sb_barrier{
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+						.pNext = nullptr,
+						.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+						.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+						.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
+						.dstAccessMask = VK_ACCESS_2_HOST_WRITE_BIT,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = sb->buffer()->handle(),
+						.offset = 0,
+						.size = _range.len,
+					};
+					VkDependencyInfo dependency{
+						.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+						.pNext = nullptr,
+						.dependencyFlags = 0,
+						.memoryBarrierCount = 0,
+						.pMemoryBarriers = nullptr,
+						.bufferMemoryBarrierCount = 1,
+						.pBufferMemoryBarriers = &sb_barrier,
+						.imageMemoryBarrierCount = 0,
+						.pImageMemoryBarriers = nullptr,
+					};
+					vkCmdPipelineBarrier2(cmd, &dependency);
+				}
+
 				{
 					ctx.keepAlive(sb);
 				}
@@ -1082,7 +1051,8 @@ namespace vkl
 			});
 		});
 		node->setName(name());
-		node->populate(ctx, ui);
+		BufferPool * pool = ui.staging_pool ? ui.staging_pool.get() : _staging_pool.get();
+		node->populate(ctx, ui, pool);
 		return node;
 	}
 
@@ -1116,7 +1086,8 @@ namespace vkl
 	UploadImage::UploadImage(CreateInfo const& ci):
 		TransferCommand(ci.app, ci.name),
 		_src(ci.src),
-		_dst(ci.dst)
+		_dst(ci.dst),
+		_staging_pool(ci.staging_pool)
 	{}
 
 	struct UploadImageNode : public ExecutionNode
@@ -1141,7 +1112,7 @@ namespace vkl
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		std::shared_ptr<PooledBuffer> _staging_buffer = nullptr;
 
-		void populate(RecordContext& ctx, UploadImage::UploadInfo const& ui)
+		void populate(RecordContext& ctx, UploadImage::UploadInfo const& ui, BufferPool * pool)
 		{
 			_src = ui.src;
 			_buffer_row_length = ui.buffer_row_length;
@@ -1159,20 +1130,20 @@ namespace vkl
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			};
 
-			if (ctx.stagingPool())
+
 			{
-				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), _src.size());
+				_staging_buffer = std::make_shared<PooledBuffer>(pool, _src.size());
 				resources() += BufferUsage{
 					.bari = {_staging_buffer->buffer(), Buffer::Range{.begin = 0, .len = _src.size()}},
 					.begin_state = ResourceState2{
-						.access = VK_ACCESS_2_HOST_WRITE_BIT,
-						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
-					},
-					.end_state = ResourceState2{
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
-					.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
+					.end_state = ResourceState2{
+						.access = VK_ACCESS_2_HOST_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+					},
+					.usage = VK_BUFFER_USAGE_2_TRANSFER_BITS_KHR,
 				};
 			}
 		}
@@ -1192,28 +1163,7 @@ namespace vkl
 		{
 			CommandBuffer& cmd = *ctx.getCommandBuffer();
 
-			std::shared_ptr<PooledBuffer> sb;
-			const bool extern_sb = _staging_buffer.operator bool();
-			if (extern_sb)
-			{
-				// Assume externally synched
-				sb = _staging_buffer;
-			}
-			else
-			{
-				sb = std::make_shared<PooledBuffer>(ctx.stagingPool(), _src.size());
-
-				InlineSynchronizeBuffer(ctx,
-					BufferAndRangeInstance{
-						.buffer = sb->buffer(),
-						.range = Buffer::Range{.begin = 0, .len = _src.size()}
-					},
-					ResourceState2{
-						.access = VK_ACCESS_2_HOST_WRITE_BIT,
-						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
-					}
-				);
-			}
+			std::shared_ptr<PooledBuffer> & sb = _staging_buffer;
 
 			// Copy to Staging Buffer
 			{
@@ -1223,48 +1173,6 @@ namespace vkl
 				sb->buffer()->unMap();
 			}
 
-			if (extern_sb)
-			{
-				// Assume externally .end_state
-				VkBufferMemoryBarrier2 sb_barrier{
-					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-					.pNext = nullptr,
-					.srcStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
-					.srcAccessMask = VK_ACCESS_2_HOST_WRITE_BIT,
-					.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
-					.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.buffer = sb->buffer()->handle(),
-					.offset = 0,
-					.size = _src.size(),
-				};
-				VkDependencyInfo dependency{
-					.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-					.pNext = nullptr,
-					.dependencyFlags = 0,
-					.memoryBarrierCount = 0,
-					.pMemoryBarriers = nullptr,
-					.bufferMemoryBarrierCount = 1,
-					.pBufferMemoryBarriers = &sb_barrier,
-					.imageMemoryBarrierCount = 0,
-					.pImageMemoryBarriers = nullptr,
-				};
-				vkCmdPipelineBarrier2(cmd, &dependency);
-			}
-			else
-			{
-				InlineSynchronizeBuffer(ctx,
-					BufferAndRangeInstance{
-						.buffer = sb->buffer(),
-						.range = Buffer::Range{.begin = 0, .len = _src.size()}
-					},
-					ResourceState2{
-						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-					}
-				);
-			}
 
 			VkBufferImageCopy2 region{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
@@ -1289,7 +1197,36 @@ namespace vkl
 
 			vkCmdCopyBufferToImage2(cmd, &copy);
 
-			if (!extern_sb)
+			{
+				// Assume externally .end_state
+				VkBufferMemoryBarrier2 sb_barrier{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+					.pNext = nullptr,
+					.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+						.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+						.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
+						.dstAccessMask = VK_ACCESS_2_HOST_WRITE_BIT,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = sb->buffer()->handle(),
+					.offset = 0,
+					.size = _src.size(),
+				};
+				VkDependencyInfo dependency{
+					.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+					.pNext = nullptr,
+					.dependencyFlags = 0,
+					.memoryBarrierCount = 0,
+					.pMemoryBarriers = nullptr,
+					.bufferMemoryBarrierCount = 1,
+					.pBufferMemoryBarriers = &sb_barrier,
+					.imageMemoryBarrierCount = 0,
+					.pImageMemoryBarriers = nullptr,
+				};
+				vkCmdPipelineBarrier2(cmd, &dependency);
+			}
+
+
 			{
 				ctx.keepAlive(sb);
 			}
@@ -1306,7 +1243,8 @@ namespace vkl
 		});
 
 		node->setName(name());
-		node->populate(ctx, ui);
+		BufferPool* pool = ui.staging_pool ? ui.staging_pool.get() : _staging_pool.get();
+		node->populate(ctx, ui, pool);
 		return node;
 	}
 
@@ -1337,7 +1275,8 @@ namespace vkl
 
 	UploadResources::UploadResources(CreateInfo const& ci) :
 		TransferCommand(ci.app, ci.name),
-		_holder(ci.holder)
+		_holder(ci.holder),
+		_staging_pool(ci.staging_pool)
 	{
 
 	}
@@ -1377,7 +1316,7 @@ namespace vkl
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		size_t _total_staging_size = 0;
 
-		void populate(RecordContext& ctx, UploadResources::UploadInfo const& ui)
+		void populate(RecordContext& ctx, UploadResources::UploadInfo const& ui, BufferPool * pool)
 		{
 			_upload_list = ui.upload_list;
 			
@@ -1489,24 +1428,23 @@ namespace vkl
 					_staging_buffer = nullptr;
 				}
 			}
-			if (!_staging_buffer && _total_staging_size > 0 && ctx.stagingPool())
+			if (!_staging_buffer && _total_staging_size > 0)
 			{
-				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), _total_staging_size);
+				_staging_buffer = std::make_shared<PooledBuffer>(pool, _total_staging_size);
 			}
 			if (_staging_buffer)
 			{
-				// Note on staging buffers synch:
-				// I think it is useless to declare we need them for host access (VK_PIPELINE_STAGE_2_HOST_BIT / VK_ACCESS_2_HOST_WRITE_BIT) and then do an inline barrier for the copy
-				// Because this host access corresponds to the memcpy() in execute()
-				// But these memcpy() are processed before the CmdBuffer is submitted, so synching from whatever to host access is useless now
-				// It should instead be done when releasing the staging buffer, ready for its next utilisation. 
-				// It was not an issue so far, probably because enough passes for a staging buffer to be recycled for a synch problem to appear.
 				resources() += BufferUsage{
 					.bari = BufferAndRangeInstance{.buffer = _staging_buffer->buffer(), .range = _staging_buffer->buffer()->fullRange(),},
-					.begin_state = {
+					.begin_state = ResourceState2{
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
 					},
+					.end_state = ResourceState2{
+						.access = VK_ACCESS_2_HOST_WRITE_BIT,
+						.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+					},
+					.usage = VK_BUFFER_USAGE_2_TRANSFER_BITS_KHR,
 				};
 			}
 		}
@@ -1529,17 +1467,6 @@ namespace vkl
 		{
 			const ResourcesToUpload& resources = _upload_list;
 			VkCommandBuffer cmd = ctx.getCommandBuffer()->handle();
-			
-
-			if (_total_staging_size > 0 && !_staging_buffer)
-			{
-				_staging_buffer = std::make_shared<PooledBuffer>(ctx.stagingPool(), _total_staging_size);
-				InlineSynchronizeBuffer(ctx, BufferAndRangeInstance{ .buffer = _staging_buffer->buffer(), .range = _staging_buffer->buffer()->fullRange(), },
-					ResourceState2{
-						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
-				});
-			}
 
 			uint8_t* data = nullptr;
 			if (_staging_buffer)
@@ -1639,6 +1566,34 @@ namespace vkl
 			{
 				_staging_buffer->buffer()->unMap();
 				_staging_buffer->buffer()->flush();
+				{
+					// Assume externally .end_state
+					VkBufferMemoryBarrier2 sb_barrier{
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+						.pNext = nullptr,
+						.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+							.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT,
+							.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
+							.dstAccessMask = VK_ACCESS_2_HOST_WRITE_BIT,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = _staging_buffer->buffer()->handle(),
+						.offset = 0,
+						.size = _staging_buffer->buffer()->createInfo().size,
+					};
+					VkDependencyInfo dependency{
+						.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+						.pNext = nullptr,
+						.dependencyFlags = 0,
+						.memoryBarrierCount = 0,
+						.pMemoryBarriers = nullptr,
+						.bufferMemoryBarrierCount = 1,
+						.pBufferMemoryBarriers = &sb_barrier,
+						.imageMemoryBarrierCount = 0,
+						.pImageMemoryBarriers = nullptr,
+					};
+					vkCmdPipelineBarrier2(cmd, &dependency);
+				}
 			}
 
 			if (completion_callbacks.operator bool() && !completion_callbacks->callbacks.empty())
@@ -1658,7 +1613,8 @@ namespace vkl
 			});
 		});
 		node->setName(name());
-		node->populate(ctx, ui);
+		BufferPool* pool = ui.staging_pool ? ui.staging_pool.get() : _staging_pool.get();
+		node->populate(ctx, ui, pool);
 		return node;
 	}
 

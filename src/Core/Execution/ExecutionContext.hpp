@@ -32,15 +32,12 @@ namespace vkl
 		DescriptorSetsTacker _compute_bound_sets;
 		DescriptorSetsTacker _ray_tracing_bound_sets;
 
-		BufferPool * _staging_pool = nullptr;
-
 	public:
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name;
-			BufferPool * staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -62,11 +59,6 @@ namespace vkl
 		}
 
 		DescriptorSetsTacker& getBoundSets(VkPipelineBindPoint pipeline);
-
-		BufferPool* stagingPool()const
-		{
-			return _staging_pool;
-		}
 	};
 
 	class ExecutionContext : public VkObject
@@ -88,8 +80,6 @@ namespace vkl
 		MyVector<std::shared_ptr<VkObject>> _objects_to_keep = {};
 		MyVector<CompletionCallback> _completion_callbacks = {};
 
-		BufferPool* _staging_pool = nullptr;
-
 		DescriptorSetsManager _graphics_bound_sets;
 		DescriptorSetsManager _compute_bound_sets;
 		DescriptorSetsManager _ray_tracing_bound_sets;
@@ -108,7 +98,6 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<CommandBuffer> cmd = nullptr;
 			size_t resource_tid = 0;
-			BufferPool* staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -171,11 +160,6 @@ namespace vkl
 		const auto& objectsToKeepAlive() const
 		{
 			return _objects_to_keep;
-		}
-
-		BufferPool* stagingPool()
-		{
-			return _staging_pool;
 		}
 
 		size_t resourceThreadId()const

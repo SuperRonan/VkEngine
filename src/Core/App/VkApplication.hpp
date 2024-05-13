@@ -30,7 +30,6 @@ namespace vkl
 	// It works only if VkEngine is statically linked with the project exec
 	extern const char * GetProjectName();
 	
-	class BufferPool;
 	class Queue;
 	class CommandPool;
 	class DescriptorSetLayout;

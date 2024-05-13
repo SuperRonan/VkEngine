@@ -43,7 +43,6 @@ namespace vkl
 		VkObject(ci.app, ci.name),
 		_command_buffer(ci.cmd),
 		_resource_tid(ci.resource_tid),
-		_staging_pool(ci.staging_pool),
 		_graphics_bound_sets(DescriptorSetsManager::CI{
 			.app = application(),
 			.name = name() + "._gfx_bound_sets",

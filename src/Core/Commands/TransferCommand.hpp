@@ -365,6 +365,8 @@ namespace vkl
 
 		bool _use_update_buffer_ifp = false;
 
+		std::shared_ptr<BufferPool> _staging_pool = nullptr;
+
 	public:
 
 		struct CreateInfo 
@@ -375,6 +377,7 @@ namespace vkl
 			std::shared_ptr<Buffer> dst = nullptr;
 			DynamicValue<size_t> offset = 0;
 			bool use_update_buffer_ifp = false;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -387,6 +390,7 @@ namespace vkl
 			Array<PositionedObjectView> sources = {};
 			std::shared_ptr<Buffer> dst = nullptr;
 			std::optional<bool> use_update_buffer_ifp = {};
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
 		};
 		using UI = UploadInfo;
 
@@ -418,6 +422,7 @@ namespace vkl
 		ObjectView _src;
 		std::shared_ptr<ImageView> _dst = nullptr;
 
+		std::shared_ptr<BufferPool> _staging_pool = nullptr;
 	public:
 
 		struct CreateInfo
@@ -426,6 +431,7 @@ namespace vkl
 			std::string name = {};
 			ObjectView src = {};
 			std::shared_ptr<ImageView> dst = nullptr;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -439,6 +445,7 @@ namespace vkl
 			uint32_t buffer_row_length = 0;
 			uint32_t buffer_image_height = 0;
 			std::shared_ptr<ImageView> dst = nullptr;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
 		};
 		using UI = UploadInfo;
 
@@ -468,6 +475,7 @@ namespace vkl
 	protected:
 	
 		std::shared_ptr<ResourcesHolder> _holder;
+		std::shared_ptr<BufferPool> _staging_pool = nullptr;
 
 	public:
 
@@ -476,6 +484,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			std::shared_ptr<ResourcesHolder> holder = nullptr;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -486,6 +495,7 @@ namespace vkl
 		struct UploadInfo
 		{
 			ResourcesToUpload upload_list = {};
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
 		};
 		using UI = UploadInfo;
 

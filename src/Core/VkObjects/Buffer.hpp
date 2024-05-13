@@ -248,10 +248,6 @@ namespace vkl
 		void createInstance();
 
 		bool updateResource(UpdateContext & ctx);
-
-		//BufferPool::PooledBuffer * copyToStaging(void* data, size_t size = 0);
-
-		//void recordCopyStagingToBuffer(VkCommandBuffer cmd, BufferPool::PooledBuffer * sb);
 	};
 
 	struct BufferAndRangeInstance

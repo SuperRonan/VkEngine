@@ -322,7 +322,5 @@ namespace vkl
 		Dyn<VkImageSubresourceRange> fullSubresourceRange();
 
 		bool updateResource(UpdateContext & ctx);
-
-		//BufferPool::PooledBuffer* copyToStaging2D(BufferPool& pool, void* data, uint32_t elem_size);
 	};
 }

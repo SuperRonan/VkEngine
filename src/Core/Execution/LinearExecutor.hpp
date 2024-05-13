@@ -12,8 +12,6 @@
 #include <Core/VkObjects/VkWindow.hpp>
 #include <Core/VkObjects/Queue.hpp>
 
-#include <Core/Execution/BufferPool.hpp>
-
 namespace vkl
 {
 	
@@ -84,8 +82,6 @@ namespace vkl
 
 		std::shared_ptr<Queue> _main_queue = nullptr;
 		std::shared_ptr<Queue> _present_queue = nullptr;
-
-		BufferPool _staging_pool;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::shared_ptr<ImguiCommand> _render_gui = nullptr;

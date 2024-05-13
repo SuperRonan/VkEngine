@@ -10,6 +10,9 @@ namespace vkl
 	{
 		PrebuilTransferCommands(VkApplication * app);
 
+		std::shared_ptr<BufferPool> upload_staging_pool;
+		std::shared_ptr<BufferPool> download_staging_pool;
+
 		CopyImage copy_image;
 		CopyBufferToImage copy_buffer_to_image;
 		CopyImageToBuffer copy_image_to_buffer;

@@ -1,8 +1,24 @@
 #include "PrebuiltTransferCommands.hpp"
 
+#include <Core/Execution/BufferPool.hpp>
+
 namespace vkl
 {
 	PrebuilTransferCommands::PrebuilTransferCommands(VkApplication * app):
+		upload_staging_pool(std::make_shared<BufferPool>(BufferPool::CI{
+			.app = app,
+			.name = "UploadPool",
+			.allocator = app->allocator(),
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
+			.mem_usage = VMA_MEMORY_USAGE_CPU_TO_GPU,
+		})),
+		download_staging_pool(std::make_shared<BufferPool>(BufferPool::CI{
+			.app = app,
+			.name = "DownloadPool",
+			.allocator = app->allocator(),
+			.usage = VK_BUFFER_USAGE_TRANSFER_BITS,
+			.mem_usage = VMA_MEMORY_USAGE_GPU_TO_CPU,
+		})),
 		copy_image(CopyImage::CI{
 			.app = app,
 			.name = "CopyImage",
@@ -30,16 +46,18 @@ namespace vkl
 		upload_buffer(UploadBuffer::CI{
 			.app = app,
 			.name = "UploadBuffer",
+			.staging_pool = upload_staging_pool,
 		}),
 		upload_image(UploadImage::CI{
 			.app = app,
 			.name = "UploadImage",
+			.staging_pool = upload_staging_pool,
 		}),
 		upload_resources(UploadResources::CI{
 			.app = app,
 			.name = "UploadResources",
+			.staging_pool = upload_staging_pool,
 		}),
-		
 		blit_image(BlitImage::CI{
 			.app = app,
 			.name = "BlitImage",

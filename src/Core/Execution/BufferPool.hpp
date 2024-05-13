@@ -38,8 +38,8 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VmaAllocator allocator = nullptr;
-			VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_BITS;
-			VmaMemoryUsage mem_usage = VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
+			VkBufferUsageFlags usage = 0;
+			VmaMemoryUsage mem_usage = VmaMemoryUsage::VMA_MEMORY_USAGE_UNKNOWN;
 			size_t min_size = 1024;
 		};
 		using CI = CreateInfo;

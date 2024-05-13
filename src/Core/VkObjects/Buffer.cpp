@@ -349,27 +349,4 @@ namespace vkl
 
 		return res;
 	}
-
-	
-
-	//BufferPool::PooledBuffer * Buffer::copyToStaging(void* data, size_t size)
-	//{
-	//	if (size == 0)	size = _size;
-	//	BufferPool::PooledBuffer* sb = _app->stagingPool().getStagingBuffer(size);
-
-	//	std::memcpy(sb->data, data, size);
-
-	//	return sb;
-	//}
-
-	//void Buffer::recordCopyStagingToBuffer(VkCommandBuffer cmd, BufferPool::PooledBuffer* sb)
-	//{
-	//	VkBufferCopy copy{
-	//		.srcOffset = 0,
-	//		.dstOffset = 0,
-	//		.size = std::min(_size, sb->size),
-	//	};
-
-	//	vkCmdCopyBuffer(cmd, sb->buffer, _buffer, 1, &copy);
-	//}
 }
