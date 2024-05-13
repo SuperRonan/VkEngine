@@ -1,4 +1,6 @@
 #include "TransferCommand.hpp"
+#include <vulkan/utility/vk_format_utils.h>
+#include <Core/VkObjects/DetailedVkFormat.hpp>
 
 namespace vkl
 {
@@ -1905,6 +1907,32 @@ namespace vkl
 			_completion_callback = di.completion_callback;
 
 			_size = di.size;
+
+			if (_size == 0)
+			{
+				const VkExtent3D extent = _src->image()->createInfo().extent;
+				const size_t num_pixels = extent.width * extent.height * extent.depth;
+				const DetailedVkFormat detailed_format = DetailedVkFormat::Find(_src->createInfo().format);
+				size_t pixel_size = detailed_format.pack_bits;
+				if (detailed_format.aspect & VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					uint32_t bits = 0;
+					for (uint32_t i = 0; i < detailed_format.color.channels; ++i)
+					{
+						bits += detailed_format.color.bits[i];
+					}
+					size_t bytes = std::divUpSafe<size_t>(bits, 8);
+					pixel_size = std::max(pixel_size, bytes);
+				}
+				else if (detailed_format.aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+				{
+					size_t bits = detailed_format.depth_stencil.depth_bits + detailed_format.depth_stencil.stencil_bits;
+					size_t bytes = std::divUpSafe<size_t>(bits, 8);
+					pixel_size = std::max(pixel_size, bytes);
+				}
+				_size = num_pixels * pixel_size;
+			}
+
 			_buffer_row_length = di.default_buffer_row_length;
 			_buffer_image_height = di.default_buffer_image_height;
 
@@ -2032,8 +2060,8 @@ namespace vkl
 			return std::make_shared<DownloadImageNode>(DownloadImageNode::CI{
 				.app = application(),
 				.name = name(),
-				});
 			});
+		});
 
 		node->setName(name());
 		BufferPool* pool = di.staging_pool ? di.staging_pool.get() : _staging_pool.get();

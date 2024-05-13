@@ -1033,6 +1033,29 @@ namespace std
 		}
 		return res;
 	}
+
+	template <integral Uint>
+	constexpr Uint divDown(Uint num, Uint div)
+	{
+		return num / div;
+	}
+
+	template <integral Uint>
+	constexpr Uint divUpAssumeNoOverflow(Uint num, Uint div)
+	{
+		assert(num < (num + (div - 1))); // No overflow
+		return (num + (div - 1)) / div;
+	}
+
+	template <integral Uint>
+	constexpr Uint divUpSafe(Uint num, Uint div)
+	{
+		// div instruction computes the quotient and remaineder, so it is fast
+		Uint res = num / div;
+		Uint remainder = num % div;
+		if(remainder)	++res;
+		return res;
+	}
 }
 
 namespace vkl
