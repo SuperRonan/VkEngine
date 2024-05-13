@@ -88,5 +88,13 @@ namespace vkl
 		{
 			return _buffer;
 		}
+
+		BufferSegmentInstance bufferSegment()const
+		{
+			return BufferSegmentInstance{
+				.buffer = _buffer,
+				.range = _buffer->fullRange(),
+			};
+		}
 	};
 }

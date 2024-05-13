@@ -58,6 +58,16 @@ namespace vkl
 			.name = "UploadResources",
 			.staging_pool = upload_staging_pool,
 		}),
+		download_buffer(DownloadBuffer::CI{
+			.app = app,
+			.name = "DownloadBuffer",
+			.staging_pool = download_staging_pool,
+		}),
+		download_image(DownloadImage::CI{
+			.app = app,
+			.name = "DownloadImage",
+			.staging_pool = download_staging_pool,
+		}),
 		blit_image(BlitImage::CI{
 			.app = app,
 			.name = "BlitImage",

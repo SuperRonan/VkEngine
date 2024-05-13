@@ -22,6 +22,8 @@ namespace vkl
 		UploadBuffer upload_buffer;
 		UploadImage upload_image;
 		UploadResources upload_resources;
+		DownloadBuffer download_buffer;
+		DownloadImage download_image;
 
 		BlitImage blit_image;
 		ComputeMips compute_mips;

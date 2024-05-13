@@ -1633,4 +1633,439 @@ namespace vkl
 			return getExecutionNode(ctx, ui);
 		};
 	}
+
+
+
+
+
+
+
+
+	DownloadBuffer::DownloadBuffer(CreateInfo const& ci) :
+		TransferCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_staging_pool(ci.staging_pool)
+	{
+
+	}
+
+	struct DownloadBufferNode : public ExecutionNode
+	{
+		BufferAndRangeInstance _src = {};
+		void * _dst = nullptr;
+		DownloadCallback _completion_callback = {};
+		std::shared_ptr<PooledBuffer> _staging_buffer = {};
+		
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+
+		DownloadBufferNode(CreateInfo const& ci):
+			ExecutionNode(ExecutionNode::CI{
+				.app = ci.app,
+				.name = ci.name,
+			})
+		{}
+
+		virtual void clear() override
+		{
+			ExecutionNode::clear();
+			_src = {};
+			_dst = nullptr;
+			_completion_callback = {};
+			_staging_buffer.reset();
+		}
+
+		void populate(RecordContext& ctx, DownloadBuffer::DownloadInfo const& di, BufferPool* pool)
+		{
+			_src = di.src.getInstance();
+			_dst = di.dst;
+			_completion_callback = di.completion_callback;
+
+			_staging_buffer = std::make_shared<PooledBuffer>(pool, _src.size());
+
+			resources() += BufferUsage{
+				.bari = _src,
+				.begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+			};
+
+			resources() += BufferUsage{
+				.bari = _staging_buffer->bufferSegment(),
+				.begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				.end_state = ResourceState2{
+					.access = VK_ACCESS_2_HOST_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+				},
+			};
+		}
+
+		virtual void execute(ExecutionContext& ctx) override
+		{
+			VkCommandBuffer cmd = ctx.getCommandBuffer()->handle();
+			VkBufferCopy2 region{
+				.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
+				.pNext = nullptr,
+				.srcOffset = _src.range.begin,
+				.dstOffset = 0,
+				.size = _src.size(),
+			};
+
+			VkCopyBufferInfo2 info{
+				.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2,
+				.pNext = nullptr,
+				.srcBuffer = _src.buffer->handle(),
+				.dstBuffer = _staging_buffer->buffer()->handle(),
+				.regionCount = 1,
+				.pRegions = &region,
+			};
+
+			vkCmdCopyBuffer2(cmd, &info);
+
+			{
+				// Assume externally .end_state
+				VkBufferMemoryBarrier2 sb_barrier{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+					.pNext = nullptr,
+					.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+					.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
+					.dstAccessMask = VK_ACCESS_2_HOST_READ_BIT,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = _staging_buffer->buffer()->handle(),
+					.offset = 0,
+					.size = _staging_buffer->buffer()->createInfo().size,
+				};
+				VkDependencyInfo dependency{
+					.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+					.pNext = nullptr,
+					.dependencyFlags = 0,
+					.memoryBarrierCount = 0,
+					.pMemoryBarriers = nullptr,
+					.bufferMemoryBarrierCount = 1,
+					.pBufferMemoryBarriers = &sb_barrier,
+					.imageMemoryBarrierCount = 0,
+					.pImageMemoryBarriers = nullptr,
+				};
+				vkCmdPipelineBarrier2(cmd, &dependency);
+			}
+
+			ctx.keepAlive(_staging_buffer);
+
+			if (_dst || _completion_callback)
+			{
+				void * dst = _dst;
+				DownloadCallback download_callback = _completion_callback;
+				std::shared_ptr<PooledBuffer> sb = _staging_buffer;
+				size_t size = _src.size();
+				CompletionCallback cb = [dst, download_callback, sb, size](int int_res)
+				{
+					VkResult res = static_cast<VkResult>(int_res);
+					if (res == VK_SUCCESS)
+					{
+						if (dst)
+						{
+							sb->buffer()->flush();
+							void * sb_data = sb->buffer()->map();
+							assert(sb_data != nullptr);
+							std::memcpy(dst, sb_data, size);
+							sb->buffer()->unMap();
+						}
+					}
+					if (download_callback)
+					{
+						download_callback(int_res, sb);
+					}
+				};
+				ctx.addCompletionCallback(cb);
+			}
+			else
+			{
+				// ???
+			}
+		}
+	};
+
+	std::shared_ptr<ExecutionNode> DownloadBuffer::getExecutionNode(RecordContext& ctx, DownloadInfo const& di)
+	{
+		std::shared_ptr<DownloadBufferNode> node = _exec_node_cache.getCleanNode<DownloadBufferNode>([&]() {
+			return std::make_shared<DownloadBufferNode>(DownloadBufferNode::CI{
+				.app = application(),
+				.name = name(),
+			});
+		});
+
+		node->setName(name());
+		BufferPool * pool = di.staging_pool ? di.staging_pool.get() : _staging_pool.get();
+		node->populate(ctx, di, pool);
+		return node;
+	}
+
+	std::shared_ptr<ExecutionNode> DownloadBuffer::getExecutionNode(RecordContext& ctx)
+	{
+		DownloadInfo di{
+			.src = _src,
+			.dst = _dst,
+			.staging_pool = nullptr,
+			.completion_callback = nullptr,
+		};
+		return getExecutionNode(ctx, di);
+	}
+
+	Executable DownloadBuffer::with(DownloadInfo const& di)
+	{
+		DownloadInfo _di{
+			.src = di.src ? di.src : _src,
+			.dst = di.dst ? di.dst : _dst,
+			.staging_pool = di.staging_pool,
+			.completion_callback = di.completion_callback,
+		};
+		return [this, _di](RecordContext& ctx)
+		{
+			return getExecutionNode(ctx, _di);
+		};
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	DownloadImage::DownloadImage(CreateInfo const& ci) :
+		TransferCommand(ci.app, ci.name),
+		_src(ci.src),
+		_dst(ci.dst),
+		_size(ci.size),
+		_staging_pool(ci.staging_pool)
+	{
+
+	}
+
+	struct DownloadImageNode : public ExecutionNode
+	{
+		std::shared_ptr<ImageViewInstance> _src = nullptr;
+		void* _dst = nullptr;
+		size_t _size = 0;
+		uint32_t _buffer_row_length = 0;
+		uint32_t _buffer_image_height = 0;
+		DownloadCallback _completion_callback = {};
+		std::shared_ptr<PooledBuffer> _staging_buffer = {};
+
+		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+		};
+		using CI = CreateInfo;
+
+		DownloadImageNode(CreateInfo const& ci) :
+			ExecutionNode(ExecutionNode::CI{
+				.app = ci.app,
+				.name = ci.name,
+			})
+		{}
+
+		virtual void clear() override
+		{
+			ExecutionNode::clear();
+			_src.reset();
+			_dst = nullptr;
+			_size = 0;
+			_buffer_row_length = 0;
+			_buffer_image_height = 0;
+			_completion_callback = {};
+			_staging_buffer.reset();
+			_src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		}
+
+		void populate(RecordContext& ctx, DownloadImage::DownloadInfo const& di, BufferPool* pool)
+		{
+			_src = di.src->instance();
+			_dst = di.dst;
+			_completion_callback = di.completion_callback;
+
+			_size = di.size;
+			_buffer_row_length = di.default_buffer_row_length;
+			_buffer_image_height = di.default_buffer_image_height;
+
+			_staging_buffer = std::make_shared<PooledBuffer>(pool, _size);
+
+			_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
+			resources() += ImageViewUsage{
+				.ivi = _src,
+				.begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.layout = _src_layout,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+			};
+
+			resources() += BufferUsage{
+				.bari = _staging_buffer->bufferSegment(),
+				.begin_state = ResourceState2{
+					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
+				},
+				.end_state = ResourceState2{
+					.access = VK_ACCESS_2_HOST_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_HOST_BIT,
+				},
+			};
+		}
+
+		virtual void execute(ExecutionContext& ctx) override
+		{
+			VkCommandBuffer cmd = ctx.getCommandBuffer()->handle();
+
+			VkBufferImageCopy2 region{
+				.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
+				.pNext = nullptr,
+				.bufferOffset = 0,
+				.bufferRowLength = _buffer_row_length,
+				.bufferImageHeight = _buffer_image_height,
+				.imageSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
+				.imageOffset = makeZeroOffset3D(),
+				.imageExtent = _src->image()->createInfo().extent,
+			};
+
+			VkCopyImageToBufferInfo2 info{
+				.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2,
+				.pNext = nullptr,
+				.srcImage = _src->image()->handle(),
+				.srcImageLayout = _src_layout,
+				.dstBuffer = _staging_buffer->buffer()->handle(),
+				.regionCount = 1,
+				.pRegions = &region,
+			};
+
+			vkCmdCopyImageToBuffer2(cmd, &info);
+
+			{
+				// Assume externally .end_state
+				VkBufferMemoryBarrier2 sb_barrier{
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+					.pNext = nullptr,
+					.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT,
+					.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT,
+					.dstAccessMask = VK_ACCESS_2_HOST_READ_BIT,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = _staging_buffer->buffer()->handle(),
+					.offset = 0,
+					.size = _staging_buffer->buffer()->createInfo().size,
+				};
+				VkDependencyInfo dependency{
+					.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+					.pNext = nullptr,
+					.dependencyFlags = 0,
+					.memoryBarrierCount = 0,
+					.pMemoryBarriers = nullptr,
+					.bufferMemoryBarrierCount = 1,
+					.pBufferMemoryBarriers = &sb_barrier,
+					.imageMemoryBarrierCount = 0,
+					.pImageMemoryBarriers = nullptr,
+				};
+				vkCmdPipelineBarrier2(cmd, &dependency);
+			}
+
+			ctx.keepAlive(_staging_buffer);
+
+			if (_dst || _completion_callback)
+			{
+				void* dst = _dst;
+				DownloadCallback download_callback = _completion_callback;
+				std::shared_ptr<PooledBuffer> sb = _staging_buffer;
+				size_t size = _size;
+				CompletionCallback cb = [dst, download_callback, sb, size](int int_res)
+					{
+						VkResult res = static_cast<VkResult>(int_res);
+						if (res == VK_SUCCESS)
+						{
+							if (dst)
+							{
+								sb->buffer()->flush();
+								void* sb_data = sb->buffer()->map();
+								assert(sb_data != nullptr);
+								std::memcpy(dst, sb_data, size);
+								sb->buffer()->unMap();
+							}
+						}
+						if (download_callback)
+						{
+							download_callback(int_res, sb);
+						}
+					};
+				ctx.addCompletionCallback(cb);
+			}
+			else
+			{
+				// ???
+			}
+		}
+	};
+
+	std::shared_ptr<ExecutionNode> DownloadImage::getExecutionNode(RecordContext& ctx, DownloadInfo const& di)
+	{
+		std::shared_ptr<DownloadImageNode> node = _exec_node_cache.getCleanNode<DownloadImageNode>([&]() {
+			return std::make_shared<DownloadImageNode>(DownloadImageNode::CI{
+				.app = application(),
+				.name = name(),
+				});
+			});
+
+		node->setName(name());
+		BufferPool* pool = di.staging_pool ? di.staging_pool.get() : _staging_pool.get();
+		node->populate(ctx, di, pool);
+		return node;
+	}
+
+	std::shared_ptr<ExecutionNode> DownloadImage::getExecutionNode(RecordContext& ctx)
+	{
+		DownloadInfo di{
+			.src = _src,
+			.dst = _dst,
+			.size = _size,
+			.default_buffer_row_length = 0,
+			.default_buffer_image_height = 0,
+			.staging_pool = nullptr,
+			.completion_callback = nullptr,
+		};
+		return getExecutionNode(ctx, di);
+	}
+
+	Executable DownloadImage::with(DownloadInfo const& di)
+	{
+		DownloadInfo _di{
+			.src = di.src ? di.src : _src,
+			.dst = di.dst ? di.dst : _dst,
+			.staging_pool = di.staging_pool,
+			.completion_callback = di.completion_callback,
+		};
+		return [this, _di](RecordContext& ctx)
+		{
+			return getExecutionNode(ctx, _di);
+		};
+	}
 }

@@ -510,4 +510,109 @@ namespace vkl
 			return with(ui);
 		}
 	};
+
+
+	using DownloadCallback = std::function<void(int, std::shared_ptr<PooledBuffer> const&)>;
+
+	class DownloadBuffer : public TransferCommand
+	{
+	protected:
+
+		BufferAndRange _src = {};
+		void * _dst = nullptr;
+
+		std::shared_ptr<BufferPool> _staging_pool = nullptr;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication * app = nullptr;
+			std::string name = {};
+			BufferAndRange src = {};
+			void * dst = nullptr;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
+		};
+		using CI = CreateInfo;
+
+		DownloadBuffer(CreateInfo const& ci);
+
+		virtual ~DownloadBuffer() override = default;
+
+		struct DownloadInfo
+		{
+			BufferAndRange src = {};
+			// If dst is nullptr, then no copy from staging buffer to dst
+			// If dst != nullptr, then there is a copy from staging buffer to dst in completion callback
+			void * dst = nullptr;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
+			DownloadCallback completion_callback = {};
+		};
+		using DI = DownloadInfo;
+
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, DownloadInfo const& di);
+
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
+
+		Executable with(DownloadInfo const& di);
+
+		Executable operator()(DownloadInfo const& di)
+		{
+			return with(di);
+		}
+	};
+
+
+	class DownloadImage : public TransferCommand
+	{
+	protected:
+
+		std::shared_ptr<ImageView> _src = nullptr;
+		void * _dst = nullptr;
+		size_t _size = 0;
+
+		std::shared_ptr<BufferPool> _staging_pool = nullptr;
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			std::shared_ptr<ImageView> src = nullptr;
+			void * dst = nullptr;
+			size_t size = 0;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
+		};
+		using CI = CreateInfo;
+
+		DownloadImage(CreateInfo const& ci);
+
+		virtual ~DownloadImage() override = default;
+
+		struct DownloadInfo
+		{
+			std::shared_ptr<ImageView> src = nullptr;
+			// If dst is nullptr, then no copy from staging buffer to dst
+			// If dst != nullptr, then there is a copy from staging buffer to dst in completion callback
+			void * dst = nullptr;
+			size_t size = 0;
+			uint32_t default_buffer_row_length = 0;
+			uint32_t default_buffer_image_height = 0;
+			std::shared_ptr<BufferPool> staging_pool = nullptr;
+			DownloadCallback completion_callback = {};
+		};
+		using DI = DownloadInfo;
+
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, DownloadInfo const& di);
+
+		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
+
+		Executable with(DownloadInfo const& di);
+
+		Executable operator()(DownloadInfo const& di)
+		{
+			return with(di);
+		}
+	};
 }
