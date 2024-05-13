@@ -512,7 +512,7 @@ namespace vkl
 		}
 
 		_swapchain_mutex.lock();
-		_previous_swapchain_events.push_back(_latest_swapchain_event);
+		_previous_swapchain_events.push_back(std::move(_latest_swapchain_event));
 		_swapchain_mutex.unlock();
 	}
 
@@ -754,7 +754,10 @@ namespace vkl
 							res = e->present_signal_fence->getStatus();
 						}
 						VkResult aquire_status = e->aquire_signal_fence->getStatus();
-						VKL_BREAKPOINT_HANDLE;
+						if (res == VK_SUCCESS && aquire_status != VK_SUCCESS)
+						{
+							VKL_BREAKPOINT_HANDLE;
+						}
 					}
 					return res;
 				};
@@ -888,7 +891,9 @@ namespace vkl
 
 	void LinearExecutor::waitOnCommandCompletion(bool global_wait, uint64_t timeout)
 	{
-		VkResult result;
+		VkResult result = VK_SUCCESS;
+
+		_cb_mutex.lock();
 		if (global_wait)
 		{
 			result = vkDeviceWaitIdle(device());
@@ -900,11 +905,13 @@ namespace vkl
 			{
 				_fences.push_back(it->get()->signal_fence->handle());
 			}
-			result = vkWaitForFences(device(), _fences.size32(), _fences.data(), VK_TRUE, timeout);
+			if (_fences)
+			{
+				result = vkWaitForFences(device(), _fences.size32(), _fences.data(), VK_TRUE, timeout);
+			}
 		}
 		VK_CHECK(result, "Failed to wait for all completion");
 
-		_cb_mutex.lock();
 		for (auto it = _previous_cbs.begin(), end = _previous_cbs.end(); it != end; ++it)
 		{
 			VkResult result = it->get()->signal_fence->getStatus();
@@ -917,7 +924,7 @@ namespace vkl
 
 	void LinearExecutor::waitOnSwapchainCompletion(bool global_wait, uint64_t timeout)
 	{
-		VkResult result;
+		VkResult result = VK_SUCCESS;
 		// It appears that after a call to vkDeviceWaitIdle, waiting on present signal fence ... waits forever. (with VkPresentFence) 
 		// So we don't do it.
 		_fences.clear();
@@ -929,7 +936,10 @@ namespace vkl
 			//VkResult result = it->get()->signal_fence->getStatus();
 			//assert(result != VK_NOT_READY);
 		}
-		result = vkWaitForFences(device(), _fences.size32(), _fences.data(), VK_TRUE, timeout);
+		if (_fences)
+		{
+			result = vkWaitForFences(device(), _fences.size32(), _fences.data(), VK_TRUE, timeout);
+		}
 		_previous_swapchain_events.clear();
 
 		_swapchain_mutex.unlock();
