@@ -1477,16 +1477,11 @@ namespace vkl
 				data = static_cast<uint8_t*>(_staging_buffer->buffer()->map());
 			}
 
-			std::shared_ptr<CallbackHolder> completion_callbacks;
 			const auto pushCallbackIFN = [&](CompletionCallback const& cb)
 			{
 				if (cb)
 				{
-					if (!completion_callbacks)
-					{
-						completion_callbacks = std::make_shared<CallbackHolder>();
-					}
-					completion_callbacks->callbacks.push_back(cb);
+					ctx.addCompletionCallback(cb);
 				}
 			};
 
@@ -1598,10 +1593,6 @@ namespace vkl
 				}
 			}
 
-			if (completion_callbacks.operator bool() && !completion_callbacks->callbacks.empty())
-			{
-				ctx.keepAlive(completion_callbacks);
-			}
 			ctx.keepAlive(_staging_buffer);
 		}
 	};
@@ -2045,7 +2036,7 @@ namespace vkl
 							download_callback(int_res, sb);
 						}
 					};
-				ctx.addCompletionCallback(cb);
+				ctx.addCompletionCallback(std::move(cb));
 			}
 			else
 			{
