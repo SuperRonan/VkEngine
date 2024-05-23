@@ -14,6 +14,7 @@
 #include <Core/Utils/UniqueIndexAllocator.hpp>
 #include <random>
 
+#include <thatlib/src/math/Half.hpp>
 
 void TestUniqueIdAllocator()
 {
@@ -44,6 +45,36 @@ void TestUniqueIdAllocator()
 		pool.print(std::cout);
 		std::cout << std::endl;
 	}
+}
+
+void TestHalf()
+{
+	using float16_t = that::math::float16_t;
+	std::mt19937_64 rng;
+	auto generate = [&]()
+	{
+		float r = 16;
+		std::uniform_real_distribution<float> d (-r, r);
+		float f = d(rng);
+		return pow(f, 4);
+	};
+
+	float max_dr = 0;
+
+	for (int i = 0; i < 1024 * 1024; ++i)
+	{
+		float f = generate();
+		float16_t h = f;
+		float hf = h;
+		float d = hf - f;
+		float dr = d * 100 / f;
+		max_dr = std::max(abs(dr), max_dr);
+		if(i / 1024 == 0)
+		{
+			std::cout << std::hex << f << " -> " << hf << " (" << d << ", " << dr << "%)" << std::endl;
+		}
+	}
+	VKL_BREAKPOINT_HANDLE;
 }
 
 template <class T, std::concepts::Container<T> C>
@@ -85,7 +116,7 @@ int main(int argc, const char** argv)
 	using namespace std::containers_append_operators;
 	using namespace std::string_literals;
 
-	TestUniqueIdAllocator();
+	TestHalf();
 
 	Dyn<VkExtent3D> ex = makeZeroExtent3D();
 
@@ -119,7 +150,7 @@ int main(int argc, const char** argv)
 
 		
 	// TODO make these lines work
-	// From the compiler error, int the DynValue<T>'s operator +, it doesnt find T's operator + for std::vector
+	// From the compiler error, int the DynValue<T>'s operator +, it doesn't find T's operator + for std::vector
 	// My operators are not even mentioned, so it doesn't seem to be a concept failure issue
 	// My Container's operator + isn't even in the list of candidates it appears...
 	{
