@@ -21,7 +21,7 @@ namespace vkl
 
 	protected:
 
-		Options _options = {};
+		ImGuiConfigFlags _imgui_init_flags = 0;
 
 		static AppWithImGui* g_app;
 
@@ -48,7 +48,10 @@ namespace vkl
 		{
 			assert(ctx == &_gui_context);
 			ImGui::EndFrame();
-			ImGui::UpdatePlatformWindows();
+			if (_imgui_init_flags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				ImGui::UpdatePlatformWindows();
+			}
 		}
 
 	public:
@@ -65,5 +68,10 @@ namespace vkl
 		AppWithImGui(CreateInfo const& ci);
 
 		virtual ~AppWithImGui() override;
+
+		ImGuiConfigFlags imguiConfigFlags() const
+		{
+			return _imgui_init_flags;
+		}
 	};
 }

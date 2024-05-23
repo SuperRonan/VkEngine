@@ -40,7 +40,7 @@ namespace vkl
 		default_validation = 1;
 		default_name_vk_objects = 1;
 		default_cmd_labels = 1;
-		default_verbosity = 0;
+		default_verbosity = 1;
 #endif
 #if VKL_BUILD_RELEASE_WITH_DEBUG_INFO
 		default_verbosity = 2;
@@ -146,7 +146,7 @@ namespace vkl
 		const VkBool32 f = VK_FALSE;
 		
 		features.features_13.synchronization2 = t;
-		features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
+		//features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
 		features.present_id_khr.presentId = t;
 
 		features.features2.features.geometryShader = t;

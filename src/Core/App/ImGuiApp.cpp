@@ -1,12 +1,23 @@
 #include "ImGuiApp.hpp"
 #include <cassert>
 
+#include <argparse/argparse.hpp>
+
 namespace vkl
 {
 	
 	void AppWithImGui::FillArgs(argparse::ArgumentParser& args)
 	{
 		MainWindowApp::FillArgs(args);
+		
+		args.add_argument("--imgui_docking")
+			.help("Force the ImGui Docking feature (0 or 1)")
+			.scan<'d', unsigned int>()
+		;
+
+		args.add_argument("--imgui_multi_viewport")
+			.help("Force the ImGui Multi Viewport feature (0 or 1)")
+			.scan<'d', unsigned int>();
 	}
 
 
@@ -17,10 +28,7 @@ namespace vkl
 	{
 		_imgui_ctx = ImGui::CreateContext();
 		ImGui::SetCurrentContext(_imgui_ctx);
-		ImGui::GetIO().ConfigFlags |= 
-			ImGuiConfigFlags_DockingEnable | 
-			ImGuiConfigFlags_ViewportsEnable |
-			ImGuiConfigFlags_NavEnableKeyboard;
+		ImGui::GetIO().ConfigFlags |= _imgui_init_flags;
 		
 		_gui_context = GuiContext::CI{
 			.imgui_context = _imgui_ctx,
@@ -92,6 +100,34 @@ namespace vkl
 	{
 		assert(!g_app);
 		g_app = this;
+
+		_imgui_init_flags |= ImGuiConfigFlags_NavEnableKeyboard;
+		
+		if (ci.args.is_used("--imgui_docking"))
+		{
+			if (ci.args.get<unsigned int>("--imgui_docking") == 1)
+			{
+				_imgui_init_flags |= ImGuiConfigFlags_DockingEnable;
+			}
+		}
+		else
+		{
+			// Might be platform dependant
+			_imgui_init_flags |= ImGuiConfigFlags_DockingEnable;
+		}
+
+		if (ci.args.is_used("--imgui_multi_viewport"))
+		{
+			if (ci.args.get<unsigned int>("--imgui_multi_viewport") == 1)
+			{
+				_imgui_init_flags |= ImGuiConfigFlags_ViewportsEnable;
+			}
+		}
+		else
+		{
+			// Might be platform dependant
+			_imgui_init_flags |= ImGuiConfigFlags_ViewportsEnable;
+		}
 	}
 
 	AppWithImGui::~AppWithImGui()

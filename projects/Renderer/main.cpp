@@ -30,6 +30,7 @@
 #include <Core/Rendering/SceneUserInterface.hpp>
 #include <Core/Rendering/GammaCorrection.hpp>
 #include <Core/Rendering/ImagePicker.hpp>
+#include <Core/Rendering/ImageSaver.hpp>
 
 #include <Core/Maths/Transforms.hpp>
 
@@ -429,7 +430,7 @@ namespace vkl
 
 				{
 					GuiContext * gui_ctx = beginImGuiFrame();
-					//ImGui::ShowDemoWindow();
+					ImGui::ShowDemoWindow();
 
 					if(ImGui::Begin("Rendering"))
 					{
@@ -450,24 +451,27 @@ namespace vkl
 							exec.getDebugRenderer()->declareGui(*gui_ctx);
 						}
 
-						ImGui::End();
 					}
+					ImGui::End();
 
 					if(ImGui::Begin("Scene"))
 					{
 						sui->declareGui(*gui_ctx);
 
-						ImGui::End();
 					}
+					ImGui::End();
 
 					if(ImGui::Begin("Performances"))
 					{
 						stat_records.declareGui(*gui_ctx);
-						ImGui::End();
 					}
+					ImGui::End();
 
-
-					_main_window->declareGui(*gui_ctx);
+					if (ImGui::Begin("Display"))
+					{
+						_main_window->declareGui(*gui_ctx);
+					}
+					ImGui::End();
 					endImGuiFrame(gui_ctx);
 				}
 
@@ -535,6 +539,7 @@ namespace vkl
 					exec_thread.bindSet(1, nullptr);
 
 					exec.renderDebugIFP();
+					image_saver.execute(exec_thread);
 					exec.endCommandBuffer(ptr_exec_thread);
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);
@@ -569,11 +574,6 @@ namespace vkl
 
 int main(int argc, char** argv)
 {
-	std::stringstream ss;
-	size_t m = 12;
-	ss << m;
-
-
 	try
 	{
 		argparse::ArgumentParser args;

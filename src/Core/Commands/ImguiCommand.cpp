@@ -2,6 +2,8 @@
 #include "ImguiCommand.hpp"
 #include <Core/VkObjects/VulkanExtensionsSet.hpp>
 
+#include <Core/App/ImGuiApp.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
@@ -125,7 +127,14 @@ namespace vkl
 				ctx.keepAlive(_target);
 			}
 
-			ImGui::RenderPlatformWindowsDefault();
+			AppWithImGui * app = dynamic_cast<AppWithImGui*>(application());
+			if (app)
+			{
+				if (app->imguiConfigFlags() & ImGuiConfigFlags_ViewportsEnable)
+				{
+					ImGui::RenderPlatformWindowsDefault();
+				}
+			}
 			ctx.popDebugLabel();
 		}
 	};
