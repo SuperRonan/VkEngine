@@ -478,6 +478,77 @@ float Grey(vec3 rgb)
 	return sum(rgb) / 3;
 }
 
+bool isWrong(float f)
+{
+	return isnan(f) || isinf(f);
+}
+
+bvec2 isWrong(vec2 v)
+{
+	bvec2 res;
+	for(uint i = 0; i < 2; ++i)
+	{
+		res[i] = isWrong(v[i]);
+	}
+	return res;
+}
+
+bvec3 isWrong(vec3 v)
+{
+	bvec3 res;
+	for(uint i = 0; i < 3; ++i)
+	{
+		res[i] = isWrong(v[i]);
+	}
+	return res;
+}
+
+bvec4 isWrong(vec4 v)
+{
+	bvec4 res;
+	for(uint i = 0; i < 4; ++i)
+	{
+		res[i] = isWrong(v[i]);
+	}
+	return res;
+}
+
+float fixExtremeToZero(float f)
+{
+	if(isWrong(f))
+	{
+		f = 0;
+	}
+	return f;
+}
+
+vec2 fixExtremeToZero(vec2 v)
+{
+	for(uint i = 0; i < 2; ++i)
+	{
+		v[i] = fixExtremeToZero(v[i]);
+	}
+	return v;
+}
+
+vec3 fixExtremeToZero(vec3 v)
+{
+	for(uint i = 0; i < 3; ++i)
+	{
+		v[i] = fixExtremeToZero(v[i]);
+	}
+	return v;
+}
+
+vec4 fixExtremeToZero(vec4 v)
+{
+	for(uint i = 0; i < 4; ++i)
+	{
+		v[i] = fixExtremeToZero(v[i]);
+	}
+	return v;
+}
+
 #define PI 3.1415926535897932384626433832795
 #define HALF_PI (PI / 2.0)
 #define QUART_PI (PI / 4.0)
