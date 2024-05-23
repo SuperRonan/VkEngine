@@ -666,6 +666,7 @@ namespace vkl
 
 		_pending_cbs.push_back(_latest_synch_cb);
 		_latest_synch_cb->dependecies = std::move(_context.objectsToKeepAlive());
+		_latest_synch_cb->completion_callbacks = std::move(_context.completionCallbacks());
 		_context.objectsToKeepAlive().clear();
 
 		if (submit)

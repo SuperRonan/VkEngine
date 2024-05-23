@@ -3,12 +3,12 @@
 
 namespace vkl
 {
-	static_assert(DetailedVkFormat::Type::UNORM == img::ElementType::UNORM);
-	static_assert(DetailedVkFormat::Type::SNORM == img::ElementType::SNORM);
-	static_assert(DetailedVkFormat::Type::UINT == img::ElementType::UINT);
-	static_assert(DetailedVkFormat::Type::SINT == img::ElementType::SINT);
-	static_assert(DetailedVkFormat::Type::SRGB == img::ElementType::sRGB);
-	static_assert(DetailedVkFormat::Type::SFLOAT == img::ElementType::FLOAT);
+	static_assert(static_cast<uint32_t>(DetailedVkFormat::Type::UNORM) == static_cast<uint32_t>(that::ElementType::UNORM));
+	static_assert(static_cast<uint32_t>(DetailedVkFormat::Type::SNORM) == static_cast<uint32_t>(that::ElementType::SNORM));
+	static_assert(static_cast<uint32_t>(DetailedVkFormat::Type::UINT) == static_cast<uint32_t>(that::ElementType::UINT));
+	static_assert(static_cast<uint32_t>(DetailedVkFormat::Type::SINT) == static_cast<uint32_t>(that::ElementType::SINT));
+	static_assert(static_cast<uint32_t>(DetailedVkFormat::Type::SRGB) == static_cast<uint32_t>(that::ElementType::sRGB));
+	static_assert(static_cast<uint32_t>(DetailedVkFormat::Type::SFLOAT) == static_cast<uint32_t>(that::ElementType::FLOAT));
 
 	std::vector<DetailedVkFormat> DetailedVkFormat::s_table = {
 		DetailedVkFormat(VK_FORMAT_UNDEFINED),
@@ -270,7 +270,7 @@ namespace vkl
 	{
 		std::hash<size_t> hs;
 		std::hash<uint32_t> hu;
-		size_t res = hu(type) ^ hu(channels) ^ hu(swizzle);
+		size_t res = hu(static_cast<uint32_t>(type)) ^ hu(channels) ^ hu(static_cast<uint32_t>(swizzle));
 		size_t hb = 0;
 		for (uint32_t i = 0; i < channels; ++i)
 		{
@@ -284,8 +284,8 @@ namespace vkl
 	{
 		std::hash<size_t> hst;
 		std::hash<uint32_t> hu;
-		size_t hd = hu(depth_type) ^ hu(depth_bits);
-		size_t hs = hu(stencil_type) ^ hu(stencil_bits);
+		size_t hd = hu(static_cast<uint32_t>(depth_type)) ^ hu(depth_bits);
+		size_t hs = hu(static_cast<uint32_t>(stencil_type)) ^ hu(stencil_bits);
 		size_t res = hst(hd ^ hs);
 		return res;
 	}
@@ -396,7 +396,7 @@ namespace vkl
 		pack_bits(pack)
 	{}
 
-	DetailedVkFormat::DetailedVkFormat(img::FormatInfo const& f) : 
+	DetailedVkFormat::DetailedVkFormat(that::FormatInfo const& f) :
 		aspect(VK_IMAGE_ASPECT_COLOR_BIT)
 	{
 		color = {};
@@ -427,11 +427,11 @@ namespace vkl
 		return res;
 	}
 
-	img::FormatInfo DetailedVkFormat::getImgFormatInfo()const
+	that::FormatInfo DetailedVkFormat::getImgFormatInfo()const
 	{
 		assert(aspect & VK_IMAGE_ASPECT_COLOR_BIT);
-		img::FormatInfo res{
-			.type = static_cast<img::ElementType>(color.type),
+		that::FormatInfo res{
+			.type = static_cast<that::ElementType>(color.type),
 			.elem_size = color.bits[0] / 8,
 			.channels = color.channels,
 		};

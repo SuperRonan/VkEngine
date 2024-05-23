@@ -32,21 +32,21 @@ namespace vkl
 	public:
 
 		VkFormat vk_format = VK_FORMAT_MAX_ENUM;
-		enum Type
+		enum class Type
 		{
-			None = 0,
-			UNORM = 1,
-			SNORM = 2,
-			USCALED = 3,
-			SSCALED = 4,
-			UINT = 5,
-			SINT = 6,
-			SRGB = 7,
-			UFLOAT = 8,
-			SFLOAT = 9,
-			MAX_ENUM
+			None = -1,
+			UNORM = that::ElementType::UNORM,
+			SNORM = that::ElementType::SNORM,
+			USCALED = 16,
+			SSCALED = 17,
+			UINT = that::ElementType::UINT,
+			SINT = that::ElementType::SINT,
+			SRGB = that::ElementType::sRGB,
+			UFLOAT = 18,
+			SFLOAT = that::ElementType::FLOAT,
+			MAX_ENUM = 0x7f'ff'ff'ff,
 		};
-		enum Swizzle
+		enum class Swizzle
 		{
 			RGBA = 0,
 			RGB = RGBA,
@@ -141,13 +141,13 @@ namespace vkl
 			vk_format(f)
 		{}
 
-		DetailedVkFormat(img::FormatInfo const& f);
+		DetailedVkFormat(that::FormatInfo const& f);
 
 		bool determineVkFormatFromInfo();
 
 		static DetailedVkFormat Find(VkFormat format);
 
-		img::FormatInfo getImgFormatInfo()const;
+		that::FormatInfo getImgFormatInfo()const;
 
 		std::string getGLSLName()const;
 	};

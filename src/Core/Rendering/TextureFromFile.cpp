@@ -53,7 +53,7 @@ namespace vkl
 	{
 		if (!_path.empty())
 		{
-			_host_image = img::io::readFormatedImage(_path);
+			_host_image = that::img::io::readFormatedImage(_path);
 
 			if (!_host_image.empty())
 			{

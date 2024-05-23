@@ -22,6 +22,13 @@ namespace vkl
 			};
 		}
 
+		static constexpr TaskPriority Soon()
+		{
+			return TaskPriority{
+				.priority = std::numeric_limits<size_t>::max() / 2,
+			};
+		}
+
 		static constexpr TaskPriority WhenPossible()
 		{
 			return TaskPriority{

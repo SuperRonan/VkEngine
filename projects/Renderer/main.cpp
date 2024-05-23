@@ -265,12 +265,13 @@ namespace vkl
 				.use_debug_renderer = true,
 			});
 
-
+			VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
+			//VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(Image::CI{
 				.app = this,
 				.name = "Final Image",
 				.type = VK_IMAGE_TYPE_2D,
-				.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+				.format = format,
 				.extent = _main_window->extent3D(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -339,6 +340,14 @@ namespace vkl
 					renderer.depth(), // Does not work yet
 				},
 				.dst = final_image,
+			};
+
+			ImageSaver image_saver = ImageSaver::CI{
+				.app = this,
+				.name = "ImageSaver",
+				.src = final_image,
+				.dst_folder = _mounting_points["gen"] + "/saved_images/",
+				.dst_filename = "renderer_",
 			};
 
 			exec.init();
@@ -434,6 +443,8 @@ namespace vkl
 
 						image_picker.declareGUI(*gui_ctx);
 
+						image_saver.declareGUI(*gui_ctx);
+
 						if (exec.getDebugRenderer())
 						{
 							exec.getDebugRenderer()->declareGui(*gui_ctx);
@@ -489,6 +500,7 @@ namespace vkl
 					gamma_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					image_picker.updateResources(*update_context);
+					image_saver.updateResources(*update_context);
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
 

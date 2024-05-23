@@ -23,7 +23,7 @@ namespace vkl
 		bool _upload_done = false;
 		bool _mips_done = false;
 		
-		img::FormatedImage _host_image = {};
+		that::img::FormatedImage _host_image = {};
 
 		std::shared_ptr<AsynchTask> _load_image_task = nullptr;
 
