@@ -255,8 +255,7 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 				// TODO geometry normal
 				shadow = computeShadow(position, geometry_normal, light_sample);
 			}
-
-			diffuse += (bsdf_rho * cos_theta * light_sample.Le * shadow) / light_sample.pdf; 
+			diffuse += (bsdf_rho * abs_cos_theta * light_sample.Le * shadow) / light_sample.pdf; 
 		}
 	}
 

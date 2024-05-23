@@ -351,31 +351,39 @@ namespace vkl
 			Vector3 pos1 = _host.vertices[i1].position;
 			Vector3 pos2 = _host.vertices[i2].position;
 
+
 			Vector2 tex0 = _host.vertices[i0].uv;
 			Vector2 tex1 = _host.vertices[i1].uv;
 			Vector2 tex2 = _host.vertices[i2].uv;
 
 			Vector3 edge1 = pos1 - pos0;
 			Vector3 edge2 = pos2 - pos0;
+			
+			Vector3 normal_denorm = glm::cross(edge1, edge2);
+			Vector3 normal = glm::normalize(normal_denorm);
 
 			Vector2 uv1 = tex1 - tex0;
 			Vector2 uv2 = tex2 - tex0;
 
 			// Implicit matrix [uv1[1], -uv1[0]; -uv2[1], uv2[0]]
-			// The determinent of this matrix
+			// The determinant of this matrix
 			Float d = Float(1) / (uv1[0] * uv2[1] - uv1[1] * uv2[0]);
-
-			Vector3 tg = Vector3{
-				((edge1[0] * uv2[1]) - (edge2[0] * uv1[1])),
-				((edge1[1] * uv2[1]) - (edge2[1] * uv1[1])),
-				((edge1[2] * uv2[1]) - (edge2[2] * uv1[1])),
-			} *d;
-
-			Vector3 btg = Vector3{
-				((edge1[0] * uv2[0]) - (edge2[0] * uv1[0])),
-				((edge1[1] * uv2[0]) - (edge2[1] * uv1[0])),
-				((edge1[2] * uv2[0]) - (edge2[2] * uv1[0])),
-			} *d;
+			Vector3 tg, btg;
+			if (std::isinf(d))
+			{
+				// hack, is it somewhat correct?
+				tg = pos1 - pos2;
+				btg = pos2 - pos1;
+				// scale down to weight them down if other triangles can compute proper values
+				const float scale = (1.0f / float(1 << 10));
+				tg *= scale;
+				btg *= scale;
+			}
+			else
+			{
+				tg = (edge1 * uv2.y - edge2 * uv1.y) * d;
+				btg = (edge1 * uv2.x - edge2 * uv1.x) * d;
+			}
 
 			tans[i0].tg += tg;
 			tans[i1].tg += tg;
@@ -391,16 +399,27 @@ namespace vkl
 			Vector3 normal = _host.vertices[vertex_id].normal;
 			Vector3 tg = tans[vertex_id].tg;
 			Vector3 btg = tans[vertex_id].btg;
-
+			
 			Vector3 t = tg - (normal * glm::dot(normal, tg));
 			if (glm::dot(t, t) > 0)
 			{
 				t = glm::normalize(t);
 			}
 
+			for (int i = 0; i < 3; ++i)
+			{
+				if (std::isinf(t[i]) || std::isnan(t[i]))
+				{
+					VKL_BREAKPOINT_HANDLE;
+				}
+			}
+
 			Vector3 c = glm::cross(normal, tg);
-			Float w = (glm::dot(c, btg) < 0) ? -1 : 1;
-			_host.vertices[vertex_id].tangent = Vector4(t * w, 0);
+			if (glm::dot(c, btg) < 0)
+			{
+				t = -t;
+			}
+			_host.vertices[vertex_id].tangent = Vector4(t, 0);
 		}
 	}
 

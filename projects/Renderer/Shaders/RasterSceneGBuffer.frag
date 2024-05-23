@@ -64,10 +64,11 @@ void main()
 		vec3 tex_normal = vec3(0.5, 0.5, 1);
 		tex_normal = texture(SceneTextures2D[textures.normal_texture_id], uv).xyz;
 		tex_normal = (tex_normal * 2.0 - 1);
-		normal = normalize(TBN * tex_normal);
+		normal = safeNormalize(TBN * tex_normal);
 	}
 
 	o_albedo = vec4(albedo, 0);
 	o_position = vec4(position, 0);
 	o_normal = vec4(normal, 0);
+	o_tangent = vec4(tangent, 0);
 }

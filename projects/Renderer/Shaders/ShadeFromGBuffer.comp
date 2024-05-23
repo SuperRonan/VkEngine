@@ -1,8 +1,8 @@
 #version 460
 
-// #define I_WANT_TO_DEBUG 1
+#define I_WANT_TO_DEBUG 1
 // #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
-// #include <ShaderLib:/Debug/DebugBuffers.glsl>
+#include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #include "common.glsl"
 
@@ -54,13 +54,22 @@ void main()
 		}
 #endif
 
-		vec3 res = shade(albedo, position, normal);
+		vec3 shaded = shade(albedo, position, normal);
 
 		float ao = 1;
 #if USE_AO
 		ao = textureLod(AOTexture, screen_uv, 0).x;
 #endif
-		res += ao * albedo * scene_ubo.ambient;
+		vec3 ambiant = ao * albedo * scene_ubo.ambient;
+		vec3 res = shaded + ambiant;
+
+		if(any(isWrong(res)))
+		{
+			Caret c = Caret2D(pixel, 0);
+			c = pushToDebugPixLn(normal, c);
+		}
+
+		res = fixExtremeToZero(res);
 
 		imageStore(ColorOutput, pixel, vec4(res, 0));
 	}
