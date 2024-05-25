@@ -430,7 +430,7 @@ namespace vkl
 
 				{
 					GuiContext * gui_ctx = beginImGuiFrame();
-					ImGui::ShowDemoWindow();
+					//ImGui::ShowDemoWindow();
 
 					if(ImGui::Begin("Rendering"))
 					{

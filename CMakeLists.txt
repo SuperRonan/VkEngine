@@ -131,6 +131,7 @@ file(GLOB IMGUI_SOURCES
 "${IMGUI_DIR}imgui_draw.cpp"
 "${IMGUI_DIR}imgui_widgets.cpp"
 "${IMGUI_DIR}imgui_tables.cpp"
+"${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp"
 
 "${IMGUI_DIR}backends/imgui_impl_vulkan.cpp"
 "${IMGUI_DIR}backends/imgui_impl_sdl2.cpp"
