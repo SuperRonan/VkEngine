@@ -63,7 +63,7 @@
 - [x] Re use descriptor sets
 	- [x] set = 0: common set (debug, ...), managed by the executor
 	- [x] set = 1: scene set
-	- [ ] set = 2: module set
+	- [x] set = 2: module set
 	- [x] set = 3: shader set
 	- [x] set = 4: push_descriptor set (shader invocation specific data)
 - [ ] CmdBuffer bindings (pipeline + desc sets)
@@ -73,7 +73,7 @@
 - [ ] Multi window mode (independent of ImGui)
 - [x] Buffer / Image on recreate instance command policy (copy content)
 - [ ] MultiExecutor
-- [ ] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
+- [x] Cmake: Make and Optimized mode (debug info for my code, other libs ands stl linked in release with IDL = 0)
 - [x] Window:
 	- [x] Correct HDR support (also ImGui)
 	- [x] Fullscreen
