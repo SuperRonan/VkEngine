@@ -24,6 +24,7 @@
 #include <map>
 #include <unordered_map>
 #include <concepts>
+#include <filesystem>
 
 #include "DynamicValue.hpp"
 
@@ -1061,4 +1062,6 @@ namespace std
 namespace vkl
 {
 	using MountingPoints = std::HMap<std::string, std::string>;
+
+	extern std::filesystem::path ReplaceMountingPoints(MountingPoints const& mp, std::filesystem::path const& p);
 }

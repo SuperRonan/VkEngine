@@ -117,6 +117,8 @@ namespace vkl
 			{
 				path += _extension;
 			}
+			const MountingPoints & mp = application()->mountingPoints();
+			path = ReplaceMountingPoints(mp, path);
 			std::shared_ptr<SaveInfo> ptr_save_info = std::make_shared<SaveInfo>(SaveInfo{
 				.full_path = std::move(path),
 				.extension = _extension,
@@ -143,8 +145,9 @@ namespace vkl
 
 					that::img::io::WriteInfo write_info{
 						.quality = _jpg_quality,
+						.create_folder_ifn = _create_folder_ifn,
 					};
-					that::Result write_result = that::img::io::write(std::move(image), ptr_save_info->full_path, write_info);
+					that::Result write_result = that::img::io::Write(std::move(image), ptr_save_info->full_path, write_info);
 					if (write_result != that::Result::Success)
 					{
 						result = write_result;
@@ -206,6 +209,8 @@ namespace vkl
 
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
+			_save_image = ImGui::Button("Save Image");
+
 			// TODO open a file dialog
 			if (ImGui::InputText("Folder", &_dst_folder_str))
 			{
@@ -218,8 +223,6 @@ namespace vkl
 
 			ImGui::InputInt("Index", reinterpret_cast<int*>(&_index));
 
-			_save_image = ImGui::Button("Save Image");
-
 			if (_gui_extension.declare())
 			{
 				setExtension();
@@ -229,6 +232,9 @@ namespace vkl
 				ImGui::SliderInt("Quality", &_jpg_quality, 0, 100);
 			}
 
+			ImGui::Separator();
+			ImGui::Checkbox("Create Folder IFN", &_create_folder_ifn);
+			ImGui::SameLine();
 			ImGui::Checkbox("Multi-Threaded", &_save_in_separate_thread);
 			if (_save_in_separate_thread)
 			{

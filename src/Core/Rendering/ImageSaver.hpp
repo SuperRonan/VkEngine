@@ -32,6 +32,7 @@ namespace vkl
 
 		ImGuiListSelection _gui_extension;
 		int _jpg_quality = 100;
+		bool _create_folder_ifn = true;
 
 		void setExtension();
 

@@ -347,7 +347,7 @@ namespace vkl
 				.app = this,
 				.name = "ImageSaver",
 				.src = final_image,
-				.dst_folder = _mounting_points["gen"] + "/saved_images/",
+				.dst_folder = "gen:/saved_images/",
 				.dst_filename = "renderer_",
 			};
 
