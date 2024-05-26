@@ -64,17 +64,21 @@ uint drawLight(inout rng_t rng, out float pdf)
 vec3 drawLightSample(const in Vertex vertex, const in PBMaterialData material, inout rng_t rng)
 {
 	vec3 res = 0..xxx;
-	float pdf;
+	float pdf = 0;
 	uint light_id = drawLight(rng, pdf);
 	LightSample light_sample = getLightSample(light_id, vertex.position, vertex.normal, 0);
-	const float cos_theta = dot(vertex.normal, light_sample.direction_to_light);
-	const float abs_cos_theta = abs(cos_theta);
-	const float bsdf = cos_theta > 0 ? 1 : -1;
-	res = light_sample.Le * bsdf * abs_cos_theta * material.albedo / pdf;
-
-	if(length2(res) > 0)
+	pdf *= light_sample.pdf;
+	if(pdf > 0)
 	{
-		res *= computeShadow(vertex.position, vertex.normal, light_sample);
+		const float cos_theta = dot(vertex.normal, light_sample.direction_to_light);
+		const float abs_cos_theta = abs(cos_theta);
+		const float bsdf = cos_theta > 0 ? 1 : -1;
+		res = light_sample.Le * bsdf * abs_cos_theta * material.albedo / pdf;
+
+		if(length2(res) > 0)
+		{
+			res *= computeShadow(vertex.position, vertex.normal, light_sample);
+		}
 	}
 
 	return res;
@@ -176,11 +180,14 @@ void main()
 	const uvec2 gid = uvec2(gl_GlobalInvocationID.xy);
 	const uvec2 pixel = gid;
 	const uvec2 dims = imageSize(Target);
+	const vec2 oo_dims = rcp(dims);
 	if(all(lessThan(pixel, dims)))
 	{
 		rng_t rng = hash(pixel) ^ hash(ubo.frame_idx);
 		vec3 res = 0..xxx;
-		const vec2 uv = pixelToUV(pixel, dims);
+		const vec2 subpixel_uv = lerp(0.1.xx, 0.9.xx, randomVec2_01(rng));
+		//const vec2 subpixel_uv = 0.5.xx;
+		const vec2 uv = (vec2(pixel) + subpixel_uv) * oo_dims;
 
 		const mat4 w2p = ubo.world_to_proj;
 		const mat4 p2c = inverse(ubo.camera_to_proj);
@@ -199,6 +206,7 @@ void main()
 
 		res = trace(ray, rng);
 		
+		//res = subpixel_uv.xyx;
 
 		imageStore(Target, ivec2(pixel), vec4(res, 1));
 	}

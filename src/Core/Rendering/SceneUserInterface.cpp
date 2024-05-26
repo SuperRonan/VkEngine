@@ -147,7 +147,8 @@ namespace vkl
 
 			recorder(_render_3D_basis->with(vertex_draw_info));
 		}
-
+		draw_list.clear();
+		vertex_draw_info.clear();
 
 
 
@@ -190,6 +191,8 @@ namespace vkl
 			vertex_draw_info.draw_type = DrawType::DrawIndexed;
 			recorder(_render_3D_box->with(vertex_draw_info));
 		}
+		draw_list.clear();
+		vertex_draw_info.clear();
 		
 		recorder.popDebugLabel();
 
