@@ -565,9 +565,23 @@ namespace vkl
 			.codeSize = _spv_code.size() * sizeof(uint32_t),
 			.pCode = _spv_code.data(),
 		};
-		VK_CHECK(vkCreateShaderModule(_app->device(), &module_ci, nullptr, &_module), "Failed to create a shader module.");
+		const VkResult result = vkCreateShaderModule(_app->device(), &module_ci, nullptr, &_module);
+		if (result != VK_SUCCESS)
+		{
+			_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: "s,
+					.error_message =
+						"Error while creating VkShaderModule: \n"s +
+						"Main Shader: "s + _main_path.string() + ":\n"s
+						"Error code: "s + std::to_string(result),
+			};
+			return false;
+		}
+		//VK_CHECK(result, "Failed to create a shader module.");
 
-		return true;
+		return result == VK_SUCCESS;
 	}
 
 	void ShaderInstance::reflect()
