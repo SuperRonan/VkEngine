@@ -134,6 +134,7 @@ namespace vkl
 			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 			VK_KHR_RAY_QUERY_EXTENSION_NAME,
 			VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME,
 
 			VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
 			VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME,
@@ -194,6 +195,8 @@ namespace vkl
 		features.acceleration_structure_khr.descriptorBindingAccelerationStructureUpdateAfterBind = t;
 
 		features.ray_query_khr.rayQuery = t;
+
+		features.ray_tracing_position_fetch_khr.rayTracingPositionFetch = t;
 	}
 
 	std::set<std::string_view> VkApplication::getInstanceExtensions()

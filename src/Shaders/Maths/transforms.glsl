@@ -1,3 +1,5 @@
+#pragma once
+
 #include "common.glsl"
 
 mat2 diagonal(vec2 v)
@@ -206,4 +208,40 @@ mat3 basisFromDir(vec3 dir)
 	res[0] = X;
 	res[1] = Y;
 	return res;
+}
+
+
+mat2x4 homogenizeAsVectorArray(const in mat2x3 m, float h)
+{
+	mat2x4 res;
+	for(uint i=0; i <2; ++i)
+	{
+		res[i] = vec4(m[i], h);
+	}
+	return res;
+}
+
+mat3x4 homogenizeAsVectorArray(const in mat3x3 m, float h)
+{
+	mat3x4 res;
+	for(uint i=0; i <3; ++i)
+	{
+		res[i] = vec4(m[i], h);
+	}
+	return res;
+}
+
+mat4x4 homogenizeAsVectorArray(const in mat4x3 m, float h)
+{
+	mat4x4 res;
+	for(uint i=0; i <4; ++i)
+	{
+		res[i] = vec4(m[i], h);
+	}
+	return res;
+}
+
+vec3 computeTriangleNormal(const in mat3 m)
+{
+	return normalize(cross(m[1] - m[0], m[2] - m[0]));
 }

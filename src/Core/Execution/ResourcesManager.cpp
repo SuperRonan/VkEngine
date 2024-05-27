@@ -96,6 +96,7 @@ namespace vkl
 		_common_definitions->setDefinition("SHADER_RAY_TRACING_MAX_RAY_RECURSION_DEPTH", std::to_string(props.ray_tracing_pipeline_khr.maxRayRecursionDepth));
 		_common_definitions->setDefinition("SHADER_RAY_TRACING_INVOCATION_REORDER_AVAILABLE", tod(features.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorder));
 		_common_definitions->setDefinition("SHADER_RAY_TRACING_INVOCATION_REORDER_REORDERING_HINT", std::to_string(props.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorderReorderingHint));
+		_common_definitions->setDefinition("SHADER_RAY_TRACING_POSITION_FETCH_AVAILABLE", tod(features.ray_tracing_position_fetch_khr.rayTracingPositionFetch));
 
 		_common_definitions->setDefinition("SHADER_SUBGROUP_SIZE", std::to_string(props.props_11.subgroupSize));
 		_common_definitions->setDefinition("SHADER_SUBGROUP_SUPPORTED_OPERATIONS", std::to_string(props.props_11.subgroupSupportedOperations));

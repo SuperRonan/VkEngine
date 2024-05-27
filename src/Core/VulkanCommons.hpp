@@ -306,6 +306,7 @@ namespace vkl
 		VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_khr = {};
 		VkPhysicalDeviceRayQueryFeaturesKHR ray_query_khr = {};
 		VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR ray_tracing_maintenance1_khr = {};
+		VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR ray_tracing_position_fetch_khr = {};
 		
 		VkPhysicalDeviceRayTracingMotionBlurFeaturesNV ray_tracing_motion_blur_nv = {};
 		VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV ray_tracing_invocation_reorder_nv = {};

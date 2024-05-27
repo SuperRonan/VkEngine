@@ -10,6 +10,8 @@
 #define SHADING_SHADOW_METHOD SHADING_SHADOW_RAY_TRACE
 #include "../shading.glsl"
 
+#include <ShaderLib:/Maths/transforms.glsl>
+
 layout(local_size_x = 16, local_size_y = 16) in;
 
 layout(SHADER_DESCRIPTOR_BINDING + 1) uniform PT_UBO
@@ -132,12 +134,19 @@ vec3 trace(Ray ray, inout rng_t rng)
 			const int primitive_id = rayQueryGetIntersectionPrimitiveIndexEXT(rq, true);
 			const vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rq, true);
 			const mat4x3 object_to_world = rayQueryGetIntersectionObjectToWorldEXT(rq, true);
-
+			const mat3 object_to_world_4dir = directionMatrix(mat3(object_to_world));
 
 			SceneObjectReference hit_object_ref = scene_objects_table.table[geometry_index];
 			
 			const MeshHeader mesh_header = scene_mesh_headers[hit_object_ref.mesh_id].headers;
 			const uvec3 vertices_id = getSceneMeshTriangleVerticexIndices(hit_object_ref.mesh_id, primitive_id, mesh_header.flags);
+#if SHADER_RAY_TRACING_POSITION_FETCH_AVAILABLE && 0
+			const mat3 triangle_positions = GetQueryIntersectionTriangleVertexPositionsCommitted(rq);
+#else 
+			const mat3 triangle_positions = readSceneTriangleVertexPositions(hit_object_ref.mesh_id, vertices_id);
+#endif
+			const vec3 geometry_normal_object = computeTriangleNormal(triangle_positions);
+			const vec3 geometry_normal_world = object_to_world_4dir * geometry_normal_object;
 			const Vertex vertex = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, barycentrics);
 			const Vertex world_vertex = normalize(transformVertex(object_to_world, vertex));
 			PBMaterialData material = readMaterial(hit_object_ref.material_id, vertex.uv);
@@ -159,7 +168,7 @@ vec3 trace(Ray ray, inout rng_t rng)
 				vec3 next_dir_world = TBN * next_dir;
 				ray.origin = world_vertex.position;
 				ray.direction = next_dir_world;
-				range.x = rayTMin(ray, world_vertex.normal);
+				range.x = rayTMin(ray, geometry_normal_world);
 
 				throughput *= (next_dir.z * material.albedo);
 			}

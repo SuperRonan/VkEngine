@@ -42,6 +42,7 @@ namespace vkl
 		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
 		ray_query_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 		ray_tracing_maintenance1_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
+		ray_tracing_position_fetch_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR;
 
 		ray_tracing_motion_blur_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV;
 		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV;
@@ -80,6 +81,8 @@ namespace vkl
 			chain += &ray_query_khr;
 		if(filter_extensions(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME))
 			chain += &ray_tracing_maintenance1_khr;
+		if(filter_extensions(VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME))
+			chain += &ray_tracing_position_fetch_khr;
 		chain += nullptr;
 
 		if(filter_extensions(VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME))
@@ -186,6 +189,7 @@ namespace vkl
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayQueryFeaturesKHR, ray_query_khr, rayQuery, rayQuery);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR, ray_tracing_maintenance1_khr, rayTracingMaintenance1, rayTracingPipelineTraceRaysIndirect2);
+		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR, ray_tracing_position_fetch_khr, rayTracingPositionFetch, rayTracingPositionFetch);
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
@@ -252,6 +256,7 @@ namespace vkl
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayQueryFeaturesKHR, ray_query_khr, rayQuery, rayQuery);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR, ray_tracing_maintenance1_khr, rayTracingMaintenance1, rayTracingPipelineTraceRaysIndirect2);
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR, ray_tracing_position_fetch_khr, rayTracingPositionFetch, rayTracingPositionFetch);
 		
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);

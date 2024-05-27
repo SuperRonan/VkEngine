@@ -160,6 +160,24 @@ Vertex interpolateSceneVertexAndNormalize(uint mesh_id, uvec3 vertex_ids, vec2 t
 	return res;
 }
 
+void readSceneTriangleVertexPositions(uint mesh_id, uvec3 vertex_ids, out vec3 res[3])
+{
+	for(uint i=0; i < 3; ++i)
+	{
+		res[i] = vec3(scene_mesh_vertices[mesh_id].vertices[vertex_ids[i]].position);
+	}
+}
+
+mat3 readSceneTriangleVertexPositions(uint mesh_id, uvec3 vertex_ids)
+{
+	mat3 res;
+	for(uint i=0; i < 3; ++i)
+	{
+		res[i] = vec3(scene_mesh_vertices[mesh_id].vertices[vertex_ids[i]].position);
+	}
+	return res;
+}
+
 layout(SCENE_MESHS_BINDING + 2) buffer restrict SCENE_MESH_ACCESS SceneMeshIndicesBindings
 {
 	uint32_t indices[];

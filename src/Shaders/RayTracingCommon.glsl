@@ -10,6 +10,10 @@
 #define CAN_BIND_TLAS 0
 #endif
 
+#if SHADER_RAY_TRACING_POSITION_FETCH_AVAILABLE
+#extension GL_EXT_ray_tracing_position_fetch : require
+#endif
+
 #if SHADER_RAY_QUERY_AVAILABLE
 #extension GL_EXT_ray_query : require
 #endif
@@ -17,6 +21,7 @@
 #if SHADER_RAY_TRACING_AVAILABLE
 #extension GL_EXT_ray_tracing : require
 #endif
+
 
 #define TLAS_t accelerationStructureEXT
 #define RayQuery_t rayQueryEXT
@@ -78,5 +83,28 @@ bool QueryVisibilityRayOpaqueOnlyTriangles(TLAS_t tlas, vec3 src, vec3 dst)
 	const float t_max = floatOffset(dist, -128);
 	return QueryVisibilityRayOpaqueOnlyTriangles(tlas, Ray(src, dir), t_max);
 }
+
+#if SHADER_RAY_TRACING_POSITION_FETCH_AVAILABLE
+mat3 GetQueryIntersectionTriangleVertexPositions(RayQuery_t rq, bool c)
+{
+	vec3 p[3];
+	// committed mush be a compile time constant
+	if(c)
+		rayQueryGetIntersectionTriangleVertexPositionsEXT(rq, true, p);
+	else 
+		rayQueryGetIntersectionTriangleVertexPositionsEXT(rq, false, p);
+	return mat3(p[0], p[1], p[2]);
+}
+
+mat3 GetQueryIntersectionTriangleVertexPositionsCommitted(RayQuery_t rq)
+{
+	return GetQueryIntersectionTriangleVertexPositions(rq, true);
+}
+
+mat3 GetQueryIntersectionTriangleVertexPositionsUnCommitted(RayQuery_t rq)
+{
+	return GetQueryIntersectionTriangleVertexPositions(rq, false);
+}
+#endif
 
 #endif
