@@ -1,6 +1,7 @@
 #version 460
 
 #include <ShaderLib:/Rendering/CubeMap.glsl>
+#include <ShaderLib:/Rendering/Lights/Light.glsl>
 
 #ifndef TARGET_CUBE
 #define TARGET_CUBE 0
@@ -46,7 +47,7 @@ void main()
 #if TARGET_CUBE
 	const mat4 w2p = cubeMapFaceProjection(gl_ViewIndex, light.position, POINT_LIGHT_DEFAULT_Z_NEAR);
 #else
-	const mat4 w2p = light.matrix;
+	const mat4 w2p = getSpotLightMatrixWorldToProj(light);
 #endif
 	const mat4 o2w = mat4(vd.matrix);
 	const mat4 o2p = w2p * o2w;

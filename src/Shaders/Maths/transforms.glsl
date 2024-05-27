@@ -138,14 +138,17 @@ mat3 directionMatrix(const in mat3 xform)
 }
 
 
+// Matrices follow the vulkan standard
+// - left handed 
+// - depth zero to one 
 
 // Copy pasted from glm
 
 mat4x3 lookAtAssumeNormalized4x3(vec3 center, vec3 front, vec3 up)
 {	
 	const vec3 f = front;
-	const vec3 u = up;
-	const vec3 s = cross(up, front);
+	const vec3 s = normalize(cross(up, front));
+	const vec3 u = normalize(cross(f, s));
 	
 	mat4x3 res = mat4x3(1);
 	res[0][0] = s.x;
@@ -154,12 +157,12 @@ mat4x3 lookAtAssumeNormalized4x3(vec3 center, vec3 front, vec3 up)
 	res[0][1] = u.x;
 	res[1][1] = u.y;
 	res[2][1] = u.z;
-	res[0][2] =-f.x;
-	res[1][2] =-f.y;
-	res[2][2] =-f.z;
+	res[0][2] = f.x;
+	res[1][2] = f.y;
+	res[2][2] = f.z;
 	res[3][0] =-dot(s, center);
 	res[3][1] =-dot(u, center);
-	res[3][2] = dot(f, center);
+	res[3][2] =-dot(f, center);
 	return res;
 }
 
@@ -173,7 +176,7 @@ mat4 infinitePerspectiveProjFromTan(float tan_half_fov, float aspect, float z_ne
 
 	mat4 res = mat4(0);
 	res[0][0] = (2 * z_near) / (right - left);
-	res[1][1] = (2 * z_near) / (top - bottom);
+	res[1][1] = - (2 * z_near) / (top - bottom);
 	res[2][2] = 1;
 	res[2][3] = 1;
 	res[3][2] = - 2 * z_near;

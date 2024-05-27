@@ -1,6 +1,7 @@
 #pragma once
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
+#define GLM_FORCE_LEFT_HANDED 1
 //#define VK_USE_PLATFORM_WIN32_KHR
 
 #include <SDL.h>

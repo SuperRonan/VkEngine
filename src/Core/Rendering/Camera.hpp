@@ -64,7 +64,7 @@ namespace vkl
 
 		mat4 getWorldToCam() const
 		{
-			return glm::lookAt(_position, _position + _direction, glm::cross(_right, _direction));
+			return glm::lookAt(_position, _position + _direction, up());
 		}
 
 		mat4 getWorldToProj() const
@@ -114,7 +114,7 @@ namespace vkl
 
 		constexpr vec3 up()const
 		{
-			return glm::cross(_right, _direction);
+			return glm::cross(_direction, _right);
 		}
 
 		float inclination()const

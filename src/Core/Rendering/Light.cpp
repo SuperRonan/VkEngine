@@ -179,7 +179,7 @@ namespace vkl
 		LightGLSL res = LightGLSL::MakePoint(vec3(hpos), _emission);
 		res.flags = flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
-		res.matrix[0][0] = _z_near;
+		res.z_near = _z_near;
 		return res;
 	}
 
@@ -226,7 +226,6 @@ namespace vkl
 		const vec3 dir = glm::normalize(directionMatrix(xform) * _direction);
 		LightGLSL res = LightGLSL::MakeDirectional(dir, _emission);
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
-		res.matrix[0][0];
 		return res;
 	}
 
@@ -285,7 +284,12 @@ namespace vkl
 		const mat4 proj = glm::infinitePerspective<float>(_fov, _ratio, _znear);
 		//const mat4 proj = glm::perspective<float>(_fov, _ratio, _znear, 2 * _znear);
 		res.direction = direction;
-		res.matrix = (proj * look_at);
+		res.z_near = _znear;
+		res.spot = LightGLSL::SpotLightSpecific{
+			.up = up,
+			.tan_half_fov = std::tan(_fov * 0.5f),
+			.aspect = _ratio,
+		};
 		return res;
 	}
 
@@ -308,6 +312,8 @@ namespace vkl
 		}
 
 		ImGui::Checkbox("Enable Shadow Map", &_enable_shadow_map);
+
+		ImGui::SliderFloat("Z Near", &_znear, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
 
 		ImGui::PopID();
 	}

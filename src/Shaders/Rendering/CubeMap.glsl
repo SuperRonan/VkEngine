@@ -12,7 +12,7 @@ vec3 cubeMapFaceDirection(uint id)
 
 vec3 cubeMapFaceUpDirection(uint id)
 {
-	vec3 res = cubeMapFaceDirection((id + 2) % 6);
+	vec3 res;
 	switch(id)
 	{
 		case 0:
@@ -35,7 +35,9 @@ mat4 cubeMapFaceProjection(uint id, vec3 position, float z_near)
 {
 	const vec3 front = cubeMapFaceDirection(id);
 	const vec3 up = cubeMapFaceUpDirection(id);
-	mat4 res = infinitePerspectiveProjFromFOV(HALF_PI, 1, z_near) * mat4(lookAtAssumeNormalized4x3(position, -front, -up));
+	const mat4 world_to_object = mat4(lookAtAssumeNormalized4x3(position, front, up));
+	const mat4 object_to_proj = infinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
+	const mat4 res = object_to_proj * world_to_object;
 	return res;
 }
 

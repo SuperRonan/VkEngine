@@ -75,7 +75,7 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, uint shadi
 	}
 	else if (light_type == LIGHT_TYPE_SPOT)
 	{
-		const mat4 light_matrix = light.matrix;
+		const mat4 light_matrix = getSpotLightMatrixWorldToProj(light);
 		vec4 position_light_h = (light_matrix * vec4(position, 1));
 		vec3 position_light = position_light_h.xyz / position_light_h.w;
 		const vec3 to_light = light.position - position;

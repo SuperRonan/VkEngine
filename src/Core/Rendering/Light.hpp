@@ -39,9 +39,20 @@ namespace vkl
 		uvec4 textures;
 		
 		vec3 direction;
-		int pad;
-		
-		mat4 matrix;
+		float z_near;
+
+		struct SpotLightSpecific
+		{
+			vec3 up;
+			float tan_half_fov;
+			float aspect;
+		};
+
+		union
+		{
+			uint32_t extra_data[16];
+			SpotLightSpecific spot;
+		};
 
 		static LightGLSL MakePoint(vec3 position, vec3 emission);
 

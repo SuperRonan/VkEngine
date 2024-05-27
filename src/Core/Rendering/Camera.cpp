@@ -54,8 +54,6 @@ namespace vkl
 			mat4 t = p;
 			res = p * r * t;
 		}
-		// Could remove this and flip the culling
-		res[1][1] *= -1;
 		return res;
 	}
 
