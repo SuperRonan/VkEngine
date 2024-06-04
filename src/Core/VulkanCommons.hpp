@@ -183,6 +183,7 @@ namespace vkl
 	template <class UInt>
 	struct Range
 	{
+		using Index = UInt;
 		UInt begin = 0;
 		UInt len = 0;
 

@@ -48,7 +48,6 @@ namespace vkl
 		virtual void execute(ExecutionContext& ctx)
 		{
 			std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
-			ctx.pushDebugLabel(name());
 
 			ImGui::Render();
 
@@ -135,7 +134,6 @@ namespace vkl
 					ImGui::RenderPlatformWindowsDefault();
 				}
 			}
-			ctx.popDebugLabel();
 		}
 	};
 

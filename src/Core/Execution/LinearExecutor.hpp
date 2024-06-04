@@ -50,11 +50,17 @@ namespace vkl
 
 		using vec4 = glm::vec4;
 
-		virtual void pushDebugLabel(std::string const& label, vec4 const& color) override;
+		virtual void pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp = false) override;
+
+		// "Once you overload a function from Base class in Derived class all functions with the same name in the Base class get hidden in Derived class."
+		void pushDebugLabel(std::string_view const& label, bool timestamp = false)
+		{
+			ExecutionRecorder::pushDebugLabel(label, timestamp);
+		}
 
 		virtual void popDebugLabel() override;
 
-		virtual void insertDebugLabel(std::string const& label, vec4 const& color) override;
+		virtual void insertDebugLabel(std::string_view const& label, vec4 const& color) override;
 
 		ExecutionContext* context()
 		{
@@ -70,6 +76,8 @@ namespace vkl
 			}
 		}
 	};
+
+	struct FramePerfReport;
 	
 	class LinearExecutor : public Executor
 	{
@@ -85,6 +93,8 @@ namespace vkl
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
 		std::shared_ptr<ImguiCommand> _render_gui = nullptr;
+
+		std::shared_ptr<QueryPool> _timestamp_query_pool = nullptr;
 
 		ResourcesLists _internal_resources;
 
@@ -111,6 +121,13 @@ namespace vkl
 
 		bool useSpecificPresentSignalFence() const;
 
+		MyVector<std::shared_ptr<FramePerfReport>> _frame_perf_report_pool = {};
+		uint32_t _frame_timestamp_query_count = 0;
+		uint32_t _timestamp_query_pool_capacity = 128;
+		std::shared_ptr<FramePerfReport> _current_frame_report = nullptr;
+		std::mutex _frame_perf_report_pool_mutex;
+		std::shared_ptr<FramePerfReport> _pending_frame_report = nullptr;
+
 	public:
 
 		struct CreateInfo
@@ -135,7 +152,11 @@ namespace vkl
 
 		void updateResources(UpdateContext & context);
 
-		void AquireSwapchainImage();
+		void beginFrame(bool capture_report);
+
+		void endFrame();
+
+		void aquireSwapchainImage();
 
 		//ExecutionThread* beginTransferCommandBuffer();
 
@@ -168,5 +189,10 @@ namespace vkl
 		void waitOnSwapchainCompletion(bool global_wait = false, uint64_t timeout = UINT64_MAX);
 
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) override final;
+
+		std::shared_ptr<FramePerfReport> const& getPendingFrameReport()
+		{
+			return _pending_frame_report;
+		}
 	};
 }

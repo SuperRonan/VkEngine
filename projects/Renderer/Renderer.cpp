@@ -710,7 +710,7 @@ namespace vkl
 
 	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
 	{
-		exec.pushDebugLabel(name() + ".execute()");
+		exec.pushDebugLabel(name() + ".execute()", true);
 
 		UBO ubo{
 			.time = time,
@@ -769,7 +769,7 @@ namespace vkl
 			generateVertexDrawList(draw_list);
 			if (exec.framePerfCounters())
 			{
-				exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockv().count();
+				exec.framePerfCounters()->generate_scene_draw_list_time = tick_tock.tockd().count();
 			}
 		}
 
@@ -804,7 +804,7 @@ namespace vkl
 
 						if (!pushed_label)
 						{
-							exec.pushDebugLabel("RenderShadowMaps");
+							exec.pushDebugLabel("RenderShadowMaps", true);
 							pushed_label = true;
 						}
 						if (light->type() == LightType::SPOT)
@@ -833,7 +833,7 @@ namespace vkl
 			if (selected_pipeline == 0)
 			{
 				tick_tock.tick();
-				exec.pushDebugLabel("DirectPipeline");
+				exec.pushDebugLabel("DirectPipeline", true);
 				if (_use_indirect_rendering)
 				{
 					VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
@@ -852,13 +852,13 @@ namespace vkl
 				
 				if (exec.framePerfCounters())
 				{
-					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
+					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockd().count();
 				}
 				exec.popDebugLabel();
 			}
 			else
 			{
-				exec.pushDebugLabel("DeferredPipeline");
+				exec.pushDebugLabel("DeferredPipeline", true);
 				
 				tick_tock.tick();
 				
@@ -883,7 +883,7 @@ namespace vkl
 				
 				if (exec.framePerfCounters())
 				{
-					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockv().count();
+					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockd().count();
 				}
 
 				_ambient_occlusion->execute(exec, camera);

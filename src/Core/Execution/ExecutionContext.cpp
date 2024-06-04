@@ -2,6 +2,8 @@
 #include <cassert>
 #include <random>
 
+#include <Core/Execution/ExecutionStackReport.hpp>
+
 namespace vkl
 {
 	RecordContext::RecordContext(CreateInfo const& ci):
@@ -65,27 +67,39 @@ namespace vkl
 		_can_push_vk_debug_label = application()->options().enable_command_buffer_labels;
 	}
 
-	void ExecutionContext::pushDebugLabel(std::string const& label, vec4 const& color)
+	void ExecutionContext::pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp)
 	{
-		_debug_labels.push(DebugLabel{
-			.label = label,
-			.color = color,
-		});
+		++_debug_stack_depth;
 		if (_can_push_vk_debug_label)
 		{
+			assert(label[label.size()] == char(0));
 			VkDebugUtilsLabelEXT vk_label{
 				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
 				.pNext = nullptr,
-				.pLabelName = label.c_str(),
+				.pLabelName = label.data(),
 				.color = {color.r, color.g, color.b, color.a},
 			};
 			application()->extFunctions()._vkCmdBeginDebugUtilsLabelEXT(*_command_buffer, &vk_label);
 		}
+		if (_stack_report)
+		{
+			ExecutionStackReport::Segment & segment = _stack_report->push(label, ImVec4(color.r, color.g, color.b, color.a));
+			if (timestamp)
+			{
+				segment.begin_timestamp = getNewTimestampIndex();
+				segment.end_timestamp = getNewTimestampIndex();
+				if (_timestamp_query_pool && _timestamp_query_pool->count() > segment.begin_timestamp)
+				{
+					vkCmdWriteTimestamp2(*_command_buffer, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, *_timestamp_query_pool, segment.begin_timestamp);
+				}
+			}
+			segment.begin_timepoint = _tick_tock.tock();
+		}
 	}
 
-	void ExecutionContext::pushDebugLabel(std::string const& label)
+	void ExecutionContext::pushDebugLabel(std::string_view const& label, bool timestamp)
 	{
-		std::hash<std::string> hs;
+		std::hash<std::string_view> hs;
 		size_t seed = hs(label);
 		auto rng = std::mt19937_64(seed);
 		std::uniform_real_distribution<float> distrib(0, 1);
@@ -94,26 +108,42 @@ namespace vkl
 		color.g = distrib(rng);
 		color.b = distrib(rng);
 		color.a = 1;
-		pushDebugLabel(label, color);
+		pushDebugLabel(label, color, timestamp);
 	}
 
 	void ExecutionContext::popDebugLabel()
 	{
-		_debug_labels.pop();
+		assert(_debug_stack_depth != 0);
+		--_debug_stack_depth;
+		if (_stack_report)
+		{
+			ExecutionStackReport::Segment * to_pop = _stack_report->getStackTop();
+			assert(to_pop);
+			if (to_pop->end_timestamp != uint64_t(-1))
+			{
+				if (_timestamp_query_pool && _timestamp_query_pool->count() > to_pop->end_timestamp)
+				{
+					vkCmdWriteTimestamp2(*_command_buffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, *_timestamp_query_pool, to_pop->end_timestamp);
+				}
+			}
+			to_pop->end_timepoint = _tick_tock.tock();
+			_stack_report->pop();
+		}
 		if (_can_push_vk_debug_label)
 		{
 			application()->extFunctions()._vkCmdEndDebugUtilsLabelEXT(*_command_buffer);
 		}
 	}
 
-	void ExecutionContext::insertDebugLabel(std::string const& label, vec4 const& color)
+	void ExecutionContext::insertDebugLabel(std::string_view const& label, vec4 const& color)
 	{
 		if (_can_push_vk_debug_label)
 		{
+			assert(label[label.size()] == char(0));
 			VkDebugUtilsLabelEXT vk_label{
 				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
 				.pNext = nullptr,
-				.pLabelName = label.c_str(),
+				.pLabelName = label.data(),
 				.color = {color.r, color.g, color.b, color.a},
 			};
 			application()->extFunctions()._vkCmdInsertDebugUtilsLabelEXT(*_command_buffer, &vk_label);

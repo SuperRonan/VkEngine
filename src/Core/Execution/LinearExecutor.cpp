@@ -6,6 +6,9 @@
 
 #include <Core/Commands/PrebuiltTransferCommands.hpp>
 
+#include <Core/Execution/ExecutionStackReport.hpp>
+#include <Core/Execution/FramePerfReport.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
@@ -26,11 +29,13 @@ namespace vkl
 	{
 		static thread_local SynchronizationHelper synch;
 		assert(node->isInUse());
+		pushDebugLabel(node->name(), true);
 		synch.reset(_context);
 		synch.commit(node->resources());
 		synch.record();
 		node->execute(*_context);
 		node->finish();
+		popDebugLabel();
 	}
 
 	void ExecutionThread::record(Command& cmd)
@@ -74,9 +79,9 @@ namespace vkl
 		}
 	}
 
-	void ExecutionThread::pushDebugLabel(std::string const& label, vec4 const& color)
+	void ExecutionThread::pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp)
 	{
-		_context->pushDebugLabel(label, color);
+		_context->pushDebugLabel(label, color, timestamp);
 	}
 
 	void ExecutionThread::popDebugLabel()
@@ -84,7 +89,7 @@ namespace vkl
 		_context->popDebugLabel();
 	}
 
-	void ExecutionThread::insertDebugLabel(std::string const& label, vec4 const& color)
+	void ExecutionThread::insertDebugLabel(std::string_view const& label, vec4 const& color)
 	{
 		_context->insertDebugLabel(label, color);
 	}
@@ -199,8 +204,6 @@ namespace vkl
 		}
 	};
 
-
-
 	LinearExecutor::LinearExecutor(CreateInfo const& ci) :
 		Executor(Executor::CI{
 			.app = ci.app ? ci.app : ci.window->application(), 
@@ -275,7 +278,7 @@ namespace vkl
 		
 		if (_render_gui)
 		{
-
+			
 		}
 
 		// TODO load debug renderer font here?
@@ -293,6 +296,76 @@ namespace vkl
 			_debug_renderer->updateResources(context);
 		}
 		_internal_resources.update(context);
+
+		_frame_perf_report_pool_mutex.lock();
+		{
+			for (size_t i = 0; i < _frame_perf_report_pool.size(); ++i)
+			{
+				_frame_perf_report_pool[i]->timestamp_query_pool->updateResources(context);
+			}
+		}
+		_frame_perf_report_pool_mutex.unlock();
+	}
+
+	void LinearExecutor::beginFrame(bool capture_report)
+	{
+		++_frame_index;
+		_context._timestamp_query_count = 0;
+		_context._tick_tock.tick();
+		if (capture_report)
+		{
+			_frame_perf_report_pool_mutex.lock();
+			{
+				if (!_frame_perf_report_pool.empty())
+				{
+					_current_frame_report = std::move(_frame_perf_report_pool.back());
+					_frame_perf_report_pool.pop_back();
+				}	
+			}
+			_frame_perf_report_pool_mutex.unlock();
+
+			if (!_current_frame_report)
+			{
+				_current_frame_report = std::make_shared<FramePerfReport>();
+				_current_frame_report->report = std::make_shared<ExecutionStackReport>(ExecutionStackReport::CI{
+					.app = application(),
+					.name = name() + ".ExecutionStackReport",
+				});
+				_current_frame_report->timestamp_query_pool = std::make_shared<QueryPool>(QueryPool::CI{
+					.app = application(),
+					.name = name() + "TimestampQueryPool",
+					.type = VK_QUERY_TYPE_TIMESTAMP,
+					.count = &_timestamp_query_pool_capacity,
+					.hold_instance = true,
+				});
+				_current_frame_report->timestamp_query_pool->createInstance();
+				_current_frame_report->emit_mt = true;
+			}
+
+			_current_frame_report->clear();
+			_current_frame_report->push();
+			_context._stack_report = _current_frame_report->report;
+			_context._timestamp_query_pool = _current_frame_report->timestamp_query_pool->instance();
+		}
+		
+	}
+
+	void LinearExecutor::endFrame()
+	{
+		if (_current_frame_report)
+		{
+			_current_frame_report->query_count = _context._timestamp_query_count;
+			_current_frame_report->pop();
+			if (_pending_frame_report)
+			{
+				std::unique_lock lock(_frame_perf_report_pool_mutex);
+				_frame_perf_report_pool.push_back(std::move(_pending_frame_report));
+			}
+			_pending_frame_report = std::move(_current_frame_report);
+			_context._timestamp_query_pool = nullptr;
+			_context._stack_report = nullptr;
+		}
+		_timestamp_query_pool_capacity = std::max(_timestamp_query_pool_capacity, _context._timestamp_query_count * 2);
 	}
 
 	//ExecutionRecorder* LinearExecutor::beginTransferCommandBuffer(bool synch)
@@ -314,9 +387,8 @@ namespace vkl
 		return application()->availableFeatures().swapchain_maintenance1_ext.swapchainMaintenance1 != VK_FALSE;
 	}
 
-	void LinearExecutor::AquireSwapchainImage()
+	void LinearExecutor::aquireSwapchainImage()
 	{
-		++_frame_index;
 		const bool use_specific_present_signal_fence = useSpecificPresentSignalFence();
 		std::shared_ptr<SwapchainEvent> & event = _latest_swapchain_event;
 		event = std::make_shared<SwapchainEvent>(SwapchainEvent::CI{
@@ -613,6 +685,19 @@ namespace vkl
 			.context = &_context,
 		});
 		_current_thread = res;
+
+		if (_current_frame_report)
+		{
+			_current_frame_report->push();
+			_current_frame_report->max_timestamp_bits = std::max(_current_frame_report->max_timestamp_bits, event->queue->properties().timestampValidBits);
+			if (!_current_frame_report->query_reseted)
+			{
+				vkCmdResetQueryPool(_context.getCommandBuffer()->handle(), _current_frame_report->timestamp_query_pool->instance()->handle(), 0, _current_frame_report->timestamp_query_pool->instance()->count());
+				_current_frame_report->query_reseted = true;
+			}
+			res->pushDebugLabel(cb->name(), true);
+		}
+
 		if (bind_common_set)
 		{
 			bindSet(0, _common_descriptor_set, true, true, _use_rt_pipeline);
@@ -656,6 +741,16 @@ namespace vkl
 
 	void LinearExecutor::endCommandBuffer(ExecutionThread* exec_thread, bool submit)
 	{
+		if (_current_frame_report)
+		{
+			std::shared_ptr<FramePerfReport> frame_report = _current_frame_report;
+			_context.addCompletionCallback([frame_report](int result)
+			{
+				frame_report->pop();
+			});
+			exec_thread->popDebugLabel();
+		}
+		assert(_context._debug_stack_depth == 0);
 		std::shared_ptr<CommandBuffer> cb = _context.getCommandBuffer();
 		assert(exec_thread == _current_thread);
 		delete exec_thread;

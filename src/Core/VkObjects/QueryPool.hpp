@@ -70,7 +70,6 @@ namespace vkl
 
 		size_t _latest_update_tick = 0;
 
-		void createInstance();
 
 	public:
 
@@ -99,6 +98,8 @@ namespace vkl
 		{
 			return _count;
 		}
+		
+		void createInstance();
 
 		void updateResources(UpdateContext & ctx);
 	};

@@ -92,6 +92,16 @@ namespace vkl
 		}
 	}
 
+	void AsynchTask::reset()
+	{
+		waitIFN();
+		std::unique_lock lock(_mutex);
+		_status = Status::Pending;
+		_creation_time = Clock::now();
+		_cancel_while_running = false;
+		_dependencies.clear();
+	}
+
 	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(int verbosity)
 	{
 		assert(_lambda);

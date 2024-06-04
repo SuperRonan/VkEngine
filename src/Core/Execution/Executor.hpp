@@ -68,13 +68,13 @@ namespace vkl
 
 		using vec4 = glm::vec4;
 
-		virtual void pushDebugLabel(std::string const& label, vec4 const& color) = 0;
+		virtual void pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp = false) = 0;
 
 		virtual void popDebugLabel() = 0;
 
-		virtual void insertDebugLabel(std::string const& label, vec4 const& color) = 0;
+		virtual void insertDebugLabel(std::string_view const& label, vec4 const& color) = 0;
 
-		void pushDebugLabel(std::string const& label);
+		void pushDebugLabel(std::string_view const& label, bool timestamp = false);
 
 		FramePerfCounters* framePerfCounters()const
 		{

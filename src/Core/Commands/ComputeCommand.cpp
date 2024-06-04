@@ -19,7 +19,6 @@ namespace vkl
 
 	void ComputeCommandNode::execute(ExecutionContext& ctx)
 	{
-		ctx.pushDebugLabel(name());
 		CommandBuffer & cmd = *ctx.getCommandBuffer();
 		recordBindings(cmd, ctx);
 
@@ -31,7 +30,7 @@ namespace vkl
 		{
 			if (!to_dispatch.name.empty())
 			{
-				ctx.pushDebugLabel(to_dispatch.name);
+				ctx.pushDebugLabel(to_dispatch.name, true);
 			}
 			if (to_dispatch.set)
 			{
@@ -61,7 +60,6 @@ namespace vkl
 
 
 		ctx.keepAlive(_pipeline);
-		ctx.popDebugLabel();
 	}
 
 

@@ -14,7 +14,7 @@
 #include <Core/Execution/LinearExecutor.hpp>
 #include <Core/Execution/Module.hpp>
 #include <Core/Execution/ResourcesManager.hpp>
-#include <Core/Execution/FramePerformanceCounters.hpp>
+#include <Core/Execution/PerformanceReport.hpp>
 
 #include <Core/Utils/TickTock.hpp>
 #include <Core/Utils/StatRecorder.hpp>
@@ -353,13 +353,14 @@ namespace vkl
 
 			exec.init();
 
-			FramePerfCounters frame_counters;
-			StatRecords stat_records = StatRecords::CI{
-				.name = "Statistics",
-				.memory = 256,
+			
+			std::shared_ptr<PerformanceReport> perf_reporter = std::make_shared<PerformanceReport>(PerformanceReport::CI{
+				.app = this,
+				.name = "Performances",
 				.period = 1s,
-			};
-			stat_records.createCommonRecords(frame_counters);
+				.memory = 256,
+			});
+			FramePerfCounters & frame_counters = perf_reporter->framePerfCounter();
 
 			//for (int jid = 0; jid <= GLFW_JOYSTICK_LAST; ++jid)
 			//{
@@ -463,7 +464,7 @@ namespace vkl
 
 					if(ImGui::Begin("Performances"))
 					{
-						stat_records.declareGui(*gui_ctx);
+						perf_reporter->declareGUI(*gui_ctx);
 					}
 					ImGui::End();
 
@@ -489,7 +490,7 @@ namespace vkl
 						std::TickTock_hrc prepare_scene_tt;
 						prepare_scene_tt.tick();
 						scene->updateInternal();
-						frame_counters.prepare_scene_time = prepare_scene_tt.tockv().count();
+						frame_counters.prepare_scene_time = prepare_scene_tt.tockd().count();
 					}
 
 					exec.updateResources(*update_context);
@@ -498,7 +499,7 @@ namespace vkl
 						std::TickTock_hrc update_scene_tt;
 						update_scene_tt.tick();
 						scene->updateResources(*update_context);
-						frame_counters.update_scene_time = update_scene_tt.tockv().count();
+						frame_counters.update_scene_time = update_scene_tt.tockd().count();
 					}
 					renderer.updateResources(*update_context);
 					gamma_correction.updateResources(*update_context);
@@ -510,11 +511,12 @@ namespace vkl
 
 					resources_manager.finishUpdateCycle(update_context);
 				}
-				frame_counters.update_time = update_context->tickTock().tockv().count();
+				frame_counters.update_time = update_context->tickTock().tockd().count();
 				
 				std::TickTock_hrc render_tick_tock;
 				render_tick_tock.tick();
 				{	
+					exec.beginFrame(perf_reporter->generateFrameReport());
 					exec.performSynchTransfers(*update_context, true);
 					
 					ExecutionThread* ptr_exec_thread = exec.beginCommandBuffer();
@@ -543,22 +545,24 @@ namespace vkl
 					exec.endCommandBuffer(ptr_exec_thread);
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);
-					exec.AquireSwapchainImage();
+					exec.aquireSwapchainImage();
 					exec.preparePresentation(final_image);
 					
 					
 					exec.endCommandBuffer(ptr_exec_thread);
 					exec.submit();
 					exec.present();
+					exec.endFrame();
 
 
 					++frame_index;
 				}
-				frame_counters.render_time = render_tick_tock.tockv().count();
-				frame_counters.frame_time = frame_tick_tock.tockv().count();
+				frame_counters.render_time = render_tick_tock.tockd().count();
+				frame_counters.frame_time = frame_tick_tock.tockd().count();
 				frame_tick_tock.tick();
 				{
-					stat_records.advance();
+					perf_reporter->setFramePerfReport(exec.getPendingFrameReport());
+					perf_reporter->advance();
 				}
 			}
 

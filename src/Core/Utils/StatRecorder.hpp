@@ -274,9 +274,10 @@ namespace vkl
 
 	class StatRecords
 	{
-	protected:
-
+	public:
 		using Clock = std::chrono::high_resolution_clock;
+	
+	protected:
 		
 		std::string _name;
 		size_t _memory;

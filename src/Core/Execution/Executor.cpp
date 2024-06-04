@@ -64,9 +64,9 @@ namespace vkl
 	{}
 
 
-	void ExecutionRecorder::pushDebugLabel(std::string const& label)
+	void ExecutionRecorder::pushDebugLabel(std::string_view const& label, bool timestamp)
 	{
-		std::hash<std::string> hs;
+		std::hash<std::string_view> hs;
 		size_t seed = hs(label);
 		auto rng = std::mt19937_64(seed);
 		std::uniform_real_distribution<float> distrib(0, 1);
@@ -75,6 +75,6 @@ namespace vkl
 		color.g = distrib(rng);
 		color.b = distrib(rng);
 		color.a = 1;
-		pushDebugLabel(label, color);
+		pushDebugLabel(label, color, timestamp);
 	}
 }

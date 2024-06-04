@@ -106,7 +106,7 @@ namespace vkl
 
 	void SceneUserInterface::execute(ExecutionRecorder& recorder, Camera & camera)
 	{
-		recorder.pushDebugLabel(name());
+		recorder.pushDebugLabel(name(), true);
 		
 		static thread_local VertexCommand::DrawInfo vertex_draw_info;
 		

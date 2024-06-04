@@ -30,17 +30,19 @@ namespace std
 		TickTock()
 		{}
 
-		void tick()
+		TimePoint tick()
 		{
 			_tick = Clock::now();
+			return _tick;
 		}
 
-		void tock()
+		TimePoint tock()
 		{
 			_tock = Clock::now();
+			return _tock;
 		}
 
-		Duration tockv()
+		Duration tockd()
 		{
 			tock();
 			return duration();

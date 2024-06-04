@@ -26,7 +26,6 @@ namespace vkl
 
 	void GraphicsCommandNode::execute(ExecutionContext& ctx)
 	{
-		ctx.pushDebugLabel(name());
 		CommandBuffer & cmd = *ctx.getCommandBuffer();
 
 		const VkExtent2D render_area = extract(_framebuffer->extent());
@@ -80,7 +79,6 @@ namespace vkl
 		ctx.keepAlive(_pipeline);
 		ctx.keepAlive(_framebuffer);
 		ctx.keepAlive(_render_pass);
-		ctx.popDebugLabel();
 	}
 
 
@@ -591,7 +589,7 @@ namespace vkl
 		{
 			if (!to_draw.name.empty())
 			{
-				ctx.pushDebugLabel(to_draw.name);
+				ctx.pushDebugLabel(to_draw.name, true);
 			}
 			std::shared_ptr<DescriptorSetAndPoolInstance> set = to_draw.set;
 			if (set)

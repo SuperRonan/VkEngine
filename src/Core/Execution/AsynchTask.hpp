@@ -89,8 +89,8 @@ namespace vkl
 
 		LambdaType _lambda = {};
 
-		std::chrono::time_point<Clock> _creation_time;
-		std::chrono::time_point<Clock> _begin_time;
+		Clock::time_point _creation_time;
+		Clock::time_point _begin_time;
 		Clock::duration _duration;
 
 		bool _cancel_while_running = false;
@@ -165,6 +165,8 @@ namespace vkl
 
 		std::vector<std::shared_ptr<AsynchTask>> run(int verbosity);
 
+		void reset();
+
 		void wait();
 
 		void waitIFN();
@@ -172,6 +174,16 @@ namespace vkl
 		constexpr auto duration()const
 		{
 			return _duration;
+		}
+
+		std::vector<std::shared_ptr<AsynchTask>> const& dependencies()const
+		{
+			return _dependencies;
+		}
+
+		std::vector<std::shared_ptr<AsynchTask>> & dependencies()
+		{
+			return _dependencies;
 		}
 	};
 }

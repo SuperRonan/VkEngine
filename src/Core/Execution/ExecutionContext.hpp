@@ -10,6 +10,7 @@
 #include <Core/VkObjects/Sampler.hpp>
 #include <Core/VkObjects/RenderPass.hpp>
 #include <Core/VkObjects/Framebuffer.hpp>
+#include <Core/VkObjects/QueryPool.hpp>
 
 #include <Core/Execution/BufferPool.hpp>
 #include <Core/Execution/ResourceState.hpp>
@@ -24,6 +25,8 @@
 
 namespace vkl
 {
+	class ExecutionStackReport;
+
 	class RecordContext : public VkObject
 	{
 	protected:
@@ -65,14 +68,27 @@ namespace vkl
 	{
 	protected:
 
+		std::TickTock_hrc _tick_tock;
+		using TimePoint = decltype(_tick_tock)::TimePoint;
+		using Duration = decltype(_tick_tock)::Duration;
+
 		std::shared_ptr<CommandBuffer> _command_buffer = nullptr;
 
+		uint32_t _debug_stack_depth = 0;
+		uint32_t _timestamp_query_count = 0;
+		std::shared_ptr<QueryPoolInstance> _timestamp_query_pool = nullptr;
+
+		uint32_t getNewTimestampIndex()
+		{
+			uint32_t res = _timestamp_query_count;
+			++_timestamp_query_count;
+			return res;
+		}
+
 		using vec4 = glm::vec4;
-		struct DebugLabel {
-			std::string label;
-			vec4 color;
-		};
-		std::stack<DebugLabel> _debug_labels;
+
+		std::shared_ptr<ExecutionStackReport> _stack_report;
+
 		bool _can_push_vk_debug_label = false;
 
 		size_t _resource_tid = 0;
@@ -85,7 +101,6 @@ namespace vkl
 		DescriptorSetsManager _ray_tracing_bound_sets;
 
 		FramePerfCounters * _frame_perf_counters = nullptr;
-
 
 		friend class LinearExecutor;
 
@@ -193,13 +208,13 @@ namespace vkl
 		}
 		
 
-		void pushDebugLabel(std::string const& label, vec4 const& color);
+		void pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp = false);
 
-		void pushDebugLabel(std::string const& label);
+		void pushDebugLabel(std::string_view const& label, bool timestamp = false);
 
 		void popDebugLabel();
 
-		void insertDebugLabel(std::string const& label, vec4 const& color);
+		void insertDebugLabel(std::string_view const& label, vec4 const& color);
 	};
 }
 

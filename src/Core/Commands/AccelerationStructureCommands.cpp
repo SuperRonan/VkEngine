@@ -46,8 +46,6 @@ namespace vkl
 
 		virtual void execute(ExecutionContext& ctx)
 		{
-			ctx.pushDebugLabel(name());
-
 			_my_ptr_build_ranges.resize(_build_infos.size());
 			size_t counter = 0;
 			for (size_t i = 0; i < _build_infos.size(); ++i)
@@ -64,7 +62,6 @@ namespace vkl
 
 			application()->extFunctions()._vkCmdBuildAccelerationStructuresKHR(ctx.getCommandBuffer()->handle(), _build_infos.size32(), _build_infos.data(), _my_ptr_build_ranges.data());
 
-			ctx.popDebugLabel();
 			if (_pooled_scratch_buffer)
 			{
 				ctx.keepAlive(_pooled_scratch_buffer);
