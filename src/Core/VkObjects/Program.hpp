@@ -12,11 +12,11 @@ namespace vkl
 	protected:
 
 		std::shared_ptr<PipelineLayoutInstance> _layout;
-		std::vector<std::shared_ptr<ShaderInstance>> _shaders;
+		MyVector<std::shared_ptr<ShaderInstance>> _shaders;
 		MultiDescriptorSetsLayoutsInstances _provided_sets_layouts;
 		MultiDescriptorSetsLayoutsInstances _reflection_sets_layouts;
 		MultiDescriptorSetsLayoutsInstances _sets_layouts;
-		std::vector<VkPushConstantRange> _push_constants;
+		MyVector<VkPushConstantRange> _push_constants;
 
 		struct CreateInfo
 		{
@@ -81,7 +81,7 @@ namespace vkl
 		
 		MultiDescriptorSetsLayouts _provided_sets_layouts;
 
-		std::vector<std::shared_ptr<Shader>> _shaders;
+		MyVector<std::shared_ptr<Shader>> _shaders;
 
 		std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 

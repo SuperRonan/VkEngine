@@ -227,8 +227,8 @@ namespace vkl
 			for (size_t s = 0; s < (max_set_index + 1); ++s)
 			{
 				std::shared_ptr<DescriptorSetLayoutInstance> & set_layout = _reflection_sets_layouts.getRef(s);
-				std::vector<VkDescriptorSetLayoutBinding> vk_bindings;
-				std::vector<DescriptorSetLayoutInstance::BindingMeta> metas;
+				MyVector<VkDescriptorSetLayoutBinding> vk_bindings;
+				MyVector<DescriptorSetLayoutInstance::BindingMeta> metas;
 				if (all_bindings.contains(s))
 				{
 					const auto& sb = all_bindings[s];

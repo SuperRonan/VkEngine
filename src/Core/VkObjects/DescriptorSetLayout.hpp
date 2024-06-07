@@ -23,8 +23,8 @@ namespace vkl
 		VkDescriptorSetLayout _handle = VK_NULL_HANDLE;
 
 		// Sorted by binding index
-		std::vector<VkDescriptorSetLayoutBinding> _bindings;
-		std::vector<BindingMeta> _metas;
+		MyVector<VkDescriptorSetLayoutBinding> _bindings;
+		MyVector<BindingMeta> _metas;
 
 		VkDescriptorSetLayoutCreateFlags _flags = 0;
 		VkDescriptorBindingFlags _binding_flags = 0;
@@ -46,8 +46,8 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			VkDescriptorSetLayoutCreateFlags flags = 0;
-			std::vector<VkDescriptorSetLayoutBinding> vk_bindings;
-			std::vector<BindingMeta> metas;
+			MyVector<VkDescriptorSetLayoutBinding> vk_bindings;
+			MyVector<BindingMeta> metas;
 			VkDescriptorBindingFlags binding_flags = 0;
 		};
 		using CI = CreateInfo;
@@ -145,7 +145,7 @@ namespace vkl
 		size_t _update_tick = 0;
 
 		// Sorted by Binding Index
-		std::vector<Binding> _bindings;
+		MyVector<Binding> _bindings;
 
 		VkDescriptorSetLayoutCreateFlags _flags = 0;
 		VkDescriptorBindingFlags _binding_flags = 0;
@@ -160,7 +160,7 @@ namespace vkl
 			std::string name = {};
 			VkDescriptorSetLayoutCreateFlags flags = 0;
 			bool is_dynamic = false;
-			std::vector<Binding> bindings = {};
+			MyVector<Binding> bindings = {};
 			VkDescriptorBindingFlags binding_flags = 0;
 			Dyn<bool> hold_instance = true;
 		};
@@ -174,7 +174,7 @@ namespace vkl
 
 		void createInstance();
 		
-		constexpr const std::vector<Binding>& bindings()const
+		constexpr const MyVector<Binding>& bindings()const
 		{
 			return _bindings;
 		}
@@ -206,7 +206,7 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<T>> _vector;
+		MyVector<std::shared_ptr<T>> _vector;
 
 		template <class Q>
 		friend class SafeSharedPtrArray;
@@ -267,7 +267,7 @@ namespace vkl
 			return res;
 		}
 
-		std::vector<std::shared_ptr<T>> asVector()const
+		MyVector<std::shared_ptr<T>>const& asVector()const
 		{
 			return _vector;
 		}

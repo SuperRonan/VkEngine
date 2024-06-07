@@ -201,8 +201,8 @@ namespace vkl
 	void DescriptorSetLayout::createInstance()
 	{
 		assert(!_inst);
-		std::vector<VkDescriptorSetLayoutBinding> vk_bindings(_bindings.size());
-		std::vector< DescriptorSetLayoutInstance::BindingMeta> metas(_bindings.size());
+		MyVector<VkDescriptorSetLayoutBinding> vk_bindings(_bindings.size());
+		MyVector<DescriptorSetLayoutInstance::BindingMeta> metas(_bindings.size());
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			vk_bindings[i] = _bindings[i].getVkBinding();

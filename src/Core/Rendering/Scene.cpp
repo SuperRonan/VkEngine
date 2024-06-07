@@ -316,7 +316,7 @@ namespace vkl
 			_tlas_binding_base = _xforms_bindings_base + xforms_num_bindings;
 			const uint32_t tlas_num_bindings = 1;
 
-			std::vector<DescriptorSetLayout::Binding> bindings;
+			MyVector<DescriptorSetLayout::Binding> bindings;
 			using namespace std::containers_append_operators;
 
 			bindings += DescriptorSetLayout::Binding{

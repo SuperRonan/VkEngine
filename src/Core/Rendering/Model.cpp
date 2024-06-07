@@ -115,7 +115,7 @@ namespace vkl
 		{
 			using namespace std::containers_append_operators;
 
-			std::vector<DescriptorSetLayout::Binding> bindings;
+			MyVector<DescriptorSetLayout::Binding> bindings;
 
 			if (options.bind_mesh)
 			{
