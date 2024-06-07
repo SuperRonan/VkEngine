@@ -725,10 +725,16 @@ namespace vkl
 	bool Shader::updateResources(UpdateContext & ctx)
 	{
 		using namespace std::containers_append_operators;
-		bool res = false;
 
 		static thread_local DefinitionsList definitions;
 		static thread_local SpecializationKey new_key;
+		
+		if (ctx.updateTick() <= _update_tick)
+		{
+			return _latest_update_result;
+		}
+		_update_tick = ctx.updateTick();
+		bool &res = _latest_update_result = false;
 
 		if (checkHoldInstance())
 		{

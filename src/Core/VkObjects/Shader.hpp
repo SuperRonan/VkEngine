@@ -152,7 +152,8 @@ namespace vkl
 
 		using Dependecy = std::filesystem::path;
 
-
+		size_t _update_tick = 0;
+		bool _latest_update_result = false;
 		size_t _check_tick = 0;
 		std::filesystem::path _path;
 		VkShaderStageFlagBits _stage;
