@@ -26,8 +26,8 @@ namespace vkl
 		MyVector<uint32_t> _max_primitive_count;
 		VkGeometryFlagsKHR _geometry_flags = 0;
 		VkBuildAccelerationStructureFlagsKHR  _build_flags = 0;
-		VkAccelerationStructureBuildGeometryInfoKHR _build_geometry_info;
-		VkAccelerationStructureBuildSizesInfoKHR _build_sizes;
+		VkAccelerationStructureBuildGeometryInfoKHR _build_geometry_info = {};
+		VkAccelerationStructureBuildSizesInfoKHR _build_sizes = {};
 
 		BufferAndRangeInstance _storage_buffer = {};
 
