@@ -102,7 +102,7 @@ namespace vkl
 				.mesh_shader_path = string_shaders,
 				.fragment_shader_path = string_shaders,
 				.definitions = defs,
-				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			_render_lines_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
 				.app = application(),
@@ -118,7 +118,7 @@ namespace vkl
 				.mesh_shader_path = lines_shaders,
 				.fragment_shader_path = lines_shaders,
 				.definitions = defs,
-				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 		}
 		else
@@ -143,7 +143,7 @@ namespace vkl
 				.geometry_shader_path = string_shaders,
 				.fragment_shader_path = string_shaders,
 				.definitions = defs,
-				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			_render_lines_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
@@ -159,7 +159,7 @@ namespace vkl
 				.geometry_shader_path = lines_shaders,
 				.fragment_shader_path = lines_shaders,
 				.definitions = defs,
-				.blending = Pipeline::BlendAttachementBlendingAlphaDefault(),
+				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 		}
 	}

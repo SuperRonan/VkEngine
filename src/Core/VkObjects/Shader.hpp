@@ -202,5 +202,10 @@ namespace vkl
 		{
 			return _create_instance_task;
 		}
+
+		constexpr VkShaderStageFlagBits stage() const
+		{
+			return _stage;
+		}
 	};
 }

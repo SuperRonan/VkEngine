@@ -9,6 +9,13 @@ namespace vkl
 {
 	class ProgramInstance : public AbstractInstance
 	{
+	public:
+
+		static constexpr uint32_t ShaderUnused()
+		{
+			return VK_SHADER_UNUSED_KHR;
+		}
+		
 	protected:
 
 		std::shared_ptr<PipelineLayoutInstance> _layout;
@@ -23,6 +30,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			MultiDescriptorSetsLayoutsInstances sets_layouts;
+			MyVector<std::shared_ptr<ShaderInstance>> shaders;
 		};
 		using CI = CreateInfo;
 
@@ -32,6 +40,22 @@ namespace vkl
 
 	public:
 
+		bool valid(uint32_t index) const
+		{
+			const bool res = index != ShaderUnused();
+			assert(!res || index < _shaders.size32());
+			return res;
+		}
+
+		ShaderInstance* getShaderSafe(uint32_t index)const
+		{
+			return valid(index) ? _shaders[index].get() : nullptr;
+		}
+
+		std::shared_ptr<ShaderInstance> getShaderSharedPtr(uint32_t index) const
+		{
+			return valid(index) ? _shaders[index] : nullptr;
+		}
 
 		bool reflect();
 
@@ -73,6 +97,13 @@ namespace vkl
 
 	class Program : public InstanceHolder<ProgramInstance>
 	{
+	public:
+
+		static constexpr uint32_t ShaderUnused()
+		{
+			return VK_SHADER_UNUSED_KHR;
+		}
+
 	protected:
 
 		using ParentType = InstanceHolder<ProgramInstance>;
@@ -100,11 +131,32 @@ namespace vkl
 
 		void setInvalidationCallbacks();
 
+		void launchInstanceCreationTask();
+
 		virtual void createInstanceIFP() = 0;
 
 		virtual void destroyInstanceIFN() override;
 
 	public:
+
+		uint32_t addShader(std::shared_ptr<Shader> const& shader);
+
+		bool valid(uint32_t index) const
+		{
+			const bool res = index != ShaderUnused();
+			assert(!res || index < _shaders.size32());
+			return res;
+		}
+
+		Shader* getShaderSafe(uint32_t index)const
+		{
+			return valid(index) ? _shaders[index].get() : nullptr;
+		}
+
+		std::shared_ptr<Shader> getShaderSharedPtr(uint32_t index) const
+		{
+			return valid(index) ? _shaders[index] : nullptr;
+		}
 
 		constexpr const auto& shaders()const
 		{
@@ -131,191 +183,5 @@ namespace vkl
 		{
 			return _create_instance_task;
 		}
-	};
-
-	class GraphicsProgramInstance : public ProgramInstance
-	{
-	protected:
-
-		std::shared_ptr<ShaderInstance> _vertex = nullptr;
-		std::shared_ptr<ShaderInstance> _tess_control = nullptr;
-		std::shared_ptr<ShaderInstance> _tess_eval = nullptr;
-		std::shared_ptr<ShaderInstance> _geometry = nullptr;
-		
-		std::shared_ptr<ShaderInstance> _task = nullptr;
-		std::shared_ptr<ShaderInstance> _mesh = nullptr;
-
-		std::shared_ptr<ShaderInstance> _fragment = nullptr;
-
-		// Mesh (or task if present) local_size
-		VkExtent3D _local_size = makeZeroExtent3D();
-
-		void extractLocalSizeIFP();
-
-	public:
-
-		struct CreateInfoVertex
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<ShaderInstance> vertex = nullptr;
-			std::shared_ptr<ShaderInstance> tess_control = nullptr;
-			std::shared_ptr<ShaderInstance> tess_eval = nullptr;
-			std::shared_ptr<ShaderInstance> geometry = nullptr;
-			std::shared_ptr<ShaderInstance> fragment = nullptr;
-		};
-		using CIV = CreateInfoVertex;
-
-		struct CreateInfoMesh
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<ShaderInstance> task = nullptr;
-			std::shared_ptr<ShaderInstance> mesh = nullptr;
-			std::shared_ptr<ShaderInstance> fragment = nullptr;
-		};
-		using CIM = CreateInfoMesh;
-
-		GraphicsProgramInstance(CreateInfoVertex const& civ);
-		GraphicsProgramInstance(CreateInfoMesh const& cim);
-
-		virtual ~GraphicsProgramInstance() override {};
-
-		constexpr const VkExtent3D& localSize()const
-		{
-			return _local_size;
-		}
-
-	};
-
-	class GraphicsProgram : public Program 
-	{
-	public:
-
-		struct CreateInfoVertex
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<Shader> vertex = nullptr; 
-			std::shared_ptr<Shader> tess_control = nullptr;
-			std::shared_ptr<Shader> tess_eval = nullptr;
-			std::shared_ptr<Shader> geometry = nullptr;
-			std::shared_ptr<Shader> fragment = nullptr;
-			Dyn<bool> hold_instance = true;
-		};
-		using CIV = CreateInfoVertex;
-
-		struct CreateInfoMesh
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<Shader> task = nullptr;
-			std::shared_ptr<Shader> mesh = nullptr;
-			std::shared_ptr<Shader> fragment = nullptr;
-			Dyn<bool> hold_instance = true;
-		};
-
-	protected:
-
-		std::shared_ptr<Shader> _vertex = nullptr;
-		std::shared_ptr<Shader> _tess_control = nullptr;
-		std::shared_ptr<Shader> _tess_eval = nullptr;
-		std::shared_ptr<Shader> _geometry = nullptr;
-		
-		std::shared_ptr<Shader> _task = nullptr;
-		std::shared_ptr<Shader> _mesh = nullptr;
-
-		std::shared_ptr<Shader> _fragment = nullptr;
-
-		virtual void createInstanceIFP() override;
-
-	public:
-
-		GraphicsProgram(CreateInfoVertex const& ci);
-		GraphicsProgram(CreateInfoMesh const& ci);
-
-		virtual ~GraphicsProgram() override;
-
-	};
-
-	class ComputeProgramInstance : public ProgramInstance
-	{
-	protected:
-
-		std::shared_ptr<ShaderInstance> _shader = nullptr;
-		VkExtent3D _local_size = makeZeroExtent3D();
-
-	public:
-
-		struct CreateInfo
-		{
-			VkApplication * app = nullptr;
-			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<ShaderInstance> shader = nullptr;
-		};
-		using CI = CreateInfo;
-
-		ComputeProgramInstance(CreateInfo const& ci);
-
-		virtual ~ComputeProgramInstance() override {};
-
-		void extractLocalSize();
-
-		constexpr const VkExtent3D& localSize()const
-		{
-			return _local_size;
-		}
-
-		constexpr const std::shared_ptr<ShaderInstance>& shader()const
-		{
-			return _shader;
-		}
-
-		constexpr std::shared_ptr<ShaderInstance>& shader()
-		{
-			return _shader;
-		}
-
-	};
-
-	class ComputeProgram : public Program
-	{
-	protected:
-
-		std::shared_ptr<Shader> _shader = nullptr;
-
-		virtual void createInstanceIFP() override;
-
-	public:
-
-		struct CreateInfo
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<Shader> shader = nullptr;
-			Dyn<bool> hold_instance = true;
-		};
-		using CI = CreateInfo;
-
-		ComputeProgram(CreateInfo const& ci);
-
-		virtual ~ComputeProgram() override;
-
-
-		constexpr const std::shared_ptr<Shader>& shader()const
-		{
-			return _shader;
-		}
-
-		constexpr std::shared_ptr<Shader>& shader()
-		{
-			return _shader;
-		}
-	};
+	};	
 }

@@ -36,7 +36,7 @@ namespace vkl
 		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
 			.name = name() + ".Show3DBasis",
-			.vertex_input_desc = Pipeline::VertexInputWithoutVertices(),
+			.vertex_input_desc = GraphicsPipeline::VertexInputWithoutVertices(),
 			.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 			.draw_count = 3,
 			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ShaderCommand.hpp"
+#include <Core/VkObjects/ComputePipeline.hpp>
 
 namespace vkl
 {

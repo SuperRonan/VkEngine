@@ -3,6 +3,7 @@
 #include "ShaderCommand.hpp"
 #include <Core/Rendering/Drawable.hpp>
 #include <variant>
+#include <Core/VkObjects/GraphicsPipeline.hpp>
 
 namespace vkl
 {
@@ -21,6 +22,7 @@ namespace vkl
 		std::shared_ptr<FramebufferInstance> _framebuffer;
 		std::shared_ptr<ImageViewInstance> _depth_stencil;
 
+		MyVector<VkClearValue> _clear_values;
 		std::optional<VkClearColorValue> _clear_color;
 		std::optional<VkClearDepthStencilValue> _clear_depth_stencil;
 

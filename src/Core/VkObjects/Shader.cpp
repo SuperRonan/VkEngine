@@ -663,9 +663,12 @@ namespace vkl
 	{
 		return VkPipelineShaderStageCreateInfo{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
 			.stage = _stage,
 			.module = module(),
 			.pName = _reflection.entry_point_name,
+			.pSpecializationInfo = nullptr,
 		};
 	}
 

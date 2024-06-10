@@ -6,12 +6,28 @@ namespace vkl
 {
 	ProgramInstance::ProgramInstance(CreateInfo const &ci) : 
 		AbstractInstance(ci.app, ci.name),
-		_provided_sets_layouts(ci.sets_layouts)
+		_provided_sets_layouts(ci.sets_layouts),
+		_shaders(ci.shaders)
 	{}
 
 	ProgramInstance::~ProgramInstance()
 	{
 		callDestructionCallbacks();
+	}
+
+	uint32_t Program::addShader(std::shared_ptr<Shader> const& shader)
+	{
+		uint32_t res;
+		if (shader)
+		{
+			res = _shaders.size32();
+			_shaders.push_back(shader);
+		}
+		else
+		{
+			res = ShaderUnused();
+		}
+		return res;
 	}
 
 	bool ProgramInstance::reflect()
@@ -469,6 +485,23 @@ namespace vkl
 		ParentType::destroyInstanceIFN();
 	}
 
+	void Program::launchInstanceCreationTask()
+	{
+		waitForInstanceCreationIFN();
+		_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+			.name = "Creating Program " + name(),
+			.priority = TaskPriority::ASAP(),
+			.lambda = [this]() {
+				createInstanceIFP();
+				return AsynchTask::ReturnType{
+					.success = true,
+				};
+			},
+			.dependencies = getShadersTasksDependencies(),
+			});
+		application()->threadPool().pushTask(_create_instance_task);
+	}
+
 	bool Program::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
@@ -485,7 +518,7 @@ namespace vkl
 		{
 			if (!_inst && can_create)
 			{
-				createInstanceIFP();
+				launchInstanceCreationTask();
 				res = true;
 			}
 		}
@@ -514,250 +547,6 @@ namespace vkl
 			}
 		}
 		return res;
-	}
-
-	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoVertex const& ci) :
-		ProgramInstance(ProgramInstance::CI{
-			.app = ci.app,
-			.name = ci.name,
-			.sets_layouts = ci.sets_layouts.getInstance(),
-		}),
-		_vertex(ci.vertex),
-		_tess_control(ci.tess_control),
-		_tess_eval(ci.tess_eval),
-		_geometry(ci.geometry),
-		_fragment(ci.fragment)
-	{
-		if (_vertex)		_shaders.push_back(_vertex);
-		if (_tess_control)	_shaders.push_back(_tess_control);
-		if (_tess_eval)		_shaders.push_back(_tess_eval);
-		if (_geometry)		_shaders.push_back(_geometry);
-		if (_fragment)		_shaders.push_back(_fragment);
-		
-		createLayout();
-
-		
-	}
-
-	GraphicsProgramInstance::GraphicsProgramInstance(CreateInfoMesh const& ci) :
-		ProgramInstance(ProgramInstance::CI{
-			.app = ci.app,
-			.name = ci.name,
-			.sets_layouts = ci.sets_layouts.getInstance(),
-		}),
-		_task(ci.task),
-		_mesh(ci.mesh),
-		_fragment(ci.fragment)
-	{
-		if(_task)			_shaders.push_back(_task);
-		if(_mesh)			_shaders.push_back(_mesh);
-		if (_fragment)		_shaders.push_back(_fragment);
-
-		createLayout();
-		
-		extractLocalSizeIFP();
-	}
-
-	void GraphicsProgramInstance::extractLocalSizeIFP()
-	{
-		std::shared_ptr<ShaderInstance> & shader = _task ? _task : _mesh;
-		if (shader)
-		{
-			const auto& refl = shader->reflection();
-			const auto& lcl = refl.entry_points[0].local_size;
-			_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
-		}
-	}
-
-	GraphicsProgram::GraphicsProgram(CreateInfoVertex const& civ) :
-		Program(Program::CI{
-			.app = civ.app, 
-			.name = civ.name, 
-			.sets_layouts = civ.sets_layouts,
-			.hold_instance = civ.hold_instance,
-		}),
-		_vertex(civ.vertex),
-		_tess_control(civ.tess_control),
-		_tess_eval(civ.tess_eval),
-		_geometry(civ.geometry),
-		_fragment(civ.fragment)
-	{
-		if (_vertex)
-		{
-			_shaders.push_back(_vertex);
-		}
-		if (_tess_control)
-		{
-			_shaders.push_back(_tess_control);
-		}
-		if (_tess_eval)
-		{
-			_shaders.push_back(_tess_eval);
-		}
-		if (_geometry)
-		{
-			_shaders.push_back(_geometry);
-		}
-		if (_fragment)
-		{
-			_shaders.push_back(_fragment);
-		}
-
-		setInvalidationCallbacks();
-	}
-
-	GraphicsProgram::GraphicsProgram(CreateInfoMesh const& cim) :
-		Program(Program::CI{
-			.app = cim.app,
-			.name = cim.name,
-			.sets_layouts = cim.sets_layouts,
-			.hold_instance = cim.hold_instance,
-		}),
-		_task(cim.task),
-		_mesh(cim.mesh),
-		_fragment(cim.fragment)
-	{
-		if (_task)
-		{
-			_shaders.push_back(_task);
-		}
-		if (_mesh)
-		{
-			_shaders.push_back(_mesh);
-		}
-		if (_fragment)
-		{
-			_shaders.push_back(_fragment);
-		}
-
-		setInvalidationCallbacks();
-	}
-
-	GraphicsProgram::~GraphicsProgram()
-	{
-
-	}
-
-	void GraphicsProgram::createInstanceIFP()
-	{
-		// Maybe deduce the priority from the shaders
-		waitForInstanceCreationIFN();
-		assert(_fragment);
-		if (_vertex || _geometry)
-		{
-			assert(_vertex);
-				
-			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
-				.name = "Creating Program " + name(),
-				.priority = TaskPriority::ASAP(),
-				.lambda = [this]() {		
-					_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIV{
-						.app = application(),
-						.name = name(),
-						.sets_layouts = _provided_sets_layouts,
-						.vertex = _vertex->instance(),
-						.tess_control = _tess_control ? _tess_control->instance() : nullptr,
-						.tess_eval = _tess_eval ? _tess_eval->instance() : nullptr,
-						.geometry = _geometry ?  _geometry->instance() : nullptr,
-						.fragment = _fragment->instance(),
-					});
-					return AsynchTask::ReturnType{
-						.success = true,
-					};
-				},
-				.dependencies = getShadersTasksDependencies(),
-			});
-			application()->threadPool().pushTask(_create_instance_task);
-				
-		}
-		else
-		{
-			assert(!!_mesh);
-			_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
-				.name = "Creating Program " + name(),
-				.priority = TaskPriority::ASAP(),
-				.lambda = [this]() {
-					_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CIM{
-						.app = application(),
-						.name = name(),
-						.sets_layouts = _provided_sets_layouts,
-						.task = _task ? _task->instance() : nullptr,
-						.mesh = _mesh->instance(),
-						.fragment = _fragment->instance(),
-					});
-					return AsynchTask::ReturnType{
-						.success = true,
-					};
-				},
-				.dependencies = getShadersTasksDependencies(),
-			});
-			application()->threadPool().pushTask(_create_instance_task);
-		}
-	}
-
-	ComputeProgramInstance::ComputeProgramInstance(CreateInfo const& ci):
-		ProgramInstance(ProgramInstance::CI{
-			.app = ci.app,
-			.name = ci.name,
-			.sets_layouts = ci.sets_layouts.getInstance(),
-		}),
-		_shader(ci.shader)
-	{
-		_shaders = { _shader };
-		createLayout();
-		
-		extractLocalSize();
-	}
-	
-	void ComputeProgramInstance::extractLocalSize()
-	{
-		const auto& refl = _shader->reflection();
-		const auto& lcl = refl.entry_points[0].local_size;
-		assert(lcl.x != 0);
-		assert(lcl.y != 0);
-		assert(lcl.z != 0);
-		_local_size = { .width = lcl.x, .height = lcl.y, .depth = lcl.z };
-	}
-
-	ComputeProgram::ComputeProgram(CreateInfo const& ci) :
-		Program(Program::CI{
-			.app = ci.app, 
-			.name = ci.name, 
-			.sets_layouts = ci.sets_layouts,
-			.hold_instance = ci.hold_instance,
-		}),
-		_shader(ci.shader)
-	{
-		_shaders = { _shader };
-
-		setInvalidationCallbacks();
-	}
-
-	void ComputeProgram::createInstanceIFP()
-	{
-		waitForInstanceCreationIFN();
-		assert(_shader);
-		_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
-			.name = "Creating Program " + name(),
-			.priority = TaskPriority::ASAP(),
-			.lambda = [this]() {
-				_inst = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
-					.app = application(),
-					.name = name(),
-					.sets_layouts = _provided_sets_layouts,
-					.shader = _shader->instance(),
-				});
-				return AsynchTask::ReturnType{
-					.success = true,
-				};
-			},
-			.dependencies = getShadersTasksDependencies(),
-		});
-		application()->threadPool().pushTask(_create_instance_task);
-	}
-
-	ComputeProgram::~ComputeProgram()
-	{
 	}
 
 }

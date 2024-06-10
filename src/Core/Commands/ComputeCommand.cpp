@@ -89,7 +89,7 @@ namespace vkl
 			.shader = shader,
 		});
 
-		_pipeline = std::make_shared<Pipeline>(Pipeline::ComputeCreateInfo{
+		_pipeline = std::make_shared<ComputePipeline>(ComputePipeline::CI{
 			.app = application(),
 			.name = _program->name(),
 			.program = _program,

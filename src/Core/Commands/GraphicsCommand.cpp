@@ -18,6 +18,7 @@ namespace vkl
 		_framebuffer.reset();
 		_depth_stencil.reset();
 
+		_clear_values.clear();
 		_clear_color.reset();
 		_clear_depth_stencil.reset();
 		
@@ -32,17 +33,17 @@ namespace vkl
 
 		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->colorSize() + 1) : 0;
 
-		std::vector<VkClearValue> clear_values(num_clear_values);
+		_clear_values.resize(num_clear_values);
 		if (num_clear_values)
 		{
 			if (_clear_color.has_value())
 			{
 				const VkClearValue cv = { .color = _clear_color.value() };
-				std::fill_n(clear_values.begin(), _framebuffer->colorSize(), cv);
+				std::fill_n(_clear_values.begin(), _framebuffer->colorSize(), cv);
 			}
 			if (_clear_depth_stencil.has_value())
 			{
-				clear_values.back() = VkClearValue{ .depthStencil = _clear_depth_stencil.value() };
+				_clear_values.back() = VkClearValue{ .depthStencil = _clear_depth_stencil.value() };
 			}
 		}
 
@@ -55,7 +56,7 @@ namespace vkl
 			.framebuffer = *_framebuffer,
 			.renderArea = VkRect2D{.offset = makeZeroOffset2D(), .extent = render_area},
 			.clearValueCount = static_cast<uint32_t>(num_clear_values),
-			.pClearValues = num_clear_values ? clear_values.data() : nullptr,
+			.pClearValues = num_clear_values ? _clear_values.data() : nullptr,
 		};
 
 		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
@@ -67,8 +68,8 @@ namespace vkl
 			}
 			else
 			{
-				VkViewport viewport = Pipeline::Viewport(extract(_framebuffer->extent()));
-				VkRect2D scissor = Pipeline::Scissor(extract(_framebuffer->extent()));
+				VkViewport viewport = GraphicsPipeline::Viewport(extract(_framebuffer->extent()));
+				VkRect2D scissor = GraphicsPipeline::Scissor(extract(_framebuffer->extent()));
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
@@ -417,23 +418,23 @@ namespace vkl
 
 	void GraphicsCommand::createPipeline()
 	{
-		Pipeline::GraphicsCreateInfo gci;
+		GraphicsPipeline::CI gci;
 		gci.app = application();
 		gci.name = name() + ".Pipeline";
 		gci.vertex_input = _vertex_input_desc;
-		gci.input_assembly = Pipeline::InputAssemblyDefault(_topology);
-		gci.rasterization = Pipeline::RasterizationDefault(_cull_mode, _polygon_mode, 1.0f);
+		gci.input_assembly = GraphicsPipeline::InputAssemblyDefault(_topology);
+		gci.rasterization = GraphicsPipeline::RasterizationDefault(_cull_mode, _polygon_mode, 1.0f);
 		
 		if (_line_raster_mode.has_value())
 		{
-			gci.line_raster = Pipeline::LineRasterization(_line_raster_mode.value());
+			gci.line_raster = GraphicsPipeline::LineRasterization(_line_raster_mode.value());
 		}
 
 		// TODO from attachements
 		VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
 
 		// should be dynamic?
-		gci.multisampling = Pipeline::MultisampleState(samples);
+		gci.multisampling = GraphicsPipeline::MultisampleState(samples);
 		gci.program = _program;
 		gci.render_pass = _render_pass;
 
@@ -518,11 +519,11 @@ namespace vkl
 			}
 			return res;
 		}();
-		std::vector<VkPipelineColorBlendAttachmentState> blending(n_color, _blending.value_or(Pipeline::BlendAttachementNoBlending()));
+		MyVector<VkPipelineColorBlendAttachmentState> blending(n_color, _blending.value_or(GraphicsPipeline::BlendAttachementNoBlending()));
 		gci.attachements_blends = blending;
 
 
-		_pipeline = std::make_shared<Pipeline>(gci);
+		_pipeline = std::make_shared<GraphicsPipeline>(std::move(gci));
 	}
 
 	void GraphicsCommand::init()
