@@ -87,6 +87,16 @@ namespace vkl
 		}
 
 		virtual void destroyInstanceIFN() = 0;
+
+		std::mutex& mutex()
+		{
+			return _mutex;
+		}
+
+		std::mutex const& mutex() const
+		{
+			return _mutex;
+		}
 	};
 
 	template <std::derived_from<AbstractInstance> Instance>
