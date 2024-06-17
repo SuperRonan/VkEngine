@@ -88,7 +88,12 @@ namespace vkl
 
 
 		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+		
+		bool _latest_update_result = false;
+		size_t _latest_update_tick = 0;
+		
 		std::shared_ptr<Program> _program = nullptr;
+
 
 		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
@@ -124,9 +129,19 @@ namespace vkl
 
 		bool updateResources(UpdateContext & ctx);
 
+		bool instanceIsPending() const
+		{
+			return !!_create_instance_task;
+		}
+
 		bool hasInstanceOrIsPending() const
 		{
-			return _inst || _create_instance_task;
+			return _inst || instanceIsPending();
+		}
+
+		std::shared_ptr<AsynchTask> const& getInstanceCreationTask()const
+		{
+			return _create_instance_task;
 		}
 
 		void waitForInstanceCreationIFN();

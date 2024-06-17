@@ -85,8 +85,12 @@ namespace vkl
 
 	bool Pipeline::updateResources(UpdateContext & ctx)
 	{
-		bool res = false;
-
+		if (_latest_update_tick >= ctx.updateTick())
+		{
+			return _latest_update_result;
+		}
+		_latest_update_tick = ctx.updateTick();
+		bool & res = _latest_update_result = false;
 		bool can_create = true;
 
 		res |= _program->updateResources(ctx);
