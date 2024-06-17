@@ -271,10 +271,9 @@ namespace vkl
 		
 		if (scratch_buffer_size > 0)
 		{
-			// TODO Check alignment of provided scratch buffer
 			if (!bi.scratch_buffer || (bi.scratch_buffer.size() < scratch_buffer_size))
 			{
-				node->_pooled_scratch_buffer = std::make_shared<PooledBuffer>(&_scratch_buffer_pool, scratch_buffer_size + scratch_align);
+				node->_pooled_scratch_buffer = std::make_shared<PooledBuffer>(&_scratch_buffer_pool, scratch_buffer_size);
 				node->_scratch_buffer.buffer = node->_pooled_scratch_buffer->buffer();
 				node->_scratch_buffer.range = Buffer::Range{
 					.begin = 0,
@@ -284,6 +283,8 @@ namespace vkl
 				const size_t align_offset = node->_scratch_buffer.deviceAddress() % scratch_align;
 				if (align_offset > 0)
 				{
+					// Should not happen anymore
+					NOT_YET_IMPLEMENTED;
 					node->_scratch_buffer.range.begin += (scratch_align - align_offset);
 				}
 			}
@@ -329,6 +330,7 @@ namespace vkl
 			.name = name() + ".ScratchBufferPool",
 			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			.min_align = application()->deviceProperties().acceleration_structure_khr.minAccelerationStructureScratchOffsetAlignment,
 		})
 	{}
 

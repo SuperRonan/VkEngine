@@ -19,6 +19,7 @@ namespace vkl
 	protected:
 
 		size_t _minimum_size = 1024;
+		VkDeviceSize _min_align = 1;
 		VkBufferUsageFlags _usage;
 		VmaMemoryUsage _mem_usage;
 
@@ -41,6 +42,7 @@ namespace vkl
 			VkBufferUsageFlags usage = 0;
 			VmaMemoryUsage mem_usage = VmaMemoryUsage::VMA_MEMORY_USAGE_UNKNOWN;
 			size_t min_size = 1024;
+			VkDeviceSize min_align = 1;
 		};
 		using CI = CreateInfo;
 

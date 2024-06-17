@@ -11,6 +11,7 @@ namespace vkl
 			.app = ci.app,
 			.name = ci.name,
 			.size = &_byte_size,
+			.min_align = ci.min_align,
 			.usage = ci.usage,
 			.mem_usage = ci.mem_usage,
 		}),
@@ -76,6 +77,25 @@ namespace vkl
 	void HostManagedBuffer::resize(size_t byte_size)
 	{
 		grow(byte_size);
+	}
+
+	bool HostManagedBuffer::setIFN(size_t offset, const void* data, size_t len)
+	{
+
+		bool res = false;
+		if (offset + len > _byte_size)
+		{
+			res = true;
+		}
+		if (!res)
+		{
+			res = std::memcmp(data, static_cast<const uint8_t*>(_data) + offset, len) == 0;
+		}
+		if (res)
+		{
+			set(offset, data, len);
+		}
+		return res;
 	}
 
 	void HostManagedBuffer::set(size_t offset, const void* data, size_t len)

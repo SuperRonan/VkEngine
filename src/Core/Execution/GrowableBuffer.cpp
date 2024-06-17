@@ -11,7 +11,7 @@ namespace vkl
 		_capacity = _size.value();
 
 		Buffer::CI _ci = ci;
-
+		_ci.usage |= VK_BUFFER_USAGE_TRANSFER_BITS;
 		_ci.size = &_capacity;
 
 		_buffer = std::make_shared<Buffer>(_ci);

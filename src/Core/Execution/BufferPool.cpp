@@ -6,6 +6,7 @@ namespace vkl
 {
 	BufferPool::BufferPool(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
+		_min_align(ci.min_align),
 		_minimum_size(ci.min_size),
 		_usage(ci.usage),
 		_mem_usage(ci.mem_usage),
@@ -68,6 +69,7 @@ namespace vkl
 				.name = name() + ".PooledBuffer",
 				.ci = ci,
 				.aci = aci,
+				.min_align = _min_align,
 				.allocator = application()->allocator(),
 			});
 		}

@@ -482,7 +482,7 @@ namespace vkl
 
 			if (_inst)
 			{
-				TLASI * inst = reinterpret_cast<TLASI*>(_inst.get());
+				TLASI * inst = static_cast<TLASI*>(_inst.get());
 				inst->requireBuildMode(build_mode);
 				inst->setPrimitiveCountIFN(compact_counter);
 				inst->link();

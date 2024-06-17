@@ -28,6 +28,7 @@ namespace vkl
 
 		VkBufferCreateInfo _ci;
 		VmaAllocationCreateInfo  _aci;
+		VkDeviceSize _min_align = 1;
 		// The VkBuffer handle is not unique (it can be the same as one used before when recreating the instance)
 		VkBuffer _buffer = VK_NULL_HANDLE;
 		size_t _unique_id = 0;
@@ -68,6 +69,7 @@ namespace vkl
 			std::string name = {};
 			VkBufferCreateInfo ci;
 			VmaAllocationCreateInfo aci;
+			VkDeviceSize min_align = 1;
 			VmaAllocator allocator = VMA_NULL;
 		};
 		using CI = CreateInfo;
@@ -186,6 +188,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = "";
 			DynamicValue<VkDeviceSize> size = VkDeviceSize(0);
+			VkDeviceSize min_align = 1;
 			VkBufferUsageFlags usage = 0;
 			std::vector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
@@ -200,6 +203,7 @@ namespace vkl
 	protected:
 
 		DynamicValue<VkDeviceSize> _size = 0;
+		VkDeviceSize _min_align = 1;
 		VkBufferUsageFlags _usage = 0;
 		std::vector<uint32_t> _queues = {};
 		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;

@@ -10,6 +10,7 @@ namespace vkl
 		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
 		_aci(ci.aci),
+		_min_align(ci.min_align),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1)),
 		_allocator(ci.allocator)
 	{
@@ -33,7 +34,8 @@ namespace vkl
 			_ci.usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		}
 		assert(_allocator);
-		VK_CHECK(vmaCreateBuffer(_allocator, &_ci, &_aci, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
+		
+		VK_CHECK(vmaCreateBufferWithAlignment(_allocator, &_ci, &_aci, _min_align, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
 
 		InternalStates is;
 		is.states.push_back(InternalStates::PosAndState{
@@ -282,6 +284,7 @@ namespace vkl
 	Buffer::Buffer(CreateInfo const& ci) :
 		InstanceHolder<BufferInstance>(ci.app, ci.name, ci.hold_instance),
 		_size(ci.size),
+		_min_align(ci.min_align),
 		_usage(ci.usage),
 		_queues(std::filterRedundantValues(ci.queues)),
 		_sharing_mode(_queues.size() > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE),
@@ -315,6 +318,7 @@ namespace vkl
 			.aci = VmaAllocationCreateInfo{
 				.usage = _mem_usage,
 			},
+			.min_align = _min_align,
 			.allocator = _allocator,
 		};
 		
