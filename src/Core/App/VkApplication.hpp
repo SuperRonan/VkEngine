@@ -138,16 +138,18 @@ namespace vkl
 
 		struct ExtFunctionsPtr
 		{
+			// VK_EXT_mesh_shader
 			PFN_vkCmdDrawMeshTasksEXT _vkCmdDrawMeshTasksEXT = nullptr;
 			PFN_vkCmdDrawMeshTasksIndirectEXT _vkCmdDrawMeshTasksIndirectEXT = nullptr;
 			PFN_vkCmdDrawMeshTasksIndirectCountEXT _vkCmdDrawMeshTasksIndirectCountEXT = nullptr;
 			
+			// VK_EXT_debug_utils
 			PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
-			
 			PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT = nullptr;
 			PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT = nullptr;
 			PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
 
+			// VK_KHR_acceleration_structure
 			PFN_vkCreateAccelerationStructureKHR _vkCreateAccelerationStructureKHR = nullptr;
 			PFN_vkDestroyAccelerationStructureKHR _vkDestroyAccelerationStructureKHR = nullptr;
 			PFN_vkCmdBuildAccelerationStructuresKHR _vkCmdBuildAccelerationStructuresKHR = nullptr;
@@ -165,6 +167,14 @@ namespace vkl
 			PFN_vkGetDeviceAccelerationStructureCompatibilityKHR _vkGetDeviceAccelerationStructureCompatibilityKHR = nullptr;
 			PFN_vkGetAccelerationStructureBuildSizesKHR _vkGetAccelerationStructureBuildSizesKHR = nullptr;
 
+			// VK_KHR_ray_tracing_pipeline
+			PFN_vkCmdTraceRaysKHR _vkCmdTraceRaysKHR = nullptr;
+			PFN_vkCreateRayTracingPipelinesKHR _vkCreateRayTracingPipelinesKHR = nullptr;
+			PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR _vkGetRayTracingCaptureReplayShaderGroupHandlesKHR = nullptr;
+			PFN_vkCmdTraceRaysIndirectKHR _vkCmdTraceRaysIndirectKHR = nullptr;
+			PFN_vkGetRayTracingShaderGroupStackSizeKHR _vkGetRayTracingShaderGroupStackSizeKHR = nullptr;
+			PFN_vkCmdSetRayTracingPipelineStackSizeKHR _vkCmdSetRayTracingPipelineStackSizeKHR = nullptr;
+			PFN_vkGetRayTracingShaderGroupHandlesKHR _vkGetRayTracingShaderGroupHandlesKHR = nullptr;
 		};
 
 		ExtFunctionsPtr _ext_functions;

@@ -194,6 +194,9 @@ namespace vkl
 		features.acceleration_structure_khr.accelerationStructure = t;
 		features.acceleration_structure_khr.descriptorBindingAccelerationStructureUpdateAfterBind = t;
 
+		features.ray_tracing_pipeline_khr.rayTracingPipeline = t;
+		features.ray_tracing_pipeline_khr.rayTraversalPrimitiveCulling = t;
+
 		features.ray_query_khr.rayQuery = t;
 
 		features.ray_tracing_position_fetch_khr.rayTracingPositionFetch = t;
@@ -697,6 +700,17 @@ namespace vkl
 			_ext_functions._vkCmdWriteAccelerationStructuresPropertiesKHR = reinterpret_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
 			_ext_functions._vkGetDeviceAccelerationStructureCompatibilityKHR = reinterpret_cast<PFN_vkGetDeviceAccelerationStructureCompatibilityKHR>(vkGetDeviceProcAddr(_device, "vkGetDeviceAccelerationStructureCompatibilityKHR"));
 			_ext_functions._vkGetAccelerationStructureBuildSizesKHR = reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(_device, "vkGetAccelerationStructureBuildSizesKHR"));
+		}
+
+		if (_available_features.ray_tracing_pipeline_khr.rayTracingPipeline)
+		{
+			_ext_functions._vkCmdTraceRaysKHR = reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(_device, "vkCmdTraceRaysKHR"));
+			_ext_functions._vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(_device, "vkCreateRayTracingPipelinesKHR"));
+			_ext_functions._vkGetRayTracingCaptureReplayShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingCaptureReplayShaderGroupHandlesKHR>(vkGetDeviceProcAddr(_device, "vkGetRayTracingCaptureReplayShaderGroupHandlesKHR"));
+			_ext_functions._vkCmdTraceRaysIndirectKHR = reinterpret_cast<PFN_vkCmdTraceRaysIndirectKHR>(vkGetDeviceProcAddr(_device, "vkCmdTraceRaysIndirectKHR"));
+			_ext_functions._vkGetRayTracingShaderGroupStackSizeKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupStackSizeKHR>(vkGetDeviceProcAddr(_device, "vkGetRayTracingShaderGroupStackSizeKHR"));
+			_ext_functions._vkCmdSetRayTracingPipelineStackSizeKHR = reinterpret_cast<PFN_vkCmdSetRayTracingPipelineStackSizeKHR>(vkGetDeviceProcAddr(_device, "vkCmdSetRayTracingPipelineStackSizeKHR"));
+			_ext_functions._vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(_device, "vkGetRayTracingShaderGroupHandlesKHR"));
 		}
 	}
 
