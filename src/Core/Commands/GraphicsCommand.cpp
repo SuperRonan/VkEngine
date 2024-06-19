@@ -767,18 +767,8 @@ namespace vkl
 
 	void VertexCommand::populateDrawCallsResources(VertexCommandNode & node, DrawInfo const& di)
 	{
-		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
-			const auto & layouts = _program->instance()->reflectionSetsLayouts();
-			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-			if (set_index < layouts.size())
-			{
-				return layouts[set_index];
-			}
-			else
-			{
-				return nullptr;
-			}
-		}();
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		std::shared_ptr<DescriptorSetLayoutInstance> layout = _pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
 		node._draw_type = di.draw_type;
 		// Synchronize for vertex attribute fetch and descriptor binding
 		node._draw_list.resize(di.draw_list.size());
@@ -1065,18 +1055,8 @@ namespace vkl
 
 	void MeshCommand::populateDrawCallsResources(MeshCommandNode & node, DrawInfo const& di)
 	{
-		std::shared_ptr<DescriptorSetLayoutInstance> layout = [&]() -> std::shared_ptr<DescriptorSetLayoutInstance> {
-			const auto& layouts = _program->instance()->reflectionSetsLayouts();
-			const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-			if (set_index < layouts.size())
-			{
-				return layouts[set_index];
-			}
-			else
-			{
-				return nullptr;
-			}
-		}();
+		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+		std::shared_ptr<DescriptorSetLayoutInstance> layout = _pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
 
 		node._draw_type = di.draw_type;
 		node._draw_list.resize(di.draw_list.size());
