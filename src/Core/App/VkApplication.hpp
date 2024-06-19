@@ -360,7 +360,12 @@ namespace vkl
 			return *_device_extensions;
 		}
 
-		const ExtFunctionsPtr& extFunctions()
+		const ExtFunctionsPtr& extFunctions() const
+		{
+			return _ext_functions;
+		}
+
+		ExtFunctionsPtr& extFunctions()
 		{
 			return _ext_functions;
 		}
