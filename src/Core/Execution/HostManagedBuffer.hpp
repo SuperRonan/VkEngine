@@ -13,7 +13,14 @@ namespace vkl
 		size_t _byte_size = 0;
 		void * _data = nullptr;
 
-		AABB<1, size_t> _upload_range;
+		using UploadRange = AABB<1, size_t>;
+
+		union
+		{
+			UploadRange _upload_range;
+			MyVector<UploadRange> _upload_ranges;
+		};
+		bool _use_single_upload_range = false;
 
 		PositionedObjectView consumeUploadView();
 
@@ -23,6 +30,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
+			bool use_single_upload_range = true;
 			size_t size = 0;
 			VkDeviceSize min_align = 1;
 			VkBufferUsageFlags usage = 0;

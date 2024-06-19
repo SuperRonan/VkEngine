@@ -16,9 +16,18 @@ namespace vkl
 			.mem_usage = ci.mem_usage,
 		}),
 		_byte_size(ci.size),
+		_use_single_upload_range(ci.use_single_upload_range),
 		_data(_byte_size ? std::malloc(_byte_size) : nullptr)
 	{
 		_capacity = _byte_size; // hack because _byte_size was not initialized when _capacity was init
+		if (_use_single_upload_range)
+		{
+			_upload_range = UploadRange();
+		}
+		else
+		{
+			_upload_ranges = MyVector<UploadRange>();
+		}
 	}
 
 	HostManagedBuffer::~HostManagedBuffer()
@@ -31,6 +40,15 @@ namespace vkl
 
 		_byte_size = 0;
 		_buffer.reset();
+
+		if (_use_single_upload_range)
+		{
+			_upload_range.~UploadRange();
+		}
+		else
+		{
+			_upload_ranges.~MyVector();
+		}
 	}
 
 	void HostManagedBuffer::grow(size_t desired_size)
@@ -115,8 +133,23 @@ namespace vkl
 	void HostManagedBuffer::invalidateByteRange(Buffer::Range const& range)
 	{
 		const size_t align = 4;
-		AABB<1, size_t> segment(Vector<1, size_t>(std::alignDown(range.begin, align)), Vector<1, size_t>(std::alignUp(range.end(), align)));
-		_upload_range += segment;
+		using Vec = Vector<1, size_t>;
+		const UploadRange segment(Vec(std::alignDown(range.begin, align)), Vec(std::alignUp(range.end(), align)));
+		if (_use_single_upload_range)
+		{
+			_upload_range += segment;
+		}
+		else
+		{
+			NOT_YET_IMPLEMENTED;
+			auto compare = [](UploadRange const& a, UploadRange const& b)
+			{
+				// TODO
+
+				return true;
+			};
+			auto it = std::lower_bound(_upload_ranges.begin(), _upload_ranges.end(), segment, compare);
+		}
 	}
 
 	PositionedObjectView HostManagedBuffer::consumeUploadView()
