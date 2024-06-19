@@ -88,9 +88,14 @@ namespace vkl
 				return this;
 			}
 
-			virtual T const& value() const
+			T const& getCachedValue() const
 			{
 				return _value;
+			}
+
+			virtual T const& value() const
+			{
+				return getCachedValue();
 			}
 
 			void setValue(T const& t)
@@ -331,7 +336,11 @@ namespace vkl
 			_inst = std::make_shared<impl::LambdaValueInstanceByRef>(l);
 		}
 
-
+		T const& getCachedValue()const
+		{
+			assert(hasValue());
+			return _inst->getCachedValue();
+		}
 
 		T const& value()const
 		{
