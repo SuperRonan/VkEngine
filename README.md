@@ -39,9 +39,9 @@
 	- [ ] Meshlets? 
 	- [ ] Separate positions from other vertex data?
 - [x] Scene
-- [ ] VkRayTracingKHR
+- [x] VkRayTracingKHR
 	- [x] TLAS
-	- [ ] SBT
+	- [x] SBT
 - [x] Modules
 - [ ] Multi layer swapchain (for VR)
 - [x] Debug buffers
@@ -86,6 +86,7 @@
 - [x] Remove ext features from the device requested feature chain when the extension is not used (it now generates a validation error)
 - [ ] Separate DescriptorSet and DescriptorPool
 	- [ ] Use one pool for many descriptor sets (for model resources)
+- [ ] Add helper types StringVector, AnyVector, ...
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib
