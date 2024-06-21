@@ -789,10 +789,12 @@ namespace vkl
 		{
 			if (_use_indirect_rendering)
 			{
-				bool pushed_label = false;
 				VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
 				std::shared_ptr<Framebuffer> previous_fb = std::move(my_draw_list.extern_framebuffer);
 				PushConstant previous_pc = std::move(my_draw_list.draw_list.drawCalls().front().pc);
+				
+				exec.pushDebugLabel("RenderShadowMaps", true);
+				
 				for (auto& [path, lid] : _scene->_unique_light_instances)
 				{
 					std::shared_ptr<Light> const& light = path.path.back()->light();
@@ -802,11 +804,6 @@ namespace vkl
 						my_draw_list.draw_list.drawCalls().front().pc = lid.frame_light_id;
 						my_draw_list.extern_framebuffer = my_lid->framebuffer;
 
-						if (!pushed_label)
-						{
-							exec.pushDebugLabel("RenderShadowMaps", true);
-							pushed_label = true;
-						}
 						if (light->type() == LightType::SPOT)
 						{
 							exec(_render_spot_light_depth->with(my_draw_list));
@@ -815,15 +812,13 @@ namespace vkl
 						{
 							exec(_render_point_light_depth->with(my_draw_list));
 						}
-					}
+					}	
 				}
+
+				exec.popDebugLabel();
 				my_draw_list.extern_framebuffer = std::move(previous_fb);
 				my_draw_list.draw_list.drawCalls().front().pc = std::move(previous_pc);
 
-				if (pushed_label)
-				{
-					exec.popDebugLabel();
-				}
 			}
 		}
 

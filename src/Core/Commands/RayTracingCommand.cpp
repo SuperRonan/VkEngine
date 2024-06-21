@@ -93,6 +93,7 @@ namespace vkl
 			.name = ci.name,
 			.sets_layouts = ci.sets_layouts,
 		}),
+		
 		_common_shader_definitions(ci.definitions),
 		_extent(ci.extent)
 	{
@@ -176,6 +177,14 @@ namespace vkl
 			.program = program,
 			.max_recursion_depth = ci.max_recursion_depth,
 			.hold_instance = ci.hold_instance,
+		});
+
+		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
+			.app = application(),
+			.name = name() + ".shader_set",
+			.program = program,
+			.target_set = application()->descriptorBindingGlobalOptions().shader_set,
+			.bindings = ci.bindings,
 		});
 
 		if (ci.create_sbt)
@@ -271,9 +280,15 @@ namespace vkl
 
 	Executable RayTracingCommand::with(TraceInfo const& ti)
 	{
-		return [this, ti](RecordContext & ctx)
+		TraceInfo _ti = ti;
+		if (!_ti.sbt)
 		{
-			return getExecutionNode(ctx, 1, &ti);
+			_ti.sbt = _sbt.get();
+		}
+		
+		return [this, _ti](RecordContext & ctx)
+		{
+			return getExecutionNode(ctx, 1, &_ti);
 		};
 	}
 }

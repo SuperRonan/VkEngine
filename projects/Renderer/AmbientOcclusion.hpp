@@ -4,6 +4,7 @@
 #include <Core/Execution/Executor.hpp>
 
 #include <Core/Commands/ComputeCommand.hpp>
+#include <Core/Commands/RayTracingCommand.hpp>
 
 #include <Core/IO/GuiContext.hpp>
 #include <Core/IO/ImGuiUtils.hpp>
@@ -20,7 +21,8 @@ namespace vkl
 		enum class Method
 		{
 			SSAO = 0,
-			RQAO = 1,
+			RTAO = 1,
+			RQAO = 2,
 		};
 		
 		struct UBO
@@ -30,6 +32,7 @@ namespace vkl
 
 	protected:
 
+		// Controls if the Acceleration structure is available (set by the caller from the scene)
 		bool _can_rt = false;
 		bool _enable = true;
 		int _ao_samples = 16;
@@ -43,7 +46,9 @@ namespace vkl
 
 		std::string _method_glsl;
 
-		std::shared_ptr<ComputeCommand> _command = nullptr;
+		std::shared_ptr<ComputeCommand> _ssao_compute_command = nullptr;
+		std::shared_ptr<ComputeCommand> _rqao_compute_command = nullptr;
+		std::shared_ptr<RayTracingCommand> _rtao_command = nullptr;
 
 		struct CommandPC
 		{
@@ -107,7 +112,11 @@ namespace vkl
 			uint32_t res = 0;
 			if (enable())
 			{
-				if (_gui_method.index() == 1)
+				if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
+				{
+					res |= 1;
+				}
+				if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
 				{
 					res |= 2;
 				}

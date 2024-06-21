@@ -92,9 +92,12 @@ namespace vkl
 		assert(_data);
 	}
 
-	void HostManagedBuffer::resize(size_t byte_size)
+	void HostManagedBuffer::resizeIFN(size_t byte_size)
 	{
-		grow(byte_size);
+		if (byte_size > _byte_size)
+		{
+			grow(byte_size);
+		}
 	}
 
 	bool HostManagedBuffer::setIFN(size_t offset, const void* data, size_t len)
@@ -107,7 +110,7 @@ namespace vkl
 		}
 		if (!res)
 		{
-			res = std::memcmp(data, static_cast<const uint8_t*>(_data) + offset, len) == 0;
+			res = std::memcmp(data, static_cast<const uint8_t*>(_data) + offset, len) != 0;
 		}
 		if (res)
 		{

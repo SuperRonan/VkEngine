@@ -49,7 +49,7 @@ namespace vkl
 
 		void grow(size_t desired_size);
 
-		void resize(size_t byte_size);
+		void resizeIFN(size_t byte_size);
 
 		bool setIFN(size_t offset, const void * data, size_t len);
 

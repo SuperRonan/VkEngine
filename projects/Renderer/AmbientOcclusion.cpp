@@ -12,29 +12,54 @@ namespace vkl
 		_gui_method(ImGuiListSelection::CI{
 			.name = "Method",
 			.mode = ImGuiListSelection::Mode::Dropdown,
-			.labels = {"SSAO", "RTAO"},
+			.labels = {"SSAO", "RTAO", "RQAO"},
 		})
 	{
 		_gui_method.setIndex(ci.default_method);
-		if (!_can_rt)
+		
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+		_can_rt &= can_as;
+
+		_gui_method.enableOptions(static_cast<uint32_t>(Method::RTAO), _can_rt && can_rt);
+		_gui_method.enableOptions(static_cast<uint32_t>(Method::RQAO), _can_rt && can_rq);
+
+		if (_gui_method.options()[_gui_method.index()].disable)
 		{
-			_gui_method.enableOptions(1, false);
 			_gui_method.setIndex(0);
 		}
+
 		assert(!!_positions);
 
 		createInternalResources();
 	}
 
-	bool AmbientOcclusion::setCanRT(bool can_rt)
+	bool AmbientOcclusion::setCanRT(bool want_rt)
 	{
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+
 		bool res = false;
-		if (can_rt != _can_rt)
+		if (want_rt != _can_rt)
 		{
-			_gui_method.enableOptions(1, can_rt);
-			if (_gui_method.index() == 1)
+			_gui_method.enableOptions(static_cast<uint32_t>(Method::RTAO), want_rt && can_rt);
+			_gui_method.enableOptions(static_cast<uint32_t>(Method::RQAO), want_rt && can_rq);
+			if (_gui_method.options()[_gui_method.index()].disable)
 			{
-				_gui_method.setIndex(0);
+				if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO) && !_gui_method.options()[static_cast<uint32_t>(Method::RQAO)].disable)
+				{
+					_gui_method.setIndex(static_cast<uint32_t>(Method::RQAO));
+				}
+				else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO) && !_gui_method.options()[static_cast<uint32_t>(Method::RTAO)].disable)
+				{
+					_gui_method.setIndex(static_cast<uint32_t>(Method::RTAO));
+				}
+				else
+				{
+					_gui_method.setIndex(static_cast<uint32_t>(Method::SSAO));
+				}
 			}
 			_can_rt = can_rt;
 			res = true;
@@ -44,6 +69,10 @@ namespace vkl
 
 	void AmbientOcclusion::createInternalResources()
 	{
+		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+
 		_format = VK_FORMAT_R16_SNORM;
 		_format_glsl = DetailedVkFormat::Find(_format).getGLSLName();
 
@@ -77,9 +106,9 @@ namespace vkl
 
 		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/Rendering/AmbientOcclusion/";
 		_method_glsl = "AO_METHOD 0";
-		Dyn<DefinitionsList> defs = [this]()
+		Dyn<DefinitionsList> defs = [this](DefinitionsList & res)
 		{
-			DefinitionsList res;
+			res.clear();
 			res.push_back("OUT_FORMAT "s + _format_glsl);
 			res.push_back("AO_SAMPLES "s + std::to_string(_ao_samples));
 			res.push_back(_method_glsl);
@@ -107,16 +136,57 @@ namespace vkl
 			});
 		}
 
-		_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+		_ssao_compute_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
-			.name = name() + ".command",
+			.name = name() + ".SSAO",
 			.shader_path = folder / "AmbientOcclusion.comp",
-			.extent = _target->image()->extent(),
+			.extent = target_extent,
 			.dispatch_threads = true,
 			.sets_layouts = _sets_layouts,
-			.bindings = std::move(bindings),
-			.definitions = std::move(defs),
+			.bindings = bindings,
+			.definitions = defs,
 		});
+
+		std::filesystem::path rtao_shader = folder / "RTAO.glsl";
+
+		if (can_rq)
+		{
+			_rqao_compute_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = application(),
+				.name = name() + ".RQAO",
+				.shader_path = rtao_shader,
+				.extent = target_extent,
+				.dispatch_threads = true,
+				.sets_layouts = _sets_layouts,
+				.bindings = bindings,
+				.definitions = defs,
+			});
+		}
+
+
+		using RTShader = RayTracingCommand::RTShader;
+		if (can_rt)
+		{
+			_rtao_command = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+				.app = application(),
+				.name = name() + ".RTAO",
+				.sets_layouts = _sets_layouts,
+				.raygen = RTShader{.path = rtao_shader},
+				.misses = {RTShader{.path = rtao_shader}},
+				.closest_hits = {RTShader{.path = rtao_shader}},
+				.hit_groups = {RayTracingCommand::HitGroup{.closest_hit = 0}},
+				.definitions = defs,
+				.bindings = bindings,
+				.extent = target_extent,
+				.max_recursion_depth = 0,
+				.create_sbt = true,
+			});
+
+			ShaderBindingTable * sbt = _rtao_command->getSBT().get();
+			sbt->setRecord(ShaderRecordType::RayGen, 0, 0);
+			sbt->setRecord(ShaderRecordType::Miss, 0, 0);
+			sbt->setRecord(ShaderRecordType::HitGroup, 0, 0);
+		}
 	}
 
 
@@ -127,7 +197,19 @@ namespace vkl
 		{
 			_method_glsl.back() = '0' + _gui_method.index();
 			_sampler->updateResources(ctx);
-			ctx.resourcesToUpdateLater() += _command;
+
+			if (_gui_method.index() == static_cast<uint32_t>(Method::SSAO))
+			{
+				ctx.resourcesToUpdateLater() += _ssao_compute_command;
+			}
+			else if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
+			{
+				ctx.resourcesToUpdateLater() += _rtao_command;
+			}
+			else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
+			{
+				ctx.resourcesToUpdateLater() += _rqao_compute_command;
+			}
 
 			++_seed;
 		}
@@ -153,9 +235,26 @@ namespace vkl
 				.seed = uint32_t(std::hash<uint32_t>()(_seed)),
 			};
 
-			recorder(_command->with(ComputeCommand::SingleDispatchInfo{
-				.pc = pc,
-			}));
+			if (_gui_method.index() == static_cast<uint32_t>(Method::SSAO))
+			{
+				recorder(_ssao_compute_command->with(ComputeCommand::SingleDispatchInfo{
+					.pc = pc,
+				}));
+			}
+			else if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
+			{
+				_rtao_command->getSBT()->recordUpdateIFN(recorder);
+				recorder(_rtao_command->with(RayTracingCommand::TraceInfo{
+					.extent = _target->image()->extent().value(),
+					.pc = pc,
+				}));
+			}
+			else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
+			{
+				recorder(_rqao_compute_command->with(ComputeCommand::SingleDispatchInfo{
+					.pc = pc,
+				}));
+			}
 
 			//recorder.popDebugLabel();
 		}

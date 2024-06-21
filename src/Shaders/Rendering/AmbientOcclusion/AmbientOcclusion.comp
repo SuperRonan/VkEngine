@@ -125,70 +125,6 @@ float computeAO_1(inout rng_t rng, vec2 uv, vec2 ratio)
 }
 
 
-
-float computeRQAO(inout rng_t rng, vec2 uv)
-{
-	float res = 0;
-#if SHADER_RAY_QUERY_AVAILABLE
-	// const vec3 wcenter_position = textureLod(in_world_position, uv, 0).xyz;
-	const vec3 wcenter_position = texelFetch(in_world_position, ivec2(uv * textureSize(in_world_position, 0).xy), 0).xyz;
-	//const vec3 wcenter_normal = normalize(textureLod(in_world_normal, uv, 0).xyz);
-	vec3 wcenter_normal = texelFetch(in_world_normal, ivec2(uv * textureSize(in_world_normal, 0).xy), 0).xyz;
-	wcenter_normal = normalize(wcenter_normal);
-	const mat3 world_basis = basisFromDir(wcenter_normal);
-
-	// TODO
-	const float world_radius = _pc.radius * 10;
-
-	// ivec2 debug_pix = ivec2(200, 100);
-	// if(gl_GlobalInvocationID.xy == debug_pix)
-	// {
-	// 	Caret c = Caret2D(debug_pix * 2, 0);
-	// 	c = pushToDebugPixLn(wcenter_normal, c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(length2(wcenter_normal), c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(length2(world_basis[0]), c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(length2(world_basis[1]), c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(length2(world_basis[2]), c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(dot(world_basis[0], world_basis[1]), c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(dot(world_basis[1], world_basis[2]), c, vec4(1, 0, 1, 1));
-	// 	c = pushToDebugPixLn(dot(world_basis[0], world_basis[2]), c, vec4(1, 0, 1, 1));	
-	// }
-
-	for(int i=0; i < AO_SAMPLES; ++i)
-	{
-		const vec3 sampled_dir_ = randomCosineDirOnHemisphere(rng);
-		const vec3 sampled_dir_w = world_basis * sampled_dir_;
-		
-		Ray ray = Ray(wcenter_position, sampled_dir_w);
-		const float t_min = rayTMin(ray, wcenter_normal);
-		
-		vec3 color = vec3(0);
-
-		if(QueryVisibilityRayOpaqueOnlyTriangles(SceneTLAS, ray, vec2(t_min, world_radius)))
-		{
-			// The PDF cancels the contribution
-			res += 1;
-			color = vec3(0, 1, 0);
-		}
-		else
-		{
-			color = vec3(1, 0, 0);
-		}
-
-#if I_WANT_TO_DEBUG
-		if(gl_GlobalInvocationID.xy == ivec2(500, 500))
-		{
-			const mat4 proj_matrix = mat4(1);
-			pushDebugLine(proj_matrix, ray.origin, sampleRay(ray, world_radius), 0, color, color, 0);
-		}
-#endif
-		
-	}
-	res /= float(AO_SAMPLES);
-#endif
-	return res;
-}
-
 void main()
 {
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
@@ -208,8 +144,6 @@ void main()
 		// Different methods may use a different number of registers -> Different scheduling
 #if AO_METHOD == AO_METHOD_SSAO
 		res = computeAO_1(rng, uv, ratio);
-#elif AO_METHOD == AO_METHOD_RQAO
-		res = computeRQAO(rng, uv);
 #endif
 
 		imageStore(ao_image, pixel, res.xxxx);

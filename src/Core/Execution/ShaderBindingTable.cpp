@@ -146,13 +146,14 @@ namespace vkl
 		const uint32_t shader_record_align = application()->deviceProperties().ray_tracing_pipeline_khr.shaderGroupHandleAlignment;
 		const uint32_t shader_group_base_align = application()->deviceProperties().ray_tracing_pipeline_khr.shaderGroupBaseAlignment;
 		RayTracingPipelineInstance * pipeline = static_cast<RayTracingPipelineInstance*>(_pipeline->instance().get());
+		assert(pipeline);
 		RayTracingProgramInstance * program = pipeline->program();
 		
 		const uint8_t* handles = pipeline->shaderGroupHandles().data();
 		
 		for (size_t i = 0; i < _segments.size(); ++i)
 		{
-			Segment const& s = _segments[i];
+			Segment & s = _segments[i];
 			const uint32_t record_size = shader_record_size + s.shader_data_record_size;
 			const uint32_t record_stride = std::alignUpAssumePo2(record_size, shader_record_align);
 			Range range = s.indices_invalidation;
@@ -167,6 +168,7 @@ namespace vkl
 				const uint8_t* handle_ptr = handles + handle_id * shader_record_size;
 				_buffer.setIFN(record_offset, handle_ptr, shader_record_size);
 			}
+			s.indices_invalidation = Range{.begin = 0, .len = 0};
 		}
 	}
 
@@ -194,7 +196,7 @@ namespace vkl
 		_pipeline->updateResources(ctx);
 
 		const uint32_t sbt_buffer_size = prepareSize();
-		_buffer.resize(sbt_buffer_size);
+		_buffer.resizeIFN(sbt_buffer_size);
 
 		auto update_f = [this](UpdateContext* ctx)
 		{
@@ -217,7 +219,7 @@ namespace vkl
 		{
 			_update_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 				.name = name() + ".Update",
-				.verbosity = 1,
+				.verbosity = 0,
 				.priority = TaskPriority::ASAP(),
 				.lambda = [this, update_f]()
 				{

@@ -30,12 +30,13 @@ namespace vkl
 			.maxPipelineRayRecursionDepth = _max_recursion_depth,
 			.pLibraryInfo = nullptr,
 			.pLibraryInterface = nullptr,
+			.pDynamicState = nullptr,
 			.layout = layout()->handle(),
 			.basePipelineHandle = VK_NULL_HANDLE,
 			.basePipelineIndex = 0,
 		};
 		application()->extFunctions()._vkCreateRayTracingPipelinesKHR(device(), VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &vk_ci, nullptr, &_handle);
-
+		setVkNameIFP();
 		const uint32_t shader_group_handle_size = application()->deviceProperties().ray_tracing_pipeline_khr.shaderGroupHandleSize;
 		_shader_group_handles.resize(shader_group_handle_size * prog.shaderGroups().size());
 		application()->extFunctions()._vkGetRayTracingShaderGroupHandlesKHR(device(), _handle, 0, prog.shaderGroups().size32(), _shader_group_handles.byte_size(), _shader_group_handles.data());
