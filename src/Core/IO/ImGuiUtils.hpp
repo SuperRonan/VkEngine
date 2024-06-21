@@ -95,7 +95,7 @@ namespace vkl
 			return _index;
 		}
 
-		const auto& Options()const
+		const auto& options()const
 		{
 			return _options;
 		}
