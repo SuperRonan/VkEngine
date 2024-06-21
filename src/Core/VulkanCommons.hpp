@@ -313,6 +313,8 @@ namespace vkl
 		VkPhysicalDeviceRayTracingMotionBlurFeaturesNV ray_tracing_motion_blur_nv = {};
 		VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV ray_tracing_invocation_reorder_nv = {};
 		
+		VkPhysicalDeviceRayTracingValidationFeaturesNV ray_tracing_validation_nv = {};
+
 		VulkanFeatures();
 
 		VkPhysicalDeviceFeatures2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
@@ -1002,7 +1004,7 @@ namespace std
 		assert(isPowerOf2(a_p2));
 		assert(a_p2 > 1);
 		const Uint a_mask = a_p2 - 1;
-		const Uint res = (n | a_mask) + 1;
+		const Uint res = (n + a_mask) & ~a_mask;
 		assert(res == alignUp(n, a_p2));
 		return res;
 	}

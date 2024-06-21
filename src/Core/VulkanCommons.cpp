@@ -47,6 +47,8 @@ namespace vkl
 		ray_tracing_motion_blur_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV;
 		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV;
 
+		ray_tracing_validation_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_VALIDATION_FEATURES_NV;
+
 		pNextChain chain = &features2;
 
 		if(version >= VK_MAKE_VERSION(1, 1, 0))
@@ -89,6 +91,10 @@ namespace vkl
 			chain += &ray_tracing_motion_blur_nv;
 		if(filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
 			chain += &ray_tracing_invocation_reorder_nv;
+		
+		if(filter_extensions(VK_NV_RAY_TRACING_VALIDATION_EXTENSION_NAME))
+			chain += &ray_tracing_validation_nv;
+
 		chain += nullptr;
 
 		return features2;
@@ -193,6 +199,8 @@ namespace vkl
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
+		
+		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingValidationFeaturesNV, ray_tracing_validation_nv, rayTracingValidation, rayTracingValidation);
 
 #undef COMBINE_VK_FEATURES_STD
 #undef COMBINE_VK_FEATURES
@@ -260,6 +268,8 @@ namespace vkl
 		
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
+		
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingValidationFeaturesNV, ray_tracing_validation_nv, rayTracingValidation, rayTracingValidation);
 
 #undef COUNT_VK_FEATURES_STD
 #undef COUNT_VK_FEATURES

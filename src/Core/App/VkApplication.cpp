@@ -138,6 +138,8 @@ namespace vkl
 
 			VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
 			VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME,
+
+			VK_NV_RAY_TRACING_VALIDATION_EXTENSION_NAME,
 		};
 	}
 
@@ -200,6 +202,8 @@ namespace vkl
 		features.ray_query_khr.rayQuery = t;
 
 		features.ray_tracing_position_fetch_khr.rayTracingPositionFetch = t;
+
+		features.ray_tracing_validation_nv.rayTracingValidation = t;
 	}
 
 	std::set<std::string_view> VkApplication::getInstanceExtensions()
@@ -238,9 +242,18 @@ namespace vkl
 	{
 		if (message_severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
-			VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
-
- 			VKL_BREAKPOINT_HANDLE;
+			bool ignore = false;
+			// There is a bug in the current SDK's VLL which emits this incorrect error
+			std::string_view message = callback_data->pMessage;
+			if ((message.find("VUID-vkCmdTraceRaysKHR-None-08608") != std::string_view::npos) && (message.find("VK_DYNAMIC_STATE_VIEWPORT") != std::string_view::npos))
+			{
+				ignore = true;
+			}
+			if (!ignore)
+			{
+				VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
+ 				VKL_BREAKPOINT_HANDLE;
+			}
 		}
 		return VK_FALSE;
 	}
