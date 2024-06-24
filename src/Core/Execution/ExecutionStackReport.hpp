@@ -8,7 +8,7 @@
 
 #include <Core/VkObjects/QueryPool.hpp>
 
-#include <sstream>
+#include <thatlib/src/utils/ExtensibleStringStorage.hpp>
 
 namespace vkl
 {
@@ -19,11 +19,9 @@ namespace vkl
 		// Note: 
 		// This object has 2 stages
 		// First stage: accumulation of data
-		// Segment::label point to just the label (stored in _string_buffer)
 		// Segment::timestamp* are timestamp query indices (-1 means no value), could be uint32_t
 
 		// Second stage: display of data
-		// Segment::label points to a label with timings for the GUI (stored in _string_stream)
 		// Segment::timestamp* now contains the retrieved timestamp value
 
 		// Maybe encode the color in less space (sRGB + linear Alpha)
@@ -51,14 +49,11 @@ namespace vkl
 	
 	protected:
 
-		// Null terminated strings
-		// At the begining for fast push labels
-		MyVector<char> _string_buffer = {};
+
 		MyVector<Segment> _stack = {};
 		Index _stack_top = Index(-1);
 
-		// a series of null terminated strings (needed for ImGui)
-		std::stringstream _string_stream;
+		that::ExtensibleStringStorage _strings;
 		
 		TimePoint _begin_timepoint = {};
 		TimePoint _end_timepoint = {};
@@ -85,18 +80,6 @@ namespace vkl
 		Segment* getStackTop();
 		
 		void pop();
-
-		std::string_view getStringView1(Range const& r) const
-		{
-			return std::string_view(_string_buffer.data() + r.begin, r.len);
-		}
-
-		std::string_view getStringView2(Range const& r) const
-		{
-			return std::string_view(_string_stream.view().data() + r.begin, r.len);
-		}
-
-		Range pushString(std::string_view sv);
 
 		using GetQueryResultFn = std::function<void(uint32_t, uint64_t&, uint32_t*)>;
 		void aquireQueryResults(GetQueryResultFn const& get_query_result_f);

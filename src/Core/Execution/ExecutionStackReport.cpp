@@ -8,7 +8,7 @@ namespace vkl
 
 	void ExecutionStackReport::clear()
 	{
-		_string_buffer.clear();
+		_strings.clear();
 		_stack.clear();
 		_stack_top = Index(-1);
 		_begin_timepoint = {};
@@ -17,10 +17,14 @@ namespace vkl
 	ExecutionStackReport::Segment& ExecutionStackReport::push(std::string_view label, Color const& color)
 	{
 		const Index depth = (_stack_top != Index(-1)) ? (_stack[_stack_top].depth + 1) : 0;
+		const Range label_range = Range{
+			.begin = static_cast<Range::Index>(_strings.pushBack(label)), 
+			.len = static_cast<Range::Index>(label.size()),
+		}; 
 		_stack.push_back(Segment{
 			.depth = depth,
 			.parent = _stack_top,
-			.label_range = pushString(label),
+			.label_range = label_range,
 			.color = color,
 		});
 		Segment & res = _stack.back();
@@ -42,18 +46,6 @@ namespace vkl
 	{
 		assert(_stack_top != Index(-1));
 		_stack_top = _stack[_stack_top].parent;
-	}
-
-	ExecutionStackReport::Range ExecutionStackReport::pushString(std::string_view sv)
-	{
-		Range res{
-			.begin = static_cast<Index>(_string_buffer.size()),
-			.len = static_cast<Index>(sv.size()),
-		};
-		_string_buffer.resize(res.begin + sv.size() + 1);
-		std::memcpy(_string_buffer.data() + res.begin, sv.data(), sv.size());
-		_string_buffer.back() = 0;
-		return res;
 	}
 
 	void ExecutionStackReport::aquireQueryResults(GetQueryResultFn const& get_query_result_f)
@@ -108,7 +100,7 @@ namespace vkl
 		{
 			if (std::isnan(time))
 			{
-				_string_stream << "?";
+				_strings.pushBack("?", false);
 			}
 			else
 			{
@@ -123,14 +115,12 @@ namespace vkl
 					++unit_id;
 				}
 				assert(unit_id < units.size());
-				_string_stream << time;
-				_string_stream << units[unit_id];
+				_strings.print(false, "%.2f%s", time, units[unit_id]);
 			}
 		};
-		_string_stream << std::setprecision(3);
 		for (size_t i = 0; i < _stack.size(); ++i)
 		{
-			const size_t old_size = _string_stream.view().size();
+			const size_t old_size = _strings.size();
 			Segment & seg = _stack[i];
 
 			const std::chrono::nanoseconds cpu_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(seg.end_timepoint - seg.begin_timepoint);
@@ -148,14 +138,14 @@ namespace vkl
 					return std::numeric_limits<double>::quiet_NaN();
 				}
 			}();
-			const std::string_view label = getStringView1(_stack[i].label_range);
+			const std::string_view label = _strings.get(_stack[i].label_range);
 			
-			_string_stream << label << ": ";
+			_strings.print(false, "%s: ", label.data());
 			textTimeNs(cpu_duration_ns);
-			_string_stream << " | ";
+			_strings.print(false, " | ");
 			textTimeNs(gpu_duration_ns);
-			_string_stream << char(0);
-			const size_t new_size = _string_stream.view().size();
+			_strings.pushNull();
+			const size_t new_size = _strings.size();
 			const uint32_t len = static_cast<uint32_t>((new_size - old_size) - 1);
 
 			_stack[i].label_range = Range{.begin = static_cast<uint32_t>(old_size), .len = len};
@@ -172,7 +162,7 @@ namespace vkl
 		while(i < _stack.size())
 		{
 			const Segment & seg = _stack[i];
-			const std::string_view label = getStringView2(seg.label_range);
+			const std::string_view label = _strings.get(seg.label_range);
 			if (seg.depth < d)
 			{
 				while (seg.depth != d)
