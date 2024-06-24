@@ -27,6 +27,8 @@
 #include <concepts>
 #include <filesystem>
 
+#include <thatlib/src/core/Range.hpp>
+
 #include "DynamicValue.hpp"
 
 #include <Core/Utils/MyVector.hpp>
@@ -180,76 +182,13 @@ namespace vkl
 		const void * id = nullptr;
 	};
 
-	template <class UInt>
-	struct Range
-	{
-		using Index = UInt;
-		UInt begin = 0;
-		UInt len = 0;
-
-		template <class Q>
-		constexpr bool operator==(Range<Q> const& o) const
-		{
-			return begin == o.begin && len == o.len;
-		}
-
-		constexpr bool contains(UInt i) const
-		{
-			return i >= begin && i < (begin + len);
-		}
-
-		template <class Q>
-		constexpr bool contains(Range<Q> const& r) const
-		{
-			return r.begin >= begin && r.end() <= end();
-		}
-
-		constexpr UInt end()const
-		{
-			return begin + len;
-		}
-
-		// Assume ranges are valid
-		constexpr Range& operator|=(Range const& o)
-		{
-			UInt end = std::max(this->end(), o.end());
-			begin = std::min(begin, o.begin);
-			len = end - begin;
-			return *this;
-		}
-
-		// Assume ranges are valid
-		constexpr Range operator|(Range const& o) const
-		{
-			Range res = *this;
-			res |= o;
-			return res;
-		}
-
-		// Assume ranges are valid
-		constexpr Range& operator|=(UInt u)
-		{
-			UInt end = std::max(this->end(), u);
-			begin = std::min(begin, u);
-			len = end - begin;
-			return *this;
-		}
-
-		// Assume ranges are valid
-		constexpr Range operator|(UInt u) const
-		{
-			Range res = *this;
-			res |= u;
-			return res;
-		}
-	};
-
-	using Range32u = Range<uint32_t>;
-	using Range64u = Range<uint64_t>;
-	using Range32i = Range<int32_t>;
-	using Range64i = Range<int64_t>;
-	using Range_st = Range<size_t>;
-
+	template <class Index>
+	using Range = that::Range<Index>;
+	using Range32u = that::Range32u;
+	using Range64u = that::Range64u;
+	using Range32i = that::Range32i;
+	using Range64i = that::Range64i;
+	using Range_st = that::Range_st;
 
 	constexpr VkBufferUsageFlags VK_BUFFER_USAGE_TRANSFER_BITS = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	constexpr VkBufferUsageFlags2KHR VK_BUFFER_USAGE_2_TRANSFER_BITS_KHR = VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR;
