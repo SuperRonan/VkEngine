@@ -78,11 +78,11 @@ namespace vkl
 			assert(queries);
 			query_data.resize(query_result_size * query_count);
 			void* p_data = query_data.data();
-			result = vkGetQueryPoolResults(queries->device(), *queries, 0, query_count, query_data.byte_size(), p_data, query_result_size, query_flags);
+			const uint32_t qc = std::min(query_count, queries->count());	
+			result = vkGetQueryPoolResults(queries->device(), *queries, 0, qc, query_data.byte_size(), p_data, query_result_size, query_flags);
 
 			if (result == VK_SUCCESS)
 			{
-				const uint32_t qc = query_count;
 				ExecutionStackReport::GetQueryResultFn get_query_result_f;
 				auto get_query_result_lambda = [p_data, qc] <std::unsigned_integral UInt, bool PAIR> () -> ExecutionStackReport::GetQueryResultFn
 				{

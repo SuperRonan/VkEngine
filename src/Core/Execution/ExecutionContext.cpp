@@ -81,13 +81,15 @@ namespace vkl
 			};
 			application()->extFunctions()._vkCmdBeginDebugUtilsLabelEXT(*_command_buffer, &vk_label);
 		}
+		const uint32_t begin_timestamp = getNewTimestampIndex();
+		const uint32_t end_timestamp = getNewTimestampIndex();
 		if (_stack_report)
 		{
 			ExecutionStackReport::Segment & segment = _stack_report->push(label, ImVec4(color.r, color.g, color.b, color.a));
 			if (timestamp)
 			{
-				segment.begin_timestamp = getNewTimestampIndex();
-				segment.end_timestamp = getNewTimestampIndex();
+				segment.begin_timestamp = begin_timestamp;
+				segment.end_timestamp = end_timestamp;
 				if (_timestamp_query_pool && _timestamp_query_pool->count() > segment.begin_timestamp)
 				{
 					vkCmdWriteTimestamp2(*_command_buffer, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, *_timestamp_query_pool, segment.begin_timestamp);

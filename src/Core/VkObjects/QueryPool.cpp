@@ -80,7 +80,7 @@ namespace vkl
 				if (_inst)
 				{
 					bool d = false;
-					if (d)
+					if (!d)
 					{
 						uint32_t count = *_count;
 						if (count != _inst->count())
