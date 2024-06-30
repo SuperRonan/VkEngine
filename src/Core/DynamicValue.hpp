@@ -4,6 +4,7 @@
 #include <cassert>
 #include <type_traits>
 #include <Core/Utils/stl_extension.hpp>
+#include <optional>
 
 template <class Q, class T>
 concept TLike = std::is_convertible<Q, T>::value;
@@ -383,6 +384,16 @@ namespace vkl
 		bool canSetValue() const
 		{
 			return _inst ? _inst->canSetValue() : false;
+		}
+		
+		std::optional<T> optionalValue()const
+		{
+			return hasValue() ? value() : std::optional<T>{};
+		}
+
+		operator std::optional<T>() const
+		{
+			return optionalValue();
 		}
 	};
 
