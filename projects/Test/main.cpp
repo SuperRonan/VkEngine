@@ -118,7 +118,7 @@ int main(int argc, const char** argv)
 
 	TestHalf();
 
-	Dyn<VkExtent3D> ex = makeZeroExtent3D();
+	Dyn<VkExtent3D> ex = makeUniformExtent3D(0);
 
 	Dyn<float> pi = 3.14f;
 

@@ -111,13 +111,15 @@ namespace vkl
 	{
 		if (_enable)
 		{
+			const ComputePC pc{
+				.exposure = _exposure,
+				.gamma = _gamma,
+			};
 			exec(_compute_tonemap->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _dst->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
-				.pc = ComputePC{
-					.exposure = _exposure,
-					.gamma = _gamma,
-				},
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 			}));
 		}
 	}

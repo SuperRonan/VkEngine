@@ -87,9 +87,9 @@ namespace vkl
 					.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
 					.pNext = nullptr,
 					.srcSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
-					.srcOffsets = {makeZeroOffset3D(), convert(_src->image()->createInfo().extent)},
+					.srcOffsets = {makeUniformOffset3D(0), convert(_src->image()->createInfo().extent)},
 					.dstSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
-					.dstOffsets = {makeZeroOffset3D(), convert(_dst->image()->createInfo().extent)},
+					.dstOffsets = {makeUniformOffset3D(0), convert(_dst->image()->createInfo().extent)},
 				};
 				regions = &_region;
 				n_regions = 1;
@@ -362,7 +362,7 @@ namespace vkl
 								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
 							},
 							.srcOffsets = {
-								makeZeroOffset3D(), convert(tg.extent),
+								makeUniformOffset3D(0), convert(tg.extent),
 							},
 							.dstSubresource = {
 								.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
@@ -371,7 +371,7 @@ namespace vkl
 								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
 							},
 							.dstOffsets = {
-								makeZeroOffset3D(), convert(smaller_extent),
+								makeUniformOffset3D(0), convert(smaller_extent),
 							},
 						};
 

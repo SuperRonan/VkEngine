@@ -1,5 +1,8 @@
 #include "GraphicsCommand.hpp"
 
+#include <thatlib/src/stl_ext/const_forward.hpp>
+#include <thatlib/src/core/Concepts.hpp>
+
 namespace vkl
 {
 
@@ -54,7 +57,7 @@ namespace vkl
 			.pNext = nullptr,
 			.renderPass = *_render_pass,
 			.framebuffer = *_framebuffer,
-			.renderArea = VkRect2D{.offset = makeZeroOffset2D(), .extent = render_area},
+			.renderArea = VkRect2D{.offset = makeUniformOffset2D(0), .extent = render_area},
 			.clearValueCount = static_cast<uint32_t>(num_clear_values),
 			.pClearValues = num_clear_values ? _clear_values.data() : nullptr,
 		};
@@ -588,9 +591,9 @@ namespace vkl
 		
 		for (DrawCallInfo& to_draw : _draw_list)
 		{
-			if (!to_draw.name.empty())
+			if (to_draw.name_size != 0)
 			{
-				ctx.pushDebugLabel(to_draw.name, true);
+				ctx.pushDebugLabel(_strings.get(Range{.begin = to_draw.name_begin, .len = static_cast<Index>(to_draw.name_size), }), true);
 			}
 			std::shared_ptr<DescriptorSetAndPoolInstance> set = to_draw.set;
 			if (set)
@@ -601,7 +604,7 @@ namespace vkl
 					ctx.keepAlive(set);
 				}
 			}
-			recordPushConstant(cmd, ctx, to_draw.pc);
+			recordPushConstantIFN(cmd, to_draw.pc_begin, to_draw.pc_size, to_draw.pc_offset);
 
 			if (to_draw.index_buffer.buffer)
 			{
@@ -614,7 +617,7 @@ namespace vkl
 				_vb_offsets.resize(to_draw.num_vertex_buffers);
 				for (size_t i = 0; i < _vb_bind.size(); ++i)
 				{
-					const BufferAndRangeInstance & bari = _vertex_buffers[to_draw.vertex_buffer_begin + i];
+					const BufferAndRangeInstance & bari = _vertex_buffers.data()[to_draw.vertex_buffer_begin + i];
 					_vb_bind[i] = bari.buffer->handle();
 					_vb_offsets[i] = bari.range.begin;
 				}
@@ -639,7 +642,7 @@ namespace vkl
 				assertm(false, "Unsupported draw call type");
 				break;
 			}
-			if (!to_draw.name.empty())
+			if (to_draw.name_size != 0)
 			{
 				ctx.popDebugLabel();
 			}
@@ -703,6 +706,10 @@ namespace vkl
 	void VertexCommand::createProgram()
 	{
 		std::shared_ptr<Shader> vert = nullptr, tess_control = nullptr, tess_eval = nullptr, geom = nullptr, frag = nullptr;
+		Dyn<DefinitionsList> defs = [this](DefinitionsList & res)
+		{
+			res = _shaders.definitions.getCachedValue();
+		};
 		if (!_shaders.vertex_path.empty())
 		{
 			vert = std::make_shared<Shader>(Shader::CI{
@@ -710,7 +717,7 @@ namespace vkl
 				.name = name() + ".vert",
 				.source_path = _shaders.vertex_path,
 				.stage = VK_SHADER_STAGE_VERTEX_BIT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		if (!_shaders.tess_control_path.empty())
@@ -720,7 +727,7 @@ namespace vkl
 				.name = name() + ".tess_control",
 				.source_path = _shaders.tess_control_path,
 				.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		if (!_shaders.tess_eval_path.empty())
@@ -730,7 +737,7 @@ namespace vkl
 				.name = name() + ".tess_eval",
 				.source_path = _shaders.tess_eval_path,
 				.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		if (!_shaders.geometry_path.empty())
@@ -740,7 +747,7 @@ namespace vkl
 				.name = name() + ".geom",
 				.source_path = _shaders.geometry_path,
 				.stage = VK_SHADER_STAGE_GEOMETRY_BIT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		if (!_shaders.fragment_path.empty())
@@ -750,7 +757,7 @@ namespace vkl
 				.name = name() + ".frag",
 				.source_path = _shaders.fragment_path,
 				.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		_program = std::make_shared<GraphicsProgram>(GraphicsProgram::CreateInfoVertex{
@@ -765,130 +772,244 @@ namespace vkl
 		});
 	}
 
-	void VertexCommand::populateDrawCallsResources(VertexCommandNode & node, DrawInfo const& di)
+	struct VertexCommandTemplateProcessor
 	{
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		std::shared_ptr<DescriptorSetLayoutInstance> layout = _pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
-		node._draw_type = di.draw_type;
-		// Synchronize for vertex attribute fetch and descriptor binding
-		node._draw_list.resize(di.draw_list.size());
-		for (size_t i = 0; i < node._draw_list.size(); ++i)
+		template <class DCIRef>
+		static void DrawInfo_pushBack(VertexCommand::DrawInfo& that, DCIRef&& dci)
 		{
-			const VertexDrawList::DrawCallInfo & to_draw = di.draw_list.drawCalls()[i];
-			VertexCommandNode::DrawCallInfo & node_to_draw = node._draw_list[i];
-
-			node_to_draw.name = to_draw.name;
-			node_to_draw.draw_count = to_draw.draw_count;
-			node_to_draw.instance_count = to_draw.instance_count;
-			node_to_draw.index_buffer = to_draw.index_buffer.getInstance();
-			node_to_draw.index_type = to_draw.index_type;
-			node_to_draw.num_vertex_buffers = to_draw.num_vertex_buffers;
-			if (node_to_draw.num_vertex_buffers > 0)
+			that.calls.push_back(VertexCommand::MyDrawCallInfo{
+				.name_size = static_cast<uint32_t>(dci.name.size()),
+				.pc_size = dci.pc_size,
+				.pc_offset = dci.pc_offset,
+				.draw_count = dci.draw_count,
+				.instance_count = dci.instance_count,
+				.indirect_draw_stride = dci.indirect_draw_stride,
+				.indirect_draw_buffer = dci.indirect_draw_buffer,
+				.index_buffer = dci.index_buffer,
+				.index_type = dci.index_type,
+				.num_vertex_buffers = dci.num_vertex_buffers,
+				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(dci.set),
+			});
+			VertexCommand::MyDrawCallInfo& mdci = that.calls.back();
+			if (!dci.name.empty())
 			{
-				const size_t old_size = node._vertex_buffers.size();
-				node_to_draw.vertex_buffer_begin = old_size;
-				node._vertex_buffers.resize(old_size + node_to_draw.num_vertex_buffers);
-				for (uint32_t i = 0; i < node_to_draw.num_vertex_buffers; ++i)
+				mdci.name_begin = that._strings.pushBack(dci.name, true);
+			}
+			if (dci.pc_data && dci.pc_size != 0)
+			{
+				mdci.pc_begin = that._data.pushBack(dci.pc_data, dci.pc_size);
+			}
+			if (dci.vertex_buffers && dci.num_vertex_buffers != 0)
+			{
+				using VB = typename std::remove_pointer<decltype(dci.vertex_buffers)>::type;
+				constexpr const bool can_move = !std::is_const<typename std::remove_reference<DCIRef>::type>::value && !std::is_const<VB>::value;
+				if constexpr (can_move)
 				{
-					node._vertex_buffers[old_size + i] = di.draw_list.vertexBuffers()[to_draw.vertex_buffer_begin + i].getInstance();
+					mdci.vertex_buffer_begin = that._vertex_buffers.pushBackMove(dci.vertex_buffers, dci.num_vertex_buffers);
+				}
+				else
+				{
+					mdci.vertex_buffer_begin = that._vertex_buffers.pushBack(dci.vertex_buffers, dci.num_vertex_buffers);
 				}
 			}
-			node_to_draw.indirect_draw_buffer = to_draw.indirect_draw_buffer.getInstance();
-			node_to_draw.indirect_draw_stride = to_draw.indirect_draw_stride;
-
-			node_to_draw.pc = to_draw.pc;
-
-			if(layout)
-			{
-				assert(!!to_draw.set);
-				node_to_draw.set = to_draw.set->instance();
-				populateDescriptorSet(node, *to_draw.set->instance(), *layout);
-			}
-
-			// Hack solution to not trigger a synch validation error -> will have to rewrite the synch helper soon 
-			//if (false && to_draw.vertex_buffers.size() == 1 && to_draw.index_buffer == to_draw.vertex_buffers[0].buffer)
-			//{
-			//	Buffer::Range range;
-			//	range.begin = std::min(to_draw.index_buffer_range.begin, to_draw.vertex_buffers[0].range.begin);
-			//	size_t end = std::max(to_draw.index_buffer_range.end(), to_draw.vertex_buffers[0].range.end());
-			//	range.len = end - range.begin;
-			//	synch.addSynch(Resource{
-			//		._buffer = to_draw.index_buffer,
-			//		._buffer_range = range,
-			//		._begin_state = ResourceState2{
-			//			.access = VK_ACCESS_2_INDEX_READ_BIT | VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-			//			.stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT,
-			//		},
-			//	});
-			//}
-			//else
-			if (node_to_draw.index_buffer.buffer)
-			{
-				node.resources() += BufferUsage{
-					.bari = node_to_draw.index_buffer,
-					.begin_state = ResourceState2{
-						.access = VK_ACCESS_2_INDEX_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
-					},
-					.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-				};
-			}
-			if (node_to_draw.indirect_draw_buffer.buffer)
-			{
-				node.resources() += BufferUsage{
-					.bari = node_to_draw.indirect_draw_buffer,
-					.begin_state = ResourceState2{
-						.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
-					},
-				};
-			}
-			for (uint32_t i = 0; i < node_to_draw.num_vertex_buffers; ++i)
-			{
-				node.resources() += BufferUsage{
-					.bari = node._vertex_buffers[node_to_draw.vertex_buffer_begin + i],
-					.begin_state = ResourceState2{
-						.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
-						.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
-					},
-					.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				};
-			}
 		}
+		
+
+		template <that::concepts::UniversalReference<VertexCommand::DrawInfo> DrawInfoRef>
+		static void populateDrawCallsResources(VertexCommand& that, VertexCommandNode& node, DrawInfoRef&& di)
+		{
+			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+			std::shared_ptr<DescriptorSetLayoutInstance> layout = that._pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
+			node._draw_type = di.draw_type;
+			
+
+			
+			node._vertex_buffers.resize(di._vertex_buffers.size());
+			for (size_t i = 0; i < node._vertex_buffers.size(); ++i)
+			{
+				node._vertex_buffers.data()[i] = di._vertex_buffers.data()[i].getInstance();
+			}
+
+			node._draw_list.resize(di.calls.size());
+			for (size_t i = 0; i < node._draw_list.size(); ++i)
+			{
+				auto& to_draw = di.calls[i];
+				VertexCommandNode::DrawCallInfo& node_to_draw = node._draw_list[i];
+				
+				node_to_draw.name_begin = to_draw.name_begin;
+				node_to_draw.pc_begin = to_draw.pc_begin;
+				
+				node_to_draw.name_size = to_draw.name_size;
+				node_to_draw.pc_size = to_draw.pc_size;
+
+				node_to_draw.pc_offset = to_draw.pc_offset;
+				node_to_draw.draw_count = to_draw.draw_count;
+				 
+				node_to_draw.instance_count = to_draw.instance_count;
+				node_to_draw.indirect_draw_stride = to_draw.indirect_draw_stride;
+				
+				node_to_draw.indirect_draw_buffer = to_draw.indirect_draw_buffer.getInstance();
+
+				node_to_draw.index_buffer = to_draw.index_buffer.getInstance();
+				
+				node_to_draw.index_type = to_draw.index_type;
+				node_to_draw.num_vertex_buffers = to_draw.num_vertex_buffers;
+
+				node_to_draw.vertex_buffer_begin = to_draw.vertex_buffer_begin;
+
+				if (layout)
+				{
+					assert(!!to_draw.set);
+					node_to_draw.set = to_draw.set->instance();
+					that.populateDescriptorSet(node, *to_draw.set->instance(), *layout);
+				}
+
+				if (node_to_draw.index_buffer.buffer)
+				{
+					node.resources() += BufferUsage{
+						.bari = node_to_draw.index_buffer,
+						.begin_state = ResourceState2{
+							.access = VK_ACCESS_2_INDEX_READ_BIT,
+							.stage = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT,
+						},
+						.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+					};
+				}
+				if (node_to_draw.indirect_draw_buffer.buffer)
+				{
+					node.resources() += BufferUsage{
+						.bari = node_to_draw.indirect_draw_buffer,
+						.begin_state = ResourceState2{
+							.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT,
+							.stage = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT,
+						},
+						.usage = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+					};
+				}
+				for (uint32_t i = 0; i < node_to_draw.num_vertex_buffers; ++i)
+				{
+					node.resources() += BufferUsage{
+						.bari = node._vertex_buffers.data()[node_to_draw.vertex_buffer_begin + i],
+						.begin_state = ResourceState2{
+							.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT,
+							.stage = VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT,
+						},
+						.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+					};
+				}
+			}
+
+			node._data = std::forward<decltype(node._data)>(di._data);
+			node._strings = std::forward<decltype(node._strings)>(di._strings);
+
+			node.pc_begin = di.pc_begin;
+			node.pc_size = di.pc_size;
+			node.pc_offset = di.pc_offset;
+		}
+
+		template <that::concepts::UniversalReference<VertexCommand::DrawInfo> DrawInfoRef>
+		static std::shared_ptr<ExecutionNode> getExecutionNode(VertexCommand& that, RecordContext& ctx, DrawInfoRef&& di)
+		{
+			std::shared_ptr<VertexCommandNode> node = that._exec_node_cache.getCleanNode<VertexCommandNode>([&]() {
+				return std::make_shared<VertexCommandNode>(VertexCommandNode::CI{
+					.app = that.application(),
+				});
+			});
+
+			node->setName(that.name());
+
+			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
+			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+			if (di.extern_framebuffer)
+			{
+				node->_framebuffer = di.extern_framebuffer->instance();
+			}
+			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
+			that.populateFramebufferResources(*node);
+			populateDrawCallsResources<DrawInfoRef>(that, *node, std::forward<VertexCommand::DrawInfo>(di));
+
+			node->_data = std::forward<decltype(node->_data)>(di._data);
+			node->_strings = std::forward<decltype(node->_strings)>(di._strings);
+
+			node->pc_begin = di.pc_begin;
+			node->pc_size = di.pc_size;
+			node->pc_offset = di.pc_offset;
+
+			return node;
+		}
+
+		template <that::concepts::UniversalReference<VertexCommand::SingleDrawInfo> SDIRef>
+		static Executable with_SDI(VertexCommand& that, SDIRef&& sdi)
+		{
+			static thread_local VertexCommand::DrawInfo di;
+			di.clear();
+
+			di.draw_type = DrawType::Draw;
+			di.viewport = sdi.viewport;
+			di.setPushConstant(sdi.pc_data, sdi.pc_size, sdi.pc_offset);
+			di.pushBack(VertexCommand::DrawCallInfo{
+				.draw_count = sdi.draw_count,
+				.instance_count = sdi.instance_count,
+			});
+
+			return that.with(std::move(di));
+		}
+	};
+
+	void VertexCommand::DrawInfo::clear()
+	{
+		ShaderCommandList::clear();
+		draw_type = DrawType::MAX_ENUM;
+
+		viewport = {};
+		calls.clear();
+		_vertex_buffers.clear();
+		extern_framebuffer.reset();
 	}
+	
+	void VertexCommand::DrawInfo::pushBack(DrawCallInfoConst const& dci)
+	{
+		VertexCommandTemplateProcessor::DrawInfo_pushBack<DrawCallInfoConst const&>(*this, dci);
+	}
+
+	void VertexCommand::DrawInfo::pushBack(DrawCallInfoConst&& dci)
+	{
+		VertexCommandTemplateProcessor::DrawInfo_pushBack<DrawCallInfoConst&&>(*this, std::move(dci));
+	}
+
+	void VertexCommand::DrawInfo::pushBack(DrawCallInfo const& dci)
+	{
+		VertexCommandTemplateProcessor::DrawInfo_pushBack<DrawCallInfo const&>(*this, dci);
+	}
+
+	void VertexCommand::DrawInfo::pushBack(DrawCallInfo&& dci)
+	{
+		VertexCommandTemplateProcessor::DrawInfo_pushBack<DrawCallInfo&&>(*this, std::move(dci));
+	}
+
 
 	std::shared_ptr<ExecutionNode> VertexCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
 	{
-		std::shared_ptr<VertexCommandNode> node = _exec_node_cache.getCleanNode<VertexCommandNode>([&]() {
-			return std::make_shared<VertexCommandNode>(VertexCommandNode::CI{
-				.app = application(),
-				.name = name(),
-			});
-		});
+		return VertexCommandTemplateProcessor::getExecutionNode<DrawInfo const&>(*this, ctx, di);
+	}
 
-		node->setName(name());
-		
-		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		if (di.extern_framebuffer)
-		{
-			node->_framebuffer = di.extern_framebuffer->instance();
-		}
-		populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
-		populateFramebufferResources(*node);
-		populateDrawCallsResources(*node, di);
-
-		return node;
+	std::shared_ptr<ExecutionNode> VertexCommand::getExecutionNode(RecordContext& ctx, DrawInfo && di)
+	{
+		auto res = VertexCommandTemplateProcessor::getExecutionNode<DrawInfo &&>(*this, ctx, std::move(di));
+		di.clear();
+		return res;
 	}
 
 	std::shared_ptr<ExecutionNode> VertexCommand::getExecutionNode(RecordContext& ctx)
 	{
-		NOT_YET_IMPLEMENTED;
-		DrawInfo di{
-			
+		SingleDrawInfo sdi{
+			.draw_count = _draw_count.value(),
+			.instance_count = 1,
+			.pc_data = _pc.data(),
+			.pc_size = _pc.size32(),
+			.pc_offset = 0,
 		};
-
-		return getExecutionNode(ctx, di);
+		return with(std::move(sdi))(ctx);
 	}
 
 	Executable VertexCommand::with(DrawInfo const& di)
@@ -899,9 +1020,29 @@ namespace vkl
 		};
 	}
 
+	Executable VertexCommand::with(DrawInfo && di)
+	{
+		return [this, _di = std::move(di)](RecordContext& ctx) mutable
+		{
+			return getExecutionNode(ctx, std::move(_di));
+		};
+	}
+
+	Executable VertexCommand::with(SingleDrawInfo const& sdi)
+	{
+		return VertexCommandTemplateProcessor::with_SDI<SingleDrawInfo const&>(*this, sdi);
+	}
+
+	Executable VertexCommand::with(SingleDrawInfo && sdi)
+	{
+		return VertexCommandTemplateProcessor::with_SDI<SingleDrawInfo&&>(*this, std::move(sdi));
+	}
+
 	bool VertexCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
+
+		_shaders.definitions.value();
 
 		res |= GraphicsCommand::updateResources(ctx);
 
@@ -937,6 +1078,10 @@ namespace vkl
 
 		for (auto& to_draw : _draw_list)
 		{
+			if (to_draw.name_size != 0)
+			{
+				ctx.pushDebugLabel(_strings.get(Range{.begin = to_draw.name_begin, .len = to_draw.name_size}), true);
+			}
 			const VkExtent3D & work = to_draw.extent;
 
 			const std::shared_ptr<DescriptorSetAndPoolInstance> & set = to_draw.set;
@@ -945,7 +1090,7 @@ namespace vkl
 				ctx.graphicsBoundSets().bindOneAndRecord(set_index, set, layout);
 				ctx.keepAlive(set);
 			}
-			recordPushConstant(cmd, ctx, to_draw.pc);
+			recordPushConstantIFN(cmd, to_draw.pc_begin, to_draw.pc_size, to_draw.pc_offset);
 
 			switch (_draw_type)
 			{
@@ -955,6 +1100,10 @@ namespace vkl
 			default:
 				assertm(false, "Unsupported draw call type");
 				break;
+			}
+			if (to_draw.name_size != 0)
+			{
+				ctx.popDebugLabel();
 			}
 		}
 
@@ -1010,6 +1159,10 @@ namespace vkl
 	void MeshCommand::createProgram()
 	{
 		std::shared_ptr<Shader> task = nullptr, mesh = nullptr, frag = nullptr;
+		Dyn<DefinitionsList> defs = [this](DefinitionsList& res)
+		{
+			res = _shaders.definitions.getCachedValue();
+		};
 		if (!_shaders.task_path.empty())
 		{
 			task = std::make_shared<Shader>(Shader::CI{
@@ -1017,7 +1170,7 @@ namespace vkl
 				.name = name() + ".task",
 				.source_path = _shaders.task_path,
 				.stage = VK_SHADER_STAGE_TASK_BIT_EXT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		if (!_shaders.mesh_path.empty())
@@ -1027,7 +1180,7 @@ namespace vkl
 				.name = name() + ".mesh",
 				.source_path = _shaders.mesh_path,
 				.stage = VK_SHADER_STAGE_MESH_BIT_EXT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 		if (!_shaders.fragment_path.empty())
@@ -1037,7 +1190,7 @@ namespace vkl
 				.name = name() + ".frag",
 				.source_path = _shaders.fragment_path,
 				.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-				.definitions = _shaders.definitions
+				.definitions = defs,
 			});
 		}
 
@@ -1051,74 +1204,159 @@ namespace vkl
 		});
 	}
 
-
-
-	void MeshCommand::populateDrawCallsResources(MeshCommandNode & node, DrawInfo const& di)
+	struct MeshCommandTemplateProcessor
 	{
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		std::shared_ptr<DescriptorSetLayoutInstance> layout = _pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
-
-		node._draw_type = di.draw_type;
-		node._draw_list.resize(di.draw_list.size());
-
-		for (size_t i=0; i < di.draw_list.size(); ++i)
+		template <that::concepts::UniversalReference<MeshCommand::DrawCallInfo> DCIRef>
+		static void DrawInfo_pushBack(MeshCommand::DrawInfo& that, DCIRef&& dci)
 		{
-			const DrawCallInfo & to_draw = di.draw_list[i];
-			MeshCommandNode::DrawCallInfo& node_to_draw = node._draw_list[i];
-
-			node_to_draw.name = to_draw.name;
-			node_to_draw.extent = di.dispatch_threads ? getWorkgroupsDispatchSize(to_draw.extent) : to_draw.extent;
-			node_to_draw.pc = to_draw.pc;
-
-			if (layout)
+			that.draw_list.push_back(MeshCommand::MyDrawCallInfo{
+				.name_size = static_cast<uint32_t>(dci.name.size()),
+				.pc_size = dci.pc_size,
+				.pc_offset = dci.pc_offset,
+				.extent = dci.extent,
+				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(dci.set),
+			});
+			MeshCommand::MyDrawCallInfo & mdci = that.draw_list.back();
+			if (mdci.name_size != 0)
 			{
-				assert(!!to_draw.set);
-				node_to_draw.set = to_draw.set->instance();
-				populateDescriptorSet(node, *to_draw.set->instance(), *layout);	
+				mdci.name_begin = that._strings.pushBack(dci.name, true);
+			}
+			if (dci.pc_data && mdci.pc_size != 0)
+			{
+				mdci.pc_begin = that._data.pushBack(dci.pc_data, mdci.pc_size);
 			}
 		}
+
+		template <that::concepts::UniversalReference<MeshCommand::DrawInfo> DrawInfoRef>
+		static void populateDrawCallsResources(MeshCommand& that, MeshCommandNode& node, DrawInfoRef&& di)
+		{
+			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+			std::shared_ptr<DescriptorSetLayoutInstance> layout = that._pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
+
+			node._draw_type = di.draw_type;
+			node._draw_list.resize(di.draw_list.size());
+
+			for (size_t i = 0; i < di.draw_list.size(); ++i)
+			{
+				auto& to_draw = di.draw_list[i];
+				MeshCommandNode::DrawCallInfo& node_to_draw = node._draw_list[i];
+				
+				node_to_draw.name_begin = to_draw.name_begin;
+				node_to_draw.pc_begin = to_draw.pc_begin;
+				node_to_draw.name_size = to_draw.name_size;
+				node_to_draw.pc_size = to_draw.pc_size;
+				node_to_draw.pc_offset = to_draw.pc_offset;
+				node_to_draw.extent = di.dispatch_threads ? that.getWorkgroupsDispatchSize(to_draw.extent) : to_draw.extent;
+
+				if (layout)
+				{
+					assert(!!to_draw.set);
+					node_to_draw.set = to_draw.set->instance();
+					that.populateDescriptorSet(node, *to_draw.set->instance(), *layout);
+				}
+			}
+		}
+
+		template <that::concepts::UniversalReference<MeshCommand::DrawInfo> DrawInfoRef>
+		static std::shared_ptr<ExecutionNode> getExecutionNode(MeshCommand& that, RecordContext& ctx, DrawInfoRef&& di)
+		{
+			assert(that.application()->availableFeatures().mesh_shader_ext.meshShader);
+			std::shared_ptr<MeshCommandNode> node = that._exec_node_cache.getCleanNode<MeshCommandNode>([&]() {
+				return std::make_shared<MeshCommandNode>(MeshCommandNode::CI{
+					.app = that.application(),
+				});
+			});
+
+			node->setName(that.name());
+
+			if (di.extern_framebuffer)
+			{
+				node->_framebuffer = di.extern_framebuffer->instance();
+			}
+
+			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
+			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+			ctx.graphicsBoundSets().bind(that.application()->descriptorBindingGlobalOptions().shader_set, that._set->instance());
+
+			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
+			that.populateFramebufferResources(*node);
+			populateDrawCallsResources<DrawInfoRef>(that, *node,  std::forward<MeshCommand::DrawInfo>(di));
+
+			node->_data = std::forward<decltype(node->_data)>(di._data);
+			node->_strings = std::forward<decltype(node->_strings)>(di._strings);
+
+			node->pc_begin = di.pc_begin;
+			node->pc_size = di.pc_size;
+			node->pc_offset = di.pc_offset;
+
+			return node;
+		}
+
+		template <that::concepts::UniversalReference<MeshCommand::SingleDrawInfo> SDIRef>
+		static Executable with_SDI(MeshCommand& that, SDIRef&& sdi)
+		{
+			static thread_local MeshCommand::DrawInfo di;
+			di.clear();
+			di.dispatch_threads = sdi.dispatch_threads.value_or(that._dispatch_threads);
+			di.setPushConstant(sdi.pc_data, sdi.pc_size, sdi.pc_offset);
+			di.draw_type = DrawType::Dispatch;
+			di.pushBack(MeshCommand::DrawCallInfo{
+				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(sdi.set),
+			});
+			MeshCommand::MyDrawCallInfo & mdci = di.draw_list.back();
+			if (sdi.extent.has_value())
+			{
+				mdci.extent = sdi.extent.value();
+			}
+			else
+			{
+				mdci.extent = that._extent.value();
+			}
+			return that.with(std::move(di));
+		}
+	};
+	void MeshCommand::DrawInfo::clear()
+	{
+		ShaderCommandList::clear();
+		draw_type = DrawType::MAX_ENUM;
+		dispatch_threads = false;
+		draw_list.clear();
+		extern_framebuffer.reset();
+	}
+
+	void MeshCommand::DrawInfo::pushBack(DrawCallInfo const& dci)
+	{
+		MeshCommandTemplateProcessor::DrawInfo_pushBack<DrawCallInfo const&>(*this, dci);
+	}
+
+	void MeshCommand::DrawInfo::pushBack(DrawCallInfo && dci)
+	{
+		MeshCommandTemplateProcessor::DrawInfo_pushBack<DrawCallInfo &&>(*this, std::move(dci));
 	}
 
 	std::shared_ptr<ExecutionNode> MeshCommand::getExecutionNode(RecordContext& ctx, DrawInfo const& di)
 	{
-		assert(application()->availableFeatures().mesh_shader_ext.meshShader);
-		std::shared_ptr<MeshCommandNode> node = _exec_node_cache.getCleanNode<MeshCommandNode>([&]() {
-			return std::make_shared<MeshCommandNode>(MeshCommandNode::CI{
-				.app = application(),
-				.name = name(),
-			});
-		});
+		return MeshCommandTemplateProcessor::getExecutionNode<DrawInfo const&>(*this, ctx, di);
+	}
 
-		node->setName(name());
-
-		if (di.extern_framebuffer)
-		{
-			node->_framebuffer = di.extern_framebuffer->instance();
-		}
-
-		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		ctx.graphicsBoundSets().bind(application()->descriptorBindingGlobalOptions().shader_set, _set->instance());
-		
-		populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
-		populateFramebufferResources(*node);
-		populateDrawCallsResources(*node, di);
-		return node;
+	std::shared_ptr<ExecutionNode> MeshCommand::getExecutionNode(RecordContext& ctx, DrawInfo && di)
+	{
+		auto res = MeshCommandTemplateProcessor::getExecutionNode<DrawInfo &&>(*this, ctx, std::move(di));
+		di.clear();
+		return res;
 	}
 
 	std::shared_ptr<ExecutionNode> MeshCommand::getExecutionNode(RecordContext& ctx)
 	{
-		DrawInfo di{
-			.draw_type = DrawType::Draw,
+		SingleDrawInfo sdi{
+			.extent = _extent,
 			.dispatch_threads = _dispatch_threads,
-			.draw_list = {
-				DrawCallInfo{
-					.extent = _extent.value(),
-				}
-			},
+			.pc_data = _pc.data(),
+			.pc_size = _pc.size32(),
+			.pc_offset = 0,
 		};
 
-		return getExecutionNode(ctx, di);
+		return with(std::move(sdi))(ctx);
 	}
 
 	Executable MeshCommand::with(DrawInfo const& di)
@@ -1129,9 +1367,29 @@ namespace vkl
 		};
 	}
 
+	Executable MeshCommand::with(DrawInfo && di)
+	{
+		return [this, _di = std::move(di)](RecordContext& ctx)
+		{
+			return getExecutionNode(ctx, std::move(_di));
+		};
+	}
+
+	Executable MeshCommand::with(SingleDrawInfo const& sdi)
+	{
+		return MeshCommandTemplateProcessor::with_SDI<SingleDrawInfo const&>(*this, sdi);
+	}
+
+	Executable MeshCommand::with(SingleDrawInfo && sdi)
+	{
+		return MeshCommandTemplateProcessor::with_SDI<SingleDrawInfo &&>(*this, std::move(sdi));
+	}
+
 	bool MeshCommand::updateResources(UpdateContext& ctx)
 	{
 		bool res = false;
+
+		_shaders.definitions.value();
 
 		res |= GraphicsCommand::updateResources(ctx);
 

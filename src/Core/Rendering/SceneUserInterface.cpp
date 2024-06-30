@@ -111,37 +111,42 @@ namespace vkl
 		static thread_local VertexCommand::DrawInfo vertex_draw_info;
 		
 		vertex_draw_info.clear();
-		auto & draw_list = vertex_draw_info.draw_list;
+		auto & draw_list = vertex_draw_info;
 
 		if (_show_world_basis)
 		{
-			draw_list.push_back(VertexDrawList::DrawCallInfo{
+			const mat4 pc = camera.getWorldToProj();
+			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "world",
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 				.draw_count = 3,
 				.instance_count = 1,
-				.pc = camera.getWorldToProj(),
 			});
 		}
 		if (_show_view_basis)
 		{
 			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25))* camera.getWorldRoationMatrix()* scaleMatrix<4, float>(0.03125);
-			draw_list.push_back(VertexDrawList::DrawCallInfo{
+			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "view",
+				.pc_data = &view_3D_basis_matrix,
+				.pc_size = sizeof(view_3D_basis_matrix),
 				.draw_count = 3,
 				.instance_count = 1,
-				.pc = view_3D_basis_matrix,
 			});
 		}
 		if (_gui_selected_node.hasValue())
 		{
-			draw_list.push_back(VertexDrawList::DrawCallInfo{
+			const mat4 pc = camera.getWorldToProj() * glm::mat4(_gui_selected_node.node.matrix);
+			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "selected node",
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 				.draw_count = 3,
 				.instance_count = 1,
-				.pc = camera.getWorldToProj() * glm::mat4(_gui_selected_node.node.matrix),
 			});
 		}
-		if (draw_list.size())
+		if (draw_list.calls.size())
 		{
 			vertex_draw_info.draw_type = DrawType::Draw;
 
@@ -168,25 +173,29 @@ namespace vkl
 					const AABB3f & aabb = mesh->getAABB();
 					Mat4 aabb_matrix = translateMatrix<4, float>(aabb.bottom())* scaleMatrix<4, float>(aabb.diagonal());
 					
-					draw_list.push_back(VertexDrawList::DrawCallInfo{
-						.name = mesh->name() + "::AABB",
+					const std::string name = mesh->name() + "::AABB";
+					const Render3DBoxPC pc{
+						.matrix = camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix) * aabb_matrix,
+						.color = glm::vec4(1, 1, 1, 1),
+					};
+					draw_list.pushBack(VertexCommand::DrawCallInfo{
+						.name = name,
+						.pc_data = &pc,
+						.pc_size = sizeof(pc),
 						.draw_count = vdcr.draw_count,
 						.instance_count = vdcr.instance_count,
 						.index_buffer = vdcr.index_buffer,
 						.index_type = vdcr.index_type,
 						.num_vertex_buffers = vdcr.vertex_buffers.size32(),
-						.pc = Render3DBoxPC{
-							.matrix = camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix) * aabb_matrix,
-							.color = glm::vec4(1, 1, 1, 1),
-						},
-					}, vdcr.vertex_buffers);
+						.vertex_buffers = vdcr.vertex_buffers.data(),
+					});
 					
 					vdcr.clear();
 				}
 			}
 		}
 
-		if (draw_list.size())
+		if (draw_list.calls.size())
 		{
 			vertex_draw_info.draw_type = DrawType::DrawIndexed;
 			recorder(_render_3D_box->with(vertex_draw_info));

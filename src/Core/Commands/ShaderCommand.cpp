@@ -2,31 +2,41 @@
 
 namespace vkl
 {
+	void ShaderCommandList::clear()
+	{
+		_data.clear();
+		_strings.clear();
+		pc_begin = 0;
+		pc_size = 0;
+		pc_offset = 0;
+	}
+
+	void ShaderCommandList::setPushConstant(const void* data, uint32_t size, uint32_t offset)
+	{
+		assert(data);
+		pc_begin = _data.pushBack(data, size);
+		pc_size = size;
+		pc_offset = offset;
+	}
+
 	void ShaderCommandNode::clear()
 	{
 		ExecutionNode::clear();
+		ShaderCommandList::clear();
 		_set.reset();
 		_pipeline.reset();
 		_image_views_to_keep.clear();
 	}
 
-	void ShaderCommandNode::recordPushConstant(CommandBuffer& cmd, ExecutionContext& context, PushConstant const& pc)
+	void ShaderCommandNode::recordPushConstant(CommandBuffer& cmd, Index begin, uint32_t size, uint32_t offset)
 	{
-		if (pc.hasValue())
-		{
-			PipelineLayoutInstance & pipeline_layout = *_pipeline->program()->pipelineLayout();
-			VkShaderStageFlags pc_stages = 0;
-			for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
-			{
-				pc_stages |= pc_range.stageFlags;
-			}
-			vkCmdPushConstants(cmd, pipeline_layout.handle(), pc_stages, 0, (uint32_t)pc.size(), pc.data());
-		}
+		PipelineLayoutInstance* pipeline_layout = _pipeline->program()->pipelineLayout().get();
+		vkCmdPushConstants(cmd, pipeline_layout->handle(), _pc_stages, offset, size, _data.data() + begin);
 	}
 
 	void ShaderCommandNode::recordBindings(CommandBuffer& cmd, ExecutionContext& context)
 	{
-		std::shared_ptr<PipelineLayoutInstance> pipeline_layout = _pipeline->program()->pipelineLayout();
+		PipelineLayoutInstance * pipeline_layout = _pipeline->program()->pipelineLayout().get();
 		const VkPipelineBindPoint bp = _pipeline->binding();
 		vkCmdBindPipeline(cmd, bp, *_pipeline);
 		context.keepAlive(_pipeline);
@@ -57,6 +67,13 @@ namespace vkl
 			context.keepAlive(std::move(ivtk));
 		}
 		_image_views_to_keep.clear();
+
+		_pc_stages = 0;
+		for (const auto& pc_range : _pipeline->program()->pushConstantRanges())
+		{
+			_pc_stages |= pc_range.stageFlags;
+		}
+		recordPushConstantIFN(cmd, pc_begin, pc_size, pc_offset);
 	}
 
 

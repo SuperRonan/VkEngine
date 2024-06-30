@@ -228,7 +228,7 @@ namespace vkl
 				flags |= 1;
 			}
 
-			CommandPC pc{
+			const CommandPC pc{
 				.camera_position = camera.position(),
 				.flags = flags, 
 				.radius = _radius,
@@ -238,21 +238,24 @@ namespace vkl
 			if (_gui_method.index() == static_cast<uint32_t>(Method::SSAO))
 			{
 				recorder(_ssao_compute_command->with(ComputeCommand::SingleDispatchInfo{
-					.pc = pc,
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
 				}));
 			}
 			else if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
 			{
 				_rtao_command->getSBT()->recordUpdateIFN(recorder);
-				recorder(_rtao_command->with(RayTracingCommand::TraceInfo{
+				recorder(_rtao_command->with(RayTracingCommand::SingleTraceInfo{
 					.extent = _target->image()->extent().value(),
-					.pc = pc,
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
 				}));
 			}
 			else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
 			{
 				recorder(_rqao_compute_command->with(ComputeCommand::SingleDispatchInfo{
-					.pc = pc,
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
 				}));
 			}
 

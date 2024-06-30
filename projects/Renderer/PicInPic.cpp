@@ -80,7 +80,8 @@ namespace vkl
 			exec(_fast_pip->with(ComputeCommand::SingleDispatchInfo{
 				.extent = extent,
 				.dispatch_threads = true,
-				.pc = pc,
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 			}));
 
 			static thread_local VertexCommand::DrawInfo vertex_draw_info;
@@ -88,23 +89,24 @@ namespace vkl
 			vertex_draw_info = VertexCommand::DrawInfo{
 				.draw_type = DrawType::Draw,
 			};
-			vertex_draw_info.draw_list.push_back(VertexDrawList::DrawCallInfo{
+			ShowOutlinePC outline_pc{
+				.pos = pip_pos,
+				.size = Vector2f(region_size),
+				.color = Vector4f(1, 1, 1, 1),
+			};
+			vertex_draw_info.pushBack(VertexCommand::DrawCallInfo{
+				.pc_data = &outline_pc,
+				.pc_size = sizeof(outline_pc),
 				.draw_count = 5,
 				.instance_count = 1,
-				.pc = ShowOutlinePC{
-					.pos = pip_pos,
-					.size = Vector2f(region_size),
-					.color = Vector4f(1, 1, 1, 1),
-				},
 			});
-			vertex_draw_info.draw_list.push_back(VertexDrawList::DrawCallInfo{
+			outline_pc.pos = Vector2f(0);
+			outline_pc.size = Vector2f(_pip_size);
+			vertex_draw_info.pushBack(VertexCommand::DrawCallInfo{
+				.pc_data = &outline_pc,
+				.pc_size = sizeof(outline_pc),
 				.draw_count = 5,
 				.instance_count = 1,
-				.pc = ShowOutlinePC{
-					.pos = Vector2f(0),
-					.size = Vector2f(_pip_size),
-					.color = Vector4f(1, 1, 1, 1),
-				},
 			});
 			exec(_show_outline->with(vertex_draw_info));
 			exec.popDebugLabel();

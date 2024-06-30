@@ -7,12 +7,37 @@
 
 #include <Core/Execution/DescriptorSetsManager.hpp>
 
+#include <thatlib/src/utils/ExtensibleDataStorage.hpp>
+#include <thatlib/src/utils/ExtensibleStringStorage.hpp>
+
 namespace vkl
 {	
+	
+	struct ShaderCommandList
+	{
+		using Index = size_t;
+		using Range = Range<Index>;
+		
+		// For push constants
+		that::ExDS _data;
+		// For names
+		that::ExSS _strings;
 
-	class ShaderCommandNode : public ExecutionNode
+		Index pc_begin = 0;
+		uint32_t pc_size = 0;
+		uint32_t pc_offset = 0;
+
+		void setPushConstant(const void * data, uint32_t size, uint32_t offset = 0);
+
+		void clear();
+	};
+
+	class ShaderCommandNode : public ExecutionNode, public ShaderCommandList
 	{
 	public:
+		
+		using Range = ShaderCommandList::Range;
+
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;
@@ -26,13 +51,22 @@ namespace vkl
 			})
 		{}
 
+		VkShaderStageFlags _pc_stages = 0;
 		std::shared_ptr<DescriptorSetAndPoolInstance> _set;
 		std::shared_ptr<PipelineInstance> _pipeline;
 		MyVector<std::shared_ptr<ImageViewInstance>> _image_views_to_keep;
 
 		virtual void clear() override;
 
-		virtual void recordPushConstant(CommandBuffer& cmd, ExecutionContext& ctx, PushConstant const& pc);
+		virtual void recordPushConstant(CommandBuffer& cmd, Index begin, uint32_t size, uint32_t offset = 0);
+
+		void recordPushConstantIFN(CommandBuffer& cmd, Index begin, uint32_t size, uint32_t offset = 0)
+		{
+			if (size != 0)
+			{
+				recordPushConstant(cmd, begin, size, offset);
+			}
+		}
 
 		virtual void recordBindings(CommandBuffer& cmd, ExecutionContext& context);
 	};
@@ -82,5 +116,14 @@ namespace vkl
 
 		virtual bool updateResources(UpdateContext & ctx) override;
 
+		std::shared_ptr<Pipeline> const& pipeline()const
+		{
+			return _pipeline;
+		}
+
+		std::shared_ptr<DescriptorSetAndPool> const& descriptorSet()const
+		{
+			return _set;
+		}
 	};
 }

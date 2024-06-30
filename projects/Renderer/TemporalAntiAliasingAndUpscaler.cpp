@@ -96,7 +96,8 @@ namespace vkl
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _output->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
-				.pc = pc,
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 			}));
 		}
 		else

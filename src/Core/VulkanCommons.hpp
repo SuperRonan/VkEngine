@@ -19,7 +19,6 @@
 #include <vector>
 #include <deque>
 #include <list>
-#include <bit>
 #include <set>
 #include <unordered_set>
 #include <map>
@@ -28,6 +27,7 @@
 #include <filesystem>
 
 #include <thatlib/src/core/Range.hpp>
+#include <thatlib/src/stl_ext/alignment.hpp>
 
 #include "DynamicValue.hpp"
 
@@ -372,54 +372,31 @@ namespace vkl
 		return res;
 	}
 
-	constexpr VkExtent2D makeZeroExtent2D()
+	constexpr VkExtent2D makeUniformExtent2D(uint32_t n)
 	{
 		return VkExtent2D{
-			.width = 0,
-			.height = 0,
+			.width = n, .height = n,
 		};
 	}
 
-	constexpr VkExtent3D makeZeroExtent3D()
+	constexpr VkExtent3D makeUniformExtent3D(uint32_t n)
 	{
 		return VkExtent3D{
-			.width = 0,
-			.height = 0,
-			.depth = 0,
+			.width = n, .height = n, .depth = n,
 		};
 	}
 
-	constexpr VkExtent2D makeOneExtent2D()
-	{
-		return VkExtent2D{
-			.width = 1,
-			.height = 1,
-		};
-	}
-
-	constexpr VkExtent3D makeOneExtent3D()
-	{
-		return VkExtent3D{
-			.width = 1,
-			.height = 1,
-			.depth = 1,
-		};
-	}
-
-	constexpr VkOffset2D makeZeroOffset2D()
+	constexpr VkOffset2D makeUniformOffset2D(int32_t n)
 	{
 		return VkOffset2D{
-			.x = 0,
-			.y = 0,
+			.x = n, .y = n,
 		};
 	}
 
-	constexpr VkOffset3D makeZeroOffset3D()
+	constexpr VkOffset3D makeUniformOffset3D(int32_t n)
 	{
 		return VkOffset3D{
-			.x = 0,
-			.y = 0,
-			.z = 0,
+			.x = n, .y = n, .z = n,
 		};
 	}
 
@@ -916,91 +893,6 @@ namespace std
 			return hs(h(r.begin) xor h(r.len));
 		}
 	};
-
-	// returns true for 0
-	template <integral Uint>
-	constexpr bool isPowerOf2(Uint i)
-	{
-		return ((i - 1) & i) == 0;
-	}
-
-	template <integral Uint>
-	constexpr bool isPo2(Uint i)
-	{
-		return isPowerOf2(i);
-	}
-
-	template <integral Uint>
-	constexpr Uint alignUp(Uint n, Uint a)
-	{
-		const Uint r = n % a;
-		return r ? n + (a - r) : n;
-	}
-
-	template <integral Uint>
-	constexpr Uint alignUpAssumePo2(Uint n, Uint a_p2)
-	{
-		assert(isPowerOf2(a_p2));
-		assert(a_p2 > 1);
-		const Uint a_mask = a_p2 - 1;
-		const Uint res = (n + a_mask) & ~a_mask;
-		assert(res == alignUp(n, a_p2));
-		return res;
-	}
-
-	template <integral Uint>
-	constexpr Uint alignDown(Uint n, Uint a)
-	{
-		return n - (n % a);
-	}
-
-	template <integral Uint>
-	constexpr Uint alignDownAssumePo2(Uint n, Uint a_p2)
-	{
-		assert(isPowerOf2(a_p2));
-		assert(a_p2 > 1);
-		const Uint a_mask = a_p2 - 1;
-		const Uint res = n & ~a_mask;
-		assert(res == alignDown(n, a_p2));
-		return res;
-	}
-
-	// returns p such as:
-	// p >= n &&
-	// isPowerOf2(p) == true
-	template <integral Uint>
-	constexpr Uint roundToNextPo2(Uint n)
-	{
-		Uint res = n;
-		if (!isPowerOf2(n))
-		{
-			res = std::bit_ceil(n);
-		}
-		return res;
-	}
-
-	template <integral Uint>
-	constexpr Uint divDown(Uint num, Uint div)
-	{
-		return num / div;
-	}
-
-	template <integral Uint>
-	constexpr Uint divUpAssumeNoOverflow(Uint num, Uint div)
-	{
-		assert(num < (num + (div - 1))); // No overflow
-		return (num + (div - 1)) / div;
-	}
-
-	template <integral Uint>
-	constexpr Uint divUpSafe(Uint num, Uint div)
-	{
-		// div instruction computes the quotient and remaineder, so it is fast
-		Uint res = num / div;
-		Uint remainder = num % div;
-		if(remainder)	++res;
-		return res;
-	}
 }
 
 namespace vkl

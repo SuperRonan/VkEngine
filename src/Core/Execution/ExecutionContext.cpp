@@ -72,7 +72,7 @@ namespace vkl
 		++_debug_stack_depth;
 		if (_can_push_vk_debug_label)
 		{
-			assert(label[label.size()] == char(0));
+			assert(*(label.data() + label.size()) == char(0));
 			VkDebugUtilsLabelEXT vk_label{
 				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
 				.pNext = nullptr,

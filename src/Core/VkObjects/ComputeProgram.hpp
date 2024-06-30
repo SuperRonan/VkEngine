@@ -8,7 +8,7 @@ namespace vkl
 	{
 	protected:
 
-		VkExtent3D _local_size = makeZeroExtent3D();
+		VkExtent3D _local_size = makeUniformExtent3D(0);
 
 	public:
 

@@ -5,6 +5,8 @@
 #include <variant>
 #include <Core/VkObjects/GraphicsPipeline.hpp>
 
+#include <thatlib/src/utils/ExtensibleStorage.hpp>
+
 namespace vkl
 {
 	class GraphicsCommandNode : public ShaderCommandNode
@@ -146,23 +148,32 @@ namespace vkl
 		VertexCommandNode(CreateInfo const& ci);
 
 		
-		MyVector<BufferAndRangeInstance> _vertex_buffers;
+		that::ExS<BufferAndRangeInstance> _vertex_buffers;
 
 		struct DrawCallInfo
 		{
-			std::string name = {};
+			Index name_begin = 0;
+			Index pc_begin = 0;
 			
+			uint32_t name_size = 0;
+			uint32_t pc_size = 0;
+
+			uint32_t pc_offset = 0;
 			uint32_t draw_count = 0;
+			
 			uint32_t instance_count = 0;
-			BufferAndRangeInstance index_buffer = {};
-			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
-			uint32_t vertex_buffer_begin = 0; // index in _vertex_buffers
-			uint32_t num_vertex_buffers = 0;
-			BufferAndRangeInstance indirect_draw_buffer;
 			uint32_t indirect_draw_stride = 5 * 4;
+			
+			BufferAndRangeInstance indirect_draw_buffer;
+			
+			BufferAndRangeInstance index_buffer = {};
+			
+			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
+			uint32_t num_vertex_buffers = 0;
+			
+			Index vertex_buffer_begin = 0; // index in _vertex_buffers
 
 			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
-			PushConstant pc = {};
 		};
 
 		MyVector<DrawCallInfo> _draw_list;
@@ -181,6 +192,8 @@ namespace vkl
 	{
 	protected:
 
+		friend struct VertexCommandTemplateProcessor;
+
 		struct ShaderPaths
 		{
 			std::filesystem::path vertex_path;
@@ -197,8 +210,32 @@ namespace vkl
 
 		virtual void createProgram() override;
 
-		struct DrawInfo;
-		void populateDrawCallsResources(VertexCommandNode & node, DrawInfo const& di);
+		struct MyDrawCallInfo
+		{
+			using Index = ShaderCommandList::Index;
+			Index name_begin = 0;
+			Index pc_begin = 0;
+
+			uint32_t name_size = 0;
+			uint32_t pc_size = 0;
+
+			uint32_t pc_offset = 0;
+			uint32_t draw_count = 0;
+
+			uint32_t instance_count = 0;
+			uint32_t indirect_draw_stride = 5 * 4;
+
+			BufferAndRange indirect_draw_buffer = {};
+
+			BufferAndRange index_buffer = {};
+
+			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
+			uint32_t num_vertex_buffers = 0;
+
+			Index vertex_buffer_begin = 0;
+
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+		};
 
 	public:
 
@@ -237,23 +274,49 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		template <bool CONST_VB>
+		struct DrawCallInfoT
+		{
+			std::string_view name = {};
+			const void* pc_data = nullptr;
+			uint32_t pc_size = 0;
+			
+			uint32_t pc_offset = 0;
+			uint32_t draw_count = 0;
+
+			uint32_t instance_count = 0;
+			uint32_t indirect_draw_stride = 5 * 4;
+
+			BufferAndRange indirect_draw_buffer = {};
+
+			BufferAndRange index_buffer = {};
+			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
+			uint32_t num_vertex_buffers = 0;
+
+			typename std::conditional<CONST_VB, const BufferAndRange, BufferAndRange>::type * vertex_buffers = nullptr;
+
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+		};
+		using DrawCallInfo = DrawCallInfoT<false>;
+		using DrawCallInfoConst = DrawCallInfoT<true>;
 		
-		struct DrawInfo
+		struct DrawInfo : public ShaderCommandList
 		{
 			DrawType draw_type = DrawType::MAX_ENUM;	
 			std::optional<VkViewport> viewport = {};
 
-			VertexDrawList draw_list = {};
+			MyVector<MyDrawCallInfo> calls;
+
+			that::ExS<BufferAndRange> _vertex_buffers;
 
 			std::shared_ptr<Framebuffer> extern_framebuffer = nullptr; 
 
-			void clear()
-			{
-				draw_type = DrawType::MAX_ENUM;
-				viewport.reset();
-				draw_list.clear();
-				extern_framebuffer.reset();
-			}
+			void pushBack(DrawCallInfo const& dci);
+			void pushBack(DrawCallInfo && dci);
+			void pushBack(DrawCallInfoConst const& dci);
+			void pushBack(DrawCallInfoConst && dci);
+
+			void clear();
 		};
 		using DI = DrawInfo;
 		
@@ -265,36 +328,42 @@ namespace vkl
 		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
 		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, DrawInfo const& di);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, DrawInfo && di);
 
 		Executable with(DrawInfo const& di);
+		Executable with(DrawInfo && di);
 		
 		Executable operator()(DrawInfo const& di)
 		{
 			return with(di);
 		}
 
+		Executable operator()(DrawInfo && di)
+		{
+			return with(std::move(di));
+		}
+
 		struct SingleDrawInfo
 		{
-			uint32_t draw_count;
-			PushConstant pc;
+			uint32_t draw_count = 0;
+			uint32_t instance_count = 1;
+			const void * pc_data = nullptr;
+			uint32_t pc_size = 0;
+			uint32_t pc_offset = 0;
 			std::optional<VkViewport> viewport = {};
 		};
-		Executable with(SingleDrawInfo const& sdi)
-		{
-			DrawInfo di{
-				.draw_type = DrawType::Draw,
-				.viewport = sdi.viewport,
-			};
-			di.draw_list.push_back(VertexDrawList::DrawCallInfo{
-				.draw_count = sdi.draw_count,
-				.instance_count = 1,
-				.pc = sdi.pc,
-			});
-			return with(di);
-		}
+		
+		Executable with(SingleDrawInfo const& sdi);
+		Executable with(SingleDrawInfo && sdi);
+
 		Executable operator()(SingleDrawInfo const& sdi)
 		{
 			return with(sdi);
+		}
+		
+		Executable operator()(SingleDrawInfo && sdi)
+		{
+			return with(std::move(sdi));
 		}
 	};
 
@@ -321,10 +390,13 @@ namespace vkl
 
 		struct DrawCallInfo
 		{
-			std::string name = {};
-			VkExtent3D extent = makeZeroExtent3D();
+			Index name_begin = 0;
+			Index pc_begin = 0;
+			uint32_t name_size = 0;
+			uint32_t pc_size = 0;
+			uint32_t pc_offset = 0;
+			VkExtent3D extent = makeUniformExtent3D(0);
 			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
-			PushConstant pc = {};
 		};
 
 		MyVector<DrawCallInfo> _draw_list;
@@ -340,6 +412,8 @@ namespace vkl
 	class MeshCommand : public GraphicsCommand
 	{
 	protected:
+
+		friend struct MeshCommandTemplateProcessor;
 		
 		struct ShaderPaths
 		{
@@ -356,8 +430,17 @@ namespace vkl
 
 		virtual void createProgram() override;
 
-		struct DrawInfo;
-		void populateDrawCallsResources(MeshCommandNode & node, DrawInfo const& di);
+		struct MyDrawCallInfo
+		{
+			using Index = ShaderCommandList::Index;
+			Index name_begin = 0;
+			Index pc_begin = 0;
+			uint32_t name_size = 0;
+			uint32_t pc_size = 0;
+			uint32_t pc_offset = 0;
+			VkExtent3D extent = makeUniformExtent3D(0);
+			std::shared_ptr<DescriptorSetAndPool> set;
+		};
 
 	public:
 
@@ -395,24 +478,26 @@ namespace vkl
 
 		struct DrawCallInfo
 		{
-			std::string name;
-			PushConstant pc = {};
-			VkExtent3D extent = {};
-			std::shared_ptr<DescriptorSetAndPool> set;
+			std::string_view name = {};
+			const void * pc_data = nullptr;
+			uint32_t pc_size = 0;
+			uint32_t pc_offset = 0;
+			VkExtent3D extent = makeUniformExtent3D(0);
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
 		};
 
-		struct DrawInfo
+		struct DrawInfo : public ShaderCommandList
 		{
-			DrawType draw_type;
+			DrawType draw_type = DrawType::MAX_ENUM;
 			bool dispatch_threads = true;
-			MyVector<DrawCallInfo> draw_list;
+
+			MyVector<MyDrawCallInfo> draw_list;
 			std::shared_ptr<Framebuffer> extern_framebuffer = nullptr;
 
-			void clear()
-			{
-				draw_list.clear();
-				extern_framebuffer.reset();
-			}
+			void pushBack(DrawCallInfo const& dci);
+			void pushBack(DrawCallInfo && dci);
+
+			void clear();
 		};
 		using DI = DrawInfo;
 
@@ -421,40 +506,41 @@ namespace vkl
 		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override;
 
 		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, DrawInfo const& di);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx, DrawInfo && di);
 
 		Executable with(DrawInfo const& di);
+		Executable with(DrawInfo && di);
 
 		Executable operator()(DrawInfo const& di)
 		{
 			return with(di);
 		}
 
+		Executable operator()(DrawInfo && di)
+		{
+			return with(std::move(di));
+		}
+
 		struct SingleDrawInfo
 		{
 			std::optional<VkExtent3D> extent;
 			std::optional<bool> dispatch_threads = false;
-			PushConstant pc = {};
+			const void * pc_data = nullptr;
+			uint32_t pc_size = 0;
+			uint32_t pc_offset = 0;
 			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
 		};
-		Executable with(SingleDrawInfo const& sdi)
-		{
-			DrawInfo di{
-				.draw_type = DrawType::Dispatch,
-				.dispatch_threads = sdi.dispatch_threads.value_or(_dispatch_threads),
-				.draw_list {
-					DrawCallInfo{
-						.pc = sdi.pc.empty() ? _pc : sdi.pc,
-						.extent = sdi.extent.value_or(_extent.value()),
-						.set = sdi.set,
-					},
-				},
-			};
-			return with(di);
-		}
+		Executable with(SingleDrawInfo const& sdi);
+		Executable with(SingleDrawInfo && sdi);
 
 		Executable operator()(SingleDrawInfo const& sdi)
 		{
 			return with(sdi);
+		}
+
+		Executable operator()(SingleDrawInfo && sdi)
+		{
+			return with(std::move(sdi));
 		}
 
 		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
@@ -469,32 +555,32 @@ namespace vkl
 		}
 	};
 
-	class FragCommand : public GraphicsCommand
-	{
-	protected:
+	//class FragCommand : public GraphicsCommand
+	//{
+	//protected:
 
-		virtual void createProgram() override;
+	//	virtual void createProgram() override;
 
-	public:
+	//public:
 
-		struct CreateInfo
-		{
-			VkApplication* app = nullptr;
-			std::string name = {};
-			std::vector<ShaderBindingDescription> bindings = {};
-			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
-			std::shared_ptr<ImageView> depth_buffer = nullptr;
-			std::filesystem::path fragment_shader_path = {};
-			DynamicValue<DefinitionsList> definitions;
-		};
+	//	struct CreateInfo
+	//	{
+	//		VkApplication* app = nullptr;
+	//		std::string name = {};
+	//		std::vector<ShaderBindingDescription> bindings = {};
+	//		std::vector<std::shared_ptr<ImageView>> color_attachements = {};
+	//		std::shared_ptr<ImageView> depth_buffer = nullptr;
+	//		std::filesystem::path fragment_shader_path = {};
+	//		DynamicValue<DefinitionsList> definitions;
+	//	};
 
-		using CI = CreateInfo;
+	//	using CI = CreateInfo;
 
-		FragCommand(CreateInfo const& ci);
+	//	FragCommand(CreateInfo const& ci);
 
-		virtual void init() override;
+	//	virtual void init() override;
 
-		//virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
+	//	//virtual void recordDraw(CommandBuffer& cmd, ExecutionContext& context, void * user_data) override;
 
-	};
+	//};
 }

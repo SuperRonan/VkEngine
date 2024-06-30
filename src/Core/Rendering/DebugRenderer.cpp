@@ -343,13 +343,12 @@ namespace vkl
 				MeshCommand::DrawInfo draw_info{
 					.draw_type = DrawType::Draw,
 					.dispatch_threads = true,
-					.draw_list = {
-						MeshCommand::DrawCallInfo{
-							.pc = pc,
-							.extent = {.width = _number_of_debug_strings, .height = 1, .depth = 1 },
-						},
-					},
 				};
+				draw_info.pushBack(MeshCommand::DrawCallInfo{
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
+					.extent = {.width = _number_of_debug_strings, .height = 1, .depth = 1 },
+				});
 				exec(_render_strings_with_mesh->with(draw_info));
 				draw_info.draw_list.front().extent.width = _number_of_debug_lines;
 				exec(_render_lines_with_mesh->with(draw_info));
@@ -358,7 +357,8 @@ namespace vkl
 			{
 				VertexCommand::SingleDrawInfo draw_info{
 					.draw_count = _number_of_debug_strings,
-					.pc = pc,
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
 				};
 				exec(_render_strings_with_geometry->with(draw_info));
 				draw_info.draw_count = _number_of_debug_lines;

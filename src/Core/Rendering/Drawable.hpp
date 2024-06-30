@@ -2,7 +2,6 @@
 
 #include <Core/App/VkApplication.hpp>
 #include <Core/Execution/DescriptorSetsManager.hpp>
-#include <Core/Rendering/DrawList.hpp>
 
 namespace vkl
 {

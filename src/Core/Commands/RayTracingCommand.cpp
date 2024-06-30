@@ -1,5 +1,8 @@
 #include <Core/Commands/RayTracingCommand.hpp>
 
+#include <thatlib/src/core/Concepts.hpp>
+#include <thatlib/src/stl_ext/const_forward.hpp>
+
 namespace vkl
 {
 	struct RayTracingCommandNode : public ShaderCommandNode
@@ -13,13 +16,16 @@ namespace vkl
 
 		struct TraceCallInfo
 		{
-			std::string name = {};
-			VkExtent3D extent;
-			PushConstant pc = {};
+			Index name_begin = 0;	
+			Index pc_begin = 0;
+			uint32_t name_size = 0;
+			uint32_t pc_size = 0;
+			uint32_t pc_offset = 0;
+			VkExtent3D extent = {};
 			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
 			VkDeviceSize stack_size = VkDeviceSize(-1);
-			BufferAndRangeInstance sbt_buffer;
-			ShaderBindingTable::Regions sbt_regions;
+			BufferAndRangeInstance sbt_buffer = {};
+			ShaderBindingTable::Regions sbt_regions = {};
 		};
 		
 		RayTracingCommandNode(CreateInfo const& ci) :
@@ -48,11 +54,10 @@ namespace vkl
 			for (size_t i = 0; i < trace_calls.size(); ++i)
 			{
 				const TraceCallInfo & tci = trace_calls[i];
-				if (!tci.name.empty())
+				if (tci.name_size != 0)
 				{
-					ctx.pushDebugLabel(tci.name);
+					ctx.pushDebugLabel(_strings.get(Range{.begin = tci.name_begin, .len = tci.name_size}), true);
 				}
-
 
 				if (tci.set)
 				{
@@ -64,10 +69,7 @@ namespace vkl
 					}
 				}
 
-				if (tci.pc.hasValue())
-				{
-					recordPushConstant(cmd, ctx, tci.pc);
-				}
+				recordPushConstantIFN(cmd, tci.pc_begin, tci.pc_size, tci.pc_offset);
 
 				if (tci.stack_size != VkDeviceSize(-1))
 				{
@@ -78,7 +80,7 @@ namespace vkl
 
 				fp._vkCmdTraceRaysKHR(cmd, &tci.sbt_regions.raygen, &tci.sbt_regions.miss, &tci.sbt_regions.hit_group, &tci.sbt_regions.callable, tci.extent.width, tci.extent.height, tci.extent.depth);
 
-				if (!tci.name.empty())
+				if (tci.name_size != 0)
 				{
 					ctx.popDebugLabel();
 				}
@@ -93,7 +95,6 @@ namespace vkl
 			.name = ci.name,
 			.sets_layouts = ci.sets_layouts,
 		}),
-		
 		_common_shader_definitions(ci.definitions),
 		_extent(ci.extent)
 	{
@@ -219,76 +220,215 @@ namespace vkl
 		return res;
 	}
 
-	std::shared_ptr<ExecutionNode> RayTracingCommand::getExecutionNode(RecordContext& ctx, size_t n, const TraceInfo * tis)
+	void RayTracingCommand::TraceInfo::clear()
 	{
-		std::shared_ptr<RayTracingCommandNode> node = _exec_node_cache.getCleanNode<RayTracingCommandNode>([&]()
+		ShaderCommandList::clear();
+		pc_offset = 0;
+		calls.clear();
+		sbt = nullptr;
+		stack_size = VkDeviceSize(-1);
+	}
+
+	struct RayTracingCommandTemplateProcessor
+	{
+		template <that::concepts::UniversalReference<RayTracingCommand::TraceInfo> TraceInfoRef>
+		static std::shared_ptr<ExecutionNode> getExecutionNode(RayTracingCommand& that, RecordContext& ctx, TraceInfoRef&& info)
 		{
-			return std::make_shared<RayTracingCommandNode>(RayTracingCommandNode::CI{
-				.app = application(),
-				.name = {},
-			});
-		});
-		node->setName(name());
-
-		_pipeline->waitForInstanceCreationIFN();
-		_set->waitForInstanceCreationIFN();
-		const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
-		const uint32_t invocation_set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-		ctx.rayTracingBoundSets().bind(shader_set_index, _set->instance());
-		populateBoundResources(*node, ctx.rayTracingBoundSets(), shader_set_index + 1);
-		std::shared_ptr<DescriptorSetLayoutInstance> layout = _pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
-
-		node->trace_calls.resize(n);
-		for (size_t i = 0; i < n; ++i)
-		{
-			const TraceInfo & ti = tis[i];
-			RayTracingCommandNode::TraceCallInfo & tci = node->trace_calls[i];
-			tci.name = ti.name;
-			tci.extent = ti.extent;
-			tci.pc = ti.pc;
-			tci.set = ti.set ? ti.set->instance() : nullptr;
-			tci.stack_size = ti.stack_size;
-			tci.sbt_buffer = BufferAndRangeInstance{.buffer = ti.sbt->buffer().buffer()->instance(), .range = ti.sbt->buffer().buffer()->instance()->fullRange()};
-			tci.sbt_regions = ti.sbt->getRegions();
-
-			if (layout)
+			std::shared_ptr<RayTracingCommandNode> node = that._exec_node_cache.getCleanNode<RayTracingCommandNode>([&]()
 			{
-				populateDescriptorSet(*node, *ti.set->instance(), *layout);
+				return std::make_shared<RayTracingCommandNode>(RayTracingCommandNode::CI{
+					.app = that.application(),
+					.name = {},
+				});
+			});
+			node->setName(that.name());
+
+			that._pipeline->waitForInstanceCreationIFN();
+			that._set->waitForInstanceCreationIFN();
+			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
+			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
+			ctx.rayTracingBoundSets().bind(shader_set_index, that._set->instance());
+			that.populateBoundResources(*node, ctx.rayTracingBoundSets(), shader_set_index + 1);
+			std::shared_ptr<DescriptorSetLayoutInstance> layout = that._pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
+
+			node->trace_calls.resize(info.calls.size());
+
+			ShaderBindingTable * const common_sbt = info.sbt ? info.sbt : that._sbt.get();
+			bool use_common_sbt = false;
+			const ResourceState2 sbt_state = ResourceState2{
+				.access = VK_ACCESS_2_SHADER_BINDING_TABLE_READ_BIT_KHR,
+				.stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+			};
+			const VkBufferUsageFlags2KHR sbt_usage = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+			
+			for (size_t i = 0; i < info.calls.size(); ++i)
+			{
+				auto& ti = info.calls[i];
+				RayTracingCommandNode::TraceCallInfo& tci = node->trace_calls[i];
+
+				ShaderBindingTable * const sbt = ti.sbt ? ti.sbt : common_sbt;
+
+				tci.name_begin = ti.name_begin;
+				tci.pc_begin = ti.pc_begin;
+				tci.name_size = ti.name_size;
+				tci.pc_size = ti.pc_size;
+				tci.pc_offset = ti.pc_offset;
+				tci.extent = ti.extent;
+				tci.sbt_buffer = sbt->buffer().getSegmentInstance();
+				tci.sbt_regions = sbt->getRegions();
+
+				if (layout)
+				{
+					that.populateDescriptorSet(*node, *ti.set->instance(), *layout);
+				}
+
+				if (sbt != common_sbt)
+				{
+					node->resources() += BufferUsage{
+						.bari = tci.sbt_buffer,
+						.begin_state = sbt_state,
+						.usage = sbt_usage,
+					};
+				}
+				else
+				{
+					use_common_sbt = true;
+				}
+			}
+			if (use_common_sbt)
+			{
+				node->resources() += BufferUsage{
+					.bari = common_sbt->buffer().getSegmentInstance(),
+					.begin_state = sbt_state,
+					.usage = sbt_usage,
+				};
 			}
 
-			node->resources() += BufferUsage{
-				.bari = tci.sbt_buffer,
-				.begin_state = ResourceState2{
-					.access = VK_ACCESS_2_SHADER_BINDING_TABLE_READ_BIT_KHR,
-					.stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
-				},
-				.usage = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR,
-			};
+			node->_data = std::forward<decltype(node->_data)>(info._data);
+			node->_strings = std::forward<decltype(node->_strings)>(info._strings);
+
+			node->pc_begin = info.pc_begin;
+			node->pc_size = info.pc_size;
+			node->pc_offset = info.pc_offset;
+
+			return node;
 		}
 
-		return node;
+		template <that::concepts::UniversalReference<RayTracingCommand::TraceInfo::CallInfo> CallInfoRef>
+		static void TraceInfo_pushBack(RayTracingCommand::TraceInfo & that, CallInfoRef&& ci)
+		{
+			using Index = ShaderCommandList::Index;
+			that.calls += RayTracingCommand::MyTraceCallInfo{
+				.name_size = static_cast<uint32_t>(ci.name.size()),
+				.pc_size = ci.pc_size,
+				.pc_offset = ci.pc_offset,
+				.extent = ci.extent,
+				.sbt = ci.sbt,
+				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(ci.set),
+				.stack_size = ci.stack_size,
+			};
+			RayTracingCommand::MyTraceCallInfo & tc = that.calls.back();
+			if (!ci.name.empty())
+			{
+				tc.name_begin = that._strings.pushBack(ci.name, true);
+			}
+			if (ci.pc_data && tc.pc_size != 0)
+			{
+				tc.pc_begin = that._data.pushBack(ci.pc_data, tc.pc_size);
+			}
+		}
+
+		template <that::concepts::UniversalReference<RayTracingCommand::SingleTraceInfo> STIRef>
+		static Executable with_STI(RayTracingCommand& that, STIRef&& sti)
+		{
+			static thread_local RayTracingCommand::TraceInfo ti;
+			ti.clear();
+
+			if (sti.pc_data && sti.pc_size != 0)
+			{
+				ti.setPushConstant(sti.pc_data, sti.pc_size, sti.pc_offset);
+			}
+
+			ti.sbt = sti.sbt;
+			ti.stack_size = sti.stack_size;
+			
+			ti.calls += RayTracingCommand::MyTraceCallInfo{
+				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(sti.set),
+			};
+
+			RayTracingCommand::MyTraceCallInfo & tci = ti.calls.back();
+			if (sti.extent.has_value())
+			{
+				tci.extent = sti.extent.value();
+			}
+			else
+			{
+				tci.extent = that._extent.value();
+			}
+
+			return that.with(std::move(ti));
+		}
+	};
+
+	void RayTracingCommand::TraceInfo::pushBack(CallInfo const& ci)
+	{
+		RayTracingCommandTemplateProcessor::TraceInfo_pushBack<CallInfo const&>(*this, ci);
+	}
+
+	void RayTracingCommand::TraceInfo::pushBack(CallInfo && ci)
+	{
+		RayTracingCommandTemplateProcessor::TraceInfo_pushBack<CallInfo &&>(*this, std::move(ci));
+	}
+
+	std::shared_ptr<ExecutionNode> RayTracingCommand::getExecutionNode(RecordContext& ctx, TraceInfo const& ti)
+	{
+		return RayTracingCommandTemplateProcessor::getExecutionNode<TraceInfo const&>(*this, ctx, ti);
+	}
+
+	std::shared_ptr<ExecutionNode> RayTracingCommand::getExecutionNode(RecordContext& ctx, TraceInfo && ti)
+	{
+		decltype(auto) res = RayTracingCommandTemplateProcessor::getExecutionNode<TraceInfo&&>(*this, ctx, std::move(ti));
+		ti.clear();
+		return res;
 	}
 
 	std::shared_ptr<ExecutionNode> RayTracingCommand::getExecutionNode(RecordContext& ctx)
 	{
-		TraceInfo ti{
+		SingleTraceInfo sti{
+			.extent = _extent,
 			.sbt = _sbt.get(),
-			.extent = *_extent,
 		};
-		return getExecutionNode(ctx, 1, &ti);
+		if (_pc.hasValue())
+		{
+			sti.pc_data = _pc.data();
+			sti.pc_size = _pc.size32();
+		}
+		return with(std::move(sti))(ctx);
 	}
 
 	Executable RayTracingCommand::with(TraceInfo const& ti)
-	{
-		TraceInfo _ti = ti;
-		if (!_ti.sbt)
+	{	
+		return [this, ti](RecordContext & ctx)
 		{
-			_ti.sbt = _sbt.get();
-		}
-		
-		return [this, _ti](RecordContext & ctx)
-		{
-			return getExecutionNode(ctx, 1, &_ti);
+			return getExecutionNode(ctx, ti);
 		};
+	}
+
+	Executable RayTracingCommand::with(TraceInfo && ti)
+	{
+		return [this, _ti = std::move(ti)](RecordContext& ctx) mutable
+		{
+			return getExecutionNode(ctx, std::move(_ti));
+		};
+	}
+
+	Executable RayTracingCommand::with(SingleTraceInfo const& sti)
+	{
+		return RayTracingCommandTemplateProcessor::with_STI<SingleTraceInfo const&>(*this, sti);
+	}
+
+	Executable RayTracingCommand::with(SingleTraceInfo && sti)
+	{
+		return RayTracingCommandTemplateProcessor::with_STI<SingleTraceInfo &&>(*this, std::move(sti));
 	}
 }

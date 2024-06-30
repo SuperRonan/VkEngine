@@ -532,7 +532,9 @@ namespace vkl
 
 	void SimpleRenderer::generateVertexDrawList(MultiVertexDrawCallList & res)
 	{
-		VertexDrawCallInfo vr;
+		static thread_local VertexDrawCallInfo _vr;
+		VertexDrawCallInfo & vr = _vr;
+		vr.clear();
 		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
 		auto add_model = [&res, &vr](std::shared_ptr<Scene::Node> const& node, glm::mat4 const& matrix)
 		{
@@ -544,19 +546,22 @@ namespace vkl
 				
 				auto & res_model_type = res[model_type];
 				res_model_type.draw_type = DrawType::DrawIndexed;
-				res_model_type.draw_list.push_back(VertexDrawList::DrawCallInfo{
+				res_model_type.pushBack(VertexCommand::DrawCallInfo{
 					.name = node->name(),
+					.pc_data = &matrix,
+					.pc_size = sizeof(matrix),
 					.draw_count = vr.draw_count,
 					.instance_count = vr.instance_count,
 					.index_buffer = vr.index_buffer,
 					.index_type = vr.index_type,
 					.num_vertex_buffers = vr.vertex_buffers.size32(),
+					.vertex_buffers = vr.vertex_buffers.data(),
 					.set = node->model()->setAndPool(),
-					.pc = matrix,
-				}, vr.vertex_buffers);
+				});
 			}
 			return node->visible();
 		};
+		vr.clear();
 		_scene->getTree()->iterateOnDag(add_model);
 	}
 
@@ -750,17 +755,19 @@ namespace vkl
 			{
 				uint32_t num_objects;
 			};
+			const PrepareDrawListPC pc { .num_objects = num_objects };
 			exec(_prepare_draw_list->with(ComputeCommand::SingleDispatchInfo{
 				.extent = VkExtent3D{.width = num_objects, .height = 1, .depth = 1},
 				.dispatch_threads = true,
-				.pc = PrepareDrawListPC{.num_objects = num_objects},
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 			}));
 			VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
 			my_draw_list.draw_type = DrawType::IndirectDraw;
-			my_draw_list.draw_list.push_back(VertexDrawList::DrawCallInfo{
+			my_draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.draw_count = num_objects,
-				.indirect_draw_buffer = _vk_draw_params_segment,
 				.indirect_draw_stride = sizeof(VkDrawIndirectCommand),
+				.indirect_draw_buffer = _vk_draw_params_segment,
 			});
 		}
 		else if(generate_host_draw_list)
@@ -791,7 +798,8 @@ namespace vkl
 			{
 				VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
 				std::shared_ptr<Framebuffer> previous_fb = std::move(my_draw_list.extern_framebuffer);
-				PushConstant previous_pc = std::move(my_draw_list.draw_list.drawCalls().front().pc);
+				const size_t previous_pc_begin = my_draw_list.pc_begin;
+				const uint32_t previous_pc_size = my_draw_list.pc_size;
 				
 				exec.pushDebugLabel("RenderShadowMaps", true);
 				
@@ -801,7 +809,8 @@ namespace vkl
 					LightInstanceData * my_lid = dynamic_cast<LightInstanceData*>(lid.specific_data.get());
 					if (light->enableShadowMap() && my_lid && my_lid->framebuffer && ((lid.flags & 1) != 0))
 					{
-						my_draw_list.draw_list.drawCalls().front().pc = lid.frame_light_id;
+						const uint32_t pc = lid.frame_light_id;
+						my_draw_list.setPushConstant(&pc, sizeof(pc));
 						my_draw_list.extern_framebuffer = my_lid->framebuffer;
 
 						if (light->type() == LightType::SPOT)
@@ -817,8 +826,8 @@ namespace vkl
 
 				exec.popDebugLabel();
 				my_draw_list.extern_framebuffer = std::move(previous_fb);
-				my_draw_list.draw_list.drawCalls().front().pc = std::move(previous_pc);
-
+				my_draw_list.pc_begin = previous_pc_begin;
+				my_draw_list.pc_size = previous_pc_size;
 			}
 		}
 
@@ -838,7 +847,7 @@ namespace vkl
 				{
 					for (uint32_t model_type : _model_types)
 					{
-						if (draw_list[model_type].draw_list.size())
+						if (draw_list[model_type].calls.size())
 						{
 							exec(_direct_pipeline._render_scene_direct[model_type]->with(draw_list[model_type]));
 						}
@@ -868,7 +877,7 @@ namespace vkl
 				{
 					for (uint32_t model_type : _model_types)
 					{
-						if (draw_list[model_type].draw_list.size())
+						if (draw_list[model_type].calls.size())
 						{
 							exec(_deferred_pipeline._raster_gbuffer[model_type].raster->with(draw_list[model_type]));
 						}

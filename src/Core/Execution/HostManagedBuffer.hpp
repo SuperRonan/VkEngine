@@ -95,5 +95,21 @@ namespace vkl
 		virtual void updateResources(UpdateContext & ctx, bool shrink_to_fit = false) override;
 
 		virtual void recordTransferIFN(ExecutionRecorder & exec) override;
+
+		BufferSegment getSegment() const
+		{
+			return BufferSegment{
+				.buffer = _buffer,
+				.range = Buffer::Range{.begin = 0, .len = _byte_size},
+			};
+		}
+
+		BufferSegmentInstance getSegmentInstance() const
+		{
+			return BufferSegmentInstance{
+				.buffer = _buffer->instance(),
+				.range = Buffer::Range{.begin = 0, .len = _byte_size},
+			};
+		}
 	};
 }

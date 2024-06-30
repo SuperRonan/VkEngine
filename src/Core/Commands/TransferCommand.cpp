@@ -59,9 +59,9 @@ namespace vkl
 					.sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
 					.pNext = nullptr,
 					.srcSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
-					.srcOffset = makeZeroOffset3D(),
+					.srcOffset = makeUniformOffset3D(0),
 					.dstSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
-					.dstOffset = makeZeroOffset3D(),
+					.dstOffset = makeUniformOffset3D(0),
 					.extent = _dst->image()->createInfo().extent,
 				};
 				regions = &_region;
@@ -208,7 +208,7 @@ namespace vkl
 					.bufferRowLength = _default_buffer_row_length,   // 0 => tightly packed
 					.bufferImageHeight = _default_buffer_image_height, // 0 => tightly packed
 					.imageSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
-					.imageOffset = makeZeroOffset3D(),
+					.imageOffset = makeUniformOffset3D(0),
 					.imageExtent = extent,
 				};
 				p_regions = &_reg;
@@ -348,7 +348,7 @@ namespace vkl
 					.bufferRowLength = _default_buffer_row_length,   // 0 => tightly packed
 					.bufferImageHeight = _default_buffer_image_height, // 0 => tightly packed
 					.imageSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
-					.imageOffset = makeZeroOffset3D(),
+					.imageOffset = makeUniformOffset3D(0),
 					.imageExtent = extent,
 				};
 				p_regions = &_reg;
@@ -1183,7 +1183,7 @@ namespace vkl
 				.bufferRowLength = _buffer_row_length,   // 0 => tightly packed
 				.bufferImageHeight = _buffer_image_height, // 0 => tightly packed
 				.imageSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
-				.imageOffset = makeZeroOffset3D(),
+				.imageOffset = makeUniformOffset3D(0),
 				.imageExtent = _dst->image()->createInfo().extent,
 			};
 
@@ -1544,7 +1544,7 @@ namespace vkl
 					.bufferRowLength = resources.images[i].buffer_row_length,
 					.bufferImageHeight = resources.images[i].buffer_image_height,
 					.imageSubresource = getImageLayersFromRange(resources.images[i].dst->createInfo().subresourceRange), // Copy to base mip only
-					.imageOffset = makeZeroOffset3D(),
+					.imageOffset = makeUniformOffset3D(0),
 					.imageExtent = resources.images[i].dst->image()->createInfo().extent,
 				};
 				const VkCopyBufferToImageInfo2 info{
@@ -1964,7 +1964,7 @@ namespace vkl
 				.bufferRowLength = _buffer_row_length,
 				.bufferImageHeight = _buffer_image_height,
 				.imageSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
-				.imageOffset = makeZeroOffset3D(),
+				.imageOffset = makeUniformOffset3D(0),
 				.imageExtent = _src->image()->createInfo().extent,
 			};
 

@@ -17,7 +17,7 @@ namespace vkl
 		uint32_t _fragment = ShaderUnused();
 
 		// Mesh (or task if present) local_size
-		VkExtent3D _local_size = makeZeroExtent3D();
+		VkExtent3D _local_size = makeUniformExtent3D(0);
 
 		void extractLocalSizeIFP();
 
