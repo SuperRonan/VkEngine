@@ -561,8 +561,8 @@ namespace vkl
 			}
 			return node->visible();
 		};
-		vr.clear();
 		_scene->getTree()->iterateOnDag(add_model);
+		vr.clear();
 	}
 
 	struct LightInstanceData : public Scene::LightInstanceSpecificData

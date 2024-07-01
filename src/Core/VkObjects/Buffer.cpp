@@ -5,7 +5,6 @@ namespace vkl
 {
 	std::atomic<size_t> BufferInstance::_instance_counter = 0;
 
-
 	BufferInstance::BufferInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_ci(ci.ci),
@@ -36,7 +35,7 @@ namespace vkl
 		assert(_allocator);
 		
 		VK_CHECK(vmaCreateBufferWithAlignment(_allocator, &_ci, &_aci, _min_align, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
-
+		
 		InternalStates is;
 		is.states.push_back(InternalStates::PosAndState{
 			.pos = 0,
@@ -68,7 +67,7 @@ namespace vkl
 		}
 
 		callDestructionCallbacks();
-
+		
 		vmaDestroyBuffer(_allocator, _buffer, _alloc);
 		_buffer = VK_NULL_HANDLE;
 		_alloc = VMA_NULL;

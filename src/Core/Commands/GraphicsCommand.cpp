@@ -898,13 +898,6 @@ namespace vkl
 					};
 				}
 			}
-
-			node._data = std::forward<decltype(node._data)>(di._data);
-			node._strings = std::forward<decltype(node._strings)>(di._strings);
-
-			node.pc_begin = di.pc_begin;
-			node.pc_size = di.pc_size;
-			node.pc_offset = di.pc_offset;
 		}
 
 		template <that::concepts::UniversalReference<VertexCommand::DrawInfo> DrawInfoRef>
@@ -928,8 +921,8 @@ namespace vkl
 			that.populateFramebufferResources(*node);
 			populateDrawCallsResources<DrawInfoRef>(that, *node, std::forward<VertexCommand::DrawInfo>(di));
 
-			node->_data = std::forward<decltype(node->_data)>(di._data);
-			node->_strings = std::forward<decltype(node->_strings)>(di._strings);
+			node->_data = std::forward<that::ExDS>(di._data);
+			node->_strings = std::forward<that::ExSS>(di._strings);
 
 			node->pc_begin = di.pc_begin;
 			node->pc_size = di.pc_size;
@@ -1282,8 +1275,8 @@ namespace vkl
 			that.populateFramebufferResources(*node);
 			populateDrawCallsResources<DrawInfoRef>(that, *node,  std::forward<MeshCommand::DrawInfo>(di));
 
-			node->_data = std::forward<decltype(node->_data)>(di._data);
-			node->_strings = std::forward<decltype(node->_strings)>(di._strings);
+			node->_data = std::forward<that::ExDS>(di._data);
+			node->_strings = std::forward<that::ExSS>(di._strings);
 
 			node->pc_begin = di.pc_begin;
 			node->pc_size = di.pc_size;
