@@ -1,5 +1,7 @@
 #include "ShaderCommand.hpp"
 
+#include <Core/VkObjects/TopLevelAccelerationStructure.hpp>
+
 namespace vkl
 {
 	void ShaderCommandList::clear()
@@ -163,17 +165,17 @@ namespace vkl
 						// The shader stage is not synched by the tlas build, but does it make a difference? (maybe synch each blas in the tlas build to all shader stages too)
 						// It also assumes that the tlases were not modified since, but that would invalidate the tlas anyway
 						// For now: disable it (it does not seem to bother even the picky synch validation)
-						if (false)
-						{
-							for (auto& bi : tlas->blases())
-							{
-								if (bi.blas)
-								{
-									bu.bari = bi.blas->instance()->storageBuffer();
-									node.resources() += bu;
-								}
-							}
-						}
+						//if (false)
+						//{
+						//	for (auto& bi : tlas->blases())
+						//	{
+						//		if (bi.blas)
+						//		{
+						//			bu.bari = bi.blas->instance()->storageBuffer();
+						//			node.resources() += bu;
+						//		}
+						//	}
+						//}
 					}
 				}
 			}

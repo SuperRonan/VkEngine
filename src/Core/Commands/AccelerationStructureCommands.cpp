@@ -1,5 +1,8 @@
 #include <Core/Commands/AccelerationStructureCommands.hpp>
 
+#include <Core/VkObjects/TopLevelAccelerationStructure.hpp>
+
+
 namespace vkl
 {
 	struct BuildAccelerationStructureCommandNode : public ExecutionNode
@@ -10,7 +13,7 @@ namespace vkl
 			std::shared_ptr<AccelerationStructureInstance> dst;
 		};
 		MyVector<Target> _targets;
-		MyVector<VkAccelerationStructureGeometryKHR> _geometries;
+		MyVector<VkAccelerationStructureGeometryKHR> _vk_geometries;
 		MyVector<VkAccelerationStructureBuildGeometryInfoKHR> _build_infos;
 		MyVector<VkAccelerationStructureBuildRangeInfoKHR> _build_ranges;
 
@@ -38,7 +41,7 @@ namespace vkl
 			_targets.clear();
 			_build_infos.clear();
 			_build_ranges.clear();
-			_geometries.clear();
+			_vk_geometries.clear();
 			_scratch_buffer = {};
 			_pooled_scratch_buffer.reset();
 			ExecutionNode::clear();
@@ -188,31 +191,34 @@ namespace vkl
 			else if (tlasi)
 			{
 				TLAS * tlas = reinterpret_cast<TLAS*>(bi.targets[i].dst.get());
-				//build_info.pGeometries[0].geometry.instances.data.deviceAddress = tlasi->instancesBuffer().deviceAddress();
-				node->resources() += BufferUsage{
-					.bari = tlasi->instancesBuffer(),
-					.begin_state = ResourceState2{
-						.access = extern_buffer_access,
-						.stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-					},
-					.usage = extern_buffer_usage,
-				};
-
-				for (size_t j = 0; j < tlas->blases(); ++j)
+				for (size_t g = 0; g < tlasi->geometries().size(); ++g)
 				{
-					auto & blas_ref = tlas->blases()[j];
-					if (blas_ref.blas)
+					TLASI::Geometry & geom = tlasi->geometries()[g];
+					node->resources() += BufferUsage{
+						.bari = geom.instances_buffer,
+						.begin_state = ResourceState2{
+							.access = extern_buffer_access,
+							.stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+						},
+						.usage = extern_buffer_usage,
+					};
+					for (size_t j = 0; j < geom.blases; ++j)
 					{
-						node->resources() += BufferUsage{
-							.bari = blas_ref.blas->instance()->storageBuffer(),
-							.begin_state = ResourceState2{
-								.access = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR, // Not 100% sure about this one, maybe shader read bit
-								.stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-							},
-							.usage = VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
-						};
+						auto & blas_ref = geom.blases[j];
+						if (blas_ref.blas)
+						{
+							node->resources() += BufferUsage{
+								.bari = blas_ref.blas->instance()->storageBuffer(),
+								.begin_state = ResourceState2{
+									.access = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR, // Not 100% sure about this one, maybe shader read bit
+									.stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+								},
+								.usage = VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+							};
+						}
 					}
 				}
+
 			}
 			else
 			{
@@ -234,7 +240,7 @@ namespace vkl
 					else if(tlasi)
 					{
 						//TLAS* tlas = reinterpret_cast<TLAS*>(bi.targets[i].src.get());
-						range.primitiveCount = tlasi->primitiveCount();
+						range.primitiveCount = tlasi->geometries()[j].primitive_count;
 					}
 					else
 					{
@@ -311,7 +317,6 @@ namespace vkl
 		{
 			node->_scratch_buffer = {};
 		}
-
 		return node;
 	}
 

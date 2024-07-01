@@ -3,7 +3,7 @@
 #include <Core/Commands/ShaderBindingDescriptor.hpp>
 #include <Core/VulkanCommons.hpp>
 #include <Core/VkObjects/Sampler.hpp>
-#include <Core/VkObjects/AccelerationStructure.hpp>
+#include <Core/VkObjects/TopLevelAccelerationStructure.hpp>
 
 namespace vkl
 {

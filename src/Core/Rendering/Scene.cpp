@@ -545,6 +545,12 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".TLAS",
 				.geometry_flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+				.geometries = {
+					TLAS::GeometryCreateInfo{
+						.flags = 0,
+						.capacity = 16,
+					},
+				},
 				.build_flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
 				.hold_instance = &_maintain_rt,
 			});
@@ -808,19 +814,20 @@ namespace vkl
 				if (_maintain_rt)
 				{
 					Mesh * mesh = model->mesh().get();
+					const uint32_t tlas_geometry_id = 0;
 					if (mesh && mesh->isReadyToDraw())
 					{
 						bool register_to_tlas = true;
-						if (unique_model_id < _tlas->blases().size())
+						if (unique_model_id < _tlas->geometries()[tlas_geometry_id].blases.size())
 						{
-							if (_tlas->blases()[unique_model_id].blas == mesh->blas())
+							if (_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].blas == mesh->blas())
 							{
 								register_to_tlas = false;
 							}
 						}
 						if (register_to_tlas)
 						{
-							_tlas->registerBLAS(unique_model_id, TLAS::BLASInstance{
+							_tlas->registerBLAS(tlas_geometry_id, unique_model_id, TLAS::BLASInstance{
 								.blas = mesh->blas(),
 								.xform = convertXFormToVk(matrix),
 								.instanceCustomIndex = unique_model_id,
@@ -831,7 +838,7 @@ namespace vkl
 						}
 						else if (changed_xform)
 						{
-							_tlas->blases()[unique_model_id].setXForm(matrix);
+							_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setXForm(matrix);
 						}
 					}
 				}

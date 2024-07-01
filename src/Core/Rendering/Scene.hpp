@@ -15,6 +15,7 @@
 
 #include <Core/Utils/UniqueIndexAllocator.hpp>
 
+#include <Core/VkObjects/TopLevelAccelerationStructure.hpp>
 #include <Core/Commands/AccelerationStructureCommands.hpp>
 
 #include <unordered_map>
