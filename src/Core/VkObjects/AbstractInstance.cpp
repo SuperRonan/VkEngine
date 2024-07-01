@@ -45,11 +45,24 @@ namespace vkl
 
 	bool AbstractInstanceHolder::checkHoldInstance()
 	{
-		const bool hi = holdInstance().value();
-		if (!hi)
+		if (_hold_instance.hasValue())
 		{
-			destroyInstanceIFN();
+			const bool prev = _hold_instance.getCachedValue();
+			const bool hi = _hold_instance.value();
+			if (!prev && hi)
+			{
+				// When recreating an instance after it was not held for some time, we need to notify dependent objects
+				callInvalidationCallbacks();
+			}
+			else if (!hi)
+			{
+				destroyInstanceIFN();
+			}
+			return hi;
 		}
-		return hi;
+		else
+		{
+			return true;
+		}
 	}
 }

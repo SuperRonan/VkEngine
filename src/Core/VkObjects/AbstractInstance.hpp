@@ -54,15 +54,17 @@ namespace vkl
 		std::map<uintptr_t, std::function<void(void)>> _invalidation_callbacks = {};
 		mutable std::mutex _mutex;
 
-		Dyn<bool> _hold_instance = true;
+		Dyn<bool> _hold_instance = {};
 
 	public:
 
 		template <class StringLike>
-		constexpr AbstractInstanceHolder(VkApplication * app, StringLike && name, Dyn<bool> hold_instance) :
+		constexpr AbstractInstanceHolder(VkApplication * app, StringLike && name, Dyn<bool> const& hold_instance) :
 			VkObject(app, std::forward<StringLike>(name)),
 			_hold_instance(hold_instance)
-		{}
+		{
+			hold_instance.valueOr(true);
+		}
 
 		virtual ~AbstractInstanceHolder() override = default;
 
@@ -111,7 +113,7 @@ namespace vkl
 		using InstanceType = Instance;
 
 		template <std::concepts::StringLike StringLike>
-		constexpr InstanceHolder(VkApplication* app, StringLike&& name, Dyn<bool> hold_instance) :
+		constexpr InstanceHolder(VkApplication* app, StringLike&& name, Dyn<bool> const& hold_instance) :
 			AbstractInstanceHolder(app, std::forward<StringLike>(name), hold_instance)
 		{}
 
