@@ -87,6 +87,7 @@
 - [ ] Separate DescriptorSet and DescriptorPool
 	- [ ] Use one pool for many descriptor sets (for model resources)
 - [ ] Add helper types StringVector, AnyVector, ...
+- [ ] Refactor UploadQueue, AsynchUpload, ... to avoid using individual small allocations
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib

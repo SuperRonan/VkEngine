@@ -54,8 +54,20 @@ namespace vkl
 
 			if (aquired.target_buffer)
 			{
+				static thread_local MyVector<ResourcesToUpload::BufferSource> sources;
+				sources.resize(aquired.sources.size());
+				for (size_t i = 0; i < sources.size(); ++i)
+				{
+					sources[i] = ResourcesToUpload::BufferSource{
+						.data = aquired.sources[i].obj.data(),
+						.size = aquired.sources[i].obj.size(),
+						.offset = aquired.sources[i].pos,
+						.copy_data = aquired.sources[i].obj.ownsValue(),
+					};
+				}
 				ResourcesToUpload::BufferUpload bu{
-					.sources = std::move(aquired.sources),
+					.sources = sources.data(),
+					.sources_count = sources.size(),
 					.dst = std::move(aquired.target_buffer),
 					.completion_callback = std::move(aquired.completion_callback),
 				};
@@ -65,7 +77,9 @@ namespace vkl
 			{
 				assert(!!aquired.target_view);
 				ResourcesToUpload::ImageUpload iu{
-					.src = std::move(aquired.source),
+					.data = aquired.source.data(),
+					.size = aquired.source.size(),
+					.copy_data = aquired.source.ownsValue(),
 					.buffer_row_length = aquired.buffer_row_length,
 					.buffer_image_height = aquired.buffer_image_height,
 					.dst = std::move(aquired.target_view),

@@ -165,7 +165,7 @@ namespace vkl
 		_upload_range.reset();
 		ObjectView o((const uint8_t*)_data + range.begin, range.len);
 		return PositionedObjectView{
-			.obj = o,
+			.obj = std::move(o),
 			.pos = range.begin,
 		};
 	}
@@ -178,10 +178,16 @@ namespace vkl
 		{
 			if (!_upload_range.empty())
 			{
+				PositionedObjectView pov = consumeUploadView();
+				ResourcesToUpload::BufferSource source{
+					.data = pov.obj.data(),
+					.size = pov.obj.size(),
+					.offset = pov.pos,
+					.copy_data = false,
+				};
 				ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-					.sources = {
-						consumeUploadView(),
-					},
+					.sources = &source,
+					.sources_count = 1,
 					.dst = _buffer->instance(),
 				};
 			}

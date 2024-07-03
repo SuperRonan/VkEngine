@@ -964,13 +964,15 @@ namespace vkl
 		}
 		
 		{
+			const UBO ubo = getUBO();
+			ResourcesToUpload::BufferSource src{
+				.data = &ubo,
+				.size = sizeof(ubo),
+				.copy_data = true,
+			};
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-				.sources = {
-					PositionedObjectView{
-						.obj = getUBO(),
-						.pos = 0,
-					},
-				},
+				.sources = &src,
+				.sources_count = 1,
 				.dst = _ubo_buffer->instance(),
 			};
 		}

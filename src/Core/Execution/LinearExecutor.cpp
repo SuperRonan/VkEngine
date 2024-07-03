@@ -607,7 +607,8 @@ namespace vkl
 	{
 		ExecutionThread* upload_thread = beginCommandBuffer();
 		UploadResources &uploader = application()->getPrebuiltTransferCommands().upload_resources;
-		ResourcesToUpload upload_list = update_context.resourcesToUpload();
+		static thread_local ResourcesToUpload upload_list;
+		upload_list = update_context.resourcesToUpload();
 		if (consume_asynch && update_context.uploadQueue())
 		{
 
@@ -633,6 +634,7 @@ namespace vkl
 		(*upload_thread)(uploader.with(UploadResources::UI{
 			.upload_list = std::move(upload_list),
 		}));
+		upload_list.clear();
 		
 		endCommandBuffer(upload_thread);
 	}
@@ -983,7 +985,7 @@ namespace vkl
 		_cb_mutex.unlock();
 	}
 
-	static MyVector<VkFence> _fences;
+	static thread_local MyVector<VkFence> _fences;
 
 	void LinearExecutor::waitOnCommandCompletion(bool global_wait, uint64_t timeout)
 	{

@@ -129,8 +129,15 @@ namespace vkl
 
 		if (_should_update_props_buffer)
 		{
+			ResourcesToUpload::BufferSource source{
+				.data = &_cached_props,
+				.size = sizeof(_cached_props),
+				.offset = 0,
+				.copy_data = false,
+			};
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-				.sources = {PositionedObjectView{.obj = _cached_props, .pos = 0}},
+				.sources = &source,
+				.sources_count = 1,
 				.dst = _props_buffer->instance(),
 			};
 			_should_update_props_buffer = false;

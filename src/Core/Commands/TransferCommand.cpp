@@ -2,6 +2,10 @@
 #include <vulkan/utility/vk_format_utils.h>
 #include <Core/VkObjects/DetailedVkFormat.hpp>
 
+#include <thatlib/src/stl_ext/alignment.hpp>
+#include <thatlib/src/core/Concepts.hpp>
+#include <thatlib/src/stl_ext/const_forward.hpp>
+
 namespace vkl
 {
 	
@@ -1318,9 +1322,9 @@ namespace vkl
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		size_t _total_staging_size = 0;
 
-		void populate(RecordContext& ctx, UploadResources::UploadInfo const& ui, BufferPool * pool)
+		void populate(RecordContext& ctx, BufferPool * pool)
 		{
-			_upload_list = ui.upload_list;
+			
 			
 			_extra_buffer_info.resize(_upload_list.buffers.size());
 			_extra_image_info.resize(_upload_list.images.size());
@@ -1332,17 +1336,23 @@ namespace vkl
 			for (size_t i = 0; i < _upload_list.buffers.size(); ++i)
 			{
 				const auto& buffer_upload = _upload_list.buffers[i];
-				assert(buffer_upload.sources);
+				assert(buffer_upload.sources_count > 0);
 
 				const bool use_update = [&]() {
+					return false;
 					bool res = true;
 					if (res)
 					{
 						const uint32_t max_size = 65536;
-						for (const auto& src : buffer_upload.sources)
+						for (size_t j = 0; j < buffer_upload.sources_count; ++j)
 						{
-							res &= (src.obj.size() <= max_size);
-							res &= (src.obj.size() % 4 == 0);
+							const size_t size = _upload_list.buffer_sources.data()[buffer_upload.sources_begin + j].size;
+							res &= (size <= max_size);
+							res &= (size % 4 == 0);
+							if (!res)
+							{
+								break;
+							}
 						}
 					}
 					return res;
@@ -1354,11 +1364,12 @@ namespace vkl
 				// first consider .len as .end
 				Buffer::Range buffer_range{ .begin = size_t(-1), .len = 0 };
 				size_t total_upload_size = 0;
-				for (const auto& src : buffer_upload.sources)
+				for (size_t j = 0; j < buffer_upload.sources_count; ++j)
 				{
-					buffer_range.begin = std::min(buffer_range.begin, src.pos);
-					buffer_range.len = std::max(buffer_range.len, src.obj.size() + src.pos);
-					total_upload_size += src.obj.size();
+					ResourcesToUpload::BufferSource & source = _upload_list.buffer_sources.data()[buffer_upload.sources_begin + j];
+					buffer_range.begin = std::min<size_t>(buffer_range.begin, source.offset);
+					buffer_range.len = std::max<size_t>(buffer_range.len, source.offset + source.size);
+					total_upload_size += source.size;
 				}
 				// now .len is .len
 				buffer_range.len = buffer_range.len - buffer_range.begin;
@@ -1388,10 +1399,11 @@ namespace vkl
 				}
 				else
 				{
-					for (const auto& src : buffer_upload.sources)
+					for (size_t j = 0; j < buffer_upload.sources_count; ++j)
 					{
+						const ResourcesToUpload::BufferSource& src = _upload_list.buffer_sources.data()[buffer_upload.sources_begin + j];
 						resources() += BufferUsage{
-							.bari = {buffer_upload.dst, Buffer::Range{.begin = src.pos, .len = src.obj.size()}},
+							.bari = {buffer_upload.dst, Buffer::Range{.begin = src.offset, .len = src.size}},
 							.begin_state = {
 								.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
 								.stage = stage,
@@ -1409,7 +1421,7 @@ namespace vkl
 				const auto& image_upload = _upload_list.images[i];
 
 				_extra_image_info[i].staging_offset = staging_offset;
-				staging_offset += std::alignUp(image_upload.src.size(), image_align);
+				staging_offset += std::alignUp(image_upload.size, image_align);
 
 				resources() += ImageViewUsage{
 					.ivi = image_upload.dst,
@@ -1487,15 +1499,19 @@ namespace vkl
 
 			for (size_t i = 0; i < resources.buffers.size(); ++i)
 			{
+				const ResourcesToUpload::BufferUpload & bu = resources.buffers[i];
 				if (_extra_buffer_info[i].use_update)
 				{
-					for (size_t j = 0; j < resources.buffers[i].sources.size(); ++j)
+					for (size_t j = 0; j < bu.sources_count; ++j)
 					{
+						const ResourcesToUpload::BufferSource & src = resources.buffer_sources.data()[bu.sources_begin + j];
+						const void * src_data = resources.getSrcData(src);
+						assert(!!src_data);
 						vkCmdUpdateBuffer(cmd, 
 							resources.buffers[i].dst->handle(), 
-							resources.buffers[i].sources[j].pos, 
-							resources.buffers[i].sources[j].obj.size(), 
-							resources.buffers[i].sources[j].obj.data()
+							src.offset, 
+							src.size, 
+							src_data
 						);
 					}
 				}
@@ -1503,22 +1519,22 @@ namespace vkl
 				{
 					assert(data);
 					size_t s = 0;
-					_buffer_regions.resize(resources.buffers[i].sources.size());
-					for (size_t j = 0; j < resources.buffers[i].sources.size(); ++j)
+					_buffer_regions.resize(bu.sources_count);
+					for (size_t j = 0; j < bu.sources_count; ++j)
 					{
+						const ResourcesToUpload::BufferSource& src = resources.buffer_sources.data()[bu.sources_begin + j];
+						const void* src_data = resources.getSrcData(src);
 						const size_t sb_offset = _extra_buffer_info[i].staging_offset + s;
 						uint8_t * dst = data + sb_offset;
-						const void * src = resources.buffers[i].sources[j].obj.data();
-						const size_t size = resources.buffers[i].sources[j].obj.size();
-						std::memcpy(dst, src, size);
+						std::memcpy(dst, src_data, src.size);
 						_buffer_regions[j] = VkBufferCopy2{
 							.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,
 							.pNext = nullptr,
 							.srcOffset = sb_offset,
-							.dstOffset = resources.buffers[i].sources[j].pos,
-							.size = size,
+							.dstOffset = src.offset,
+							.size = src.size,
 						};
-						s += resources.buffers[i].sources[j].obj.size();
+						s += src.size;
 
 					}
 					const VkCopyBufferInfo2 info{
@@ -1536,28 +1552,31 @@ namespace vkl
 			}
 			for (size_t i = 0; i < resources.images.size(); ++i)
 			{
-				std::memcpy(data + _extra_image_info[i].staging_offset, resources.images[i].src.data(), resources.images[i].src.size());
+				assert(!!data);
+				const ResourcesToUpload::ImageUpload & iu = resources.images[i];
+				const void * src_data = resources.getSrcData(iu);
+				std::memcpy(data + _extra_image_info[i].staging_offset, src_data, iu.size);
 				const VkBufferImageCopy2 region{
 					.sType = VK_STRUCTURE_TYPE_BUFFER_IMAGE_COPY_2,
 					.pNext = nullptr,
 					.bufferOffset = _extra_image_info[i].staging_offset,
-					.bufferRowLength = resources.images[i].buffer_row_length,
-					.bufferImageHeight = resources.images[i].buffer_image_height,
-					.imageSubresource = getImageLayersFromRange(resources.images[i].dst->createInfo().subresourceRange), // Copy to base mip only
+					.bufferRowLength = iu.buffer_row_length,
+					.bufferImageHeight = iu.buffer_image_height,
+					.imageSubresource = getImageLayersFromRange(iu.dst->createInfo().subresourceRange), // Copy to base mip only
 					.imageOffset = makeUniformOffset3D(0),
-					.imageExtent = resources.images[i].dst->image()->createInfo().extent,
+					.imageExtent = iu.dst->image()->createInfo().extent,
 				};
 				const VkCopyBufferToImageInfo2 info{
 					.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2,
 					.pNext = nullptr,
 					.srcBuffer = _staging_buffer->buffer()->handle(),
-					.dstImage = resources.images[i].dst->image()->handle(),
+					.dstImage = iu.dst->image()->handle(),
 					.dstImageLayout = _dst_layout,
 					.regionCount = 1,
 					.pRegions = &region,
 				};
 				vkCmdCopyBufferToImage2(cmd, &info);
-				pushCallbackIFN(resources.images[i].completion_callback);
+				pushCallbackIFN(iu.completion_callback);
 			}
 			if (_staging_buffer)
 			{
@@ -1597,18 +1616,34 @@ namespace vkl
 		}
 	};
 
+	struct UploadResourcesTemplateProcessor
+	{
+		template <that::concepts::UniversalReference<UploadResources::UploadInfo> UIRef>
+		static std::shared_ptr<ExecutionNode> GetExecutionNode(UploadResources& that, RecordContext& ctx, UIRef&& ui)
+		{
+			std::shared_ptr<UploadResourcesNode> node = that._exec_node_cache.getCleanNode<UploadResourcesNode>([&]() {
+				return std::make_shared<UploadResourcesNode>(UploadResourcesNode::CI{
+					.app = that.application(),
+				});
+			});
+			node->setName(that.name());
+			BufferPool* pool = ui.staging_pool ? ui.staging_pool.get() : that._staging_pool.get();
+			node->_upload_list = std::forward<ResourcesToUpload>(ui.upload_list);
+			node->populate(ctx, pool);
+			return node;
+		}
+	};
+
 	std::shared_ptr<ExecutionNode> UploadResources::getExecutionNode(RecordContext& ctx, UploadInfo const& ui)
 	{
-		std::shared_ptr<UploadResourcesNode> node = _exec_node_cache.getCleanNode<UploadResourcesNode>([&]() {
-			return std::make_shared<UploadResourcesNode>(UploadResourcesNode::CI{
-				.app = application(),
-				.name = name(),
-			});
-		});
-		node->setName(name());
-		BufferPool* pool = ui.staging_pool ? ui.staging_pool.get() : _staging_pool.get();
-		node->populate(ctx, ui, pool);
-		return node;
+		return UploadResourcesTemplateProcessor::GetExecutionNode<UploadInfo const&>(*this, ctx, ui);
+	}
+
+	std::shared_ptr<ExecutionNode> UploadResources::getExecutionNode(RecordContext& ctx, UploadInfo&& ui)
+	{
+		std::shared_ptr<ExecutionNode> res = UploadResourcesTemplateProcessor::GetExecutionNode<UploadInfo&&>(*this, ctx, std::move(ui));
+		ui.clear();
+		return res;
 	}
 
 	std::shared_ptr<ExecutionNode> UploadResources::getExecutionNode(RecordContext& ctx)
@@ -1624,6 +1659,14 @@ namespace vkl
 		return [this, ui](RecordContext & ctx)
 		{
 			return getExecutionNode(ctx, ui);
+		};
+	}
+
+	Executable UploadResources::with(UploadInfo && ui)
+	{
+		return [this, _ui = std::move(ui)](RecordContext& ctx)
+		{
+			return getExecutionNode(ctx, std::move(_ui));
 		};
 	}
 

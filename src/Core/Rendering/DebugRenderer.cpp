@@ -300,13 +300,14 @@ namespace vkl
 				.num_debug_strings = _number_of_debug_strings,
 				.num_debug_lines = _number_of_debug_lines,
 			};	
+			ResourcesToUpload::BufferSource src{
+				.data = &header,
+				.size = sizeof(header),
+				.copy_data = true,
+			};
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-				.sources = {
-					PositionedObjectView{
-						.obj = header,
-						.pos = 0,
-					},
-				},
+				.sources = &src,
+				.sources_count = 1,
 				.dst = _debug_buffer->instance(),
 			};
 			_should_write_header = false;

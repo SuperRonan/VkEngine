@@ -477,6 +477,8 @@ namespace vkl
 		std::shared_ptr<ResourcesHolder> _holder;
 		std::shared_ptr<BufferPool> _staging_pool = nullptr;
 
+		friend struct UploadResourcesTemplateProcessor;
+
 	public:
 
 		struct CreateInfo
@@ -496,18 +498,30 @@ namespace vkl
 		{
 			ResourcesToUpload upload_list = {};
 			std::shared_ptr<BufferPool> staging_pool = nullptr;
+
+			void clear()
+			{
+				upload_list.clear();
+				staging_pool.reset();
+			}
 		};
 		using UI = UploadInfo;
 
 		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, UploadInfo const& ui);
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, UploadInfo && ui);
 
 		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(UploadInfo const& ui);
+		Executable with(UploadInfo && ui);
 
 		Executable operator()(UploadInfo const& ui)
 		{
 			return with(ui);
+		}
+		Executable operator()(UploadInfo && ui)
+		{
+			return with(std::move(ui));
 		}
 	};
 

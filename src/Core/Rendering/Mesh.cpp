@@ -725,7 +725,8 @@ namespace vkl
 					synch_upload = true;
 				}
 
-				MyVector<PositionedObjectView> sources(3);
+				static thread_local MyVector<PositionedObjectView> sources;
+				sources.resize(3);
 				const MeshHeader header = getHeader();
 				sources[0] = PositionedObjectView{
 					.obj = header,
@@ -754,8 +755,19 @@ namespace vkl
 
 				if (synch_upload)
 				{
+					std::array<ResourcesToUpload::BufferSource, 3> _sources;
+					for (size_t i = 0; i < _sources.size(); ++i)
+					{
+						_sources[i] = {
+							.data = sources[i].obj.data(),
+							.size = sources[i].obj.size(),
+							.offset = sources[i].pos,
+							.copy_data = sources[i].obj.ownsValue(),
+						};
+					}
 					ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-						.sources = std::move(sources),
+						.sources = _sources.data(),
+						.sources_count = _sources.size(),
 						.dst = _device.mesh_buffer->instance(),
 					};
 					_device.uploaded = true;
@@ -774,6 +786,7 @@ namespace vkl
 						},
 					});
 				}
+				sources.clear();
 			}
 			else
 			{

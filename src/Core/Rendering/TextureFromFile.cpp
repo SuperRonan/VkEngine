@@ -224,7 +224,9 @@ namespace vkl
 			if (synch_upload)
 			{
 				ResourcesToUpload::ImageUpload up{
-					.src = ObjectView(_host_image.rawData(), _host_image.byteSize()),
+					.data = _host_image.rawData(),
+					.size = _host_image.byteSize(),
+					.copy_data = false,
 					.dst = _top_mip_view->instance(),
 				};
 				ctx.resourcesToUpload() += std::move(up);
