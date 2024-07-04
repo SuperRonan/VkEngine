@@ -15,6 +15,8 @@ namespace vkl
 		_geometries(ci.geometries.size())
 	{
 		_max_primitive_count.resize(_geometries.size());
+		//std::cout << "----------------------------------------------------" << std::endl;
+		//std::cout << "Create TLAS with " << _geometries.size() << " geometries: " << std::endl;
 		for (size_t i = 0; i < _geometries.size(); ++i)
 		{
 			Geometry & g = _geometries[i];
@@ -22,7 +24,9 @@ namespace vkl
 			g.primitive_count = ci.geometries[i].capacity;
 			g.instances_buffer = ci.geometries[i].instances_buffer;
 			_max_primitive_count[i] = ci.geometries[i].capacity;
+			//std::cout << "\t" << i << ": With a capacity of " << _max_primitive_count[i] << std::endl;
 		}
+		
 
 		create();
 	}
@@ -69,7 +73,7 @@ namespace vkl
 				.flags = g.flags,
 			};
 
-			uint32_t max_capacity = _geometries[i].instances_buffer.size() / sizeof(VkAccelerationStructureInstanceKHR);
+			const uint32_t max_capacity = _geometries[i].instances_buffer.size() / sizeof(VkAccelerationStructureInstanceKHR);
 			if (_max_primitive_count[i] > max_capacity)
 			{
 				_max_primitive_count[i] = max_capacity;
@@ -100,6 +104,7 @@ namespace vkl
 		{
 			requireRebuild();
 			g.primitive_count = n;
+			assert(_max_primitive_count[geometry_id] >= n);
 		}
 	}
 
@@ -242,9 +247,9 @@ namespace vkl
 		{
 			TopLevelAccelerationStructureInstance::GeometryCreateInfo & gci = geometries_ci[i];
 			Geometry & g = _geometries[i];
-			gci.capacity = g.blases.size32();
 			gci.flags = g.flags.valueOr(0) | common_geom_flags;
 			gci.instances_buffer = g.instances_buffer->getSegmentInstance();
+			gci.capacity = gci.instances_buffer.size() / sizeof(VkAccelerationStructureInstanceKHR);
 		}
 		_inst = std::make_shared<TopLevelAccelerationStructureInstance>(TopLevelAccelerationStructureInstance::CI{
 			.app = application(),

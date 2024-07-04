@@ -232,7 +232,7 @@ namespace vkl
 				for (uint32_t j = 0; j < build_info.geometryCount; ++j)
 				{
 					VkAccelerationStructureBuildRangeInfoKHR & range = node->_build_ranges[previous_range_size + j];
-					memset(&range, 0, sizeof(range));
+					std::memset(&range, 0, sizeof(range));
 					if (blasi)
 					{
 						range.primitiveCount = blasi->maxPrimitiveCount()[j];
