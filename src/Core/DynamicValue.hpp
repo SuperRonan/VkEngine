@@ -334,7 +334,8 @@ namespace vkl
 		template <std::convertible_to<typename impl::LambdaValueInstanceByRef<T>::LambdaType> L>
 		DynamicValue& operator=(L const& l)
 		{
-			_inst = std::make_shared<impl::LambdaValueInstanceByRef>(l);
+			_inst = std::make_shared<impl::LambdaValueInstanceByRef<T>>(l);
+			return *this;
 		}
 
 		T const& getCachedValue()const

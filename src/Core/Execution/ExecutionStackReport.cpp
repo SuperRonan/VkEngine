@@ -115,7 +115,7 @@ namespace vkl
 					++unit_id;
 				}
 				assert(unit_id < units.size());
-				_strings.print(false, "%.2f%s", time, units[unit_id]);
+				_strings.printf(false, "%.2f%s", time, units[unit_id]);
 			}
 		};
 		for (size_t i = 0; i < _stack.size(); ++i)
@@ -140,9 +140,9 @@ namespace vkl
 			}();
 			const std::string_view label = _strings.get(_stack[i].label_range);
 			
-			_strings.print(false, "%s: ", label.data());
+			_strings.printf(false, "%s: ", label.data());
 			textTimeNs(cpu_duration_ns);
-			_strings.print(false, " | ");
+			_strings.printf(false, " | ");
 			textTimeNs(gpu_duration_ns);
 			_strings.pushNull();
 			const size_t new_size = _strings.size();

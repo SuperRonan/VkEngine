@@ -109,8 +109,8 @@ namespace vkl
 		Dyn<DefinitionsList> defs = [this](DefinitionsList & res)
 		{
 			res.clear();
-			res.push_back("OUT_FORMAT "s + _format_glsl);
-			res.push_back("AO_SAMPLES "s + std::to_string(_ao_samples));
+			res.pushBackFormatted("OUT_FORMAT {:s}", _format_glsl);
+			res.pushBackFormatted("AO_SAMPLES {:d}", _ao_samples);
 			res.push_back(_method_glsl);
 			return res;
 		};

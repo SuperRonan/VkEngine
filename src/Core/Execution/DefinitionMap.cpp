@@ -45,7 +45,7 @@ namespace vkl
 				std::stringstream ss;
 				for (const auto& [k, v] : _definitions)
 				{
-					_collapsed.emplace_back(k + " "s + v);
+					_collapsed.pushBackFormatted("{:s} {:s}", k, v);
 				}
 			}
 		}

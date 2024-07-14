@@ -55,9 +55,9 @@ namespace vkl
 
 			oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);
 			copied_so_far = version_end;
-			for (const std::string& def : definitions)
+			for (size_t i = 0; i < definitions.size(); ++i)
 			{
-				oss << "#define " << def << "\n";
+				oss << "#define " << definitions[i] << "\n";
 			}
 		}
 
@@ -729,7 +729,6 @@ namespace vkl
 	{
 		using namespace std::containers_append_operators;
 
-		static thread_local DefinitionsList definitions;
 		static thread_local SpecializationKey new_key;
 		
 		if (ctx.updateTick() <= _update_tick)
@@ -741,15 +740,14 @@ namespace vkl
 
 		if (checkHoldInstance())
 		{
-			definitions.clear();
 			new_key.clear();
 			
-			definitions = *_definitions;
+			DefinitionsList definitions = *_definitions;
 			definitions += ctx.commonDefinitions()->collapsed();
 			
-			for (std::string const& def : definitions)
+			for (size_t i = 0; i < definitions.size(); ++i)
 			{
-				new_key.definitions += def;
+				new_key.definitions += definitions[i];
 				new_key.definitions += '\n';
 			}
 		

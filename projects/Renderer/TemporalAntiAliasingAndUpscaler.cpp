@@ -51,7 +51,7 @@ namespace vkl
 					.binding = 2,
 				},
 			},
-			.definitions = [this](){ DefinitionsList res; res.push_back("IMAGE_FORMAT "s + _format_glsl); return res; },
+			.definitions = [this](DefinitionsList & res){ res.clear(); res.pushBackFormatted("IMAGE_FORMAT {:s}", _format_glsl);},
 		});
 	}
 

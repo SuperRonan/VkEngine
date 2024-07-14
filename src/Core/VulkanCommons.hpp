@@ -28,6 +28,7 @@
 
 #include <thatlib/src/core/Range.hpp>
 #include <thatlib/src/stl_ext/alignment.hpp>
+#include <thatlib/src/utils/ExtensibleStringContainer.hpp>
 
 #include "DynamicValue.hpp"
 
@@ -816,7 +817,7 @@ namespace vkl
 		size_t pos = 0;
 	};
 
-	using DefinitionsList = MyVector<std::string>;
+	using DefinitionsList = that::ExtensibleStringContainer32;
 }
 
 template<class Stream>

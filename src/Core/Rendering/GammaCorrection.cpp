@@ -45,12 +45,13 @@ namespace vkl
 				.binding = 1,
 			});
 		}
-
-		Dyn<DefinitionsList> definitions = [this]() -> DefinitionsList
+		
+		Dyn<DefinitionsList> definitions = [this](DefinitionsList & res)
 		{
-			DefinitionsList res(2);
-			res[0] = "USE_SEPARATE_SOURCE "s + ((_src == _dst) ? "0"s : "1"s);
-			res[1] = "DST_FORMAT "s + _dst_glsl_format;
+			res.clear();
+			const char d = (_src == _dst) ? '0' : '1';
+			res.pushBackFormatted("USE_SEPARATE_SOURCE {:c}"sv, d);
+			res.pushBackFormatted("DST_FORMAT {:s}", _dst_glsl_format);
 			return res;
 		};
 

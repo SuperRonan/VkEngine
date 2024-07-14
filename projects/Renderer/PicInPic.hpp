@@ -41,7 +41,8 @@ namespace vkl
 		};
 
 		MultiDescriptorSetsLayouts _sets_layouts;
-
+		
+		std::string _glsl_format;
 		Dyn<DefinitionsList> _definitions;
 
 	public:

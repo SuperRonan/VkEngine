@@ -11,10 +11,9 @@ namespace vkl
 	{
 		const std::filesystem::path common_shaders = application()->mountingPoints()["ShaderLib"];
 
-		_definitions = [&]() -> DefinitionsList {
-			DetailedVkFormat detailed_format = DetailedVkFormat::Find(_target->format().value());
-			std::string glsl_format = detailed_format.getGLSLName();
-			return {glsl_format, };
+		_definitions = [this](DefinitionsList& res){
+			res.clear();
+			res += _glsl_format;
 		};
 
 		_fast_pip = std::make_shared<ComputeCommand>(ComputeCommand::CI{
@@ -50,6 +49,8 @@ namespace vkl
 		const bool update_anyway = context.updateAnyway();
 		if (_enable || update_anyway)
 		{
+			DetailedVkFormat detailed_format = DetailedVkFormat::Find(_target->format().value());
+			_glsl_format = detailed_format.getGLSLName();
 			context.resourcesToUpdateLater() += _fast_pip;
 			context.resourcesToUpdateLater() += _show_outline;
 		}
