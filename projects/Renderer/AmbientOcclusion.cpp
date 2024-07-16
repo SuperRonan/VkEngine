@@ -1,5 +1,5 @@
 #include "AmbientOcclusion.hpp"
-#include <Core/VkObjects/DetailedVkFormat.hpp>
+#include <vkl/VkObjects/DetailedVkFormat.hpp>
 
 namespace vkl
 {

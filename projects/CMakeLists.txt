@@ -37,7 +37,7 @@ AddProject(Test)
 
 AddProject(Renderer)
 
-set(MP_CONTENT "\"ShaderLib\" \"${ENGINE_SRC_PATH}/Shaders/\"")
+set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen/\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${ENGINE_SRC_PATH}/../projects/\"")
 file(GENERATE OUTPUT "$<CONFIG>/MountingPoints.txt" CONTENT ${MP_CONTENT})

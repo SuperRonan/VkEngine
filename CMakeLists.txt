@@ -27,7 +27,7 @@ set(VK_ENGINE_DEFINITIONS "")
 # ThatLib
 add_subdirectory(ext/thatlib)
 set(THAT_LIB "thatlib")
-set(THAT_LIB_INCLUDE_DIR ext/thatlib)
+set(THAT_LIB_INCLUDE_DIR ${THATLIB_INCLUDE_FOLDER})
 set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${THAT_LIB})
 set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${THAT_LIB_INCLUDE_DIR})
 
@@ -179,31 +179,70 @@ add_compile_definitions($<IF:$<CONFIG:MinSizeRel>,VKL_BUILD_MIN_SIZE_RELEASE=1,V
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
-set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" src ext)
 
 
-FILE(
-	GLOB VK_ENGINE_SOURCE 
-	src/Core/* 
-	src/Core/App/*
-	src/Core/Commands/*
-	src/Core/Execution/*
-	src/Core/IO/*
-	src/Core/Maths/*
-	src/Core/Rendering/*
-	src/Core/VkObjects/*
-	src/Core/Utils/* 
+set(VKL_FOLDERS
+	Core
+	App
+	Commands
+	Execution
+	IO
+	Maths
+	Rendering
+	VkObjects
+	Utils
+	Import 
 )
 
-file(GLOB SPV_REFLECT_SOURCE ext/SPIRV-Reflect/spirv_reflect.h ext/SPIRV-Reflect/spirv_reflect.cpp)
+set(VKL_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(VKL_SOURCE_FOLDER "${VKL_ROOT_DIR}/src/")
+set(VKL_INCLUDE_FOLDER "${VKL_ROOT_DIR}/include/")
+set(VKL_SHADER_FOLDER "${VKL_ROOT_DIR}/Shaders/")
 
-source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/src/ FILES ${VK_ENGINE_SOURCE})
 
-source_group("SPIRV-Reflect" FILES ${SPV_REFLECT_SOURCE})
+
+
+set(VKL_INCLUDE_FOLDERS ${VKL_FOLDERS})
+list(TRANSFORM VKL_INCLUDE_FOLDERS PREPEND "${VKL_INCLUDE_FOLDER}vkl/")
+
+set(VKL_SOURCE_FOLDERS ${VKL_FOLDERS})
+list(TRANSFORM VKL_SOURCE_FOLDERS PREPEND "${VKL_SOURCE_FOLDER}vkl/")
+
+set(VKL_INCLUDE_FOLDERS_FILES ${VKL_INCLUDE_FOLDERS})
+list(TRANSFORM VKL_INCLUDE_FOLDERS_FILES APPEND "/*")
+set(VKL_SOURCE_FOLDERS_FILES ${VKL_SOURCE_FOLDERS})
+list(TRANSFORM VKL_SOURCE_FOLDERS_FILES APPEND "/*")
+
+
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" "${VKL_INCLUDE_FOLDER}")
+
+file(
+	GLOB VK_ENGINE_FILES 
+	${VKL_SOURCE_FOLDERS_FILES} ${VKL_INCLUDE_FOLDERS_FILES}
+)
+	
+file(GLOB SPV_REFLECT_FILES ext/SPIRV-Reflect/spirv_reflect.h ext/SPIRV-Reflect/spirv_reflect.cpp)
+	
+option(VK_ENGINE_SEPARATE_SOURCE_GROUP OFF)
+#source_group(TREE ${CMAKE_CURRENT_LIST_DIR}/src/ FILES ${VK_ENGINE_FILES})
+foreach(folder IN LISTS VKL_FOLDERS)
+	if(${VK_ENGINE_SEPARATE_SOURCE_GROUP})
+		source_group("sources/${folder}" REGULAR_EXPRESSION "${VKL_SOURCE_FOLDER}vkl/${folder}/.*")
+		source_group("headers/${folder}" REGULAR_EXPRESSION "${VKL_INCLUDE_FOLDER}vkl/${folder}/.*")
+	else()
+		source_group(${folder} REGULAR_EXPRESSION "(src|include)/vkl/${folder}/.*")
+	endif()
+endforeach()
+source_group("SPIRV-Reflect" FILES ${SPV_REFLECT_FILES})
+
+
+file(GLOB_RECURSE VKL_COMMON_SHADERS_FILES "${VKL_SHADER_FOLDER}/*")
+
+source_group(TREE "${VKL_SHADER_FOLDER}/" PREFIX "Shaders" FILES ${VKL_COMMON_SHADERS_FILES})
 
 set(ENGINE_SRC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/")
 
-add_library(VkEngine STATIC ${VK_ENGINE_SOURCE} ${SPV_REFLECT_SOURCE})
+add_library(VkEngine STATIC ${VK_ENGINE_FILES} ${SPV_REFLECT_FILES} ${VKL_COMMON_SHADERS_FILES})
 set_target_properties(VkEngine PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_definitions(VkEngine PUBLIC "ENGINE_SRC_PATH=\"${ENGINE_SRC_PATH}\"")
 target_include_directories(VkEngine PUBLIC ${VK_ENGINE_INCLUDE_DIRS}) 

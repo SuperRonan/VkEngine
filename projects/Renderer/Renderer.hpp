@@ -1,24 +1,24 @@
 #pragma once
 
-#include <Core/Execution/Executor.hpp>
-#include <Core/Execution/Module.hpp>
+#include <vkl/Execution/Executor.hpp>
+#include <vkl/Execution/Module.hpp>
 
-#include <Core/Commands/GraphicsCommand.hpp>
-#include <Core/Commands/ComputeCommand.hpp>
-#include <Core/Commands/TransferCommand.hpp>
+#include <vkl/Commands/GraphicsCommand.hpp>
+#include <vkl/Commands/ComputeCommand.hpp>
+#include <vkl/Commands/TransferCommand.hpp>
 
-#include <Core/Rendering/Model.hpp>
-#include <Core/Rendering/RenderObjects.hpp>
-#include <Core/Rendering/Scene.hpp>
-#include <Core/Rendering/Camera.hpp>
+#include <vkl/Rendering/Model.hpp>
+#include <vkl/Rendering/RenderObjects.hpp>
+#include <vkl/Rendering/Scene.hpp>
+#include <vkl/Rendering/Camera.hpp>
 
-#include <Core/IO/ImGuiUtils.hpp>
-#include <Core/IO/GuiContext.hpp>
+#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/IO/GuiContext.hpp>
 
 #include "AmbientOcclusion.hpp"
 #include "TemporalAntiAliasingAndUpscaler.hpp"
 
-#include <Core/Commands/AccelerationStructureCommands.hpp>
+#include <vkl/Commands/AccelerationStructureCommands.hpp>
 
 #include <unordered_map>
 #include <map>

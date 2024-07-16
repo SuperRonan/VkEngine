@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Core/App/VkApplication.hpp>
+#include <vkl/App/VkApplication.hpp>
 
-#include <Core/Execution/Module.hpp>
+#include <vkl/Execution/Module.hpp>
 
-#include <Core/Commands/ComputeCommand.hpp>
+#include <vkl/Commands/ComputeCommand.hpp>
 
-#include <Core/IO/GuiContext.hpp>
+#include <vkl/IO/GuiContext.hpp>
 
-#include <Core/Rendering/Camera.hpp>
+#include <vkl/Rendering/Camera.hpp>
 
 namespace vkl
 {

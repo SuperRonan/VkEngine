@@ -1,38 +1,38 @@
 #define SDL_MAIN_HANDLED
 
-#include <Core/App/ImGuiApp.hpp>
+#include <vkl/App/ImGuiApp.hpp>
 
-#include <Core/VkObjects/VkWindow.hpp>
-#include <Core/VkObjects/ImageView.hpp>
-#include <Core/VkObjects/Buffer.hpp>
+#include <vkl/VkObjects/VkWindow.hpp>
+#include <vkl/VkObjects/ImageView.hpp>
+#include <vkl/VkObjects/Buffer.hpp>
 
-#include <Core/Commands/ComputeCommand.hpp>
-#include <Core/Commands/GraphicsCommand.hpp>
-#include <Core/Commands/TransferCommand.hpp>
-#include <Core/Commands/ImguiCommand.hpp>
+#include <vkl/Commands/ComputeCommand.hpp>
+#include <vkl/Commands/GraphicsCommand.hpp>
+#include <vkl/Commands/TransferCommand.hpp>
+#include <vkl/Commands/ImguiCommand.hpp>
 
-#include <Core/Execution/LinearExecutor.hpp>
-#include <Core/Execution/Module.hpp>
-#include <Core/Execution/ResourcesManager.hpp>
-#include <Core/Execution/PerformanceReport.hpp>
+#include <vkl/Execution/LinearExecutor.hpp>
+#include <vkl/Execution/Module.hpp>
+#include <vkl/Execution/ResourcesManager.hpp>
+#include <vkl/Execution/PerformanceReport.hpp>
 
-#include <Core/Utils/TickTock.hpp>
-#include <Core/Utils/StatRecorder.hpp>
+#include <vkl/Utils/TickTock.hpp>
+#include <vkl/Utils/StatRecorder.hpp>
 
-#include <Core/IO/ImGuiUtils.hpp>
-#include <Core/IO/InputListener.hpp>
+#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/IO/InputListener.hpp>
 
-#include <Core/Rendering/DebugRenderer.hpp>
-#include <Core/Rendering/Camera.hpp>
-#include <Core/Rendering/Model.hpp>
-#include <Core/Rendering/Scene.hpp>
-#include <Core/Rendering/SceneLoader.hpp>
-#include <Core/Rendering/SceneUserInterface.hpp>
-#include <Core/Rendering/GammaCorrection.hpp>
-#include <Core/Rendering/ImagePicker.hpp>
-#include <Core/Rendering/ImageSaver.hpp>
+#include <vkl/Rendering/DebugRenderer.hpp>
+#include <vkl/Rendering/Camera.hpp>
+#include <vkl/Rendering/Model.hpp>
+#include <vkl/Rendering/Scene.hpp>
+#include <vkl/Rendering/SceneLoader.hpp>
+#include <vkl/Rendering/SceneUserInterface.hpp>
+#include <vkl/Rendering/GammaCorrection.hpp>
+#include <vkl/Rendering/ImagePicker.hpp>
+#include <vkl/Rendering/ImageSaver.hpp>
 
-#include <Core/Maths/Transforms.hpp>
+#include <vkl/Maths/Transforms.hpp>
 
 #include <argparse/argparse.hpp>
 

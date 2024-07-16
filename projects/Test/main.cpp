@@ -1,20 +1,20 @@
 
 #define SDL_MAIN_HANDLED
 
-#include <Core/Utils/stl_extension.hpp>
-#include <Core/DynamicValue.hpp>
-#include <Core/VulkanCommons.hpp>
+#include <vkl/Utils/stl_extension.hpp>
+#include <vkl/Core/DynamicValue.hpp>
+#include <vkl/Core/VulkanCommons.hpp>
 
 #include <chrono>
 #include <thread>
 #include <iostream>
 
-#include <Core/Execution/ThreadPool.hpp>
+#include <vkl/Execution/ThreadPool.hpp>
 
-#include <Core/Utils/UniqueIndexAllocator.hpp>
+#include <vkl/Utils/UniqueIndexAllocator.hpp>
 #include <random>
 
-#include <thatlib/src/math/Half.hpp>
+#include <that/math/Half.hpp>
 
 void TestUniqueIdAllocator()
 {

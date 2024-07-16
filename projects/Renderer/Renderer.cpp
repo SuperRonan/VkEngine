@@ -1,6 +1,6 @@
 #include "Renderer.hpp"
 
-#include <Core/Commands/PrebuiltTransferCommands.hpp>
+#include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
 namespace vkl
 {

@@ -1,10 +1,10 @@
 #include "TemporalAntiAliasingAndUpscaler.hpp"
 
-#include <Core/VkObjects/DetailedVkFormat.hpp>
+#include <vkl/VkObjects/DetailedVkFormat.hpp>
 
-#include <Core/Execution/Executor.hpp>
+#include <vkl/Execution/Executor.hpp>
 
-#include <Core/Commands/PrebuiltTransferCommands.hpp>
+#include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
 namespace vkl
 {

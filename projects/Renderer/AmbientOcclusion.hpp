@@ -1,15 +1,15 @@
 #pragma once
 
-#include <Core/Execution/Module.hpp>
-#include <Core/Execution/Executor.hpp>
+#include <vkl/Execution/Module.hpp>
+#include <vkl/Execution/Executor.hpp>
 
-#include <Core/Commands/ComputeCommand.hpp>
-#include <Core/Commands/RayTracingCommand.hpp>
+#include <vkl/Commands/ComputeCommand.hpp>
+#include <vkl/Commands/RayTracingCommand.hpp>
 
-#include <Core/IO/GuiContext.hpp>
-#include <Core/IO/ImGuiUtils.hpp>
+#include <vkl/IO/GuiContext.hpp>
+#include <vkl/IO/ImGuiUtils.hpp>
 
-#include <Core/Rendering/Camera.hpp>
+#include <vkl/Rendering/Camera.hpp>
 
 
 namespace vkl
