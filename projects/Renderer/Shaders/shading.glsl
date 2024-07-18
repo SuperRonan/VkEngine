@@ -80,6 +80,7 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, uint shadi
 		vec3 position_light = position_light_h.xyz / position_light_h.w;
 		const vec3 to_light = light.position - position;
 		res.Le = 0..xxx;
+
 		if(position_light_h.z > 0)
 		{
 			const float dist2 = dot(to_light, to_light);
@@ -97,7 +98,7 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, uint shadi
 				if((attenuation_flags) != 0)
 				{
 					float attenuation = 0;
-					float dist_to_center;
+					float dist_to_center = 0;
 					if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_LINEAR)
 					{
 						dist_to_center = length(clip_uv_in_light);
@@ -247,7 +248,7 @@ vec3 shade(vec3 albedo, vec3 position, vec3 normal)
 		{
 			const float cos_theta = dot(normal, light_sample.direction_to_light);
 			const float abs_cos_theta = abs(cos_theta);
-			const float bsdf_rho = cos_theta > 0 ? 1 : 0;
+			const float bsdf_rho = (cos_theta > 0 ? 1 : 0) / M_PI;
 
 			float shadow = 1;
 			if(length2(light_sample.Le * bsdf_rho) > 0)

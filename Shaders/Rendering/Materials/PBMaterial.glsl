@@ -8,6 +8,9 @@ struct PBMaterialProperties
 {
 	vec3 albedo;
 	uint flags;
+	float metallic;
+	float roughness;
+	float cavity;
 };
 
 PBMaterialProperties NoMaterialProps()

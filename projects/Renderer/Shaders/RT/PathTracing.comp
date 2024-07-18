@@ -1,6 +1,7 @@
 #version 460
 
 #define I_WANT_TO_DEBUG 0
+#define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
 #include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #include "../common.glsl"
@@ -26,30 +27,191 @@ layout(push_constant) uniform PushConstant
 	uint value;
 } _pc;
 
-#define MAX_DEPTH 5
-#define LIGHT_SAMPLES 8
+#define MAX_DEPTH 3
+#define LIGHT_SAMPLES 16
 
 struct PBMaterialData
 {
 	vec3 albedo;
+	uint flags;
+	float metallic;
 	vec3 normal;
+	float roughness;
+	float cavity;
+};
+
+struct GeometryShadingInfo
+{
+	vec3 position;
+	vec3 geometry_normal;
+	vec3 vertex_shading_normal;
+	vec3 shading_normal;
+	vec3 shading_tangent;
 };
 
 PBMaterialData readMaterial(uint material_id, vec2 uv)
 {
+	const PBMaterialProperties props = scene_pb_materials[material_id].props;
 	PBMaterialData res;
+	res.flags = props.flags;
 	res.albedo = 0..xxx;
 	res.normal = vec3(0, 0, 1);
 	const ScenePBMaterialTextures textures = scene_pb_materials_textures.ids[material_id];
-	if(textures.albedo_texture_id != uint(-1))
+	if(((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0) && textures.albedo_texture_id != uint(-1))
 	{
 		res.albedo = texture(SceneTextures2D[textures.albedo_texture_id], uv).xyz;
 	}
 	else
 	{
-		res.albedo = scene_pb_materials[material_id].props.albedo;
+		res.albedo = props.albedo;
 	}
 
+	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0) && textures.normal_texture_id != uint(-1))
+	{
+		res.normal = texture(SceneTextures2D[textures.normal_texture_id], uv).xyz;
+		res.normal = normalize(res.normal * 2 - 1);
+	}
+
+	res.metallic = props.metallic;
+	res.roughness = props.roughness;
+	res.cavity = props.cavity;
+
+	return res;
+}
+
+
+float microfacetD(float alpha2, vec3 normal, vec3 halfway)
+{
+	return alpha2 / (M_PI * sqr(sqr(dot(normal, halfway)) * (alpha2 - 1) + 1));
+}
+
+float microfacetGGX(vec3 n, vec3 v, float k)
+{
+	const float d = dot(n, v);
+	return d / (d * (1.0 - k) + k);
+}
+
+float specularFresnelNormalIncidence(float n)
+{
+	return sqr(n - 1) / sqr(n + 1);
+}
+
+vec3 FresnelSchlick(vec3 F0, vec3 v, vec3 h)
+{
+	const float a = -5.55473f;
+	const float b = -6.98316f;
+	const float d = dot(v, h);
+	return F0 + (1.0.xxx - F0) * pow(2, (a * d + b) * d);
+}
+
+// wo: outcoming direction
+// wi: incoming direction
+// Assume directions vectors are normalized
+vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in PBMaterialData material)
+{
+	vec3 res = 0..xxx;
+	
+	const vec3 geometry_normal = gsi.geometry_normal;
+	const vec3 shading_normal = gsi.shading_normal;
+	const vec3 normal = gsi.shading_normal;
+
+	const float cos_theta_geom_i = dot(geometry_normal, wi);
+	const float cos_theta_geom_o = dot(geometry_normal, wo);
+
+	const float cos_theta_i = dot(normal, wi);
+	const float abs_cos_theta_i = abs(cos_theta_i);
+	const float cos_theta_o = dot(normal, wo);
+	const float abs_cos_theta_o = abs(cos_theta_o);
+
+	const bool same_hemisphere = sign(cos_theta_geom_i) == sign(cos_theta_geom_o);
+
+	const bool can_reflect = (material.flags & MATERIAL_FLAG_REFLECTION_BIT) != 0;
+	const bool can_transmit = (material.flags & MATERIAL_FLAG_TRANSMISSION_BIT) != 0;
+
+	if((same_hemisphere && can_reflect) || (!same_hemisphere && can_transmit))
+	{
+		
+		const vec3 reflected = reflect(-wo, normal);
+		const vec3 halfway = normalize(wo + wi);
+
+		const float alpha = sqr(material.roughness);
+		const float alpha2 = sqr(alpha);
+		const float specular_k = sqr(material.roughness + 1) / 8;
+
+		const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
+		const vec3 specular_F = FresnelSchlick(F0, wo, halfway);
+		const vec3 Kd = 1..xxx - specular_F; 
+
+		const float diffuse_rho = oo_PI;
+		const vec3 diffuse_contribution = Kd * material.albedo * diffuse_rho * (1.0 - material.metallic);
+		res += diffuse_contribution;
+
+		//const vec3 F0 = material.F0;
+
+		if(nonZero(F0) && (material.roughness < 1.0f || material.metallic != 0.0f))
+		{
+			const float specular_D = microfacetD(alpha2, normal, halfway);
+			const float specular_Go = microfacetGGX(normal, wo, specular_k);
+			const float specular_Gi = microfacetGGX(normal, wi, specular_k);
+			const float specular_G = specular_Go * specular_Gi; 
+
+			const vec3 specular_cook_torrance = specular_F * specular_D * specular_G / max(4.0f * abs_cos_theta_i * abs_cos_theta_o, EPSILON_f);
+			if(!any(isWrong(specular_cook_torrance)))
+			{
+				res += specular_cook_torrance;
+			}
+		}
+
+	}
+
+	return res;
+}
+
+struct BSDFSample
+{
+	vec3 direction;
+	vec3 bsdf;
+	float pdf;
+};
+
+BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMaterialData material, inout rng_t rng)
+{
+	BSDFSample res;
+	res.pdf = 1.0f;
+	const vec3 normal = gsi.shading_normal;
+	const mat3 local_to_world_basis = basisFromDir(normal);
+	const vec3 reflected = reflect(-wo, normal);
+
+	const float alpha = sqr(material.roughness);
+	const float alpha2 = sqr(alpha);
+	const float specular_k = sqr(material.roughness + 1) / 8;
+
+	const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
+	bool sample_diffuse = true;
+	if(material.roughness == 0)
+	{
+		const float dielectric_probability = material.metallic;
+		const float dielectric_selection = randomFloat01(rng);
+		if(dielectric_selection < dielectric_probability)
+		{
+			res.direction = reflected;
+			res.pdf = dielectric_probability;
+			res.bsdf = F0;
+			sample_diffuse = false;
+		}
+		else
+		{
+			res.pdf = (1.0f - dielectric_probability);
+		}
+	}
+	if(sample_diffuse)
+	{
+		const vec3 local_direction = randomCosineDirOnHemisphere(rng);
+		res.direction = local_to_world_basis * local_direction;
+		res.pdf *= local_direction.z / M_PI;
+		res.bsdf = evaluateBSDF(gsi, wo, res.direction, material);
+	}
+	
 	return res;
 }
 
@@ -63,23 +225,25 @@ uint drawLight(inout rng_t rng, out float pdf)
 }
 
 // TODO add geometry normal
-vec3 drawLightSample(const in Vertex vertex, const in PBMaterialData material, inout rng_t rng)
+vec3 drawLightSample(const in GeometryShadingInfo vertex, vec3 wo, const in PBMaterialData material, inout rng_t rng)
 {
 	vec3 res = 0..xxx;
 	float pdf = 0;
-	uint light_id = drawLight(rng, pdf);
-	LightSample light_sample = getLightSample(light_id, vertex.position, vertex.normal, 0);
-	pdf *= light_sample.pdf;
-	if(pdf > 0)
-	{
-		const float cos_theta = dot(vertex.normal, light_sample.direction_to_light);
-		const float abs_cos_theta = abs(cos_theta);
-		const float bsdf = cos_theta > 0 ? 1 : -1;
-		res = light_sample.Le * bsdf * abs_cos_theta * material.albedo / pdf;
+	const uint light_id = drawLight(rng, pdf);
 
-		if(length2(res) > 0)
+	const vec3 normal = vertex.shading_normal;
+
+	LightSample light_sample = getLightSample(light_id, vertex.position, normal, 0);
+	pdf *= light_sample.pdf;
+	if(pdf > 0 && nonZero(light_sample.Le))
+	{
+		const vec3 bsdf = evaluateBSDF(vertex, wo, light_sample.direction_to_light, material);
+		const float cos_theta = abs(dot(light_sample.direction_to_light, vertex.shading_normal));
+		res = light_sample.Le * bsdf * cos_theta / pdf;
+
+		if(nonZero(res))
 		{
-			res *= computeShadow(vertex.position, vertex.normal, light_sample);
+			res *= computeShadow(vertex.position, normal, light_sample);
 		}
 	}
 
@@ -108,6 +272,8 @@ Vertex normalize(Vertex v)
 	return v;
 }
 
+
+
 vec3 trace(Ray ray, inout rng_t rng)
 {
 	vec3 res = 0..xxx;
@@ -130,6 +296,8 @@ vec3 trace(Ray ray, inout rng_t rng)
 		}
 		else
 		{
+			const vec3 wo = -ray.direction;
+
 			const uint custom_index = rayQueryGetIntersectionInstanceCustomIndexEXT(rq, true);
 			const uint instance_index = rayQueryGetIntersectionInstanceIdEXT(rq, true);
 			const uint sbt_index = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rq, true);
@@ -150,34 +318,51 @@ vec3 trace(Ray ray, inout rng_t rng)
 			const mat3 triangle_positions = readSceneTriangleVertexPositions(hit_object_ref.mesh_id, vertices_id);
 #endif
 			const vec3 geometry_normal_object = computeTriangleNormal(triangle_positions);
-			const vec3 geometry_normal_world = object_to_world_4dir * geometry_normal_object;
+			const vec3 geometry_normal_world = normalize(object_to_world_4dir * geometry_normal_object);
 			const Vertex vertex = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, barycentrics);
 			const Vertex world_vertex = normalize(transformVertex(object_to_world, vertex));
+			
+			GeometryShadingInfo gsi;
+			gsi.position = world_vertex.position;
+			gsi.geometry_normal = geometry_normal_world;
+			gsi.vertex_shading_normal = world_vertex.normal;
+			gsi.shading_tangent = world_vertex.tangent;
+			const vec3 shading_bt = cross(gsi.shading_tangent, gsi.vertex_shading_normal);
+			const mat3 shading_TBN = mat3(gsi.shading_tangent, shading_bt, gsi.vertex_shading_normal);
 			PBMaterialData material = readMaterial(hit_object_ref.material_id, vertex.uv);
+			gsi.shading_normal = shading_TBN * material.normal;
+			//gsi.shading_normal = gsi.vertex_shading_normal;
+			
 
 			vec3 light_samples = 0..xxx;
 			for(uint l = 0; l < LIGHT_SAMPLES; ++l)
 			{
-				light_samples += drawLightSample(world_vertex, material, rng);
+				light_samples += drawLightSample(gsi, wo, material, rng);
 			}
 			res += throughput * (light_samples / LIGHT_SAMPLES);
 
 			if(depth < (MAX_DEPTH - 1))
 			{
-				const vec3 bt = cross(world_vertex.tangent, world_vertex.normal);
-				const mat3 TBN = mat3(world_vertex.tangent, bt, world_vertex.normal);
+				BSDFSample bsdf_sample = sampleBSDF(gsi, wo, material, rng);
+				if(bsdf_sample.pdf > 0)
+				{
+					vec3 next_dir_world = bsdf_sample.direction;
+					ray.origin = gsi.position;
+					ray.direction = next_dir_world;
+					range.x = rayTMin(ray, geometry_normal_world);
 
-				vec3 next_dir = randomCosineDirOnHemisphere(rng);
-				float pdf = next_dir.z;
-				vec3 next_dir_world = TBN * next_dir;
-				ray.origin = world_vertex.position;
-				ray.direction = next_dir_world;
-				range.x = rayTMin(ray, geometry_normal_world);
+					const float cos_theta = abs(dot(gsi.shading_normal, ray.direction));
 
-				throughput *= (next_dir.z * material.albedo);
+					throughput *= (bsdf_sample.bsdf * cos_theta / bsdf_sample.pdf);
+				}
+				else
+				{
+					throughput*= 0; 	
+				}
+				
 			}
 
-			if(sum(throughput) <= 0)
+			if(!nonZero(throughput))
 			{
 				break;
 			}
@@ -196,6 +381,7 @@ void main()
 	const vec2 oo_dims = rcp(dims);
 	if(all(lessThan(pixel, dims)))
 	{
+
 		rng_t rng = hash(pixel) ^ hash(ubo.frame_idx);
 		vec3 res = 0..xxx;
 		const vec2 subpixel_uv = lerp(0.1.xx, 0.9.xx, randomVec2_01(rng));

@@ -89,7 +89,7 @@ namespace vkl
 
 		float intensity = (_emission.x + _emission.y + _emission.z) / 3;
 		float old_intensity = intensity;
-		bool changed = ImGui::SliderFloat("Intensity", &intensity, 0, 10);
+		bool changed = ImGui::SliderFloat("Intensity", &intensity, 0, 50, "%.3f", ImGuiSliderFlags_Logarithmic);
 
 		if (changed && old_intensity > 0.0f)
 		{

@@ -23,11 +23,22 @@ namespace vkl
 	PhysicallyBasedMaterial::PhysicallyBasedMaterial(CreateInfo const& ci) :
 		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased, .synch = ci.synch}),
 		_albedo(ci.albedo),
+		_metallic(ci.metallic),
+		_roughness(ci.roughness),
+		_cavity(ci.cavity),
 		_sampler(ci.sampler),
 		_albedo_texture(ci.albedo_texture),
 		_normal_texture(ci.normal_texture),
 		_cached_props({})
 	{
+		if (!_roughness.hasValue())
+		{
+			_roughness = 1.0f;
+		}
+		if (!_metallic.hasValue())
+		{
+			_metallic = 0.0f;
+		}
 		_should_update_props_buffer = true;
 
 		_props_buffer = std::make_shared<Buffer>(Buffer::CI{
@@ -69,21 +80,29 @@ namespace vkl
 
 	PhysicallyBasedMaterial::Properties PhysicallyBasedMaterial::getProperties() const
 	{
-		uint32_t flags = Flags::NONE;
+		uint32_t flags_u32 = 0;
+		Flags & flags = reinterpret_cast<Flags&>(flags_u32);
+
+		flags.type = 1;
 
 		if (useAlbedoTexture())
 		{
-			flags |= Flags::USE_ALBEDO_TEXTURE;
+			flags.textures |= 1;
 		}
 
 		if (useNormalTexture())
 		{
-			flags |= Flags::USE_NORMAL_TEXTURE;
+			flags.textures |= 2;
 		}
+
+		flags.bsdf_hemispheres |= 1;
 		
 		return Properties{
-			.albedo = _albedo,
-			.flags = flags,
+			.albedo = _albedo.valueOr(vec3(0)),
+			.flags = flags_u32,
+			.metallic = _metallic.valueOr(0),
+			.roughness = _roughness.valueOr(0),
+			.cavity = _cavity.valueOr(0),
 		};
 	}
 
@@ -94,11 +113,51 @@ namespace vkl
 		ImGui::Text("Name: ");
 		ImGui::SameLine();
 		ImGui::Text(name().c_str());
-		_should_update_props_buffer |= ImGui::Checkbox(" Force Albedo property", &_force_albedo_prop);
-		if (!useAlbedoTexture())
+
+		auto declare_dynamic = [&]<class T>(Dyn<T> &dv, std::string_view label, auto const& imgui_f)
 		{
-			_should_update_props_buffer |= ImGui::ColorPicker3("albedo", &_albedo.x);
-		}
+			if (dv.hasValue())
+			{
+				T value = dv.value();
+				ImGui::BeginDisabled(!dv.canSetValue());
+
+				bool changed = imgui_f(&value);
+				_should_update_props_buffer |= changed;
+				if (changed)
+				{
+					dv.setValue(value);
+				}
+
+				ImGui::EndDisabled();
+			}
+			else
+			{
+				ImGui::Text("%s: no value!", label.data());
+			}
+		};
+
+		auto declare_color = [&](Dyn<vec3>& dv, std::string_view label)
+		{
+			declare_dynamic(dv, label, [&](vec3* ptr) {
+				return ImGui::ColorPicker3(label.data(), reinterpret_cast<float*>(ptr));
+			});
+		};
+
+		auto declare_float = [&](Dyn<float>& dv, std::string_view label, ImGuiSliderFlags flags = 0)
+		{
+			declare_dynamic(dv, label, [&](float* ptr) {
+				return ImGui::SliderFloat(label.data(), ptr, 0, 1, "%.3f", flags);
+			});
+		};
+
+		_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_force_albedo_prop);
+		
+		declare_color(_albedo, "albedo");
+
+
+		declare_float(_metallic, "metallic", ImGuiSliderFlags_NoRoundToFormat);
+		declare_float(_roughness, "roughness", ImGuiSliderFlags_NoRoundToFormat);
+		declare_float(_cavity, "cavity", ImGuiSliderFlags_NoRoundToFormat);
 
 
 		ImGui::PopID();

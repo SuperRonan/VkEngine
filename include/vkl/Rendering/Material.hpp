@@ -86,14 +86,18 @@ namespace vkl
 
 		struct Properties
 		{
-			alignas(16) vec3 albedo;
+			ubo_vec3 albedo;
 			uint32_t flags;
+			float metallic;
+			float roughness;
+			float cavity;
 		};
 
-		enum Flags : uint32_t {
-			NONE = 0,
-			USE_ALBEDO_TEXTURE = (1 << 1),
-			USE_NORMAL_TEXTURE = (1 << 2),
+		struct Flags
+		{
+			uint32_t type : 2;
+			uint32_t textures : 4;
+			uint32_t bsdf_hemispheres : 2;
 		};
 
 		void callRegistrationCallback(DescriptorSetAndPool::Registration& reg, bool include_textures);
@@ -101,7 +105,10 @@ namespace vkl
 	protected:
 
 
-		vec3 _albedo;
+		Dyn<vec3> _albedo = {};
+		Dyn<float> _metallic = {};
+		Dyn<float> _roughness = {};
+		Dyn<float> _cavity = {};
 		
 		Properties _cached_props;
 
@@ -135,7 +142,10 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			vec3 albedo = vec3(0.7);
+			Dyn<vec3> albedo = {};
+			Dyn<float> metallic = {};
+			Dyn<float> roughness = {};
+			Dyn<float> cavity = {};
 			std::shared_ptr<Sampler> sampler = nullptr;
 			std::shared_ptr<Texture> albedo_texture = nullptr;
 			std::shared_ptr<Texture> normal_texture = nullptr;

@@ -1,5 +1,7 @@
 #pragma once
 
+#define BIT_MASK(n) ((1 << n) - 1)
+
 #ifndef COMMON_DESCRIPTOR_BINDING
 #define COMMON_DESCRIPTOR_BINDING set = 0, binding = 0
 #endif
@@ -549,7 +551,13 @@ vec4 fixExtremeToZero(vec4 v)
 	return v;
 }
 
+bool nonZero(vec3 rgb)
+{
+	return any(notEqual(rgb, 0..xxx));
+}
+
 #define PI 3.1415926535897932384626433832795
+#define M_PI PI
 #define HALF_PI (PI / 2.0)
 #define QUART_PI (PI / 4.0)
 #define TWO_PI (2.0 * PI)
@@ -558,7 +566,7 @@ vec4 fixExtremeToZero(vec4 v)
 #define SQRT_2 (sqrt(2.0))
 #define oo_SQRT_2 rcp(SQRT_2)
 #define GOLDEN_RATIO ((1.0 + sqrt(5.0)) / 2.0)
-#define PHI GOLDEN_RATIO
+#define M_PHI GOLDEN_RATIO
 #define EPSILON_f 1.19209e-07f
 #define EPSILON_d double(2.22045e-16)
 #define EPSILON_h float16_t(1e-3) // TODO

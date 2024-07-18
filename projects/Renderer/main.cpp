@@ -100,33 +100,55 @@ namespace vkl
 			{
 				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
 					.app = this,
-					.radius = 0.5,
+					.radius = 0.4,
 				});
 
-				std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
-					.app = this,
-					.name = "DefaultMaterial",
+				const size_t n_m = 11;
+				const size_t n_r = 11;
+
+				const vec3 base(0, 0, 0);
+				const vec3 dir_m(1, 0, 0);
+				const vec3 dir_r(0, 0, 1);
+
+				std::shared_ptr<Scene::Node> test_material_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "TestMaterials",
+					.matrix = glm::mat4x3(translateMatrix<4, float>(vec3(-1, 1, -2)) * scaleMatrix<4, float>(0.2)),
 				});
 
-				std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-					.app = this,
-					.name = "Model",
-					.mesh = mesh,
-					.material = material,
-				});
+				for (size_t i_m = 0; i_m < n_m; ++i_m)
+				{
+					const float metallic = float(i_m) / float(n_m - 1);
+					for (size_t i_r = 0; i_r < n_r; ++i_r)
+					{
+						const float roughness = float(i_r) / float(n_r - 1);
 
-				std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-					.name = "ModelNode",
-					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 1, 1)) * scaleMatrix<4, float>(0.5)),
-					.model = model,
-				});
-				root->addChild(model_node);
+						const vec3 position = base + float(i_m) * dir_m + float(i_r) * dir_r;
 
-				root->addChild(std::make_shared<Scene::Node>(Scene::Node::CI{
-					.name = "ModelNode2",
-					.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(2, 1, 1)) * scaleMatrix<4, float>(0.5)),
-					.model = model,
-				}));
+						std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+							.app = this,
+							.name = std::format("TestMaterial_{0:d}_{1:d}", i_m, i_r),
+							.albedo = vec3(0.7),
+							.metallic = metallic,
+							.roughness = roughness,
+							.cavity = 0,
+						});
+
+						std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+							.app = this,
+							.name = "TestModel",
+							.mesh = mesh,
+							.material = material,
+						});
+						
+						std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+							.name = "ModelNode",
+							.matrix = glm::mat4x3(translateMatrix<4, float>(position)),
+							.model = model,
+						});
+						test_material_node->addChild(model_node);
+					}
+				}
+				root->addChild(test_material_node);
 			}
 
 			{
@@ -186,7 +208,7 @@ namespace vkl
 						.app = this,
 						.name = "PointLight",
 						.position = glm::vec3(0, 0, 0),
-						.emission = glm::vec3(1, 0.8, 0.6) * 15.0f,
+						.emission = glm::vec3(1, 0.8, 0.6) * 15.0f * 3.0f,
 						.enable_shadow_map = true,
 						
 					});
@@ -208,7 +230,7 @@ namespace vkl
 				for (int i = 0; i < 3; ++i)
 				{
 					glm::vec3 color = glm::vec3(0);
-					color[i] = 10;
+					color[i] = 10 * 5;
 					std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
 						.app = this,
 						.name = "SpotLight" + std::to_string(i),
