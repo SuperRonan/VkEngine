@@ -21,8 +21,10 @@ namespace vkl
 		std::shared_ptr<ImageView> _output;
 
 		bool _enable = true;
+		ImGuiListSelection _mode;
 		float _alpha = 0.9;
 
+		uint32_t _accumulated_samples = 0;
 		bool _reset = true;
 
 		std::string _format_glsl;

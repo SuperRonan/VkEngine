@@ -13,6 +13,13 @@ namespace vkl
 		_input(ci.input),
 		_sets_layouts(ci.sets_layouts)
 	{
+		_mode = ImGuiListSelection::CI{
+			.name = "Mode",
+			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.labels = {"Accumulate", "Alpha"},
+			.default_index = 1,
+			.same_line = true,
+		};
 		_output = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".Output",
@@ -51,7 +58,11 @@ namespace vkl
 					.binding = 2,
 				},
 			},
-			.definitions = [this](DefinitionsList & res){ res.clear(); res.pushBackFormatted("IMAGE_FORMAT {:s}", _format_glsl);},
+			.definitions = [this](DefinitionsList & res){ 
+				res.clear(); 
+				res.pushBackFormatted("TAAU_MODE {:d}", _mode.index());
+				res.pushBackFormatted("IMAGE_FORMAT {:s}", _format_glsl);
+			},
 		});
 	}
 
@@ -81,7 +92,7 @@ namespace vkl
 	{
 		if (_enable)
 		{
-			Matrix4f new_matrix = camera.getWorldToProj();
+			const Matrix4f new_matrix = camera.getWorldToProj();
 			TAAU_PushConstant pc{
 				.alpha = _alpha,
 				.flags = 0,
@@ -90,15 +101,22 @@ namespace vkl
 			if (_reset)
 			{
 				pc.flags |= 0x1;
+				_accumulated_samples = 0;
 				_matrix = new_matrix;
 			}
-			_reset = false;
+			if (_mode.index() == 0)
+			{
+				float alpha = 1.0 / (_accumulated_samples + 1.0);
+				pc.alpha = 1.0 - alpha;
+				++_accumulated_samples;
+			}
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _output->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
 				.pc_data = &pc,
 				.pc_size = sizeof(pc),
 			}));
+			_reset = false;
 		}
 		else
 		{
@@ -116,10 +134,23 @@ namespace vkl
 		ImGui::PushID(this);
 		{
 			ImGui::Checkbox("Enable", &_enable);
-			float one_minus_alpha = 1.0 - _alpha;
-			if (ImGui::SliderFloat("Renew Rate", &one_minus_alpha, 0, 1, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+			if (_mode.declare())
 			{
-				_alpha = 1.0 - one_minus_alpha;
+				_reset = true;
+			}
+			if (_mode.index() == 0)
+			{
+				ImGui::BeginDisabled();
+				ImGui::InputInt("Accumulated samples: ", (int*)&_accumulated_samples);
+				ImGui::EndDisabled();
+			}
+			else if (_mode.index() == 1)
+			{
+				float one_minus_alpha = 1.0 - _alpha;
+				if (ImGui::SliderFloat("Renew Rate", &one_minus_alpha, 0, 1, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+				{
+					_alpha = 1.0 - one_minus_alpha;
+				}
 			}
 			ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
 			_reset |= ImGui::Button("Reset");
