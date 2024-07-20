@@ -1,2 +1,0 @@
-"ProjectShaders" "Shaders"
-"ShaderLib" "ShaderLib"

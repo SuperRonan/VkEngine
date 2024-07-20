@@ -34,7 +34,7 @@ namespace vkl
 
 		setFormat();
 
-		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
+		const std::filesystem::path shaders = application()->mountingPoints()["RenderLibShaders"];
 
 		_input->setInvalidationCallback(Callback{
 			.callback = [this](){_reset = true;},

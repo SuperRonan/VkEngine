@@ -1,45 +1,80 @@
+include(CMakeParseArguments)
+
+set(PROJECTS_FOLDER "${CMAKE_CURRENT_LIST_DIR}/")
+
 set(EXECUTABLES "")
 
-function(AddProject p_name)
-	if(DEFINED ARGV1)
-		set(folder ${ARGV1})
-	else()
-		set(folder ${p_name})
+function(AddLib target)
+	cmake_parse_arguments(PARSED_ARGS "" "SUB_DIRECTORY" "" ${ARGN})
+	if(NOT PARSED_ARGS_SUB_DIRECTORY)
+		set(PARSED_ARGS_SUB_DIRECTORY ${target})
 	endif()
-	file(GLOB ${p_name}_SOURCES ${folder}/*)
-	add_executable(${p_name} ${folder}/main.cpp ${${p_name}_SOURCES})
-	target_include_directories(${p_name} PRIVATE ${folder})
+	set(folder ${PARSED_ARGS_SUB_DIRECTORY})
+	file(GLOB_RECURSE ${target}_SOURCES ${folder}/*)
+	add_library(${target} ${${target}_SOURCES})
 	
-	target_compile_definitions(${p_name} PRIVATE "PROJECT_NAME=\"${p_name}\"")
-	target_compile_definitions(${p_name} PRIVATE "PROJECT_SRC_PATH=\"${CMAKE_CURRENT_SOURCE_DIR}/${folder}/\"")
+	source_group(TREE ${PROJECTS_FOLDER}${folder} FILES ${${target}_SOURCES})
 
-	target_link_libraries(${p_name} PUBLIC VkEngine)
+	target_include_directories(${target} PUBLIC  ${folder})
 
-	set_target_properties(${p_name} PROPERTIES LINK_OPTIONS ${VK_ENGINE_LINK_OPTIONS})
+	target_link_libraries(${target} PUBLIC VkEngine)
+
+	set_target_properties(${target} PROPERTIES LINK_OPTIONS ${VK_ENGINE_LINK_OPTIONS})
+
+	set_target_properties(${target} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
+
+endfunction()
+
+function(AddExec target)
+	cmake_parse_arguments(PARSED_ARGS "" "SUB_DIRECTORY;MAIN_SOURCE" "DEPENDENCIES" ${ARGN})
+	if(NOT PARSED_ARGS_SUB_DIRECTORY)
+		set(PARSED_ARGS_SUB_DIRECTORY ${target})
+	endif()
+	set(folder ${PARSED_ARGS_SUB_DIRECTORY})
+	file(GLOB_RECURSE ${target}_SOURCES ${folder}/*)
+	add_executable(${target} ${folder}/main.cpp ${${target}_SOURCES})
 	
-	set_target_properties(${p_name} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
-	set(EXECUTABLES ${EXECUTABLES} ${p_name})
+	source_group(TREE ${PROJECTS_FOLDER}${folder} FILES ${${target}_SOURCES})
+	
+	target_include_directories(${target} PRIVATE ${folder})
+	
+	target_compile_definitions(${target} PRIVATE "PROJECT_NAME=\"${target}\"")
 
+	set(${folder}_DEPENDENCIES VkEngine)
+	if(PARSED_ARGS_DEPENDENCIES)
+		list(APPEND ${folder}_DEPENDENCIES ${PARSED_ARGS_DEPENDENCIES})
+	endif()
+
+	target_link_libraries(${target} PUBLIC ${${folder}_DEPENDENCIES})
+
+	
+
+	set_target_properties(${target} PROPERTIES LINK_OPTIONS ${VK_ENGINE_LINK_OPTIONS})
+	
+	set_target_properties(${target} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
+	set(EXECUTABLES ${EXECUTABLES} ${target})
 	
 endfunction()
 
+AddLib(RenderLib)
 
-AddProject(Test)
+AddExec(Test)
 
-# AddProject(GameOfLife "GOL")
+# AddExec(GameOfLife "GOL")
 
-# AddProject(Paint)
+# AddExec(Paint)
 
-# AddProject(Particules2D "Particules/sim2D")
-# AddProject(Particules3D "Particules/sim3D")
+# AddExec(Particules2D "Particules/sim2D")
+# AddExec(Particules3D "Particules/sim3D")
 
-# AddProject(Flotsam)
+# AddExec(Flotsam)
 
-AddProject(Renderer)
+AddExec(Renderer DEPENDENCIES RenderLib)
 
 set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen/\"")
-set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${ENGINE_SRC_PATH}/../projects/\"")
+set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${PROJECTS_FOLDER}\"")
+set(MP_CONTENT "${MP_CONTENT}\n\"RenderLibShaders\" \"${PROJECTS_FOLDER}RenderLib/Shaders/\"")
 file(GENERATE OUTPUT "$<CONFIG>/MountingPoints.txt" CONTENT ${MP_CONTENT})
 
 install(TARGETS ${EXECUTABLES} DESTINATION bin)
