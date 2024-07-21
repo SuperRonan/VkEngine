@@ -105,7 +105,7 @@ namespace vkl
 		_clear_color(ci.clear_color),
 		_clear_depth_stencil(ci.clear_depth_stencil),
 		_blending(ci.blending),
-		_line_raster_mode(ci.line_raster_mode),
+		_line_raster_state(ci.line_raster_state),
 		_draw_type(ci.draw_type)
 	{
 		if (ci.extern_framebuffer.has_value())
@@ -139,7 +139,7 @@ namespace vkl
 			VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 
 			if (clear_color.has_value())	load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			if (opt_blending.has_value())
+			else if (opt_blending.has_value())
 			{
 				const VkPipelineColorBlendAttachmentState & blending = opt_blending.value();
 				if (blending.blendEnable)
@@ -426,12 +426,12 @@ namespace vkl
 		gci.name = name() + ".Pipeline";
 		gci.vertex_input = _vertex_input_desc;
 		gci.input_assembly = GraphicsPipeline::InputAssemblyDefault(_topology);
-		gci.rasterization = GraphicsPipeline::RasterizationDefault(_cull_mode, _polygon_mode, 1.0f);
+		gci.rasterization = GraphicsPipeline::RasterizationState{
+			.polygonMode = _polygon_mode,
+			.cullMode = _cull_mode,
+		};
 		
-		if (_line_raster_mode.has_value())
-		{
-			gci.line_raster = GraphicsPipeline::LineRasterization(_line_raster_mode.value());
-		}
+		gci.line_raster = _line_raster_state;
 
 		// TODO from attachements
 		VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
@@ -665,7 +665,7 @@ namespace vkl
 			.polygon_mode = ci.polygon_mode,
 			.cull_mode = ci.cull_mode,
 			.vertex_input_description = ci.vertex_input_desc,
-			.line_raster_mode = ci.line_raster_mode,
+			.line_raster_state = ci.line_raster_state,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.extern_framebuffer = ci.extern_framebuffer,
@@ -1113,7 +1113,7 @@ namespace vkl
 			.name = ci.name,
 			.polygon_mode = ci.polygon_mode,
 			.cull_mode = ci.cull_mode,
-			.line_raster_mode = ci.line_raster_mode,
+			.line_raster_state = ci.line_raster_state,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.extern_framebuffer = ci.extern_framebuffer,

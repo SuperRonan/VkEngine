@@ -31,6 +31,8 @@ namespace vkl
 
 	protected:
 
+		friend class GraphicsPipeline;
+
 		std::optional<VertexInputDescription> _vertex_input;
 		std::optional<VkPipelineInputAssemblyStateCreateInfo> _input_assembly;
 		MyVector<VkViewport> _viewports;
@@ -103,6 +105,40 @@ namespace vkl
 			return scissor;
 		}
 
+		struct RasterizationState
+		{
+			VkBool32				depthClampEnable = VK_FALSE;
+			VkBool32				rasterizerDiscardEnable = VK_FALSE;
+			Dyn<VkPolygonMode>		polygonMode = {};
+			Dyn<VkCullModeFlags>	cullMode = {};
+			Dyn<VkFrontFace>		frontFace = {};
+			VkBool32				depthBiasEnable = VK_FALSE;
+			float					depthBiasConstantFactor = 0.0f;
+			float					depthBiasClamp = 0.0f;
+			float					depthBiasSlopeFactor = 0.0f;
+			Dyn<float>				lineWidth = {};
+
+			VkPipelineRasterizationStateCreateInfo value()const
+			{
+				VkPipelineRasterizationStateCreateInfo res{
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = 0,
+					.depthClampEnable = depthClampEnable,
+					.rasterizerDiscardEnable = rasterizerDiscardEnable,
+					.polygonMode = polygonMode.valueOr(VK_POLYGON_MODE_FILL),
+					.cullMode = cullMode.valueOr(0),
+					.frontFace = frontFace.valueOr(VK_FRONT_FACE_COUNTER_CLOCKWISE),
+					.depthBiasEnable = depthBiasEnable,
+					.depthBiasConstantFactor = depthBiasConstantFactor,
+					.depthBiasClamp = depthBiasClamp,
+					.depthBiasSlopeFactor = depthBiasSlopeFactor,
+					.lineWidth = lineWidth.valueOr(1.0f),
+				};
+				return res;
+			}
+		};
+
 		constexpr static VkPipelineRasterizationStateCreateInfo RasterizationDefault(VkCullModeFlags cull = VK_CULL_MODE_NONE, VkPolygonMode polygon_mode = VK_POLYGON_MODE_FILL, float line_width = 1.0f)
 		{
 			VkPipelineRasterizationStateCreateInfo rasterization{
@@ -119,6 +155,30 @@ namespace vkl
 			};
 			return rasterization;
 		}
+
+		struct LineRasterizationState
+		{
+			Dyn<VkLineRasterizationModeKHR>	lineRasterizationMode;
+			Dyn<uint32_t>	lineStippleFactor;
+			Dyn<uint16_t>	lineStipplePattern;
+
+			VkPipelineRasterizationLineStateCreateInfoEXT value() const
+			{
+				VkPipelineRasterizationLineStateCreateInfoEXT res{
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_EXT,
+					.pNext = nullptr,
+					.lineRasterizationMode = lineRasterizationMode.valueOr(VK_LINE_RASTERIZATION_MODE_DEFAULT_KHR),
+					.stippledLineEnable = VK_FALSE,
+					.lineStippleFactor = lineStippleFactor.valueOr(1),
+					.lineStipplePattern = lineStipplePattern.valueOr(1),
+				};
+				if (res.lineStippleFactor != 1 || res.lineStipplePattern != 1)
+				{
+					res.stippledLineEnable = VK_TRUE;
+				}
+				return res;
+			}
+		};
 
 		constexpr static VkPipelineRasterizationLineStateCreateInfoEXT LineRasterization(VkLineRasterizationModeEXT mode, uint32_t factor = 1, uint16_t pattern = 1)
 		{
@@ -215,8 +275,8 @@ namespace vkl
 			MyVector<VkViewport> viewports;
 			MyVector<VkRect2D> scissors;
 
-			VkPipelineRasterizationStateCreateInfo rasterization;
-			std::optional<VkPipelineRasterizationLineStateCreateInfoEXT> line_raster;
+			RasterizationState rasterization;
+			std::optional<LineRasterizationState> line_raster;
 			VkPipelineMultisampleStateCreateInfo multisampling;
 			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
 			MyVector<VkPipelineColorBlendAttachmentState> attachements_blends;
@@ -238,8 +298,8 @@ namespace vkl
 		MyVector<VkViewport> _viewports;
 		MyVector<VkRect2D> _scissors;
 
-		VkPipelineRasterizationStateCreateInfo _rasterization;
-		std::optional<VkPipelineRasterizationLineStateCreateInfoEXT> _line_raster;
+		RasterizationState _rasterization;
+		std::optional<LineRasterizationState> _line_raster;
 		VkPipelineMultisampleStateCreateInfo _multisampling;
 		std::optional<VkPipelineDepthStencilStateCreateInfo> _depth_stencil = {};
 		MyVector<VkPipelineColorBlendAttachmentState> _attachements_blends;
@@ -257,7 +317,6 @@ namespace vkl
 		GraphicsPipeline(CreateInfo const& ci);
 
 		virtual ~GraphicsPipeline() override;
-
 
 		GraphicsProgram* program()const
 		{

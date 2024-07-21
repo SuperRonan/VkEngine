@@ -81,6 +81,10 @@ namespace vkl
 
 		const VkCompareOp cmp = _depth ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_ALWAYS;
 
+		GraphicsPipeline::LineRasterizationState line_raster_state{
+			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
+		};
+
 		if (use_mesh_shader)
 		{
 			defs += "MESH_PIPELINE 1"s;
@@ -109,7 +113,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".RenderLines",
 				.dispatch_threads = true,
-				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.line_raster_state = line_raster_state,
 				.sets_layouts = _sets_layouts,
 				.bindings = {},
 				.color_attachements = { _target },
@@ -149,7 +153,7 @@ namespace vkl
 			_render_lines_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderLines",
-				.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+				.line_raster_state = line_raster_state,
 				.sets_layouts = _sets_layouts,
 				.bindings = {},
 				.color_attachements = { _target },

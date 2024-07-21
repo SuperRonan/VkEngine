@@ -160,8 +160,8 @@ namespace vkl
 			.input_assembly = _input_assembly,
 			.viewports = _viewports,
 			.scissors = _scissors,
-			.rasterization = _rasterization,
-			.line_raster = _line_raster,
+			.rasterization = _rasterization.value(),
+			.line_raster = {},
 			.multisampling = _multisampling,
 			.depth_stencil = _depth_stencil,
 			.attachements_blends = _attachements_blends,
@@ -169,11 +169,65 @@ namespace vkl
 			.render_pass = _render_pass->instance(),
 			.program = std::static_pointer_cast<GraphicsProgramInstance>(_program->instance()),
 		};
+		if(_line_raster.has_value())
+		gci.line_raster = _line_raster.value().value();
 		_inst = std::make_shared<GraphicsPipelineInstance>(std::move(gci));
 	}
 
 	bool GraphicsPipeline::checkInstanceParamsReturnInvalid()
 	{
-		return false;
+		bool res = false;
+		assert(_inst);
+		GraphicsPipelineInstance& inst = *static_cast<GraphicsPipelineInstance*>(_inst.get());
+		
+		do {
+			const VkPipelineRasterizationStateCreateInfo & ir = inst._rasterization;
+			
+			if (_rasterization.polygonMode.hasValue() && ir.polygonMode != _rasterization.polygonMode.value())
+			{
+				res = true;
+				break;
+			}
+
+			if (_rasterization.cullMode.hasValue() && ir.polygonMode != _rasterization.cullMode.value())
+			{
+				res = true;
+				break;
+			}
+
+			if (_rasterization.frontFace.hasValue() && ir.frontFace != _rasterization.frontFace.value())
+			{
+				res = true;
+				break;
+			}
+
+			if (_line_raster.has_value())
+			{
+				assert(inst._line_raster.has_value());
+				const VkPipelineRasterizationLineStateCreateInfoEXT& ilr = inst._line_raster.value();
+				const LineRasterizationState & lrs = _line_raster.value();
+				
+				if (lrs.lineRasterizationMode.hasValue() && ilr.lineRasterizationMode != lrs.lineRasterizationMode.value())
+				{
+					res = true;
+					break;
+				}
+
+				if (lrs.lineStippleFactor.hasValue() && ilr.lineStippleFactor != lrs.lineStippleFactor.value())
+				{
+					res = true;
+					break;
+				}
+
+				if (lrs.lineStipplePattern.hasValue() && ilr.lineStipplePattern != lrs.lineStipplePattern.value())
+				{
+					res = true;
+					break;
+				}
+			}
+
+		} while(false);
+
+		return res;
 	}
 }

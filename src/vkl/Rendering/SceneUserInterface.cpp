@@ -33,13 +33,16 @@ namespace vkl
 	void SceneUserInterface::createInternalResources()
 	{
 		const std::filesystem::path shader_lib = application()->mountingPoints()["ShaderLib"];
+		GraphicsPipeline::LineRasterizationState line_raster_state{
+			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
+		};
 		_render_3D_basis = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
 			.name = name() + ".Show3DBasis",
 			.vertex_input_desc = GraphicsPipeline::VertexInputWithoutVertices(),
 			.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 			.draw_count = 3,
-			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
 			.color_attachements = {_target},
 			.vertex_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
@@ -62,7 +65,7 @@ namespace vkl
 			.name = name() + ".Render3DBox",
 			.vertex_input_desc = RigidMesh::vertexInputDescOnlyPos3D(),
 			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
-			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
 			.color_attachements = { _target },
 			.depth_stencil = _depth,

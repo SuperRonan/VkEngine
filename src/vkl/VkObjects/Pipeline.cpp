@@ -98,14 +98,17 @@ namespace vkl
 
 		if (checkHoldInstance())
 		{
-			if (checkInstanceParamsReturnInvalid())
+			if (_inst)
 			{
-				res = true;
-			}
+				if (checkInstanceParamsReturnInvalid())
+				{
+					res = true;
+				}
 
-			if (res)
-			{
-				destroyInstanceIFN();
+				if (res)
+				{
+					destroyInstanceIFN();
+				}
 			}
 
 			if (!_inst && can_create)

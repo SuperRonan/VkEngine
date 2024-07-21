@@ -31,12 +31,14 @@ namespace vkl
 			},
 			.definitions = _definitions,
 		});
-
+		GraphicsPipeline::LineRasterizationState line_raster_state{
+			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
+		};
 		_show_outline = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
 			.name = name() + ".ShowOutline",
 			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
-			.line_raster_mode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
 			.color_attachements = {_target},
 			.vertex_shader_path = common_shaders / "RenderRect.glsl",
