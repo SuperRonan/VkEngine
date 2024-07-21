@@ -2,6 +2,29 @@
 
 #include "common.glsl"
 
+// theta is the inclination angle with the +Y axis
+// phi is the azimuthal angle with the +X axis
+
+vec3 SphericalToCartesian(vec2 theta_phi)
+{
+	const float theta = theta_phi.x;
+	const float phi = theta_phi.y;
+	const float ct = cos(theta);
+	const float st = sin(theta);
+	const float cp = cos(phi);
+	const float sp = sin(phi);
+	vec3 res;
+	res.x = st * cp;
+	res.y = ct;
+	res.z = st * sp;
+	return res;
+}
+
+vec3 SphericalToCartesian(vec3 theta_phi_rho)
+{
+	return SphericalToCartesian(theta_phi_rho.xy) * theta_phi_rho.z;
+}
+
 mat2 diagonal(vec2 v)
 {
 	return mat2(v.x, 0, 0, v.y);

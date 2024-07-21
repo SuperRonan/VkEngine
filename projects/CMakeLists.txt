@@ -70,6 +70,7 @@ AddExec(Test)
 # AddExec(Flotsam)
 
 AddExec(Renderer DEPENDENCIES RenderLib)
+AddExec(BSDF DEPENDENCIES RenderLib)
 
 set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen/\"")
