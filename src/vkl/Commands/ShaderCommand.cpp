@@ -15,10 +15,12 @@ namespace vkl
 
 	void ShaderCommandList::setPushConstant(const void* data, uint32_t size, uint32_t offset)
 	{
-		assert(data);
-		pc_begin = _data.pushBack(data, size);
-		pc_size = size;
-		pc_offset = offset;
+		if (data && size)
+		{
+			pc_begin = _data.pushBack(data, size);
+			pc_size = size;
+			pc_offset = offset;
+		}
 	}
 
 	void ShaderCommandNode::clear()
