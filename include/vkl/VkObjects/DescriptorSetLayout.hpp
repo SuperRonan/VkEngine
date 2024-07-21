@@ -121,7 +121,7 @@ namespace vkl
 				return VkDescriptorSetLayoutBinding{
 					.binding = binding,
 					.descriptorType = type,
-					.descriptorCount = count.value(),
+					.descriptorCount = count.valueOr(1),
 					.stageFlags = stages,
 					.pImmutableSamplers = nullptr,
 				};
