@@ -160,7 +160,7 @@ namespace vkl
 		assert(!_upload_range.empty());
 		Buffer::Range range{
 			.begin = _upload_range.bottom().x,
-			.len = std::min(_upload_range.diagonal().x, _byte_size),
+			.len = std::min(_upload_range.diagonal().x, _byte_size - _upload_range.bottom().x),
 		};
 		_upload_range.reset();
 		ObjectView o((const uint8_t*)_data + range.begin, range.len);
@@ -173,10 +173,24 @@ namespace vkl
 	void HostManagedBuffer::updateResources(UpdateContext& ctx, bool shrink_to_fit)
 	{
 		GrowableBuffer::updateResources(ctx, shrink_to_fit);
-		const bool transfer = _prev_buffer_inst.operator bool();
-		if (!transfer)
+		if (!_upload_range.empty())
 		{
-			if (!_upload_range.empty())
+			const bool transfer = _prev_buffer_inst.operator bool();
+			Buffer::Range range{
+				.begin = _upload_range.bottom().x,
+				.len = std::min(_upload_range.diagonal().x, _byte_size - _upload_range.bottom().x),
+			};
+			bool upload_now = !transfer;
+			if (transfer)
+			{
+				Buffer::Range transfer_range = _prev_buffer_inst->fullRange();
+				transfer_range.len = std::min(transfer_range.len, _buffer->instance()->fullRange().len);
+				if (range.contains(transfer_range))
+				{
+					upload_now = true;
+				}
+			}
+			if (upload_now)
 			{
 				PositionedObjectView pov = consumeUploadView();
 				ResourcesToUpload::BufferSource source{
@@ -190,6 +204,7 @@ namespace vkl
 					.sources_count = 1,
 					.dst = _buffer->instance(),
 				};
+				_prev_buffer_inst.reset();
 			}
 		}
 
