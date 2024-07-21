@@ -94,6 +94,11 @@ namespace vkl
 				return _value;
 			}
 
+			T & getCachedValueRef() 
+			{
+				return _value;
+			}
+
 			virtual T const& value() const
 			{
 				return getCachedValue();
@@ -342,6 +347,12 @@ namespace vkl
 		{
 			assert(hasValue());
 			return _inst->getCachedValue();
+		}
+
+		T& getCachedValueRef()
+		{
+			assert(hasValue());
+			return _inst->getCachedValueRef();
 		}
 
 		T const& value()const
