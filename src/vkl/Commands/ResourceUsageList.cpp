@@ -9,7 +9,7 @@ namespace vkl
 		Buffer::Range range = bari.range;
 		if (range.len == 0)
 		{
-			range.len = bari.buffer->createInfo().size;
+			range.len = (bari.buffer->createInfo().size - range.begin);
 		}
 		if (bsrs.range.len == 0)
 		{
