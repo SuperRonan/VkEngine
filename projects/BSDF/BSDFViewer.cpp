@@ -4,11 +4,14 @@
 
 #include <vkl/IO/ImGuiUtils.hpp>
 
+#include <random>
+
 namespace vkl
 {
 	struct UBOBase
 	{
 		Matrix4f world_to_proj;
+		Matrix3x4f world_to_camera;
 		ubo_vec3 direction;
 		float common_alpha;
 	};
@@ -66,7 +69,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".UBO",
 			.size = sizeof(UBOBase) + 4 * sizeof(vec4),
-			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
@@ -86,8 +89,16 @@ namespace vkl
 					.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				},
 				DescriptorSetLayout::Binding{
-					.name = "bsdf_image",
+					.name = "Colors",
 					.binding = 1,
+					.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.stages = VK_SHADER_STAGE_ALL,
+					.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
+					.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				},
+				DescriptorSetLayout::Binding{
+					.name = "bsdf_image",
+					.binding = 2,
 					.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 					.stages = VK_SHADER_STAGE_ALL,
 					.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT,
@@ -103,12 +114,16 @@ namespace vkl
 			.layout = _set_layout,
 			.bindings = {
 				Binding{
-					.buffer = _ubo->getSegment(),
+					.buffer = BufferSegment{.buffer = _ubo->buffer(), .range = Buffer::Range{.begin = 0, .len = sizeof(UBOBase)}},
 					.binding = 0,
 				},
 				Binding{
-					.image = _functions_image,
+					.buffer = BufferSegment{.buffer = _ubo->buffer(), .range = Buffer::Range{.begin = sizeof(UBOBase)}},
 					.binding = 1,
+				},
+				Binding{
+					.image = _functions_image,
+					.binding = 2,
 				},
 			},
 		});
@@ -140,10 +155,28 @@ namespace vkl
 
 	void BSDFViewer::updateResources(UpdateContext& ctx)
 	{
+		const size_t old_size = _colors.size();
 		_colors.resize(_num_functions.value());
+		const size_t new_size = _colors.size();
+		for (size_t i = old_size; i < new_size; ++i)
+		{
+			const size_t seed = i;
+			auto rng = std::mt19937_64(seed);
+			std::uniform_real_distribution<float> distrib(0, 1);
+			vec4 color{
+				distrib(rng),
+				distrib(rng),
+				distrib(rng),
+				1.0f,
+			};
+			color = glm::sqrt(color);
+			_colors[i] = color;
+		}
+		
 
 		UBOBase ubo{
 			.world_to_proj = _camera->getWorldToProj(),
+			.world_to_camera = Matrix3x4f(glm::transpose(_camera->getWorldToCam())),
 			.direction = Vector3f(std::sin(_inclination), std::cos(_inclination), 0),
 			.common_alpha = _common_alpha,
 		};
@@ -183,7 +216,8 @@ namespace vkl
 
 		ImGui::SliderFloat("Common alpha", &_common_alpha, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
 
-		ImGui::SliderAngle("Inclination", &_inclination, -180, 180, "%.1f deg", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp);
+		ImGui::Checkbox("Hemisphere", &_hemisphere);
+		ImGui::SliderAngle("Inclination", &_inclination, 0, _hemisphere ? 90 : 180, "%.1f deg", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp);
 
 		{
 			int resolution = _resolution;

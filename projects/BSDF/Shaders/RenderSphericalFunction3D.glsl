@@ -2,9 +2,21 @@
 
 #include "Bindings.glsl"
 
+#define RASTER_NORMAL_MODE_FRAGMENT_DERIVATIVE 0
+#define RASTER_NORMAL_MODE_MESHLET_FACE_NORMAL 2
+
+#ifndef RASTER_NORMAL_MODE
+#define RASTER_NORMAL_MODE RASTER_NORMAL_MODE_FRAGMENT_DERIVATIVE
+#endif
+
+#define USE_VARYING_POSITION (BSDF_RENDER_MODE == BSDF_RENDER_MODE_TRANSPARENT) && (RASTER_NORMAL_MODE == RASTER_NORMAL_MODE_FRAGMENT_DERIVATIVE)
+
 struct Varying
 {
 	vec4 color;
+#if USE_VARYING_POSITION
+	vec3 position_camera;
+#endif
 };
 
 // layout(push_constant) uniform PushConstant
@@ -48,29 +60,56 @@ layout(triangles, max_vertices = MAX_VERTICES, max_primitives = MAX_PRIMITIVES) 
 
 layout(location = 0) out Varying out_v[];
 
-
-float fetchIntensity(uvec2 id, uint layer)
+struct CenterInfo
 {
-	//imageLoad(bsdf_image, ivec3(gid, gl_GlobalInvocationID.z)).x;
+	uvec2 gid;
+	uvec2 lid;
+	vec3 wi;
+	uint layer;
+};
+
+uvec2 GetResolution()
+{
 	const uvec2 num_wgs = gl_NumWorkGroups.xy;
 	const uvec2 num_threads = num_wgs * LOCAL_SIZE;
-	const vec2 uv = vec2(id) / vec2(num_threads - 1);
-	const vec2 theta_phi = uv.yx * vec2(M_PI, TWO_PI);
-	const vec3 direction = SphericalToCartesian(theta_phi);
-	return pow(direction.y, 10);
+	return num_threads;
 }
 
-uint fetchVertex(mat4 proj, uvec2 lid, uvec2 gid, uint layer, uvec2 offset)
+vec3 GetDirection(uvec2 id)
+{
+	const vec2 uv = vec2(id) / vec2(GetResolution() - 1);
+	const vec2 theta_phi = uv.yx * vec2(M_PI, TWO_PI);
+	const vec3 direction = SphericalToCartesian(theta_phi);
+	return direction;
+}
+
+float fetchIntensity(const in CenterInfo c, uvec2 offset)
+{
+#if BSDF_RENDER_USE_TEXTURE
+	return imageLoad(bsdf_image, ivec3(c.gid + offset, c.layer)).x;
+#else
+	const vec3 wi = GetDirection(c.gid + offset);
+	const vec3 wo = ubo.direction;
+	return EvaluateSphericalFunction(c.layer, wo, wi);
+#endif
+}
+
+uint fetchVertex(mat4 proj, const in CenterInfo c, uvec2 offset)
 {
 	const uvec2 num_wgs = gl_NumWorkGroups.xy;
 	const uvec2 num_threads = num_wgs * LOCAL_SIZE;
-	const uvec2 id = ModulateMaxPlusOne(gid + offset, num_threads);
+	const uvec2 id = ModulateMaxPlusOne(c.gid + offset, num_threads);
 	const vec2 uv = vec2(id) / vec2(num_threads - 1);
 	const vec2 theta_phi = uv.yx * vec2(M_PI, TWO_PI);
-	const float intensity = fetchIntensity(id, layer);
+	const float intensity = fetchIntensity(c, offset);
 	const vec3 vertex_position = SphericalToCartesian(vec3(theta_phi, intensity));
-	const uint index = (lid.y + offset.y) * MAX_VERTICES_X + (lid.x + offset.x);
-	gl_MeshVerticesEXT[index].gl_Position = proj * vec4(vertex_position, 1);
+	const vec4 vertex_position_h = vec4(vertex_position, 1);
+	const uint index = (c.lid.y + offset.y) * MAX_VERTICES_X + (c.lid.x + offset.x);
+	gl_MeshVerticesEXT[index].gl_Position = proj * vertex_position_h;
+#if USE_VARYING_POSITION
+	const mat4x3 world_to_cam = GetWorldToCamera();
+	out_v[index].position_camera = world_to_cam * vertex_position_h;
+#endif
 	return index;
 }
 
@@ -84,6 +123,12 @@ void main()
 	const uvec3 gid3 = gl_GlobalInvocationID;
 	const uint layer = gid3.z;
 	const uvec2 gid = gid3.xy;
+
+	CenterInfo c;
+	c.gid = gid;
+	c.lid = lid;
+	c.layer = layer;
+	c.wi = GetDirection(c.gid);
 	
 	const uint primitive_count = MAX_PRIMITIVES;
 	const uint vertex_count = MAX_VERTICES;
@@ -94,11 +139,11 @@ void main()
 	}
 	
 	const mat4 world_to_proj = ubo.camera_world_to_proj;
-	vec4 color = vec4(1, 1, 1, 1);
+	vec4 color = GetColor(layer);
 	color.a *= ubo.common_alpha;
 
 	uvec4 indices;
-	indices.x = fetchVertex(world_to_proj, lid, gid, layer, uvec2(0));
+	indices.x = fetchVertex(world_to_proj, c, uvec2(0));
 	out_v[indices.x].color = color;
 
 	const bool on_edge_x = (lid.x == (LOCAL_SIZE_X - 1));
@@ -108,17 +153,17 @@ void main()
 
 	if(on_edge_x)
 	{
-		indices.y = fetchVertex(world_to_proj, lid, gid, layer, uvec2(1, 0));
+		indices.y = fetchVertex(world_to_proj, c, uvec2(1, 0));
 		out_v[indices.y].color = color;
 	}
 	if(on_edge_y)
 	{
-		indices.z = fetchVertex(world_to_proj, lid, gid, layer, uvec2(0, 1));
+		indices.z = fetchVertex(world_to_proj, c, uvec2(0, 1));
 		out_v[indices.z].color = color;
 	}
 	if(on_edge_x && on_edge_y)
 	{
-		indices.w = fetchVertex(world_to_proj, lid, gid, layer, uvec2(1, 1));
+		indices.w = fetchVertex(world_to_proj, c, uvec2(1, 1));
 		out_v[indices.w].color = color;
 	}
 
@@ -148,8 +193,21 @@ layout(location = 0) out vec4 o_color;
 
 void main()
 {
-
 	o_color = in_v.color;
+
+#if (BSDF_RENDER_MODE == BSDF_RENDER_MODE_TRANSPARENT)
+#if RASTER_NORMAL_MODE == RASTER_NORMAL_MODE_FRAGMENT_DERIVATIVE
+	const vec3 position_camera = in_v.position_camera;
+	const vec3 ddx = dFdx(position_camera);
+	const vec3 ddy = dFdy(position_camera);
+	const vec3 normal_camera = normalize(cross(ddx, ddy));
+	const vec3 wo = normalize(position_camera);
+#endif
+	const float a = 1.0f;
+	const float b = 4.0f;
+	const float mult = pow(1.0 - pow(abs(dot(normal_camera, wo)), a), b);
+	o_color.a *= mult;
+#endif
 
 }
 

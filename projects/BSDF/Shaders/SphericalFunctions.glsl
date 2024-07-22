@@ -5,10 +5,33 @@
 
 #define NORMAL vec3(0, 1, 0)
 
-float EvaluateSphericalFunction(uint index, vec3 direction, vec3 wo)
+float EvaluateSphericalFunction(uint index, vec3 wo, vec3 wi)
 {
+	const vec3 n = NORMAL;
+	const vec3 halfway = safeNormalize(wo + wi);
+	const vec3 reflected = reflect(-wo, n);
+
+	const float cos_theta_i = dot(n, wi);
+	const float abs_cos_theta_i = abs(cos_theta_i);
+
 	float res = 0;
-	res = 1.0f;
+
+	if(index == 0)
+	{
+		if(cos_theta_i > 0)
+		{
+			res = oo_PI;
+		}
+	}
+	else if (index == 1)
+	{
+		if(cos_theta_i > 0)
+		{
+			res = pow(max(dot(reflected, wi), 0), 10);
+		}
+	}
+
+	res *= abs_cos_theta_i;
 	return res;
 }
 

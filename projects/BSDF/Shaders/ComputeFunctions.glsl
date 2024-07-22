@@ -30,7 +30,7 @@ void main()
 	const vec2 theta_phi = thread_uv * vec2(M_PI, TWO_PI);
 	const vec3 wi = SphericalToCartesian(theta_phi);
 	const vec3 wo = ubo.direction;
-	float intensity = EvaluateSphericalFunction(function_index, wi, wo);
+	float intensity = EvaluateSphericalFunction(function_index, wo, wi);
 
 	imageStore(bsdf_image, ivec3(gid3), intensity.xxxx);
 }

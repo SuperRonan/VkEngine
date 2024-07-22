@@ -26,6 +26,7 @@ namespace vkl
 		Camera * _camera = nullptr;
 
 		// In radians
+		bool _hemisphere = true;
 		float _inclination = 1.5;
 
 		float _common_alpha = 0.5;
