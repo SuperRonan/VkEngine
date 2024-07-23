@@ -383,8 +383,8 @@ namespace vkl
 				.ivi = node._framebuffer->textures()[i],
 				.begin_state = ResourceState2{
 					.access = access, 
-					.layout = at_desc.initialLayout,
 					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+					.layout = at_desc.initialLayout,
 				},
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			};
@@ -410,8 +410,8 @@ namespace vkl
 				.ivi = node._depth_stencil,
 				.begin_state = ResourceState2{
 					.access = access,
-					.layout = at_desc.initialLayout,
 					.stage = stage,
+					.layout = at_desc.initialLayout,
 				},
 				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			};

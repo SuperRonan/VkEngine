@@ -352,8 +352,8 @@ namespace vkl
 				.ivi = node->_target,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-					.layout = layout,
 					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+					.layout = layout,
 				},
 				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			};

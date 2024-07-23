@@ -32,13 +32,13 @@ namespace vkl
 					.pos = 0,
 					.write_state = ResourceState2{
 						.access = VK_ACCESS_2_NONE,
-						.layout = _ci.initialLayout,
 						.stage = VK_PIPELINE_STAGE_2_NONE,
+						.layout = _ci.initialLayout,
 					},
 					.read_only_state = ResourceState2{
 						.access = VK_ACCESS_2_NONE,
-						.layout = _ci.initialLayout,
 						.stage = VK_PIPELINE_STAGE_2_NONE,
+						.layout = _ci.initialLayout,
 					},
 				},
 			};

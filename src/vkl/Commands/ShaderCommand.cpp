@@ -113,8 +113,8 @@ namespace vkl
 			const auto& meta = layout.metas()[i];
 			ResourceState2 begin_state{
 				.access = meta.access,
-				.layout = meta.layout,
 				.stage = getPipelineStageFromShaderStage2(binding.stageFlags),
+				.layout = meta.layout,
 			};
 
 			if (resource_binding.isBuffer())

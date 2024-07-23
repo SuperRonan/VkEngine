@@ -7,15 +7,15 @@ namespace vkl
 	struct ResourceState1
 	{
 		VkAccessFlags access = VK_ACCESS_NONE_KHR;
-		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkPipelineStageFlags stage = VK_PIPELINE_STAGE_NONE_KHR;
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	};
 
 	struct ResourceState2
 	{
 		VkAccessFlags2 access = VK_ACCESS_2_NONE_KHR;
-		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_NONE_KHR;
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		constexpr bool operator==(ResourceState2 const& o) const noexcept
 		{
@@ -214,7 +214,6 @@ namespace vkl
 		return res;
 	}
 
-
 	//class ResourceStateTracker
 	//{
 	//public:
@@ -309,3 +308,15 @@ namespace vkl
 
 	//};
 }
+
+// TODO make my own OptionalResourceState2 or std::optional<ResourceState2>
+//namespace std
+//{
+//	using namespace vkl;
+//
+//	template <>
+//	class optional<ResourceState2>
+//	{
+//
+//	};
+//}

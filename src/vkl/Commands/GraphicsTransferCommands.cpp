@@ -46,8 +46,8 @@ namespace vkl
 				.ivi = _src,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_READ_BIT,
+					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
 					.layout = _src_layout,
-					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 			};
@@ -56,8 +56,8 @@ namespace vkl
 				.ivi = _dst,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT,
 					.layout = _dst_layout,
-					.stage = VK_PIPELINE_STAGE_2_BLIT_BIT
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			};
@@ -189,8 +189,8 @@ namespace vkl
 					.ivi = _targets[i].target,
 					.begin_state = {
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT, // ??? Why transfer write (without it there is a synch validation hazard)
-						.layout = _src_layout,
 						.stage = mips_blit_stage,
+						.layout = _src_layout,
 					},
 					.usage = VK_IMAGE_USAGE_TRANSFER_BITS,
 				};
@@ -509,8 +509,8 @@ namespace vkl
 				.ivi = _target,
 				.begin_state = ResourceState2{
 					.access = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-					.layout = _dst_layout,
 					.stage = VK_PIPELINE_STAGE_2_CLEAR_BIT,
+					.layout = _dst_layout,
 				},
 				.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			};
