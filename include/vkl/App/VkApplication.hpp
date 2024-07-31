@@ -53,12 +53,18 @@ namespace vkl
 
 		struct Options
 		{
+			uint64_t use_general_image_layout_bits = 0;
+			
+			uint32_t gpu_id = uint32_t(-1);
+			
 			bool enable_validation = false;
 			bool enable_object_naming = false;
 			bool enable_command_buffer_labels = false;
-			uint32_t gpu_id = uint32_t(-1);
+			bool prefer_render_pass_with_dynamic_rendering = false;
+			bool query_render_pass_creation_feedback = false;
+			bool render_pass_disallow_merging = false;
+
 			// bit field per image usage (VkImageUsageFlagBits)
-			uint64_t use_general_image_layout_bits = 0;
 
 			constexpr VkImageLayout getLayout(VkImageLayout optimal_layout, VkImageUsageFlags usage) const
 			{

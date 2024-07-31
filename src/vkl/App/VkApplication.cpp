@@ -122,6 +122,8 @@ namespace vkl
 			VK_KHR_PRESENT_ID_EXTENSION_NAME,
 			VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
 
+			VK_EXT_SUBPASS_MERGE_FEEDBACK_EXTENSION_NAME,
+
 			VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME,
 			VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
 			VK_EXT_MESH_SHADER_EXTENSION_NAME,
@@ -153,7 +155,7 @@ namespace vkl
 		features.present_id_khr.presentId = t;
 
 		features.features2.features.geometryShader = t;
-		
+
 		features.features2.features.samplerAnisotropy = t;
 		features.features_12.samplerMirrorClampToEdge = t;
 
@@ -177,6 +179,8 @@ namespace vkl
 		features.features_12.runtimeDescriptorArray = t;
 
 		features.features_13.maintenance4 = t;
+
+		features.subpass_merge_feedback.subpassMergeFeedback = t;
 
 		features.line_raster_ext.bresenhamLines = t;
 		features.line_raster_ext.stippledBresenhamLines = t;
@@ -654,6 +658,10 @@ namespace vkl
 			_queues_by_desired = device_queues.desired_to_info;
 		}
 
+
+		_options.prefer_render_pass_with_dynamic_rendering &= _available_features.features_13.dynamicRendering;
+		_options.query_render_pass_creation_feedback &= _available_features.subpass_merge_feedback.subpassMergeFeedback;
+		_options.render_pass_disallow_merging &= _available_features.subpass_merge_feedback.subpassMergeFeedback;
 
 		queryDescriptorBindingOptions();
 	}
