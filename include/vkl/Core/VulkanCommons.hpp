@@ -96,7 +96,7 @@ namespace vkl
 	struct VkStruct
 	{
 		VkStructureType sType;
-		void * pNext;
+		const void * pNext;
 	};
 
 	namespace concepts
@@ -121,6 +121,20 @@ namespace vkl
 		{}
 
 		constexpr pNextChain(nullptr_t n = nullptr) {};
+
+		const VkStruct* find(VkStructureType type) const
+		{
+			const VkStruct * res = current;
+			while (res)
+			{
+				if (res->sType == type)
+				{
+					break;
+				}
+				res = reinterpret_cast<const VkStruct*>(res->pNext);
+			}
+			return res;
+		}
 
 		template <concepts::VkStructLike VkStructLike>
 		constexpr pNextChain& link(VkStructLike* vk_struct)
