@@ -47,14 +47,14 @@
 
 namespace vkl
 {
-	const char* GetProjectName()
-	{
-		return PROJECT_NAME;
-	}
-
 	class BSDFApp : public AppWithImGui
 	{
 	public:
+
+		virtual std::string getProjectName() const override
+		{
+			return PROJECT_NAME;
+		}
 
 		static void FillArgs(argparse::ArgumentParser& args_parser)
 		{

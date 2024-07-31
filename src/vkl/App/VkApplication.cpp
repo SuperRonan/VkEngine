@@ -1047,7 +1047,7 @@ namespace vkl
 				{
 					if (!_mounting_points.contains("ProjectShaders"))
 					{
-						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] + GetProjectName() + "/Shaders/"s;
+						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] + getProjectName() + "/Shaders/"s;
 					}
 				}
 			}

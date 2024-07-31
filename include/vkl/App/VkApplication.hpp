@@ -25,11 +25,7 @@ namespace argparse
 }
 
 namespace vkl
-{
-	// This is provided by the project
-	// It works only if VkEngine is statically linked with the project exec
-	extern const char * GetProjectName();
-	
+{	
 	class Queue;
 	class CommandPool;
 	class DescriptorSetLayout;
@@ -78,6 +74,8 @@ namespace vkl
 		};
 
 		static void FillArgs(argparse::ArgumentParser & args_parser);
+
+		virtual std::string getProjectName() const = 0;
 		
 		struct DesiredQueueInfo
 		{
