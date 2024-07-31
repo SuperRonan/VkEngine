@@ -46,6 +46,10 @@ namespace vkl
 			ParentType(other)
 		{}
 
+		constexpr MyVector(std::vector<T, Allocator> const& other) : 
+			ParentType(other)
+		{}
+
 		// (7)
 		constexpr MyVector(MyVector const& other, const Allocator& alloc) :
 			ParentType(other, alloc)
@@ -53,6 +57,10 @@ namespace vkl
 
 		// (8)
 		constexpr MyVector(MyVector && other) noexcept :
+			ParentType(std::move(other))
+		{}
+
+		constexpr MyVector(std::vector<T, Allocator>&& other) noexcept :
 			ParentType(std::move(other))
 		{}
 
@@ -80,8 +88,20 @@ namespace vkl
 			return *this;
 		}
 
+		const MyVector& operator=(const std::vector<T, Allocator> const& other)
+		{
+			ParentType::operator=(other);
+			return *this;
+		}
+
 		// (2)
 		constexpr MyVector& operator=(MyVector&& other) noexcept
+		{
+			ParentType::operator=(std::move(other));
+			return *this;
+		}
+
+		const MyVector& operator=(const std::vector<T, Allocator> && other)
 		{
 			ParentType::operator=(std::move(other));
 			return *this;
