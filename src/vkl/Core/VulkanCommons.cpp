@@ -33,6 +33,10 @@ namespace vkl
 		present_id_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
 		present_wait_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR;
 
+		fragment_shading_rate_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
+		multisampled_render_to_single_sampled_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_FEATURES_EXT;
+		subpass_merge_feedback.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBPASS_MERGE_FEEDBACK_FEATURES_EXT;
+
 		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
 		index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
 		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
@@ -65,6 +69,13 @@ namespace vkl
 		if(filter_extensions(VK_KHR_PRESENT_WAIT_EXTENSION_NAME))
 			chain += &present_wait_khr;
 
+		if(filter_extensions(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
+			chain += &fragment_shading_rate_khr;
+		if(filter_extensions(VK_EXT_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_EXTENSION_NAME))
+			chain += &multisampled_render_to_single_sampled_ext;
+		if(filter_extensions(VK_EXT_SUBPASS_MERGE_FEEDBACK_EXTENSION_NAME))
+			chain += &subpass_merge_feedback;
+
 		if(filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			chain += &line_raster_ext;
 		if(filter_extensions(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME))
@@ -73,7 +84,6 @@ namespace vkl
 			chain += &mesh_shader_ext;
 		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
 			chain += &robustness2_ext;
-		chain += nullptr;
 
 		if(filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
 			chain += &acceleration_structure_khr;
@@ -85,7 +95,6 @@ namespace vkl
 			chain += &ray_tracing_maintenance1_khr;
 		if(filter_extensions(VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME))
 			chain += &ray_tracing_position_fetch_khr;
-		chain += nullptr;
 
 		if(filter_extensions(VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME))
 			chain += &ray_tracing_motion_blur_nv;
@@ -96,7 +105,6 @@ namespace vkl
 			chain += &ray_tracing_validation_nv;
 
 		chain += nullptr;
-
 		return features2;
 	}
 
@@ -111,6 +119,8 @@ namespace vkl
 		props_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 		props_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
 		props_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
+
+		fragment_shading_rate_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR;
 
 		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_PROPERTIES_EXT;
 		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
@@ -129,6 +139,9 @@ namespace vkl
 			chain += &props_12;
 		if (version >= VK_MAKE_VERSION(1, 3, 0))
 			chain += &props_13;
+		
+		if(filter_extensions(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
+			chain += &fragment_shading_rate_khr;
 
 		if (filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
 			chain += &line_raster_ext;
@@ -136,18 +149,16 @@ namespace vkl
 			chain += &mesh_shader_ext;
 		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
 			chain += &robustness2_ext;
-		chain += nullptr;
 
 		if (filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
 			chain += &acceleration_structure_khr;
 		if (filter_extensions(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
 			chain += &ray_tracing_pipeline_khr;
-		chain += nullptr;
 
 		if (filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
 			chain += &ray_tracing_invocation_reorder_nv;
-		chain += nullptr;
 
+		chain += nullptr;
 		return props2;
 	}
 	
@@ -185,6 +196,10 @@ namespace vkl
 		COMBINE_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
 		COMBINE_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
 		COMBINE_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
+
+		COMBINE_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
+		COMBINE_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
+		COMBINE_VK_FEATURES(VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT, subpass_merge_feedback, subpassMergeFeedback, subpassMergeFeedback);
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
@@ -254,6 +269,10 @@ namespace vkl
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
 		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
 		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
+
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT, subpass_merge_feedback, subpassMergeFeedback, subpassMergeFeedback);
 
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);

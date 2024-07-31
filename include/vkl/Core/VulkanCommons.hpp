@@ -252,6 +252,10 @@ namespace vkl
 		VkPhysicalDevicePresentIdFeaturesKHR present_id_khr = {};
 		VkPhysicalDevicePresentWaitFeaturesKHR present_wait_khr = {};
 
+		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_khr = {};
+		VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT multisampled_render_to_single_sampled_ext = {};
+		VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT subpass_merge_feedback = {};
+
 		VkPhysicalDeviceLineRasterizationFeaturesEXT line_raster_ext = {};
 		VkPhysicalDeviceIndexTypeUint8FeaturesEXT index_uint8_ext = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_ext = {};
@@ -291,6 +295,8 @@ namespace vkl
 		VkPhysicalDeviceVulkan11Properties props_11 = {};
 		VkPhysicalDeviceVulkan12Properties props_12 = {};
 		VkPhysicalDeviceVulkan13Properties props_13 = {};
+
+		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_khr = {};
 
 		VkPhysicalDeviceLineRasterizationPropertiesEXT line_raster_ext = {};
 		VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_ext = {};
