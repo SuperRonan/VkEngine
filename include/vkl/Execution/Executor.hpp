@@ -8,6 +8,8 @@
 #include <vkl/Execution/ResourcesLists.hpp>
 #include <vkl/Execution/FramePerformanceCounters.hpp>
 
+#include <vkl/Execution/RenderPassBeginInfo.hpp>
+
 namespace vkl
 {
 	using namespace std::chrono_literals;
@@ -63,8 +65,22 @@ namespace vkl
 			execute(node);
 		}
 
+		struct BindSetInfo
+		{
+			uint32_t index = 0;
+			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+			bool bind_graphics = true;
+			bool bind_compute = true;
+			bool bind_rt = true;
+		};
 		
-		virtual void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true) = 0;
+		virtual void bindSet(BindSetInfo const& info) = 0;
+
+		virtual void beginRenderPass(RenderPassBeginInfo const& info) = 0;
+
+		virtual void nextSubPass(VkSubpassContents content) = 0;
+
+		virtual void endRenderPass() = 0;
 
 		using vec4 = glm::vec4;
 

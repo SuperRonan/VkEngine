@@ -341,7 +341,7 @@ namespace vkl
 		VkImageLayout layout;
 		if (node->_render_pass)
 		{
-			layout = node->_render_pass->getAttachementDescriptors2().front().initialLayout;
+			layout = node->_render_pass->getAttachmentDescriptors2().front().initialLayout;
 		}
 		else
 		{

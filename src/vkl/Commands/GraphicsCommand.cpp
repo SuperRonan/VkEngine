@@ -369,7 +369,7 @@ namespace vkl
 
 		for (size_t i = 0; i < node._framebuffer->colorSize(); ++i)
 		{
-			const VkAttachmentDescription2 & at_desc = node._render_pass->getAttachementDescriptors2()[i];
+			const VkAttachmentDescription2 & at_desc = node._render_pass->getAttachmentDescriptors2()[i];
 			VkAccessFlags2 access = VK_ACCESS_2_NONE;
 			if (at_desc.storeOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
 			{
@@ -392,7 +392,7 @@ namespace vkl
 		}
 		if (node._depth_stencil)
 		{
-			const VkAttachmentDescription2& at_desc = node._render_pass->getAttachementDescriptors2().back();
+			const VkAttachmentDescription2& at_desc = node._render_pass->getAttachmentDescriptors2().back();
 			
 			VkAccessFlags2 access = VK_ACCESS_2_NONE;
 			VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
