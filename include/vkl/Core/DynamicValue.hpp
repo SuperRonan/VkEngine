@@ -381,6 +381,11 @@ namespace vkl
 			return _inst.operator bool();
 		}
 
+		constexpr operator bool() const
+		{
+			return hasValue();
+		}
+
 		void setValue(T const& t)
 		{
 			assert(hasValue());
