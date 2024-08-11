@@ -659,9 +659,9 @@ namespace vkl
 		}
 
 
-		_options.prefer_render_pass_with_dynamic_rendering &= _available_features.features_13.dynamicRendering;
-		_options.query_render_pass_creation_feedback &= _available_features.subpass_merge_feedback.subpassMergeFeedback;
-		_options.render_pass_disallow_merging &= _available_features.subpass_merge_feedback.subpassMergeFeedback;
+		_options.prefer_render_pass_with_dynamic_rendering &= (_available_features.features_13.dynamicRendering) != VK_FALSE;
+		_options.query_render_pass_creation_feedback &= (_available_features.subpass_merge_feedback.subpassMergeFeedback) != VK_FALSE;
+		_options.render_pass_disallow_merging &= (_available_features.subpass_merge_feedback.subpassMergeFeedback) != VK_FALSE;
 
 		queryDescriptorBindingOptions();
 	}
@@ -852,10 +852,10 @@ namespace vkl
 		};
 
 		_options = Options{
+			.gpu_id = static_cast<uint32_t>(ci.args.get<int>("--gpu")),
 			.enable_validation = intToBool(ci.args.get<int>("--validation")),
 			.enable_object_naming = intToBool(ci.args.get<int>("--name_vk_objects")),
 			.enable_command_buffer_labels = intToBool(ci.args.get<int>("--cmd_labels")),
-			.gpu_id = static_cast<uint32_t>(ci.args.get<int>("--gpu")),
 		};
 
 		std::string arg_image_layout = ci.args.get<std::string>("image_layout");
