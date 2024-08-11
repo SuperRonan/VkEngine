@@ -503,6 +503,23 @@ namespace vkl
 		};
 	}
 
+	inline VkExtent2D minimumExtent(VkExtent2D const& a, VkExtent2D const& b)
+	{
+		return VkExtent2D{
+			.width = std::min(a.width, b.width),
+			.height = std::min(a.height, b.height),
+		};
+	}
+
+	inline VkExtent3D minimumExtent(VkExtent3D const& a, VkExtent3D const& b)
+	{
+		return VkExtent3D{
+			.width = std::min(a.width, b.width),
+			.height = std::min(a.height, b.height),
+			.depth = std::min(a.depth, b.depth),
+		};
+	}
+
 	constexpr VkImageViewType getDefaultViewTypeFromImageType(VkImageType type)
 	{
 		switch (type)
