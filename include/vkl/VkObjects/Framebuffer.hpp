@@ -12,10 +12,10 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageViewInstance>> _textures = {};
-		std::shared_ptr<ImageViewInstance> _depth_stencil = nullptr;
+		MyVector<std::shared_ptr<ImageViewInstance>> _attachments = {};
 		std::shared_ptr<RenderPassInstance> _render_pass = nullptr;
-		uint32_t _layers = 1;
+		VkExtent3D _extent = {};
+
 		VkFramebuffer _handle = VK_NULL_HANDLE;
 
 	public:
@@ -25,9 +25,8 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<RenderPassInstance> render_pass = nullptr;
-			std::vector<std::shared_ptr<ImageViewInstance>> targets = {};
-			std::shared_ptr<ImageViewInstance> depth_stencil = nullptr;
-			uint32_t layers = 1;
+			MyVector<std::shared_ptr<ImageViewInstance>> attachments = {};
+			VkExtent3D extent = {};
 		};
 		using CI = CreateInfo;
 
@@ -61,49 +60,14 @@ namespace vkl
 			return _render_pass;
 		}
 
-		constexpr const auto& textures()const
+		constexpr const auto& attachments()const
 		{
-			return _textures;
+			return _attachments;
 		}
 
-		constexpr auto& textures()
+		constexpr VkExtent3D extent()const
 		{
-			return _textures;
-		}
-
-		constexpr size_t colorSize()const
-		{
-			return textures().size();
-		}
-
-		constexpr size_t count()const
-		{
-			return _textures.size();
-		}
-
-		constexpr uint32_t layers()const
-		{
-			return _layers;
-		}
-
-		std::shared_ptr<ImageViewInstance> const& depthStencil()const
-		{
-			return _depth_stencil;
-		}
-
-		VkExtent3D extent()const
-		{
-			VkExtent3D res;
-			std::memset(&res, 0, sizeof(res));
-			if (!_textures.empty() && _textures[0])
-			{
-				res = _textures[0]->image()->createInfo().extent;
-			}
-			else if (_depth_stencil)
-			{
-				res = _depth_stencil->image()->createInfo().extent;
-			}
-			return res;
+			return _extent;
 		}
 	};
 
@@ -111,11 +75,9 @@ namespace vkl
 	{
 	protected:
 
-		std::vector<std::shared_ptr<ImageView>> _textures = {};
-		// Maybe in a future version of vulkan, depth and stencil can be separate images
-		std::shared_ptr<ImageView> _depth_stencil = nullptr;
+		MyVector<std::shared_ptr<ImageView>> _attachments = {};
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
-		Dyn<uint32_t> _layers;
+		Dyn<VkExtent3D> _extent = {};
 
 		void createInstanceIFP();
 
@@ -126,9 +88,8 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<RenderPass> render_pass = nullptr;
-			std::vector<std::shared_ptr<ImageView>> targets = {};
-			std::shared_ptr<ImageView> depth_stencil = nullptr;
-			Dyn<uint32_t> layers = {};
+			MyVector<std::shared_ptr<ImageView>> attachments = {};
+			Dyn<VkExtent3D> extent = {};
 			Dyn<bool> hold_instance = true;
 		};
 
@@ -150,29 +111,19 @@ namespace vkl
 			return _render_pass;
 		}
 
-		constexpr const auto& textures()const
+		constexpr const auto& attachments()const
 		{
-			return _textures;
+			return _attachments;
 		}
 
-		constexpr auto& textures()
+		constexpr const DynamicValue<VkExtent3D>& extent()const
 		{
-			return _textures;
+			return _extent;
 		}
 
-		constexpr size_t colorSize()const
-		{
-			return textures().size();
-		}
-
-		//constexpr size_t layers()const
+		//constexpr DynamicValue<VkExtent3D>& extent()
 		//{
-		//	return _textures.size();
+		//	return _extent;
 		//}
-
-		DynamicValue<VkExtent3D> extent()const
-		{
-			return _textures[0]->image()->extent();
-		}
 	};
 }
