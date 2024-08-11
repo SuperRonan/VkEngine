@@ -194,9 +194,15 @@ namespace vkl
 	{
 		_ubo->recordTransferIFN(exec);
 
-		exec.bindSet(application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set, _set);
+		exec.bindSet(BindSetInfo{
+			.index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set,
+			.set = _set,
+		});
 		exec(_render_3D_mesh);
-		exec.bindSet(application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set, nullptr);
+		exec.bindSet(BindSetInfo{
+			.index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set,
+			.set = nullptr,
+		});
 	}
 
 	void BSDFViewer::declareGUI(GuiContext& ctx)

@@ -46,7 +46,7 @@ namespace vkl
 
 		virtual void record(Executable const& executable) override;
 
-		virtual void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true) override;
+		virtual void bindSet(BindSetInfo const& info) override;
 
 		using vec4 = glm::vec4;
 
@@ -166,7 +166,7 @@ namespace vkl
 
 		ExecutionThread* beginCommandBuffer(bool bind_common_set = true);
 
-		void bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics = true, bool bind_compute = true, bool bind_rt = true);
+		void bindSet(BindSetInfo const& info);
 
 		void renderDebugIFP();
 

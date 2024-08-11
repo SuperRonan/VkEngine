@@ -16,6 +16,15 @@ namespace vkl
 
 	class DebugRenderer;
 
+	struct BindSetInfo
+	{
+		uint32_t index = 0;
+		std::shared_ptr<DescriptorSetAndPool> set = nullptr;
+		bool bind_graphics = true;
+		bool bind_compute = true;
+		bool bind_rt = true;
+	};
+
 	class ExecutionRecorder : public VkObject
 	{
 	protected:
@@ -65,14 +74,7 @@ namespace vkl
 			execute(node);
 		}
 
-		struct BindSetInfo
-		{
-			uint32_t index = 0;
-			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
-			bool bind_graphics = true;
-			bool bind_compute = true;
-			bool bind_rt = true;
-		};
+		
 		
 		virtual void bindSet(BindSetInfo const& info) = 0;
 

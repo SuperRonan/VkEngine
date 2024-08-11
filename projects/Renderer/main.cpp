@@ -549,7 +549,10 @@ namespace vkl
 					
 					exec.performAsynchMipsCompute(*update_context->mipsQueue());
 
-					exec_thread.bindSet(1, scene->set());
+					exec_thread.bindSet(BindSetInfo{
+						.index = 1, 
+						.set = scene->set(),
+					});
 					scene->prepareForRendering(exec_thread);
 					renderer.execute(exec_thread, camera, t, dt, frame_index);
 
@@ -561,7 +564,10 @@ namespace vkl
 					 
 					pip.execute(exec_thread);
 
-					exec_thread.bindSet(1, nullptr);
+					exec_thread.bindSet(BindSetInfo{
+						.index = 1,
+						.set = nullptr,
+					});
 
 					exec.renderDebugIFP();
 					image_saver.execute(exec_thread);

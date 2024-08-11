@@ -55,27 +55,27 @@ namespace vkl
 		executeNode(node);
 	}
 
-	void ExecutionThread::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
+	void ExecutionThread::bindSet(BindSetInfo const& info)
 	{
-		if (set)
+		if (info.set)
 		{
-			set->waitForInstanceCreationIFN();
+			info.set->waitForInstanceCreationIFN();
 		}
-		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (set && set->instance()->exists()) ? set->instance() : nullptr;
-		if (bind_graphics)
+		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (info.set && info.set->instance()->exists()) ? info.set->instance() : nullptr;
+		if (info.bind_graphics)
 		{
-			_record_context.graphicsBoundSets().bind(s, inst);
-			_context->graphicsBoundSets().bind(s, inst);
+			_record_context.graphicsBoundSets().bind(info.index, inst);
+			_context->graphicsBoundSets().bind(info.index, inst);
 		}
-		if (bind_compute)
+		if (info.bind_compute)
 		{
-			_record_context.computeBoundSets().bind(s, inst);
-			_context->computeBoundSets().bind(s, inst);
+			_record_context.computeBoundSets().bind(info.index, inst);
+			_context->computeBoundSets().bind(info.index, inst);
 		}
-		if (bind_rt)
+		if (info.bind_rt)
 		{
-			_record_context.rayTracingBoundSets().bind(s, inst);
-			_context->rayTracingBoundSets().bind(s, inst);
+			_record_context.rayTracingBoundSets().bind(info.index, inst);
+			_context->rayTracingBoundSets().bind(info.index, inst);
 		}
 	}
 
@@ -702,7 +702,13 @@ namespace vkl
 
 		if (bind_common_set)
 		{
-			bindSet(0, _common_descriptor_set, true, true, _use_rt_pipeline);
+			bindSet(BindSetInfo{
+				.index = 0,
+				.set = _common_descriptor_set, 
+				.bind_graphics = true,
+				.bind_compute = true,
+				.bind_rt = _use_rt_pipeline,
+			});
 		}
 		return res;
 	}
@@ -736,9 +742,9 @@ namespace vkl
 	//	return res;
 	//}
 
-	void LinearExecutor::bindSet(uint32_t s, std::shared_ptr<DescriptorSetAndPool> const& set, bool bind_graphics, bool bind_compute, bool bind_rt)
+	void LinearExecutor::bindSet(BindSetInfo const& info)
 	{
-		_current_thread->bindSet(s, set, bind_graphics, bind_compute, bind_rt);
+		_current_thread->bindSet(info);
 	}
 
 	void LinearExecutor::endCommandBuffer(ExecutionThread* exec_thread, bool submit)
