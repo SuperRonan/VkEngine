@@ -252,6 +252,7 @@ namespace vkl
 				VkPipelineStageFlags initial_stage = VK_PIPELINE_STAGE_NONE;
 				VkPipelineStageFlags final_stage = VK_PIPELINE_STAGE_NONE;
 				VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+				VkImageUsageFlags vk_image_usage = 0;
 
 				bool deduce_from_op = true;
 
@@ -259,6 +260,7 @@ namespace vkl
 				{
 					// It does not make sense to have an input attachment at subpass 0
 					const VkAttachmentReference2* ref = findRef(subpass.pInputAttachments, subpass.inputAttachmentCount, i);
+					vk_image_usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 					if (ref)
 					{
 						layout = ref->layout;
@@ -271,6 +273,7 @@ namespace vkl
 				if ((usage & AttachmentSubpassUsage::Usage::Color) != AttachmentSubpassUsage::Usage::None)
 				{
 					const VkAttachmentReference2* ref = findRef(subpass.pColorAttachments, subpass.colorAttachmentCount, i);
+					vk_image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 					if (ref)
 					{
 						layout = ref->layout;
@@ -282,6 +285,7 @@ namespace vkl
 				}
 				if ((usage & AttachmentSubpassUsage::Usage::DepthStencil) != AttachmentSubpassUsage::Usage::None)
 				{
+					vk_image_usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 					if (subpass.pDepthStencilAttachment)
 					{
 						layout = subpass.pDepthStencilAttachment->layout;
@@ -294,6 +298,9 @@ namespace vkl
 				if ((usage & AttachmentSubpassUsage::Usage::ResolveDst) != AttachmentSubpassUsage::Usage::None)
 				{
 					const VkAttachmentReference2* ref = findRef(subpass.pResolveAttachments, subpass.colorAttachmentCount, i);
+					vk_image_usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+					//vk_image_usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT; vkCmdResolveImage requires both
+
 					if (ref)
 					{
 						layout = ref->layout;
@@ -315,6 +322,7 @@ namespace vkl
 					final_stage = initial_stage;
 					access = VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR;
 					deduce_from_op = false;
+					vk_image_usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 				}
 
 				if (deduce_from_op)
@@ -406,6 +414,7 @@ namespace vkl
 				global_usage.final_access = access;
 				global_usage.initial_stage = initial_stage;
 				global_usage.final_stage = final_stage;
+				global_usage.usage |= vk_image_usage;
 			}
 		}
 		else
