@@ -1013,6 +1013,7 @@ namespace vkl
 	{
 		resource_list.iterateOnBuffers(getBufferProcessFunction());
 		resource_list.iterateOnImages(getImageProcessFunction());
+		_ctx->keepAlive(resource_list.imageViews());
 	}
 
 	void SynchronizationHelper::record()

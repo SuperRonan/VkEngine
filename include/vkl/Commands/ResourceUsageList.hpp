@@ -167,7 +167,7 @@ namespace vkl
 	{
 	protected:
 
-
+		MyVector<std::shared_ptr<ImageViewInstance>> _image_views;
 
 	public:
 
@@ -181,6 +181,7 @@ namespace vkl
 		void addView(std::shared_ptr<ImageViewInstance> const& ivi, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkImageUsageFlags usages = 0)
 		{
 			addImage(ivi->image(), ivi->createInfo().subresourceRange, state, end_state, usages);
+			_image_views += ivi;
 		}
 
 		void add(BufferUsage const& bu) 
@@ -215,13 +216,20 @@ namespace vkl
 			add(ivu);
 			return *this;
 		}
+
+		const auto& imageViews()const
+		{
+			return _image_views;
+		}
 		
 		virtual void iterateOnBuffers(BufferUsageFunction const& fn) const = 0;
 
 		virtual void iterateOnImages(ImageUsageFunction const& fn) const = 0;
 
-		virtual void clear() = 0;
-
+		virtual void clear()
+		{
+			_image_views.clear();
+		}
 	};
 
 

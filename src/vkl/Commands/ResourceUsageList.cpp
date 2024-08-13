@@ -139,6 +139,7 @@ namespace vkl
 
 	void ModularResourceUsageList::clear()
 	{
+		AbstractResourceUsageList::clear();
 		_buffers.clear();
 		_images.clear();
 	}
