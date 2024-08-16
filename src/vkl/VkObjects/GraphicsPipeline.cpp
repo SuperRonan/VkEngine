@@ -3,6 +3,38 @@
 
 namespace vkl
 {
+	constexpr bool operator==(VkPipelineColorBlendAttachmentState const lhs, VkPipelineColorBlendAttachmentState const& rhs) noexcept
+	{
+		bool res = lhs.blendEnable == rhs.blendEnable;
+		if (lhs.blendEnable && rhs.blendEnable)
+		{
+			res &= (lhs.srcColorBlendFactor == rhs.srcColorBlendFactor);
+			res &= (lhs.dstColorBlendFactor == rhs.dstColorBlendFactor);
+			res &= (lhs.colorBlendOp == rhs.colorBlendOp);
+			res &= (lhs.srcAlphaBlendFactor == rhs.srcAlphaBlendFactor);
+			res &= (lhs.dstAlphaBlendFactor == rhs.dstAlphaBlendFactor);
+			res &= (lhs.alphaBlendOp == rhs.alphaBlendOp);
+			res &= (lhs.colorWriteMask == rhs.colorWriteMask);
+		}
+		return res;
+	}
+
+	constexpr bool operator!=(VkPipelineColorBlendAttachmentState const lhs, VkPipelineColorBlendAttachmentState const& rhs) noexcept
+	{
+		bool res = lhs.blendEnable != rhs.blendEnable;
+		if (lhs.blendEnable && rhs.blendEnable)
+		{
+			res |= (lhs.srcColorBlendFactor != rhs.srcColorBlendFactor);
+			res |= (lhs.dstColorBlendFactor != rhs.dstColorBlendFactor);
+			res |= (lhs.colorBlendOp != rhs.colorBlendOp);
+			res |= (lhs.srcAlphaBlendFactor != rhs.srcAlphaBlendFactor);
+			res |= (lhs.dstAlphaBlendFactor != rhs.dstAlphaBlendFactor);
+			res |= (lhs.alphaBlendOp != rhs.alphaBlendOp);
+			res |= (lhs.colorWriteMask != rhs.colorWriteMask);
+		}
+		return res;
+	}
+
 	GraphicsPipelineInstance::GraphicsPipelineInstance(CreateInfo const& ci) :
 		PipelineInstance(PipelineInstance::CI{
 			.app = ci.app,
@@ -109,6 +141,43 @@ namespace vkl
 	}
 
 
+	VkPipelineMultisampleStateCreateInfo GraphicsPipeline::MultisamplingState::link()
+	{
+		VkPipelineMultisampleStateCreateInfo res{
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.rasterizationSamples = rasterization_samples.valueOr(VK_SAMPLE_COUNT_1_BIT),
+			.sampleShadingEnable = VK_FALSE,
+			.minSampleShading = 0,
+			.pSampleMask = nullptr,
+			.alphaToCoverageEnable = VK_FALSE,
+			.alphaToOneEnable = VK_FALSE,
+		};
+		if (min_sample_shading.hasValue())
+		{
+			const float v = min_sample_shading.value();
+			if (v >= 0.0f)
+			{
+				res.sampleShadingEnable = VK_TRUE;
+				res.minSampleShading = std::min(v, 1.0f);
+			}
+		}
+		if (flags.hasValue())
+		{
+			const Flags v = flags.value();
+			if (!!(v & Flags::AlphaToCoverageEnable))
+			{
+				res.alphaToCoverageEnable = VK_TRUE;
+			}
+			if (!!(v & Flags::AlphaToOneEnable))
+			{
+				res.alphaToOneEnable = VK_TRUE;
+			}
+		}
+		return res;
+	}
+
 
 	GraphicsPipeline::GraphicsPipeline(CreateInfo const& ci):
 		Pipeline(Pipeline::CI{
@@ -162,15 +231,21 @@ namespace vkl
 			.scissors = _scissors,
 			.rasterization = _rasterization.value(),
 			.line_raster = {},
-			.multisampling = _multisampling,
+			.multisampling = _multisampling.link(),
 			.depth_stencil = _depth_stencil,
-			.attachements_blends = _attachements_blends,
 			.dynamic = _dynamic,
 			.render_pass = _render_pass->instance(),
 			.program = std::static_pointer_cast<GraphicsProgramInstance>(_program->instance()),
 		};
-		if(_line_raster.has_value())
-		gci.line_raster = _line_raster.value().value();
+		if (_line_raster.has_value())
+		{
+			gci.line_raster = _line_raster.value().value();
+		}
+		gci.attachements_blends.resize(_attachements_blends.size());
+		for (size_t i = 0; i < _attachements_blends.size(); ++i)
+		{
+			gci.attachements_blends[i] = _attachements_blends[i].value();
+		}
 		_inst = std::make_shared<GraphicsPipelineInstance>(std::move(gci));
 	}
 
@@ -196,6 +271,68 @@ namespace vkl
 			}
 
 			if (_rasterization.frontFace.hasValue() && ir.frontFace != _rasterization.frontFace.value())
+			{
+				res = true;
+				break;
+			}
+
+
+			if (_multisampling.rasterization_samples.hasValue() && inst._multisampling.rasterizationSamples != _multisampling.rasterization_samples.value())
+			{
+				res = true;
+				break;
+			}
+
+			if (_multisampling.min_sample_shading.hasValue())
+			{
+				const float v = _multisampling.min_sample_shading.value();
+				if (v >= 0.0f)
+				{
+					if (inst._multisampling.sampleShadingEnable == VK_FALSE || inst._multisampling.minSampleShading != v)
+					{
+						res = true;
+						break;
+					}
+				}
+				else if(inst._multisampling.sampleShadingEnable != VK_FALSE)
+				{
+					res = true;
+					break;
+				}
+			}
+			
+			if (_multisampling.flags.hasValue())
+			{
+				const MultisamplingState::Flags flags = _multisampling.flags.value();
+				MultisamplingState::Flags inst_flags = MultisamplingState::Flags::None;
+				if (inst._multisampling.alphaToCoverageEnable)
+				{
+					inst_flags |= MultisamplingState::Flags::AlphaToCoverageEnable;
+				}
+				if (inst._multisampling.alphaToOneEnable)
+				{
+					inst_flags |= MultisamplingState::Flags::AlphaToOneEnable;
+				}
+				if (flags != inst_flags)
+				{
+					res = true;
+					break;
+				}
+			}
+
+			if (_attachements_blends.size() == inst._attachements_blends.size())
+			{
+				for (size_t i = 0; i < _attachements_blends.size(); ++i)
+				{
+					const VkPipelineColorBlendAttachmentState value = _attachements_blends[i].value();
+					if (value != inst._attachements_blends[i])
+					{
+						res = true;
+						break;
+					}
+				}
+			}
+			else
 			{
 				res = true;
 				break;

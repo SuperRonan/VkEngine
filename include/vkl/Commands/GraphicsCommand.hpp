@@ -4,7 +4,7 @@
 #include <vkl/Rendering/Drawable.hpp>
 #include <vkl/VkObjects/GraphicsPipeline.hpp>
 
-#include <variant>
+#include <vkl/Execution/RenderPassBeginInfo.hpp>
 
 #include <that/utils/ExtensibleStorage.hpp>
 
@@ -21,39 +21,37 @@ namespace vkl
 		using CI = CreateInfo;
 		GraphicsCommandNode(CreateInfo const& ci);
 
-		std::shared_ptr<RenderPassInstance> _render_pass;
-		std::shared_ptr<FramebufferInstance> _framebuffer;
-		std::shared_ptr<ImageViewInstance> _depth_stencil;
-
-		MyVector<VkClearValue> _clear_values;
-		std::optional<VkClearColorValue> _clear_color;
-		std::optional<VkClearDepthStencilValue> _clear_depth_stencil;
+		RenderPassBeginInfo _render_pass_begin_info;
 
 		VkViewport _viewport;
 
 		virtual void clear() override;
 
+		void exportFramebufferResources();
+
 		virtual void execute(ExecutionContext & ctx) override;
 
 		virtual void recordDrawCalls(ExecutionContext & ctx) = 0;
-	};
-
-	struct AttachmentInfo
-	{
-		Dyn<VkFormat> format;
-		Dyn<VkSampleCountFlagBits> samples;
-	};
-	struct ExternFramebufferInfo
-	{
-		MyVector<AttachmentInfo> color_attachments;
-		std::optional<AttachmentInfo> detph_stencil_attchement;
-		uint32_t layers = 1;
-		bool multiview = false;
 	};
 	
 	class GraphicsCommand : public ShaderCommand
 	{
 	public:
+
+		struct ColorAttachment
+		{
+			std::shared_ptr<ImageView> view = nullptr;
+			std::shared_ptr<ImageView> resolved = nullptr;
+			Dyn<VkClearColorValue> clear_value = {};
+			Dyn<VkPipelineColorBlendAttachmentState> blending = {};
+		};
+
+		struct DepthStencilAttachment
+		{
+			std::shared_ptr<ImageView> view = nullptr;
+			Dyn<float> clear_depth = {};
+			Dyn<uint32_t> clear_stencil = {};
+		};
 		
 	protected:
 
@@ -62,22 +60,25 @@ namespace vkl
 		Dyn<VkCullModeFlags> _cull_mode;
 		Dyn<VertexInputDescription> _vertex_input_desc;
 		std::shared_ptr<GraphicsProgram> _program;
-		std::vector<std::shared_ptr<ImageView>> _attachements = {};
-		std::shared_ptr<ImageView> _depth_stencil = nullptr;
-		std::shared_ptr<RenderPass> _render_pass = nullptr;
-		std::variant<std::shared_ptr<Framebuffer>, ExternFramebufferInfo> _framebuffer;
+		MyVector<ColorAttachment> _color_attachements = {};
+		DepthStencilAttachment _depth_stencil = {};
+		std::shared_ptr<ImageView> _fragment_shading_rate_image = {};
+		Dyn<VkExtent2D> _fragment_shading_rate_texel_size = {};
+		Dyn<VkSampleCountFlagBits> _inline_multisampling = {};
 
+		std::shared_ptr<RenderPass> _render_pass = nullptr;
+		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
+
+		uint32_t _view_mask = 0;
+		bool _use_external_renderpass = false;
 		std::optional<bool> _write_depth = {};
 		std::optional<VkCompareOp> _depth_compare_op = VK_COMPARE_OP_LESS;
 		std::optional<VkStencilOpState> _stencil_front_op = {};
 		std::optional<VkStencilOpState> _stencil_back_op = {};
 
-		std::optional<VkClearColorValue> _clear_color = {};
-		std::optional<VkClearDepthStencilValue> _clear_depth_stencil = {};
-
-		std::optional<VkPipelineColorBlendAttachmentState> _blending = {};
-
 		std::optional<GraphicsPipeline::LineRasterizationState> _line_raster_state = {};
+
+		Dyn<DefinitionsList> _common_shader_definitions = {};
 
 		DrawType _draw_type = {};
 
@@ -102,16 +103,18 @@ namespace vkl
 			std::optional<GraphicsPipeline::LineRasterizationState> line_raster_state = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
-			std::optional<ExternFramebufferInfo> extern_framebuffer = {};
-			std::vector<std::shared_ptr<ImageView>> targets = {};
-			std::shared_ptr<ImageView> depth_stencil = nullptr;
+			std::shared_ptr<RenderPass> extern_render_pass = {};
+			MyVector<ColorAttachment> color_attachments = {};
+			DepthStencilAttachment depth_stencil_attachment = {};
+			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
+			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
+			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			uint32_t view_mask = 0;
 			std::optional<bool> write_depth = {};
 			std::optional<VkCompareOp> depth_compare_op = {};
 			std::optional<VkStencilOpState> stencil_front_op = {};
 			std::optional<VkStencilOpState> stencil_back_op = {};
-			std::optional<VkClearColorValue> clear_color = {};
-			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
-			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
+			Dyn<DefinitionsList> definitions = {};
 			DrawType draw_type = {};
 		};
 
@@ -252,9 +255,13 @@ namespace vkl
 			std::optional<GraphicsPipeline::LineRasterizationState> line_raster_state = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
-			std::optional<ExternFramebufferInfo> extern_framebuffer = {};
-			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
-			std::shared_ptr<ImageView> depth_stencil = nullptr;
+			std::shared_ptr<RenderPass> extern_render_pass = {};
+			MyVector<ColorAttachment> color_attachments = {};
+			DepthStencilAttachment depth_stencil_attachment = {};
+			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
+			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
+			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			uint32_t view_mask = 0;
 			std::optional<bool> write_depth = {};
 			std::optional<VkCompareOp> depth_compare_op = {};
 			std::optional<VkStencilOpState> stencil_front_op = {};
@@ -265,11 +272,6 @@ namespace vkl
 			std::filesystem::path geometry_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
 			DynamicValue<DefinitionsList> definitions = DefinitionsList();
-			
-			std::optional<VkClearColorValue> clear_color = {};
-			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
-
-			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
 
 			DrawType draw_type = {};
 		};
@@ -456,9 +458,13 @@ namespace vkl
 			std::optional<GraphicsPipeline::LineRasterizationState> line_raster_state = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
-			std::optional<ExternFramebufferInfo> extern_framebuffer = {};
-			std::vector<std::shared_ptr<ImageView>> color_attachements = {};
-			std::shared_ptr<ImageView> depth_stencil = nullptr;
+			std::shared_ptr<RenderPass> extern_render_pass = {};
+			MyVector<ColorAttachment> color_attachments = {};
+			DepthStencilAttachment depth_stencil_attachment = {};
+			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
+			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
+			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			uint32_t view_mask = 0;
 			std::optional<bool> write_depth = {};
 			std::optional<VkCompareOp> depth_compare_op = {};
 			std::optional<VkStencilOpState> stencil_front_op = {};
@@ -467,11 +473,6 @@ namespace vkl
 			std::filesystem::path mesh_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};
 			DynamicValue<DefinitionsList> definitions = DefinitionsList();
-
-			std::optional<VkClearColorValue> clear_color = {};
-			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
-
-			std::optional<VkPipelineColorBlendAttachmentState> blending = {};
 		};
 		using CI = CreateInfo;
 

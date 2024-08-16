@@ -5,34 +5,55 @@
 
 namespace vkl
 {
-	class RenderPass;
-	class Framebuffer;
+	class RenderPassInstance;
+	class FramebufferInstance;
 	class CommandBuffer;
+	class ExecutionContext;
 
 	struct RenderPassBeginInfo
-	{
-		enum class Mode
-		{
-			RENDER_PASS,
-			DYNAMIC_RENDERING,
-		};
-		
+	{	
 		enum class Flags
 		{
-
+			None = 0,
 		};
+
+		static constexpr VkRect2D DefaultRenderArea = VkRect2D{ .offset = makeUniformOffset2D(0), .extent = makeUniformExtent2D(uint32_t(-1)) };
 		
-		Mode mode = Mode::RENDER_PASS;
-		std::shared_ptr<RenderPass> render_pass = nullptr;
-		std::shared_ptr<Framebuffer> framebuffer = nullptr;
-		VkRect2D render_area = {};
+		std::shared_ptr<RenderPassInstance> render_pass = nullptr;
+		std::shared_ptr<FramebufferInstance> framebuffer = nullptr;
+		VkRect2D render_area = DefaultRenderArea;
 		MyVector<VkClearValue> clear_values = {};
-		VkSubpassContents content = VK_SUBPASS_CONTENTS_INLINE;
 
-		void exportResources(ResourceUsageList & resources);
+		RenderPassInstance* getRenderPassInstance() const
+		{
+			RenderPassInstance* res = nullptr;
+			if (render_pass)
+			{
+				res = render_pass.get();
+			}
+			else if (framebuffer)
+			{
+				res = framebuffer->renderPass().get();
+			}
+			return res;
+		}
 
-		void recordBegin(CommandBuffer & cmd);
+		void exportResources(ResourceUsageList & resources, bool export_for_all_subpasses = false);
 
-		void recordNextSubpass(CommandBuffer & cmd, uint32_t index);
+		void recordBegin(ExecutionContext & ctx, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
+
+		void exportSubpassResources(uint32_t index, ResourceUsageList& resources);
+
+		void recordNextSubpass(ExecutionContext& ctx, uint32_t index, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
+
+		void recordEnd(ExecutionContext& ctx);
+
+		void clear()
+		{
+			render_pass.reset();
+			framebuffer.reset();
+			render_area = DefaultRenderArea;
+			clear_values.clear();
+		}
 	};
 }

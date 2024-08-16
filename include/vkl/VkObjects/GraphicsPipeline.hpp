@@ -4,6 +4,8 @@
 #include <vkl/VkObjects/GraphicsProgram.hpp>
 #include "RenderPass.hpp"
 
+#include <that/utils/EnumClassOperators.hpp>
+
 namespace vkl
 {
 	class GraphicsPipelineInstance : public PipelineInstance
@@ -193,32 +195,20 @@ namespace vkl
 			return res;
 		}
 
-		constexpr static VkPipelineMultisampleStateCreateInfo MultisampleOneSample()
+		struct MultisamplingState
 		{
-			VkPipelineMultisampleStateCreateInfo multisampling{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-				.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-				.sampleShadingEnable = VK_FALSE,
-				.pSampleMask = nullptr,
-				.alphaToCoverageEnable = VK_FALSE,
-				.alphaToOneEnable = VK_FALSE,
+			enum class Flags : uint32_t
+			{
+				None = 0x0,
+				AlphaToCoverageEnable = 0x1,
+				AlphaToOneEnable = 0x2,
 			};
-			return multisampling;
-		}
+			Dyn<VkSampleCountFlagBits> rasterization_samples = {};
+			Dyn<float> min_sample_shading = {};
+			Dyn<Flags> flags = {};
 
-		constexpr static VkPipelineMultisampleStateCreateInfo MultisampleState(VkSampleCountFlagBits samples, std::optional<float> sample_shading = {})
-		{
-			VkPipelineMultisampleStateCreateInfo multisampling{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-				.rasterizationSamples = samples,
-				.sampleShadingEnable = sample_shading.has_value() ? VK_TRUE : VK_FALSE,
-				.minSampleShading = sample_shading.value_or(0),
-				.pSampleMask = nullptr,
-				.alphaToCoverageEnable = VK_FALSE,
-				.alphaToOneEnable = VK_FALSE,
-			};
-			return multisampling;
-		}
+			VkPipelineMultisampleStateCreateInfo link();
+		};
 
 		constexpr static VkPipelineDepthStencilStateCreateInfo DepthStencilCloser(bool write_depth = true)
 		{
@@ -277,9 +267,9 @@ namespace vkl
 
 			RasterizationState rasterization;
 			std::optional<LineRasterizationState> line_raster;
-			VkPipelineMultisampleStateCreateInfo multisampling;
+			MultisamplingState multisampling;
 			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
-			MyVector<VkPipelineColorBlendAttachmentState> attachements_blends;
+			MyVector<Dyn<VkPipelineColorBlendAttachmentState>> attachements_blends;
 
 			MyVector<VkDynamicState> dynamic;
 
@@ -300,9 +290,9 @@ namespace vkl
 
 		RasterizationState _rasterization;
 		std::optional<LineRasterizationState> _line_raster;
-		VkPipelineMultisampleStateCreateInfo _multisampling;
+		MultisamplingState _multisampling;
 		std::optional<VkPipelineDepthStencilStateCreateInfo> _depth_stencil = {};
-		MyVector<VkPipelineColorBlendAttachmentState> _attachements_blends;
+		MyVector<Dyn<VkPipelineColorBlendAttachmentState>> _attachements_blends;
 
 		MyVector<VkDynamicState> _dynamic;
 
@@ -323,4 +313,7 @@ namespace vkl
 			return static_cast<GraphicsProgram*>(_program.get());
 		}
 	};
+
+THAT_DECLARE_ENUM_CLASS_OPERATORS(GraphicsPipeline::MultisamplingState::Flags, uint32_t)
+
 }

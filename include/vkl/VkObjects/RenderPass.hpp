@@ -301,9 +301,9 @@ namespace vkl
 			Mode mode = Mode::Automatic;
 			MyVector<AttachmentDescription2> attachments;
 			MyVector<SubPassDescription2> subpasses;
-			Dyn<bool> disallow_merging = false;
+			Dyn<bool> disallow_merging = {};
 			bool create_on_construct = false;
-			Dyn<bool> hold_instance = true;
+			Dyn<bool> hold_instance = {};
 		};
 		using CI = CreateInfo;
 

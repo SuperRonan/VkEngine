@@ -17,8 +17,7 @@ namespace vkl
 	{
 		ShaderCommandNode::clear();
 
-		_render_pass.reset();
-		_framebuffer.reset();
+		_render_pass_begin_info.clear();
 		_depth_stencil.reset();
 
 		_clear_values.clear();
@@ -28,41 +27,16 @@ namespace vkl
 		_viewport = {};
 	}
 
+	void GraphicsCommandNode::exportFramebufferResources()
+	{
+		_render_pass_begin_info.exportResources(_resources, true);
+	}
+
 	void GraphicsCommandNode::execute(ExecutionContext& ctx)
 	{
 		CommandBuffer & cmd = *ctx.getCommandBuffer();
 
-		const VkExtent2D render_area = extract(_framebuffer->extent());
-
-		const size_t num_clear_values = (_clear_color.has_value() || _clear_depth_stencil.has_value()) ? (_framebuffer->colorSize() + 1) : 0;
-
-		_clear_values.resize(num_clear_values);
-		if (num_clear_values)
-		{
-			if (_clear_color.has_value())
-			{
-				const VkClearValue cv = { .color = _clear_color.value() };
-				std::fill_n(_clear_values.begin(), _framebuffer->colorSize(), cv);
-			}
-			if (_clear_depth_stencil.has_value())
-			{
-				_clear_values.back() = VkClearValue{ .depthStencil = _clear_depth_stencil.value() };
-			}
-		}
-
-		const std::string pass_name = name();
-
-		VkRenderPassBeginInfo begin = {
-			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			.pNext = nullptr,
-			.renderPass = *_render_pass,
-			.framebuffer = *_framebuffer,
-			.renderArea = VkRect2D{.offset = makeUniformOffset2D(0), .extent = render_area},
-			.clearValueCount = static_cast<uint32_t>(num_clear_values),
-			.pClearValues = num_clear_values ? _clear_values.data() : nullptr,
-		};
-
-		vkCmdBeginRenderPass(cmd, &begin, VK_SUBPASS_CONTENTS_INLINE);
+		_render_pass_begin_info.recordBegin(ctx);
 		{
 			recordBindings(cmd, ctx);
 			if (false)
@@ -71,18 +45,17 @@ namespace vkl
 			}
 			else
 			{
-				VkViewport viewport = GraphicsPipeline::Viewport(extract(_framebuffer->extent()));
-				VkRect2D scissor = GraphicsPipeline::Scissor(extract(_framebuffer->extent()));
+				VkExtent2D render_area = extract(_render_pass_begin_info.framebuffer->extent());
+				VkViewport viewport = GraphicsPipeline::Viewport(render_area);
+				VkRect2D scissor = GraphicsPipeline::Scissor(render_area);
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
 			recordDrawCalls(ctx);
 		}
-		vkCmdEndRenderPass(cmd);
+		_render_pass_begin_info.recordEnd(ctx);
 
 		ctx.keepAlive(_pipeline);
-		ctx.keepAlive(_framebuffer);
-		ctx.keepAlive(_render_pass);
 	}
 
 
@@ -96,327 +69,215 @@ namespace vkl
 		_polygon_mode(ci.polygon_mode),
 		_cull_mode(ci.cull_mode),
 		_vertex_input_desc(ci.vertex_input_description),
-		_attachements(ci.targets),
-		_depth_stencil(ci.depth_stencil),
+		_color_attachements(ci.color_attachments),
+		_depth_stencil(ci.depth_stencil_attachment),
+		_fragment_shading_rate_image(ci.fragment_shading_rate_image),
+		_fragment_shading_rate_texel_size(ci.fragment_shading_rate_texel_size),
+		_inline_multisampling(ci.inline_multisampling),
+		_view_mask(ci.view_mask),
+		_use_external_renderpass(ci.extern_render_pass),
 		_write_depth(ci.write_depth),
 		_depth_compare_op(ci.depth_compare_op),
 		_stencil_front_op(ci.stencil_front_op),
 		_stencil_back_op(ci.stencil_back_op),
-		_clear_color(ci.clear_color),
-		_clear_depth_stencil(ci.clear_depth_stencil),
-		_blending(ci.blending),
 		_line_raster_state(ci.line_raster_state),
+		_common_shader_definitions(ci.definitions),
 		_draw_type(ci.draw_type)
 	{
-		if (ci.extern_framebuffer.has_value())
+		if (ci.extern_render_pass)
 		{
-			_framebuffer = ci.extern_framebuffer.value();
-		}
-		else
-		{
-			_framebuffer = std::shared_ptr<Framebuffer>(nullptr);
+			_render_pass = ci.extern_render_pass;
 		}
 	}
 
 	void GraphicsCommand::createGraphicsResources()
 	{
 		using namespace std::containers_append_operators;
-		const bool use_extern_fb = _framebuffer.index() == 1;
-		const uint32_t n_color = use_extern_fb ? std::get<1>(_framebuffer).color_attachments.size32() : static_cast<uint32_t>(_attachements.size());
-		
-		MyVector<RenderPass::AttachmentDescription2> at_desc(n_color);
-		MyVector<VkAttachmentReference2> at_ref(n_color);
 
-		MyVector<VkSubpassDependency2> dependencies;
-
-
-		for (size_t i = 0; i < n_color; ++i)
+		if (!_use_external_renderpass)
 		{
-			const std::optional<VkClearColorValue> & clear_color = _clear_color;
-			const std::optional<VkPipelineColorBlendAttachmentState> & opt_blending = _blending;
-
-			const VkImageLayout layout = application()->options().getLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-			VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-
-			if (clear_color.has_value())	load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-			else if (opt_blending.has_value())
-			{
-				const VkPipelineColorBlendAttachmentState & blending = opt_blending.value();
-				if (blending.blendEnable)
-				{
-					load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
-					// We could go in details of the blend factors
-				}
-			}
-			
-			Dyn<VkFormat> attachment_format;
-			Dyn<VkSampleCountFlagBits> attachment_samples;
-			if (use_extern_fb)
-			{
-				attachment_format = std::get<1>(_framebuffer).color_attachments[i].format;
-				attachment_samples = std::get<1>(_framebuffer).color_attachments[i].samples;
-			}
-			else
-			{
-				attachment_format = _attachements[i]->format();
-				attachment_samples = _attachements[i]->image()->sampleCount();
-			}
-
-			at_desc[i] = RenderPass::AttachmentDescription2{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-				.pNext = nullptr,
-				.flags = 0,
-				.format = attachment_format,
-				.samples = attachment_samples,
-				.loadOp = load_op,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = layout,
-				.finalLayout = layout,
+			RenderPass::CI render_pass_ci{
+				.app = application(),
+				.name = name() + ".RenderPass",
+				.mode = RenderPass::Mode::Automatic,
 			};
-			at_ref[i] = VkAttachmentReference2{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-				.pNext = nullptr,
-				.attachment = uint32_t(i),
-				.layout = layout,
-			};
-		}
-		VkSubpassDependency2 color_dependency = {
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
-			.pNext = nullptr,
-			.srcSubpass = VK_SUBPASS_EXTERNAL,
-			.dstSubpass = 0,
-			.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			.srcAccessMask = VK_ACCESS_NONE,
-			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-		};
-		dependencies.push_back(color_dependency);
-
-		const bool depth_attachment = [&]() {
-			bool res = false;
-			if (use_extern_fb)
-			{
-				res = std::get<1>(_framebuffer).detph_stencil_attchement.has_value();
-			}
-			else
-			{
-				res = _depth_stencil.operator bool();
-			}
-			return res;
-		}();
-
-		if (depth_attachment)
-		{
-			const bool write_depth = _write_depth.value_or(false);
-
-			Dyn<VkFormat> depth_stencil_format;
-			Dyn<VkSampleCountFlagBits> depth_stencil_samples;
-			if (use_extern_fb)
-			{
-				ExternFramebufferInfo const& fb = std::get<1>(_framebuffer);
-				assert(fb.detph_stencil_attchement.has_value());
-				depth_stencil_format = fb.detph_stencil_attchement->format;
-				depth_stencil_samples = fb.detph_stencil_attchement->samples;
-			}
-			else
-			{
-				assert(_depth_stencil.operator bool());
-				depth_stencil_format = _depth_stencil->format();
-				depth_stencil_samples = _depth_stencil->image()->sampleCount();
-			}
-
-			VkImageAspectFlags aspect = getImageAspectFromFormat(*depth_stencil_format);
-			const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.has_value();
-			const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.has_value() || _stencil_back_op.has_value());
-			assert(depth || stencil);
-			VkImageLayout layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			if (depth && !stencil)
-			{
-				layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-			}
-			else if (!depth && stencil)
-			{
-				layout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
-			}
-			layout = application()->options().getLayout(layout, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-			VkAttachmentLoadOp depth_load_op = VK_ATTACHMENT_LOAD_OP_LOAD, stencil_load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			VkAttachmentStoreOp depth_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE, stencil_store_op = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-			if (depth)
-			{
-				if (_clear_depth_stencil.has_value())
-				{
-					depth_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				}
-
-				if (write_depth)
-				{
-					depth_store_op = VK_ATTACHMENT_STORE_OP_STORE;
-				}
-			}
-
-			if (stencil)
-			{
-				if (_stencil_back_op.has_value() || _stencil_front_op.has_value())
-				{
-					// TODO go in the details of the stencil op
-					stencil_load_op = VK_ATTACHMENT_LOAD_OP_LOAD;
-					stencil_store_op = VK_ATTACHMENT_STORE_OP_STORE;
-				}
-			
-				if (_clear_depth_stencil.has_value())
-				{
-					stencil_load_op = VK_ATTACHMENT_LOAD_OP_CLEAR;
-				}
-			}
-
-
-			at_desc.push_back(RenderPass::AttachmentDescription2{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-				.pNext = nullptr,
-				.flags = 0,
-				.format = depth_stencil_format,
-				.samples = depth_stencil_samples,
-				.loadOp = depth_load_op,
-				.storeOp = depth_store_op,
-				.stencilLoadOp = stencil_load_op,
-				.stencilStoreOp = stencil_store_op,
-				.initialLayout = layout,
-				.finalLayout = layout,
+			render_pass_ci.subpasses.push_back(SubPassDescription2{
+				.view_mask = _view_mask,
+				.read_only_depth = _write_depth.value_or(false),
+				.read_only_stencil = !(_stencil_front_op.has_value() || _stencil_back_op.has_value()),
+				.disallow_merging = application()->options().render_pass_disallow_merging,
+				.auto_preserve_all_other_attachments = false, // No need
+				.shading_rate_texel_size = _fragment_shading_rate_texel_size,
+				.inline_multisampling = _inline_multisampling,
 			});
-			at_ref.push_back(VkAttachmentReference2{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-				.pNext = nullptr,
-				.attachment = static_cast<uint32_t>(at_desc.size() - 1),
-				.layout = layout,
-			});
-
-			VkSubpassDependency2 depth_stencil_dependency = {
-				.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
-				.pNext = nullptr,
-				.srcSubpass = VK_SUBPASS_EXTERNAL,
-				.dstSubpass = 0,
-				.srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-				.srcAccessMask = VK_ACCESS_NONE,
-				.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, // TODO if read depth
-			};
-			dependencies.push_back(depth_stencil_dependency);
-		}
-
-		VkSubpassDescription2 subpass = {
-			.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-			.pNext = nullptr,
-			.flags = 0,
-			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
-			.colorAttachmentCount = n_color,
-			.pColorAttachments= at_ref.data(), // Warning this is unsafe, the ptr is copied, assuming the data is copied later
-			.pResolveAttachments = nullptr,
-			.pDepthStencilAttachment = depth_attachment ? (at_ref.data() + n_color) : nullptr, // Warning this is unsafe, the ptr is copied, assuming the data is copied later
-			.preserveAttachmentCount = 0,
-			.pPreserveAttachments = nullptr,
-		};
-
-		bool multiview = false;
-		if (use_extern_fb)
-		{
-			multiview = std::get<1>(_framebuffer).multiview;
-		}
-		_render_pass = std::make_shared <RenderPass>(RenderPass::CI{
-			.app = application(),
-			.name = name() + ".RenderPass",
-			.attachement_descriptors = at_desc,
-			.attachement_ref_per_subpass = {at_ref},
-			.subpasses = {subpass},
-			.dependencies = dependencies,
-			.last_is_depth_stencil = depth_attachment,
-			.multiview = multiview,
-		});
-
-		if (!use_extern_fb)
-		{
-			_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+			MyVector<AttachmentDescription2>& attachments = render_pass_ci.attachments;
+			SubPassDescription2& subpass = render_pass_ci.subpasses.front();
+			Framebuffer::CI framebuffer_ci{
 				.app = application(),
 				.name = name() + ".Framebuffer",
-				.render_pass = _render_pass,
-				.targets = _attachements,
-				.depth_stencil = _depth_stencil,
-			});
+			};
+			uint32_t attachment_count = 0;
+			const uint32_t color_base = attachment_count;
+			subpass.colors.resize(_color_attachements.size());
+			attachment_count += _color_attachements.size32();
+			const uint32_t resolve_base = attachment_count;
+			const uint32_t resolve_count = std::count_if(_color_attachements.begin(), _color_attachements.end(), [](ColorAttachment const& a) {return a.resolved.operator bool(); });
+			if (resolve_count)
+			{
+				attachment_count += resolve_count;
+				subpass.inputs.resize(_color_attachements.size());
+			}
+			const uint32_t depth_stencil_base = attachment_count;
+			if (_depth_stencil.view)
+			{
+				attachment_count += 1;
+			}
+			const uint32_t fragment_shading_rate_base = attachment_count;
+			if (_fragment_shading_rate_image)
+			{
+				attachment_count += 1;
+			}
+			attachments.resize(attachment_count);
+			framebuffer_ci.attachments.resize(attachment_count);
+			uint32_t resolve_counter = 0;
+			for (uint32_t i = 0; i < _color_attachements.size32(); ++i)
+			{
+				ColorAttachment const& ca = _color_attachements[i];
+				AttachmentDescription2& dst = attachments[color_base + i];
+				dst.format = ca.view->format();
+				dst.samples = ca.view->image()->sampleCount();
+				dst.flags = [this, i]()
+				{
+					AttachmentDescription2::Flags flags = AttachmentDescription2::Flags::None;
+					if (_color_attachements[i].clear_value)
+					{
+						flags |= AttachmentDescription2::Flags::Clear;
+					}
+					else if(_color_attachements[i].blending && _color_attachements[i].blending.value().blendEnable)
+					{
+						flags |= AttachmentDescription2::Flags::Blend;
+					}
+					else
+					{
+						flags |= AttachmentDescription2::Flags::OverWrite;
+					}
+					return flags;
+				};
+				subpass.colors[i].index = color_base + i;
+				if (ca.view->range())
+				{
+					// The Dyn is not forwarded, but is it necessary?
+					subpass.colors[i].aspect = ca.view->range().value().aspectMask;
+				}
+				framebuffer_ci.attachments[color_base + i] = ca.view;
+				if (resolve_count > 0)
+				{
+					AttachmentDescription2& resolve_dst = attachments[resolve_base + i];
+					if (ca.resolved)
+					{
+						attachments[resolve_counter].flags = AttachmentDescription2::Flags::OverWrite;
+						attachments[resolve_counter].format = ca.resolved->format();
+						attachments[resolve_counter].samples = ca.resolved->image()->sampleCount();
+						subpass.resolves[i].index = resolve_counter;
+						framebuffer_ci.attachments[resolve_counter] = ca.resolved;
+						if (ca.resolved->range())
+						{
+							subpass.resolves[i].aspect = ca.resolved->range().value().aspectMask;
+						}
+						++resolve_counter;
+					}
+				}
+			}
+			if (_depth_stencil.view)
+			{
+				AttachmentDescription2& dst = attachments[depth_stencil_base];
+				VkImageAspectFlags aspect = getImageAspectFromFormat(_depth_stencil.view->format().value()); 
+				if (_depth_stencil.view->range().hasValue())
+				{
+					aspect &= _depth_stencil.view->range().value().aspectMask;
+				}
+				dst.format = _depth_stencil.view->format();
+				dst.samples = _depth_stencil.view->image()->sampleCount();
+				const bool depth = aspect & VK_IMAGE_ASPECT_DEPTH_BIT;
+				const bool stencil = aspect & VK_IMAGE_ASPECT_STENCIL_BIT;
+				dst.flags = [this, depth, stencil]
+				{
+					AttachmentDescription2::Flags flags = AttachmentDescription2::Flags::None;
+					if (depth)
+					{
+						const bool read_only = _write_depth.value_or(false);
+						if (_depth_stencil.clear_depth)
+						{
+							flags |= AttachmentDescription2::Flags::LoadOpClear;
+						}
+						else
+						{
+							flags |= AttachmentDescription2::Flags::LoadOpLoad;
+						}
+						if (read_only)
+						{
+							flags |= AttachmentDescription2::Flags::StoreOpNone;
+						}
+						else
+						{
+							flags |= AttachmentDescription2::Flags::StoreOpStore;
+						}
+					}
+					if (stencil)
+					{
+						const bool read_only = !(_stencil_front_op.has_value() || _stencil_back_op.has_value());
+						if (_depth_stencil.clear_stencil)
+						{
+							flags |= AttachmentDescription2::Flags::StencilLoadOpClear;
+						}
+						else
+						{
+							flags |= AttachmentDescription2::Flags::StencilLoadOpLoad;
+						}
+						if (read_only)
+						{
+							flags |= AttachmentDescription2::Flags::StencilStoreOpNone;
+						}
+						else
+						{
+							flags |= AttachmentDescription2::Flags::StencilStoreOpStore;
+						}
+					}
+					return flags;
+				};
+
+				subpass.depth_stencil.index = depth_stencil_base;
+				subpass.depth_stencil.aspect = aspect;
+				framebuffer_ci.attachments[depth_stencil_base] = _depth_stencil.view;
+			}
+			if (_fragment_shading_rate_image)
+			{
+				// The LoadOp and StoreOp is ignored 
+				attachments[fragment_shading_rate_base].format = _fragment_shading_rate_image->format();
+				attachments[fragment_shading_rate_base].samples = _fragment_shading_rate_image->image()->sampleCount();
+				subpass.fragment_shading_rate.index = fragment_shading_rate_base;
+				framebuffer_ci.attachments[fragment_shading_rate_base] = _fragment_shading_rate_image;
+			}
+			
+			_render_pass = std::make_shared<RenderPass>(std::move(render_pass_ci));
+			framebuffer_ci.render_pass = _render_pass;
+			_framebuffer = std::make_shared<Framebuffer>(std::move(framebuffer_ci));
 		}
 	}
 
 	void GraphicsCommand::populateFramebufferResources(GraphicsCommandNode & node)
 	{
-		node._render_pass = _render_pass->instance();
-		if (_framebuffer.index() == 0)
+		RenderPassBeginInfo& info = node._render_pass_begin_info;
+		if (_render_pass && !info.render_pass)
 		{
-			node._framebuffer = std::get<0>(_framebuffer)->instance();
-			node._depth_stencil = _depth_stencil ? _depth_stencil->instance() : nullptr;
+			info.render_pass = _render_pass->instance();
+		}
+		if (_framebuffer && !info.framebuffer)
+		{
+			info.framebuffer = _framebuffer->instance();
 		}
 
-		if (node._framebuffer->depthStencil() && !node._depth_stencil)
-		{
-			node._depth_stencil = node._framebuffer->depthStencil();
-		}
-
-		node._clear_color = _clear_color;
-		node._clear_depth_stencil = _clear_depth_stencil;
-
-		for (size_t i = 0; i < node._framebuffer->colorSize(); ++i)
-		{
-			const VkAttachmentDescription2 & at_desc = node._render_pass->getAttachmentDescriptors2()[i];
-			VkAccessFlags2 access = VK_ACCESS_2_NONE;
-			if (at_desc.storeOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
-			{
-				access |= VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-			}
-			if (at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD)
-			{
-				access |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT;
-			}
-			node.resources() += ImageViewUsage{
-				.ivi = node._framebuffer->textures()[i],
-				.begin_state = ResourceState2{
-					.access = access, 
-					.stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-					.layout = at_desc.initialLayout,
-				},
-				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-			};
-			// TODO end state IFN
-		}
-		if (node._depth_stencil)
-		{
-			const VkAttachmentDescription2& at_desc = node._render_pass->getAttachmentDescriptors2().back();
-			
-			VkAccessFlags2 access = VK_ACCESS_2_NONE;
-			VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
-
-			if (at_desc.storeOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.stencilStoreOp == VK_ATTACHMENT_STORE_OP_STORE || at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR || at_desc.stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
-			{
-				access |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			}
-			if (at_desc.loadOp == VK_ATTACHMENT_LOAD_OP_LOAD || at_desc.stencilStoreOp == VK_ATTACHMENT_LOAD_OP_LOAD)
-			{
-				access |= VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-			}
-
-			node.resources() += ImageViewUsage{
-				.ivi = node._depth_stencil,
-				.begin_state = ResourceState2{
-					.access = access,
-					.stage = stage,
-					.layout = at_desc.initialLayout,
-				},
-				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			};
-			// TODO end state IFN
-		}
+		node.exportFramebufferResources();
 	}
 
 	void GraphicsCommand::createPipeline()
@@ -433,38 +294,38 @@ namespace vkl
 		
 		gci.line_raster = _line_raster_state;
 
-		// TODO from attachements
-		VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
-
+		Dyn<VkSampleCountFlagBits> samples = [this]()
+		{
+			VkSampleCountFlagBits res = VK_SAMPLE_COUNT_1_BIT;
+			for (size_t i = 0; i < _color_attachements.size(); ++i)
+			{
+				const auto& sc = _color_attachements[i].view->image()->sampleCount();
+				if (sc)
+				{
+					res = std::max(res, sc.value());
+				}
+			}
+			return res;
+		};
 		// should be dynamic?
-		gci.multisampling = GraphicsPipeline::MultisampleState(samples);
+		gci.multisampling = GraphicsPipeline::MultisamplingState{
+			.rasterization_samples = samples,
+		};
 		gci.program = _program;
 		gci.render_pass = _render_pass;
 
-		const bool use_extern_fb = _framebuffer.index() == 1;
-		const bool depth_attachment = [&]() {
-			bool res = false;
-			if (use_extern_fb)
-			{
-				res = std::get<1>(_framebuffer).detph_stencil_attchement.has_value();
-			}
-			else
-			{
-				res = _depth_stencil.operator bool();
-			}
-			return res;
-		}();
-		if (depth_attachment)
+		const uint32_t depth_stencil_index = _render_pass->subpasses().front().depth_stencil.index;
+		if (depth_stencil_index != VK_ATTACHMENT_UNUSED)
 		{
 			const VkImageAspectFlags aspect = [&](){
 				VkImageAspectFlags res = 0;
-				if (use_extern_fb)
+				if (_use_external_renderpass)
 				{
-					res = getImageAspectFromFormat(std::get<1>(_framebuffer).detph_stencil_attchement->format.value());
+					res = getImageAspectFromFormat(_render_pass->attachments()[depth_stencil_index].format.value()) & _render_pass->subpasses().front().depth_stencil.aspect;
 				}
 				else
 				{
-					res = _depth_stencil->range().value().aspectMask;
+					res = _depth_stencil.view->range().value().aspectMask;
 				}
 				return res;
 			}();
@@ -510,20 +371,12 @@ namespace vkl
 		{
 			gci.dynamic = { VK_DYNAMIC_STATE_VIEWPORT , VK_DYNAMIC_STATE_SCISSOR };
 		}
-		const size_t n_color = [&]() {
-			size_t res = 0;
-			if (_framebuffer.index() == 0)
-			{
-				res = std::get<0>(_framebuffer)->colorSize();
-			}
-			else if (_framebuffer.index() == 1)
-			{
-				res = std::get<1>(_framebuffer).color_attachments.size();
-			}
-			return res;
-		}();
-		MyVector<VkPipelineColorBlendAttachmentState> blending(n_color, _blending.value_or(GraphicsPipeline::BlendAttachementNoBlending()));
-		gci.attachements_blends = blending;
+
+		gci.attachements_blends.resize(_color_attachements.size());
+		for (uint32_t i = 0; i < _color_attachements.size32(); ++i)
+		{
+			gci.attachements_blends[i] = _color_attachements[i].blending;
+		}
 
 
 		_pipeline = std::make_shared<GraphicsPipeline>(std::move(gci));
@@ -538,17 +391,18 @@ namespace vkl
 	{
 		bool res = false;
 
-		res |= _render_pass->updateResources(ctx);
+		_common_shader_definitions.value();
+
+		if (!_use_external_renderpass)
+		{
+			res |= _render_pass->updateResources(ctx);
+		}
 
 		res |= ShaderCommand::updateResources(ctx);
 
-		if (_framebuffer.index() == 0)
+		if (_framebuffer)
 		{
-			std::shared_ptr<Framebuffer> fb = std::get<0>(_framebuffer);
-			if (fb)
-			{
-				fb->updateResources(ctx);
-			}
+			res |= _framebuffer->updateResources(ctx);
 		}
 
 		return res;
