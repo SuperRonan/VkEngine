@@ -1,6 +1,9 @@
 
 #include <vkl/Commands/ImguiCommand.hpp>
+
 #include <vkl/VkObjects/VulkanExtensionsSet.hpp>
+
+#include <vkl/Execution/RenderPassBeginInfo.hpp>
 
 #include <vkl/App/ImGuiApp.hpp>
 
@@ -25,9 +28,7 @@ namespace vkl
 			})
 		{}
 
-		std::shared_ptr<RenderPassInstance> _render_pass;
-		std::shared_ptr<FramebufferInstance> _framebuffer;
-		std::shared_ptr<ImageViewInstance> _target;
+		RenderPassBeginInfo _render_pass_info = {};
 		std::shared_ptr<SwapchainInstance> _swapchain;
 		std::shared_ptr<DescriptorPool> _desc_pool;
 		size_t _index = 0;
@@ -37,10 +38,8 @@ namespace vkl
 		{
 			ExecutionNode::clear();
 
-			_render_pass.reset();
-			_framebuffer.reset();
+			_render_pass_info.clear();
 			_swapchain.reset();
-			_target.reset();
 			_desc_pool.reset();
 			_index = 0;
 		}
@@ -51,80 +50,21 @@ namespace vkl
 
 			ImGui::Render();
 
-			const VkExtent2D render_area = extract(_target->image()->createInfo().extent);
-
-			if (_render_pass)
+			if (_render_pass_info)
 			{
-				//std::vector<VkClearValue> clear_values(_framebuffers[index]->size());
-				//for (size_t i = 0; i < clear_values.size(); ++i)
-				//{
-				//	clear_values[i] = VkClearValue{
-				//		.color = VkClearColorValue{.int32{0, 0, 0, 1}},
-				//	};
-				//}
-
-				const VkRenderPassBeginInfo render_begin = {
-					.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-					.pNext = nullptr,
-					.renderPass = *_render_pass,
-					.framebuffer = *_framebuffer,
-					.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
-					.clearValueCount = 0,
-					.pClearValues = nullptr,
-				};
-				vkCmdBeginRenderPass(*cmd, &render_begin, VK_SUBPASS_CONTENTS_INLINE);
-			}
-			else
-			{
-				VkRenderingAttachmentInfo attachement{
-					.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-					.pNext = nullptr,
-					.imageView = _target->handle(),
-					.imageLayout = _layout,
-					.resolveMode = VK_RESOLVE_MODE_NONE,
-					.resolveImageView = VK_NULL_HANDLE,
-					.resolveImageLayout = _layout,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-					.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				};
-				VkRenderingInfo render_info{
-					.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.renderArea = VkRect2D{.offset = VkOffset2D{0, 0}, .extent = render_area},
-					.layerCount = 1,
-					.viewMask = 0,
-					.colorAttachmentCount = 1,
-					.pColorAttachments = &attachement,
-					.pDepthAttachment = nullptr,
-					.pStencilAttachment = nullptr,
-				};
-				vkCmdBeginRendering(*cmd, &render_info);
+				_render_pass_info.recordBegin(ctx, VK_SUBPASS_CONTENTS_INLINE);
 			}
 
 			{
 				ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *cmd);
 			}
 
-			if (_render_pass)
+			if (_render_pass_info)
 			{
-				vkCmdEndRenderPass(*cmd);
-			}
-			else
-			{
-				vkCmdEndRendering(*cmd);
+				_render_pass_info.recordEnd(ctx);
 			}
 
 			ctx.keepAlive(_desc_pool);
-			if (_render_pass)
-			{
-				ctx.keepAlive(_render_pass);
-				ctx.keepAlive(_framebuffer);
-			}
-			if(_target)
-			{
-				ctx.keepAlive(_target);
-			}
 
 			AppWithImGui * app = dynamic_cast<AppWithImGui*>(application());
 			if (app)
@@ -174,7 +114,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + std::string(".Framebuffer ") + std::to_string(i),
 				.render_pass = _render_pass,
-				.targets = {_swapchain->instance()->views()[i]},
+				.attachments = {_swapchain->instance()->views()[i]},
 			});
 		}
 	}
@@ -183,70 +123,17 @@ namespace vkl
 	{
 		// ImGui require the ext, vk 1.3 is not enough for now (event though the ext has been promoted to core in 1.3)
 		const bool can_use_dynamic_rendering = application()->availableFeatures().features_13.dynamicRendering && application()->deviceExtensions().contains(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-		if (false && can_use_dynamic_rendering)
-		{
-
-		}
-		else
-		{
-			const VkImageLayout layout = application()->options().getLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-			RenderPass::AttachmentDescription2 attachement_desc{
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-				.pNext = nullptr,
-				.flags = 0,
-				.format = [this](){return _swapchain->format().value().format;},
-				.samples = VK_SAMPLE_COUNT_1_BIT,// To check
-				.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = layout,
-				.finalLayout = layout,
-			};
-		
-			MyVector<VkAttachmentReference2> attachement_reference = { {
-				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-				.pNext = nullptr,
-				.attachment = 0,
-				.layout = layout,
-			} };
-
-			VkSubpassDescription2 subpass = {
-				.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-				.pNext = nullptr,
-				.flags = 0,
-				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-				.inputAttachmentCount = 0,
-				.pInputAttachments = nullptr,
-				.colorAttachmentCount = static_cast<uint32_t>(1),
-				.pColorAttachments = attachement_reference.data(), // Warning this is dangerous, the data is copied
-				.pResolveAttachments = nullptr,
-				.pDepthStencilAttachment = nullptr,
-				.preserveAttachmentCount = 0,
-				.pPreserveAttachments = nullptr,
-			};
-			VkSubpassDependency2 dependency = {
-				.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
-				.pNext = nullptr,
-				.srcSubpass = VK_SUBPASS_EXTERNAL,
-				.dstSubpass = 0,
-				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				.srcAccessMask = VK_ACCESS_NONE,
-				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-			};
-
-			_render_pass = std::make_shared<RenderPass>(RenderPass::CI{
-				.app = application(),
-				.name = name() + ".RenderPass",
-				.attachement_descriptors = { attachement_desc },
-				.attachement_ref_per_subpass = { attachement_reference },
-				.subpasses = { subpass },
-				.dependencies ={ dependency },
-				.last_is_depth_stencil = false,
-				.create_on_construct = true,
-			});
-		}
+		_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
+			.app = application(),
+			.name = name() + ".RenderPass",
+			.colors = {
+				AttachmentDescription2{
+					.flags = AttachmentDescription2::Flags::Blend,
+					.format = [this]() { return _swapchain->format().value().format; },
+					.samples = VK_SAMPLE_COUNT_1_BIT, // swapchain images appears to be only with 1 sample
+				},
+			}
+		});
 	}
 
 	void ImguiCommand::initImGui()
@@ -325,39 +212,14 @@ namespace vkl
 
 		node->setName(name());
 
-		node->_render_pass = _render_pass ? _render_pass->instance() : nullptr;
-		if (node->_render_pass)
-		{
-			node->_framebuffer = _framebuffers[ei.index]->instance();
-		}
+		node->_render_pass_info = RenderPassBeginInfo{
+			.framebuffer = _framebuffers[ei.index]->instance(),
+		};
 
-		node->_swapchain = _swapchain->instance();
-		{
-			node->_target = node->_swapchain->views()[ei.index]->instance();
-		}
 		node->_desc_pool = _desc_pool;
 		node->_index = ei.index;
 		
-		VkImageLayout layout;
-		if (node->_render_pass)
-		{
-			layout = node->_render_pass->getAttachmentDescriptors2().front().initialLayout;
-		}
-		else
-		{
-			layout = application()->options().getLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-		}
-		node->resources() += 
-			ImageViewUsage{
-				.ivi = node->_target,
-				.begin_state = ResourceState2{
-					.access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT,
-					.stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-					.layout = layout,
-				},
-				.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-			};
-		
+		node->_render_pass_info.exportResources(node->resources(), true);
 		return node;
 	}
 
