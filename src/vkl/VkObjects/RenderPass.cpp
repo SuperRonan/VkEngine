@@ -626,16 +626,10 @@ namespace vkl
 				{
 					if (i < ci.resolve.size32())
 					{
-						Dyn<AttachmentDescription2::Flags> flags = res.attachments[resolve_base + i].flags;
-						res.attachments[resolve_base + i].flags = [flags]()
+						if (!res.attachments[resolve_base + i].flags)
 						{
-							AttachmentDescription2::Flags res = AttachmentDescription2::Flags::OverWrite;
-							if (flags)
-							{
-								res |= (flags.value() & AttachmentDescription2::Flags::FlagsMask);
-							}
-							return res;
-						};
+							res.attachments[resolve_base + i].flags = AttachmentDescription2::Flags::OverWrite;
+						}
 						subpass.resolves[i].index = resolve_base + i;
 					}
 				}
