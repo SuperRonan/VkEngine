@@ -22,9 +22,9 @@ namespace vkl
 		std::shared_ptr<RenderPassInstance> render_pass = nullptr;
 		std::shared_ptr<FramebufferInstance> framebuffer = nullptr;
 		VkRect2D render_area = DefaultRenderArea;
-	protected:
+	//protected:
 		uint32_t _subpass_index = 0;
-	public:
+	//public:
 		uint32_t clear_value_count = 0;
 		VkClearValue* ptr_clear_values = nullptr;
 		MyVector<VkClearValue> clear_values = {};
