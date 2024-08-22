@@ -71,6 +71,7 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 
+		uint32_t _subpass_index = 0;
 		uint32_t _view_mask = 0;
 		bool _use_external_renderpass = false;
 		std::optional<bool> _write_depth = {};
@@ -104,6 +105,7 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::shared_ptr<RenderPass> extern_render_pass = {};
+			uint32_t subpass_index = 0;
 			MyVector<ColorAttachment> color_attachments = {};
 			DepthStencilAttachment depth_stencil_attachment = {};
 			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
@@ -256,6 +258,7 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::shared_ptr<RenderPass> extern_render_pass = {};
+			uint32_t subpass_index = 0;
 			MyVector<ColorAttachment> color_attachments = {};
 			DepthStencilAttachment depth_stencil_attachment = {};
 			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
@@ -460,6 +463,7 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts = {};
 			std::vector<ShaderBindingDescription> bindings = {};
 			std::shared_ptr<RenderPass> extern_render_pass = {};
+			uint32_t subpass_index = 0;
 			MyVector<ColorAttachment> color_attachments = {};
 			DepthStencilAttachment depth_stencil_attachment = {};
 			std::shared_ptr<ImageView> fragment_shading_rate_image = {};

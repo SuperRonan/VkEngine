@@ -52,7 +52,8 @@ namespace vkl
 		_depth_stencil(ci.depth_stencil),
 		_attachements_blends(ci.attachements_blends),
 		_dynamic(ci.dynamic),
-		_render_pass(ci.render_pass)
+		_render_pass(ci.render_pass),
+		_subpass_index(ci.subpass_index)
 	{
 		create();
 	}
@@ -133,7 +134,7 @@ namespace vkl
 			.pDynamicState = &dynamic_state_ci,
 			.layout = layout()->handle(),
 			.renderPass = *_render_pass,
-			.subpass = 0,
+			.subpass = _subpass_index,
 			.basePipelineHandle = VK_NULL_HANDLE,
 			.basePipelineIndex = 0,
 		};
@@ -197,7 +198,8 @@ namespace vkl
 		_depth_stencil(ci.depth_stencil),
 		_attachements_blends(ci.attachements_blends),
 		_dynamic(ci.dynamic),
-		_render_pass(ci.render_pass)
+		_render_pass(ci.render_pass),
+		_subpass_index(ci.subpass_index)
 	{
 		if (_render_pass)
 		{
@@ -235,6 +237,7 @@ namespace vkl
 			.depth_stencil = _depth_stencil,
 			.dynamic = _dynamic,
 			.render_pass = _render_pass->instance(),
+			.subpass_index = _subpass_index,
 			.program = std::static_pointer_cast<GraphicsProgramInstance>(_program->instance()),
 		};
 		if (_line_raster.has_value())

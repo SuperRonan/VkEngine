@@ -132,6 +132,7 @@ namespace vkl
 		_inline_multisampling(ci.inline_multisampling),
 		_view_mask(ci.view_mask),
 		_use_external_renderpass(ci.extern_render_pass),
+		_subpass_index(ci.subpass_index),
 		_write_depth(ci.write_depth),
 		_depth_compare_op(ci.depth_compare_op),
 		_stencil_front_op(ci.stencil_front_op),
@@ -354,6 +355,7 @@ namespace vkl
 		};
 		gci.program = _program;
 		gci.render_pass = _render_pass;
+		gci.subpass_index = 0;
 
 		const uint32_t depth_stencil_index = _render_pass->subpasses().front().depth_stencil.index;
 		if (depth_stencil_index != VK_ATTACHMENT_UNUSED)
@@ -564,6 +566,7 @@ namespace vkl
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.extern_render_pass = ci.extern_render_pass,
+			.subpass_index = ci.subpass_index,
 			.color_attachments = ci.color_attachments,
 			.depth_stencil_attachment = ci.depth_stencil_attachment,
 			.fragment_shading_rate_image = ci.fragment_shading_rate_image,
@@ -1013,6 +1016,7 @@ namespace vkl
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
 			.extern_render_pass = ci.extern_render_pass,
+			.subpass_index = ci.subpass_index,
 			.color_attachments = ci.color_attachments,
 			.depth_stencil_attachment = ci.depth_stencil_attachment,
 			.fragment_shading_rate_image = ci.fragment_shading_rate_image,

@@ -27,6 +27,7 @@ namespace vkl
 			MyVector<VkPipelineColorBlendAttachmentState> attachements_blends;
 			MyVector<VkDynamicState> dynamic;
 			std::shared_ptr<RenderPassInstance> render_pass;
+			uint32_t subpass_index = 0;
 			std::shared_ptr<GraphicsProgramInstance> program;
 		};
 		using CI = CreateInfo;
@@ -46,6 +47,7 @@ namespace vkl
 		MyVector<VkPipelineColorBlendAttachmentState> _attachements_blends;
 		MyVector<VkDynamicState> _dynamic;
 		std::shared_ptr<RenderPassInstance> _render_pass;
+		uint32_t _subpass_index = 0;
 
 		void create();
 
@@ -274,6 +276,7 @@ namespace vkl
 			MyVector<VkDynamicState> dynamic;
 
 			std::shared_ptr<RenderPass> render_pass;
+			uint32_t subpass_index = 0;
 
 			std::shared_ptr<GraphicsProgram> program;
 
@@ -297,6 +300,7 @@ namespace vkl
 		MyVector<VkDynamicState> _dynamic;
 
 		std::shared_ptr<RenderPass> _render_pass;
+		uint32_t _subpass_index = 0;
 
 		virtual void createInstanceIFP() override;
 
