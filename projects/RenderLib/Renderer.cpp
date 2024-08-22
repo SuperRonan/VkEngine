@@ -199,6 +199,36 @@ namespace vkl
 			},
 		});
 
+		_direct_pipeline._render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+			.app = application(),
+			.name = name() + ".DirectPipeline.RenderPass",
+			.attachments = {
+				AttachmentDescription2{
+					.flags = AttachmentDescription2::Flags::Clear,
+					.format = _render_target->format(),
+					.samples = _render_target->image()->sampleCount(),
+				},
+				AttachmentDescription2{
+					.flags = AttachmentDescription2::Flags::Clear,
+					.format = _depth->format(),
+					.samples = _depth->image()->sampleCount(),
+				},
+			},
+			.subpasses = {
+				SubPassDescription2{
+					.colors = {AttachmentReference2{.index = 0}},
+					.depth_stencil = AttachmentReference2{.index = 1},
+				}
+			},
+		});
+
+		_direct_pipeline._framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+			.app = application(),
+			.name = name() + ".DirectPipeline.Framebuffer",
+			.render_pass = _direct_pipeline._render_pass,
+			.attachments = {_render_target, _depth},
+		});
+
 		for (uint32_t model_type : _model_types)
 		{
 			_direct_pipeline._render_scene_direct[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -218,15 +248,12 @@ namespace vkl
 						.binding = 6,
 					},
 				},
-				.color_attachements = {_render_target},
-				.depth_stencil = _depth,
+				.extern_render_pass = _direct_pipeline._render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "render.vert",
 				.fragment_shader_path = shaders / "render.frag",
 				.definitions = [this](DefinitionsList & res){res = {_shadow_method_glsl_def};},
-				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
 		}
 
@@ -250,15 +277,12 @@ namespace vkl
 					.binding = 6,
 				},
 			},
-			.color_attachements = {_render_target},
-			.depth_stencil = _depth,
+			.extern_render_pass = _direct_pipeline._render_pass,
 			.write_depth = true,
 			.depth_compare_op = VK_COMPARE_OP_LESS,
 			.vertex_shader_path = shaders / "RenderIndirect.vert",
 			.fragment_shader_path = shaders / "RenderIndirect.frag",
 			.definitions = [this](DefinitionsList & res) {res = {_shadow_method_glsl_def};},
-			.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-			.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 		});
 
 		{
@@ -303,6 +327,51 @@ namespace vkl
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
+
+			_deferred_pipeline._render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+				.app = application(),
+				.name = name() + ".Deferred.RenderPass",
+				.attachments = {
+					AttachmentDescription2{
+						.flags = AttachmentDescription2::Flags::Clear,
+						.format = _deferred_pipeline._albedo->format(),
+						.samples = _deferred_pipeline._albedo->image()->sampleCount(),
+					},
+					AttachmentDescription2{
+						.flags = AttachmentDescription2::Flags::Clear,
+						.format = _deferred_pipeline._position->format(),
+						.samples = _deferred_pipeline._position->image()->sampleCount(),
+					},
+					AttachmentDescription2{
+						.flags = AttachmentDescription2::Flags::Clear,
+						.format = _deferred_pipeline._normal->format(),
+						.samples = _deferred_pipeline._normal->image()->sampleCount(),
+					},
+					AttachmentDescription2{
+						.flags = AttachmentDescription2::Flags::Clear,
+						.format = _deferred_pipeline._tangent->format(),
+						.samples = _deferred_pipeline._tangent->image()->sampleCount(),
+					},
+					AttachmentDescription2{
+						.flags = AttachmentDescription2::Flags::Clear,
+						.format = _depth->format(),
+						.samples = _depth->image()->sampleCount(),
+					},
+				},
+				.subpasses = {
+					SubPassDescription2{
+						.colors = {AttachmentReference2{.index = 0}, AttachmentReference2{.index = 1}, AttachmentReference2{.index = 2}, AttachmentReference2{.index = 3}},
+						.depth_stencil = AttachmentReference2{.index = 4},
+					}
+				},
+			});
+
+			_deferred_pipeline._framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+				.app = application(),
+				.name = name() + ".Deferred.Framebuffer",
+				.render_pass = _deferred_pipeline._render_pass,
+				.attachments = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal, _deferred_pipeline._tangent, _depth},
+			});
 			
 
 			for (uint32_t model_type : _model_types)
@@ -321,18 +390,15 @@ namespace vkl
 							.binding = 0,
 						},
 					},
-					.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal},
-					.depth_stencil = _depth,
+					.extern_render_pass = _deferred_pipeline._render_pass,
 					.write_depth = true,
 					.depth_compare_op = VK_COMPARE_OP_LESS,
 					.vertex_shader_path = shaders / "RasterGBuffer.vert",
 					.fragment_shader_path = shaders / "RasterGBuffer.frag",
-					.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-					.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 				});
 			}
 
-			_deferred_pipeline.raster_gbuffer_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
+			_deferred_pipeline._raster_gbuffer_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RasterSceneGBuffer",
 				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -348,14 +414,11 @@ namespace vkl
 						.binding = 1,
 					},
 				},
-				.color_attachements = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal, _deferred_pipeline._tangent},
-				.depth_stencil = _depth,
+				.extern_render_pass = _deferred_pipeline._render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "RasterSceneGBuffer.vert",
 				.fragment_shader_path = shaders / "RasterSceneGBuffer.frag",
-				.clear_color = VkClearColorValue{.int32 = {0, 0, 0, 0}},
-				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1.0,},
 			});
 			
 			_ambient_occlusion = std::make_shared<AmbientOcclusion>(AmbientOcclusion::CI{
@@ -419,6 +482,16 @@ namespace vkl
 				},
 			});
 
+			_spot_light_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
+				.app = application(),
+				.name = name() + ".SpotLightRenderPass",
+				.depth_stencil = AttachmentDescription2{
+					.flags = AttachmentDescription2::Flags::Clear,
+					.format = [this]() {return _scene->lightDepthFormat(); },
+					.samples = [this]() {return _scene->lightDepthSamples(); },
+				},
+			});
+
 			_render_spot_light_depth = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderSpotLightDepth",
@@ -431,17 +504,22 @@ namespace vkl
 						.binding = 1,
 					},
 				},
-				.extern_framebuffer = ExternFramebufferInfo{
-					.detph_stencil_attchement = AttachmentInfo{
-						.format = [this](){return _scene->lightDepthFormat();},
-						.samples = [this](){return _scene->lightDepthSamples();},
-					},
-				},
+				.extern_render_pass = _spot_light_render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
 				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
-				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
+			});
+
+			_point_light_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
+				.app = application(),
+				.name = name() + ".PointLightRenderPass",
+				.view_mask = 0b111111,
+				.depth_stencil = AttachmentDescription2{
+					.flags = AttachmentDescription2::Flags::Clear,
+					.format = [this]() {return _scene->lightDepthFormat(); },
+					.samples = [this]() {return _scene->lightDepthSamples(); },
+				},
 			});
 
 			_render_point_light_depth = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -456,20 +534,12 @@ namespace vkl
 						.binding = 1,
 					},
 				},
-				.extern_framebuffer = ExternFramebufferInfo{
-					.detph_stencil_attchement = AttachmentInfo{
-						.format = [this]() {return _scene->lightDepthFormat(); },
-						.samples = [this]() {return _scene->lightDepthSamples(); },
-					},
-					.layers = 1,
-					.multiview = true,
-				},
+				.extern_render_pass = _point_light_render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
 				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
 				.definitions = Dyn<DefinitionsList>({"TARGET_CUBE 1"}),
-				.clear_depth_stencil = VkClearDepthStencilValue{.depth = 1},
 			});
 		}
 
@@ -602,6 +672,8 @@ namespace vkl
 
 		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Forward || update_all_anyway)
 		{
+			_direct_pipeline._render_pass->updateResources(ctx);
+			_direct_pipeline._framebuffer->updateResources(ctx);
 			if (_use_indirect_rendering || update_all_anyway)
 			{
 				ctx.resourcesToUpdateLater() += _direct_pipeline._render_scene_indirect;
@@ -621,9 +693,12 @@ namespace vkl
 			_deferred_pipeline._normal->updateResource(ctx);
 			_deferred_pipeline._tangent->updateResource(ctx);
 
+			_deferred_pipeline._render_pass->updateResources(ctx);
+			_deferred_pipeline._framebuffer->updateResources(ctx);
+
 			if (_use_indirect_rendering || update_all_anyway)
 			{
-				ctx.resourcesToUpdateLater() += _deferred_pipeline.raster_gbuffer_indirect;
+				ctx.resourcesToUpdateLater() += _deferred_pipeline._raster_gbuffer_indirect;
 			}
 			if(!_use_indirect_rendering || update_all_anyway)
 			{
@@ -646,6 +721,8 @@ namespace vkl
 		
 		if (_use_indirect_rendering)
 		{
+			_spot_light_render_pass->updateResources(ctx);
+			_point_light_render_pass->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _render_spot_light_depth;
 			ctx.resourcesToUpdateLater() += _render_point_light_depth;
 		}
@@ -680,12 +757,15 @@ namespace vkl
 								{
 									render_pass = _render_spot_light_depth->renderPass();
 								}
+								std::shared_ptr<Image> depth_image = lid.depth_view->image();
 								my_lid->framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
 									.app = application(),
 									.name = lid.depth_view->name(),
 									.render_pass = render_pass,
-									.depth_stencil = lid.depth_view,
-									.layers = 1,
+									.attachments = {lid.depth_view},
+									.extent = [depth_image]() {
+										return depth_image->extent().value();
+									},
 								});
 							}
 						}
@@ -796,11 +876,15 @@ namespace vkl
 			if (_use_indirect_rendering)
 			{
 				VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
-				std::shared_ptr<Framebuffer> previous_fb = std::move(my_draw_list.extern_framebuffer);
 				const size_t previous_pc_begin = my_draw_list.pc_begin;
 				const uint32_t previous_pc_size = my_draw_list.pc_size;
 				
 				exec.pushDebugLabel("RenderShadowMaps", true);
+
+				RenderPassBeginInfo render_pass;
+				VkClearValue clear{
+					.depthStencil = {.depth = 1.0f},
+				};
 				
 				for (auto& [path, lid] : _scene->_unique_light_instances)
 				{
@@ -810,7 +894,13 @@ namespace vkl
 					{
 						const uint32_t pc = lid.frame_light_id;
 						my_draw_list.setPushConstant(&pc, sizeof(pc));
-						my_draw_list.extern_framebuffer = my_lid->framebuffer;
+
+						render_pass.clear();
+						render_pass.ptr_clear_values = &clear;
+						render_pass.clear_value_count = 1;
+						render_pass.framebuffer = my_lid->framebuffer->instance();
+
+						exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
 
 						if (light->type() == LightType::SPOT)
 						{
@@ -820,11 +910,12 @@ namespace vkl
 						{
 							exec(_render_point_light_depth->with(my_draw_list));
 						}
+
+						exec.endRenderPass();
 					}	
 				}
 
 				exec.popDebugLabel();
-				my_draw_list.extern_framebuffer = std::move(previous_fb);
 				my_draw_list.pc_begin = previous_pc_begin;
 				my_draw_list.pc_size = previous_pc_size;
 			}
@@ -832,11 +923,21 @@ namespace vkl
 
 		if (!draw_list.empty() && _pipeline_selection.index() < 2)
 		{
-			const size_t selected_pipeline = _pipeline_selection.index();
-			if (selected_pipeline == 0)
+			const RenderPipeline selected_pipeline = static_cast<RenderPipeline>(_pipeline_selection.index());
+			if (selected_pipeline == RenderPipeline::Forward)
 			{
 				tick_tock.tick();
 				exec.pushDebugLabel("DirectPipeline", true);
+				std::array<VkClearValue, 2> clear_values = {
+					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+					VkClearValue{.depthStencil = VkClearDepthStencilValue{.depth = 1.0f}},
+				};
+				RenderPassBeginInfo render_pass{
+					.framebuffer = _direct_pipeline._framebuffer->instance(),
+					.clear_value_count = static_cast<uint32_t>(clear_values.size()),
+					.ptr_clear_values = clear_values.data(),
+				};
+				exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
 				if (_use_indirect_rendering)
 				{
 					VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
@@ -852,6 +953,8 @@ namespace vkl
 						}
 					}
 				}
+
+				exec.endRenderPass();
 				
 				if (exec.framePerfCounters())
 				{
@@ -864,12 +967,27 @@ namespace vkl
 				exec.pushDebugLabel("DeferredPipeline", true);
 				
 				tick_tock.tick();
+
+				std::array<VkClearValue, 5> clear_values = {
+					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+					VkClearValue{.depthStencil = VkClearDepthStencilValue{.depth = 1.0f}},
+				};
+				RenderPassBeginInfo render_pass{
+					.framebuffer = _deferred_pipeline._framebuffer->instance(),
+					.clear_value_count = static_cast<uint32_t>(clear_values.size()),
+					.ptr_clear_values = clear_values.data(),
+				};
+
+				exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
 				
 				if (_use_indirect_rendering)
 				{
 					VertexCommand::DrawInfo & my_draw_list = (_cached_draw_list.begin())->second;
 					{
-						exec(_deferred_pipeline.raster_gbuffer_indirect->with(my_draw_list));
+						exec(_deferred_pipeline._raster_gbuffer_indirect->with(my_draw_list));
 					}
 				}
 				else
@@ -883,6 +1001,7 @@ namespace vkl
 					}
 				}
 
+				exec.endRenderPass();
 				
 				if (exec.framePerfCounters())
 				{

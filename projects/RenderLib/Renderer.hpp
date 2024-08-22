@@ -70,6 +70,8 @@ namespace vkl
 
 		struct DirectPipelineV1
 		{
+			std::shared_ptr<RenderPass> _render_pass = nullptr;
+			std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 			std::map<uint32_t, std::shared_ptr<VertexCommand>> _render_scene_direct;
 			std::shared_ptr<VertexCommand> _render_scene_indirect;
 			struct RenderSceneDirectPC
@@ -87,11 +89,13 @@ namespace vkl
 			std::shared_ptr<ImageView> _normal = nullptr;
 			std::shared_ptr<ImageView> _tangent = nullptr;
 
+			std::shared_ptr<RenderPass> _render_pass = nullptr;
+			std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 			struct RasterCommands
 			{
 				std::shared_ptr<VertexCommand> raster;
 			};
-			std::shared_ptr<VertexCommand> raster_gbuffer_indirect;
+			std::shared_ptr<VertexCommand> _raster_gbuffer_indirect;
 			std::map<uint32_t, RasterCommands> _raster_gbuffer;
 			struct RasterGBufferPC 
 			{
@@ -116,7 +120,9 @@ namespace vkl
 		std::shared_ptr<TemporalAntiAliasingAndUpscaler> _taau;
 
 		std::shared_ptr<Sampler> _light_depth_sampler = nullptr;
+		std::shared_ptr<RenderPass> _spot_light_render_pass = nullptr;
 		std::shared_ptr<VertexCommand> _render_spot_light_depth = nullptr;
+		std::shared_ptr<RenderPass> _point_light_render_pass = nullptr;
 		std::shared_ptr<VertexCommand> _render_point_light_depth = nullptr;
 
 		std::shared_ptr<AmbientOcclusion> _ambient_occlusion = nullptr;
