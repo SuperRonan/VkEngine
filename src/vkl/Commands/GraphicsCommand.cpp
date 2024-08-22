@@ -176,17 +176,17 @@ namespace vkl
 			const uint32_t color_base = attachment_count;
 			subpass.colors.resize(_color_attachements.size());
 			attachment_count += _color_attachements.size32();
+			const uint32_t depth_stencil_base = attachment_count;
+			if (_depth_stencil.view)
+			{
+				attachment_count += 1;
+			}
 			const uint32_t resolve_base = attachment_count;
 			const uint32_t resolve_count = std::count_if(_color_attachements.begin(), _color_attachements.end(), [](ColorAttachment const& a) {return a.resolved.operator bool(); });
 			if (resolve_count)
 			{
 				attachment_count += resolve_count;
 				subpass.inputs.resize(_color_attachements.size());
-			}
-			const uint32_t depth_stencil_base = attachment_count;
-			if (_depth_stencil.view)
-			{
-				attachment_count += 1;
 			}
 			const uint32_t fragment_shading_rate_base = attachment_count;
 			if (_fragment_shading_rate_image)
