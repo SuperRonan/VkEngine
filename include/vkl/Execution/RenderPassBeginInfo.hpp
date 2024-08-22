@@ -29,19 +29,7 @@ namespace vkl
 		VkClearValue* ptr_clear_values = nullptr;
 		MyVector<VkClearValue> clear_values = {};
 
-		RenderPassInstance* getRenderPassInstance() const
-		{
-			RenderPassInstance* res = nullptr;
-			if (render_pass)
-			{
-				res = render_pass.get();
-			}
-			else if (framebuffer)
-			{
-				res = framebuffer->renderPass().get();
-			}
-			return res;
-		}
+		RenderPassInstance* getRenderPassInstance() const;
 
 		operator bool()const
 		{

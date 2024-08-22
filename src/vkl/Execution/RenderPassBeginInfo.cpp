@@ -7,6 +7,20 @@
 
 namespace vkl
 {
+	RenderPassInstance* RenderPassBeginInfo::getRenderPassInstance() const
+	{
+		RenderPassInstance* res = nullptr;
+		if (render_pass)
+		{
+			res = render_pass.get();
+		}
+		else if (framebuffer)
+		{
+			res = framebuffer->renderPass().get();
+		}
+		return res;
+	}
+
 	void RenderPassBeginInfo::exportResources(ResourceUsageList& resources, bool export_for_all_subpasses)
 	{
 		assert(render_pass || framebuffer);
