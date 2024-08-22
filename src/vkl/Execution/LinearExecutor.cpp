@@ -15,6 +15,7 @@
 
 namespace vkl
 {
+	static thread_local SynchronizationHelper _synch;
 
 	ExecutionThread::ExecutionThread(CreateInfo const& ci):
 		ExecutionRecorder(ci.app, ci.name),
@@ -27,12 +28,11 @@ namespace vkl
 
 	void ExecutionThread::executeNode(std::shared_ptr<ExecutionNode> const& node)
 	{
-		static thread_local SynchronizationHelper synch;
 		assert(node->isInUse());
 		pushDebugLabel(node->name(), true);
-		synch.reset(_context);
-		synch.commit(node->resources());
-		synch.record();
+		_synch.reset(_context);
+		_synch.commit(node->resources());
+		_synch.record();
 		node->execute(*_context);
 		node->finish();
 		popDebugLabel();
@@ -77,6 +77,49 @@ namespace vkl
 			_record_context.rayTracingBoundSets().bind(info.index, inst);
 			_context->rayTracingBoundSets().bind(info.index, inst);
 		}
+	}
+
+	static thread_local ResourceUsageList _render_pass_resources;
+
+	void ExecutionThread::beginRenderPass(RenderPassBeginInfo const& info, VkSubpassContents contents)
+	{
+		assert(!_render_pass);
+		_render_pass = info;
+		_render_pass_resources.clear();
+		_render_pass.exportResources(_render_pass_resources, !_render_pass_synch_subpass);
+		
+		_synch.reset(_context);
+		_synch.commit(_render_pass_resources);
+		_synch.record();
+
+		_render_pass_resources.clear();
+
+		_render_pass.recordBegin(*_context, contents);
+	}
+
+	void ExecutionThread::nextSubPass(VkSubpassContents contents)
+	{
+		assert(!!_render_pass);
+		if (_render_pass_synch_subpass)
+		{
+			_render_pass_resources.clear();
+
+			_render_pass.exportNextSubpassResources(_render_pass_resources);
+
+			_synch.reset(_context);
+			_synch.commit(_render_pass_resources);
+			_synch.record();
+
+			_render_pass_resources.clear();
+		}
+		_render_pass.recordNextSubpass(*_context, contents);
+	}
+
+	void ExecutionThread::endRenderPass()
+	{
+		assert(!!_render_pass);
+		_render_pass.recordEnd(*_context);
+		_render_pass.clear();
 	}
 
 	void ExecutionThread::pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp)

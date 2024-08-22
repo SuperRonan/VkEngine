@@ -25,6 +25,8 @@ namespace vkl
 
 		RecordContext _record_context;
 		ExecutionContext* _context;
+		RenderPassBeginInfo _render_pass = {};
+		bool _render_pass_synch_subpass = false;
 
 		void executeNode(std::shared_ptr<ExecutionNode> const &node);
 
@@ -47,6 +49,12 @@ namespace vkl
 		virtual void record(Executable const& executable) override;
 
 		virtual void bindSet(BindSetInfo const& info) override;
+
+		virtual void beginRenderPass(RenderPassBeginInfo const& info, VkSubpassContents contents) override;
+
+		virtual void nextSubPass(VkSubpassContents contents) override;
+
+		virtual void endRenderPass() override;
 
 		using vec4 = glm::vec4;
 
