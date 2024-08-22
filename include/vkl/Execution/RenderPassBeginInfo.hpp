@@ -22,6 +22,11 @@ namespace vkl
 		std::shared_ptr<RenderPassInstance> render_pass = nullptr;
 		std::shared_ptr<FramebufferInstance> framebuffer = nullptr;
 		VkRect2D render_area = DefaultRenderArea;
+	protected:
+		uint32_t _subpass_index = 0;
+	public:
+		uint32_t clear_value_count = 0;
+		VkClearValue* ptr_clear_values = nullptr;
 		MyVector<VkClearValue> clear_values = {};
 
 		RenderPassInstance* getRenderPassInstance() const
@@ -38,13 +43,23 @@ namespace vkl
 			return res;
 		}
 
+		operator bool()const
+		{
+			return !!getRenderPassInstance();
+		}
+
 		void exportResources(ResourceUsageList & resources, bool export_for_all_subpasses = false);
 
 		void recordBegin(ExecutionContext & ctx, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
 
+		void exportNextSubpassResources(ResourceUsageList& resources)
+		{
+			exportSubpassResources(_subpass_index + 1, resources);
+		}
+
 		void exportSubpassResources(uint32_t index, ResourceUsageList& resources);
 
-		void recordNextSubpass(ExecutionContext& ctx, uint32_t index, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
+		void recordNextSubpass(ExecutionContext& ctx, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
 
 		void recordEnd(ExecutionContext& ctx);
 
@@ -53,6 +68,9 @@ namespace vkl
 			render_pass.reset();
 			framebuffer.reset();
 			render_area = DefaultRenderArea;
+			_subpass_index = 0;
+			clear_value_count = 0;
+			ptr_clear_values = nullptr;
 			clear_values.clear();
 		}
 	};

@@ -52,6 +52,7 @@ namespace vkl
 
 	void RenderPassBeginInfo::recordBegin(ExecutionContext& ctx, VkSubpassContents contents)
 	{
+		_subpass_index = 0;
 		if (framebuffer)
 		{
 			ctx.keepAlive(framebuffer);
@@ -70,6 +71,11 @@ namespace vkl
 				NOT_YET_IMPLEMENTED;
 			}
 		}
+		if (!ptr_clear_values)
+		{
+			clear_value_count = clear_values.size32();
+			ptr_clear_values = clear_values.data();
+		}
 		if (rpi->handle())
 		{
 			VkRenderPassBeginInfo info{
@@ -78,8 +84,8 @@ namespace vkl
 				.renderPass = *rpi,
 				.framebuffer = *fbi,
 				.renderArea = render_area,
-				.clearValueCount = clear_values.size32(),
-				.pClearValues = clear_values.data(),
+				.clearValueCount = clear_value_count,
+				.pClearValues = ptr_clear_values,
 			};
 			VkSubpassBeginInfo subpass{
 				.sType = VK_STRUCTURE_TYPE_SUBPASS_BEGIN_INFO,
@@ -100,7 +106,7 @@ namespace vkl
 		}
 	}
 
-	void RenderPassBeginInfo::recordNextSubpass(ExecutionContext& ctx, uint32_t index, VkSubpassContents contents)
+	void RenderPassBeginInfo::recordNextSubpass(ExecutionContext& ctx, VkSubpassContents contents)
 	{
 		RenderPassInstance* rpi = getRenderPassInstance();
 		if (rpi->handle())
@@ -121,6 +127,7 @@ namespace vkl
 			// Dynamic Rendering
 			NOT_YET_IMPLEMENTED;
 		}
+		++_subpass_index;
 	}
 
 	void RenderPassBeginInfo::exportSubpassResources(uint32_t index, ResourceUsageList& resources)

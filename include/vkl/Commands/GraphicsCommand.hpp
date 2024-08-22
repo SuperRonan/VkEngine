@@ -21,9 +21,9 @@ namespace vkl
 		using CI = CreateInfo;
 		GraphicsCommandNode(CreateInfo const& ci);
 
-		RenderPassBeginInfo _render_pass_begin_info;
+		RenderPassBeginInfo _render_pass_begin_info = {};
 
-		VkViewport _viewport;
+		VkViewport _viewport = {};
 
 		virtual void clear() override;
 
@@ -54,6 +54,8 @@ namespace vkl
 		};
 		
 	protected:
+
+		friend struct GraphicsCommandTemplateProcessor;
 
 		VkPrimitiveTopology _topology;
 		Dyn<VkPolygonMode> _polygon_mode = VK_POLYGON_MODE_FILL;
@@ -87,8 +89,6 @@ namespace vkl
 		virtual void createGraphicsResources();
 
 		void createPipeline();
-
-		virtual void populateFramebufferResources(GraphicsCommandNode & node);
 
 	public:
 
@@ -307,12 +307,13 @@ namespace vkl
 		{
 			DrawType draw_type = DrawType::MAX_ENUM;	
 			std::optional<VkViewport> viewport = {};
+			MyVector<VkClearColorValue> clear_colors = {};
+			VkClearColorValue* ptr_clear_color = nullptr;
+			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 
 			MyVector<MyDrawCallInfo> calls;
 
 			that::ExS<BufferAndRange> _vertex_buffers;
-
-			std::shared_ptr<Framebuffer> extern_framebuffer = nullptr; 
 
 			void pushBack(DrawCallInfo const& dci);
 			void pushBack(DrawCallInfo && dci);
@@ -494,7 +495,11 @@ namespace vkl
 			bool dispatch_threads = true;
 
 			MyVector<MyDrawCallInfo> draw_list;
-			std::shared_ptr<Framebuffer> extern_framebuffer = nullptr;
+
+
+			MyVector<VkClearColorValue> clear_colors = {};
+			VkClearColorValue* ptr_clear_color = nullptr;
+			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 
 			void pushBack(DrawCallInfo const& dci);
 			void pushBack(DrawCallInfo && dci);

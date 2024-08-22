@@ -18,11 +18,6 @@ namespace vkl
 		ShaderCommandNode::clear();
 
 		_render_pass_begin_info.clear();
-		_depth_stencil.reset();
-
-		_clear_values.clear();
-		_clear_color.reset();
-		_clear_depth_stencil.reset();
 		
 		_viewport = {};
 	}
@@ -36,7 +31,10 @@ namespace vkl
 	{
 		CommandBuffer & cmd = *ctx.getCommandBuffer();
 
-		_render_pass_begin_info.recordBegin(ctx);
+		if (_render_pass_begin_info)
+		{
+			_render_pass_begin_info.recordBegin(ctx);
+		}
 		{
 			recordBindings(cmd, ctx);
 			if (false)
@@ -53,10 +51,68 @@ namespace vkl
 			}
 			recordDrawCalls(ctx);
 		}
-		_render_pass_begin_info.recordEnd(ctx);
+		if (_render_pass_begin_info)
+		{
+			_render_pass_begin_info.recordEnd(ctx);
+		}
 
 		ctx.keepAlive(_pipeline);
 	}
+
+
+	struct GraphicsCommandTemplateProcessor
+	{
+		template <class DrawInfo>
+		static void FillRenderPassInfo(GraphicsCommandNode& node, GraphicsCommand& that, DrawInfo const& di)
+		{
+			if (!that._use_external_renderpass)
+			{
+				node._render_pass_begin_info.framebuffer = that._framebuffer->instance();
+				RenderPassInstance* rpi = node._render_pass_begin_info.framebuffer->renderPass().get();
+				node._render_pass_begin_info.clear_values.resize(node._render_pass_begin_info.framebuffer->attachments().size());
+				for (uint32_t i = 0; i < that._color_attachements.size32(); ++i)
+				{
+					VkClearColorValue& ccv = node._render_pass_begin_info.clear_values[i].color;
+					if (rpi->getAttachmentDescriptors2()[i].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+					{
+						if (di.ptr_clear_color)
+						{
+							ccv = di.ptr_clear_color[i];
+						}
+						else if (di.clear_colors)
+						{
+							ccv = di.clear_colors[i];
+						}
+						else
+						{
+							ccv = that._color_attachements[i].clear_value.valueOr(VkClearColorValue{ .uint32 = {0, 0, 0, 0} });
+						}
+					}
+				}
+				if (that._depth_stencil.view)
+				{
+					const uint32_t index = that._color_attachements.size32();
+					VkAttachmentDescription2 const& desc = rpi->getAttachmentDescriptors2()[index];
+					VkClearDepthStencilValue& cdsv = node._render_pass_begin_info.clear_values[index].depthStencil;
+					if (desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR || desc.stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
+					{
+						if (di.clear_depth_stencil)
+						{
+							cdsv = *di.clear_depth_stencil;
+						}
+						else
+						{
+							cdsv = VkClearDepthStencilValue{
+								.depth = that._depth_stencil.clear_depth.valueOr(0.0f),
+								.stencil = that._depth_stencil.clear_stencil.valueOr(0u),
+							};
+						}
+					}
+				}
+				node.exportFramebufferResources();
+			}
+		}
+	};
 
 
 	GraphicsCommand::GraphicsCommand(CreateInfo const& ci) :
@@ -153,7 +209,7 @@ namespace vkl
 					{
 						flags |= AttachmentDescription2::Flags::Clear;
 					}
-					else if(_color_attachements[i].blending && _color_attachements[i].blending.value().blendEnable)
+					else if(_color_attachements[i].blending.operator bool() && _color_attachements[i].blending.value().blendEnable)
 					{
 						flags |= AttachmentDescription2::Flags::Blend;
 					}
@@ -263,21 +319,6 @@ namespace vkl
 			framebuffer_ci.render_pass = _render_pass;
 			_framebuffer = std::make_shared<Framebuffer>(std::move(framebuffer_ci));
 		}
-	}
-
-	void GraphicsCommand::populateFramebufferResources(GraphicsCommandNode & node)
-	{
-		RenderPassBeginInfo& info = node._render_pass_begin_info;
-		if (_render_pass && !info.render_pass)
-		{
-			info.render_pass = _render_pass->instance();
-		}
-		if (_framebuffer && !info.framebuffer)
-		{
-			info.framebuffer = _framebuffer->instance();
-		}
-
-		node.exportFramebufferResources();
 	}
 
 	void GraphicsCommand::createPipeline()
@@ -522,16 +563,17 @@ namespace vkl
 			.line_raster_state = ci.line_raster_state,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
-			.extern_framebuffer = ci.extern_framebuffer,
-			.targets = ci.color_attachements,
-			.depth_stencil = ci.depth_stencil,
+			.extern_render_pass = ci.extern_render_pass,
+			.color_attachments = ci.color_attachments,
+			.depth_stencil_attachment = ci.depth_stencil_attachment,
+			.fragment_shading_rate_image = ci.fragment_shading_rate_image,
+			.fragment_shading_rate_texel_size = ci.fragment_shading_rate_texel_size,
+			.inline_multisampling = ci.inline_multisampling,
+			.view_mask = ci.view_mask,
 			.write_depth = ci.write_depth,
 			.depth_compare_op = ci.depth_compare_op,
 			.stencil_front_op = ci.stencil_front_op,
 			.stencil_back_op = ci.stencil_back_op,
-			.clear_color = ci.clear_color,
-			.clear_depth_stencil = ci.clear_depth_stencil,
-			.blending = ci.blending,
 			.draw_type = ci.draw_type,
 		}),
 		_shaders(ShaderPaths{
@@ -767,12 +809,10 @@ namespace vkl
 
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-			if (di.extern_framebuffer)
-			{
-				node->_framebuffer = di.extern_framebuffer->instance();
-			}
+			
+			GraphicsCommandTemplateProcessor::FillRenderPassInfo(*node, that, di);
+
 			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
-			that.populateFramebufferResources(*node);
 			populateDrawCallsResources<DrawInfoRef>(that, *node, std::forward<VertexCommand::DrawInfo>(di));
 
 			node->_data = std::forward<that::ExDS>(di._data);
@@ -809,9 +849,11 @@ namespace vkl
 		draw_type = DrawType::MAX_ENUM;
 
 		viewport = {};
+		clear_colors.clear();
+		ptr_clear_color = nullptr;
 		calls.clear();
 		_vertex_buffers.clear();
-		extern_framebuffer.reset();
+
 	}
 	
 	void VertexCommand::DrawInfo::pushBack(DrawCallInfoConst const& dci)
@@ -970,16 +1012,17 @@ namespace vkl
 			.line_raster_state = ci.line_raster_state,
 			.sets_layouts = ci.sets_layouts,
 			.bindings = ci.bindings,
-			.extern_framebuffer = ci.extern_framebuffer,
-			.targets = ci.color_attachements,
-			.depth_stencil = ci.depth_stencil,
+			.extern_render_pass = ci.extern_render_pass,
+			.color_attachments = ci.color_attachments,
+			.depth_stencil_attachment = ci.depth_stencil_attachment,
+			.fragment_shading_rate_image = ci.fragment_shading_rate_image,
+			.fragment_shading_rate_texel_size = ci.fragment_shading_rate_texel_size,
+			.inline_multisampling = ci.inline_multisampling,
+			.view_mask = ci.view_mask,
 			.write_depth = ci.write_depth,
 			.depth_compare_op = ci.depth_compare_op,
 			.stencil_front_op = ci.stencil_front_op,
 			.stencil_back_op = ci.stencil_back_op,
-			.clear_color = ci.clear_color,
-			.clear_depth_stencil = ci.clear_depth_stencil,
-			.blending = ci.blending,
 		}),
 		_shaders{
 			.task_path = ci.task_shader_path,
@@ -1116,17 +1159,14 @@ namespace vkl
 
 			node->setName(that.name());
 
-			if (di.extern_framebuffer)
-			{
-				node->_framebuffer = di.extern_framebuffer->instance();
-			}
-
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 			ctx.graphicsBoundSets().bind(that.application()->descriptorBindingGlobalOptions().shader_set, that._set->instance());
 
+			GraphicsCommandTemplateProcessor::FillRenderPassInfo(*node, that, di);
+
 			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
-			that.populateFramebufferResources(*node);
+			
 			populateDrawCallsResources<DrawInfoRef>(that, *node,  std::forward<MeshCommand::DrawInfo>(di));
 
 			node->_data = std::forward<that::ExDS>(di._data);
@@ -1168,7 +1208,10 @@ namespace vkl
 		draw_type = DrawType::MAX_ENUM;
 		dispatch_threads = false;
 		draw_list.clear();
-		extern_framebuffer.reset();
+
+		clear_colors.clear();
+		ptr_clear_color = nullptr;
+		clear_depth_stencil.reset();
 	}
 
 	void MeshCommand::DrawInfo::pushBack(DrawCallInfo const& dci)
