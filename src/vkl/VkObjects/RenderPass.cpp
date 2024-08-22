@@ -575,6 +575,78 @@ namespace vkl
 		}
 	}
 
+	RenderPass::RenderPass(SinglePassCreateInfo const& ci):
+		RenderPass([&]() -> CreateInfo
+		{
+			CreateInfo res{
+				.app = ci.app,
+				.name = ci.name,
+				.mode = ci.mode,
+				.subpasses = {SubPassDescription2{
+					.view_mask = ci.view_mask,
+					.read_only_depth = ci.read_only_depth,
+					.read_only_stencil = ci.read_only_stencil,
+					.auto_preserve_all_other_attachments = false,
+					.shading_rate_texel_size = ci.fragment_shading_rate_texel_size,
+					.inline_multisampling = ci.inline_multisampling,
+				}},
+				.create_on_construct = ci.create_on_construct,
+				.hold_instance = ci.hold_instance,
+			};
+			SubPassDescription2& subpass = res.subpasses.front();
+			that::ExS<AttachmentDescription2> attachments;
+
+			const uint32_t color_base = attachments.pushBack(ci.colors.data(), ci.colors.size());
+			subpass.colors.resize(ci.colors.size());
+			if (ci.depth_stencil)
+			{
+				const uint32_t depth_stencil_base = attachments.pushBack(&ci.depth_stencil, 1);
+				subpass.depth_stencil = AttachmentReference2{
+					.index = depth_stencil_base,
+				};
+			}
+			uint32_t resolve_base = 0;
+			if (ci.resolve)
+			{
+				resolve_base = attachments.pushBack(ci.resolve.data(), ci.resolve.size());
+				subpass.resolves.resize(ci.colors.size());
+			}
+			if (ci.fragment_shading_rate)
+			{
+				const uint32_t fragment_shading_rate_base = attachments.pushBack(&ci.fragment_shading_rate, 1);
+				subpass.fragment_shading_rate = AttachmentReference2{
+					.index = fragment_shading_rate_base,
+				};
+			}
+			
+			for (uint32_t i = 0; i < ci.colors.size32(); ++i)
+			{
+				subpass.colors[i].index = color_base + i;
+				if (ci.resolve)
+				{
+					if (i < ci.resolve.size32())
+					{
+						Dyn<AttachmentDescription2::Flags> flags = res.attachments[resolve_base + i].flags;
+						res.attachments[resolve_base + i].flags = [flags]()
+						{
+							AttachmentDescription2::Flags res = AttachmentDescription2::Flags::OverWrite;
+							if (flags)
+							{
+								res |= (flags.value() & AttachmentDescription2::Flags::FlagsMask);
+							}
+							return res;
+						};
+						subpass.resolves[i].index = resolve_base + i;
+					}
+				}
+			}
+
+			res.attachments = std::move(attachments.getStorage());
+
+			return res;
+		}())
+	{}
+
 	RenderPass::~RenderPass()
 	{
 		

@@ -90,6 +90,11 @@ namespace vkl
 		Dyn<VkFormat> format = {};
 		Dyn<VkSampleCountFlagBits> samples = {};
 
+		constexpr operator bool() const
+		{
+			return format.operator bool();
+		}
+
 		static VkAttachmentDescriptionFlags GetVkFlags(Flags flags);
 		static VkAttachmentLoadOp GetLoadOp(Flags flags);
 		static VkAttachmentStoreOp GetStoreOp(Flags flags);
@@ -307,7 +312,28 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
+		struct SinglePassCreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Mode mode = Mode::Automatic;
+			uint32_t view_mask = 0;
+			MyVector<AttachmentDescription2> colors = {};
+			AttachmentDescription2 depth_stencil = {};
+			MyVector<AttachmentDescription2> resolve = {};
+			AttachmentDescription2 fragment_shading_rate = {};
+			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
+			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			bool read_only_depth = false;
+			bool read_only_stencil = false;
+			bool create_on_construct = false;
+			Dyn<bool> hold_instance = {};
+		};
+		using SPCI = SinglePassCreateInfo;
+
 		RenderPass(CreateInfo const& ci);
+
+		RenderPass(SinglePassCreateInfo const& spci);
 
 		virtual ~RenderPass()override;
 
