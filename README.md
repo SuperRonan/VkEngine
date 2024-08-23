@@ -88,6 +88,7 @@
 	- [ ] Use one pool for many descriptor sets (for model resources)
 - [ ] Add helper types StringVector, AnyVector, ...
 - [ ] Refactor UploadQueue, AsynchUpload, ... to avoid using individual small allocations
+- [ ] Make a common interface render pass
 
 - [ ] Find a better project name
 - [ ] Rework on thatlib
