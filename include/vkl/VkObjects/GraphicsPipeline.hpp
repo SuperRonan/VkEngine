@@ -87,14 +87,14 @@ namespace vkl
 			return input_assembly;
 		}
 
-		constexpr static VkViewport Viewport(VkExtent2D const& extent)
+		constexpr static VkViewport Viewport(VkRect2D const& rect)
 		{
 			VkViewport viewport{
-				.x = 0.0f,
-				.y = 0.0f,
-				.width = (float)extent.width,
-				.height = (float)extent.height,
-				.minDepth = 0.0f,
+				.x = static_cast<float>(rect.offset.x),
+				.y = static_cast<float>(rect.offset.y),
+				.width = static_cast<float>(rect.extent.width),
+				.height = static_cast<float>(rect.extent.height),
+				.minDepth = 0.0f, 
 				.maxDepth = 1.0f,
 			};
 			return viewport;
