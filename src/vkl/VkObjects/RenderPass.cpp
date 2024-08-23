@@ -1,4 +1,5 @@
 #include <vkl/VkObjects/RenderPass.hpp>
+#include <vkl/VkObjects/ImageView.hpp>
 #include <cassert>
 
 namespace vkl
@@ -39,6 +40,52 @@ namespace vkl
 	VkAttachmentStoreOp AttachmentDescription2::GetStencilStoreOp(Flags flags)
 	{
 		return GetStoreOp(static_cast<Flags>(flags >> FlagsStencilOpShift));
+	}
+
+	AttachmentDescription2 AttachmentDescription2::MakeFrom(Dyn<Flags> const& flags, std::shared_ptr<ImageView> const& view)
+	{
+		AttachmentDescription2 res{
+			.flags = flags,
+		};
+		if (view)
+		{
+			res.format = view->format();
+			res.samples = view->sampleCount();
+		}
+		return res;
+	}
+
+	AttachmentDescription2 AttachmentDescription2::MakeFrom(Dyn<Flags> const& flags, ImageView const& view)
+	{
+		AttachmentDescription2 res{
+			.flags = flags,
+			.format = view.format(),
+			.samples = view.sampleCount(),
+		};
+		return res;
+	}
+
+	AttachmentDescription2 AttachmentDescription2::MakeFrom(Dyn<Flags> && flags, std::shared_ptr<ImageView> const& view)
+	{
+		AttachmentDescription2 res{
+			.flags = std::move(flags),
+		};
+		if (view)
+		{
+			res.format = view->format();
+			res.samples = view->sampleCount();
+		}
+		return res;
+	}
+
+	AttachmentDescription2 AttachmentDescription2::MakeFrom(Dyn<Flags> && flags, ImageView const& view)
+	{
+		AttachmentDescription2 res{
+			.flags = std::move(flags),
+			.format = view.format(),
+			.samples = view.sampleCount(),
+		};
+		return res;
 	}
 
 	RenderPassInstance::~RenderPassInstance()

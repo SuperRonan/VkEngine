@@ -64,6 +64,7 @@ namespace vkl
 			OverWrite = LoadOpDontCare | StoreOpStore,
 			Blend = LoadOpLoad | StoreOpStore,
 			Clear = LoadOpClear | StoreOpStore,
+			ReadOnly = LoadOpLoad | StoreOpNone,
 			DontCare = LoadOpDontCare | StoreOpDontCare,
 			OpNone = LoadOpNone | StoreOpNone,
 
@@ -82,6 +83,7 @@ namespace vkl
 			StencilOverWrite = OverWrite << FlagsStencilOpShift,
 			StencilBlend = Blend << FlagsStencilOpShift,
 			StencilClear = Clear << FlagsStencilOpShift,
+			StencilReadOnly = ReadOnly << FlagsStencilOpShift,
 			StencilDontCare = DontCare << FlagsStencilOpShift,
 			StencilOpNone = OpNone << FlagsStencilOpShift,
 		};
@@ -100,6 +102,11 @@ namespace vkl
 		static VkAttachmentStoreOp GetStoreOp(Flags flags);
 		static VkAttachmentLoadOp GetStencilLoadOp(Flags flags);
 		static VkAttachmentStoreOp GetStencilStoreOp(Flags flags);
+
+		static AttachmentDescription2 MakeFrom(Dyn<Flags> const& flags, std::shared_ptr<ImageView> const& view);
+		static AttachmentDescription2 MakeFrom(Dyn<Flags> const& flags, ImageView const& view);
+		static AttachmentDescription2 MakeFrom(Dyn<Flags> && flags, std::shared_ptr<ImageView> const& view);
+		static AttachmentDescription2 MakeFrom(Dyn<Flags> && flags, ImageView const& view);
 	};
 
 
