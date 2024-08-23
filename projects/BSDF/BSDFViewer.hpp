@@ -45,6 +45,9 @@ namespace vkl
 
 		VkPolygonMode _polygon_mode_3D = VK_POLYGON_MODE_FILL;
 
+		std::shared_ptr<RenderPass> _render_pass = nullptr;
+		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
+
 		std::shared_ptr<MeshCommand> _render_3D_mesh;
 		std::shared_ptr<MeshCommand> _render_2D_mesh;
 		

@@ -130,6 +130,28 @@ namespace vkl
 
 		_sets_layouts.set(application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set, _set_layout);
 
+
+		_render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+			.app = application(),
+			.name = name() + ".RenderPass",
+			.attachments = {
+				AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _target),
+			},
+			.subpasses = {
+				SubPassDescription2{
+					.colors = {AttachmentReference2{.index = 0}},
+				},
+			},	
+		});
+
+		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+			.app = application(),
+			.name = name() + ".Framebuffer",
+			.attachments = {
+				_target,
+			},
+		});
+
 		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
 
 		if (can_mesh)
@@ -142,13 +164,9 @@ namespace vkl
 				.extent = [this](){VkExtent2D a = _sphere_resolution.value(); return VkExtent3D{.width = a.width, .height = a.height, .depth = _num_functions.value()}; },
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,
-				.color_attachements = {
-					_target,
-				},
+				.extern_render_pass = _render_pass,
 				.mesh_shader_path = shaders / "RenderSphericalFunction3D.glsl",
 				.fragment_shader_path = shaders / "RenderSphericalFunction3D.glsl",
-				.clear_color = VkClearColorValue{.uint32{0, 0, 0, 0}},
-				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 		}
 	}
@@ -187,6 +205,9 @@ namespace vkl
 		_functions_image->updateResource(ctx);
 		_set->updateResources(ctx);
 
+		_render_pass->updateResources(ctx);
+		_framebuffer->updateResources(ctx);
+
 		ctx.resourcesToUpdateLater() += _render_3D_mesh;
 	}
 
@@ -198,7 +219,21 @@ namespace vkl
 			.index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set,
 			.set = _set,
 		});
+
+		std::array<VkClearValue, 1> clear_values = {
+			VkClearColorValue{.float32 = {0.0f, 0.0f, 0.0f, 0.0f}},
+		};
+
+		exec.beginRenderPass(RenderPassBeginInfo{
+			.framebuffer = _framebuffer->instance(),
+			.clear_value_count = clear_values.size(),
+			.ptr_clear_values = clear_values.data(),
+		}, VK_SUBPASS_CONTENTS_INLINE);
+
 		exec(_render_3D_mesh);
+
+		exec.endRenderPass();
+
 		exec.bindSet(BindSetInfo{
 			.index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set,
 			.set = nullptr,

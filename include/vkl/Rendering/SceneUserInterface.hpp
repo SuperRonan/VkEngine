@@ -50,6 +50,8 @@ namespace vkl
 		std::shared_ptr<ImageView> _depth = nullptr;
 		MultiDescriptorSetsLayouts _sets_layouts = {};
 		
+		std::shared_ptr<RenderPass> _render_pass = nullptr;
+		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 
 		std::shared_ptr<VertexCommand> _render_3D_basis = nullptr;
 		struct Render3DBasisPC

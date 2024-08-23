@@ -40,7 +40,7 @@ namespace vkl
 			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
 			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
-			.color_attachements = {_target},
+			.color_attachments = { GraphicsCommand::ColorAttachment{.view = _target}},
 			.vertex_shader_path = common_shaders / "RenderRect.glsl",
 			.fragment_shader_path = common_shaders / "RenderRect.glsl",
 		});

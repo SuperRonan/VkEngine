@@ -32,6 +32,33 @@ namespace vkl
 
 	void SceneUserInterface::createInternalResources()
 	{
+		_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
+			.app = application(),
+			.name = name() + ".RenderPass",
+			.colors = {
+				AttachmentDescription2{
+					.flags = AttachmentDescription2::Flags::Blend,
+					.format = _target->format(),
+					.samples = _target->sampleCount(),
+				},
+			},
+			.depth_stencil = AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::ReadOnly, _depth),
+			.read_only_depth = true,
+		});
+
+		Framebuffer::CI fb_ci{
+			.app = application(),
+			.name = name() + ".Framebuffer",
+			.render_pass = _render_pass,
+			.attachments = {_target},
+		};
+		if (_depth)
+		{
+			fb_ci.attachments.push_back(_depth);
+		}
+
+		_framebuffer = std::make_shared<Framebuffer>(std::move(fb_ci));
+
 		const std::filesystem::path shader_lib = application()->mountingPoints()["ShaderLib"];
 		GraphicsPipeline::LineRasterizationState line_raster_state{
 			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
@@ -44,7 +71,7 @@ namespace vkl
 			.draw_count = 3,
 			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
-			.color_attachements = {_target},
+			.extern_render_pass = _render_pass,
 			.vertex_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
 			.geometry_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
 			.fragment_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
@@ -67,10 +94,9 @@ namespace vkl
 			.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
 			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
-			.color_attachements = { _target },
-			.depth_stencil = _depth,
+			.extern_render_pass = _render_pass,
 			.write_depth = false,
-			.depth_compare_op = VK_COMPARE_OP_LESS,
+			.depth_compare_op = _depth ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS,
 			.vertex_shader_path = shader_lib / "Rendering/Mesh/renderOnlyPos.vert",
 			.fragment_shader_path = shader_lib / "Rendering/Mesh/renderUniColor.frag",
 			.definitions = std::move(render_box_3D_defs),
@@ -95,15 +121,26 @@ namespace vkl
 	void SceneUserInterface::updateResources(UpdateContext& ctx)
 	{
 		bool update_3D_basis = _show_view_basis || _show_world_basis || _gui_selected_node.hasValue() || ctx.updateAnyway();
+
+		bool render = false;
+
 		if (update_3D_basis)
 		{
 			ctx.resourcesToUpdateLater() += _render_3D_basis;
+			render = true;
 		}
 
 		if (_gui_selected_node.hasValue() || ctx.updateAnyway())
 		{
 			_box_mesh->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _render_3D_box;
+			render = true;
+		}
+
+		if (render)
+		{
+			_render_pass->updateResources(ctx);
+			_framebuffer->updateResources(ctx);
 		}
 	}
 

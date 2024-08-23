@@ -85,6 +85,27 @@ namespace vkl
 			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
 		};
 
+		_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
+			.app = application(),
+			.name = name() + ".RenderPass",
+			.colors = {AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Blend, _target)},
+			.depth_stencil = AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::ReadOnly, _depth),
+		});
+
+		Framebuffer::CI fb_ci{
+			.app = application(),
+			.name = name() + ".Framebuffer",
+			.render_pass = _render_pass,
+			.attachments = {_target},
+		};
+		if (_depth)
+		{
+			fb_ci.attachments.push_back(_depth);
+		}
+		_framebuffer = std::make_shared<Framebuffer>(std::move(fb_ci));
+
+		_blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault();
+
 		if (use_mesh_shader)
 		{
 			defs += "MESH_PIPELINE 1"s;
@@ -100,14 +121,17 @@ namespace vkl
 						.binding = 0,
 					},
 				},
-				.color_attachements = { _target },
-				.depth_stencil = _depth,
+				.extern_render_pass = _render_pass,
+				.color_attachments = {
+					GraphicsCommand::ColorAttachment{
+						.blending = &_blending,
+					}
+				},
 				.write_depth = false,
 				.depth_compare_op = cmp,
 				.mesh_shader_path = string_shaders,
 				.fragment_shader_path = string_shaders,
 				.definitions = defs,
-				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			_render_lines_with_mesh = std::make_shared<MeshCommand>(MeshCommand::CI{
 				.app = application(),
@@ -116,14 +140,17 @@ namespace vkl
 				.line_raster_state = line_raster_state,
 				.sets_layouts = _sets_layouts,
 				.bindings = {},
-				.color_attachements = { _target },
-				.depth_stencil = _depth,
+				.extern_render_pass = _render_pass,
+				.color_attachments = {
+					GraphicsCommand::ColorAttachment{
+						.blending = &_blending,
+					}
+				},
 				.write_depth = false,
 				.depth_compare_op = cmp,
 				.mesh_shader_path = lines_shaders,
 				.fragment_shader_path = lines_shaders,
 				.definitions = defs,
-				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 		}
 		else
@@ -140,15 +167,18 @@ namespace vkl
 						.binding = 0,
 					},
 				},
-				.color_attachements = { _target },
-				.depth_stencil = _depth,
+				.extern_render_pass = _render_pass,
+				.color_attachments = {
+					GraphicsCommand::ColorAttachment{
+						.blending = &_blending,
+					}
+				},
 				.write_depth = false,
 				.depth_compare_op = cmp,
 				.vertex_shader_path = string_shaders,
 				.geometry_shader_path = string_shaders,
 				.fragment_shader_path = string_shaders,
 				.definitions = defs,
-				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 			_render_lines_with_geometry = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
@@ -156,15 +186,18 @@ namespace vkl
 				.line_raster_state = line_raster_state,
 				.sets_layouts = _sets_layouts,
 				.bindings = {},
-				.color_attachements = { _target },
-				.depth_stencil = _depth,
+				.extern_render_pass = _render_pass,
+				.color_attachments = {
+					GraphicsCommand::ColorAttachment{
+						.blending = &_blending,
+					}
+				},
 				.write_depth = false,
 				.depth_compare_op = cmp,
 				.vertex_shader_path = lines_shaders,
 				.geometry_shader_path = lines_shaders,
 				.fragment_shader_path = lines_shaders,
 				.definitions = defs,
-				.blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault(),
 			});
 		}
 	}
@@ -285,48 +318,54 @@ namespace vkl
 
 	void DebugRenderer::updateResources(UpdateContext& ctx)
 	{
-		_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
-		_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
+		_debug_buffer->updateResource(ctx); // this one holds instance based on _enable_debug
+		if (_enable_debug)
+		{
+			_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
+			_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
 		
-		_font->updateResources(ctx);
-		_sampler->updateResources(ctx);
-		_debug_buffer->updateResource(ctx);
+			_font->updateResources(ctx);
+			_sampler->updateResources(ctx);
 
 
-		if (_should_write_header && _debug_buffer->instance())
-		{
-			struct Header {
-				uint32_t num_debug_strings;
-				uint32_t num_debug_lines;
-				uint32_t pad1;
-				uint32_t pad2;
-			};
-			Header header{
-				.num_debug_strings = _number_of_debug_strings,
-				.num_debug_lines = _number_of_debug_lines,
-			};	
-			ResourcesToUpload::BufferSource src{
-				.data = &header,
-				.size = sizeof(header),
-				.copy_data = true,
-			};
-			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-				.sources = &src,
-				.sources_count = 1,
-				.dst = _debug_buffer->instance(),
-			};
-			_should_write_header = false;
-		}
+			if (_should_write_header && _debug_buffer->instance())
+			{
+				struct Header {
+					uint32_t num_debug_strings;
+					uint32_t num_debug_lines;
+					uint32_t pad1;
+					uint32_t pad2;
+				};
+				Header header{
+					.num_debug_strings = _number_of_debug_strings,
+					.num_debug_lines = _number_of_debug_lines,
+				};	
+				ResourcesToUpload::BufferSource src{
+					.data = &header,
+					.size = sizeof(header),
+					.copy_data = true,
+				};
+				ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
+					.sources = &src,
+					.sources_count = 1,
+					.dst = _debug_buffer->instance(),
+				};
+				_should_write_header = false;
+			}
 
-		if (_render_strings_with_geometry)
-		{
-			ctx.resourcesToUpdateLater() += _render_strings_with_geometry;
-			ctx.resourcesToUpdateLater() += _render_lines_with_geometry;
-		}
-		if (_render_strings_with_mesh)
-		{
-			ctx.resourcesToUpdateLater() += _render_strings_with_mesh;
-			ctx.resourcesToUpdateLater() += _render_lines_with_mesh;
+			_render_pass->updateResources(ctx);
+			ctx.resourcesToUpdateLater() += _framebuffer;
+
+			if (_render_strings_with_geometry)
+			{
+				ctx.resourcesToUpdateLater() += _render_strings_with_geometry;
+				ctx.resourcesToUpdateLater() += _render_lines_with_geometry;
+			}
+			if (_render_strings_with_mesh)
+			{
+				ctx.resourcesToUpdateLater() += _render_strings_with_mesh;
+				ctx.resourcesToUpdateLater() += _render_lines_with_mesh;
+			}
 		}
 	}
 
