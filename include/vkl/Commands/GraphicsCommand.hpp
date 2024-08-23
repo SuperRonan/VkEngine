@@ -207,7 +207,6 @@ namespace vkl
 			std::filesystem::path tess_eval_path;
 			std::filesystem::path geometry_path;
 			std::filesystem::path fragment_path;
-			DynamicValue<DefinitionsList> definitions;
 		};
 
 		ShaderPaths _shaders;
@@ -427,7 +426,6 @@ namespace vkl
 			std::filesystem::path task_path;
 			std::filesystem::path mesh_path;
 			std::filesystem::path fragment_path;
-			DynamicValue<DefinitionsList> definitions;
 		};
 
 		ShaderPaths _shaders;

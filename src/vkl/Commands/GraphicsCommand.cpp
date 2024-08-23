@@ -43,9 +43,9 @@ namespace vkl
 			}
 			else
 			{
-				VkExtent2D render_area = extract(_render_pass_begin_info.framebuffer->extent());
+				VkRect2D render_area = ctx.renderingInfo().area;
 				VkViewport viewport = GraphicsPipeline::Viewport(render_area);
-				VkRect2D scissor = GraphicsPipeline::Scissor(render_area);
+				VkRect2D scissor = render_area;
 				vkCmdSetViewport(cmd, 0, 1, &viewport);
 				vkCmdSetScissor(cmd, 0, 1, &scissor);
 			}
@@ -339,13 +339,16 @@ namespace vkl
 		Dyn<VkSampleCountFlagBits> samples = [this]()
 		{
 			VkSampleCountFlagBits res = VK_SAMPLE_COUNT_1_BIT;
-			for (size_t i = 0; i < _color_attachements.size(); ++i)
+			SubPassDescription2 const& subpass = _render_pass->subpasses()[_subpass_index];
+			for (size_t i = 0; i < subpass.colors.size(); ++i)
 			{
-				const auto& sc = _color_attachements[i].view->image()->sampleCount();
-				if (sc)
-				{
-					res = std::max(res, sc.value());
-				}
+				VkSampleCountFlagBits sc = _render_pass->attachments()[subpass.colors[i].index].samples.valueOr(VK_SAMPLE_COUNT_1_BIT);
+				res = std::max(res, sc);
+			}
+			if (subpass.depth_stencil.index != VK_ATTACHMENT_UNUSED)
+			{
+				VkSampleCountFlagBits sc = _render_pass->attachments()[subpass.depth_stencil.index].samples.valueOr(VK_SAMPLE_COUNT_1_BIT);
+				res = std::max(res, sc);
 			}
 			return res;
 		};
@@ -415,10 +418,14 @@ namespace vkl
 			gci.dynamic = { VK_DYNAMIC_STATE_VIEWPORT , VK_DYNAMIC_STATE_SCISSOR };
 		}
 
-		gci.attachements_blends.resize(_color_attachements.size());
-		for (uint32_t i = 0; i < _color_attachements.size32(); ++i)
+		SubPassDescription2 const& subpass = _render_pass->subpasses()[_subpass_index];
+		gci.attachements_blends.resize(subpass.colors.size());
+		for (uint32_t i = 0; i < subpass.colors.size(); ++i)
 		{
-			gci.attachements_blends[i] = _color_attachements[i].blending;
+			if (i < _color_attachements.size32())
+			{
+				gci.attachements_blends[i] = _color_attachements[i].blending;
+			}
 		}
 
 
@@ -434,7 +441,10 @@ namespace vkl
 	{
 		bool res = false;
 
-		_common_shader_definitions.value();
+		if (_common_shader_definitions.hasValue())
+		{
+			_common_shader_definitions.value();
+		}
 
 		if (!_use_external_renderpass)
 		{
@@ -577,6 +587,7 @@ namespace vkl
 			.depth_compare_op = ci.depth_compare_op,
 			.stencil_front_op = ci.stencil_front_op,
 			.stencil_back_op = ci.stencil_back_op,
+			.definitions = ci.definitions,
 			.draw_type = ci.draw_type,
 		}),
 		_shaders(ShaderPaths{
@@ -585,7 +596,6 @@ namespace vkl
 			.tess_eval_path = ci.tess_eval_shader_path,
 			.geometry_path = ci.geometry_shader_path, 
 			.fragment_path = ci.fragment_shader_path, 
-			.definitions = ci.definitions 
 		}),
 		_draw_count(ci.draw_count)
 	{
@@ -605,10 +615,14 @@ namespace vkl
 	void VertexCommand::createProgram()
 	{
 		std::shared_ptr<Shader> vert = nullptr, tess_control = nullptr, tess_eval = nullptr, geom = nullptr, frag = nullptr;
-		Dyn<DefinitionsList> defs = [this](DefinitionsList & res)
+		Dyn<DefinitionsList> defs;
+		if (_common_shader_definitions)
 		{
-			res = _shaders.definitions.getCachedValue();
-		};
+			defs = [this](DefinitionsList& res)
+			{
+				res = _common_shader_definitions.getCachedValue();
+			};
+		} 
 		if (!_shaders.vertex_path.empty())
 		{
 			vert = std::make_shared<Shader>(Shader::CI{
@@ -934,8 +948,6 @@ namespace vkl
 	{
 		bool res = false;
 
-		_shaders.definitions.value();
-
 		res |= GraphicsCommand::updateResources(ctx);
 
 		return res;
@@ -1027,12 +1039,12 @@ namespace vkl
 			.depth_compare_op = ci.depth_compare_op,
 			.stencil_front_op = ci.stencil_front_op,
 			.stencil_back_op = ci.stencil_back_op,
+			.definitions = ci.definitions,
 		}),
 		_shaders{
 			.task_path = ci.task_shader_path,
 			.mesh_path = ci.mesh_shader_path,
 			.fragment_path = ci.fragment_shader_path,
-			.definitions = ci.definitions,
 		},
 		_extent(ci.extent),
 		_dispatch_threads(ci.dispatch_threads)
@@ -1053,10 +1065,14 @@ namespace vkl
 	void MeshCommand::createProgram()
 	{
 		std::shared_ptr<Shader> task = nullptr, mesh = nullptr, frag = nullptr;
-		Dyn<DefinitionsList> defs = [this](DefinitionsList& res)
+		Dyn<DefinitionsList> defs;
+		if (_common_shader_definitions)
 		{
-			res = _shaders.definitions.getCachedValue();
-		};
+			defs = [this](DefinitionsList& res)
+				{
+					res = _common_shader_definitions.getCachedValue();
+				};
+		}
 		if (!_shaders.task_path.empty())
 		{
 			task = std::make_shared<Shader>(Shader::CI{
@@ -1282,8 +1298,6 @@ namespace vkl
 	bool MeshCommand::updateResources(UpdateContext& ctx)
 	{
 		bool res = false;
-
-		_shaders.definitions.value();
 
 		res |= GraphicsCommand::updateResources(ctx);
 
