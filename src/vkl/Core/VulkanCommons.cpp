@@ -759,7 +759,7 @@ namespace vkl
 		{
 			res = VK_IMAGE_ASPECT_COLOR_BIT;
 		}
-		else if (f >= VK_FORMAT_E5B9G9R9_UFLOAT_PACK32 && f <= VK_FORMAT_D32_SFLOAT_S8_UINT)
+		else if (f >= VK_FORMAT_D16_UNORM && f <= VK_FORMAT_D32_SFLOAT_S8_UINT)
 		{
 			switch (f)
 			{
