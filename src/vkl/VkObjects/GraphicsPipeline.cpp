@@ -247,7 +247,9 @@ namespace vkl
 		gci.attachements_blends.resize(_attachements_blends.size());
 		for (size_t i = 0; i < _attachements_blends.size(); ++i)
 		{
-			gci.attachements_blends[i] = _attachements_blends[i].value();
+			gci.attachements_blends[i] = _attachements_blends[i].valueOr(VkPipelineColorBlendAttachmentState{
+				.blendEnable = VK_FALSE,
+			});
 		}
 		_inst = std::make_shared<GraphicsPipelineInstance>(std::move(gci));
 	}
