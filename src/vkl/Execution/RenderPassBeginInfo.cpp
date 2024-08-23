@@ -93,7 +93,7 @@ namespace vkl
 		if (rpi->handle())
 		{
 			VkRenderPassBeginInfo info{
-				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				.pNext = nullptr,
 				.renderPass = *rpi,
 				.framebuffer = *fbi,
@@ -118,6 +118,13 @@ namespace vkl
 			};
 			vkCmdBeginRendering(ctx.getCommandBuffer()->handle(), &info);
 		}
+
+		ctx.renderingInfo() = ExecutionContext::RenderingInfo{
+			.render_pass = render_pass ? render_pass : framebuffer->renderPass(),
+			.framebuffer = framebuffer,
+			.area = render_area,
+			.subpass_index = 0,
+		};
 	}
 
 	void RenderPassBeginInfo::recordNextSubpass(ExecutionContext& ctx, VkSubpassContents contents)
@@ -142,6 +149,7 @@ namespace vkl
 			NOT_YET_IMPLEMENTED;
 		}
 		++_subpass_index;
+		ctx.renderingInfo().subpass_index = _subpass_index;
 	}
 
 	void RenderPassBeginInfo::exportSubpassResources(uint32_t index, ResourceUsageList& resources)
@@ -194,5 +202,7 @@ namespace vkl
 		{
 			vkCmdEndRendering(ctx.getCommandBuffer()->handle());
 		}
+
+		ctx.renderingInfo().clear();
 	}
 }

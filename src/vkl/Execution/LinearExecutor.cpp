@@ -85,6 +85,7 @@ namespace vkl
 	{
 		assert(!_render_pass);
 		_render_pass = info;
+		_record_context.beginRenderPass(_render_pass.render_pass ? _render_pass.render_pass : _render_pass.framebuffer->renderPass(), _render_pass.framebuffer);
 		_render_pass_resources.clear();
 		_render_pass.exportResources(_render_pass_resources, !_render_pass_synch_subpass);
 		
@@ -99,6 +100,7 @@ namespace vkl
 
 	void ExecutionThread::nextSubPass(VkSubpassContents contents)
 	{
+		_record_context.nextSubPass();
 		assert(!!_render_pass);
 		if (_render_pass_synch_subpass)
 		{
@@ -117,6 +119,7 @@ namespace vkl
 
 	void ExecutionThread::endRenderPass()
 	{
+		_record_context.endRenderPass();
 		assert(!!_render_pass);
 		_render_pass.recordEnd(*_context);
 		_render_pass.clear();

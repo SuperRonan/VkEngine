@@ -35,6 +35,10 @@ namespace vkl
 		DescriptorSetsTacker _compute_bound_sets;
 		DescriptorSetsTacker _ray_tracing_bound_sets;
 
+		std::shared_ptr<RenderPassInstance> _render_pass = nullptr;
+		std::shared_ptr<FramebufferInstance> _framebuffer = nullptr;
+		uint32_t _subpass_index = 0;
+
 	public:
 
 		struct CreateInfo
@@ -62,10 +66,67 @@ namespace vkl
 		}
 
 		DescriptorSetsTacker& getBoundSets(VkPipelineBindPoint pipeline);
+
+		void beginRenderPass(std::shared_ptr<RenderPassInstance> const& render_pass, std::shared_ptr<FramebufferInstance> const& framebuffer)
+		{
+			assert(!_render_pass);
+			assert(!_framebuffer);
+			_render_pass = render_pass;
+			_framebuffer = framebuffer;
+			_subpass_index = 0;
+		}
+
+		void nextSubPass()
+		{
+			assert(_render_pass);
+			++_subpass_index;
+		}
+
+		void endRenderPass()
+		{
+			assert(_render_pass);
+			assert(_framebuffer);
+			_render_pass = nullptr;
+			_framebuffer = nullptr;
+			_subpass_index = 0;
+		}
+
+		std::shared_ptr<RenderPassInstance> const& getBoundRenderPass()const
+		{
+			return _render_pass;
+		}
+
+		std::shared_ptr<FramebufferInstance> const& getBoundFramebuffer()const
+		{
+			return _framebuffer;
+		}
+
+		uint32_t getSubPassIndex()const
+		{
+			return _subpass_index;
+		}
 	};
 
 	class ExecutionContext : public VkObject
 	{
+	public:
+
+		struct RenderingInfo
+		{
+			std::shared_ptr<RenderPassInstance> render_pass = nullptr;
+			std::shared_ptr<FramebufferInstance> framebuffer = nullptr;
+			VkRect2D area = {};
+			uint32_t subpass_index = 0;
+
+			void clear()
+			{
+				render_pass.reset();
+				framebuffer.reset();
+				area = {};
+				subpass_index = 0;
+			}
+		};
+
 	protected:
 
 		std::TickTock_hrc _tick_tock;
@@ -99,6 +160,8 @@ namespace vkl
 		DescriptorSetsManager _graphics_bound_sets;
 		DescriptorSetsManager _compute_bound_sets;
 		DescriptorSetsManager _ray_tracing_bound_sets;
+
+		RenderingInfo _rendering = {};
 
 		FramePerfCounters * _frame_perf_counters = nullptr;
 
@@ -144,7 +207,14 @@ namespace vkl
 		template <std::derived_from<VkObject> O>
 		void keepAlive(MyVector<std::shared_ptr<O>> const& objs)
 		{
-			_objects_to_keep += objs;
+			const size_t prev = _objects_to_keep.size();
+			_objects_to_keep.resize(_objects_to_keep.size() + objs.size());
+			for (size_t i = 0; i < objs.size(); ++i)
+			{
+				_objects_to_keep[prev + i] = objs[i];
+			}
+			//const std::shared_ptr<VkObject>* ptr = reinterpret_cast<const std::shared_ptr<VkObject>*>(objs.data());
+			//_objects_to_keep.insert(_objects_to_keep.back(), ptr, ptr + objs.size());
 		}
 
 		auto& objectsToKeepAlive()
@@ -215,6 +285,16 @@ namespace vkl
 		void popDebugLabel();
 
 		void insertDebugLabel(std::string_view const& label, vec4 const& color);
+
+		RenderingInfo& renderingInfo()
+		{
+			return _rendering;
+		}
+
+		RenderingInfo const& renderingInfo()const
+		{
+			return _rendering;
+		}
 	};
 }
 
