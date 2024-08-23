@@ -383,6 +383,13 @@ namespace vkl
 				.resolution = glm::uvec3(ext.width, ext.height, 1),
 				.oo_resolution = glm::vec2(1.0 / float(ext.width), 1.0 / float(ext.height)),
 			};
+
+			RenderPassBeginInfo render_pass{
+				.framebuffer = _framebuffer->instance(),
+			};
+
+			exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
+
 			if (_render_strings_with_mesh)
 			{
 				MeshCommand::DrawInfo draw_info{
@@ -409,6 +416,8 @@ namespace vkl
 				draw_info.draw_count = _number_of_debug_lines;
 				exec(_render_lines_with_geometry->with(draw_info));
 			}
+
+			exec.endRenderPass();
 
 
 			Buffer::Range clear_range = _debug_buffer->instance()->fullRange();
