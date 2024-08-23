@@ -549,9 +549,11 @@ namespace vkl
 	{
 		unpack(ci);
 		
-		deduceUsages();
-		
 		link();
+		
+		deduceUsages();
+
+		prepareSynch();
 
 		_vk_ci2 = VkRenderPassCreateInfo2{
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
@@ -581,7 +583,6 @@ namespace vkl
 
 		create(_vk_ci2);
 
-		prepareSynch();
 	}
 
 	RenderPassInstance::RenderPassInstance(CreateInfo const& ci) :
@@ -704,10 +705,12 @@ namespace vkl
 		{
 			AttachmentDescription2 const& desc = _attachments[i];
 			const AttachmentDescription2::Flags flags = desc.flags.valueOr(AttachmentDescription2::Flags::None);
+			assert(desc.format.hasValue());
 			vk_attachements[i] = VkAttachmentDescription2{
 				.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
 				.pNext = nullptr,
 				.flags = AttachmentDescription2::GetVkFlags(flags),
+				.format = desc.format.value(),
 				.samples = desc.samples.valueOr(VK_SAMPLE_COUNT_1_BIT),
 				.loadOp = AttachmentDescription2::GetLoadOp(flags),
 				.storeOp = AttachmentDescription2::GetStoreOp(flags),
