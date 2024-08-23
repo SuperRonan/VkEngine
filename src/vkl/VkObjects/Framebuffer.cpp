@@ -95,6 +95,7 @@ namespace vkl
 		_extent(ci.extent),
 		_render_pass(ci.render_pass)
 	{
+		assert(_render_pass);
 		Callback cb{
 			.callback = [&]() {
 				destroyInstanceIFN();
