@@ -167,6 +167,11 @@ namespace vkl
 			return _format;
 		}
 
+		Dyn<VkSampleCountFlagBits> const& sampleCount() const
+		{
+			return image()->sampleCount();
+		}
+
 		constexpr VkComponentMapping components()const
 		{
 			return _components;
