@@ -318,12 +318,11 @@ namespace vkl
 
 	void DebugRenderer::updateResources(UpdateContext& ctx)
 	{
+		_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
+		_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
 		_debug_buffer->updateResource(ctx); // this one holds instance based on _enable_debug
 		if (_enable_debug)
 		{
-			_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
-			_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
-		
 			_font->updateResources(ctx);
 			_sampler->updateResources(ctx);
 
