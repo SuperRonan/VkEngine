@@ -35,6 +35,19 @@ namespace vkl
 				assertm(false, "Cannot set buffer end state multiple times!");
 			}
 		}
+		bsrs.usage |= usages;
+	}
+
+	void FullyMergedBufferUsageList::add(FullyMergedBufferUsageList const& other)
+	{
+		for (const auto& [buffer, state] : other._buffers)
+		{
+			BufferSegmentInstance segment{
+				.buffer = buffer,
+				.range = state.range,
+			};
+			add(segment, state.state, state.end_state, state.usage);
+		}
 	}
 
 	void FullyMergedBufferUsageList::iterate(BufferUsageFunction const& fn) const
@@ -92,6 +105,15 @@ namespace vkl
 			{
 				assertm(false, "Cannot set image end state multiple times!");
 			}
+		}
+		isrs.usage |= usages;
+	}
+
+	void FullyMergedImageUsageList::add(FullyMergedImageUsageList const& other)
+	{
+		for (const auto& [img, state] : other._images)
+		{
+			add(img, state.range, state.state, state.end_state, state.usage);
 		}
 	}
 

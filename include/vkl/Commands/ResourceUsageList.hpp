@@ -26,6 +26,7 @@ namespace vkl
 		Buffer::Range range = {};
 		ResourceState2 state = {};
 		std::optional<ResourceState2> end_state = {};
+		VkBufferUsageFlags2KHR usage = 0;
 	};
 
 	struct ImageLinearRangeState
@@ -41,6 +42,7 @@ namespace vkl
 		VkImageSubresourceRange range = MakeZeroImageSubRange();
 		ResourceState2 state = {};
 		std::optional<ResourceState2> end_state = {};
+		VkImageUsageFlags usage;
 	};
 
 	struct ResourceUsage
@@ -105,6 +107,14 @@ namespace vkl
 
 		virtual void add(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) final override;
 
+		void add(FullyMergedBufferUsageList const& other);
+
+		FullyMergedBufferUsageList& operator+=(FullyMergedBufferUsageList const& other)
+		{
+			add(other);
+			return *this;
+		}
+
 		virtual void iterate(BufferUsageFunction const& fn) const final override;
 
 		virtual void clear() final override;
@@ -123,8 +133,6 @@ namespace vkl
 	class AbstractImageUsageList
 	{
 	protected:
-
-		
 
 	public:
 
@@ -151,6 +159,14 @@ namespace vkl
 
 		virtual void add(std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkImageUsageFlags usages = 0) final override;
 		
+		void add(FullyMergedImageUsageList const& other);
+
+		FullyMergedImageUsageList& operator+=(FullyMergedImageUsageList const& other)
+		{
+			add(other);
+			return *this;
+		}
+
 		virtual void iterate(ImageUsageFunction const& fn) const final override;
 
 		virtual void clear() final override;
@@ -246,11 +262,50 @@ namespace vkl
 
 		ModularResourceUsageList();
 
-		
-
 		virtual void addBuffer(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) final override;
 
 		virtual void addImage(std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkImageUsageFlags usages = 0) final override;
+
+		void addBuffers(FullyMergedBufferUsageList const& buffers)
+		{
+			_buffers.add(buffers);
+		}
+
+		void addImages(FullyMergedImageUsageList const& images)
+		{
+			_images.add(images);
+		}
+
+		void add(ModularResourceUsageList const& other)
+		{
+			addBuffers(other._buffers);
+			addImages(other._images);
+			_image_views += other._image_views;
+		}
+
+		ModularResourceUsageList& operator+=(ModularResourceUsageList const& other)
+		{
+			add(other);
+			return *this;
+		}
+
+		ModularResourceUsageList& operator+=(BufferUsage const& bu)
+		{
+			AbstractResourceUsageList::add(bu);
+			return *this;
+		}
+
+		ModularResourceUsageList& operator+=(ImageUsage const& iu)
+		{
+			AbstractResourceUsageList::add(iu);
+			return *this;
+		}
+
+		ModularResourceUsageList& operator+=(ImageViewUsage const& ivu)
+		{
+			AbstractResourceUsageList::add(ivu);
+			return *this;
+		}
 
 		virtual void iterateOnBuffers(BufferUsageFunction const& fn) const final override;
 
