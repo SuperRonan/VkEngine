@@ -33,6 +33,7 @@ namespace vkl
 
 		if (_render_pass_begin_info)
 		{
+			_render_pass_begin_info.ptr_clear_values = reinterpret_cast<VkClearValue*>(_data.data() + reinterpret_cast<uintptr_t>(_render_pass_begin_info.ptr_clear_values));
 			_render_pass_begin_info.recordBegin(ctx);
 		}
 		{
@@ -69,19 +70,20 @@ namespace vkl
 			{
 				node._render_pass_begin_info.framebuffer = that._framebuffer->instance();
 				RenderPassInstance* rpi = node._render_pass_begin_info.framebuffer->renderPass().get();
-				node._render_pass_begin_info.clear_values.resize(node._render_pass_begin_info.framebuffer->attachments().size());
+
+				uintptr_t& clear_values_index = reinterpret_cast<uintptr_t&>(node._render_pass_begin_info.ptr_clear_values);
+				const uint32_t push_count = node._render_pass_begin_info.framebuffer->attachments().size();
+				clear_values_index = node._data.pushBack(nullptr, sizeof(VkClearValue) * push_count, alignof(VkClearValue));
+				VkClearValue * dst_clear_value_ptr = reinterpret_cast<VkClearValue*>(node._data.data() + clear_values_index);
+				
 				for (uint32_t i = 0; i < that._color_attachements.size32(); ++i)
 				{
-					VkClearColorValue& ccv = node._render_pass_begin_info.clear_values[i].color;
+					VkClearColorValue& ccv = dst_clear_value_ptr[i].color;
 					if (rpi->getAttachmentDescriptors2()[i].loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
 					{
-						if (di.ptr_clear_color)
+						if (i < di.clear_colors_count)
 						{
-							ccv = di.ptr_clear_color[i];
-						}
-						else if (di.clear_colors)
-						{
-							ccv = di.clear_colors[i];
+							ccv = reinterpret_cast<const VkClearColorValue*>(di._data.data() + di.clear_colors_index)[i];
 						}
 						else
 						{
@@ -93,7 +95,7 @@ namespace vkl
 				{
 					const uint32_t index = that._color_attachements.size32();
 					VkAttachmentDescription2 const& desc = rpi->getAttachmentDescriptors2()[index];
-					VkClearDepthStencilValue& cdsv = node._render_pass_begin_info.clear_values[index].depthStencil;
+					VkClearDepthStencilValue& cdsv = dst_clear_value_ptr[index].depthStencil;
 					if (desc.loadOp == VK_ATTACHMENT_LOAD_OP_CLEAR || desc.stencilLoadOp == VK_ATTACHMENT_LOAD_OP_CLEAR)
 					{
 						if (di.clear_depth_stencil)
@@ -462,9 +464,23 @@ namespace vkl
 	}
 
 
+	void GraphicsCommand::GfxDrawInfo::setClearColors(const VkClearColorValue* ptr, uint32_t count)
+	{
+		clear_colors_count = count;
+		if (count)
+		{
+			clear_colors_index = _data.pushBack(ptr, count * sizeof(VkClearColorValue), alignof(VkClearColorValue));
+		}
+	}
 
-
-
+	void GraphicsCommand::GfxDrawInfo::clear()
+	{
+		ShaderCommandList::clear();
+		viewport.reset();
+		clear_colors_count = 0;
+		clear_colors_index = 0;
+		clear_depth_stencil.reset();
+	}
 
 
 
@@ -823,6 +839,9 @@ namespace vkl
 			});
 
 			node->setName(that.name());
+			
+			node->_data = std::forward<that::ExDS>(di._data);
+			node->_strings = std::forward<that::ExSS>(di._strings);
 
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
@@ -832,8 +851,6 @@ namespace vkl
 			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
 			populateDrawCallsResources<DrawInfoRef>(that, *node, std::forward<VertexCommand::DrawInfo>(di));
 
-			node->_data = std::forward<that::ExDS>(di._data);
-			node->_strings = std::forward<that::ExSS>(di._strings);
 
 			node->pc_begin = di.pc_begin;
 			node->pc_size = di.pc_size;
@@ -862,15 +879,10 @@ namespace vkl
 
 	void VertexCommand::DrawInfo::clear()
 	{
-		ShaderCommandList::clear();
+		GfxDrawInfo::clear();
 		draw_type = DrawType::MAX_ENUM;
-
-		viewport = {};
-		clear_colors.clear();
-		ptr_clear_color = nullptr;
 		calls.clear();
 		_vertex_buffers.clear();
-
 	}
 	
 	void VertexCommand::DrawInfo::pushBack(DrawCallInfoConst const& dci)
@@ -1179,6 +1191,9 @@ namespace vkl
 
 			node->setName(that.name());
 
+			node->_data = std::forward<that::ExDS>(di._data);
+			node->_strings = std::forward<that::ExSS>(di._strings);
+
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
 			ctx.graphicsBoundSets().bind(that.application()->descriptorBindingGlobalOptions().shader_set, that._set->instance());
@@ -1188,9 +1203,6 @@ namespace vkl
 			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
 			
 			populateDrawCallsResources<DrawInfoRef>(that, *node,  std::forward<MeshCommand::DrawInfo>(di));
-
-			node->_data = std::forward<that::ExDS>(di._data);
-			node->_strings = std::forward<that::ExSS>(di._strings);
 
 			node->pc_begin = di.pc_begin;
 			node->pc_size = di.pc_size;
@@ -1224,14 +1236,10 @@ namespace vkl
 	};
 	void MeshCommand::DrawInfo::clear()
 	{
-		ShaderCommandList::clear();
+		GfxDrawInfo::clear();
 		draw_type = DrawType::MAX_ENUM;
 		dispatch_threads = false;
 		draw_list.clear();
-
-		clear_colors.clear();
-		ptr_clear_color = nullptr;
-		clear_depth_stencil.reset();
 	}
 
 	void MeshCommand::DrawInfo::pushBack(DrawCallInfo const& dci)

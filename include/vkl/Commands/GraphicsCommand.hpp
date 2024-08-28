@@ -120,6 +120,19 @@ namespace vkl
 			DrawType draw_type = {};
 		};
 
+		struct GfxDrawInfo : public ShaderCommandList
+		{
+			std::optional<VkViewport> viewport = {};
+
+			Index clear_colors_index = 0;
+			uint32_t clear_colors_count = 0;
+			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
+			
+			void setClearColors(const VkClearColorValue* ptr, uint32_t count);
+
+			void clear();
+		};
+
 		GraphicsCommand(CreateInfo const& ci);
 
 		virtual void init() override;
@@ -305,13 +318,9 @@ namespace vkl
 		using DrawCallInfo = DrawCallInfoT<false>;
 		using DrawCallInfoConst = DrawCallInfoT<true>;
 		
-		struct DrawInfo : public ShaderCommandList
+		struct DrawInfo : public GraphicsCommand::GfxDrawInfo
 		{
-			DrawType draw_type = DrawType::MAX_ENUM;	
-			std::optional<VkViewport> viewport = {};
-			MyVector<VkClearColorValue> clear_colors = {};
-			VkClearColorValue* ptr_clear_color = nullptr;
-			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
+			DrawType draw_type = DrawType::MAX_ENUM;
 
 			MyVector<MyDrawCallInfo> calls;
 
@@ -321,6 +330,7 @@ namespace vkl
 			void pushBack(DrawCallInfo && dci);
 			void pushBack(DrawCallInfoConst const& dci);
 			void pushBack(DrawCallInfoConst && dci);
+
 
 			void clear();
 		};
@@ -491,17 +501,11 @@ namespace vkl
 			std::shared_ptr<DescriptorSetAndPool> set = nullptr;
 		};
 
-		struct DrawInfo : public ShaderCommandList
+		struct DrawInfo : public GraphicsCommand::GfxDrawInfo
 		{
 			DrawType draw_type = DrawType::MAX_ENUM;
-			bool dispatch_threads = true;
-
+			bool dispatch_threads = false;
 			MyVector<MyDrawCallInfo> draw_list;
-
-
-			MyVector<VkClearColorValue> clear_colors = {};
-			VkClearColorValue* ptr_clear_color = nullptr;
-			std::optional<VkClearDepthStencilValue> clear_depth_stencil = {};
 
 			void pushBack(DrawCallInfo const& dci);
 			void pushBack(DrawCallInfo && dci);
