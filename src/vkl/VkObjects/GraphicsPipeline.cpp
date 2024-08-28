@@ -290,7 +290,7 @@ namespace vkl
 				break;
 			}
 
-			if (_rasterization.cullMode.hasValue() && ir.polygonMode != _rasterization.cullMode.value())
+			if (_rasterization.cullMode.hasValue() && ir.cullMode != _rasterization.cullMode.value())
 			{
 				res = true;
 				break;
@@ -350,12 +350,19 @@ namespace vkl
 			{
 				for (size_t i = 0; i < _attachements_blends.size(); ++i)
 				{
-					const VkPipelineColorBlendAttachmentState value = _attachements_blends[i].value();
-					if (value != inst._attachements_blends[i])
+					if (_attachements_blends[i].hasValue())
 					{
-						res = true;
-						break;
+						const VkPipelineColorBlendAttachmentState& value = _attachements_blends[i].value();
+						if (value != inst._attachements_blends[i])
+						{
+							res = true;
+							break;
+						}
 					}
+				}
+				if (res)
+				{
+					break;
 				}
 			}
 			else
