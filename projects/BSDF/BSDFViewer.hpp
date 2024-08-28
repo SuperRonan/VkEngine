@@ -45,6 +45,8 @@ namespace vkl
 
 		VkPolygonMode _polygon_mode_3D = VK_POLYGON_MODE_FILL;
 
+		VkPipelineColorBlendAttachmentState _blending;
+
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 

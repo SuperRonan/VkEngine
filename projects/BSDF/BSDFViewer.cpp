@@ -147,12 +147,15 @@ namespace vkl
 		_framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
 			.app = application(),
 			.name = name() + ".Framebuffer",
+			.render_pass = _render_pass,
 			.attachments = {
 				_target,
 			},
 		});
 
 		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
+
+		_blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault();
 
 		if (can_mesh)
 		{
@@ -165,6 +168,11 @@ namespace vkl
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,
 				.extern_render_pass = _render_pass,
+				.color_attachments = {
+					GraphicsCommand::ColorAttachment{
+						.blending = &_blending,
+					}
+				},	
 				.mesh_shader_path = shaders / "RenderSphericalFunction3D.glsl",
 				.fragment_shader_path = shaders / "RenderSphericalFunction3D.glsl",
 			});
@@ -206,7 +214,7 @@ namespace vkl
 		_set->updateResources(ctx);
 
 		_render_pass->updateResources(ctx);
-		_framebuffer->updateResources(ctx);
+		ctx.resourcesToUpdateLater() += _framebuffer;
 
 		ctx.resourcesToUpdateLater() += _render_3D_mesh;
 	}
@@ -228,7 +236,7 @@ namespace vkl
 			.framebuffer = _framebuffer->instance(),
 			.clear_value_count = clear_values.size(),
 			.ptr_clear_values = clear_values.data(),
-		}, VK_SUBPASS_CONTENTS_INLINE);
+		});
 
 		exec(_render_3D_mesh);
 
