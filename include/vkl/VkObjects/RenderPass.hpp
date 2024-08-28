@@ -281,6 +281,11 @@ namespace vkl
 			return _attachments_usages;
 		}
 
+		const auto& getSubpasses() const
+		{
+			return _subpasses;
+		}
+
 	};
 
 	class RenderPass : public InstanceHolder<RenderPassInstance>
