@@ -15,8 +15,6 @@
 
 namespace vkl
 {
-	static thread_local SynchronizationHelper _synch;
-
 	ExecutionThread::ExecutionThread(CreateInfo const& ci):
 		ExecutionRecorder(ci.app, ci.name),
 		_record_context(RecordContext::CI{
@@ -24,18 +22,128 @@ namespace vkl
 			.name = ci.name + ".RecordContext",
 		}),
 		_context(ci.context)
-	{}
+		//_synch(std::make_unique<SynchronizationHelper>())
+	{
+		_synch.reset(_context);
+		reset();
+	}
+
+	bool ExecutionThread::useDeferredRecord() const
+	{
+		return _deferred_record || _current_render_pass_index != uint32_t(-1);
+	}
+
+	void ExecutionThread::releaseNodes()
+	{
+		for (auto& node : _nodes.getStorage())
+		{
+			node.node->finish();
+		}
+	}
+
+	void ExecutionThread::recordEventNotRenderPass(uint32_t index, bool synch)
+	{
+		CommandEvent const& event = _commands[index];
+		switch (event.type)
+		{
+		case CommandEvent::Type::ExecNode:
+		{
+			ExecNodeEvent & ene = _nodes.data()[event.index];
+
+			_context->pushDebugLabel(ene.node->name(), true);
+
+			if (synch)
+			{
+				_synch.reset(_context);
+				_synch.commit(ene.node->resources());
+				_synch.record();
+			}
+
+			ene.node->execute(*_context);
+			ene.node->finish();
+
+			_context->popDebugLabel();
+		}
+		break;
+		case CommandEvent::Type::BindSet:
+		{
+			BindSetEvent & bse = _sets.data()[event.index];
+			if (bse.info.bind_graphics)
+			{
+				_context->graphicsBoundSets().bind(bse.info.index, bse.info.set->instance());
+			}
+			if (bse.info.bind_compute)
+			{
+				_context->computeBoundSets().bind(bse.info.index, bse.info.set->instance());
+			}
+			if (bse.info.bind_rt)
+			{
+				_context->rayTracingBoundSets().bind(bse.info.index, bse.info.set->instance());
+			}
+		}
+		break;
+		case CommandEvent::Type::BeginRenderPass:
+		case CommandEvent::Type::EndRenderPass:
+		case CommandEvent::Type::NextSubPass:
+		{
+			assert(false);
+		}
+		break;
+		case CommandEvent::Type::PushDebugLabel:
+		case CommandEvent::Type::InsertDebugLabel:
+		break;
+		{
+			DebugLabelEvent & dle = _debug_labels.data()[event.index];
+			std::string_view sv = _strings.get(Range32u{ .begin = dle.string_index, .len = dle.string_len });
+			if (event.type == CommandEvent::Type::PushDebugLabel)
+			{
+				_context->pushDebugLabel(sv, dle.color, dle.timestamp);
+			}
+			else
+			{
+				_context->insertDebugLabel(sv, dle.color);
+			}
+		}
+		break;
+		case CommandEvent::Type::PopDebugLabel:
+		{
+			_context->popDebugLabel();
+		}
+		break;
+		}
+	}
 
 	void ExecutionThread::executeNode(std::shared_ptr<ExecutionNode> const& node)
 	{
 		assert(node->isInUse());
-		pushDebugLabel(node->name(), true);
-		_synch.reset(_context);
-		_synch.commit(node->resources());
-		_synch.record();
-		node->execute(*_context);
-		node->finish();
-		popDebugLabel();
+		if (useDeferredRecord())
+		{
+			ExecNodeEvent ex_ne{
+				.node = node,
+			};
+			CommandEvent event{
+				.type = CommandEvent::Type::ExecNode,
+				.index = static_cast<uint32_t>(_nodes.pushBack(&ex_ne, 1)),
+			};
+			_commands.push_back(event);
+			if (_current_render_pass_index != uint32_t(-1))
+			{
+				if (!_deferred_record)
+				{
+					_render_pass_resources += node->resources();
+				}
+			}
+		}
+		else
+		{
+			_context->pushDebugLabel(node->name(), true);
+			_synch.reset(_context);
+			_synch.commit(node->resources());
+			_synch.record();
+			node->execute(*_context);
+			node->finish();
+			_context->popDebugLabel();
+		}
 	}
 
 	void ExecutionThread::record(Command& cmd)
@@ -62,83 +170,255 @@ namespace vkl
 			info.set->waitForInstanceCreationIFN();
 		}
 		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (info.set && info.set->instance()->exists()) ? info.set->instance() : nullptr;
+
+
+		if (useDeferredRecord())
+		{
+			BindSetEvent bse{
+				.info = info,
+			};
+			CommandEvent ce{
+				.type = CommandEvent::Type::BindSet,
+				.index = static_cast<uint32_t>(_sets.pushBack(&bse, 1)),
+			};
+			_commands.push_back(ce);
+		}
+
 		if (info.bind_graphics)
 		{
 			_record_context.graphicsBoundSets().bind(info.index, inst);
-			_context->graphicsBoundSets().bind(info.index, inst);
+			if (!useDeferredRecord())
+			{
+				_context->graphicsBoundSets().bind(info.index, inst);
+			}
 		}
 		if (info.bind_compute)
 		{
 			_record_context.computeBoundSets().bind(info.index, inst);
-			_context->computeBoundSets().bind(info.index, inst);
+			if (!useDeferredRecord())
+			{
+				_context->computeBoundSets().bind(info.index, inst);
+			}
 		}
 		if (info.bind_rt)
 		{
 			_record_context.rayTracingBoundSets().bind(info.index, inst);
-			_context->rayTracingBoundSets().bind(info.index, inst);
+			if (!useDeferredRecord())
+			{
+				_context->rayTracingBoundSets().bind(info.index, inst);
+			}
 		}
 	}
 
-	static thread_local ResourceUsageList _render_pass_resources;
-
-	void ExecutionThread::beginRenderPass(RenderPassBeginInfo const& info, VkSubpassContents contents)
+	void ExecutionThread::clearDeferedLists()
 	{
-		assert(!_render_pass);
-		_render_pass = info;
-		_record_context.beginRenderPass(_render_pass.render_pass ? _render_pass.render_pass : _render_pass.framebuffer->renderPass(), _render_pass.framebuffer);
-		_render_pass_resources.clear();
-		_render_pass.exportResources(_render_pass_resources, !_render_pass_synch_subpass);
-		
-		_synch.reset(_context);
-		_synch.commit(_render_pass_resources);
-		_synch.record();
-
-		_render_pass_resources.clear();
-
-		_render_pass.recordBegin(*_context, contents);
+		releaseNodes();
+		_nodes.clear();
+		_sets.clear();
+		_clear_values.clear();
+		_begin_render_passes.clear();
+		_debug_labels.clear();
+		_strings.clear();
+		_commands.clear();
 	}
 
-	void ExecutionThread::nextSubPass(VkSubpassContents contents)
+	void ExecutionThread::reset()
 	{
-		_record_context.nextSubPass();
-		assert(!!_render_pass);
-		if (_render_pass_synch_subpass)
+		clearDeferedLists();
+		_render_pass_resources.clear();
+	}
+
+	void ExecutionThread::beginRenderPass(RenderPassBeginInfo const& info, RenderPassBeginInfo::Flags flags)
+	{
+		assert(_current_render_pass_index == uint32_t(-1));
+		BeginRenderPassEvent event{
+			.info = info,
+			.flags = flags,
+		};
+		_current_render_pass_index = _begin_render_passes.pushBack(&event, 1);
+		RenderPassBeginInfo & _info = _begin_render_passes.data()[_current_render_pass_index].info;
+		if (!_info.render_pass)
+		{
+			_info.render_pass = _info.framebuffer->renderPass();
+		}
+		uintptr_t & clear_values_index = reinterpret_cast<uintptr_t&>(_info.ptr_clear_values);
+		clear_values_index = _clear_values.pushBack(info.ptr_clear_values, info.clear_value_count);
+		
+		CommandEvent ce{
+			.type = CommandEvent::Type::BeginRenderPass,
+			.index = _current_render_pass_index,
+		};
+		_commands.push_back(ce);
+
+		if (!_deferred_record)
 		{
 			_render_pass_resources.clear();
-
-			_render_pass.exportNextSubpassResources(_render_pass_resources);
-
-			_synch.reset(_context);
-			_synch.commit(_render_pass_resources);
-			_synch.record();
-
-			_render_pass_resources.clear();
+			bool export_all_subpasses = !_render_pass_synch_subpass;
+			_info.exportResources(_render_pass_resources, export_all_subpasses);
 		}
-		_render_pass.recordNextSubpass(*_context, contents);
+		_record_context.beginRenderPass(_info.render_pass , _info.framebuffer);
+	}
+
+	void ExecutionThread::nextSubPass(RenderPassBeginInfo::Flags flags)
+	{
+		assert(_current_render_pass_index != uint32_t(-1));
+		BeginRenderPassEvent & rp_event = _begin_render_passes.data()[_current_render_pass_index];
+		RenderPassBeginInfo& _info = rp_event.info;
+
+		const uint32_t current_subpass_index = _record_context.getSubPassIndex();
+		const uint32_t num_subpasses = _info.render_pass->getSubpasses().size32();
+		assert(current_subpass_index < (num_subpasses - 1));
+
+		if (_deferred_record)
+		{
+			CommandEvent event{
+				.type = CommandEvent::Type::NextSubPass,
+				.flags = flags,
+			};
+		}
+		else 
+		{
+			if (_info.render_pass->handle()) 
+			{
+				_info.recordNextSubpass(*_context, flags);
+			}
+			else // Dynamic Rendering
+			{
+				NOT_YET_IMPLEMENTED;
+
+				_info.recordEndSubpass(*_context);				
+
+				_synch.reset(_context);
+
+				_info.recordNextSubpass(*_context, flags);
+			}
+		}
+
+		_record_context.nextSubPass();
 	}
 
 	void ExecutionThread::endRenderPass()
 	{
 		_record_context.endRenderPass();
-		assert(!!_render_pass);
-		_render_pass.recordEnd(*_context);
-		_render_pass.clear();
+		assert(_current_render_pass_index != uint32_t(-1));
+
+		BeginRenderPassEvent& rp_event = _begin_render_passes.data()[_current_render_pass_index];
+		RenderPassBeginInfo& _info = rp_event.info;
+
+		if (_deferred_record)
+		{
+			_commands.push_back(CommandEvent{
+				.type = CommandEvent::Type::EndRenderPass,
+			});
+		}
+		else
+		{
+			if (_info.render_pass->handle())
+			{
+				_synch.reset(_context);
+				_synch.commit(_render_pass_resources);
+				_synch.record();
+				_render_pass_resources.clear();
+				
+				_info.ptr_clear_values = _clear_values.data() + reinterpret_cast<uintptr_t>(_info.ptr_clear_values);
+				_info.recordBegin(*_context, rp_event.flags | RenderPassBeginInfo::Flags::ContentsInline);
+
+				uint32_t index = _current_render_pass_index + 1;
+				while(index < _commands.size32())
+				{
+					CommandEvent & ce = _commands[index];
+					if (ce.type == CommandEvent::Type::EndRenderPass)
+					{
+						break;
+					}
+					if (ce.type == CommandEvent::Type::NextSubPass)
+					{
+						_info.recordNextSubpass(*_context, ce.flags);
+					}
+					else
+					{
+						recordEventNotRenderPass(index, false);
+					}
+					++index;
+				}
+
+				_info.recordEnd(*_context);
+			}
+			else
+			{
+				NOT_YET_IMPLEMENTED;
+			}
+			clearDeferedLists();
+		}
+
+		_current_render_pass_index = uint32_t(-1);
 	}
 
 	void ExecutionThread::pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp)
 	{
-		_context->pushDebugLabel(label, color, timestamp);
+		if (useDeferredRecord())
+		{
+			DebugLabelEvent dle{
+				.string_index = static_cast<uint32_t>(_strings.pushBack(label)),
+				.string_len = static_cast<uint32_t>(label.size()),
+				.color = color,
+				.timestamp = timestamp,
+			};
+			CommandEvent event{
+				.type = CommandEvent::Type::PushDebugLabel,
+				.index = static_cast<uint32_t>(_debug_labels.pushBack(&dle, 1)),
+			};
+			_commands.push_back(event);
+		}
+		else
+		{
+			_context->pushDebugLabel(label, color, timestamp);
+		}
 	}
 
 	void ExecutionThread::popDebugLabel()
 	{
-		_context->popDebugLabel();
+		if (useDeferredRecord())
+		{
+			CommandEvent event{
+				.type = CommandEvent::Type::PopDebugLabel,
+			};
+			_commands.push_back(event);
+		}
+		else
+		{
+			_context->popDebugLabel();
+		}
 	}
 
 	void ExecutionThread::insertDebugLabel(std::string_view const& label, vec4 const& color)
 	{
-		_context->insertDebugLabel(label, color);
+		if (useDeferredRecord())
+		{
+			DebugLabelEvent dle{
+				.string_index = static_cast<uint32_t>(_strings.pushBack(label)),
+				.string_len = static_cast<uint32_t>(label.size()),
+				.color = color,
+			};
+			CommandEvent event{
+				.type = CommandEvent::Type::InsertDebugLabel,
+				.index = static_cast<uint32_t>(_debug_labels.pushBack(&dle, 1)),
+			};
+			_commands.push_back(event);
+		}
+		else
+		{
+			_context->insertDebugLabel(label, color);
+		}
 	}
+
+	void ExecutionThread::recordCommands()
+	{
+		// Assume the command pool mutex is owned
+		uint32_t index;
+	}
+
+
 
 	struct CommandBufferSubmission : public VkObject
 	{
@@ -296,6 +576,12 @@ namespace vkl
 				.id = this,
 			});
 		}
+
+		_execution_thread = std::make_unique<ExecutionThread>(ExecutionThread::CI{
+			.app = application(),
+			.name = name() + ".ExecutionThread",
+			.context = &_context,
+		});
 	}
 
 	LinearExecutor::~LinearExecutor()
@@ -709,8 +995,8 @@ namespace vkl
 		pool->mutex().unlock();
 		++_cb_count;
 		cb->begin();
+		cb->pool()->mutex().lock();
 		_context.setCommandBuffer(cb);
-
 
 		std::shared_ptr<CommandBufferSubmission> event = std::make_shared<CommandBufferSubmission>(CommandBufferSubmission::CI{
 			.app = application(), 
@@ -727,12 +1013,7 @@ namespace vkl
 		_latest_synch_cb = event;
 		
 		assert(_current_thread == nullptr);
-		ExecutionThread* res = new ExecutionThread(ExecutionThread::CI{
-			.app = application(),
-			.name = name() + ".ExecutionRecorder",
-			.context = &_context,
-		});
-		_current_thread = res;
+		_current_thread = _execution_thread.get();
 
 		if (_current_frame_report)
 		{
@@ -743,12 +1024,12 @@ namespace vkl
 				vkCmdResetQueryPool(_context.getCommandBuffer()->handle(), _current_frame_report->timestamp_query_pool->instance()->handle(), 0, _current_frame_report->timestamp_query_pool->instance()->count());
 				_current_frame_report->query_reseted = true;
 			}
-			res->pushDebugLabel(cb->name(), true);
+			_current_thread->pushDebugLabel(cb->name(), true);
 		}
 
 		if (bind_common_set)
 		{
-			bindSet(BindSetInfo{
+			_current_thread->bindSet(BindSetInfo{
 				.index = 0,
 				.set = _common_descriptor_set, 
 				.bind_graphics = true,
@@ -756,7 +1037,7 @@ namespace vkl
 				.bind_rt = _use_rt_pipeline,
 			});
 		}
-		return res;
+		return _current_thread;
 	}
 
 	//ExecutionThread* LinearExecutor::beginTransferCommandBuffer()
@@ -807,11 +1088,12 @@ namespace vkl
 		assert(_context._debug_stack_depth == 0);
 		std::shared_ptr<CommandBuffer> cb = _context.getCommandBuffer();
 		assert(exec_thread == _current_thread);
-		delete exec_thread;
 		_current_thread = nullptr;
 		_context.setCommandBuffer(nullptr);
+		_execution_thread->reset();
 
 		cb->end();
+		cb->pool()->mutex().unlock();
 
 		_pending_cbs.push_back(_latest_synch_cb);
 		_latest_synch_cb->dependecies = std::move(_context.objectsToKeepAlive());

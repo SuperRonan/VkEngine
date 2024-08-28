@@ -78,9 +78,9 @@ namespace vkl
 		
 		virtual void bindSet(BindSetInfo const& info) = 0;
 
-		virtual void beginRenderPass(RenderPassBeginInfo const& info, VkSubpassContents contents) = 0;
+		virtual void beginRenderPass(RenderPassBeginInfo const& info, RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) = 0;
 
-		virtual void nextSubPass(VkSubpassContents contents) = 0;
+		virtual void nextSubPass(RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) = 0;
 
 		virtual void endRenderPass() = 0;
 

@@ -21,14 +21,89 @@ namespace vkl
 
 	class ExecutionThread : public ExecutionRecorder
 	{
+	public:
+
 	protected:
+
 
 		RecordContext _record_context;
 		ExecutionContext* _context;
-		RenderPassBeginInfo _render_pass = {};
+
+		uint32_t _current_render_pass_index = uint32_t(-1);
+		uint32_t _current_subpass_base_offset = 0;
+		bool _deferred_record = false;
 		bool _render_pass_synch_subpass = false;
 
+		struct CommandEvent
+		{
+			enum class Type : uint32_t
+			{
+				ExecNode,
+				BindSet,
+				BeginRenderPass,
+				NextSubPass,
+				EndRenderPass,
+				PushDebugLabel,
+				PopDebugLabel,
+				InsertDebugLabel,
+				MAX_ENUM = ~0u,
+			};
+
+			Type type = Type::MAX_ENUM;
+			union
+			{
+				uint32_t index = 0;
+				RenderPassBeginInfo::Flags flags;
+			};
+		};
+
+		struct ExecNodeEvent
+		{
+			std::shared_ptr<ExecutionNode> node;
+		};
+
+		struct BindSetEvent
+		{
+			BindSetInfo info = {};
+		};
+
+		// Note on RenderPass's contents:
+		// It could be deduced from the commands recorded during each subpass scope
+		struct BeginRenderPassEvent
+		{
+			RenderPassBeginInfo info = {};
+			RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None;
+		};
+
+		struct DebugLabelEvent
+		{
+			uint32_t string_index = 0;
+			uint32_t string_len = 0;
+			vec4 color = {};
+			bool timestamp = false;
+		};
+
+		that::ExS<ExecNodeEvent> _nodes = {};
+		that::ExS<BindSetEvent> _sets = {};
+		that::ExS<VkClearValue> _clear_values = {};
+		that::ExS<BeginRenderPassEvent> _begin_render_passes = {};
+		that::ExS<DebugLabelEvent> _debug_labels = {};
+		that::ExSS _strings = {};
+		
+		MyVector<CommandEvent> _commands;
+
+		ResourceUsageList _render_pass_resources;
+		SynchronizationHelper _synch;
+
+		void clearDeferedLists();
+
 		void executeNode(std::shared_ptr<ExecutionNode> const &node);
+
+		void recordEventNotRenderPass(uint32_t index, bool synch);
+
+		bool useDeferredRecord() const;
+
+		void releaseNodes();
 
 	public:
 
@@ -37,6 +112,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			ExecutionContext* context;
+			bool deferred_record = false;
 		};
 		using CI = CreateInfo;
 
@@ -50,9 +126,9 @@ namespace vkl
 
 		virtual void bindSet(BindSetInfo const& info) override;
 
-		virtual void beginRenderPass(RenderPassBeginInfo const& info, VkSubpassContents contents) override;
+		virtual void beginRenderPass(RenderPassBeginInfo const& info, RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) override;
 
-		virtual void nextSubPass(VkSubpassContents contents) override;
+		virtual void nextSubPass(RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) override;
 
 		virtual void endRenderPass() override;
 
@@ -83,6 +159,10 @@ namespace vkl
 				_context->setFramePerfCounters(fpc);
 			}
 		}
+
+		void reset();
+
+		void recordCommands();
 	};
 
 	struct FramePerfReport;
@@ -107,6 +187,8 @@ namespace vkl
 		ResourcesLists _internal_resources;
 
 		ExecutionContext _context;
+
+		std::unique_ptr<ExecutionThread> _execution_thread;
 
 		ExecutionThread* _current_thread = nullptr;
 
