@@ -473,4 +473,47 @@ namespace vkl
 		}
 		return res;
 	}
+
+	VkColorComponentFlags DetailedVkFormat::getColorComponents() const
+	{
+		VkColorComponentFlags res = 0;
+		if (aspect & VK_IMAGE_ASPECT_COLOR_BIT)
+		{
+			switch (color.swizzle)
+			{
+			case Swizzle::RGBA:
+			{
+				for (uint32_t i = 0; i < color.channels; ++i)
+				{
+					res |= (VK_COLOR_COMPONENT_R_BIT << i);
+				}
+			}
+			break;
+			case Swizzle::BGRA:
+			{
+				res |= VK_COLOR_COMPONENTS_RGB_BITS;
+				if(color.channels == 4)
+				{
+					res |= VK_COLOR_COMPONENT_A_BIT;
+				}
+			}
+			break;
+			case Swizzle::ARGB:
+			case Swizzle::ABGR:
+			{
+				res |= VK_COLOR_COMPONENT_A_BIT;
+				if (color.channels == 4)
+				{
+					res |= VK_COLOR_COMPONENTS_RGB_BITS;
+				}
+			}
+			break;
+			case Swizzle::EBGR:
+			{
+				res |= VK_COLOR_COMPONENTS_RGB_BITS;
+			}
+			}
+		}
+		return res;
+	}
 }

@@ -52,11 +52,11 @@ namespace vkl
 			RGB = RGBA,
 			RG = RGB,
 			R = RG,
-			ARGB = 1,
-			BGRA = 2,
+			BGRA = 1,
+			BGR = BGRA,
+			ARGB = 2,
 			ABGR = 3,
-			BGR = ABGR,
-			EBGR = 4,
+			EBGR = 4, // should it really exists separatly, or is it just a special RGB?
 		};
 		VkImageAspectFlags aspect = VK_IMAGE_ASPECT_NONE;
 
@@ -150,5 +150,7 @@ namespace vkl
 		that::FormatInfo getImgFormatInfo()const;
 
 		std::string getGLSLName()const;
+
+		VkColorComponentFlags getColorComponents() const;
 	};
 }

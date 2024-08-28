@@ -248,11 +248,7 @@ namespace vkl
 				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
 				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
 				.alphaBlendOp = VK_BLEND_OP_MAX,
-				.colorWriteMask =
-					VK_COLOR_COMPONENT_R_BIT |
-					VK_COLOR_COMPONENT_G_BIT |
-					VK_COLOR_COMPONENT_B_BIT |
-					VK_COLOR_COMPONENT_A_BIT,
+				.colorWriteMask = VK_COLOR_COMPONENTS_RGBA_BITS,
 			};
 			return color_blend_attachement;
 		}
