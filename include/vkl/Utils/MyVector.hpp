@@ -88,7 +88,7 @@ namespace vkl
 			return *this;
 		}
 
-		const MyVector& operator=(const std::vector<T, Allocator> & other)
+		constexpr MyVector& operator=(const std::vector<T, Allocator> & other)
 		{
 			ParentType::operator=(other);
 			return *this;
@@ -101,7 +101,7 @@ namespace vkl
 			return *this;
 		}
 
-		const MyVector& operator=(const std::vector<T, Allocator> && other)
+		constexpr MyVector& operator=(const std::vector<T, Allocator> && other)
 		{
 			ParentType::operator=(std::move(other));
 			return *this;
