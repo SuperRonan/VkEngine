@@ -52,7 +52,7 @@ namespace vkl
 
 			if (_render_pass_info)
 			{
-				_render_pass_info.recordBegin(ctx, VK_SUBPASS_CONTENTS_INLINE);
+				_render_pass_info.recordBegin(ctx);
 			}
 
 			{

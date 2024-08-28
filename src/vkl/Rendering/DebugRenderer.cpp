@@ -387,7 +387,7 @@ namespace vkl
 				.framebuffer = _framebuffer->instance(),
 			};
 
-			exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
+			exec.beginRenderPass(render_pass);
 
 			if (_render_strings_with_mesh)
 			{

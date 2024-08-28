@@ -900,7 +900,7 @@ namespace vkl
 						render_pass.clear_value_count = 1;
 						render_pass.framebuffer = my_lid->framebuffer->instance();
 
-						exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
+						exec.beginRenderPass(render_pass);
 
 						if (light->type() == LightType::SPOT)
 						{
@@ -937,7 +937,7 @@ namespace vkl
 					.clear_value_count = static_cast<uint32_t>(clear_values.size()),
 					.ptr_clear_values = clear_values.data(),
 				};
-				exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
+				exec.beginRenderPass(render_pass);
 				if (_use_indirect_rendering)
 				{
 					VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
@@ -981,7 +981,7 @@ namespace vkl
 					.ptr_clear_values = clear_values.data(),
 				};
 
-				exec.beginRenderPass(render_pass, VK_SUBPASS_CONTENTS_INLINE);
+				exec.beginRenderPass(render_pass);
 				
 				if (_use_indirect_rendering)
 				{
