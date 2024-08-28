@@ -450,9 +450,6 @@ namespace vkl
 						}
 					}
 				}
-
-				
-
 				
 				
 				desc.initialLayout = layout;
@@ -463,6 +460,24 @@ namespace vkl
 				global_usage.final_stage = final_stage;
 				global_usage.usage |= vk_image_usage;
 			}
+
+			//VkSubpassDependency2 dep{
+			//	.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
+			//	.pNext = nullptr,
+			//	.srcSubpass = 0,
+			//	.dstSubpass = 0,
+			//	.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+			//	.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+			//	.srcAccessMask = 0,
+			//	.dstAccessMask = 0,
+			//	.dependencyFlags = 0,
+			//	.viewOffset = 0,
+			//};
+			//if (subpass.viewMask)
+			//{
+			//	dep.dependencyFlags |= VK_DEPENDENCY_VIEW_LOCAL_BIT;
+			//}
+			//dependecies.pushBack(&dep, 1);
 		}
 		else
 		{
