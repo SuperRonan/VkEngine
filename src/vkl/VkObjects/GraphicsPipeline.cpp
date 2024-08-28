@@ -1,6 +1,8 @@
 
 #include <vkl/VkObjects/GraphicsPipeline.hpp>
 
+#include <vkl/VkObjects/DetailedVkFormat.hpp>
+
 namespace vkl
 {
 	constexpr bool operator==(VkPipelineColorBlendAttachmentState const lhs, VkPipelineColorBlendAttachmentState const& rhs) noexcept
@@ -224,6 +226,7 @@ namespace vkl
 
 	void GraphicsPipeline::createInstanceIFP()
 	{
+		std::shared_ptr<RenderPassInstance> rpi = _render_pass->instance();
 		GraphicsPipelineInstance::CI gci{
 			.app = application(),
 			.name = name(),
@@ -236,7 +239,7 @@ namespace vkl
 			.multisampling = _multisampling.link(),
 			.depth_stencil = _depth_stencil,
 			.dynamic = _dynamic,
-			.render_pass = _render_pass->instance(),
+			.render_pass = rpi,
 			.subpass_index = _subpass_index,
 			.program = std::static_pointer_cast<GraphicsProgramInstance>(_program->instance()),
 		};
@@ -245,11 +248,29 @@ namespace vkl
 			gci.line_raster = _line_raster.value().value();
 		}
 		gci.attachements_blends.resize(_attachements_blends.size());
+		const VkSubpassDescription2 & subpass = rpi->getSubpasses()[_subpass_index];
 		for (size_t i = 0; i < _attachements_blends.size(); ++i)
 		{
-			gci.attachements_blends[i] = _attachements_blends[i].valueOr(VkPipelineColorBlendAttachmentState{
-				.blendEnable = VK_FALSE,
-			});
+			if (_attachements_blends[i].hasValue())
+			{
+				gci.attachements_blends[i] = _attachements_blends[i].value();
+			}
+			else
+			{
+				VkPipelineColorBlendAttachmentState & blend = gci.attachements_blends[i] = VkPipelineColorBlendAttachmentState{
+					.blendEnable = VK_FALSE,
+					.colorWriteMask = 0,
+				};
+
+				if (i < subpass.colorAttachmentCount)
+				{
+					VkAttachmentReference2 const& ref = subpass.pColorAttachments[i];
+					// TODO consider the aspect mask for multiplanar formats
+					VkAttachmentDescription2 const& desc = rpi->getAttachmentDescriptors2()[ref.attachment];
+					DetailedVkFormat df = DetailedVkFormat::Find(desc.format);
+					blend.colorWriteMask = df.getColorComponents();
+				}
+			}
 		}
 		_inst = std::make_shared<GraphicsPipelineInstance>(std::move(gci));
 	}
