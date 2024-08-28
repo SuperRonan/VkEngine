@@ -42,6 +42,45 @@ namespace vkl
 		return GetStoreOp(static_cast<Flags>(flags >> FlagsStencilOpShift));
 	}
 
+	AttachmentDescription2::Flags AttachmentDescription2::GetFlag(VkAttachmentLoadOp lop)
+	{
+		Flags res;
+		if (lop <= VK_ATTACHMENT_LOAD_OP_DONT_CARE)
+		{
+			res = static_cast<Flags>(lop) << FlagsLoadOpBitOffset;
+		}
+		else
+		{
+			res = Flags::LoadOpNone;
+		}
+		return res;
+	}
+	
+	AttachmentDescription2::Flags AttachmentDescription2::GetFlag(VkAttachmentStoreOp sop)
+	{
+		Flags res;
+		if (sop <= VK_ATTACHMENT_STORE_OP_DONT_CARE)
+		{
+			res = static_cast<Flags>(sop) << FlagsStoreOpBitOffset;
+		}
+		else
+		{
+			res = Flags::StoreOpNone;
+		}
+		return res;
+	}
+	
+	AttachmentDescription2::Flags AttachmentDescription2::GetStencilFlag(VkAttachmentLoadOp lop)
+	{
+		return GetFlag(lop) << FlagsStencilOpShift;
+	}
+	
+	AttachmentDescription2::Flags AttachmentDescription2::GetStencilFlag(VkAttachmentStoreOp sop)
+	{
+		return GetFlag(sop) << FlagsStencilOpShift;
+	}
+
+
 	AttachmentDescription2 AttachmentDescription2::MakeFrom(Dyn<Flags> const& flags, std::shared_ptr<ImageView> const& view)
 	{
 		AttachmentDescription2 res{
@@ -294,6 +333,10 @@ namespace vkl
 				AttachmentUsage & global_usage = _attachments_usages[i];
 				const VkImageAspectFlags aspect = getImageAspectFromFormat(desc.format);
 				const bool is_color = aspect & VK_IMAGE_ASPECT_COLOR_BIT;
+				const bool is_depth = aspect & VK_IMAGE_ASPECT_DEPTH_BIT;
+				const bool is_stencil = aspect & VK_IMAGE_ASPECT_STENCIL_BIT;
+
+				global_usage.flags = static_cast<AttachmentDescription2::Flags>(desc.flags);
 
 				VkAccessFlags access = VK_ACCESS_NONE;
 				VkPipelineStageFlags initial_stage = VK_PIPELINE_STAGE_NONE;
@@ -459,6 +502,14 @@ namespace vkl
 				global_usage.initial_stage = initial_stage;
 				global_usage.final_stage = final_stage;
 				global_usage.usage |= vk_image_usage;
+
+				global_usage.flags |= AttachmentDescription2::GetFlag(desc.loadOp);
+				global_usage.flags |= AttachmentDescription2::GetFlag(desc.storeOp);
+				if (is_stencil)
+				{
+					global_usage.flags |= AttachmentDescription2::GetStencilFlag(desc.stencilLoadOp);
+					global_usage.flags |= AttachmentDescription2::GetStencilFlag(desc.stencilStoreOp);
+				}
 			}
 
 			//VkSubpassDependency2 dep{

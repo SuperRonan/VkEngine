@@ -103,6 +103,11 @@ namespace vkl
 		static VkAttachmentLoadOp GetStencilLoadOp(Flags flags);
 		static VkAttachmentStoreOp GetStencilStoreOp(Flags flags);
 
+		static Flags GetFlag(VkAttachmentLoadOp lop);
+		static Flags GetFlag(VkAttachmentStoreOp sop);
+		static Flags GetStencilFlag(VkAttachmentLoadOp lop);
+		static Flags GetStencilFlag(VkAttachmentStoreOp sop);
+
 		static AttachmentDescription2 MakeFrom(Dyn<Flags> const& flags, std::shared_ptr<ImageView> const& view);
 		static AttachmentDescription2 MakeFrom(Dyn<Flags> const& flags, ImageView const& view);
 		static AttachmentDescription2 MakeFrom(Dyn<Flags> && flags, std::shared_ptr<ImageView> const& view);
