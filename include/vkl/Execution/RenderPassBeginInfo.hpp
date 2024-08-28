@@ -2,6 +2,7 @@
 
 #include <vkl/Core/VulkanCommons.hpp>
 #include <vkl/Commands/ResourceUsageList.hpp>
+#include <that/utils/EnumClassOperators.hpp>
 
 namespace vkl
 {
@@ -12,10 +13,16 @@ namespace vkl
 
 	struct RenderPassBeginInfo
 	{	
-		enum class Flags
+		enum class Flags : uint32_t
 		{
 			None = 0,
+			ContentsInline = 0x0001,
+			ContentsSecondaryCBs = 0x0002,
+			ContentsInlineAndSecondaryCBs = ContentsInline | ContentsSecondaryCBs,
+
 		};
+
+		static VkSubpassContents ExtractSubpassContents(Flags flags);
 
 		static constexpr VkRect2D DefaultRenderArea = VkRect2D{ .offset = makeUniformOffset2D(0), .extent = makeUniformExtent2D(uint32_t(-1)) };
 		
@@ -23,11 +30,11 @@ namespace vkl
 		std::shared_ptr<FramebufferInstance> framebuffer = nullptr;
 		VkRect2D render_area = DefaultRenderArea;
 	//protected:
-		uint32_t _subpass_index = 0;
+		
+		uint32_t _internal = 0;
 	//public:
 		uint32_t clear_value_count = 0;
 		VkClearValue* ptr_clear_values = nullptr;
-		MyVector<VkClearValue> clear_values = {};
 
 		RenderPassInstance* getRenderPassInstance() const;
 
@@ -38,16 +45,18 @@ namespace vkl
 
 		void exportResources(ResourceUsageList & resources, bool export_for_all_subpasses = false);
 
-		void recordBegin(ExecutionContext & ctx, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
+		void recordBegin(ExecutionContext & ctx, Flags flags = Flags::None);
 
 		void exportNextSubpassResources(ResourceUsageList& resources)
 		{
-			exportSubpassResources(_subpass_index + 1, resources);
+			exportSubpassResources(_internal & std::bitMask(31u), resources);
 		}
 
 		void exportSubpassResources(uint32_t index, ResourceUsageList& resources);
 
-		void recordNextSubpass(ExecutionContext& ctx, VkSubpassContents contents = VK_SUBPASS_CONTENTS_INLINE);
+		void recordEndSubpass(ExecutionContext& ctx);
+
+		void recordNextSubpass(ExecutionContext& ctx, Flags flags = Flags::None);
 
 		void recordEnd(ExecutionContext& ctx);
 
@@ -56,10 +65,11 @@ namespace vkl
 			render_pass.reset();
 			framebuffer.reset();
 			render_area = DefaultRenderArea;
-			_subpass_index = 0;
+			_internal = 0;
 			clear_value_count = 0;
 			ptr_clear_values = nullptr;
-			clear_values.clear();
 		}
 	};
+
+	THAT_DECLARE_ENUM_CLASS_OPERATORS(RenderPassBeginInfo::Flags, uint32_t)
 }
