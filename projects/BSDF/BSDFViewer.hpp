@@ -7,6 +7,7 @@
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
 #include <vkl/Rendering/Camera.hpp>
+#include <vkl/Rendering/RenderWorldBasis.hpp>
 
 namespace vkl
 {
@@ -27,9 +28,11 @@ namespace vkl
 
 		// In radians
 		bool _hemisphere = true;
-		float _inclination = 1.5;
+		float _inclination = glm::radians(45.0f);
 
-		float _common_alpha = 0.5;
+		float _common_alpha = 0.9;
+
+		ImVec4 _clear_color = ImVec4(0, 0, 0, 0);
 
 		uint32_t _alignment = 0;
 		uint32_t _resolution = 0;
@@ -52,7 +55,11 @@ namespace vkl
 
 		std::shared_ptr<MeshCommand> _render_3D_mesh;
 		std::shared_ptr<MeshCommand> _render_2D_mesh;
-		
+	
+		std::shared_ptr<VertexCommand> _render_in_vector;
+	
+		std::shared_ptr<RenderWorldBasis> _render_world_basis = nullptr;
+
 		void createInternals();
 
 	public:

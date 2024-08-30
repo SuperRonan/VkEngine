@@ -175,8 +175,48 @@ namespace vkl
 				},	
 				.mesh_shader_path = shaders / "RenderSphericalFunction3D.glsl",
 				.fragment_shader_path = shaders / "RenderSphericalFunction3D.glsl",
+				.definitions = [this](DefinitionsList& res)
+				{
+					res.clear();
+					if (_polygon_mode_3D == VK_POLYGON_MODE_LINE)
+					{
+						res.pushBack("BSDF_RENDER_MODE BSDF_RENDER_MODE_WIREFRAME");
+					}
+					res.pushBackFormatted("TARGET_PRIMITIVE {}", _polygon_mode_3D == VK_POLYGON_MODE_FILL ? "TARGET_TRIANGLES" : "TARGET_IMPLICIT_LINES");
+				},
 			});
 		}
+
+		_render_in_vector = std::make_shared<VertexCommand>(VertexCommand::CI{
+			.app = application(),
+			.name = name() + ".RenderLines",
+			.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+			.draw_count = 1,
+			.line_raster_state = GraphicsPipeline::LineRasterizationState{
+				.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT,
+			},
+			.sets_layouts = _sets_layouts,
+			.extern_render_pass = _render_pass,
+			.color_attachments = {
+				GraphicsCommand::ColorAttachment{
+					.blending = &_blending,
+				}
+			},
+			.write_depth = false,
+			.depth_compare_op = VK_COMPARE_OP_LESS,
+			.vertex_shader_path = shaders / "RenderInputVector.glsl",
+			.geometry_shader_path = shaders / "RenderInputVector.glsl",
+			.fragment_shader_path = shaders / "RenderInputVector.glsl",
+		});
+
+
+		_render_world_basis = std::make_shared<RenderWorldBasis>(RenderWorldBasis::CI{
+			.app = application(),
+			.name = name() + ".RenderWorldBasis",
+			.sets_layouts = _sets_layouts,
+			.extern_render_pass = _render_pass,
+			.subpass_index = 0,
+		});
 	}
 
 	void BSDFViewer::updateResources(UpdateContext& ctx)
@@ -217,6 +257,10 @@ namespace vkl
 		ctx.resourcesToUpdateLater() += _framebuffer;
 
 		ctx.resourcesToUpdateLater() += _render_3D_mesh;
+
+		ctx.resourcesToUpdateLater() += _render_in_vector;
+
+		_render_world_basis->updateResources(ctx);
 	}
 
 	void BSDFViewer::execute(ExecutionRecorder& exec)
@@ -229,7 +273,7 @@ namespace vkl
 		});
 
 		std::array<VkClearValue, 1> clear_values = {
-			VkClearColorValue{.float32 = {0.0f, 0.0f, 0.0f, 0.0f}},
+			VkClearColorValue{.float32 = {_clear_color.x, _clear_color.y, _clear_color.z, _clear_color.w}},
 		};
 
 		exec.beginRenderPass(RenderPassBeginInfo{
@@ -238,7 +282,11 @@ namespace vkl
 			.ptr_clear_values = clear_values.data(),
 		});
 
+		_render_world_basis->execute(exec, *_camera);
+		
 		exec(_render_3D_mesh);
+
+		exec(_render_in_vector);
 
 		exec.endRenderPass();
 
@@ -284,6 +332,26 @@ namespace vkl
 		gui_polygon_mode.setIndex(static_cast<uint32_t>(_polygon_mode_3D));
 		gui_polygon_mode.declare();
 		_polygon_mode_3D = static_cast<VkPolygonMode>(gui_polygon_mode.index());
+
+		_render_world_basis->declareGUI(ctx);
+
+		ImGui::Text("Snap camera to:");
+		for (char i = 0; i < 3; ++i)
+		{
+			if (i != 1)
+			{
+				ImGui::SameLine();
+				const char label[2] = {'x' + i, char(0)};
+				if (ImGui::Button(label))
+				{
+					vec3 axis = vec3(0);
+					axis[i] = -1.0f;
+					_camera->position() = axis;
+					_camera->direction() = -axis;
+					_camera->computeInternal();
+				}
+			}
+		}
 
 		ImGui::PopID();
 	}
