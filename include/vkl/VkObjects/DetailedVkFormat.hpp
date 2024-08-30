@@ -8,6 +8,11 @@
 
 namespace vkl
 {
+
+#ifndef VKL_USE_COMPRESSED_DETAILED_FORMAT
+#define VKL_USE_COMPRESSED_DETAILED_FORMAT 1
+#endif
+
 	struct DetailedVkFormat
 	{
 	protected:
@@ -29,24 +34,42 @@ namespace vkl
 
 		static ReverseMap makeReversedMap();
 
+		static constexpr uint32_t TypeCustomTypesOffset = static_cast<uint32_t>(that::ElementType::MAX_ENUM);
+		
+
 	public:
 
+#if VKL_USE_COMPRESSED_DETAILED_FORMAT
+		using PackBits_t = uint8_t;
+		using BitCount_t = uint8_t;
+		using ChannelCount_t = uint8_t;
+		using TypeUint_t = uint8_t;
+		using SwizzleUint_t = uint8_t;
+#else
+		using PackBits_t = uint32_t;
+		using BitCount_t = uint32_t;
+		using ChannelCount_t = uint32_t;
+		using TypeUint_t = uint32_t;
+		using SwizzleUint_t = uint32_t;
+#endif
+
 		VkFormat vk_format = VK_FORMAT_MAX_ENUM;
-		enum class Type
+		enum class Type : TypeUint_t
 		{
-			None = -1,
+			None = TypeUint_t(~0u),
 			UNORM = that::ElementType::UNORM,
 			SNORM = that::ElementType::SNORM,
-			USCALED = 16,
-			SSCALED = 17,
+			USCALED = TypeCustomTypesOffset + 0,
+			SSCALED = TypeCustomTypesOffset + 1,
 			UINT = that::ElementType::UINT,
 			SINT = that::ElementType::SINT,
 			SRGB = that::ElementType::sRGB,
-			UFLOAT = 18,
+			UFLOAT = TypeCustomTypesOffset + 2,
 			SFLOAT = that::ElementType::FLOAT,
-			MAX_ENUM = 0x7f'ff'ff'ff,
+			MAX_ENUM = TypeCustomTypesOffset + 3,
 		};
-		enum class Swizzle
+
+		enum class Swizzle : SwizzleUint_t
 		{
 			RGBA = 0,
 			RGB = RGBA,
@@ -58,14 +81,39 @@ namespace vkl
 			ABGR = 3,
 			EBGR = 4, // should it really exists separatly, or is it just a special RGB?
 		};
+
+	protected:
+		
+		static constexpr uint32_t MinTypeBits = std::bit_width(static_cast<uint32_t>(Type::MAX_ENUM));
+		static constexpr uint32_t MinSwizzleBits = 3;
+		static constexpr uint32_t MinAspectBits = std::max<uint32_t>(std::bit_width<uint32_t>(VK_IMAGE_ASPECT_MEMORY_PLANE_3_BIT_EXT), 16u);
+
+	public:
+
+
+
+#if VKL_USE_COMPRESSED_DETAILED_FORMAT
+		uint16_t aspect : MinAspectBits = VK_IMAGE_ASPECT_NONE;
+#else 
 		VkImageAspectFlags aspect = VK_IMAGE_ASPECT_NONE;
+#endif
+
+		// 0 means not packed
+		PackBits_t pack_bits = 0;
 
 		struct ColorFormatDetailedInfo
 		{
+#if VKL_USE_COMPRESSED_DETAILED_FORMAT
+			Type type : MinTypeBits;
+			Swizzle swizzle : MinSwizzleBits;
+			ChannelCount_t channels;
+			std::array<BitCount_t, 4> bits;
+#else
 			Type type;
-			uint32_t channels;
-			std::array<uint32_t, 4> bits;
 			Swizzle swizzle;
+			ChannelCount_t  channels;
+			std::array<BitCount_t, 4> bits;
+#endif
 
 			constexpr bool operator==(ColorFormatDetailedInfo const& o) const = default;
 
@@ -74,10 +122,18 @@ namespace vkl
 
 		struct DepthStencilFormatDetailedInfo
 		{
+#if VKL_USE_COMPRESSED_DETAILED_FORMAT
+			Type depth_type : MinTypeBits;
+			Type stencil_type : MinTypeBits;
+			BitCount_t depth_bits;
+			BitCount_t stencil_bits;
+
+#else
 			Type depth_type;
-			uint32_t depth_bits;
 			Type stencil_type;
-			uint32_t stencil_bits;
+			BitCount_t depth_bits;
+			BitCount_t stencil_bits;
+#endif
 
 			constexpr bool operator==(DepthStencilFormatDetailedInfo const& o) const = default;
 
@@ -89,9 +145,6 @@ namespace vkl
 			ColorFormatDetailedInfo color = {};
 			DepthStencilFormatDetailedInfo depth_stencil;
 		};
-
-		// 0 means not packed
-		uint32_t pack_bits = 0;
 
 		DetailedVkFormat(DetailedVkFormat const& other) :
 			vk_format(other.vk_format),
@@ -128,13 +181,13 @@ namespace vkl
 		constexpr DetailedVkFormat() = default;
 
 		// Color constructor
-		DetailedVkFormat(VkFormat f, Type type, uint32_t channels, std::array<uint32_t, 4> bits_per_component, Swizzle swizzle, uint32_t pack);
-		DetailedVkFormat(VkFormat f, Type type, uint32_t channels, uint32_t bits_per_component, Swizzle swizzle, uint32_t pack);
-		DetailedVkFormat(VkFormat f, ColorFormatDetailedInfo const& color_info, uint32_t pack);
+		DetailedVkFormat(VkFormat f, Type type, ChannelCount_t channels, std::array<BitCount_t, 4> bits_per_component, Swizzle swizzle, PackBits_t pack);
+		DetailedVkFormat(VkFormat f, Type type, ChannelCount_t channels, BitCount_t bits_per_component, Swizzle swizzle, PackBits_t pack);
+		DetailedVkFormat(VkFormat f, ColorFormatDetailedInfo const& color_info, PackBits_t pack);
 
 		// Depth Stencil Constructor
-		DetailedVkFormat(VkFormat f, Type depth_type, uint32_t depth_bits, Type stencil_type, uint32_t stencil_bits, uint32_t pack);
-		DetailedVkFormat(VkFormat f, DepthStencilFormatDetailedInfo const& depth_stencil_info, uint32_t pack);
+		DetailedVkFormat(VkFormat f, Type depth_type, BitCount_t depth_bits, Type stencil_type, BitCount_t stencil_bits, PackBits_t pack);
+		DetailedVkFormat(VkFormat f, DepthStencilFormatDetailedInfo const& depth_stencil_info, PackBits_t pack);
 		
 		
 		DetailedVkFormat(VkFormat f):

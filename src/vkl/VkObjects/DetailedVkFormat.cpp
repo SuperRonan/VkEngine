@@ -341,55 +341,55 @@ namespace vkl
 		return res;
 	}
 
-	DetailedVkFormat::DetailedVkFormat(VkFormat f, Type type, uint32_t channels, std::array<uint32_t, 4> bits_per_component, Swizzle swizzle, uint32_t pack) :
+	DetailedVkFormat::DetailedVkFormat(VkFormat f, Type type, ChannelCount_t channels, std::array<BitCount_t, 4> bits_per_component, Swizzle swizzle, PackBits_t pack) :
 		vk_format(f),
 		aspect(VK_IMAGE_ASPECT_COLOR_BIT),
-		color({
+		pack_bits(pack),
+		color(ColorFormatDetailedInfo{
 			.type = type,
+			.swizzle = swizzle,
 			.channels = channels,
 			.bits = bits_per_component,
-			.swizzle = swizzle,
-		}),
-		pack_bits(pack)
+		})
 	{}
 
-	DetailedVkFormat::DetailedVkFormat(VkFormat f, Type type, uint32_t channels, uint32_t bits_per_component, Swizzle swizzle, uint32_t pack) :
+	DetailedVkFormat::DetailedVkFormat(VkFormat f, Type type, ChannelCount_t channels, BitCount_t bits_per_component, Swizzle swizzle, PackBits_t pack) :
 		vk_format(f),
 		aspect(VK_IMAGE_ASPECT_COLOR_BIT),
-		color({
+		pack_bits(pack),
+		color(ColorFormatDetailedInfo{
 			.type = type,
+			.swizzle = swizzle,
 			.channels = channels,
 			.bits = {bits_per_component, bits_per_component, bits_per_component, bits_per_component},
-			.swizzle = swizzle,
-		}),
-		pack_bits(pack)
+		})
 	{
-		for (uint32_t i = channels; i < 4; ++i)
+		for (ChannelCount_t i = channels; i < 4; ++i)
 		{
 			color.bits[i] = 0;
 		}
 	}
 
-	DetailedVkFormat::DetailedVkFormat(VkFormat f, ColorFormatDetailedInfo const& color_info, uint32_t pack):
+	DetailedVkFormat::DetailedVkFormat(VkFormat f, ColorFormatDetailedInfo const& color_info, PackBits_t pack):
 		vk_format(f),
 		aspect(VK_IMAGE_ASPECT_COLOR_BIT),
 		color(color_info),
 		pack_bits(pack)
 	{}
 
-	DetailedVkFormat::DetailedVkFormat(VkFormat f, Type depth_type, uint32_t depth_bits, Type stencil_type, uint32_t stencil_bits, uint32_t pack) :
+	DetailedVkFormat::DetailedVkFormat(VkFormat f, Type depth_type, BitCount_t depth_bits, Type stencil_type, BitCount_t stencil_bits, PackBits_t pack) :
 		vk_format(f),
 		aspect((depth_bits ? VK_IMAGE_ASPECT_DEPTH_BIT : 0) | (stencil_bits ? VK_IMAGE_ASPECT_STENCIL_BIT : 0)),
-		depth_stencil({
+		depth_stencil(DepthStencilFormatDetailedInfo{
 			.depth_type = depth_type,
-			.depth_bits = depth_bits,
 			.stencil_type = stencil_type,
+			.depth_bits = depth_bits,
 			.stencil_bits = stencil_bits,
 		}),
 		pack_bits(pack)
 	{}
 
-	DetailedVkFormat::DetailedVkFormat(VkFormat f, DepthStencilFormatDetailedInfo const& dsi, uint32_t pack) :
+	DetailedVkFormat::DetailedVkFormat(VkFormat f, DepthStencilFormatDetailedInfo const& dsi, PackBits_t pack) :
 		vk_format(f),
 		aspect((dsi.depth_bits ? VK_IMAGE_ASPECT_DEPTH_BIT : 0) | (dsi.stencil_bits ? VK_IMAGE_ASPECT_STENCIL_BIT : 0)),
 		depth_stencil(dsi),
@@ -432,8 +432,8 @@ namespace vkl
 		assert(aspect & VK_IMAGE_ASPECT_COLOR_BIT);
 		that::FormatInfo res{
 			.type = static_cast<that::ElementType>(color.type),
-			.elem_size = color.bits[0] / 8,
-			.channels = color.channels,
+			.elem_size = static_cast<uint8_t>(color.bits[0] / BitCount_t(8)),
+			.channels = static_cast<uint8_t>(color.channels),
 		};
 		return res;
 	}
