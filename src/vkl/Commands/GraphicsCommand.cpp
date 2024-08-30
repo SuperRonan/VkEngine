@@ -162,7 +162,7 @@ namespace vkl
 			};
 			render_pass_ci.subpasses.push_back(SubPassDescription2{
 				.view_mask = _view_mask,
-				.read_only_depth = _write_depth.value_or(false),
+				.read_only_depth = !_write_depth,
 				.read_only_stencil = !(_stencil_front_op.has_value() || _stencil_back_op.has_value()),
 				.disallow_merging = application()->options().render_pass_disallow_merging,
 				.auto_preserve_all_other_attachments = false, // No need
@@ -264,7 +264,7 @@ namespace vkl
 					AttachmentDescription2::Flags flags = AttachmentDescription2::Flags::None;
 					if (depth)
 					{
-						const bool read_only = _write_depth.value_or(false);
+						const bool read_only = !_write_depth;
 						if (_depth_stencil.clear_depth)
 						{
 							flags |= AttachmentDescription2::Flags::LoadOpClear;
@@ -384,7 +384,7 @@ namespace vkl
 				.pNext = nullptr,
 				.flags = 0,
 				.depthTestEnable = depth ? VK_TRUE : VK_FALSE,
-				.depthWriteEnable = _write_depth.value_or(false) ? VK_TRUE : VK_FALSE,
+				.depthWriteEnable = _write_depth ? VK_TRUE : VK_FALSE,
 				.depthCompareOp = _depth_compare_op.value_or(VK_COMPARE_OP_LESS),
 				.depthBoundsTestEnable = VK_FALSE,
 				.stencilTestEnable = stencil ? VK_TRUE : VK_FALSE,

@@ -74,7 +74,7 @@ namespace vkl
 		uint32_t _subpass_index = 0;
 		uint32_t _view_mask = 0;
 		bool _use_external_renderpass = false;
-		std::optional<bool> _write_depth = {};
+		bool _write_depth = false;
 		std::optional<VkCompareOp> _depth_compare_op = VK_COMPARE_OP_LESS;
 		std::optional<VkStencilOpState> _stencil_front_op = {};
 		std::optional<VkStencilOpState> _stencil_back_op = {};
@@ -112,7 +112,7 @@ namespace vkl
 			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
 			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
 			uint32_t view_mask = 0;
-			std::optional<bool> write_depth = {};
+			bool write_depth = false;
 			std::optional<VkCompareOp> depth_compare_op = {};
 			std::optional<VkStencilOpState> stencil_front_op = {};
 			std::optional<VkStencilOpState> stencil_back_op = {};
@@ -277,7 +277,7 @@ namespace vkl
 			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
 			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
 			uint32_t view_mask = 0;
-			std::optional<bool> write_depth = {};
+			bool write_depth = false;
 			std::optional<VkCompareOp> depth_compare_op = {};
 			std::optional<VkStencilOpState> stencil_front_op = {};
 			std::optional<VkStencilOpState> stencil_back_op = {};
@@ -478,7 +478,7 @@ namespace vkl
 			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
 			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
 			uint32_t view_mask = 0;
-			std::optional<bool> write_depth = {};
+			bool write_depth = false;
 			std::optional<VkCompareOp> depth_compare_op = {};
 			std::optional<VkStencilOpState> stencil_front_op = {};
 			std::optional<VkStencilOpState> stencil_back_op = {};
