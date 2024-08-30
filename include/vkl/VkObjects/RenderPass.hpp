@@ -33,6 +33,8 @@ namespace vkl
 
 		using FlagsUint = uint32_t;
 
+	protected:
+	
 		static constexpr const FlagsUint FlagsBitOffset = 0;
 		static constexpr const FlagsUint FlagsBitCount = 1;
 		static constexpr const FlagsUint FlagsLoadOpBitOffset = FlagsBitOffset + FlagsBitCount;
@@ -42,6 +44,8 @@ namespace vkl
 		static constexpr const FlagsUint FlagsStencilOpBitOffset = FlagsStoreOpBitOffset + FlagsStoreOpBitCount;
 		static constexpr const FlagsUint FlagsStencilOpBitCount = FlagsLoadOpBitCount + FlagsStoreOpBitCount;
 		static constexpr const FlagsUint FlagsStencilOpShift = FlagsLoadOpBitCount + FlagsStoreOpBitCount;
+	
+	public:
 
 		enum class Flags : FlagsUint
 		{
