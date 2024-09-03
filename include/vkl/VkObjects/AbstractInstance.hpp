@@ -112,7 +112,7 @@ namespace vkl
 
 		using InstanceType = Instance;
 
-		template <std::concepts::StringLike StringLike>
+		template <that::concepts::StringLike StringLike>
 		constexpr InstanceHolder(VkApplication* app, StringLike&& name, Dyn<bool> const& hold_instance) :
 			AbstractInstanceHolder(app, std::forward<StringLike>(name), hold_instance)
 		{}

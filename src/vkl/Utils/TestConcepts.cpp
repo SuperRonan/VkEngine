@@ -26,10 +26,5 @@ void LaunchTests()
 {
 	TestContainerForType<int>();
 
-	static_assert(::std::concepts::StringLike<std::string>);
-	static_assert(::std::concepts::StringLike<std::string_view>);
-	static_assert(::std::concepts::StringLike<const char *>);
-	static_assert(::std::concepts::StringLike<char *>);
-
 	static_assert(::std::concepts::ConvertibleContainer<std::vector<uint32_t>, std::vector<uint64_t>>);
 }

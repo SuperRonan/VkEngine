@@ -4,6 +4,8 @@
 #include <iterator>
 #include <utility>
 
+#include <vkl/Utils/Container.hpp>
+
 namespace vkl
 {
 	template <class T, class Allocator = std::allocator<T>>

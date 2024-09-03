@@ -79,12 +79,6 @@ namespace std
 
 
 
-	
-		template <class Str>
-		concept StringLike = std::convertible_to<Str, std::string_view>;
-
-
-
 
 		template <class SetType>
 		concept GenericSet = GenericContainer<SetType> && requires(SetType& a, const SetType b, typename SetType::value_type & x)
