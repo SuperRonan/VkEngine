@@ -71,5 +71,5 @@ namespace vkl
 		}
 	};
 
-	THAT_DECLARE_ENUM_CLASS_OPERATORS(RenderPassBeginInfo::Flags, uint32_t)
+	THAT_DECLARE_ENUM_CLASS_OPERATORS(RenderPassBeginInfo::Flags)
 }

@@ -371,8 +371,8 @@ namespace vkl
 		}
 	};
 
-THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::AttachmentDescription2::Flags, vkl::AttachmentDescription2::FlagsUint)
-THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::RenderPassInstance::__AttachmentSubpassUsage::Usage, vkl::RenderPassInstance::__AttachmentSubpassUsage::UsageUint)
+THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::AttachmentDescription2::Flags)
+THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::RenderPassInstance::__AttachmentSubpassUsage::Usage)
 
 }
 
