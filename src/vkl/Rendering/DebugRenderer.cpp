@@ -104,7 +104,7 @@ namespace vkl
 		}
 		_framebuffer = std::make_shared<Framebuffer>(std::move(fb_ci));
 
-		_blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault();
+		_blending = AttachmentBlending::DefaultAlphaBlending();
 
 		if (use_mesh_shader)
 		{

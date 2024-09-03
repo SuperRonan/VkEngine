@@ -25,7 +25,7 @@ namespace vkl
 		std::shared_ptr<ImageView> _target = nullptr;
 		std::shared_ptr<ImageView> _depth = nullptr;
 
-		VkPipelineColorBlendAttachmentState _blending;
+		AttachmentBlending _blending;
 
 		std::shared_ptr<VertexCommand> _render_planes = nullptr;
 		std::shared_ptr<VertexCommand> _render_lines = nullptr;

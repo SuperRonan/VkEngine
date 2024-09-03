@@ -4,7 +4,7 @@
 #include <vkl/VkObjects/GraphicsProgram.hpp>
 #include "RenderPass.hpp"
 
-#include <that/utils/EnumClassOperators.hpp>
+#include <vkl/VkObjects/Blending.hpp>
 
 namespace vkl
 {
@@ -24,7 +24,8 @@ namespace vkl
 			std::optional<VkPipelineRasterizationLineStateCreateInfoEXT> line_raster;
 			VkPipelineMultisampleStateCreateInfo multisampling;
 			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
-			MyVector<VkPipelineColorBlendAttachmentState> attachements_blends;
+			MyVector<AttachmentBlending> attachments_blends;
+			PipelineBlending common_blending = {};
 			MyVector<VkDynamicState> dynamic;
 			std::shared_ptr<RenderPassInstance> render_pass;
 			uint32_t subpass_index = 0;
@@ -44,7 +45,8 @@ namespace vkl
 		std::optional<VkPipelineRasterizationLineStateCreateInfoEXT> _line_raster;
 		VkPipelineMultisampleStateCreateInfo _multisampling;
 		std::optional<VkPipelineDepthStencilStateCreateInfo> _depth_stencil = {};
-		MyVector<VkPipelineColorBlendAttachmentState> _attachements_blends;
+		MyVector<AttachmentBlending> _attachments_blends;
+		PipelineBlending _common_blending = {};
 		MyVector<VkDynamicState> _dynamic;
 		std::shared_ptr<RenderPassInstance> _render_pass;
 		uint32_t _subpass_index = 0;
@@ -229,30 +231,6 @@ namespace vkl
 			return depth_stencil;
 		}
 
-		constexpr static VkPipelineColorBlendAttachmentState BlendAttachementNoBlending()
-		{
-			VkPipelineColorBlendAttachmentState color_blend_attachement{
-				.blendEnable = VK_FALSE,
-				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			};
-			return color_blend_attachement;
-		}
-
-		constexpr static VkPipelineColorBlendAttachmentState BlendAttachementBlendingAlphaDefault()
-		{
-			VkPipelineColorBlendAttachmentState color_blend_attachement{
-				.blendEnable = VK_TRUE,
-				.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-				.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-				.colorBlendOp = VK_BLEND_OP_ADD,
-				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-				.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-				.alphaBlendOp = VK_BLEND_OP_MAX,
-				.colorWriteMask = VK_COLOR_COMPONENTS_RGBA_BITS,
-			};
-			return color_blend_attachement;
-		}
-
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;
@@ -267,7 +245,8 @@ namespace vkl
 			std::optional<LineRasterizationState> line_raster;
 			MultisamplingState multisampling;
 			std::optional<VkPipelineDepthStencilStateCreateInfo> depth_stencil = {};
-			MyVector<Dyn<VkPipelineColorBlendAttachmentState>> attachements_blends;
+			MyVector<Dyn<AttachmentBlending>> attachments_blends;
+			Dyn<PipelineBlending> common_blending = {};
 
 			MyVector<VkDynamicState> dynamic;
 
@@ -291,7 +270,8 @@ namespace vkl
 		std::optional<LineRasterizationState> _line_raster;
 		MultisamplingState _multisampling;
 		std::optional<VkPipelineDepthStencilStateCreateInfo> _depth_stencil = {};
-		MyVector<Dyn<VkPipelineColorBlendAttachmentState>> _attachements_blends;
+		MyVector<Dyn<AttachmentBlending>> _attachments_blends;
+		Dyn<PipelineBlending> _common_blending;
 
 		MyVector<VkDynamicState> _dynamic;
 
@@ -314,6 +294,6 @@ namespace vkl
 		}
 	};
 
-THAT_DECLARE_ENUM_CLASS_OPERATORS(GraphicsPipeline::MultisamplingState::Flags, uint32_t)
+THAT_DECLARE_ENUM_CLASS_OPERATORS(GraphicsPipeline::MultisamplingState::Flags)
 
 }

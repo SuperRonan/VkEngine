@@ -43,7 +43,7 @@ namespace vkl
 			std::shared_ptr<ImageView> view = nullptr;
 			std::shared_ptr<ImageView> resolved = nullptr;
 			Dyn<VkClearColorValue> clear_value = {};
-			Dyn<VkPipelineColorBlendAttachmentState> blending = {};
+			Dyn<AttachmentBlending> blending = {};
 		};
 
 		struct DepthStencilAttachment
@@ -67,6 +67,7 @@ namespace vkl
 		std::shared_ptr<ImageView> _fragment_shading_rate_image = {};
 		Dyn<VkExtent2D> _fragment_shading_rate_texel_size = {};
 		Dyn<VkSampleCountFlagBits> _inline_multisampling = {};
+		Dyn<PipelineBlending> _common_blending = {};
 
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
@@ -111,6 +112,7 @@ namespace vkl
 			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
 			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
 			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			Dyn<PipelineBlending> common_blending = {};
 			uint32_t view_mask = 0;
 			bool write_depth = false;
 			std::optional<VkCompareOp> depth_compare_op = {};
@@ -276,6 +278,7 @@ namespace vkl
 			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
 			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
 			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			Dyn<PipelineBlending> common_blending = {};
 			uint32_t view_mask = 0;
 			bool write_depth = false;
 			std::optional<VkCompareOp> depth_compare_op = {};
@@ -477,6 +480,7 @@ namespace vkl
 			std::shared_ptr<ImageView> fragment_shading_rate_image = {};
 			Dyn<VkExtent2D> fragment_shading_rate_texel_size = {};
 			Dyn<VkSampleCountFlagBits> inline_multisampling = {};
+			Dyn<PipelineBlending> common_blending = {};
 			uint32_t view_mask = 0;
 			bool write_depth = false;
 			std::optional<VkCompareOp> depth_compare_op = {};

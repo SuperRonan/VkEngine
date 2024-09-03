@@ -16,8 +16,8 @@ namespace vkl
 			res &= (lhs.srcAlphaBlendFactor == rhs.srcAlphaBlendFactor);
 			res &= (lhs.dstAlphaBlendFactor == rhs.dstAlphaBlendFactor);
 			res &= (lhs.alphaBlendOp == rhs.alphaBlendOp);
-			res &= (lhs.colorWriteMask == rhs.colorWriteMask);
 		}
+		res &= (lhs.colorWriteMask == rhs.colorWriteMask);
 		return res;
 	}
 
@@ -32,8 +32,8 @@ namespace vkl
 			res |= (lhs.srcAlphaBlendFactor != rhs.srcAlphaBlendFactor);
 			res |= (lhs.dstAlphaBlendFactor != rhs.dstAlphaBlendFactor);
 			res |= (lhs.alphaBlendOp != rhs.alphaBlendOp);
-			res |= (lhs.colorWriteMask != rhs.colorWriteMask);
 		}
+		res |= (lhs.colorWriteMask != rhs.colorWriteMask);
 		return res;
 	}
 
@@ -52,7 +52,7 @@ namespace vkl
 		_line_raster(ci.line_raster),
 		_multisampling(ci.multisampling),
 		_depth_stencil(ci.depth_stencil),
-		_attachements_blends(ci.attachements_blends),
+		_attachments_blends(ci.attachments_blends),
 		_dynamic(ci.dynamic),
 		_render_pass(ci.render_pass),
 		_subpass_index(ci.subpass_index)
@@ -62,6 +62,8 @@ namespace vkl
 
 	void GraphicsPipelineInstance::create()
 	{
+		VkSubpassDescription2 const& subpass = _render_pass->getSubpasses()[_subpass_index];
+
 		VkPipelineVertexInputStateCreateInfo vertex_input_ci;
 		if (_vertex_input.has_value())
 			vertex_input_ci = _vertex_input->link();
@@ -85,13 +87,24 @@ namespace vkl
 			.pScissors = _scissors.data(),
 		};
 
-		VkPipelineColorBlendStateCreateInfo blending_ci{
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-			.logicOpEnable = VK_FALSE, // TODO
-			.attachmentCount = _attachements_blends.size32(),
-			.pAttachments = _attachements_blends.data(),
-			.blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
-		};
+		assert(_attachments_blends.size32() <= subpass.colorAttachmentCount);
+		MyVector<VkPipelineColorBlendAttachmentState> attachments_blend(_attachments_blends.size());
+		const bool extra_filter_mask = true;
+		for (size_t i = 0; i < _attachments_blends.size(); ++i)
+		{
+			attachments_blend[i] = _attachments_blends[i].operator VkPipelineColorBlendAttachmentState();	
+			if (extra_filter_mask)
+			{
+				const VkFormat format = _render_pass->getAttachmentDescriptors2()[subpass.pColorAttachments[i].attachment].format;
+				const DetailedVkFormat df = DetailedVkFormat::Find(format);
+				const VkColorComponentFlags extra_mask = df.getColorComponents();
+
+				attachments_blend[i].colorWriteMask &= extra_mask;
+			}
+		}
+		VkPipelineBlendingState blending_ci;
+		_common_blending.extract(blending_ci);
+		blending_ci.link(attachments_blend.data(), _attachments_blends.size32());
 
 		MyVector<VkPipelineShaderStageCreateInfo> shaders_ci(_program->shaders().size());
 		for (size_t i = 0; i < shaders_ci.size(); ++i)
@@ -132,7 +145,7 @@ namespace vkl
 			.pRasterizationState = &_rasterization,
 			.pMultisampleState = &_multisampling,
 			.pDepthStencilState = _depth_stencil.has_value() ? &_depth_stencil.value() : nullptr,
-			.pColorBlendState = &blending_ci,
+			.pColorBlendState = &blending_ci.ci,
 			.pDynamicState = &dynamic_state_ci,
 			.layout = layout()->handle(),
 			.renderPass = *_render_pass,
@@ -198,7 +211,8 @@ namespace vkl
 		_line_raster(ci.line_raster),
 		_multisampling(ci.multisampling),
 		_depth_stencil(ci.depth_stencil),
-		_attachements_blends(ci.attachements_blends),
+		_attachments_blends(ci.attachments_blends),
+		_common_blending(ci.common_blending),
 		_dynamic(ci.dynamic),
 		_render_pass(ci.render_pass),
 		_subpass_index(ci.subpass_index)
@@ -238,6 +252,7 @@ namespace vkl
 			.line_raster = {},
 			.multisampling = _multisampling.link(),
 			.depth_stencil = _depth_stencil,
+			.common_blending = _common_blending.valueOr(PipelineBlending{}),
 			.dynamic = _dynamic,
 			.render_pass = rpi,
 			.subpass_index = _subpass_index,
@@ -247,20 +262,17 @@ namespace vkl
 		{
 			gci.line_raster = _line_raster.value().value();
 		}
-		gci.attachements_blends.resize(_attachements_blends.size());
+		gci.attachments_blends.resize(_attachments_blends.size());
 		const VkSubpassDescription2 & subpass = rpi->getSubpasses()[_subpass_index];
-		for (size_t i = 0; i < _attachements_blends.size(); ++i)
+		for (size_t i = 0; i < _attachments_blends.size(); ++i)
 		{
-			if (_attachements_blends[i].hasValue())
+			if (_attachments_blends[i].hasValue())
 			{
-				gci.attachements_blends[i] = _attachements_blends[i].value();
+				gci.attachments_blends[i] = _attachments_blends[i].value();
 			}
 			else
 			{
-				VkPipelineColorBlendAttachmentState & blend = gci.attachements_blends[i] = VkPipelineColorBlendAttachmentState{
-					.blendEnable = VK_FALSE,
-					.colorWriteMask = 0,
-				};
+				AttachmentBlending & blend = gci.attachments_blends[i];
 
 				if (i < subpass.colorAttachmentCount)
 				{
@@ -268,7 +280,7 @@ namespace vkl
 					// TODO consider the aspect mask for multiplanar formats
 					VkAttachmentDescription2 const& desc = rpi->getAttachmentDescriptors2()[ref.attachment];
 					DetailedVkFormat df = DetailedVkFormat::Find(desc.format);
-					blend.colorWriteMask = df.getColorComponents();
+					blend = df.getColorComponents();
 				}
 			}
 		}
@@ -346,17 +358,22 @@ namespace vkl
 				}
 			}
 
-			if (_attachements_blends.size() == inst._attachements_blends.size())
+			bool use_any_blend_constant = false;
+			if (_attachments_blends.size() == inst._attachments_blends.size())
 			{
-				for (size_t i = 0; i < _attachements_blends.size(); ++i)
+				for (size_t i = 0; i < _attachments_blends.size(); ++i)
 				{
-					if (_attachements_blends[i].hasValue())
+					if (_attachments_blends[i].hasValue())
 					{
-						const VkPipelineColorBlendAttachmentState& value = _attachements_blends[i].value();
-						if (value != inst._attachements_blends[i])
+						const AttachmentBlending& value = _attachments_blends[i].value();
+						if (!AttachmentBlending::Equivalent(value, inst._attachments_blends[i]))
 						{
 							res = true;
 							break;
+						}
+						else if (value.usesConstantBlendFactor())
+						{
+							use_any_blend_constant |= true;
 						}
 					}
 				}
@@ -369,6 +386,16 @@ namespace vkl
 			{
 				res = true;
 				break;
+			}
+
+			if (_common_blending.hasValue())
+			{
+				const PipelineBlending v = _common_blending.value();
+				if (!PipelineBlending::Equivalent(v, inst._common_blending, use_any_blend_constant))
+				{
+					res = true;
+					break;
+				}
 			}
 
 			if (_line_raster.has_value())

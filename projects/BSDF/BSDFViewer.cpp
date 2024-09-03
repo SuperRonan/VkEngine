@@ -155,7 +155,7 @@ namespace vkl
 
 		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
 
-		_blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault();
+		_blending = AttachmentBlending::DefaultAlphaBlending();
 
 		if (can_mesh)
 		{

@@ -50,7 +50,7 @@ namespace vkl
 
 		std::filesystem::path shaders = application()->mountingPoints()["ShaderLib"] + "/Rendering/Interface";
 
-		_blending = GraphicsPipeline::BlendAttachementBlendingAlphaDefault();
+		_blending = AttachmentBlending::DefaultAlphaBlending();
 
 		_render_planes = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),

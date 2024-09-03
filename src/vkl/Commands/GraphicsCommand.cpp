@@ -132,6 +132,7 @@ namespace vkl
 		_fragment_shading_rate_image(ci.fragment_shading_rate_image),
 		_fragment_shading_rate_texel_size(ci.fragment_shading_rate_texel_size),
 		_inline_multisampling(ci.inline_multisampling),
+		_common_blending(ci.common_blending),
 		_view_mask(ci.view_mask),
 		_use_external_renderpass(ci.extern_render_pass),
 		_subpass_index(ci.subpass_index),
@@ -212,7 +213,7 @@ namespace vkl
 					{
 						flags |= AttachmentDescription2::Flags::Clear;
 					}
-					else if(_color_attachements[i].blending.operator bool() && _color_attachements[i].blending.value().blendEnable)
+					else if(_color_attachements[i].blending.operator bool() && _color_attachements[i].blending.value().detailed.enable)
 					{
 						flags |= AttachmentDescription2::Flags::Blend;
 					}
@@ -338,6 +339,12 @@ namespace vkl
 		
 		gci.line_raster = _line_raster_state;
 
+		const constexpr auto min_max_samples = [](VkSampleCountFlagBits l, VkSampleCountFlagBits r)
+		{
+			return std::min(l, r);
+			//return std::max(l, r);
+		};
+
 		Dyn<VkSampleCountFlagBits> samples = [this]()
 		{
 			VkSampleCountFlagBits res = VK_SAMPLE_COUNT_1_BIT;
@@ -345,16 +352,16 @@ namespace vkl
 			for (size_t i = 0; i < subpass.colors.size(); ++i)
 			{
 				VkSampleCountFlagBits sc = _render_pass->attachments()[subpass.colors[i].index].samples.valueOr(VK_SAMPLE_COUNT_1_BIT);
-				res = std::max(res, sc);
+				res = min_max_samples(res, sc);
 			}
 			if (subpass.depth_stencil.index != VK_ATTACHMENT_UNUSED)
 			{
 				VkSampleCountFlagBits sc = _render_pass->attachments()[subpass.depth_stencil.index].samples.valueOr(VK_SAMPLE_COUNT_1_BIT);
-				res = std::max(res, sc);
+				res = min_max_samples(res, sc);
 			}
 			return res;
 		};
-		// should be dynamic?
+		
 		gci.multisampling = GraphicsPipeline::MultisamplingState{
 			.rasterization_samples = samples,
 		};
@@ -421,12 +428,13 @@ namespace vkl
 		}
 
 		SubPassDescription2 const& subpass = _render_pass->subpasses()[_subpass_index];
-		gci.attachements_blends.resize(subpass.colors.size());
+		gci.common_blending = _common_blending;
+		gci.attachments_blends.resize(subpass.colors.size());
 		for (uint32_t i = 0; i < subpass.colors.size(); ++i)
 		{
 			if (i < _color_attachements.size32())
 			{
-				gci.attachements_blends[i] = _color_attachements[i].blending;
+				gci.attachments_blends[i] = _color_attachements[i].blending;
 			}
 		}
 
@@ -598,6 +606,7 @@ namespace vkl
 			.fragment_shading_rate_image = ci.fragment_shading_rate_image,
 			.fragment_shading_rate_texel_size = ci.fragment_shading_rate_texel_size,
 			.inline_multisampling = ci.inline_multisampling,
+			.common_blending = ci.common_blending,
 			.view_mask = ci.view_mask,
 			.write_depth = ci.write_depth,
 			.depth_compare_op = ci.depth_compare_op,
@@ -1046,6 +1055,7 @@ namespace vkl
 			.fragment_shading_rate_image = ci.fragment_shading_rate_image,
 			.fragment_shading_rate_texel_size = ci.fragment_shading_rate_texel_size,
 			.inline_multisampling = ci.inline_multisampling,
+			.common_blending = ci.common_blending,
 			.view_mask = ci.view_mask,
 			.write_depth = ci.write_depth,
 			.depth_compare_op = ci.depth_compare_op,

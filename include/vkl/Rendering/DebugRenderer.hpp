@@ -37,7 +37,7 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 
-		VkPipelineColorBlendAttachmentState _blending = {};
+		AttachmentBlending _blending = {};
 
 		std::shared_ptr<VertexCommand> _render_strings_with_geometry = nullptr;
 		std::shared_ptr<VertexCommand> _render_lines_with_geometry = nullptr;
