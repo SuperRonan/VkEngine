@@ -133,7 +133,7 @@ namespace vkl
 
 		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo& vr) override = 0;
 
-		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
+		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
 		virtual ShaderBindings getShaderBindings(uint offset) = 0;
 
@@ -380,9 +380,9 @@ namespace vkl
 
 		virtual void fillVertexDrawCallInfo(VertexDrawCallInfo& vr) override;
 
-		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
+		static MyVector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
 
-		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override final
+		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override final
 		{
 			return getSetLayoutBindingsStatic(offset);
 		}

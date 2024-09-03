@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <memory>
+
+#include <vkl/Utils/MyVector.hpp>
 
 namespace vkl
 {
@@ -15,12 +16,12 @@ namespace vkl
 
 	struct ResourcesLists
 	{
-		std::vector<std::shared_ptr<ImageView>> images;
-		std::vector<std::shared_ptr<Buffer>> buffers;
-		std::vector<std::shared_ptr<Sampler>> samplers;
-		std::vector<std::shared_ptr<DescriptorSetAndPool>> sets;
-		std::vector<std::shared_ptr<Command>> commands;
-		std::vector<std::shared_ptr<Framebuffer>> framebuffers;
+		MyVector<std::shared_ptr<ImageView>> images;
+		MyVector<std::shared_ptr<Buffer>> buffers;
+		MyVector<std::shared_ptr<Sampler>> samplers;
+		MyVector<std::shared_ptr<DescriptorSetAndPool>> sets;
+		MyVector<std::shared_ptr<Command>> commands;
+		MyVector<std::shared_ptr<Framebuffer>> framebuffers;
 
 		ResourcesLists& operator+=(ResourcesLists const& o);
 

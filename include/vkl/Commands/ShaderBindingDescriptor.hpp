@@ -38,5 +38,5 @@ namespace vkl
 		uint32_t					binding = uint32_t(-1);
 	};
 	
-	using ShaderBindings = std::vector<ShaderBindingDescription>;	
+	using ShaderBindings = MyVector<ShaderBindingDescription>;	
 }
