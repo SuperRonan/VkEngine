@@ -483,10 +483,7 @@ namespace vkl
 			{
 			case Swizzle::RGBA:
 			{
-				for (uint32_t i = 0; i < color.channels; ++i)
-				{
-					res |= (VK_COLOR_COMPONENT_R_BIT << i);
-				}
+				res |= std::bitMask<VkColorComponentFlags>(color.channels);
 			}
 			break;
 			case Swizzle::BGRA:
