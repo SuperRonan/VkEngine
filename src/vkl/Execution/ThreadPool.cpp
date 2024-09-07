@@ -228,19 +228,20 @@ namespace vkl
 
 	void ThreadPool::insertJustPushedTasks(bool can_lock_just_pushed, bool can_lock_pending, bool can_lock_ready)
 	{
-		std::vector<std::shared_ptr<AsynchTask>> just_pushed_tasks = [&](){
-			if (can_lock_just_pushed)
-			{
-				_just_pushed_mutex.lock();
-			}
-			std::vector<std::shared_ptr<AsynchTask>> tmp = _just_pushed_tasks;
-			_just_pushed_tasks.clear();
-			if (can_lock_just_pushed)
-			{
-				_just_pushed_mutex.unlock();
-			}
-			return tmp;
-		}();
+		static thread_local std::vector<std::shared_ptr<AsynchTask>> just_pushed_tasks;
+		just_pushed_tasks.clear();
+		
+		if (can_lock_just_pushed)
+		{
+			_just_pushed_mutex.lock();
+		}
+		just_pushed_tasks = std::move(_just_pushed_tasks);
+		_just_pushed_tasks.clear();
+		if (can_lock_just_pushed)
+		{
+			_just_pushed_mutex.unlock();
+		}
+		
 
 
 		for (std::shared_ptr<AsynchTask> const& task : just_pushed_tasks)
@@ -271,6 +272,7 @@ namespace vkl
 				}
 			}
 		}
+		just_pushed_tasks.clear();
 	}
 
 	std::shared_ptr<AsynchTask> ThreadPool::aquireTaskIFP(bool can_lock_ready)
