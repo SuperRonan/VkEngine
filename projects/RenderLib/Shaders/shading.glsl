@@ -12,6 +12,8 @@
 
 #include <ShaderLib:/RayTracingCommon.glsl>
 
+#include <ShaderLib:/Rendering/Shading/microfacets.glsl>
+
 layout(SHADER_DESCRIPTOR_BINDING + 6) uniform sampler LightDepthSampler;
 
 #define SHADING_SHADOW_NONE 0
