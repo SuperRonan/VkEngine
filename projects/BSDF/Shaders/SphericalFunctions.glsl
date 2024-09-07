@@ -27,7 +27,7 @@ float EvaluateSphericalFunction(uint index, vec3 wo, vec3 wi)
 	{
 		if(cos_theta_i > 0)
 		{
-			res = pow(max(dot(reflected, wi), 0), 10);
+			res = pow(max(dot(reflected, wi), 0), 1) * oo_PI;
 		}
 	}
 

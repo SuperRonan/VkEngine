@@ -17,6 +17,13 @@ namespace vkl
 
 	protected:
 
+		struct FunctionStatistics
+		{
+			float integral;
+			float variance_with_reference;
+			float p1, p2;
+		};
+
 		MultiDescriptorSetsLayouts _sets_layouts;
 
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
@@ -32,6 +39,8 @@ namespace vkl
 
 		float _common_alpha = 0.9;
 
+		uint32_t _reference_function_index = 0;
+
 		ImVec4 _clear_color = ImVec4(0, 0, 0, 0);
 
 		uint32_t _alignment = 0;
@@ -45,6 +54,17 @@ namespace vkl
 		std::shared_ptr<ImageView> _functions_image = nullptr;
 		
 		std::shared_ptr<HostManagedBuffer> _ubo;
+		std::shared_ptr<Buffer> _statistics_buffer;
+
+		uint32_t _statistics_seed = 0;
+		uint32_t _statistics_samples = 1 << 12;
+		bool _generate_statistics = true;
+		struct Statistics
+		{
+			MyVector<FunctionStatistics> vector;
+			std::shared_mutex mutex;
+		};
+		std::shared_ptr<Statistics> _statistics;
 
 		VkPolygonMode _polygon_mode_3D = VK_POLYGON_MODE_FILL;
 
@@ -57,6 +77,8 @@ namespace vkl
 		std::shared_ptr<MeshCommand> _render_2D_mesh;
 	
 		std::shared_ptr<VertexCommand> _render_in_vector;
+
+		std::shared_ptr<ComputeCommand> _compute_statistics = nullptr;
 	
 		std::shared_ptr<RenderWorldBasis> _render_world_basis = nullptr;
 

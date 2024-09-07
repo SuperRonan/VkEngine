@@ -2,6 +2,8 @@
 
 #include "Bindings.glsl"
 
+#include <ShaderLib:/random.glsl>
+
 #define TARGET_TRIANGLES 0
 #define TARGET_IMPLICIT_LINES 1
 #define TARGET_EXPLICIT_LINES 2
@@ -18,6 +20,8 @@
 #endif
 
 #define USE_VARYING_POSITION (BSDF_RENDER_MODE == BSDF_RENDER_MODE_TRANSPARENT) && (RASTER_NORMAL_MODE == RASTER_NORMAL_MODE_FRAGMENT_DERIVATIVE)
+
+#define SHADE_WITH_PATCH_COLOR 0
 
 struct Varying
 {
@@ -150,6 +154,11 @@ void main()
 	vec4 color = GetColor(layer);
 	color.a *= ubo.common_alpha;
 
+#if SHADE_WITH_PATCH_COLOR
+	rng_t seed = hash(wid);
+	color = vec4(randomRGB(seed), 1);
+#endif
+
 	uvec4 indices;
 	indices.x = fetchVertex(world_to_proj, c, uvec2(0));
 	out_v[indices.x].color = color;
@@ -199,6 +208,14 @@ layout(location = 0) in Varying in_v;
 
 layout(location = 0) out vec4 o_color;
 
+float transparencyFactor(float abs_cos_theta)
+{
+	const float a = 1.0f;
+	const float b = 2.0f;
+	const float res = pow(1.0 - pow(abs_cos_theta, a), b);
+	return res;	
+}
+
 void main()
 {
 	o_color = in_v.color;
@@ -211,10 +228,12 @@ void main()
 	const vec3 normal_camera = normalize(cross(ddx, ddy));
 	const vec3 wo = normalize(position_camera);
 #endif
-	const float a = 1.0f;
-	const float b = 4.0f;
-	const float mult = pow(1.0 - pow(abs(dot(normal_camera, wo)), a), b);
+	const float mult = transparencyFactor(abs(dot(normal_camera, wo)));
 	o_color.a *= mult;
+#endif
+
+#if SHADE_WITH_PATCH_COLOR
+	o_color.a = 1.0f;
 #endif
 
 }

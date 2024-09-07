@@ -1,0 +1,86 @@
+#version 460
+
+#ifndef STATISTICS_USE_RANDOM_SAMPLES
+#define STATISTICS_USE_RANDOM_SAMPLES 1
+#endif
+
+#define STATISTICS_BUFFER_ACCESS 
+
+#extension GL_EXT_shader_atomic_float : require
+
+#include "Bindings.glsl"
+
+#include <ShaderLib:/random.glsl>
+
+#if STATISTICS_USE_RANDOM_SAMPLES
+#ifndef LOCAL_SIZE_X
+#define LOCAL_SIZE_X 128
+#endif
+#ifndef LOCAL_SIZE_Y
+#define LOCAL_SIZE_Y 1
+#endif
+#else 
+#ifndef LOCAL_SIZE_X
+#define LOCAL_SIZE_X 16
+#endif
+#ifndef LOCAL_SIZE_Y
+#define LOCAL_SIZE_Y 8
+#endif
+#endif
+
+
+layout(local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y) in;
+
+void main()
+{
+	const uint num_functions = gl_NumWorkGroups.z;
+	const uvec2 num_wgs = gl_NumWorkGroups.xy;
+	const uvec2 num_threads = num_wgs * uvec2(LOCAL_SIZE_X, LOCAL_SIZE_Y);
+	const uvec2 lid = gl_LocalInvocationID.xy;
+	const uint local_linear_thread_id = lid.y * LOCAL_SIZE_X + lid.x;
+	const uvec2 wid = gl_WorkGroupID.xy;
+	const uvec3 gid3 = gl_GlobalInvocationID;
+	const uint function_index = gid3.z;
+	const uvec2 gid = gid3.xy;
+
+	float intensity = 0.0f;
+	float ref_intensity = 0.0f;
+	float pdf = 1.0f;
+
+	const vec3 wo = ubo.direction;
+
+#if STATISTICS_USE_RANDOM_SAMPLES
+	rng_t rng = hash(gid) ^ ubo.seed;
+
+	vec3 sampled_dir;
+	pdf = 0.0f;
+
+#if DEFAULT_IMPORTANCE_SAMPLING_METHOD == IMPORTANCE_SAMPLING_METHOD_UNIFORM
+
+#elif DEFAULT_IMPORTANCE_SAMPLING_METHOD == IMPORTANCE_SAMPLING_METHOD_COSINE
+	sampled_dir = randomCosineDirOnHemisphere(rng).xzy;
+	pdf = sampled_dir.y / M_PI;
+#endif
+
+	intensity = EvaluateSphericalFunction(function_index, wo, sampled_dir);
+	ref_intensity = EvaluateSphericalFunction(ubo.reference_function, wo, sampled_dir);
+	
+#else 
+
+	const vec2 thread_uv = vec2(gid) + 0.5.xx / vec2(num_threads);
+	const vec2 theta_phi = thread_uv * vec2(M_PI, TWO_PI);
+	const vec3 wi = SphericalToCartesian(theta_phi);
+
+	intensity = EvaluateSphericalFunction(function_index, wo, wi);
+	ref_intensity = EvaluateSphericalFunction(ubo.reference_function, wo, wi);
+#endif	
+
+	if(pdf > 0.0f)
+	{
+
+		float diff = sqr(intensity - ref_intensity);
+		atomicAdd(_statistics.stats[function_index].integral, intensity / pdf);
+		atomicAdd(_statistics.stats[function_index].variance_with_reference, diff / pdf);
+
+	}
+}

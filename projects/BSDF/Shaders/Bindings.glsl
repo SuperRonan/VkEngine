@@ -13,6 +13,9 @@ layout(BSDF_BINDING_BASE + 0) uniform UBO
 
 	vec3 direction;
 	float common_alpha;
+
+	uint reference_function;
+	uint seed;
 } ubo;
 
 #ifndef BSDF_COLOR_ACCESS
@@ -56,3 +59,27 @@ layout(BSDF_BINDING_BASE + 2, BSDF_IMAGE_FORMAT) uniform restrict image2DArray b
 #ifndef BSDF_RENDER_USE_TEXTURE
 #define BSDF_RENDER_USE_TEXTURE 0
 #endif
+
+#define IMPORTANCE_SAMPLING_METHOD_UNIFORM 0
+#define IMPORTANCE_SAMPLING_METHOD_COSINE 1
+
+#ifndef DEFAULT_IMPORTANCE_SAMPLING_METHOD
+#define DEFAULT_IMPORTANCE_SAMPLING_METHOD IMPORTANCE_SAMPLING_METHOD_COSINE
+#endif
+
+#ifndef STATISTICS_BUFFER_ACCESS 
+#define STATISTICS_BUFFER_ACCESS readonly
+#endif
+
+struct FunctionStatistics
+{
+	float integral;
+	float variance_with_reference;
+	float pad1, pad2;
+};
+
+layout(BSDF_BINDING_BASE + 3) restrict STATISTICS_BUFFER_ACCESS buffer StatisticsBufferBinding
+{
+	FunctionStatistics stats[];
+} _statistics;
+
