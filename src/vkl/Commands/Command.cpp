@@ -16,6 +16,7 @@ namespace vkl
 		while (!_in_use_nodes.empty())
 		{
 			std::shared_ptr<ExecutionNode> & n = _in_use_nodes.front();
+			assert(!!n);
 			if (n->isInUse())
 			{
 				break;
