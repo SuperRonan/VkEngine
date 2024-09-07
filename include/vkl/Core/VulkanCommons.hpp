@@ -254,6 +254,9 @@ namespace vkl
 		VkPhysicalDevicePresentIdFeaturesKHR present_id_khr = {};
 		VkPhysicalDevicePresentWaitFeaturesKHR present_wait_khr = {};
 
+		VkPhysicalDeviceShaderAtomicFloatFeaturesEXT shader_atomic_float_ext = {};
+		VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT shader_atomic_float_2_ext = {};
+
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_khr = {};
 		VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT multisampled_render_to_single_sampled_ext = {};
 		VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT subpass_merge_feedback = {};

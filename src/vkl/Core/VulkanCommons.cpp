@@ -33,6 +33,9 @@ namespace vkl
 		present_id_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
 		present_wait_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR;
 
+		shader_atomic_float_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
+		shader_atomic_float_2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_2_FEATURES_EXT;
+
 		fragment_shading_rate_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
 		multisampled_render_to_single_sampled_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_FEATURES_EXT;
 		subpass_merge_feedback.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBPASS_MERGE_FEEDBACK_FEATURES_EXT;
@@ -68,6 +71,11 @@ namespace vkl
 			chain += &present_id_khr;
 		if(filter_extensions(VK_KHR_PRESENT_WAIT_EXTENSION_NAME))
 			chain += &present_wait_khr;
+
+		if(filter_extensions(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME))
+			chain += &shader_atomic_float_ext;
+		if(filter_extensions(VK_EXT_SHADER_ATOMIC_FLOAT_2_EXTENSION_NAME))
+			chain += &shader_atomic_float_2_ext;
 
 		if(filter_extensions(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
 			chain += &fragment_shading_rate_khr;
@@ -196,6 +204,9 @@ namespace vkl
 		COMBINE_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
 		COMBINE_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
 		COMBINE_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
+
+		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloatFeaturesEXT, shader_atomic_float_ext, shaderBufferFloat32Atomics, sparseImageFloat32AtomicAdd);
+		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT, shader_atomic_float_2_ext, shaderBufferFloat16Atomics, sparseImageFloat32AtomicMinMax);
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
