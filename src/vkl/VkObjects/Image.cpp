@@ -21,8 +21,8 @@ namespace vkl
 
 	void ImageInstance::setInitialState(size_t tid)
 	{
-		_states[0] = InternalStates();
-		InternalStates &is = _states[0];
+		_states[tid] = InternalStates();
+		InternalStates &is = _states[tid];
 
 		is.states.resize(_ci.mipLevels);
 		for (size_t m = 0; m < is.states.size(); ++m)
