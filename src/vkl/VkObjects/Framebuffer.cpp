@@ -117,6 +117,7 @@ namespace vkl
 		{
 			_attachments[i]->removeInvalidationCallback(this);
 		}
+		_attachments.clear();
 	}
 
 	bool Framebuffer::updateResources(UpdateContext & ctx)
