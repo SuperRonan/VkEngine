@@ -256,6 +256,7 @@ namespace vkl
 
 		VkPhysicalDeviceShaderAtomicFloatFeaturesEXT shader_atomic_float_ext = {};
 		VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT shader_atomic_float_2_ext = {};
+		VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT shader_image_atomic_int64_ext = {};
 
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_khr = {};
 		VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT multisampled_render_to_single_sampled_ext = {};

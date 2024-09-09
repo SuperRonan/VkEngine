@@ -76,6 +76,8 @@ namespace vkl
 			chain += &shader_atomic_float_ext;
 		if(filter_extensions(VK_EXT_SHADER_ATOMIC_FLOAT_2_EXTENSION_NAME))
 			chain += &shader_atomic_float_2_ext;
+		if(filter_extensions(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME))
+			chain += &shader_image_atomic_int64_ext;
 
 		if(filter_extensions(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
 			chain += &fragment_shading_rate_khr;
@@ -207,6 +209,7 @@ namespace vkl
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloatFeaturesEXT, shader_atomic_float_ext, shaderBufferFloat32Atomics, sparseImageFloat32AtomicAdd);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT, shader_atomic_float_2_ext, shaderBufferFloat16Atomics, sparseImageFloat32AtomicMinMax);
+		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT, shader_image_atomic_int64_ext, shaderImageInt64Atomics, sparseImageInt64Atomics);
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
@@ -280,6 +283,10 @@ namespace vkl
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
 		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
 		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
+
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloatFeaturesEXT, shader_atomic_float_ext, shaderBufferFloat32Atomics, sparseImageFloat32AtomicAdd);
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT, shader_atomic_float_2_ext, shaderBufferFloat16Atomics, sparseImageFloat32AtomicMinMax);
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT, shader_image_atomic_int64_ext, shaderImageInt64Atomics, sparseImageInt64Atomics);
 
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
