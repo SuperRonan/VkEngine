@@ -1,5 +1,7 @@
 #include <vkl/Execution/ResourcesManager.hpp>
 
+#include <ShaderLib/Vulkan/ShaderAtomicFlags.h>
+
 namespace vkl
 {
 
@@ -40,6 +42,7 @@ namespace vkl
 		const auto tod = [](VkBool32 b) {
 			return b ? "1" : "0";
 		};
+		
 
 		_common_definitions->setDefinition("SHADER_DEVICE_TYPE", std::to_string(props.props2.properties.deviceType));
 		_common_definitions->setDefinition("SHADER_DEVICE_ID", std::to_string(props.props2.properties.deviceID));
@@ -112,6 +115,73 @@ namespace vkl
 		_common_definitions->setDefinition("SHADER_MESH_PREFERS_COMPACT_VERTEX_OUTPUT", tod(props.mesh_shader_ext.prefersCompactVertexOutput));
 		_common_definitions->setDefinition("SHADER_MESH_PREFERS_LOCAL_INVOCATION_PRIMITIVE_OUTPUT", tod(props.mesh_shader_ext.prefersLocalInvocationPrimitiveOutput));
 		_common_definitions->setDefinition("SHADER_MESH_PREFERS_LOCAL_INVOCATION_VERTEX_OUTPUT", tod(props.mesh_shader_ext.prefersLocalInvocationVertexOutput));
+
+
+		_common_definitions->setDefinition("SHADER_GEOMETRY_PROCESSING_STAGES_STORES_AND_ATOMICS", tod(features.features2.features.vertexPipelineStoresAndAtomics));
+		_common_definitions->setDefinition("SHADER_FRAGMENT_STORES_AND_ATOMICS", tod(features.features2.features.fragmentStoresAndAtomics));
+
+		_common_definitions->setDefinition("SHADER_BUFFER_INT64_ATOMICS", tod(features.features_12.shaderBufferInt64Atomics));
+		_common_definitions->setDefinition("SHADER_SHARED_INT64_ATOMICS", tod(features.features_12.shaderSharedInt64Atomics));
+		_common_definitions->setDefinition("SHADER_IMAGE_INT64_ATOMICS", tod(features.shader_image_atomic_int64_ext.shaderImageInt64Atomics));
+		_common_definitions->setDefinition("SHADER_SPARSE_IMAGE_INT64_ATOMICS", tod(features.shader_image_atomic_int64_ext.sparseImageInt64Atomics));
+
+		uint32_t atomic_float_16_flags = 0;
+		uint32_t atomic_float_32_flags = 0;
+		uint32_t atomic_float_64_flags = 0;
+		if(features.shader_atomic_float_ext.shaderBufferFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, BUFFER);
+		if(features.shader_atomic_float_ext.shaderBufferFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, BUFFER);
+		if(features.shader_atomic_float_ext.shaderBufferFloat64Atomics)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, BUFFER);
+		if(features.shader_atomic_float_ext.shaderBufferFloat64AtomicAdd)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, BUFFER);
+		if(features.shader_atomic_float_ext.shaderSharedFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SHARED_MEMORY);
+		if(features.shader_atomic_float_ext.shaderSharedFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SHARED_MEMORY);
+		if(features.shader_atomic_float_ext.shaderSharedFloat64Atomics)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SHARED_MEMORY);
+		if(features.shader_atomic_float_ext.shaderSharedFloat64AtomicAdd)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SHARED_MEMORY);
+		if(features.shader_atomic_float_ext.shaderImageFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, IMAGE);
+		if(features.shader_atomic_float_ext.shaderImageFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, IMAGE);
+		if(features.shader_atomic_float_ext.sparseImageFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SPARSE_IMAGE);
+		if(features.shader_atomic_float_ext.sparseImageFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SPARSE_IMAGE);
+		
+		if(features.shader_atomic_float_2_ext.shaderBufferFloat16Atomics)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, BUFFER);
+		if(features.shader_atomic_float_2_ext.shaderBufferFloat16AtomicAdd)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, BUFFER);
+		if(features.shader_atomic_float_2_ext.shaderBufferFloat16AtomicMinMax)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, BUFFER);
+		if(features.shader_atomic_float_2_ext.shaderBufferFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, BUFFER);
+		if(features.shader_atomic_float_2_ext.shaderBufferFloat64AtomicMinMax)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, BUFFER);
+		if(features.shader_atomic_float_2_ext.shaderSharedFloat16Atomics)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SHARED_MEMORY);
+		if(features.shader_atomic_float_2_ext.shaderSharedFloat16AtomicAdd)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SHARED_MEMORY);
+		if(features.shader_atomic_float_2_ext.shaderSharedFloat16AtomicMinMax)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SHARED_MEMORY);
+		if(features.shader_atomic_float_2_ext.shaderSharedFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SHARED_MEMORY);
+		if(features.shader_atomic_float_2_ext.shaderSharedFloat64AtomicMinMax)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SHARED_MEMORY);
+		if(features.shader_atomic_float_2_ext.shaderImageFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, IMAGE);
+		if(features.shader_atomic_float_2_ext.sparseImageFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SPARSE_IMAGE);
+		
+		_common_definitions->setDefinition("SHADER_ATOMIC_FLOAT_16_FLAGS", std::to_string(atomic_float_16_flags));
+		_common_definitions->setDefinition("SHADER_ATOMIC_FLOAT_32_FLAGS", std::to_string(atomic_float_32_flags));
+		_common_definitions->setDefinition("SHADER_ATOMIC_FLOAT_64_FLAGS", std::to_string(atomic_float_64_flags));
+		
 	}
 
 

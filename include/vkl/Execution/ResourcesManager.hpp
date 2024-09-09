@@ -18,6 +18,8 @@ namespace vkl
 		std::chrono::time_point<_shader_clock_t> _last_shader_check;
 		std::chrono::milliseconds _shader_check_period;
 
+		// TODO separate device life-time constant definitions
+		// and other possibly non const definitions
 		std::unique_ptr<DefinitionsMap> _common_definitions;
 
 		std::unique_ptr<MountingPoints> _mounting_points;
