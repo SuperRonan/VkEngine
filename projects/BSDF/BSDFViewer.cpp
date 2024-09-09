@@ -403,7 +403,7 @@ namespace vkl
 			bool changed = ImGui::InputInt("Number of functions", &n);
 			if (changed)
 			{
-				_num_functions.setValue(n);
+				_num_functions.setValue(std::max(n, 0));
 				_generate_statistics |= true;
 			}
 		}
