@@ -72,7 +72,7 @@ AddExec(Test)
 AddExec(Renderer DEPENDENCIES RenderLib)
 AddExec(BSDF DEPENDENCIES RenderLib)
 
-set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/\"")
+set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/ShaderLib/\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen/\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${PROJECTS_FOLDER}\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"RenderLibShaders\" \"${PROJECTS_FOLDER}RenderLib/Shaders/\"")

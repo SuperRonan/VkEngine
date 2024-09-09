@@ -1,6 +1,6 @@
 #pragma once
 
-#define BIT_MASK(n) ((1 << n) - 1)
+#include "core.glsl"
 
 #ifndef COMMON_DESCRIPTOR_BINDING
 #define COMMON_DESCRIPTOR_BINDING set = 0, binding = 0
