@@ -677,7 +677,7 @@ namespace vkl
 						result.error_title = "DescriptorSet Binding Resolution Error"s;
 						result.error_message += 
 							"In DescriptorSet "s + name() + ":\n"s +
-							"Layout: "s + _layout->name() + "\n"s +
+							"Layout: "s + layout->name() + "\n"s +
 							"Could not resolve Binding \""s + meta.name + "\", (set = "s + std::to_string(_target_set) + ", binding = "s + std::to_string(vkb.binding) + ")\n"s;
 					}
 				}
