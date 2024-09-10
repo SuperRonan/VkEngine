@@ -571,13 +571,13 @@ namespace vkl
 		if (result != VK_SUCCESS)
 		{
 			_creation_result = AsynchTask::ReturnType{
-					.success = false,
-					.can_retry = true,
-					.error_title = "Shader Compilation Error: "s,
-					.error_message =
-						"Error while creating VkShaderModule: \n"s +
-						"Main Shader: "s + _main_path.string() + ":\n"s
-						"Error code: "s + std::to_string(result),
+				.success = false,
+				.can_retry = true,
+				.error_title = "Shader Compilation Error: "s,
+				.error_message =
+					"Error while creating VkShaderModule: \n"s +
+					"Main Shader: "s + _main_path.string() + ":\n"s
+					"Error code: "s + std::to_string(result),
 			};
 			return false;
 		}
@@ -605,6 +605,7 @@ namespace vkl
 
 		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
 		DefinitionsList defines = { semantic_definition };
+		defines += application()->commonShaderDefinitions().collapsed();
 		defines += ci.definitions;
 
 		_preprocessed_source = preprocess(ci.source_path, defines, ci.mounting_points);
@@ -695,7 +696,7 @@ namespace vkl
 				.name = "Compiling shader " + _path.string(),
 				.verbosity = AsynchTask::Verbosity::Medium,
 				.priority = TaskPriority::ASAP(),
-				.lambda = [this, definitions, mounting_points, string_packed_capacity, lkey]() {
+				.lambda = [this, definitions = std::move(definitions), mounting_points, string_packed_capacity, lkey]() {
 
 					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 						.app = application(),
@@ -793,7 +794,7 @@ namespace vkl
 				if(!capacity.empty())
 				{	
 					// TODO use a better function that checks the result and can parse hex
-					uint32_t u = std::atoi(capacity.c_str());
+					packed_capcity = std::atoi(capacity.c_str());
 				}
 				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
 				res = true;

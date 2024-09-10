@@ -18,6 +18,8 @@
 
 #include <vkl/Execution/ThreadPool.hpp>
 
+#include <vkl/Execution/DefinitionMap.hpp>
+
 
 namespace argparse
 {
@@ -209,6 +211,10 @@ namespace vkl
 		std::unique_ptr<TextureFileCache> _texture_file_cache = nullptr;
 
 		std::unique_ptr<PrebuilTransferCommands> _prebuilt_transfer_commands = nullptr;
+
+		DefinitionsMap _common_shader_definitions = {};
+
+		void fillCommonShaderDefinitions();
 
 		MountingPoints _mounting_points;
 
@@ -424,6 +430,11 @@ namespace vkl
 		{
 			assert(_prebuilt_transfer_commands);
 			return *_prebuilt_transfer_commands;
+		}
+
+		const DefinitionsMap& commonShaderDefinitions() const
+		{
+			return _common_shader_definitions;
 		}
 
 		MountingPoints& mountingPoints()

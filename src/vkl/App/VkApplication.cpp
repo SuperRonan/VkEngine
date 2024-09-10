@@ -16,6 +16,8 @@
 
 #include <argparse/argparse.hpp>
 
+#include <ShaderLib/Vulkan/ShaderAtomicFlags.h>
+
 #include <exception>
 #include <set>
 #include <limits>
@@ -810,6 +812,158 @@ namespace vkl
 
 	}
 
+	void VkApplication::fillCommonShaderDefinitions()
+	{
+		VulkanFeatures const& features = availableFeatures();
+		VulkanDeviceProps const& props = deviceProperties();
+
+		const auto tod = [](VkBool32 b) {
+			return b ? "1" : "0";
+			};
+
+		DefinitionsMap & defs = _common_shader_definitions;
+
+		defs.setDefinition("SHADER_DEVICE_TYPE", std::to_string(props.props2.properties.deviceType));
+		defs.setDefinition("SHADER_DEVICE_ID", std::to_string(props.props2.properties.deviceID));
+		defs.setDefinition("SHADER_VENDOR_ID", std::to_string(props.props2.properties.vendorID));
+		defs.setDefinition("SHADER_VK_API_VERSION", std::to_string(props.props2.properties.apiVersion));
+		defs.setDefinition("SHADER_DRIVER_VERSION", std::to_string(props.props2.properties.driverVersion));
+		defs.setDefinition("SHADER_DRIVER_ID", std::to_string(props.props_12.driverID));
+
+		defs.setDefinition("SHADER_MAX_BOUND_DESCRIPTOR_SETS", std::to_string(props.props2.properties.limits.maxBoundDescriptorSets));
+		defs.setDefinition("SHADER_MAX_PUSH_CONSTANT_SIZE", std::to_string(props.props2.properties.limits.maxPushConstantsSize));
+
+		defs.setDefinition("SHADER_STORAGE_IMAGE_READ_WITHOUT_FORMAT", tod(features.features2.features.shaderStorageImageReadWithoutFormat));
+		defs.setDefinition("SHADER_STORAGE_IMAGE_WRITE_WITHOUT_FORMAT", tod(features.features2.features.shaderStorageImageWriteWithoutFormat));
+		defs.setDefinition("SHADER_IMAGE_GATHER_EXTENDED", tod(features.features2.features.shaderImageGatherExtended));
+		defs.setDefinition("SHADER_STORAGE_IMAGE_EXTENDED_FORMATS", tod(features.features2.features.shaderStorageImageExtendedFormats));
+		defs.setDefinition("SHADER_STORAGE_IMAGE_MULTISAMPLE", tod(features.features2.features.shaderStorageImageMultisample));
+
+		defs.setDefinition("SHADER_CLIP_DISTANCE_AVAILABLE", tod(features.features2.features.shaderClipDistance));
+		defs.setDefinition("SHADER_CULL_DISTANCE_AVAILABLE", tod(features.features2.features.shaderCullDistance));
+		defs.setDefinition("SHADER_FP64_AVAILABLE", tod(features.features2.features.shaderFloat64));
+		defs.setDefinition("SHADER_INT64_AVAILABLE", tod(features.features2.features.shaderInt64));
+		defs.setDefinition("SHADER_INT16_AVAILABLE", tod(features.features2.features.shaderInt16));
+
+		defs.setDefinition("SHADER_POINT_SIZE_RANGE_MIN", std::to_string(props.props2.properties.limits.pointSizeRange[0]));
+		defs.setDefinition("SHADER_POINT_SIZE_RANGE_MAX", std::to_string(props.props2.properties.limits.pointSizeRange[1]));
+		defs.setDefinition("SHADER_POINT_SIZE_GRANULARITY", std::to_string(props.props2.properties.limits.pointSizeGranularity));
+		defs.setDefinition("SHADER_LINE_WIDTH_RANGE_MIN", std::to_string(props.props2.properties.limits.lineWidthRange[0]));
+		defs.setDefinition("SHADER_LINE_WIDTH_RANGE_MAX", std::to_string(props.props2.properties.limits.lineWidthRange[1]));
+		defs.setDefinition("SHADER_LINE_WIDTH_GRANULARITY", std::to_string(props.props2.properties.limits.lineWidthGranularity));
+
+		defs.setDefinition("SHADER_MAX_FRAGMENT_OUTPUT_ATTACHMENTS", std::to_string(props.props2.properties.limits.maxFragmentOutputAttachments));
+
+		defs.setDefinition("SHADER_GEOMETRY_AVAILABLE", tod(features.features2.features.geometryShader));
+		defs.setDefinition("SHADER_MAX_GEOMETRY_INPUT_COMPONENTS", std::to_string(props.props2.properties.limits.maxGeometryInputComponents));
+		defs.setDefinition("SHADER_MAX_GEOMETRY_OUTPUT_COMPONENTS", std::to_string(props.props2.properties.limits.maxGeometryOutputComponents));
+		defs.setDefinition("SHADER_MAX_GEOMETRY_OUTPUT_VERTICES", std::to_string(props.props2.properties.limits.maxGeometryOutputVertices));
+		defs.setDefinition("SHADER_MAX_GEOMETRY_SHADER_INVOCATIONS", std::to_string(props.props2.properties.limits.maxGeometryShaderInvocations));
+		defs.setDefinition("SHADER_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS", std::to_string(props.props2.properties.limits.maxGeometryTotalOutputComponents));
+
+		defs.setDefinition("SHADER_TESSELATION_AVAILABLE", tod(features.features2.features.tessellationShader));
+
+		defs.setDefinition("SHADER_FP16_AVAILABLE", tod(features.features_12.shaderFloat16));
+		defs.setDefinition("SHADER_SSBO_16BITS_ACCESS", tod(features.features_11.storageBuffer16BitAccess));
+
+		defs.setDefinition("SHADER_MAX_COMPUTE_WORKGROUP_SUBGROUPS", std::to_string(props.props_13.maxComputeWorkgroupSubgroups));
+		defs.setDefinition("SHADER_MAX_COMPUTE_LOCAL_SIZE", std::to_string(props.props2.properties.limits.maxComputeWorkGroupInvocations));
+		defs.setDefinition("SHADER_MAX_COMPUTE_LOCAL_SIZE_X", std::to_string(props.props2.properties.limits.maxComputeWorkGroupSize[0]));
+		defs.setDefinition("SHADER_MAX_COMPUTE_LOCAL_SIZE_Y", std::to_string(props.props2.properties.limits.maxComputeWorkGroupSize[1]));
+		defs.setDefinition("SHADER_MAX_COMPUTE_LOCAL_SIZE_Z", std::to_string(props.props2.properties.limits.maxComputeWorkGroupSize[2]));
+
+		defs.setDefinition("SHADER_RAY_QUERY_AVAILABLE", tod(features.ray_query_khr.rayQuery));
+		defs.setDefinition("SHADER_RAY_TRACING_AVAILABLE", tod(features.ray_tracing_pipeline_khr.rayTracingPipeline));
+		defs.setDefinition("SHADER_RAY_TRACING_MAX_RAY_HIT_ATTRIBUTE_SIZE", std::to_string(props.ray_tracing_pipeline_khr.maxRayHitAttributeSize));
+		defs.setDefinition("SHADER_RAY_TRACING_MAX_RAY_RECURSION_DEPTH", std::to_string(props.ray_tracing_pipeline_khr.maxRayRecursionDepth));
+		defs.setDefinition("SHADER_RAY_TRACING_INVOCATION_REORDER_AVAILABLE", tod(features.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorder));
+		defs.setDefinition("SHADER_RAY_TRACING_INVOCATION_REORDER_REORDERING_HINT", std::to_string(props.ray_tracing_invocation_reorder_nv.rayTracingInvocationReorderReorderingHint));
+		defs.setDefinition("SHADER_RAY_TRACING_POSITION_FETCH_AVAILABLE", tod(features.ray_tracing_position_fetch_khr.rayTracingPositionFetch));
+
+		defs.setDefinition("SHADER_SUBGROUP_SIZE", std::to_string(props.props_11.subgroupSize));
+		defs.setDefinition("SHADER_SUBGROUP_SUPPORTED_OPERATIONS", std::to_string(props.props_11.subgroupSupportedOperations));
+		defs.setDefinition("SHADER_SUBGROUP_SUPPORTED_STAGES", std::to_string(props.props_11.subgroupSupportedStages));
+
+		defs.setDefinition("SHADER_MAX_TASK_LOCAL_SIZE", std::to_string(props.mesh_shader_ext.maxTaskWorkGroupInvocations));
+		defs.setDefinition("SHADER_MAX_PREFERED_TASK_LOCAL_SIZE", std::to_string(props.mesh_shader_ext.maxPreferredTaskWorkGroupInvocations));
+		defs.setDefinition("SHADER_MAX_MESH_LOCAL_SIZE", std::to_string(props.mesh_shader_ext.maxMeshWorkGroupInvocations));
+		defs.setDefinition("SHADER_MAX_PREFERED_MESH_LOCAL_SIZE", std::to_string(props.mesh_shader_ext.maxPreferredMeshWorkGroupInvocations));
+		defs.setDefinition("SHADER_MESH_OUTPUT_PER_PRIMITIVE_GRANULARITY", std::to_string(props.mesh_shader_ext.meshOutputPerPrimitiveGranularity));
+		defs.setDefinition("SHADER_MESH_OUTPUT_PER_VERTEX_GRANULARITY", std::to_string(props.mesh_shader_ext.meshOutputPerVertexGranularity));
+		defs.setDefinition("SHADER_MESH_PREFERS_COMPACT_PRIMITIVE_OUTPUT", tod(props.mesh_shader_ext.prefersCompactPrimitiveOutput));
+		defs.setDefinition("SHADER_MESH_PREFERS_COMPACT_VERTEX_OUTPUT", tod(props.mesh_shader_ext.prefersCompactVertexOutput));
+		defs.setDefinition("SHADER_MESH_PREFERS_LOCAL_INVOCATION_PRIMITIVE_OUTPUT", tod(props.mesh_shader_ext.prefersLocalInvocationPrimitiveOutput));
+		defs.setDefinition("SHADER_MESH_PREFERS_LOCAL_INVOCATION_VERTEX_OUTPUT", tod(props.mesh_shader_ext.prefersLocalInvocationVertexOutput));
+
+
+		defs.setDefinition("SHADER_GEOMETRY_PROCESSING_STAGES_STORES_AND_ATOMICS", tod(features.features2.features.vertexPipelineStoresAndAtomics));
+		defs.setDefinition("SHADER_FRAGMENT_STORES_AND_ATOMICS", tod(features.features2.features.fragmentStoresAndAtomics));
+
+		defs.setDefinition("SHADER_BUFFER_INT64_ATOMICS", tod(features.features_12.shaderBufferInt64Atomics));
+		defs.setDefinition("SHADER_SHARED_INT64_ATOMICS", tod(features.features_12.shaderSharedInt64Atomics));
+		defs.setDefinition("SHADER_IMAGE_INT64_ATOMICS", tod(features.shader_image_atomic_int64_ext.shaderImageInt64Atomics));
+		defs.setDefinition("SHADER_SPARSE_IMAGE_INT64_ATOMICS", tod(features.shader_image_atomic_int64_ext.sparseImageInt64Atomics));
+
+		uint32_t atomic_float_16_flags = 0;
+		uint32_t atomic_float_32_flags = 0;
+		uint32_t atomic_float_64_flags = 0;
+		if (features.shader_atomic_float_ext.shaderBufferFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, BUFFER);
+		if (features.shader_atomic_float_ext.shaderBufferFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, BUFFER);
+		if (features.shader_atomic_float_ext.shaderBufferFloat64Atomics)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, BUFFER);
+		if (features.shader_atomic_float_ext.shaderBufferFloat64AtomicAdd)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, BUFFER);
+		if (features.shader_atomic_float_ext.shaderSharedFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SHARED_MEMORY);
+		if (features.shader_atomic_float_ext.shaderSharedFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SHARED_MEMORY);
+		if (features.shader_atomic_float_ext.shaderSharedFloat64Atomics)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SHARED_MEMORY);
+		if (features.shader_atomic_float_ext.shaderSharedFloat64AtomicAdd)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SHARED_MEMORY);
+		if (features.shader_atomic_float_ext.shaderImageFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, IMAGE);
+		if (features.shader_atomic_float_ext.shaderImageFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, IMAGE);
+		if (features.shader_atomic_float_ext.sparseImageFloat32Atomics)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SPARSE_IMAGE);
+		if (features.shader_atomic_float_ext.sparseImageFloat32AtomicAdd)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SPARSE_IMAGE);
+
+		if (features.shader_atomic_float_2_ext.shaderBufferFloat16Atomics)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, BUFFER);
+		if (features.shader_atomic_float_2_ext.shaderBufferFloat16AtomicAdd)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, BUFFER);
+		if (features.shader_atomic_float_2_ext.shaderBufferFloat16AtomicMinMax)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, BUFFER);
+		if (features.shader_atomic_float_2_ext.shaderBufferFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, BUFFER);
+		if (features.shader_atomic_float_2_ext.shaderBufferFloat64AtomicMinMax)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, BUFFER);
+		if (features.shader_atomic_float_2_ext.shaderSharedFloat16Atomics)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(XCHG, SHARED_MEMORY);
+		if (features.shader_atomic_float_2_ext.shaderSharedFloat16AtomicAdd)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(ADD, SHARED_MEMORY);
+		if (features.shader_atomic_float_2_ext.shaderSharedFloat16AtomicMinMax)
+			atomic_float_16_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SHARED_MEMORY);
+		if (features.shader_atomic_float_2_ext.shaderSharedFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SHARED_MEMORY);
+		if (features.shader_atomic_float_2_ext.shaderSharedFloat64AtomicMinMax)
+			atomic_float_64_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SHARED_MEMORY);
+		if (features.shader_atomic_float_2_ext.shaderImageFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, IMAGE);
+		if (features.shader_atomic_float_2_ext.sparseImageFloat32AtomicMinMax)
+			atomic_float_32_flags |= SHADER_ATOMIC_FLOAT_BIT(MIN_MAX, SPARSE_IMAGE);
+
+		defs.setDefinition("SHADER_ATOMIC_FLOAT_16_FLAGS", std::to_string(atomic_float_16_flags));
+		defs.setDefinition("SHADER_ATOMIC_FLOAT_32_FLAGS", std::to_string(atomic_float_32_flags));
+		defs.setDefinition("SHADER_ATOMIC_FLOAT_64_FLAGS", std::to_string(atomic_float_64_flags));
+
+		defs.update();
+	}
+
 	std::shared_ptr<DescriptorSetLayoutInstance> VkApplication::getEmptyDescSetLayout()
 	{
 		std::unique_lock lock(_mutex);
@@ -922,6 +1076,8 @@ namespace vkl
 		createLogicalDevice();
 		createAllocator();
 		createCommandPools();
+
+		fillCommonShaderDefinitions();
 
 		_sampler_library = std::make_unique<SamplerLibrary>(SamplerLibrary::CI{
 			.app = this,
