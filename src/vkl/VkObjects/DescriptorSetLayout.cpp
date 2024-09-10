@@ -15,7 +15,7 @@ namespace vkl
 			.pBindings = _bindings.data(),
 		};
 		VkDescriptorSetLayoutBindingFlagsCreateInfo bindings_flags_ci;
-		std::vector<VkDescriptorBindingFlags> bindings_flags;
+		MyVector<VkDescriptorBindingFlags> bindings_flags;
 
 		if (ci.binding_flags)
 		{
@@ -33,10 +33,10 @@ namespace vkl
 
 			_binding_flags = common_bindings_flags;
 
-			bindings_flags = std::vector<VkDescriptorBindingFlags>(_bindings.size(), 0);
+			bindings_flags = MyVector<VkDescriptorBindingFlags>(_bindings.size(), 0);
 			for (size_t i = 0; i < _bindings.size(); ++i)
 			{
-				VkDescriptorBindingFlags binding_flags = common_bindings_flags;
+				VkDescriptorBindingFlags binding_flags = common_bindings_flags | _metas[i].flags;
 				bool remove_update_after_bind = false;
 				switch (_bindings[i].descriptorType)
 				{

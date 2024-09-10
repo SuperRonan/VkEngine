@@ -17,6 +17,7 @@ namespace vkl
 			std::string name = {};
 			VkAccessFlags2 access = VK_ACCESS_NONE_KHR;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_MAX_ENUM;
+			VkDescriptorBindingFlags flags = 0;
 			VkFlags64 usage = 0;
 		};
 
@@ -111,6 +112,7 @@ namespace vkl
 			VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
 			Dyn<uint32_t> count = {};
 			VkShaderStageFlags stages = 0;
+			VkDescriptorBindingFlags flags = 0;
 			//std::vector<std::shared_ptr<Sampler>> immutable_samplers = {}; // TODO
 			VkAccessFlagBits2 access = VK_ACCESS_2_NONE;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -133,6 +135,7 @@ namespace vkl
 					.name = name,
 					.access = access,
 					.layout = layout,
+					.flags = flags,
 					.usage = usage,
 				};
 				return res;
