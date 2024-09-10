@@ -2,6 +2,8 @@
 
 #include "core.glsl"
 
+#define NonUniformEXT(X) nonuniformEXT(X)
+
 #ifndef COMMON_DESCRIPTOR_BINDING
 #define COMMON_DESCRIPTOR_BINDING set = 0, binding = 0
 #endif
