@@ -5,7 +5,7 @@
 #define BIND_SCENE 1
 #include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
-layout(SHADER_DESCRIPTOR_BINDING + 1) buffer restrict readonly ModelIndexBuffer
+layout(SHADER_DESCRIPTOR_BINDING + 0) buffer restrict readonly ModelIndexBuffer
 {
 	uint index[];
 } model_indices;

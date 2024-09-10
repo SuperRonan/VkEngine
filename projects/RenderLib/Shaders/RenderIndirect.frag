@@ -57,24 +57,33 @@ void main()
 
 	const vec2 uv = v_uv;
 	const vec3 position = v_w_position; 
-	const vec3 albedo = readAlbedo(material_props, textures.albedo_texture_id, v_uv);
 	const vec3 a_normal = normalize(v_w_normal);
-	vec3 normal = a_normal;
+	const vec3 normal = a_normal;
 	vec3 tangent = safeNormalize(v_w_tangent);
 	tangent = safeNormalize(tangent - dot(tangent, normal) * normal);
 	const vec3 bi_tangent = cross(tangent, normal);
-	
-	if((material_props.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0 && textures.normal_texture_id != -1)
+
+	GeometryShadingInfo geom;
+	geom.position = position;
+	geom.vertex_shading_normal = normal;
+	geom.geometry_normal = geom.vertex_shading_normal;
+	geom.shading_normal = geom.vertex_shading_normal;
+	geom.shading_tangent = tangent;
+
+	PBMaterialData material = readMaterial(material_id, uv);
+
+	if(material.normal.z != 0)
 	{
 		const mat3 TBN = mat3(tangent, bi_tangent, normal);
-		vec3 tex_normal = vec3(0.5, 0.5, 1);
-		tex_normal = texture(SceneTextures2D[textures.normal_texture_id], uv).xyz;
-		tex_normal = normalize(tex_normal * 2.0 - 1);
-		normal = TBN * tex_normal;
+		geom.shading_normal = TBN * material.normal;
 	}
 
-	vec3 res = shade(albedo, position, normal);
-	res += albedo * scene_ubo.ambient;
+	const vec3 camera_position = (inverse(ubo.world_to_camera) * vec4(0..xxx, 1)).xyz;
+	const vec3 wo = normalize(camera_position - position);
+
+	vec3 res = shade(geom, wo, material);
+	
+	res += material.albedo * scene_ubo.ambient;
 
 	o_color = vec4(res, 1);
 }

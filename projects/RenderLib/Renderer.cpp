@@ -90,6 +90,34 @@ namespace vkl
 		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
 		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
 
+		{
+			MyVector<DescriptorSetLayout::Binding> layout_bindings;
+
+			layout_bindings += DescriptorSetLayout::Binding{
+				.binding = 0,
+				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.stages = VK_SHADER_STAGE_ALL,
+				.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			};
+
+			layout_bindings += DescriptorSetLayout::Binding{
+				.binding = 1,
+				.type = VK_DESCRIPTOR_TYPE_SAMPLER,
+				.stages = VK_SHADER_STAGE_ALL,
+			};
+
+			_set_layout = std::make_shared<DescriptorSetLayout>(DescriptorSetLayout::CI{
+				.app = application(),
+				.name = name() + ".SetLayout",
+				.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
+				.is_dynamic = false,
+				.bindings = std::move(layout_bindings),
+				.binding_flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT,
+			});
+
+			_sets_layouts.set(application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set, _set_layout);
+		}
+
 		_render_target = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".render_target",
@@ -138,6 +166,22 @@ namespace vkl
 			.buffer = _ubo_buffer->buffer(),
 			.range = Buffer::Range{.begin = 0, .len = std::alignUp(sizeof(UBO), ubo_align)},
 		};
+
+		_set = std::make_shared<DescriptorSetAndPool>(DescriptorSetAndPool::CI{
+			.app = application(),
+			.name = name() + ".Set",
+			.layout = _set_layout,
+			.bindings = {
+				Binding{
+					.buffer = _ubo,
+					.binding = 0,
+				},
+				Binding{
+					.sampler = _light_depth_sampler,
+					.binding = 1,
+				},
+			},
+		});
 		
 		_draw_indexed_indirect_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -239,14 +283,6 @@ namespace vkl
 				.cull_mode = VK_CULL_MODE_BACK_BIT,
 				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 				.bindings = {
-					Binding{
-						.buffer = _ubo,
-						.binding = 0,
-					},
-					Binding{
-						.sampler = _light_depth_sampler,
-						.binding = 6,
-					},
 				},
 				.extern_render_pass = _direct_pipeline._render_pass,
 				.write_depth = true,
@@ -265,16 +301,8 @@ namespace vkl
 			.sets_layouts = _sets_layouts,
 			.bindings = {
 				Binding{
-					.buffer = _ubo,
-					.binding = 0,
-				},
-				Binding{
 					.buffer = _model_indices_segment,
-					.binding = 1,
-				},
-				Binding{
-					.sampler = _light_depth_sampler,
-					.binding = 6,
+					.binding = 0,
 				},
 			},
 			.extern_render_pass = _direct_pipeline._render_pass,
@@ -385,10 +413,6 @@ namespace vkl
 					.cull_mode = VK_CULL_MODE_BACK_BIT,
 					.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 					.bindings = {
-						Binding{
-							.buffer = _ubo,
-							.binding = 0,
-						},
 					},
 					.extern_render_pass = _deferred_pipeline._render_pass,
 					.write_depth = true,
@@ -406,12 +430,8 @@ namespace vkl
 				.sets_layouts = _sets_layouts,
 				.bindings = {
 					Binding{
-						.buffer = _ubo,
-						.binding = 0,
-					},
-					Binding{
 						.buffer = _model_indices_segment,
-						.binding = 1,
+						.binding = 0,
 					},
 				},
 				.extern_render_pass = _deferred_pipeline._render_pass,
@@ -468,10 +488,6 @@ namespace vkl
 						.image = _render_target,
 						.binding = 5,
 					},
-					Binding{
-						.sampler = _light_depth_sampler,
-						.binding = 6,
-					},
 				},
 				.definitions = [this](DefinitionsList & res)
 				{
@@ -501,7 +517,7 @@ namespace vkl
 				.bindings = {
 					Binding{
 						.buffer = _model_indices_segment,
-						.binding = 1,
+						.binding = 0,
 					},
 				},
 				.extern_render_pass = _spot_light_render_pass,
@@ -531,7 +547,7 @@ namespace vkl
 				.bindings = {
 					Binding{
 						.buffer = _model_indices_segment,
-						.binding = 1,
+						.binding = 0,
 					},
 				},
 				.extern_render_pass = _point_light_render_pass,
@@ -563,10 +579,6 @@ namespace vkl
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,
 				.bindings = {
-					Binding{
-						.buffer = _ubo,
-						.binding = 0,
-					},
 					Binding{
 						.buffer = _path_tracer._ubo,
 						.binding = 1,
@@ -790,6 +802,9 @@ namespace vkl
 		_light_depth_sampler->updateResources(ctx);
 
 		_ubo_buffer->updateResources(ctx);
+
+		_set_layout->updateResources(ctx);
+		_set->updateResources(ctx);
 	}
 
 	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
@@ -808,6 +823,15 @@ namespace vkl
 		_ubo_buffer->set(0, &ubo, sizeof(ubo));
 
 		_ubo_buffer->recordTransferIFN(exec);
+
+		const uint32_t set_index = application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::module)].set;
+		exec.bindSet(BindSetInfo{
+			.index = set_index,
+			.set = _set,
+			.bind_graphics = true,
+			.bind_compute = true,
+			.bind_rt = true,
+		});
 
 		std::TickTock_hrc tick_tock;
 		MultiVertexDrawCallList & draw_list = _cached_draw_list;
@@ -1030,6 +1054,14 @@ namespace vkl
 				vl.clear();
 			}
 		}
+
+		exec.bindSet(BindSetInfo{
+			.index = set_index,
+			.set = nullptr,
+			.bind_graphics = true,
+			.bind_compute = true,
+			.bind_rt = true,
+		});
 
 		exec.popDebugLabel();
 	}

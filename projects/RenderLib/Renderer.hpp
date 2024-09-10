@@ -60,6 +60,9 @@ namespace vkl
 		BufferAndRange _model_indices_segment;
 		BufferAndRange _atomic_counter_segment;
 
+		std::shared_ptr<DescriptorSetLayout> _set_layout;
+		std::shared_ptr<DescriptorSetAndPool> _set;
+
 		std::shared_ptr<ComputeCommand> _prepare_draw_list = nullptr;
 		
 

@@ -1,6 +1,6 @@
 #version 460
 
-#define I_WANT_TO_DEBUG 1
+#define I_WANT_TO_DEBUG 0
 // #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
 #include <ShaderLib:/Debug/DebugBuffers.glsl>
 
@@ -8,14 +8,16 @@
 
 #include "shading.glsl"
 
-layout(SHADER_DESCRIPTOR_BINDING + 0, rgba32f) uniform restrict readonly image2D AlbedoTexture;
-layout(SHADER_DESCRIPTOR_BINDING + 1, rgba32f) uniform restrict readonly image2D PositionTexture;
-layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict readonly image2D NormalTexture;
-layout(SHADER_DESCRIPTOR_BINDING + 3, rgba32f) uniform restrict readonly image2D TangentTexture;
+#define BINDING SHADER_DESCRIPTOR_BINDING + 0
 
-layout(SHADER_DESCRIPTOR_BINDING + 4) uniform sampler2D AOTexture;
+layout(BINDING + 0, rgba32f) uniform restrict readonly image2D AlbedoTexture;
+layout(BINDING + 1, rgba32f) uniform restrict readonly image2D PositionTexture;
+layout(BINDING + 2, rgba32f) uniform restrict readonly image2D NormalTexture;
+layout(BINDING + 3, rgba32f) uniform restrict readonly image2D TangentTexture;
 
-layout(SHADER_DESCRIPTOR_BINDING + 5, rgba16f) uniform restrict writeonly image2D ColorOutput;
+layout(BINDING + 4) uniform sampler2D AOTexture;
+
+layout(BINDING + 5, rgba16f) uniform restrict writeonly image2D ColorOutput;
 
 layout(local_size_x = 16, local_size_y = 16) in;
 
@@ -46,6 +48,7 @@ void main()
 
 		const vec3 position = imageLoad(PositionTexture, pixel).xyz;
 		const vec3 normal = imageLoad(NormalTexture, pixel).xyz;
+		const vec3 tangent = imageLoad(TangentTexture, pixel).xyz;
 
 #if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 		if(pixel == ivec2(100, 100))
@@ -54,7 +57,26 @@ void main()
 		}
 #endif
 
-		vec3 shaded = shade(albedo, position, normal);
+		GeometryShadingInfo geom;
+		geom.position = position;
+		// TODO
+		geom.geometry_normal = normal;
+		geom.vertex_shading_normal = normal;
+		geom.shading_normal = normal;
+		geom.shading_tangent = tangent;
+
+		uint material_id = 0;
+		PBMaterialData material;
+		material.albedo = albedo;
+		material.flags = MATERIAL_TYPE_PB | MATERIAL_FLAG_REFLECTION_BIT;
+		material.metallic = 0;
+		material.roughness = 1;
+		material.cavity = 0;
+		
+		vec3 camera_position = (inverse(ubo.world_to_camera) * vec4(0..xxx, 1)).xyz;
+		vec3 wo = vec3(1, 0, 0);
+
+		vec3 shaded = shade(geom, wo, material);
 
 		float ao = 1;
 #if USE_AO

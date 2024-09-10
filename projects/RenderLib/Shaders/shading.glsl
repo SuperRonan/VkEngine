@@ -14,8 +14,6 @@
 
 #include <ShaderLib:/Rendering/Shading/microfacets.glsl>
 
-layout(SHADER_DESCRIPTOR_BINDING + 6) uniform samplerShadow LightDepthSampler;
-
 #define SHADING_SHADOW_NONE 0
 #define SHADING_SHADOW_MAP 1
 #define SHADING_SHADOW_RAY_TRACE 2
@@ -34,6 +32,110 @@ struct LightSample
 	vec2 uv;
 	float ref_depth;
 };
+
+struct GeometryShadingInfo
+{
+	vec3 position;
+	vec3 geometry_normal;
+	vec3 vertex_shading_normal;
+	vec3 shading_normal;
+	vec3 shading_tangent;
+};
+
+PBMaterialData readMaterial(uint material_id, vec2 uv)
+{
+	const PBMaterialProperties props = scene_pb_materials[material_id].props;
+	PBMaterialData res;
+	res.flags = props.flags;
+	res.albedo = 0..xxx;
+	res.normal = vec3(0, 0, 1);
+	const ScenePBMaterialTextures textures = scene_pb_materials_textures.ids[material_id];
+	if(((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0) && textures.albedo_texture_id != uint(-1))
+	{
+		res.albedo = texture(SceneTextures2D[NonUniformEXT(textures.albedo_texture_id)], uv).xyz;
+	}
+	else
+	{
+		res.albedo = props.albedo;
+	}
+
+	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0) && textures.normal_texture_id != uint(-1))
+	{
+		res.normal = texture(SceneTextures2D[NonUniformEXT(textures.normal_texture_id)], uv).xyz;
+		res.normal = normalize(res.normal * 2 - 1);
+	}
+
+	res.metallic = props.metallic;
+	res.roughness = props.roughness;
+	res.cavity = props.cavity;
+
+	return res;
+}
+
+
+// wo: outcoming direction
+// wi: incoming direction
+// Assume directions vectors are normalized
+// The returned BSDF is NOT multiplied by cos_theta
+vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in PBMaterialData material)
+{
+	vec3 res = 0..xxx;
+	
+	const vec3 geometry_normal = gsi.geometry_normal;
+	const vec3 shading_normal = gsi.shading_normal;
+	const vec3 normal = gsi.shading_normal;
+
+	const float cos_theta_geom_i = dot(geometry_normal, wi);
+	const float cos_theta_geom_o = dot(geometry_normal, wo);
+
+	const float cos_theta_i = dot(normal, wi);
+	const float abs_cos_theta_i = abs(cos_theta_i);
+	const float cos_theta_o = dot(normal, wo);
+	const float abs_cos_theta_o = abs(cos_theta_o);
+
+	const bool same_hemisphere = sign(cos_theta_geom_i) == sign(cos_theta_geom_o);
+
+	const bool can_reflect = (material.flags & MATERIAL_FLAG_REFLECTION_BIT) != 0;
+	const bool can_transmit = (material.flags & MATERIAL_FLAG_TRANSMISSION_BIT) != 0;
+
+	if((same_hemisphere && can_reflect) || (!same_hemisphere && can_transmit))
+	{
+		
+		const vec3 reflected = reflect(-wo, normal);
+		const vec3 halfway = normalize(wo + wi);
+
+		const float alpha = sqr(material.roughness);
+		const float alpha2 = sqr(alpha);
+		const float specular_k = sqr(material.roughness + 1) / 8;
+
+		const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
+		const vec3 specular_F = FresnelSchlick(F0, wo, halfway);
+		const vec3 Kd = 1..xxx - specular_F; 
+
+		const float diffuse_rho = oo_PI;
+		const vec3 diffuse_contribution = Kd * material.albedo * diffuse_rho * (1.0 - material.metallic);
+		res += diffuse_contribution;
+
+		//const vec3 F0 = material.F0;
+
+		if(nonZero(F0) && (material.roughness < 1.0f || material.metallic != 0.0f))
+		{
+			const float specular_D = microfacetD(alpha2, normal, halfway);
+			const float specular_Go = microfacetGGX(normal, wo, specular_k);
+			const float specular_Gi = microfacetGGX(normal, wi, specular_k);
+			const float specular_G = specular_Go * specular_Gi; 
+
+			const vec3 specular_cook_torrance = specular_F * specular_D * specular_G / max(4.0f * abs_cos_theta_i * abs_cos_theta_o, EPSILON_f);
+			if(!any(isWrong(specular_cook_torrance)))
+			{
+				res += specular_cook_torrance;
+			}
+		}
+
+	}
+
+	return res;
+}
 
 #define BSDF_REFLECTION_BIT 0x1
 #define BSDF_TRANSMISSION_BIT  0x2
@@ -235,35 +337,29 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 	return res;
 }
 
-// TODO geometry and shading normal
-vec3 shade(vec3 albedo, vec3 position, vec3 normal)
+vec3 shade(const in GeometryShadingInfo geom, vec3 wo, const in PBMaterialData material)
 {
 	vec3 res = 0..xxx;
 
-	const vec3 geometry_normal = normal;
-
-	vec3 diffuse = 0..xxx;
-
 	for(uint l = 0; l < scene_ubo.num_lights; ++l)
 	{
-		const LightSample light_sample = getLightSample(l, position, normal, BSDF_REFLECTION_BIT);
+		const LightSample light_sample = getLightSample(l, geom.position, geom.geometry_normal, BSDF_REFLECTION_BIT);
+		const vec3 wi = light_sample.direction_to_light;
 		if(light_sample.pdf > 0)
 		{
-			const float cos_theta = dot(normal, light_sample.direction_to_light);
+			const float cos_theta = dot(geom.shading_normal, wi);
 			const float abs_cos_theta = abs(cos_theta);
-			const float bsdf_rho = (cos_theta > 0 ? 1 : 0) / M_PI;
+			const vec3 bsdf_rho = evaluateBSDF(geom, wo, wi, material);
 
 			float shadow = 1;
 			if(length2(light_sample.Le * bsdf_rho) > 0)
 			{
 				// TODO geometry normal
-				shadow = computeShadow(position, geometry_normal, light_sample);
+				shadow = computeShadow(geom.position, geom.geometry_normal, light_sample);
 			}
-			diffuse += (bsdf_rho * abs_cos_theta * light_sample.Le * shadow) / light_sample.pdf; 
+			res += (bsdf_rho * abs_cos_theta * light_sample.Le * shadow) / light_sample.pdf; 
 		}
 	}
-
-	res += diffuse * albedo;
 
 	// {
 	// 	vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) / vec2(2731, 1500);

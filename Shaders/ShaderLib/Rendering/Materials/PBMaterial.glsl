@@ -13,6 +13,16 @@ struct PBMaterialProperties
 	float cavity;
 };
 
+struct PBMaterialData
+{
+	vec3 albedo;
+	uint flags;
+	float metallic;
+	vec3 normal;
+	float roughness;
+	float cavity;
+};
+
 PBMaterialProperties NoMaterialProps()
 {
 	PBMaterialProperties res;
@@ -56,3 +66,37 @@ vec3 getBoundMaterialAlbedo(vec2 uv)
 #endif
 	return 0..xxx;
 }
+
+#if BIND_SINGLE_MATERIAL
+
+PBMaterialData readBoundMaterial(vec2 uv)
+{
+	const PBMaterialProperties props = material_props.props;
+	PBMaterialData res;
+	res.flags = props.flags;
+	res.albedo = 0..xxx;
+	res.normal = vec3(0, 0, 1);
+	if(((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0))
+	{
+		res.albedo = texture(AlbedoTexture, uv).xyz;
+	}
+	else
+	{
+		res.albedo = props.albedo;
+	}
+
+	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0))
+	{
+		res.normal = texture(NormalTexture, uv).xyz;
+		res.normal = normalize(res.normal * 2 - 1);
+	}
+
+	res.metallic = props.metallic;
+	res.roughness = props.roughness;
+	res.cavity = props.cavity;
+
+	return res;
+}
+
+#endif
+

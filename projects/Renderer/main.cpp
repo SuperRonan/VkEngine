@@ -68,6 +68,10 @@ namespace vkl
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 			features.features2.features.fillModeNonSolid = VK_TRUE;
 			features.features_11.multiview = VK_TRUE;
+			features.features_12.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+			features.features_12.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+			features.features_12.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+			features.features_12.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
 		}
 
 		virtual std::set<std::string_view> getDeviceExtensions() override

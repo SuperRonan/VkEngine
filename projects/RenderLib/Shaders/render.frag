@@ -22,25 +22,28 @@ void main()
 {
 	const PBMaterialProperties props = material_props.props;
 	const vec2 uv = v_uv;
-	const vec3 position = v_w_position; 
-	vec3 albedo = getBoundMaterialAlbedo(v_uv);
-	
+	PBMaterialData material = readBoundMaterial(uv);
+	GeometryShadingInfo geom;
+	geom.position = v_w_position;
 	const vec3 a_normal = normalize(v_w_normal);
-	vec3 normal = a_normal;
-	vec3 tangent = safeNormalize(v_w_tangent);
-	tangent = safeNormalize(tangent - dot(tangent, normal) * normal);
-	const vec3 bi_tangent = cross(tangent, normal);
-
-	if((material_props.props.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0)
+	geom.vertex_shading_normal = a_normal;
+	geom.geometry_normal = geom.vertex_shading_normal;
+	geom.shading_normal = geom.vertex_shading_normal;
+	geom.shading_tangent = safeNormalize(v_w_tangent);
+	geom.shading_tangent = safeNormalize(geom.shading_tangent - dot(geom.shading_tangent, geom.vertex_shading_normal) * geom.vertex_shading_normal);
+	const vec3 bi_tangent = cross(geom.shading_tangent, geom.vertex_shading_normal);
+	
+	if(material.normal.z != 0)
 	{
-		const mat3 TBN = mat3(tangent, bi_tangent, normal);
-		vec3 tex_normal = texture(NormalTexture, uv).xyz;
-		tex_normal = normalize(tex_normal * 2.0 - 1);
-		normal = TBN * tex_normal;
+		const mat3 TBN = mat3(geom.shading_tangent, bi_tangent, geom.vertex_shading_normal);
+		geom.shading_normal = TBN * material.normal;
 	}
 
-	vec3 res = shade(albedo, position, normal);
-	res += albedo * scene_ubo.ambient;
+	const vec3 camera_position = (inverse(ubo.world_to_camera) * vec4(0..xxx, 1)).xyz;
+	const vec3 wo = normalize(camera_position - geom.position);
+
+	vec3 res = shade(geom, wo, material);
+	res += material.albedo * scene_ubo.ambient;
 
 	o_color = vec4(res, 1);
 }
