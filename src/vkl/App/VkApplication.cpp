@@ -249,10 +249,10 @@ namespace vkl
 			bool ignore = false;
 			// There is a bug in the current SDK's VLL which emits this incorrect error
 			std::string_view message = callback_data->pMessage;
-			if ((message.find("VUID-vkCmdTraceRaysKHR-None-08608") != std::string_view::npos) && (message.find("VK_DYNAMIC_STATE_VIEWPORT") != std::string_view::npos))
-			{
-				ignore = true;
-			}
+			// Bug in SDK 1.3.283
+			ignore |= ((message.find("VUID-vkCmdTraceRaysKHR-None-08608") != std::string_view::npos) && (message.find("VK_DYNAMIC_STATE_VIEWPORT") != std::string_view::npos));
+			// Bug in SDK 1.3.290
+			ignore |= ((message.find("VUID-VkShaderModuleCreateInfo-pCode-08737") != std::string_view::npos) && (message.find("Expected Image to have the same type as Result Type Image") != std::string_view::npos));
 			if (!ignore)
 			{
 				VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
