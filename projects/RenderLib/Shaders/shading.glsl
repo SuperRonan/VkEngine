@@ -14,7 +14,7 @@
 
 #include <ShaderLib:/Rendering/Shading/microfacets.glsl>
 
-layout(SHADER_DESCRIPTOR_BINDING + 6) uniform sampler LightDepthSampler;
+layout(SHADER_DESCRIPTOR_BINDING + 6) uniform samplerShadow LightDepthSampler;
 
 #define SHADING_SHADOW_NONE 0
 #define SHADING_SHADOW_MAP 1
@@ -170,7 +170,8 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 #if SHADING_SHADOW_METHOD == SHADING_SHADOW_MAP
 	const Light light = lights_buffer.lights[light_sample.light_id];
 	const uint light_type = light.flags & LIGHT_TYPE_MASK;
-	bool query_shadow_map = ((light.flags & LIGHT_ENABLE_SHADOW_MAP_BIT) != 0) && (light.textures.x != uint(-1));
+	const uint shadow_texture_index = light.textures.x;
+	bool query_shadow_map = ((light.flags & LIGHT_ENABLE_SHADOW_MAP_BIT) != 0) && (shadow_texture_index != uint(-1));
 	if(query_shadow_map)
 	{
 		if(light_type == LIGHT_TYPE_POINT)
@@ -181,7 +182,7 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 			// Could also compute the sin_theta with the norm of the cross produc
 			const float cos_theta = adot(light_main_direction, geometry_normal);
 			const float sin_theta = sqrt(1 - sqr(cos_theta));
-			const ivec2 tex_size = textureSize(samplerCubeShadow(LightsDepthCube[light.textures.x], LightDepthSampler), 0);
+			const ivec2 tex_size = textureSize(samplerCubeShadow(LightsDepthCube[shadow_texture_index], LightDepthSampler), 0);
 			
 			const float shadow_texel_size = sin_theta * ref_depth / tex_size.x;
 			vec2 lerp_range = vec2(4096, 128);
@@ -190,8 +191,8 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 			ref_depth = floatOffset(ref_depth, -offset);
 
 			//ref_depth = applyShadowBias(ref_depth, light.flags, light.shadow_bias_data, cos_theta);
+			float texture_depth = texture(samplerCubeShadow(LightsDepthCube[shadow_texture_index], LightDepthSampler), vec4(-light_sample.direction_to_light, ref_depth));
 
-			float texture_depth = texture(samplerCubeShadow(LightsDepthCube[light.textures.x], LightDepthSampler), vec4(-light_sample.direction_to_light, ref_depth));
 			res = texture_depth;	
 		}
 		else if(light_type == LIGHT_TYPE_DIRECTIONAL)
@@ -205,7 +206,7 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 			const vec3 light_main_direction = light.direction;
 			const float cos_theta = adot(light_main_direction, geometry_normal);
 			const float sin_theta = sqrt(1 - sqr(cos_theta));
-			const ivec2 tex_res = textureSize(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), 0);
+			const ivec2 tex_res = textureSize(sampler2DShadow(LightsDepth2D[shadow_texture_index], LightDepthSampler), 0);
 			const float tex_size = float(tex_res.x);
 			const float shadow_texel_size = sin_theta * (ref_depth) / (log2(tex_size));
 			vec2 lerp_range = vec2(16, 128 * 8);
@@ -214,9 +215,9 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 			const float biased_ref_depth = floatOffset(ref_depth, -offset);
 
 			//ref_depth = applyShadowBias(ref_depth, light.flags, light.shadow_bias_data, cos_theta);
-			const float texture_depth_test = texture(sampler2DShadow(LightsDepth2D[light.textures.x], LightDepthSampler), vec3(light_tex_uv, biased_ref_depth));
+			const float texture_depth_test = texture(sampler2DShadow(LightsDepth2D[shadow_texture_index], LightDepthSampler), vec3(light_tex_uv, biased_ref_depth));
 			res = texture_depth_test;
-			//const float texture_depth = texture(sampler2D(LightsDepth2D[light.textures.x], LightDepthSampler), vec2(light_tex_uv)).x;
+			//const float texture_depth = texture(sampler2D(LightsDepth2D[shadow_texture_index], LightDepthSampler), vec2(light_tex_uv)).x;
 			//res = (biased_ref_depth <= texture_depth) ? 1 : 0;
 		}
 	}
