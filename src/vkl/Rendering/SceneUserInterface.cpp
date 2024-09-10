@@ -147,6 +147,19 @@ namespace vkl
 	void SceneUserInterface::execute(ExecutionRecorder& recorder, Camera & camera)
 	{
 		recorder.pushDebugLabel(name(), true);
+
+		bool began_render_pass = false;
+		auto begin_render_pass_IFN = [&]()
+		{
+			if (!began_render_pass && !recorder.getCurrentRenderingStatus())
+			{
+				recorder.beginRenderPass(RenderPassBeginInfo{
+					.render_pass = _render_pass->instance(),
+					.framebuffer = _framebuffer->instance(),
+				});
+				began_render_pass = true;
+			}
+		};
 		
 		static thread_local VertexCommand::DrawInfo vertex_draw_info;
 		
@@ -186,10 +199,12 @@ namespace vkl
 				.instance_count = 1,
 			});
 		}
+
+
 		if (draw_list.calls.size())
 		{
+			begin_render_pass_IFN();
 			vertex_draw_info.draw_type = DrawType::Draw;
-
 			recorder(_render_3D_basis->with(vertex_draw_info));
 		}
 		draw_list.clear();
@@ -237,12 +252,18 @@ namespace vkl
 
 		if (draw_list.calls.size())
 		{
+			begin_render_pass_IFN();
 			vertex_draw_info.draw_type = DrawType::DrawIndexed;
 			recorder(_render_3D_box->with(vertex_draw_info));
 		}
 		draw_list.clear();
 		vertex_draw_info.clear();
 		
+		if (began_render_pass)
+		{
+			recorder.endRenderPass();
+		}
+
 		recorder.popDebugLabel();
 
 		vertex_draw_info.clear();

@@ -181,7 +181,8 @@ namespace vkl
 			NOT_YET_IMPLEMENTED;
 		}
 		++_internal;
-		ctx.renderingInfo().subpass_index = _internal & std::bitMask(31);
+		constexpr const uint32_t subpass_mask = std::bitMask<uint32_t>(31u);
+		ctx.renderingInfo().subpass_index = _internal & subpass_mask;
 	}
 
 	void RenderPassBeginInfo::exportSubpassResources(uint32_t index, ResourceUsageList& resources)

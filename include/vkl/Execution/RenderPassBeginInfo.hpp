@@ -30,7 +30,8 @@ namespace vkl
 		std::shared_ptr<FramebufferInstance> framebuffer = nullptr;
 		VkRect2D render_area = DefaultRenderArea;
 	//protected:
-		
+		// bits 0..30: subpass index
+		// bit 31: ended subpass (for dynamic rendering)
 		uint32_t _internal = 0;
 	//public:
 		uint32_t clear_value_count = 0;
@@ -68,6 +69,12 @@ namespace vkl
 			_internal = 0;
 			clear_value_count = 0;
 			ptr_clear_values = nullptr;
+		}
+
+		uint32_t subpassIndex() const
+		{
+			constexpr const uint32_t subpass_mask = std::bitMask<uint32_t>(31u);
+			return _internal & subpass_mask;
 		}
 	};
 

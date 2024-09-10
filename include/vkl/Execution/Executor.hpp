@@ -82,6 +82,14 @@ namespace vkl
 
 		virtual void nextSubPass(RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) = 0;
 
+		struct SubpassInfo
+		{
+			uint32_t index = 0;
+			RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None;
+		};
+
+		virtual bool getCurrentRenderingStatus(const RenderPassBeginInfo ** info = nullptr, SubpassInfo * subpass_info = nullptr) const = 0;
+
 		virtual void endRenderPass() = 0;
 
 		using vec4 = glm::vec4;

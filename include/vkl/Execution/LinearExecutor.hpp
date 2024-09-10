@@ -30,7 +30,7 @@ namespace vkl
 		ExecutionContext* _context;
 
 		uint32_t _current_render_pass_index = uint32_t(-1);
-		uint32_t _current_subpass_base_offset = 0;
+		uint32_t _current_subpass_index = 0;
 		bool _deferred_record = false;
 		bool _render_pass_synch_subpass = false;
 
@@ -127,6 +127,8 @@ namespace vkl
 		virtual void bindSet(BindSetInfo const& info) override;
 
 		virtual void beginRenderPass(RenderPassBeginInfo const& info, RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) override;
+
+		virtual bool getCurrentRenderingStatus(const RenderPassBeginInfo ** info = nullptr, SubpassInfo* subpass_info = nullptr) const override;
 
 		virtual void nextSubPass(RenderPassBeginInfo::Flags flags = RenderPassBeginInfo::Flags::None) override;
 

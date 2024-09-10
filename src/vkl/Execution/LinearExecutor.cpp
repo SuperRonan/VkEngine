@@ -236,6 +236,7 @@ namespace vkl
 			.flags = flags,
 		};
 		_current_render_pass_index = _begin_render_passes.pushBack(&event, 1);
+		_current_subpass_index = 0;
 		RenderPassBeginInfo & _info = _begin_render_passes.data()[_current_render_pass_index].info;
 		if (!_info.render_pass)
 		{
@@ -257,6 +258,38 @@ namespace vkl
 			_info.exportResources(_render_pass_resources, export_all_subpasses);
 		}
 		_record_context.beginRenderPass(_info.render_pass , _info.framebuffer);
+	}
+
+	bool ExecutionThread::getCurrentRenderingStatus(const RenderPassBeginInfo** info, SubpassInfo* subpass_info) const
+	{
+		bool res = (_current_render_pass_index != uint32_t(-1));
+		if (res)
+		{
+			const BeginRenderPassEvent & r_event = _begin_render_passes.data()[_current_render_pass_index];
+			const RenderPassBeginInfo & r = r_event.info;
+			if (info)
+			{
+				*info = &r;
+			}
+			if (subpass_info)
+			{
+				if (_current_subpass_index == 0)
+				{
+					*subpass_info = SubpassInfo{
+						.index = 0,
+						.flags = r_event.flags,
+					};
+				}
+				else
+				{
+					NOT_YET_IMPLEMENTED;
+					*subpass_info = SubpassInfo{
+						
+					};
+				}
+			}
+		}
+		return res;
 	}
 
 	void ExecutionThread::nextSubPass(RenderPassBeginInfo::Flags flags)

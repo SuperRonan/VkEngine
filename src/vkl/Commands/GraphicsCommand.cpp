@@ -44,6 +44,7 @@ namespace vkl
 			}
 			else
 			{
+				assert(!!ctx.renderingInfo().render_pass);
 				VkRect2D render_area = ctx.renderingInfo().area;
 				VkViewport viewport = GraphicsPipeline::Viewport(render_area);
 				VkRect2D scissor = render_area;
