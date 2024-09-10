@@ -35,6 +35,11 @@ namespace vkl
 
 		size_t copied_so_far = 0;
 
+		const auto countLines = [&](size_t b, size_t e)
+		{
+			return std::count(content.data() + b, content.data() + e, '\n');
+		};
+
 		if (!definitions.empty())
 		{
 			const size_t version_begin = content.find("#version", copied_so_far);
@@ -59,12 +64,9 @@ namespace vkl
 			{
 				oss << "#define " << definitions[i] << "\n";
 			}
+			oss << "#line " << (countLines(0, copied_so_far) + 1) << ' ' << path << "\n";
 		}
 
-		const auto countLines = [&](size_t b, size_t e)
-		{
-			return std::count(content.data() + b, content.data() + e, '\n');
-		};
 
 		while (true)
 		{
@@ -682,7 +684,9 @@ namespace vkl
 		else {
 
 			using namespace std::containers_append_operators;
-			DefinitionsList definitions = (*_definitions);
+			DefinitionsList definitions;
+			if(_definitions)
+				definitions = (*_definitions);
 			definitions += common_definitions;
 
 			SpecializationKey lkey = key;
@@ -740,17 +744,6 @@ namespace vkl
 
 		if (checkHoldInstance())
 		{
-			new_key.clear();
-			
-			DefinitionsList definitions = *_definitions;
-			definitions += ctx.commonDefinitions()->collapsed();
-			
-			for (size_t i = 0; i < definitions.size(); ++i)
-			{
-				new_key.definitions += definitions[i];
-				new_key.definitions += '\n';
-			}
-		
 			if (ctx.checkShadersTick() > _check_tick)
 			{
 				waitForInstanceCreationIFN();
@@ -766,12 +759,25 @@ namespace vkl
 				}
 				_check_tick = ctx.checkShadersTick();
 			}
-		
-			const bool use_different_spec = new_key != _current_key;
-			if (use_different_spec)
+
+			if (_definitions.hasValue())
 			{
-				_current_key = new_key;
-				res = true;
+				new_key.clear();
+
+				DefinitionsList definitions = *_definitions;
+				definitions += ctx.commonDefinitions()->collapsed();
+
+				for (size_t i = 0; i < definitions.size(); ++i)
+				{
+					new_key.definitions += definitions[i];
+					new_key.definitions += '\n';
+				}
+				const bool use_different_spec = new_key != _current_key;
+				if (use_different_spec)
+				{
+					_current_key = new_key;
+					res = true;
+				}
 			}
 
 			if (res)
