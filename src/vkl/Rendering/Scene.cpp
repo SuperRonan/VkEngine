@@ -764,7 +764,7 @@ namespace vkl
 				bool changed_xform = false;
 				uint32_t unique_model_id;
 				uint32_t model_flags = 0;
-				Mat3x4 model_matrix = glm::transpose(matrix);
+				Mat4x3_rm model_matrix = ToRowMajor(matrix);
 				if(visible)
 					model_flags |= 1;
 				if (!_unique_models.contains(path))
@@ -791,7 +791,7 @@ namespace vkl
 						(mr.material_id || material_unique_id) || 
 						(mr.xform_id != xform_unique_id);
 
-					const Mat3x4 & registed_matrix = _xforms_buffer->get<Mat3x4>(xform_unique_id);
+					const Mat4x3_rm& registed_matrix = _xforms_buffer->get<Mat4x3_rm>(xform_unique_id);
 					changed_xform = (registed_matrix != model_matrix);
 					set_xform |= changed_xform;
 				}
@@ -808,7 +808,7 @@ namespace vkl
 				
 				if (set_xform)
 				{
-					_xforms_buffer->set<Mat3x4>(xform_unique_id, model_matrix);
+					_xforms_buffer->set<Mat4x3_rm>(xform_unique_id, model_matrix);
 				}
 				
 				if (_maintain_rt)
@@ -829,7 +829,7 @@ namespace vkl
 						{
 							_tlas->registerBLAS(tlas_geometry_id, unique_model_id, TLAS::BLASInstance{
 								.blas = mesh->blas(),
-								.xform = convertXFormToVk(matrix),
+								.xform = ConvertXFormToVk(matrix),
 								.instanceCustomIndex = unique_model_id,
 								.mask = 0xFF,
 								.instanceShaderBindingTableRecordOffset = 0,

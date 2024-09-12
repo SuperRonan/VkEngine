@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vkl/Maths/Types.hpp>
+
 #include <vkl/App/VkApplication.hpp>
 
 #include <vkl/VkObjects/Buffer.hpp>
@@ -29,9 +31,10 @@ namespace vkl
 	
 	public:
 
-		using Mat4 = glm::mat4;
-		using Mat4x3 = glm::mat4x3;
-		using Mat3x4 = glm::mat3x4;
+		using Mat4 = Matrix4f;
+		using Mat4x3 = Matrix4x3f;
+		using Mat3x4 = Matrix3x4f;
+		using Mat4x3_rm = Matrix4x3fRowMajor;
 
 		class Node
 		{

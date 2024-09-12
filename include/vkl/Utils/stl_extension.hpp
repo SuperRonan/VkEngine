@@ -384,9 +384,15 @@ namespace std
 	}
 
 	template<class Int>
-	Int divCeil(Int a, Int b)
+	constexpr Int divCeil(Int a, Int b)
 	{
 		return (a + b - 1) / b;
+	}
+
+	template <class T>
+	constexpr auto sqr(T const& t)
+	{
+		return t * t;
 	}
 
 	template <class T>

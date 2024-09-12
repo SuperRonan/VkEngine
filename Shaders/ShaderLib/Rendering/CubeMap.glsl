@@ -35,8 +35,8 @@ mat4 cubeMapFaceProjection(uint id, vec3 position, float z_near)
 {
 	const vec3 front = cubeMapFaceDirection(id);
 	const vec3 up = cubeMapFaceUpDirection(id);
-	const mat4 world_to_object = mat4(lookAtAssumeNormalized4x3(position, front, up));
-	const mat4 object_to_proj = infinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
+	const mat4 world_to_object = mat4(LookAtDir4x3(position, front, up));
+	const mat4 object_to_proj = InfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
 	const mat4 res = object_to_proj * world_to_object;
 	return res;
 }

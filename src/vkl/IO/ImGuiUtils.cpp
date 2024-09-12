@@ -143,7 +143,7 @@ namespace vkl
 
 			if (changed2)
 			{
-				(*_matrix) = translateMatrix<4, float>(t) * scaleMatrix<4, float>(scale) * glm::mat4(rotation);
+				(*_matrix) = TranslationMatrix<4, float>(t) * ScalingMatrix<4, float>(scale) * glm::mat4(rotation);
 			}
 
 			changed |= changed2;

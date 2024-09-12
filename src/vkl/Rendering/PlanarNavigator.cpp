@@ -50,8 +50,8 @@ namespace vkl
 	PlanarNavigator::mat3 PlanarNavigator::getWorldToView() const
 	{
 		mat3 res = mat3(1);
-		const mat3 s = scaleMatrix<3, Float>(_zoom);
-		const mat3 t = translateMatrix<3, Float>(-_translation);
+		const mat3 s = ScalingMatrix<3, Float>(_zoom);
+		const mat3 t = TranslationMatrix<3, Float>(-_translation);
 		res = s * t;
 		using namespace glm_operators;
 		//std::cout << res << std::endl << std::endl;

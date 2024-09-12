@@ -4,12 +4,27 @@
 
 #include <cmath>
 #include "Types.hpp"
-//#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+namespace glm
+{
+	template <class T>
+	constexpr auto sqr(T const& t)
+	{
+		return t * t;
+	}
+
+	template <class T>
+	constexpr auto rcp(T const& t)
+	{
+		return T(1) / t;
+	}
+}
 
 namespace vkl
 {
 	template <class Float>
-	MatrixN<2, Float> rotate2D(Float angle)
+	constexpr MatrixN<2, Float> RotationMatrix(Float angle)
 	{
 		MatrixN<2, Float> res;
 		res[0][0] = res[1][1] = cos(angle);
@@ -18,8 +33,8 @@ namespace vkl
 		return res;
 	}
 
-	template <int N, class Float>
-	MatrixN<N, Float> scaleMatrix(Vector<N-1, Float> const& vector)
+	template <uint N, class Float>
+	constexpr MatrixN<N, Float> ScalingMatrix(Vector<N-1, Float> const& vector)
 	{
 		MatrixN<N, Float> res(Float(1.0));
 		for (int i = 0; i < N-1; ++i)
@@ -29,8 +44,8 @@ namespace vkl
 		return res;
 	}
 
-	template <int N, class Float>
-	MatrixN<N, Float> scaleMatrix(Float s)
+	template <uint N, class Float>
+	constexpr MatrixN<N, Float> ScalingMatrix(Float s)
 	{
 		MatrixN<N, Float> res(Float(1.0));
 		for (int i = 0; i < N - 1; ++i)
@@ -40,8 +55,8 @@ namespace vkl
 		return res;
 	}
 
-	template <int N, class Float>
-	MatrixN<N, Float> translateMatrix(Vector<N - 1, Float> const& vector)
+	template <uint N, class Float>
+	constexpr MatrixN<N, Float> TranslationMatrix(Vector<N - 1, Float> const& vector)
 	{
 		MatrixN<N, Float> res(Float(1.0));
 		for (int i = 0; i < N - 1; ++i)
@@ -51,8 +66,8 @@ namespace vkl
 		return res;
 	}
 
-	template <int N, class Float>
-	MatrixN<N, Float> inverseTranslateMatrix(Vector<N - 1, Float> const& vector)
+	template <uint N, class Float>
+	MatrixN<N, Float> InverseTranslateMatrix(Vector<N - 1, Float> const& vector)
 	{
 		MatrixN<N, Float> res(Float(1.0));
 		for (int i = 0; i < N - 1; ++i)
@@ -62,8 +77,8 @@ namespace vkl
 		return res;
 	}
 
-	template <int N, class Float>
-	MatrixN<N, Float> inverseTranslateMatrix(MatrixN<N, Float> const& t_mat)
+	template <uint N, class Float>
+	MatrixN<N, Float> InverseTranslateMatrix(MatrixN<N, Float> const& t_mat)
 	{
 		MatrixN<N, Float> res(Float(1.0));
 		for (int i = 0; i < N - 1; ++i)
@@ -73,14 +88,14 @@ namespace vkl
 		return res;
 	}
 
-	template <int N, class Float>
-	Vector<N + 1, Float> homogenize(Vector<N, Float> const& vec, Float h=Float(1.0))
+	template <uint N, class Float>
+	Vector<N + 1, Float> Homogenize(Vector<N, Float> const& vec, Float h=Float(1.0))
 	{
 		return Vector<N + 1, Float>(vec, h);
 	}
 
-	template <int N, class Float>
-	Vector<N, Float> deHomogenize(Vector<N + 1, Float> const& h_vec)
+	template <uint N, class Float>
+	Vector<N, Float> DeHomogenize(Vector<N + 1, Float> const& h_vec)
 	{
 		Vector<N, Float> res;
 		if (h_vec[N] != 0)
@@ -97,24 +112,24 @@ namespace vkl
 	}
 
 	template <class Float>
-	Matrix3<Float> directionMatrix(Matrix3<Float> const& mat)
+	Matrix3<Float> DirectionMatrix(Matrix3<Float> const& mat)
 	{
 		return glm::transpose(glm::inverse(mat));
 	}
 	
 	template <class Float>
-	Matrix3<Float> directionMatrix(Matrix4<Float> const& mat)
+	Matrix3<Float> DirectionMatrix(Matrix4<Float> const& mat)
 	{
-		return directionMatrix(Matrix3<Float>(mat));
+		return DirectionMatrix(Matrix3<Float>(mat));
 	}
 
 	template <class Float>
-	Matrix3<Float> directionMatrix(Matrix4x3<Float> const& mat)
+	Matrix3<Float> DirectionMatrix(Matrix4x3<Float> const& mat)
 	{
-		return directionMatrix(Matrix3<Float>(mat));
+		return DirectionMatrix(Matrix3<Float>(mat));
 	}
 
-	inline VkTransformMatrixKHR convertXFormToVk(Matrix4x3f const mat)
+	inline VkTransformMatrixKHR ConvertXFormToVk(Matrix4x3f const& mat)
 	{
 		// glm::mat4x3 is stored as 4 vec3, so can't directly memcpy :(
 		VkTransformMatrixKHR res;
@@ -126,5 +141,71 @@ namespace vkl
 			}
 		}
 		return res;
+	}
+
+	template <class Float>
+	constexpr Matrix4x3<Float> MakeRigidTransform(Matrix4x3<Float> const& rs, Vector3<Float> const& t)
+	{
+		Matrix4x3<Float> res = Matrix4x3<Float>(rs);
+		res[3] = t;
+		return res;
+	}
+
+#ifndef DEFAULT_REAL
+#define DEFAULT_REAL float
+#endif
+
+#define EQ_DFR = DEFAULT_REAL
+#define EQ_DD = 3
+#define AFFINE_XFORM_INL_TEMPLATE_DECL template <class Scalar_t EQ_DFR, uint Dimensions EQ_DD>
+#define AFFINE_XFORM_INL_cpp_constexpr constexpr
+#define AFFINE_XFORM_INL_Dims Dimensions
+#define AFFINE_XFORM_INL_CRef(T) T const&
+#define AFFINE_XFORM_INL_nmspc glm::
+#define AFFINE_XFORM_INL_Scalar Scalar_t
+#define AFFINE_XFORM_INL_QBlock MatrixN<Dimensions, Scalar_t>
+#define AFFINE_XFORM_INL_XFormMatrix Matrix<Dimensions + 1, Dimensions, Scalar_t>
+#define AFFINE_XFORM_INL_FullMatrix Matrix<Dimensions + 1, Dimensions + 1, Scalar_t>
+#define AFFINE_XFORM_INL_Vector Vector<Dimensions, Scalar_t>
+
+#include <ShaderLib/Maths/AffineXForm.inl>
+
+#undef EQ_DFR 
+#undef EQ_DD 
+#undef AFFINE_XFORM_INL_TEMPLATE_DECL 
+#undef AFFINE_XFORM_INL_cpp_constexpr 
+#undef AFFINE_XFORM_INL_Dims 
+#undef AFFINE_XFORM_INL_CRef
+#undef AFFINE_XFORM_INL_nmspc 
+#undef AFFINE_XFORM_INL_Scalar 
+#undef AFFINE_XFORM_INL_QBlock 
+#undef AFFINE_XFORM_INL_XFormMatrix 
+#undef AFFINE_XFORM_INL_FullMatrix 
+#undef AFFINE_XFORM_INL_Vector 
+	
+
+	template <class Scalar>
+	constexpr Matrix4x3<Scalar> LookAt(Vector3<Scalar> const& position, Vector3<Scalar> const& center, Vector3<Scalar> const& up)
+	{
+		return glm::lookAt(position, center, up);
+	}
+
+	template <class Scalar>
+	constexpr Matrix4x3<Scalar> LookAtDir(Vector3<Scalar> const& position, Vector3<Scalar> const& center_direction, Vector3<Scalar> const& up)
+	{
+		return LookAt(position, position + center_direction, up);
+	}
+
+	template <class Scalar>
+	constexpr Matrix4x3<Scalar> InverseLookAt(Vector3<Scalar> const& position, Vector3<Scalar> const& center, Vector3<Scalar> const& up)
+	{
+		Matrix4x3<Scalar> l = LookAt(position, center, up);
+		return InverseRigidTransformFast(l);
+	}
+
+	template <class Scalar>
+	constexpr Matrix4x3<Scalar> InverseLookAtDir(Vector3<Scalar> const& position, Vector3<Scalar> const& center_direction, Vector3<Scalar> const& up)
+	{
+		return InverseLookAt(position, position + center_direction, up);
 	}
 }

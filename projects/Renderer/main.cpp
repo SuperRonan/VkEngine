@@ -117,7 +117,7 @@ namespace vkl
 
 				std::shared_ptr<Scene::Node> test_material_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 					.name = "TestMaterials",
-					.matrix = glm::mat4x3(translateMatrix<4, float>(vec3(-1, 1, -2)) * scaleMatrix<4, float>(0.2)),
+					.matrix = glm::mat4x3(TranslationMatrix<4, float>(vec3(-1, 1, -2)) * ScalingMatrix<4, float>(0.2)),
 				});
 
 				for (size_t i_m = 0; i_m < n_m; ++i_m)
@@ -147,7 +147,7 @@ namespace vkl
 						
 						std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 							.name = "ModelNode",
-							.matrix = glm::mat4x3(translateMatrix<4, float>(position)),
+							.matrix = glm::mat4x3(TranslationMatrix<4, float>(position)),
 							.model = model,
 						});
 						test_material_node->addChild(model_node);
@@ -173,7 +173,7 @@ namespace vkl
 				//	{
 				//		std::shared_ptr<Scene::Node> node = std::make_shared<Scene::Node>(Scene::Node::CI{
 				//			.name = "translate(" + std::to_string(i) + ", " + std::to_string(j) + ")",
-				//			.matrix = glm::mat4x3(translateMatrix<4, float>(Vector3f(i * 2, 0, j * 2))),
+				//			.matrix = glm::mat4x3(TranslationMatrix<4, float>(Vector3f(i * 2, 0, j * 2))),
 				//		});
 				//		node->addChild(viking_node);
 				//		root->addChild(node);
@@ -183,7 +183,7 @@ namespace vkl
 				std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 					.app = this,
 					.name = "Sponza",
-					.matrix = scaleMatrix<4, float>(0.01),
+					.matrix = ScalingMatrix<4, float>(0.01),
 					.path = ENGINE_SRC_PATH "/../gen/models/Sponza_2/sponza.obj",
 					.synch = false,
 				});
@@ -197,7 +197,7 @@ namespace vkl
 				{
 					std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 						.name = "Light",
-						.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3(1, 6, -1))),
+						.matrix = glm::mat4x3(TranslationMatrix<4, float>(glm::vec3(1, 6, -1))),
 					});
 					light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
 						.app = this,
@@ -222,7 +222,7 @@ namespace vkl
 					{
 						std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 							.name = "PointLight" + std::to_string(i),
-							.matrix = glm::mat4x3(translateMatrix<4, float>(glm::vec3((i - (n_lights / 2)) * 6, 6, 0))),
+							.matrix = glm::mat4x3(TranslationMatrix<4, float>(glm::vec3((i - (n_lights / 2)) * 6, 6, 0))),
 						});
 						light_node->light() = pl;
 						root->addChild(light_node);
@@ -255,7 +255,7 @@ namespace vkl
 					}
 					std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 						.name = "SpotLight" + std::to_string(i),
-						.matrix = glm::mat4x3(translateMatrix<4, float>(position)),
+						.matrix = glm::mat4x3(TranslationMatrix<4, float>(position)),
 					});
 					spot_light_node->light() = spot_light;
 					root->addChild(spot_light_node);
@@ -598,7 +598,6 @@ namespace vkl
 					perf_reporter->advance();
 				}
 			}
-
 			exec.waitForAllCompletion();
 
 			VK_CHECK(vkDeviceWaitIdle(_device), "Failed to wait for completion.");

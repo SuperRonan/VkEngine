@@ -1,11 +1,13 @@
 #pragma once
 
+#include <that/core/BasicTypes.hpp>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
 namespace vkl
 {
-	template <int N, class T>
+	template <uint N, class T>
 	using Vector = glm::vec<N, T>;
 
 	template <class T>
@@ -26,8 +28,10 @@ namespace vkl
 	using Vector4f = Vector<4, float>;
 	using Vector4d = Vector<4, double>;
 
-	template <int ROWS, int COLS, class T>
-	using Matrix = glm::mat<COLS, ROWS, T>;
+	// Follow the glsl/glm standard: 
+	// Cols x Rows
+	template <uint Cols, uint Rows, class T>
+	using Matrix = glm::mat<Cols, Rows, T>;
 
 	template <class T>
 	using Matrix2x2 = Matrix<2, 2, T>;
@@ -46,7 +50,7 @@ namespace vkl
 	using Matrix3x3d = Matrix3x3<double>;
 	using Matrix4x4d = Matrix4x4<double>;
 
-	template <int N, class T>
+	template <uint N, class T>
 	using MatrixN = Matrix<N, N, T>;
 
 	template <class T>
@@ -59,10 +63,10 @@ namespace vkl
 	using Matrix4 = MatrixN<4, T>;
 
 	template <class T>
-	using Matrix4x3 = Matrix<3, 4, T>;
+	using Matrix4x3 = Matrix<4, 3, T>;
 
 	template <class T>
-	using Matrix3x4 = Matrix<4, 3, T>;
+	using Matrix3x4 = Matrix<3, 4, T>;
 
 	using Matrix2f = Matrix2<float>;
 	using Matrix3f = Matrix3<float>;
@@ -73,9 +77,29 @@ namespace vkl
 	using Matrix2d = Matrix2<double>;
 	using Matrix3d = Matrix3<double>;
 	using Matrix4d = Matrix4<double>;
+
+	template <uint Cols, uint Rows, class T>
+	using MatrixRowMajor = Matrix<Rows, Cols, T>;
+
+	template <class T>
+	using Matrix4x3RowMajor = MatrixRowMajor<4, 3, T>;
+
+	using Matrix4x3fRowMajor = Matrix4x3RowMajor<float>;
+
+	template <uint Cols, uint Rows, class T>
+	static inline MatrixRowMajor<Cols, Rows, T> ToRowMajor(Matrix<Cols, Rows, T> const& m)
+	{
+		return glm::transpose(m);
+	}
+
+	template <uint Cols, uint Rows, class T>
+	static inline Matrix<Cols, Rows, T> ToColMajor(MatrixRowMajor<Cols, Rows, T> const& m)
+	{
+		return glm::transpose(m);
+	}
 }
 
-#define USING_MATHS_TYPES_NO_NAMESPACE(FLOAT) \
+#define USING_MATHS_TYPES(FLOAT) \
 using Vector2 = Vector2<FLOAT>;\
 using Vector3 = Vector3<FLOAT>;\
 using Vector4 = Vector4<FLOAT>;\

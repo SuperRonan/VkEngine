@@ -37,7 +37,7 @@ namespace vkl
 
 		vec4 hpos = (mat * vec4(position, 1));
 		res.position = hpos;
-		res.direction = glm::normalize(directionMatrix(mat) * direction);
+		res.direction = glm::normalize(DirectionMatrix(mat) * direction);
 		
 		return res;
 	}
@@ -223,7 +223,7 @@ namespace vkl
 
 	LightGLSL DirectionalLight::getAsGLSL(mat4 const& xform) const
 	{
-		const vec3 dir = glm::normalize(directionMatrix(xform) * _direction);
+		const vec3 dir = glm::normalize(DirectionMatrix(xform) * _direction);
 		LightGLSL res = LightGLSL::MakeDirectional(dir, _emission);
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		return res;
@@ -276,7 +276,7 @@ namespace vkl
 		}
 		res.flags = SpotLight::flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
-		const mat3 dir_mat = directionMatrix(xform);
+		const mat3 dir_mat = DirectionMatrix(xform);
 		res.position = vec3(xform * vec4(_position, 1));
 		const vec3 direction = glm::normalize(dir_mat * _direction);
 		const vec3 up = glm::normalize(dir_mat * _up);

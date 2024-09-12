@@ -97,7 +97,7 @@ namespace vkl
 
 			void setXForm(Matrix4x3f const& m)
 			{
-				xform = convertXFormToVk(m);
+				xform = ConvertXFormToVk(m);
 				_mark_for_update = true;
 			}
 		};

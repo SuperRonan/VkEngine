@@ -179,7 +179,7 @@ namespace vkl
 		}
 		if (_show_view_basis)
 		{
-			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * translateMatrix<4, float>(glm::vec3(0, 0, -0.25))* camera.getWorldRoationMatrix()* scaleMatrix<4, float>(0.03125);
+			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * TranslationMatrix<4, float>(glm::vec3(0, 0, -0.25)) * mat4(camera.getWorldRoationMatrix()) * ScalingMatrix<4, float>(0.03125);
 			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "view",
 				.pc_data = &view_3D_basis_matrix,
@@ -226,7 +226,7 @@ namespace vkl
 					_box_mesh->fillVertexDrawCallInfo(vdcr);
 
 					const AABB3f & aabb = mesh->getAABB();
-					Mat4 aabb_matrix = translateMatrix<4, float>(aabb.bottom())* scaleMatrix<4, float>(aabb.diagonal());
+					Mat4 aabb_matrix = TranslationMatrix<4, float>(aabb.bottom())* ScalingMatrix<4, float>(aabb.diagonal());
 					
 					const std::string name = mesh->name() + "::AABB";
 					const Render3DBoxPC pc{

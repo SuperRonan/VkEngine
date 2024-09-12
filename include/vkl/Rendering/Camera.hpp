@@ -4,6 +4,8 @@
 #include <vkl/IO/GuiContext.hpp>
 #include <vkl/IO/ImGuiUtils.hpp>
 
+#include <vkl/Maths/Types.hpp>
+
 namespace vkl
 {
 	class Camera : public VkObject
@@ -12,10 +14,27 @@ namespace vkl
 
 		enum class Type
 		{
-			Perspective,
-			Orthographic,
-			ReversedPerspective,
+			Perspective = 0,
+			Orthographic = 1,
+			ReversedPerspective = 2,
+			Spherical = 3,
 		};
+
+		struct AsGLSL
+		{
+			Matrix4x3fRowMajor world_to_camera;
+			Matrix4x3fRowMajor camera_to_world;
+
+			Matrix4f camera_to_proj;
+			Matrix4f proj_to_camera;
+			
+			Matrix4f world_to_proj;
+			Matrix4f proj_to_world;
+
+			uint flags;
+			uint extra_1, extra_2, extra_3;
+		};
+		
 
 	protected:
 
@@ -67,17 +86,21 @@ namespace vkl
 			return glm::lookAt(_position, _position + _direction, up());
 		}
 
+		//mat4 getCamToWorld() const
+		//{
+		//	const mat4 w2c = getWorldToCam();
+
+		//	
+		//}
+
 		mat4 getWorldToProj() const
 		{
 			return getCamToProj() * getWorldToCam();
 		}
 
-		mat4 getWorldRoationMatrix() const
+		mat3 getWorldRoationMatrix() const
 		{
-			mat4 res = getWorldToCam();
-			res[3][0] = 0;
-			res[3][1] = 0;
-			res[3][2] = 0;
+			mat3 res = mat3(getWorldToCam());
 			return res;
 		}
 
@@ -137,6 +160,8 @@ namespace vkl
 		void update(CameraDelta const& delta);
 
 		void declareGui(GuiContext& ctx);
+
+		AsGLSL getAsGLSL() const;
 
 		friend class CameraController;
 	};

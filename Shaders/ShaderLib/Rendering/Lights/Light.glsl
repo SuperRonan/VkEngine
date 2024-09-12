@@ -80,7 +80,7 @@ mat4x3 getLightMatrixWorldToObject(const in Light l)
 	const vec3 center = l.position;
 	const vec3 front = l.direction;
 	const vec3 up = getLightUp(l);
-	return lookAtAssumeNormalized4x3(center, front, up);
+	return LookAtDir4x3(center, front, up);
 }
 
 mat4 getSpotLightMatrixObjectToProj(const in Light l)
@@ -88,7 +88,7 @@ mat4 getSpotLightMatrixObjectToProj(const in Light l)
 	const float tan_half_fov = getLightTanHalfFov(l);
 	const float aspect = getLightAspect(l);
 	const float z_near = l.z_near;
-	mat4 res = infinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near);
+	mat4 res = InfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near);
 	return res;
 }
 

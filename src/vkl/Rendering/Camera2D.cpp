@@ -12,12 +12,12 @@ namespace vkl
 	// pos in screen space
 	Camera2D::Vector2 Camera2D::operator()(Vector2 const& pos)const
 	{
-		return _translate + vkl::deHomogenize<2, Float>(_zoom_matrix * vkl::homogenize<2, Float>(pos));
+		return _translate + vkl::DeHomogenize<2, Float>(_zoom_matrix * vkl::Homogenize<2, Float>(pos));
 	}
 
 	Camera2D::Matrix3 Camera2D::screenToWorldMatrix()const
 	{
-		return vkl::translateMatrix<3, Float>(_translate) * _zoom_matrix;
+		return vkl::TranslationMatrix<3, Float>(_translate) * _zoom_matrix;
 	}
 
 	Camera2D::Matrix3 Camera2D::matrix()const
@@ -35,16 +35,16 @@ namespace vkl
 	{
 		assert(scroll != 0);
 
-		Vector2 camera_pos = vkl::deHomogenize<2, Float>(_zoom_matrix * vkl::homogenize<2, Float>(screen_pos));
+		Vector2 camera_pos = vkl::DeHomogenize<2, Float>(_zoom_matrix * vkl::Homogenize<2, Float>(screen_pos));
 
 		Float mult = scroll > 0 ? (1.0f / (1.0f + scroll * _ds)) : ((-scroll * _ds + 1.0f));
 
 		_zoom *= mult;
 
 		Vector2 compensate_vector = camera_pos * (1 - mult);
-		Matrix3 compensate_matrix = vkl::translateMatrix<3, Float>(compensate_vector);
+		Matrix3 compensate_matrix = vkl::TranslationMatrix<3, Float>(compensate_vector);
 
-		Matrix3 mult_matrix = vkl::scaleMatrix<3, Float>({ mult, mult });
+		Matrix3 mult_matrix = vkl::ScalingMatrix<3, Float>({ mult, mult });
 
 		_zoom_matrix = compensate_matrix * mult_matrix * _zoom_matrix;
 	}

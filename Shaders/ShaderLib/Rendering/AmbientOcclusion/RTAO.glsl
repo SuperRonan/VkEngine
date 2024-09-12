@@ -43,7 +43,7 @@ float testAOVisibility(TLAS_t tlas, Ray ray, vec2 range);
 
 float computeRTAO(inout rng_t rng, vec3 position, vec3 normal, float radius)
 {
-	const mat3 world_basis = basisFromDir(normal);
+	const mat3 world_basis = BasisFromDir(normal);
 
 	float res = 0.0f;
 

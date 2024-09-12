@@ -137,6 +137,16 @@ namespace vkl
 		}
 	}
 
+	Camera::AsGLSL Camera::getAsGLSL() const
+	{
+		AsGLSL res{
+			.world_to_proj = ToRowMajor(Matrix4x3f(getCamToProj())),
+			//.proj_to_world = 
+		};
+
+		return res;
+	}
+
 	
 
 
