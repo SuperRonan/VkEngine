@@ -2,51 +2,160 @@
 
 #include <ShaderLib:/common.glsl>
 
+#include <ShaderLib:/Maths/transforms.glsl>
+
 #define CAMERA_TYPE_PERSPECTIVE 0
 #define CAMERA_TYPE_ORTHO 1
-#define CAMERA_TYPE_SPHERICAL 2
+#define CAMERA_TYPE_REVERSE_PERSPECTIVE 2
+#define CAMERA_TYPE_SPHERICAL 3
 #define CAMERA_TYPE_BIT_COUNT 2
 #define CAMERA_FLAGS_TYPE_BIT_OFFSET 0
 
-#ifdef __cplusplus
-#define STORAGE_MAT4x3 glm::mat4x3 
-#else
-#define STORAGE_MAT4x3 layout(row_major) mat4x3 
+#ifndef FORCE_CAMERA_INFINITE_ZFAR
+#define FORCE_CAMERA_INFINITE_ZFAR 0
 #endif
 
 struct StorageCamera
-{
-	STORAGE_MAT4x3 world_to_camera; 
-	STORAGE_MAT4x3 camera_to_world; 
+{ 
+	// The direction vectors should be normalized
+	// dot(direction, right) == 0
+	vec3 position;
+	float z_near;
 
-	mat4 camera_to_proj;
-	mat4 proj_to_camera;
+	vec3 direction;
+	float z_far;
 	
-	mat4 world_to_proj;
-	mat4 world_to_camera;
-	
+	vec3 right;
 	uint flags;
-	uint extra_1;
-	uint extra_2;
-	uint extra_3;
+	
+	float inv_tan_half_fov_or_ortho_size;
+	float aspect_maybe_inv;
+	uint pad1, pad2;
 };
 
-mat4x3 ReadStorageMatrix(const in STORAGE_MAT4x3 m)
+uint GetCameraType(const in StorageCamera cam)
 {
-	return mat4x3(m);
+#ifdef FORCE_CAMERA_TYPE
+	return FORCE_CAMERA_TYPE;
+#else
+	return (cam.flags >> CAMERA_FLAGS_TYPE_BIT_OFFSET) & BIT_MASK(CAMERA_TYPE_BIT_COUNT);
+#endif
+}
+
+bool CameraHasInfiniteDepth(const in StorageCamera cam)
+{
+	return (FORCE_CAMERA_INFINITE_ZFAR != 0) || isinf(cam.z_far);
+}
+
+mat4x3 GetCameraWorldToCam(const in StorageCamera cam)
+{
+	const vec3 up = cross(cam.direction, cam.right);
+	return LookAtDir4x3AssumeOrtho(cam.position, cam.direction, up, cam.right);
+}
+
+mat4x3 GetCameraCamToWorld(const in StorageCamera cam)
+{
+	return InverseRigidTransform(GetCameraWorldToCam(cam));
+}
+
+float GetOrthoCameraAspect(const in StorageCamera cam)
+{
+	return cam.aspect_maybe_inv;
+}
+
+float GetPerspectiveCameraInvAspect(const in StorageCamera cam)
+{
+	return cam.aspect_maybe_inv;
+}
+
+float GetPerspectiveCameraInvTan(const in StorageCamera cam)
+{
+	return cam.inv_tan_half_fov_or_ortho_size;
+}
+
+float GetOrthoCameraFrameSize(const in StorageCamera cam)
+{
+	return cam.inv_tan_half_fov_or_ortho_size;
+}
+
+mat2x3 GetCameraOrthoAABB(const in StorageCamera cam)
+{
+	mat2x3 res;
+	const vec2 frame = GetOrthoCameraFrameSize(cam) * vec2(GetOrthoCameraAspect(cam), 1);
+	res[0] = vec3(-frame, cam.z_near);
+	res[1] = vec3(frame, cam.z_far);
+	return res;
+}
+
+mat4 GetCameraCamToProj(const in StorageCamera cam)
+{
+	const uint type = GetCameraType(cam);
+	mat4 res;
+	if(type == CAMERA_TYPE_PERSPECTIVE)
+	{
+		const bool infinite = CameraHasInfiniteDepth(cam);
+		const float inv_aspect = GetPerspectiveCameraInvAspect(cam);
+		const float inv_tan = GetPerspectiveCameraInvTan(cam);
+		if(infinite)
+		{
+			res = InfinitePerspectiveProjFromInvTanInvAspect(inv_tan, inv_aspect, cam.z_near);
+		}
+		else
+		{
+			res = PerspectiveProjFromInvTanInvAspect(inv_tan, inv_aspect, vec2(cam.z_near, cam.z_far));
+		}
+	}
+	else if(type == CAMERA_TYPE_ORTHO)
+	{
+		const mat2x3 volume = GetCameraOrthoAABB(cam);
+		res = OrthoProj(volume[0], volume[1]);
+	}
+	return res;
+}
+
+mat4 GetCameraProjToCam(const in StorageCamera cam)
+{
+	const uint type = GetCameraType(cam);
+	mat4 res;
+	if(type == CAMERA_TYPE_PERSPECTIVE)
+	{
+		const bool infinite = CameraHasInfiniteDepth(cam);
+		const float inv_aspect = GetPerspectiveCameraInvAspect(cam);
+		const float inv_tan = GetPerspectiveCameraInvTan(cam);
+		if(infinite)
+		{
+			res = InverseInfinitePerspectiveProjFromTan(rcp(inv_tan), rcp(inv_aspect), cam.z_far);
+		}
+		else
+		{
+			res = InversePerspectiveProjFromTan(rcp(inv_tan), rcp(inv_aspect), vec2(cam.z_near, cam.z_far));
+		}
+	}
+	else if(type == CAMERA_TYPE_ORTHO)
+	{
+		const mat2x3 volume = GetCameraOrthoAABB(cam);
+		res = InverseOrthoProj(volume[0], volume[1]);
+	}
+	return res;
+}
+
+mat4 GetCameraWorldToProj(const in StorageCamera cam)
+{
+	return GetCameraCamToProj(cam) * mat4(GetCameraWorldToCam(cam));
+}
+
+mat4 GetCameraProjToWorld(const in StorageCamera cam)
+{
+	return mat4(GetCameraCamToWorld(cam)) * GetCameraProjToCam(cam);
 }
 
 vec3 GetCameraWorldPosition(const in StorageCamera cam)
 {
-	return cam.camera_to_world[3];
+	return cam.position;
 }
 
 mat3 GetCameraWorldBasis(const in StorageCamera cam)
 {
-	return mat3(cam.camera_to_world);
-}
-
-uint GetCameraType(const in StorageCamera cam)
-{
-	return (cam.flags >> CAMERA_FLAGS_TYPE_BIT_OFFSET) & BIT_MASK(CAMERA_TYPE_BIT_COUNT)
+	const vec3 up = cross(cam.direction, cam.right);
+	return mat3(cam.right, up, cam.direction);
 }

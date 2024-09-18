@@ -31,7 +31,7 @@ void main()
 	const vec3 a_tangent = vertex.tangent;
 	const vec2 a_uv = vertex.uv;
 
-	const mat4 w2p = ubo.world_to_proj;
+	const mat4 w2p = GetCameraWorldToProj(ubo.camera);
 	const mat4 o2w = mat4(vd.matrix);
 	const mat4 o2p = w2p * o2w;
 	

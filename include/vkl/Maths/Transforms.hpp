@@ -5,9 +5,19 @@
 #include <cmath>
 #include "Types.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+#include <glm/ext/matrix_clip_space.hpp>
+
+#include <ShaderLib/interop_glsl_cpp>
 
 namespace glm
 {
+	
+}
+
+namespace vkl
+{
+
 	template <class T>
 	constexpr auto sqr(T const& t)
 	{
@@ -19,10 +29,44 @@ namespace glm
 	{
 		return T(1) / t;
 	}
-}
 
-namespace vkl
-{
+	template <class T>
+	constexpr auto TanHalfFOVFast(T const& fov)
+	{
+		// See Graphics Gems VIII.5
+		const T x = fov;
+		const T x3 = x * sqr(x);
+		const T x5 = x3 * sqr(x);
+		const T res = (x + rcp<T>(12) * x3 + rcp<T>(120) * x5) * rcp<T>(2);
+		return res;
+	}
+
+	template <class T>
+	constexpr auto TanHalfFOVCorrect(T const& fov)
+	{
+		const auto res1 = tan(fov * rcp<T>(2));
+		return res1;
+	}
+
+	template <class T>
+	constexpr auto TanHalfFOV(T const& fov)
+	{
+		const auto c = TanHalfFOVCorrect(fov);
+		const auto f = TanHalfFOVFast(fov);
+		return c;
+	}
+
+	template <uint N, class Scalar>
+	constexpr MatrixN<N, Scalar> DiagonalMatrix(Vector<N, Scalar> const& d)
+	{
+		MatrixN<N, Scalar> res;
+		for (uint i = 0; i < N; ++i)
+		{
+			res[i][i] = d[i];
+		}
+		return res;
+	}
+
 	template <class Float>
 	constexpr MatrixN<2, Float> RotationMatrix(Float angle)
 	{
@@ -151,37 +195,47 @@ namespace vkl
 		return res;
 	}
 
-#ifndef DEFAULT_REAL
-#define DEFAULT_REAL float
+#ifndef DEFAULT_SCALAR
+#define DEFAULT_SCALAR float
 #endif
 
-#define EQ_DFR = DEFAULT_REAL
+#define EQ_DFS = DEFAULT_SCALAR
 #define EQ_DD = 3
-#define AFFINE_XFORM_INL_TEMPLATE_DECL template <class Scalar_t EQ_DFR, uint Dimensions EQ_DD>
-#define AFFINE_XFORM_INL_cpp_constexpr constexpr
+#define AFFINE_XFORM_INL_TEMPLATE_DECL template <class Scalar_t EQ_DFS, uint Dimensions EQ_DD>
 #define AFFINE_XFORM_INL_Dims Dimensions
-#define AFFINE_XFORM_INL_CRef(T) T const&
-#define AFFINE_XFORM_INL_nmspc glm::
 #define AFFINE_XFORM_INL_Scalar Scalar_t
 #define AFFINE_XFORM_INL_QBlock MatrixN<Dimensions, Scalar_t>
 #define AFFINE_XFORM_INL_XFormMatrix Matrix<Dimensions + 1, Dimensions, Scalar_t>
 #define AFFINE_XFORM_INL_FullMatrix Matrix<Dimensions + 1, Dimensions + 1, Scalar_t>
 #define AFFINE_XFORM_INL_Vector Vector<Dimensions, Scalar_t>
 
-#include <ShaderLib/Maths/AffineXForm.inl>
+#include <ShaderLib/Maths/TemplateImpl/AffineXForm.inl>
 
-#undef EQ_DFR 
+#undef EQ_DFS 
 #undef EQ_DD 
 #undef AFFINE_XFORM_INL_TEMPLATE_DECL 
-#undef AFFINE_XFORM_INL_cpp_constexpr 
-#undef AFFINE_XFORM_INL_Dims 
-#undef AFFINE_XFORM_INL_CRef
-#undef AFFINE_XFORM_INL_nmspc 
+#undef AFFINE_XFORM_INL_Dims  
 #undef AFFINE_XFORM_INL_Scalar 
 #undef AFFINE_XFORM_INL_QBlock 
 #undef AFFINE_XFORM_INL_XFormMatrix 
 #undef AFFINE_XFORM_INL_FullMatrix 
 #undef AFFINE_XFORM_INL_Vector 
+
+
+#define EQ_DFS = DEFAULT_SCALAR
+#define CLIP_SPACE_INL_TEMPLATE_DECL template <class Scalar_t EQ_DFS>
+#define CLIP_SPACE_INL_Scalar Scalar_t
+#define CLIP_SPACE_INL_Vector(N) Vector<N, Scalar_t>
+#define CLIP_SPACE_INL_Matrix(N) MatrixN<N, Scalar_t>
+
+#include <ShaderLib/Maths/TemplateImpl/ClipSpaceMatrices.inl>
+
+#undef EQ_DFS 
+#undef CLIP_SPACE_INL_TEMPLATE_DECL 
+#undef CLIP_SPACE_INL_Scalar 
+#undef CLIP_SPACE_INL_Vector
+#undef CLIP_SPACE_INL_Matrix
+
 	
 
 	template <class Scalar>

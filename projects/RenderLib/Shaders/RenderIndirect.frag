@@ -78,7 +78,7 @@ void main()
 		geom.shading_normal = TBN * material.normal;
 	}
 
-	const vec3 camera_position = (inverse(ubo.world_to_camera) * vec4(0..xxx, 1)).xyz;
+	const vec3 camera_position = GetCameraWorldPosition(ubo.camera);
 	const vec3 wo = normalize(camera_position - position);
 
 	vec3 res = shade(geom, wo, material);

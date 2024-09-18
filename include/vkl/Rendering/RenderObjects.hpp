@@ -17,6 +17,7 @@ namespace vkl
 	using vec4 = glm::vec4;
 	using mat3 = glm::mat3;
 	using mat4 = glm::mat4;
+	using mat4x3 = glm::mat4x3;
 
 	constexpr vec2 clipSpaceToUv(vec2 cp)
 	{

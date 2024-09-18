@@ -140,9 +140,7 @@ namespace vkl
 			float delta_time;
 			uint32_t frame_idx;
 
-			alignas(16) glm::mat4 world_to_camera;
-			alignas(16) glm::mat4 camera_to_proj;
-			alignas(16) glm::mat4 world_to_proj;
+			alignas(16) Camera::AsGLSL camera;
 		};
 
 		template <class DrawInfoType>

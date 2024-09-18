@@ -278,7 +278,7 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 	{
 		if(light_type == LIGHT_TYPE_POINT)
 		{
-			const vec4 ref_direction_depth = cubeMapDirectionAndDepth(position, light.position, getLightZNear(light));
+			const vec4 ref_direction_depth = CubeMapDirectionAndDepth(position, light.position, getLightZNear(light));
 			float ref_depth = ref_direction_depth.w;
 			const vec3 light_main_direction = ref_direction_depth.xyz;
 			// Could also compute the sin_theta with the norm of the cross produc

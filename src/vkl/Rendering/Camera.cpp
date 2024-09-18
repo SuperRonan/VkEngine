@@ -34,18 +34,19 @@ namespace vkl
 		mat4 res;
 		if (_type == Type::Perspective)
 		{
-			if (_infinite_perspective)
+			if (_infinite_perspective || std::isinf(_far))
 			{
-				res = glm::infinitePerspective(_fov, _aspect, _near);
+				res = InfinitePerspectiveProjFromFOV(_fov, _aspect, _near);
 			}
 			else
 			{
-				res = glm::perspective(_fov, _aspect, _near, _far);
+				res = PerspectiveProjFromFOV(_fov, _aspect, vec2(_near, _far));
 			}
 		}
 		else if (_type == Type::Orthographic)
 		{
-			res = glm::ortho<float>(-_ortho_size * _aspect, _ortho_size * _aspect, -_ortho_size, _ortho_size, _near, _far);
+			const AABB3f aabb = getOrthoAABB();
+			res = OrthoProj(aabb.bottom(), aabb.top());
 		}
 		else if (_type == Type::ReversedPerspective)
 		{
@@ -55,6 +56,38 @@ namespace vkl
 			res = p * r * t;
 		}
 		return res;
+	}
+
+	mat4 Camera::getProjToCam() const
+	{
+		mat4 res;
+		if (_type == Type::Perspective)
+		{
+			if (_infinite_perspective || std::isinf(_far))
+			{
+				res = InverseInfinitePerspectiveProjFromFOV(_fov, _aspect, _near);
+			}
+			else
+			{
+				res = InversePerspectiveProjFromFOV(_fov, _aspect, vec2(_near, _far));
+			}
+		}
+		else if (_type == Type::Orthographic)
+		{
+			const AABB3f aabb = getOrthoAABB();
+			res = InverseOrthoProj(aabb.bottom(), aabb.top());
+		}
+		return res;
+	}
+
+	mat4 Camera::getWorldToProj() const
+	{
+		return getCamToProj() * mat4(getWorldToCam());
+	}
+
+	mat4 Camera::GetProjToWorld() const
+	{
+		return getCamToWorld() * getProjToCam();
 	}
 
 	void Camera::update(CameraDelta const& delta)
@@ -140,16 +173,18 @@ namespace vkl
 	Camera::AsGLSL Camera::getAsGLSL() const
 	{
 		AsGLSL res{
-			.world_to_proj = ToRowMajor(Matrix4x3f(getCamToProj())),
-			//.proj_to_world = 
+			.position = _position,
+			.z_near = _near,
+			.direction = _direction,
+			.z_far = zFar(),
+			.right = _right,
+			.flags = 0,
+			.inv_tan_half_fov = rcp(TanHalfFOV(_fov)),
+			.inv_aspect = rcp(_aspect),
 		};
-
+		res.flags |= static_cast<uint32_t>(_type);
 		return res;
 	}
-
-	
-
-
 
 	FirstPersonCameraController::FirstPersonCameraController(CreateInfo const& ci) :
 		CameraController(ci.camera),

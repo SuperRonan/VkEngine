@@ -10,22 +10,6 @@
 // A UniformSimilarity transfrom: Q = sR, s a scalar
 // These two special cases can be inverted more easily
 
-#ifndef AFFINE_XFORM_INL_TEMPLATE_DECL
-#error "AFFINE_XFORM_INL_TEMPLATE_DECL not defined"
-#endif
-
-#ifndef AFFINE_XFORM_INL_cpp_constexpr
-#error "AFFINE_XFORM_INL_cpp_constexpr not defined"
-#endif
-
-#ifndef AFFINE_XFORM_INL_CRef
-#error "AFFINE_XFORM_INL_CRef not defined"
-#endif
-
-#ifndef AFFINE_XFORM_INL_nmspc
-#error "AFFINE_XFORM_INL_nmspc not defined"
-#endif
-
 #ifndef AFFINE_XFORM_INL_Dims
 #error "AFFINE_XFORM_INL_Dims not defined"
 #endif
@@ -58,10 +42,7 @@
 
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix MakeAffineTransform(
-	AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) Q, 
-	AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_Vector) t
-	)
+constexpr AFFINE_XFORM_INL_XFormMatrix MakeAffineTransform(ConstRef(AFFINE_XFORM_INL_QBlock) Q, ConstRef(AFFINE_XFORM_INL_Vector) t)
 {
 	AFFINE_XFORM_INL_XFormMatrix res = AFFINE_XFORM_INL_XFormMatrix(Q);
 	res[AFFINE_XFORM_INL_Dims] = t;
@@ -69,19 +50,19 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix MakeAffineTransform(
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Vector ExtractTranslation(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) m)
+constexpr AFFINE_XFORM_INL_Vector ExtractTranslation(ConstRef(AFFINE_XFORM_INL_XFormMatrix) m)
 {
 	return m[AFFINE_XFORM_INL_Dims];
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_QBlock ExtractQBlock(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) m)
+constexpr AFFINE_XFORM_INL_QBlock ExtractQBlock(ConstRef(AFFINE_XFORM_INL_XFormMatrix) m)
 {
 	return AFFINE_XFORM_INL_QBlock(m);
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix mul(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) l, AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) r)
+constexpr AFFINE_XFORM_INL_XFormMatrix mul(ConstRef(AFFINE_XFORM_INL_XFormMatrix) l, ConstRef(AFFINE_XFORM_INL_XFormMatrix) r)
 {
 	const AFFINE_XFORM_INL_XFormMatrix res1 = l * AFFINE_XFORM_INL_FullMatrix(r);;
 	const AFFINE_XFORM_INL_QBlock Q = ExtractQBlock(l);
@@ -91,45 +72,45 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix mul(AFFINE_XFORM_INL
 
 // To check: It probablya assumes Q = S R
 // AFFINE_XFORM_INL_TEMPLATE_DECL
-// AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Vector ExtractScale(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) Q)
+// constexpr AFFINE_XFORM_INL_Vector ExtractScale(ConstRef(AFFINE_XFORM_INL_QBlock) Q)
 // {
 // 	AFFINE_XFORM_INL_QBlock res;
 // 	for(uint i = 0; i < 3; ++i)
 // 	{
-// 		res[i] = AFFINE_XFORM_INL_nmspc length(RS[i]);
+// 		res[i] = nmspc_glm length(RS[i]);
 // 	}
 // 	return res;
 // }
 
 // AFFINE_XFORM_INL_TEMPLATE_DECL
-// AFFINE_XFORM_INL_cpp_constexpr vec3R ExtractScale(AFFINE_XFORM_INL_CRef(mat4x3R) m)
+// constexpr vec3R ExtractScale(ConstRef(mat4x3R) m)
 // {
 // 	return ExtractScale(ExtractRSBlock(m));
 // }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Scalar ExtractUniformScaleAssumeQis_sR(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) sR)
+constexpr AFFINE_XFORM_INL_Scalar ExtractUniformScaleAssumeQis_sR(ConstRef(AFFINE_XFORM_INL_QBlock) sR)
 {
 	// If Q is indeed a sR, the two results should be the same
-	const AFFINE_XFORM_INL_Scalar res1 = AFFINE_XFORM_INL_nmspc length(sR[0]); 
-	const AFFINE_XFORM_INL_Scalar res2 = AFFINE_XFORM_INL_nmspc determinant(sR);
+	const AFFINE_XFORM_INL_Scalar res1 = nmspc_glm length(sR[0]); 
+	const AFFINE_XFORM_INL_Scalar res2 = nmspc_glm determinant(sR);
 	const AFFINE_XFORM_INL_Scalar res = res1;
 	return res;
 }
 
 // AFFINE_XFORM_INL_TEMPLATE_DECL
-// AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_QBlock NormalizeRotationScale(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) Q)
+// constexpr AFFINE_XFORM_INL_QBlock NormalizeRotationScale(ConstRef(AFFINE_XFORM_INL_QBlock) Q)
 // {
 // 	AFFINE_XFORM_INL_QBlock res;
 // 	for(uint i = 0; i < Dim; ++i)
 // 	{
-// 		res[i] = AFFINE_XFORM_INL_nmspc normalize(RS[i]);
+// 		res[i] = nmspc_glm normalize(RS[i]);
 // 	}
 // 	return res;
 // }
 
 // AFFINE_XFORM_INL_TEMPLATE_DECL
-// AFFINE_XFORM_INL_cpp_constexpr mat3R NormalizeRotationScale(AFFINE_XFORM_INL_CRef(mat3R) RS, AFFINE_XFORM_INL_CRef(vec3R) S)
+// constexpr mat3R NormalizeRotationScale(ConstRef(mat3R) RS, ConstRef(vec3R) S)
 // {
 // 	mat3R res;
 // 	for(uint i = 0; i < 3; ++i)
@@ -142,16 +123,16 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Scalar ExtractUniformScaleAssume
 #if TARGET_C_PLUS_PLUS || (AFFINE_XFORM_INL_Dims == 3)
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Vector ExtractEulerAnglesFromRotationMatrix(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) R)
+constexpr AFFINE_XFORM_INL_Vector ExtractEulerAnglesFromRotationMatrix(ConstRef(AFFINE_XFORM_INL_QBlock) R)
 {
 #if TARGET_C_PLUS_PLUS
 	if constexpr (AFFINE_XFORM_INL_Dims == 3)
 #endif
 	{
 		// TO Check if correct
-		const AFFINE_XFORM_INL_Scalar x = AFFINE_XFORM_INL_nmspc atan(R[1][2], R[2][2]);
-		const AFFINE_XFORM_INL_Scalar y = AFFINE_XFORM_INL_nmspc atan(-R[0][2], AFFINE_XFORM_INL_nmspc sqrt(AFFINE_XFORM_INL_nmspc sqr(R[1][2]) + AFFINE_XFORM_INL_nmspc sqr(R[2][2])));
-		const AFFINE_XFORM_INL_Scalar z = AFFINE_XFORM_INL_nmspc atan(R[0][1], R[0][0]);
+		const AFFINE_XFORM_INL_Scalar x = nmspc_glm atan(R[1][2], R[2][2]);
+		const AFFINE_XFORM_INL_Scalar y = nmspc_glm atan(-R[0][2], nmspc_glm sqrt(sqr(R[1][2]) + sqr(R[2][2])));
+		const AFFINE_XFORM_INL_Scalar z = nmspc_glm atan(R[0][1], R[0][0]);
 		return AFFINE_XFORM_INL_Vector(x, y, z);
 	}
 #if TARGET_C_PLUS_PLUS
@@ -163,7 +144,7 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Vector ExtractEulerAnglesFromRot
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Vector ExtractEulerAnglesAssumeUniformScale(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) sR)
+constexpr AFFINE_XFORM_INL_Vector ExtractEulerAnglesAssumeUniformScale(ConstRef(AFFINE_XFORM_INL_QBlock) sR)
 {
 	return ExtractEulerAnglesFromRotationMatrix(sR / ExtractUniformScaleAssumeQis_sR(sR));
 }
@@ -173,14 +154,14 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Vector ExtractEulerAnglesAssumeU
 #if TARGET_C_PLUS_PLUS || (AFFINE_XFORM_INL_Dims == 2)
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Scalar ExtractRotationAngle(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) R)
+constexpr AFFINE_XFORM_INL_Scalar ExtractRotationAngle(ConstRef(AFFINE_XFORM_INL_QBlock) R)
 {
 #if TARGET_C_PLUS_PLUS
 	if constexpr (AFFINE_XFORM_INL_Dims == 2)
 #endif
 	{
 		// TO Check if correct
-		AFFINE_XFORM_INL_Scalar res = AFFINE_XFORM_INL_nmspc atan(R[0][1], R[0][0]);
+		AFFINE_XFORM_INL_Scalar res = nmspc_glm atan(R[0][1], R[0][0]);
 		return res;
 	}
 #if TARGET_C_PLUS_PLUS
@@ -192,7 +173,7 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Scalar ExtractRotationAngle(AFFI
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Scalar ExtractRotationAngleAssumeUniformScale(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) sR)
+constexpr AFFINE_XFORM_INL_Scalar ExtractRotationAngleAssumeUniformScale(ConstRef(AFFINE_XFORM_INL_QBlock) sR)
 {
 	return ExtractRotationAngle(sR / ExtractUniformScaleAssumeQis_sR(sR));
 }
@@ -204,30 +185,30 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_Scalar ExtractRotationAngleAssum
 
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_QBlock InverseRotationMatrix(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) R)
+constexpr AFFINE_XFORM_INL_QBlock InverseRotationMatrix(ConstRef(AFFINE_XFORM_INL_QBlock) R)
 {
 	return transpose(R);
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_QBlock Inverse_sR(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) sR)
+constexpr AFFINE_XFORM_INL_QBlock Inverse_sR(ConstRef(AFFINE_XFORM_INL_QBlock) sR)
 {
 	const AFFINE_XFORM_INL_Scalar s = ExtractUniformScaleAssumeQis_sR(sR);
 
-	const AFFINE_XFORM_INL_QBlock res = AFFINE_XFORM_INL_nmspc transpose(sR) / (s * s);
+	const AFFINE_XFORM_INL_QBlock res = nmspc_glm transpose(sR) / (s * s);
 
 	return res;
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_QBlock InverseGenericQBlock(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_QBlock) Q)
+constexpr AFFINE_XFORM_INL_QBlock InverseGenericQBlock(ConstRef(AFFINE_XFORM_INL_QBlock) Q)
 {
 	// Probably the fastest
-	return AFFINE_XFORM_INL_nmspc inverse(Q);
+	return nmspc_glm inverse(Q);
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix InverseRigidTransformFast(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) m)
+constexpr AFFINE_XFORM_INL_XFormMatrix InverseRigidTransformFast(ConstRef(AFFINE_XFORM_INL_XFormMatrix) m)
 {
 	const AFFINE_XFORM_INL_QBlock R = ExtractQBlock(m);
 	const AFFINE_XFORM_INL_Vector T = ExtractTranslation(m);
@@ -238,7 +219,13 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix InverseRigidTransfor
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix InverseUniformSimilarTransform(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) m)
+constexpr AFFINE_XFORM_INL_XFormMatrix InverseRigidTransform(ConstRef(AFFINE_XFORM_INL_XFormMatrix) m)
+{
+	return InverseRigidTransformFast(m);
+}
+
+AFFINE_XFORM_INL_TEMPLATE_DECL
+constexpr AFFINE_XFORM_INL_XFormMatrix InverseUniformSimilarTransform(ConstRef(AFFINE_XFORM_INL_XFormMatrix) m)
 {
 	const AFFINE_XFORM_INL_QBlock sR = ExtractQBlock(m);
 	const AFFINE_XFORM_INL_Vector T = ExtractTranslation(m);
@@ -249,7 +236,7 @@ AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix InverseUniformSimila
 }
 
 AFFINE_XFORM_INL_TEMPLATE_DECL
-AFFINE_XFORM_INL_cpp_constexpr AFFINE_XFORM_INL_XFormMatrix InverseAffineTransform(AFFINE_XFORM_INL_CRef(AFFINE_XFORM_INL_XFormMatrix) m)
+constexpr AFFINE_XFORM_INL_XFormMatrix InverseAffineTransform(ConstRef(AFFINE_XFORM_INL_XFormMatrix) m)
 {
 	const AFFINE_XFORM_INL_QBlock Q = ExtractQBlock(m);
 	const AFFINE_XFORM_INL_Vector T = ExtractTranslation(m);

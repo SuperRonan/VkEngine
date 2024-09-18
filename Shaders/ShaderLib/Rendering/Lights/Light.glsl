@@ -80,7 +80,7 @@ mat4x3 getLightMatrixWorldToObject(const in Light l)
 	const vec3 center = l.position;
 	const vec3 front = l.direction;
 	const vec3 up = getLightUp(l);
-	return LookAtDir4x3(center, front, up);
+	return LookAtDir4x3AssumeOrtho(center, front, up, cross(up, front));
 }
 
 mat4 getSpotLightMatrixObjectToProj(const in Light l)

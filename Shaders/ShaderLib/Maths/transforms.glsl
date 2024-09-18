@@ -1,6 +1,29 @@
 #pragma once
 
+#include <ShaderLib:/interop_glsl_cpp>
+
 #include "common.glsl"
+
+float TanHalfFOVFast(float fov)
+{
+	// See Graphics Gems VIII.5
+	const float x = fov;
+	const float x3 = x * sqr(x);
+	const float x5 = x3 * sqr(x);
+	const float res = (x + rcp(12) * x3 + rcp(120) * x5) * 0.5f;
+	return res;
+}
+
+float TanHalfFOVCorrect(float fov)
+{
+	const float res = tan(fov * 0.5f);
+	return res;
+}
+
+float TanHalfFOV(float fov)
+{
+	return TanHalfFOVCorrect(fov);
+}
 
 // theta is the inclination angle with the +Y axis
 // phi is the azimuthal angle with the +X axis
@@ -25,12 +48,12 @@ vec3 SphericalToCartesian(vec3 theta_phi_rho)
 	return SphericalToCartesian(theta_phi_rho.xy) * theta_phi_rho.z;
 }
 
-mat2 diagonal(vec2 v)
+mat2 DiagonalMatrix(vec2 v)
 {
 	return mat2(v.x, 0, 0, v.y);
 }
 
-mat3 diagonal(vec3 v)
+mat3 DiagonalMatrix(vec3 v)
 {
 	return mat3(
 		v.x, 0, 0, 
@@ -39,7 +62,7 @@ mat3 diagonal(vec3 v)
 	);
 }
 
-mat4 diagonal(vec4 v)
+mat4 DiagonalMatrix(vec4 v)
 {
 	return mat4(
 		v.x, 0, 0, 0,
@@ -64,40 +87,40 @@ vec4 ExtractDiagonal(mat4 m)
 	return vec4(m[0][0], m[1][1], m[2][2], m[3][3]);
 }
 
-mat2 scale2(vec2 s)
+mat2 Scale2(vec2 s)
 {
-	return diagonal(s);
+	return DiagonalMatrix(s);
 }
 
-mat3 scale3(vec3 s)
+mat3 Scale3(vec3 s)
 {
-	return diagonal(s);
+	return DiagonalMatrix(s);
 }
 
-mat3 scale3(vec2 s)
+mat3 Scale3(vec2 s)
 {
-	return scale3(vec3(s, 1));
+	return Scale3(vec3(s, 1));
 }
 
-mat4 scale4(vec4 s)
+mat4 Scale4(vec4 s)
 {
-	return diagonal(s);
+	return DiagonalMatrix(s);
 }
 
-mat4 scale4(vec3 s)
+mat4 Scale4(vec3 s)
 {
-	return scale4(vec4(s, 1));
+	return Scale4(vec4(s, 1));
 }
 
 
-mat3 translate3(vec2 t)
+mat3 Translate3(vec2 t)
 {
 	mat3 res = mat3(1);
 	res[2].xy = t;
 	return res;
 }
 
-mat4 translate4(vec3 t)
+mat4 Translate4(vec3 t)
 {
 	mat4 res = mat4(1);
 	res[3].xyz = t;
@@ -105,14 +128,14 @@ mat4 translate4(vec3 t)
 }
 
 
-mat2 rotation2(float theta)
+mat2 Rotation2(float theta)
 {
 	const float c = cos(theta);
 	const float s = sin(theta);
 	return mat2(c, -s, s, c);
 }
 
-mat3 rotation3X(float theta)
+mat3 Rotation3X(float theta)
 {
 	const float c = cos(theta);
 	const float s = sin(theta);
@@ -123,7 +146,7 @@ mat3 rotation3X(float theta)
 	return res;
 }
 
-mat3 rotation3Y(float theta)
+mat3 Rotation3Y(float theta)
 {
 	const float c = cos(theta);
 	const float s = sin(theta);
@@ -134,7 +157,7 @@ mat3 rotation3Y(float theta)
 	return res;
 }
 
-mat3 rotation3Z(float theta)
+mat3 Rotation3Z(float theta)
 {
 	const float c = cos(theta);
 	const float s = sin(theta);
@@ -145,93 +168,77 @@ mat3 rotation3Z(float theta)
 	return res;
 }
 
-mat4 rotation4X(float theta)
+mat4 Rotation4X(float theta)
 {
-	return mat4(rotation3X(theta));
+	return mat4(Rotation3X(theta));
 }
 
-mat4 rotation4Y(float theta)
+mat4 Rotation4Y(float theta)
 {
-	return mat4(rotation3Y(theta));
+	return mat4(Rotation3Y(theta));
 }
 
-mat4 rotation4Z(float theta)
+mat4 Rotation4Z(float theta)
 {
-	return mat4(rotation3Z(theta));
+	return mat4(Rotation3Z(theta));
 }
 
-mat3 rotation3XYZ(vec3 xyz)
+mat3 Rotation3XYZ(vec3 xyz)
 {
-	return rotation3X(xyz.x) * rotation3Y(xyz.y) * rotation3Z(xyz.z);
+	return Rotation3X(xyz.x) * Rotation3Y(xyz.y) * Rotation3Z(xyz.z);
 }
 
-mat4 rotation4XYZ(vec3 xyz)
+mat4 Rotation4XYZ(vec3 xyz)
 {
-	return mat4(rotation3XYZ(xyz));
+	return mat4(Rotation3XYZ(xyz));
 }
 
-mat3 directionMatrix(const in mat3 xform)
+mat3 DirectionMatrix(const in mat3 xform)
 {
 	return transpose(inverse(xform));
 }
 
+mat4x3 MakeAffineTransform(const in mat3 Q, const in vec3 T);
 
 // Matrices follow the vulkan standard
 // - left handed 
 // - depth zero to one 
 
-// Copy pasted from glm
+// LookAt matrix is a Rigid matrix
+// front, up and right are assumed to make an orthonormal basis
+mat4x3 LookAtDir4x3AssumeOrtho(vec3 position, vec3 front, vec3 up, vec3 right)
+{
+	const mat3 R = transpose(mat3(right, up, front));
+	const vec3 T = -R * position;
+	const mat4x3 res = MakeAffineTransform(R, T);
+	return res;
+}
 
 // front and up are assumed to be normalized directions
-mat4x3 LookAtDir4x3(vec3 position, vec3 front, vec3 up)
+// dot(up, front) == 0
+mat4x3 LookAtDir4x3AssumeOrtho(vec3 position, vec3 front, vec3 up)
 {	
 	const vec3 f = front;
-	const vec3 s = normalize(cross(up, front));
-	const vec3 u = normalize(cross(f, s));
-	
-	mat4x3 res = mat4x3(1);
-	res[0][0] = s.x;
-	res[1][0] = s.y;
-	res[2][0] = s.z;
-	res[0][1] = u.x;
-	res[1][1] = u.y;
-	res[2][1] = u.z;
-	res[0][2] = f.x;
-	res[1][2] = f.y;
-	res[2][2] = f.z;
-	res[3][0] =-dot(s, position);
-	res[3][1] =-dot(u, position);
-	res[3][2] =-dot(f, position);
-	return res;
+	const vec3 s = cross(up, front);
+	const vec3 u = -up;
+	return LookAtDir4x3AssumeOrtho(position, front, u, s);
+}
+
+mat4x3 LookAtDir4x3(vec3 position, vec3 front, vec3 up)
+{
+	const vec3 ss = cross(up, front);
+	const float sinus = length(ss);
+	const vec3 s = ss / sinus;
+	const vec3 u = -(up - front * dot(front, up)) / sinus;
+	// const vec3 s = normalize(cross(up, front));
+	// const vec3 u = cross(s, front);
+	return LookAtDir4x3AssumeOrtho(position, front, u, s);
 }
 
 // up is assumed to a normalized direction
 mat4x3 LookAt4x3(vec3 position, vec3 center, vec3 up)
 {
-	return LookAtDir4x3(position, normalize(position + center), up);
-}
-
-mat4 InfinitePerspectiveProjFromTan(float tan_half_fov, float aspect, float z_near)
-{
-	const float range = tan_half_fov * z_near;
-	const float left = -range * aspect;
-	const float right = range * aspect;
-	const float bottom = -range;
-	const float top = range;
-
-	mat4 res = mat4(0);
-	res[0][0] = (2 * z_near) / (right - left);
-	res[1][1] = - (2 * z_near) / (top - bottom);
-	res[2][2] = 1;
-	res[2][3] = 1;
-	res[3][2] = - 2 * z_near;
-	return res;
-}
-
-mat4 InfinitePerspectiveProjFromFOV(float fov, float aspect, float z_near)
-{
-	const float tan_half_fov = tan(fov * 0.5);
-	return InfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near);
+	return LookAtDir4x3(position, normalize(center - position), up);
 }
 
 // Assume dir is normalized
@@ -296,23 +303,17 @@ vec3 ComputeTriangleNormal(const in mat3 vertices)
 
 
 #define AFFINE_XFORM_INL_TEMPLATE_DECL 
-#define AFFINE_XFORM_INL_cpp_constexpr 
 #define AFFINE_XFORM_INL_Dims 2
-#define AFFINE_XFORM_INL_CRef(T) const in T
-#define AFFINE_XFORM_INL_nmspc 
 #define AFFINE_XFORM_INL_Scalar float
 #define AFFINE_XFORM_INL_QBlock mat2
 #define AFFINE_XFORM_INL_XFormMatrix mat3x2
 #define AFFINE_XFORM_INL_FullMatrix mat3
 #define AFFINE_XFORM_INL_Vector vec2
 
-#include "AffineXForm.inl"
+#include "TemplateImpl/AffineXForm.inl"
 
 #undef AFFINE_XFORM_INL_TEMPLATE_DECL 
-#undef AFFINE_XFORM_INL_cpp_constexpr 
 #undef AFFINE_XFORM_INL_Dims 
-#undef AFFINE_XFORM_INL_CRef
-#undef AFFINE_XFORM_INL_nmspc 
 #undef AFFINE_XFORM_INL_Scalar 
 #undef AFFINE_XFORM_INL_QBlock 
 #undef AFFINE_XFORM_INL_XFormMatrix 
@@ -321,25 +322,32 @@ vec3 ComputeTriangleNormal(const in mat3 vertices)
 
 
 #define AFFINE_XFORM_INL_TEMPLATE_DECL 
-#define AFFINE_XFORM_INL_cpp_constexpr 
 #define AFFINE_XFORM_INL_Dims 3
-#define AFFINE_XFORM_INL_CRef(T) const in T
-#define AFFINE_XFORM_INL_nmspc 
 #define AFFINE_XFORM_INL_Scalar float
 #define AFFINE_XFORM_INL_QBlock mat3
 #define AFFINE_XFORM_INL_XFormMatrix mat4x3
 #define AFFINE_XFORM_INL_FullMatrix mat4
 #define AFFINE_XFORM_INL_Vector vec3
 
-#include "AffineXForm.inl"
+#include "TemplateImpl/AffineXForm.inl"
 
 #undef AFFINE_XFORM_INL_TEMPLATE_DECL 
-#undef AFFINE_XFORM_INL_cpp_constexpr 
 #undef AFFINE_XFORM_INL_Dims 
-#undef AFFINE_XFORM_INL_CRef
-#undef AFFINE_XFORM_INL_nmspc 
 #undef AFFINE_XFORM_INL_Scalar 
 #undef AFFINE_XFORM_INL_QBlock 
 #undef AFFINE_XFORM_INL_XFormMatrix 
 #undef AFFINE_XFORM_INL_FullMatrix 
 #undef AFFINE_XFORM_INL_Vector 
+
+
+#define CLIP_SPACE_INL_TEMPLATE_DECL
+#define CLIP_SPACE_INL_Scalar float
+#define CLIP_SPACE_INL_Vector(N) vec ## N
+#define CLIP_SPACE_INL_Matrix(N) mat ## N
+
+#include "TemplateImpl/ClipSpaceMatrices.inl"
+
+#undef CLIP_SPACE_INL_TEMPLATE_DECL
+#undef CLIP_SPACE_INL_Scalar
+#undef CLIP_SPACE_INL_Vector
+#undef CLIP_SPACE_INL_Matrix

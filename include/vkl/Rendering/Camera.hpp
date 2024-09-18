@@ -6,6 +6,8 @@
 
 #include <vkl/Maths/Types.hpp>
 
+#include <vkl/Maths/AlignedAxisBoundingBox.hpp>
+
 namespace vkl
 {
 	class Camera : public VkObject
@@ -22,17 +24,18 @@ namespace vkl
 
 		struct AsGLSL
 		{
-			Matrix4x3fRowMajor world_to_camera;
-			Matrix4x3fRowMajor camera_to_world;
+			vec3 position;
+			float z_near;
 
-			Matrix4f camera_to_proj;
-			Matrix4f proj_to_camera;
+			vec3 direction;
+			float z_far;
 			
-			Matrix4f world_to_proj;
-			Matrix4f proj_to_world;
-
+			vec3 right;
 			uint flags;
-			uint extra_1, extra_2, extra_3;
+			
+			float inv_tan_half_fov;
+			float inv_aspect;
+			uint pad1, pad2;
 		};
 		
 
@@ -81,26 +84,41 @@ namespace vkl
 
 		mat4 getCamToProj()const;
 
-		mat4 getWorldToCam() const
+		mat4 getProjToCam()const;
+
+		mat4x3 getWorldToCam() const
 		{
-			return glm::lookAt(_position, _position + _direction, up());
+			return LookAtDir(_position, _direction, up());
 		}
 
-		//mat4 getCamToWorld() const
-		//{
-		//	const mat4 w2c = getWorldToCam();
-
-		//	
-		//}
-
-		mat4 getWorldToProj() const
+		mat4x3 getCamToWorld() const
 		{
-			return getCamToProj() * getWorldToCam();
+			return InverseLookAtDir(_position, _direction, up());
 		}
+
+		mat4 getWorldToProj() const;
+
+		mat4 GetProjToWorld() const;
 
 		mat3 getWorldRoationMatrix() const
 		{
 			mat3 res = mat3(getWorldToCam());
+			return res;
+		}
+
+		AABB3f getOrthoAABB() const
+		{
+			const vec3 lbn = vec3(
+				-_ortho_size * _aspect,
+				-_ortho_size,
+				_near
+			);
+			const vec3 rtf = vec3(
+				_ortho_size * _aspect,
+				_ortho_size,
+				_far
+			);
+			AABB3f res = AABB3f(lbn, rtf);
 			return res;
 		}
 
@@ -153,6 +171,11 @@ namespace vkl
 		constexpr float aspect()const
 		{
 			return _aspect;
+		}
+
+		constexpr float zFar() const
+		{
+			return _infinite_perspective ? std::numeric_limits<float>::infinity() : _far;
 		}
 
 		Ray getRay(vec2 uv = vec2(0)) const;

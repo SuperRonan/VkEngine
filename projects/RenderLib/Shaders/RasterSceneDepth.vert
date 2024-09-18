@@ -45,7 +45,7 @@ void main()
 	const Light light = lights_buffer.lights[_pc.light_id];
 
 #if TARGET_CUBE
-	const mat4 w2p = cubeMapFaceProjection(gl_ViewIndex, light.position, POINT_LIGHT_DEFAULT_Z_NEAR);
+	const mat4 w2p = GetCubeMapFaceWorldToProj(gl_ViewIndex, light.position, POINT_LIGHT_DEFAULT_Z_NEAR);
 #else
 	const mat4 w2p = getSpotLightMatrixWorldToProj(light);
 #endif

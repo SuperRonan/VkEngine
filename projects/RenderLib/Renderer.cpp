@@ -816,9 +816,7 @@ namespace vkl
 			.delta_time = dt,
 			.frame_idx = frame_id,
 			
-			.world_to_camera = camera.getWorldToCam(),
-			.camera_to_proj = camera.getCamToProj(),
-			.world_to_proj = camera.getWorldToProj(),
+			.camera = camera.getAsGLSL(),
 		};
 		_ubo_buffer->set(0, &ubo, sizeof(ubo));
 

@@ -3,14 +3,14 @@
 #include <ShaderLib:/common.glsl>
 #include <ShaderLib:/Maths/transforms.glsl>
 
-vec3 cubeMapFaceDirection(uint id)
+vec3 CubeMapFaceDirection(uint id)
 {
 	vec3 res = vec3(0);
 	res[id / 2] = ((id % 2) == 0) ? 1 : -1;
 	return res;
 }
 
-vec3 cubeMapFaceUpDirection(uint id)
+vec3 CubeMapFaceUpDirection(uint id)
 {
 	vec3 res;
 	switch(id)
@@ -31,17 +31,43 @@ vec3 cubeMapFaceUpDirection(uint id)
 	return res;
 }
 
-mat4 cubeMapFaceProjection(uint id, vec3 position, float z_near)
+mat4x3 GetCubeMapFaceWorldToView(uint id, vec3 position)
 {
-	const vec3 front = cubeMapFaceDirection(id);
-	const vec3 up = cubeMapFaceUpDirection(id);
-	const mat4 world_to_object = mat4(LookAtDir4x3(position, front, up));
-	const mat4 object_to_proj = InfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
-	const mat4 res = object_to_proj * world_to_object;
+	const vec3 front = CubeMapFaceDirection(id);
+	const vec3 up = CubeMapFaceUpDirection(id);
+	return LookAtDir4x3AssumeOrtho(position, front, up);
+}
+
+mat4x3 GetCubeMapFaceViewToWorld(uint id, vec3 position)
+{
+	const vec3 front = CubeMapFaceDirection(id);
+	const vec3 up = CubeMapFaceUpDirection(id);
+	return InverseRigidTransform(LookAtDir4x3AssumeOrtho(position, front, up));
+}
+
+mat4 GetCubeMapViewToProj(float z_near)
+{
+	return InfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
+}
+
+mat4 GetCubeMapProjToView(float z_near)
+{
+	return InverseInfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
+}
+
+mat4 GetCubeMapFaceWorldToProj(uint id, vec3 position, float z_near)
+{
+	const mat4 res = GetCubeMapViewToProj(z_near) * mat4(GetCubeMapFaceWorldToView(id, position));
 	return res;
 }
 
-uint findCubeDirectionId(vec3 direction)
+mat4 GetCubeMapFaceProjToWorld(uint id, vec3 position, float z_near)
+{
+	const mat4 res = mat4(GetCubeMapFaceViewToWorld(id, position)) * GetCubeMapProjToView(z_near);
+	return res;
+}
+
+uint FindCubeDirectionId(vec3 direction)
 {
 	int max_dim = 0;
 	float max_value = abs(direction.x); 
@@ -60,7 +86,7 @@ uint findCubeDirectionId(vec3 direction)
 	return res;
 }
 
-vec3 quantifyOnCubeDirection(vec3 direction)
+vec3 QuantifyOnCubeDirection(vec3 direction)
 {
 	int max_dim = 0;
 	float max_value = abs(direction.x); 
@@ -77,20 +103,20 @@ vec3 quantifyOnCubeDirection(vec3 direction)
 	return res;
 }
 
-vec4 cubeMapDirectionAndDepth(vec3 position, vec3 center, float z_near)
+vec4 CubeMapDirectionAndDepth(vec3 position, vec3 center, float z_near)
 {
 	vec3 direction = position - center;
-	uint cube_id = findCubeDirectionId(direction);
-	mat4 matrix = cubeMapFaceProjection(cube_id, center, z_near);
+	uint cube_id = FindCubeDirectionId(direction);
+	mat4 matrix = GetCubeMapFaceWorldToProj(cube_id, center, z_near);
 	vec4 h_pos = matrix * vec4(position, 1);
 	float depth = h_pos.z / h_pos.w;
 	vec4 res;
-	res.xyz = cubeMapFaceDirection(cube_id);
+	res.xyz = CubeMapFaceDirection(cube_id);
 	res.w = depth;
 	return res;
 }
 
-float cubeMapDepth(vec3 position, vec3 center, float z_near)
+float CubeMapDepth(vec3 position, vec3 center, float z_near)
 {
-	return cubeMapDirectionAndDepth(position, center, z_near).w;
+	return CubeMapDirectionAndDepth(position, center, z_near).w;
 }
