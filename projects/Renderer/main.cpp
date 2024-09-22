@@ -602,6 +602,7 @@ namespace vkl
 
 			VK_CHECK(vkDeviceWaitIdle(_device), "Failed to wait for completion.");
 
+			VKL_BREAKPOINT_HANDLE;
 		}
 
 	};
