@@ -60,7 +60,7 @@ namespace vkl
 			MyVector<RTShader> callables;
 			MyVector<HitGroup> hit_groups;
 			Dyn<DefinitionsList> definitions;
-			std::vector<ShaderBindingDescription> bindings = {};
+			MyVector<ShaderBindingDescription> bindings = {};
 			Dyn<VkExtent3D> extent = {};
 			Dyn<uint32_t> max_recursion_depth = {};
 			bool create_sbt = false;

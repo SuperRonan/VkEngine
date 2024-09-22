@@ -62,7 +62,7 @@ namespace vkl
 			DynamicValue<VkExtent3D> extent = {};
 			bool dispatch_threads = false;
 			MultiDescriptorSetsLayouts sets_layouts = {};
-			std::vector<ShaderBindingDescription> bindings = {};
+			MyVector<ShaderBindingDescription> bindings = {};
 			DynamicValue<DefinitionsList> definitions = DefinitionsList();
 		};
 		using CI = CreateInfo;

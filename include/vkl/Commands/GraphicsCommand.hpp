@@ -104,7 +104,7 @@ namespace vkl
 			VertexInputDescription vertex_input_description = {};
 			std::optional<GraphicsPipeline::LineRasterizationState> line_raster_state = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
-			std::vector<ShaderBindingDescription> bindings = {};
+			MyVector<ShaderBindingDescription> bindings = {};
 			std::shared_ptr<RenderPass> extern_render_pass = {};
 			uint32_t subpass_index = 0;
 			MyVector<ColorAttachment> color_attachments = {};
@@ -270,7 +270,7 @@ namespace vkl
 			DynamicValue<uint32_t> draw_count = {};
 			std::optional<GraphicsPipeline::LineRasterizationState> line_raster_state = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
-			std::vector<ShaderBindingDescription> bindings = {};
+			MyVector<ShaderBindingDescription> bindings = {};
 			std::shared_ptr<RenderPass> extern_render_pass = {};
 			uint32_t subpass_index = 0;
 			MyVector<ColorAttachment> color_attachments = {};
@@ -472,7 +472,7 @@ namespace vkl
 			bool dispatch_threads = false;
 			std::optional<GraphicsPipeline::LineRasterizationState> line_raster_state = {};
 			MultiDescriptorSetsLayouts sets_layouts = {};
-			std::vector<ShaderBindingDescription> bindings = {};
+			MyVector<ShaderBindingDescription> bindings = {};
 			std::shared_ptr<RenderPass> extern_render_pass = {};
 			uint32_t subpass_index = 0;
 			MyVector<ColorAttachment> color_attachments = {};
@@ -584,7 +584,7 @@ namespace vkl
 	//	{
 	//		VkApplication* app = nullptr;
 	//		std::string name = {};
-	//		std::vector<ShaderBindingDescription> bindings = {};
+	//		MyVector<ShaderBindingDescription> bindings = {};
 	//		std::vector<std::shared_ptr<ImageView>> color_attachements = {};
 	//		std::shared_ptr<ImageView> depth_buffer = nullptr;
 	//		std::filesystem::path fragment_shader_path = {};
