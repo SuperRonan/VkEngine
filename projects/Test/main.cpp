@@ -147,18 +147,36 @@ int main(int argc, const char** argv)
 
 	std::vector e = d + "e"s;
 
+	pii += 12;
 
-		
+	pii.value();
+
+	BindingIndex b{
+		.set = 2,
+		.binding = 3,
+	};
+	b.asString();
+	std::cout << b;
+
+	using T = typename BinaryOperator_spaceship<int, double>::Type;
+
+	auto cmp = pii <=> tau;
+	cmp.value();
+
+	Dyn<BindingIndex> db = b;
+
+	db->binding;
+
 	// TODO make these lines work
 	// From the compiler error, int the DynValue<T>'s operator +, it doesn't find T's operator + for std::vector
 	// My operators are not even mentioned, so it doesn't seem to be a concept failure issue
 	// My Container's operator + isn't even in the list of candidates it appears...
 	{
-		Dyn<std::vector<std::string>> s = {{"a"s, "b"s}};
-		//Dyn<std::vector<std::string>> t = s + "c"s;
+		Dyn<MyVector<std::string>> s = {{"a"s, "b"s}};
+		Dyn<MyVector<std::string>> t = s + "c"s;
 
 		Dyn<Array<int>> vec = Array<int>{12, 23};
-		//Dyn<Array<int>> vec2 = vec + vec;
+		Dyn<Array<int>> vec2 = vec + vec;
 	}
 
 	//std::chrono::time_point<std::chrono::high_resolution_clock> tic = std::chrono::high_resolution_clock::now();
