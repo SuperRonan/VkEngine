@@ -267,6 +267,7 @@ namespace vkl
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_ext = {};
 		VkPhysicalDeviceRobustness2FeaturesEXT robustness2_ext = {};
 
+		VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR fragment_shader_barycentric_khr = {};
 		
 		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_khr = {};
 		VkPhysicalDeviceRayTracingPipelineFeaturesKHR ray_tracing_pipeline_khr = {};
@@ -307,6 +308,8 @@ namespace vkl
 		VkPhysicalDeviceLineRasterizationPropertiesEXT line_raster_ext = {};
 		VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_ext = {};
 		VkPhysicalDeviceRobustness2PropertiesEXT robustness2_ext = {};
+
+		VkPhysicalDeviceFragmentShaderBarycentricPropertiesKHR fragment_shader_barycentric_khr = {};
 
 		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_khr = {};
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_pipeline_khr = {};

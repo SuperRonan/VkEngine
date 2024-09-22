@@ -45,6 +45,8 @@ namespace vkl
 		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 		robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
 
+		fragment_shader_barycentric_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+
 		acceleration_structure_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
 		ray_query_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
@@ -95,6 +97,9 @@ namespace vkl
 		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
 			chain += &robustness2_ext;
 
+		if(filter_extensions(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
+			chain += &fragment_shader_barycentric_khr;
+
 		if(filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
 			chain += &acceleration_structure_khr;
 		if(filter_extensions(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
@@ -136,6 +141,8 @@ namespace vkl
 		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
 		robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
 
+		fragment_shader_barycentric_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_PROPERTIES_KHR;
+
 		acceleration_structure_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
 		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 
@@ -159,6 +166,9 @@ namespace vkl
 			chain += &mesh_shader_ext;
 		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
 			chain += &robustness2_ext;
+
+		if (filter_extensions(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
+			chain += &fragment_shader_barycentric_khr;
 
 		if (filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
 			chain += &acceleration_structure_khr;
@@ -219,6 +229,8 @@ namespace vkl
 		COMBINE_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRobustness2FeaturesEXT, robustness2_ext, robustBufferAccess2, nullDescriptor);
+		
+		COMBINE_VK_FEATURES(VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR, fragment_shader_barycentric_khr, fragmentShaderBarycentric, fragmentShaderBarycentric);
 
 		COMBINE_VK_FEATURES(VkPhysicalDeviceAccelerationStructureFeaturesKHR, acceleration_structure_khr, accelerationStructure, descriptorBindingAccelerationStructureUpdateAfterBind);
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);
@@ -296,6 +308,8 @@ namespace vkl
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRobustness2FeaturesEXT, robustness2_ext, robustBufferAccess2, nullDescriptor);
+
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR, fragment_shader_barycentric_khr, fragmentShaderBarycentric, fragmentShaderBarycentric);
 		
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceAccelerationStructureFeaturesKHR, acceleration_structure_khr, accelerationStructure, descriptorBindingAccelerationStructureUpdateAfterBind);
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);

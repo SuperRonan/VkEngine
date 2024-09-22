@@ -894,6 +894,7 @@ namespace vkl
 		defs.setDefinition("SHADER_MESH_PREFERS_LOCAL_INVOCATION_PRIMITIVE_OUTPUT", tod(props.mesh_shader_ext.prefersLocalInvocationPrimitiveOutput));
 		defs.setDefinition("SHADER_MESH_PREFERS_LOCAL_INVOCATION_VERTEX_OUTPUT", tod(props.mesh_shader_ext.prefersLocalInvocationVertexOutput));
 
+		defs.setDefinition("SHADER_FRAGMENT_BARYCENTRICS", tod(features.fragment_shader_barycentric_khr.fragmentShaderBarycentric));
 
 		defs.setDefinition("SHADER_GEOMETRY_PROCESSING_STAGES_STORES_AND_ATOMICS", tod(features.features2.features.vertexPipelineStoresAndAtomics));
 		defs.setDefinition("SHADER_FRAGMENT_STORES_AND_ATOMICS", tod(features.features2.features.fragmentStoresAndAtomics));
