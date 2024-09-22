@@ -66,17 +66,27 @@ void main()
 	GeometryShadingInfo geom;
 	geom.position = position;
 	geom.vertex_shading_normal = normal;
+
 	geom.geometry_normal = geom.vertex_shading_normal;
+	geom.geometry_normal = normalize(cross(dFdy(geom.position), dFdx(geom.position)));
+
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_VERTEX
 	geom.shading_normal = geom.vertex_shading_normal;
+#else
+	geom.shading_normal = geom.geometry_normal;
+#endif
+
 	geom.shading_tangent = tangent;
 
 	PBMaterialData material = readMaterial(material_id, uv);
 
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 	if(material.normal.z != 0)
 	{
 		const mat3 TBN = mat3(tangent, bi_tangent, normal);
 		geom.shading_normal = TBN * material.normal;
 	}
+#endif
 
 	const vec3 camera_position = GetCameraWorldPosition(ubo.camera);
 	const vec3 wo = normalize(camera_position - position);

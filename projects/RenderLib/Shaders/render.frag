@@ -27,23 +27,47 @@ void main()
 	geom.position = v_w_position;
 	const vec3 a_normal = normalize(v_w_normal);
 	geom.vertex_shading_normal = a_normal;
+
 	geom.geometry_normal = geom.vertex_shading_normal;
+	geom.geometry_normal = normalize(cross(dFdy(geom.position), dFdx(geom.position)));
+
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_VERTEX
 	geom.shading_normal = geom.vertex_shading_normal;
+#else
+	geom.shading_normal = geom.geometry_normal;
+#endif
+
 	geom.shading_tangent = safeNormalize(v_w_tangent);
 	geom.shading_tangent = safeNormalize(geom.shading_tangent - dot(geom.shading_tangent, geom.vertex_shading_normal) * geom.vertex_shading_normal);
 	const vec3 bi_tangent = cross(geom.shading_tangent, geom.vertex_shading_normal);
 	
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 	if(material.normal.z != 0)
 	{
 		const mat3 TBN = mat3(geom.shading_tangent, bi_tangent, geom.vertex_shading_normal);
 		geom.shading_normal = TBN * material.normal;
 	}
+#endif
 
-	const vec3 camera_position = (inverse(ubo.world_to_camera) * vec4(0..xxx, 1)).xyz;
+	const vec3 camera_position = GetCameraWorldPosition(ubo.camera);
 	const vec3 wo = normalize(camera_position - geom.position);
 
 	vec3 res = shade(geom, wo, material);
 	res += material.albedo * scene_ubo.ambient;
+
+	const float ds = dot(geom.geometry_normal, geom.shading_normal);
+	const float dvs = dot(geom.geometry_normal, geom.vertex_shading_normal);
+	res *= ds;
+
+	// if( > 0)
+	// {
+	// 	res *= vec3(0, 1, 0);
+	// }
+	// else
+	// {
+	// 	res *= vec3(1, 0, 0);
+	// }
+
 
 	o_color = vec4(res, 1);
 }

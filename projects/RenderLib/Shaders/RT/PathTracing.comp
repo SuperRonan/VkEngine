@@ -1,7 +1,7 @@
 #version 460
 
-#define I_WANT_TO_DEBUG 0
-#define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
+#define I_WANT_TO_DEBUG 1
+#define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
 #include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #include "../common.glsl"
@@ -27,7 +27,7 @@ layout(push_constant) uniform PushConstant
 	uint value;
 } _pc;
 
-#define MAX_DEPTH 5
+#define MAX_DEPTH 2
 #define LIGHT_SAMPLES 16
 
 struct BSDFSample
@@ -42,7 +42,7 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 	BSDFSample res;
 	res.pdf = 1.0f;
 	const vec3 normal = gsi.shading_normal;
-	const mat3 local_to_world_basis = basisFromDir(normal);
+	const mat3 local_to_world_basis = BasisFromDir(normal);
 	const vec3 reflected = reflect(-wo, normal);
 
 	const float alpha = sqr(material.roughness);
@@ -125,7 +125,7 @@ Vertex transformVertex(mat4x3 matrix, mat3 dir_mat, Vertex v)
 
 Vertex transformVertex(mat4x3 matrix, Vertex v)
 {
-	return transformVertex(matrix, directionMatrix(mat3(matrix)), v);
+	return transformVertex(matrix, DirectionMatrix(mat3(matrix)), v);
 }
 
 Vertex normalize(Vertex v)
@@ -169,7 +169,7 @@ vec3 trace(Ray ray, inout rng_t rng)
 			const int primitive_id = rayQueryGetIntersectionPrimitiveIndexEXT(rq, true);
 			const vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rq, true);
 			const mat4x3 object_to_world = rayQueryGetIntersectionObjectToWorldEXT(rq, true);
-			const mat3 object_to_world_4dir = directionMatrix(mat3(object_to_world));
+			const mat3 object_to_world_4dir = DirectionMatrix(mat3(object_to_world));
 
 			SceneObjectReference hit_object_ref = scene_objects_table.table[object_index];
 			
@@ -180,7 +180,7 @@ vec3 trace(Ray ray, inout rng_t rng)
 #else 
 			const mat3 triangle_positions = readSceneTriangleVertexPositions(hit_object_ref.mesh_id, vertices_id);
 #endif
-			const vec3 geometry_normal_object = computeTriangleNormal(triangle_positions);
+			const vec3 geometry_normal_object = ComputeTriangleNormal(triangle_positions);
 			const vec3 geometry_normal_world = normalize(object_to_world_4dir * geometry_normal_object);
 			const Vertex vertex = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, barycentrics);
 			const Vertex world_vertex = normalize(transformVertex(object_to_world, vertex));
@@ -251,17 +251,17 @@ void main()
 		//const vec2 subpixel_uv = 0.5.xx;
 		const vec2 uv = (vec2(pixel) + subpixel_uv) * oo_dims;
 
-		const mat4 w2p = ubo.world_to_proj;
-		const mat4 p2c = inverse(ubo.camera_to_proj);
-		const mat4 c2w = inverse(ubo.world_to_camera);
-		const mat3 c2w_dir = inverse(mat3(ubo.world_to_camera));
-		const mat4 p2w = inverse(w2p);
+		const mat4 w2p = GetCameraWorldToProj(ubo.camera);
+		const mat4 p2c = GetCameraProjToCam(ubo.camera);
+		const mat4x3 c2w = GetCameraCamToWorld(ubo.camera);
+		// Assumes c2w is a Rigid matrix
+		const mat3 c2w_dir = mat3(c2w);
+		const mat4 p2w = GetCameraProjToWorld(ubo.camera);
 		
-		const vec4 camera_pos_h = inverse(ubo.world_to_camera) * vec4(0, 0, 0, 1);
-		const vec3 camera_pos = camera_pos_h.xyz / camera_pos_h.w; 
+		const vec3 camera_pos = GetCameraWorldPosition(ubo.camera);
 
-		vec4 dir_h = normalize(p2c * vec4(UVToClipSpace(uv), 1, 1));
-		dir_h.xyz = c2w_dir * dir_h.xyz;
+		vec4 dir_h = p2c * vec4(UVToClipSpace(uv), 1, 1);
+		dir_h.xyz = c2w_dir * normalize(dir_h.xyz);
 
 		Ray ray = Ray(camera_pos, dir_h.xyz);
 
@@ -269,6 +269,7 @@ void main()
 		res = trace(ray, rng);
 		
 		//res = subpixel_uv.xyx;
+		//res = ray.direction;
 
 		imageStore(Target, ivec2(pixel), vec4(res, 1));
 	}

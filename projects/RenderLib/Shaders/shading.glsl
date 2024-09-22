@@ -21,6 +21,30 @@
 #ifndef SHADING_SHADOW_METHOD
 #define SHADING_SHADOW_METHOD SHADING_SHADOW_NONE
 #endif
+
+#define SHADING_NORMAL_LEVEL_GEOMETRY 0
+#define SHADING_NORMAL_LEVEL_VERTEX 1
+#define SHADING_NORMAL_LEVEL_TEXTURE 2
+
+#ifndef SHADING_FORCE_MAX_NORMAL_LEVEL
+#define SHADING_FORCE_MAX_NORMAL_LEVEL SHADING_NORMAL_LEVEL_TEXTURE
+#endif
+
+#ifndef SHADING_FORCE_WHITE_DIFFUSE
+#define SHADING_FORCE_WHITE_DIFFUSE 0
+#endif
+
+#ifndef SHADING_MATERIAL_USE_TEXTURE
+#define SHADING_MATERIAL_USE_TEXTURE 1
+#endif
+
+#define SHADING_MATERIAL_READ_TEXTURES ((SHADING_MATERIAL_USE_TEXTURE != 0) && (SHADING_FORCE_WHITE_DIFFUSE == 0)) 
+
+#define GBUFFER_MODE_FAT 0
+#define GBUFFER_MODE_MINIMAL 1
+
+//#def GBUFFER_MODE
+
 struct LightSample
 {
 	vec3 Le;
@@ -50,7 +74,7 @@ PBMaterialData readMaterial(uint material_id, vec2 uv)
 	res.albedo = 0..xxx;
 	res.normal = vec3(0, 0, 1);
 	const ScenePBMaterialTextures textures = scene_pb_materials_textures.ids[material_id];
-	if(((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0) && textures.albedo_texture_id != uint(-1))
+	if(SHADING_MATERIAL_READ_TEXTURES && ((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0) && textures.albedo_texture_id != uint(-1))
 	{
 		res.albedo = texture(SceneTextures2D[NonUniformEXT(textures.albedo_texture_id)], uv).xyz;
 	}
@@ -59,15 +83,24 @@ PBMaterialData readMaterial(uint material_id, vec2 uv)
 		res.albedo = props.albedo;
 	}
 
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0) && textures.normal_texture_id != uint(-1))
 	{
 		res.normal = texture(SceneTextures2D[NonUniformEXT(textures.normal_texture_id)], uv).xyz;
 		res.normal = normalize(res.normal * 2 - 1);
 	}
+#endif
 
+#if SHADING_FORCE_WHITE_DIFFUSE
+	res.metallic = 0;
+	res.roughness = 0;
+	res.cavity = 0;
+	res.albedo = vec3(1);
+#else
 	res.metallic = props.metallic;
 	res.roughness = props.roughness;
 	res.cavity = props.cavity;
+#endif
 
 	return res;
 }

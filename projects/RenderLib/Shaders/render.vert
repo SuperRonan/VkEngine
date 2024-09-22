@@ -24,7 +24,7 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {	
-	const mat4 w2p = ubo.world_to_proj;
+	const mat4 w2p = GetCameraWorldToProj(ubo.camera);
 	const mat4 o2w = _pc.object_to_world;
 	const mat4 o2p = w2p * o2w;
 	

@@ -42,6 +42,34 @@ uint GetCameraType(const in StorageCamera cam)
 #endif
 }
 
+vec3 GetCameraWorldPosition(const in StorageCamera cam)
+{
+	return cam.position;
+}
+
+vec3 GetCameraFrontDirection(const in StorageCamera cam)
+{
+	return cam.direction;
+}
+
+vec3 GetCameraRightDirection(const in StorageCamera cam)
+{
+	return cam.right;
+}
+
+vec3 GetCameraUpDirection(const in StorageCamera cam)
+{
+	const vec3 up = cross(cam.direction, cam.right);
+	return up;
+}
+
+// [Right, Up, Front]
+mat3 GetCameraWorldBasis(const in StorageCamera cam)
+{	
+	mat3 m = mat3(GetCameraRightDirection(cam), GetCameraUpDirection(cam), GetCameraFrontDirection(cam));
+	return m;
+}
+
 bool CameraHasInfiniteDepth(const in StorageCamera cam)
 {
 	return (FORCE_CAMERA_INFINITE_ZFAR != 0) || isinf(cam.z_far);
@@ -147,15 +175,4 @@ mat4 GetCameraWorldToProj(const in StorageCamera cam)
 mat4 GetCameraProjToWorld(const in StorageCamera cam)
 {
 	return mat4(GetCameraCamToWorld(cam)) * GetCameraProjToCam(cam);
-}
-
-vec3 GetCameraWorldPosition(const in StorageCamera cam)
-{
-	return cam.position;
-}
-
-mat3 GetCameraWorldBasis(const in StorageCamera cam)
-{
-	const vec3 up = cross(cam.direction, cam.right);
-	return mat3(cam.right, up, cam.direction);
 }

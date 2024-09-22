@@ -68,45 +68,80 @@ namespace vkl
 
 		ImGuiListSelection _pipeline_selection;
 		bool _use_indirect_rendering = false;
+		bool _use_fat_gbuffer = false;
 
 		std::vector<uint32_t> _model_types;
 
-		struct DirectPipelineV1
+		struct ForwardPipelineV1
 		{
-			std::shared_ptr<RenderPass> _render_pass = nullptr;
-			std::shared_ptr<Framebuffer> _framebuffer = nullptr;
-			std::map<uint32_t, std::shared_ptr<VertexCommand>> _render_scene_direct;
-			std::shared_ptr<VertexCommand> _render_scene_indirect;
+			std::shared_ptr<RenderPass> render_pass = nullptr;
+			std::shared_ptr<Framebuffer> framebuffer = nullptr;
+			std::map<uint32_t, std::shared_ptr<VertexCommand>> render_scene_direct;
+			std::shared_ptr<VertexCommand> render_scene_indirect;
 			struct RenderSceneDirectPC
 			{
 				glm::mat4 object_to_world;
 			};
+
+			void updateResources(UpdateContext& ctx, bool update_direct = true, bool update_indirect = true);
 		};
-		DirectPipelineV1 _direct_pipeline;
+		ForwardPipelineV1 _forward_pipeline;
 
-		struct DeferredPipelineV1
+		struct DeferredPipelineBase
 		{
-			// GBuffer layers
-			std::shared_ptr<ImageView> _albedo = nullptr;
-			std::shared_ptr<ImageView> _position = nullptr;
-			std::shared_ptr<ImageView> _normal = nullptr;
-			std::shared_ptr<ImageView> _tangent = nullptr;
-
-			std::shared_ptr<RenderPass> _render_pass = nullptr;
-			std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 			struct RasterCommands
 			{
 				std::shared_ptr<VertexCommand> raster;
 			};
-			std::shared_ptr<VertexCommand> _raster_gbuffer_indirect;
-			std::map<uint32_t, RasterCommands> _raster_gbuffer;
-			struct RasterGBufferPC 
+			std::shared_ptr<RenderPass> render_pass = nullptr;
+			std::shared_ptr<Framebuffer> framebuffer = nullptr;
+
+			std::map<uint32_t, RasterCommands> raster_gbuffer;
+			std::shared_ptr<VertexCommand> raster_gbuffer_indirect;
+
+			std::shared_ptr<ComputeCommand> shade_from_gbuffer = nullptr;
+
+			void updateResources(UpdateContext& ctx, bool update_direct = true, bool update_indirect = true);
+		};
+
+		struct FatDeferredPipeline : public DeferredPipelineBase
+		{
+			struct RasterGBufferPC
 			{
 				glm::mat4 object_to_world;
 			};
-			std::shared_ptr<ComputeCommand> _shade_from_gbuffer = nullptr;
+
+			
+			std::shared_ptr<ImageView> albedo = nullptr;
+			std::shared_ptr<ImageView> position = nullptr;
+			std::shared_ptr<ImageView> normal = nullptr;
+			std::shared_ptr<ImageView> tangent = nullptr;
+
+			
+			
+			void updateResources(UpdateContext& ctx, bool update_direct = true, bool update_indirect = true);
 		};
-		DeferredPipelineV1 _deferred_pipeline;
+
+		struct MinimalDeferredPipeline : public DeferredPipelineBase
+		{
+			struct RasterGBufferPC
+			{
+				glm::mat4 object_to_world;
+			};
+
+			struct RasterCommands
+			{
+				std::shared_ptr<VertexCommand> raster;
+			};
+			std::shared_ptr<ImageView> ids = nullptr;
+			// Triangle uv's 
+			std::shared_ptr<ImageView> uvs = nullptr;
+
+			void updateResources(UpdateContext& ctx, bool update_direct = true, bool update_indirect = true);
+		};
+
+		FatDeferredPipeline _fat_deferred_pipeline = {};
+		MinimalDeferredPipeline _minimal_deferred_pipeline = {};
 
 		struct PathTracer
 		{
@@ -215,17 +250,17 @@ namespace vkl
 
 		std::shared_ptr<ImageView> const& getPositionImage() const
 		{
-			return _deferred_pipeline._position;
+			return _fat_deferred_pipeline.position;
 		}
 
 		std::shared_ptr<ImageView> const& getNormalImage()const
 		{
-			return _deferred_pipeline._normal;
+			return _fat_deferred_pipeline.normal;
 		}
 
 		std::shared_ptr<ImageView> const& getAlbedoImage()const
 		{
-			return _deferred_pipeline._albedo;
+			return _fat_deferred_pipeline.albedo;
 		}
 	};
 }

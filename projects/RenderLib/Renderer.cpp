@@ -13,7 +13,7 @@ namespace vkl
 		_pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
 			.labels = {"Forward V1"s, "Deferred V1"s, "Path Tacing"s},
-			.default_index = 1,
+			.default_index = 0,
 			.same_line = true,
 		};
 
@@ -243,7 +243,7 @@ namespace vkl
 			},
 		});
 
-		_direct_pipeline._render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+		_forward_pipeline.render_pass = std::make_shared<RenderPass>(RenderPass::CI{
 			.app = application(),
 			.name = name() + ".DirectPipeline.RenderPass",
 			.attachments = {
@@ -266,16 +266,16 @@ namespace vkl
 			},
 		});
 
-		_direct_pipeline._framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+		_forward_pipeline.framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
 			.app = application(),
 			.name = name() + ".DirectPipeline.Framebuffer",
-			.render_pass = _direct_pipeline._render_pass,
+			.render_pass = _forward_pipeline.render_pass,
 			.attachments = {_render_target, _depth},
 		});
 
 		for (uint32_t model_type : _model_types)
 		{
-			_direct_pipeline._render_scene_direct[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
+			_forward_pipeline.render_scene_direct[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
 				.app = application(),
 				.name = name() + ".RenderSceneDirect",
 				.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(), // TODO model type dependent
@@ -284,7 +284,7 @@ namespace vkl
 				.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 				.bindings = {
 				},
-				.extern_render_pass = _direct_pipeline._render_pass,
+				.extern_render_pass = _forward_pipeline.render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
 				.vertex_shader_path = shaders / "render.vert",
@@ -293,7 +293,7 @@ namespace vkl
 			});
 		}
 
-		_direct_pipeline._render_scene_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
+		_forward_pipeline.render_scene_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
 			.app = application(),
 			.name = name() + ".RenderSceneIndirect",
 			.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -305,7 +305,7 @@ namespace vkl
 					.binding = 0,
 				},
 			},
-			.extern_render_pass = _direct_pipeline._render_pass,
+			.extern_render_pass = _forward_pipeline.render_pass,
 			.write_depth = true,
 			.depth_compare_op = VK_COMPARE_OP_LESS,
 			.vertex_shader_path = shaders / "RenderIndirect.vert",
@@ -314,7 +314,9 @@ namespace vkl
 		});
 
 		{
-			_deferred_pipeline._albedo = std::make_shared<ImageView>(Image::CI{
+			Dyn<bool> hold_fat_deferred;
+			Dyn<bool> hold_minimal_deferred;
+			_fat_deferred_pipeline.albedo = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.albedo",
 				.type = _render_target->image()->type(),
@@ -322,10 +324,10 @@ namespace vkl
 				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.hold_instance = hold_fat_deferred,
 			});
 			
-
-			_deferred_pipeline._position = std::make_shared<ImageView>(Image::CI{
+			_fat_deferred_pipeline.position = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.position",
 				.type = _render_target->image()->type(),
@@ -333,10 +335,10 @@ namespace vkl
 				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.hold_instance = hold_fat_deferred,
 			});
 			
-
-			_deferred_pipeline._normal = std::make_shared<ImageView>(Image::CI{
+			_fat_deferred_pipeline.normal = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.normal",
 				.type = _render_target->image()->type(),
@@ -344,9 +346,10 @@ namespace vkl
 				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.hold_instance = hold_fat_deferred,
 			});
 
-			_deferred_pipeline._tangent = std::make_shared<ImageView>(Image::CI{
+			_fat_deferred_pipeline.tangent = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.tangent",
 				.type = _render_target->image()->type(),
@@ -354,37 +357,18 @@ namespace vkl
 				.extent = _render_target->image()->extent(),
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.hold_instance = hold_fat_deferred,
 			});
 
-			_deferred_pipeline._render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+			_fat_deferred_pipeline.render_pass = std::make_shared<RenderPass>(RenderPass::CI{
 				.app = application(),
-				.name = name() + ".Deferred.RenderPass",
+				.name = name() + ".Deferred.FatRenderPass",
 				.attachments = {
-					AttachmentDescription2{
-						.flags = AttachmentDescription2::Flags::Clear,
-						.format = _deferred_pipeline._albedo->format(),
-						.samples = _deferred_pipeline._albedo->image()->sampleCount(),
-					},
-					AttachmentDescription2{
-						.flags = AttachmentDescription2::Flags::Clear,
-						.format = _deferred_pipeline._position->format(),
-						.samples = _deferred_pipeline._position->image()->sampleCount(),
-					},
-					AttachmentDescription2{
-						.flags = AttachmentDescription2::Flags::Clear,
-						.format = _deferred_pipeline._normal->format(),
-						.samples = _deferred_pipeline._normal->image()->sampleCount(),
-					},
-					AttachmentDescription2{
-						.flags = AttachmentDescription2::Flags::Clear,
-						.format = _deferred_pipeline._tangent->format(),
-						.samples = _deferred_pipeline._tangent->image()->sampleCount(),
-					},
-					AttachmentDescription2{
-						.flags = AttachmentDescription2::Flags::Clear,
-						.format = _depth->format(),
-						.samples = _depth->image()->sampleCount(),
-					},
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _fat_deferred_pipeline.albedo),
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _fat_deferred_pipeline.position),
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _fat_deferred_pipeline.normal),
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _fat_deferred_pipeline.tangent),
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _depth),
 				},
 				.subpasses = {
 					SubPassDescription2{
@@ -392,61 +376,186 @@ namespace vkl
 						.depth_stencil = AttachmentReference2{.index = 4},
 					}
 				},
+				.hold_instance = hold_fat_deferred,
 			});
 
-			_deferred_pipeline._framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+			_fat_deferred_pipeline.framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
 				.app = application(),
-				.name = name() + ".Deferred.Framebuffer",
-				.render_pass = _deferred_pipeline._render_pass,
-				.attachments = {_deferred_pipeline._albedo, _deferred_pipeline._position, _deferred_pipeline._normal, _deferred_pipeline._tangent, _depth},
+				.name = name() + ".Deferred.FatFramebuffer",
+				.render_pass = _fat_deferred_pipeline.render_pass,
+				.attachments = {_fat_deferred_pipeline.albedo, _fat_deferred_pipeline.position, _fat_deferred_pipeline.normal, _fat_deferred_pipeline.tangent, _depth},
+				.hold_instance = hold_fat_deferred,
 			});
 			
 
+			_minimal_deferred_pipeline.ids = std::make_shared<ImageView>(Image::CI{
+				.app = application(),
+				.name = name() + ".GBuffer.Ids",
+				.type = _render_target->image()->type(),
+				.format = VK_FORMAT_R32G32_UINT,
+				.extent = _render_target->image()->extent(),
+				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.hold_instance = hold_minimal_deferred,
+			});
+
+			_minimal_deferred_pipeline.uvs = std::make_shared<ImageView>(Image::CI{
+				.app = application(),
+				.name = name() + ".GBuffer.uvs",
+				.type = _render_target->image()->type(),
+				.format = VK_FORMAT_R16G16_UNORM,
+				.extent = _render_target->image()->extent(),
+				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+				.hold_instance = hold_minimal_deferred,
+			});
+
+			_minimal_deferred_pipeline.render_pass = std::make_shared<RenderPass>(RenderPass::CI{
+				.app = application(),
+				.name = name() + ".Deferred.MinimalRenderPass",
+				.attachments = {
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _minimal_deferred_pipeline.ids),
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _minimal_deferred_pipeline.uvs),
+					AttachmentDescription2::MakeFrom(AttachmentDescription2::Flags::Clear, _depth),
+				},
+				.subpasses = {
+					SubPassDescription2{
+						.colors = {AttachmentReference2{.index = 0}, AttachmentReference2{.index = 1}},
+						.depth_stencil = AttachmentReference2{.index = 2},
+					}
+				},
+				.hold_instance = hold_minimal_deferred,
+			});
+
+			_minimal_deferred_pipeline.framebuffer = std::make_shared<Framebuffer>(Framebuffer::CI{
+				.app = application(),
+				.name = name() + ".Deferred.MinimalFramebuffer",
+				.render_pass = _minimal_deferred_pipeline.render_pass,
+				.attachments = {_minimal_deferred_pipeline.ids, _minimal_deferred_pipeline.uvs, _depth},
+				.hold_instance = hold_minimal_deferred,
+			});
+
+			const Dyn<DefinitionsList> fat_definitions = [this](DefinitionsList& res)
+			{
+				res.clear();
+				res.pushBack("GBUFFER_MODE GBUFFER_MODE_FAT");
+			};
+
+			const Dyn<DefinitionsList> minimal_definitions = [this](DefinitionsList& res)
+			{
+				res.clear();
+				res.pushBack("GBUFFER_MODE GBUFFER_MODE_MINIMAL");
+			};
+
+			const auto derive_command_ci = [&] (
+				auto & target,
+				std::string_view name,
+				MyVector<Binding> const& bindings = {},
+				Dyn<DefinitionsList> const& definitions = {}
+			)
+			{
+				target.name = name;
+				target.bindings += bindings;
+				if (definitions)
+				{
+					if (target.definitions)
+					{
+						target.definitions += definitions;
+					}
+					else
+					{
+						target.definitions = definitions;
+					}
+				}
+			};
+
+			const auto create_derived_vertex_command = [&] (
+				VertexCommand::CI const& base,
+				std::string_view name,
+				std::optional<std::shared_ptr<RenderPass>> const& render_pass = {},
+				MyVector<Binding> const& bindings = {},
+				Dyn<DefinitionsList> const& definitions = {}
+			)
+			{
+				VertexCommand::CI ci = base;
+				derive_command_ci(ci, name, bindings, definitions);
+				if (render_pass)
+				{
+					ci.extern_render_pass = *render_pass;
+				}
+				return std::make_shared<VertexCommand>(std::move(ci));
+			};
+
+			const auto create_derived_compute_command = [&](
+				ComputeCommand::CI const& base,
+				std::string_view name,
+				MyVector<Binding> const& bindings = {},
+				Dyn<DefinitionsList> const& definitions = {}
+			)
+			{
+				ComputeCommand::CI ci = base;
+				derive_command_ci(ci, name, bindings, definitions);
+				return std::make_shared<ComputeCommand>(std::move(ci));
+			};
+
 			for (uint32_t model_type : _model_types)
 			{
-				DeferredPipelineV1::RasterCommands& raster_commands = _deferred_pipeline._raster_gbuffer[model_type];
-				 raster_commands.raster = std::make_shared<VertexCommand>(VertexCommand::CI{
+				const VertexCommand::CI base_raster_ci{
 					.app = application(),
-					.name = name() + ".RasterGBuffer",
 					.vertex_input_desc = RigidMesh::vertexInputDescFullVertex(),
 					.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 					.cull_mode = VK_CULL_MODE_BACK_BIT,
 					.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
-					.bindings = {
-					},
-					.extern_render_pass = _deferred_pipeline._render_pass,
 					.write_depth = true,
 					.depth_compare_op = VK_COMPARE_OP_LESS,
 					.vertex_shader_path = shaders / "RasterGBuffer.vert",
 					.fragment_shader_path = shaders / "RasterGBuffer.frag",
-				});
+				};
+				
+				auto create_command = [&](std::string_view name, std::shared_ptr<RenderPass> const& render_pass, MyVector<Binding> const& bindings, Dyn<DefinitionsList> const& definitions)
+				{
+					return create_derived_vertex_command(base_raster_ci, std::format("{}.{}RasterAndShade", this->name(), name), render_pass, bindings, definitions);
+				};
+
+				_fat_deferred_pipeline.raster_gbuffer[model_type].raster = create_command("Fat", _fat_deferred_pipeline.render_pass, {}, fat_definitions);
+
+				_minimal_deferred_pipeline.raster_gbuffer[model_type].raster = create_command("Minimal", _minimal_deferred_pipeline.render_pass, {}, minimal_definitions);
 			}
 
-			_deferred_pipeline._raster_gbuffer_indirect = std::make_shared<VertexCommand>(VertexCommand::CI{
-				.app = application(),
-				.name = name() + ".RasterSceneGBuffer",
-				.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				.cull_mode = VK_CULL_MODE_BACK_BIT,
-				.sets_layouts = _sets_layouts,
-				.bindings = {
-					Binding{
-						.buffer = _model_indices_segment,
-						.binding = 0,
+			{
+				const VertexCommand::CI base_raster_gbuffer_ci{
+					.app = application(),
+					.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+					.cull_mode = VK_CULL_MODE_BACK_BIT,
+					.sets_layouts = _sets_layouts,
+					.bindings = {
+						Binding{
+							.buffer = _model_indices_segment,
+							.binding = 0,
+						},
 					},
-				},
-				.extern_render_pass = _deferred_pipeline._render_pass,
-				.write_depth = true,
-				.depth_compare_op = VK_COMPARE_OP_LESS,
-				.vertex_shader_path = shaders / "RasterSceneGBuffer.vert",
-				.fragment_shader_path = shaders / "RasterSceneGBuffer.frag",
-			});
+					.write_depth = true,
+					.depth_compare_op = VK_COMPARE_OP_LESS,
+					.vertex_shader_path = shaders / "RasterSceneGBuffer.vert",
+					.fragment_shader_path = shaders / "RasterSceneGBuffer.frag",
+				};
+
+				auto create_command = [&](std::string_view name, std::shared_ptr<RenderPass> const& render_pass, MyVector<Binding> const& bindings, Dyn<DefinitionsList> const& definitions)
+				{
+					return create_derived_vertex_command(base_raster_gbuffer_ci, std::format("{}.RasterScene{}GBuffer", this->name(), name), render_pass, bindings, definitions);
+				};
+
+				_fat_deferred_pipeline.raster_gbuffer_indirect = create_command("Fat", _fat_deferred_pipeline.render_pass, {}, fat_definitions);
+
+				_minimal_deferred_pipeline.raster_gbuffer_indirect = create_command("Minimal", _minimal_deferred_pipeline.render_pass, {}, minimal_definitions);
+			}
 			
 			_ambient_occlusion = std::make_shared<AmbientOcclusion>(AmbientOcclusion::CI{
 				.app = application(),
 				.name = name() + ".AO",
 				.sets_layouts = _sets_layouts,
-				.positions = _deferred_pipeline._position,
-				.normals = _deferred_pipeline._normal,
+				.positions = _fat_deferred_pipeline.position,
+				.normals = _fat_deferred_pipeline.normal,
 				.can_rt = can_as && (can_rt || can_rq),
 			});
 
@@ -455,48 +564,76 @@ namespace vkl
 				.address_mode = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
 			});
 
-			_deferred_pipeline._shade_from_gbuffer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
-				.app = application(),
-				.name = name() + ".ShadeFromGBuffer",
-				.shader_path = shaders / "ShadeFromGBuffer.comp",
-				.extent = _render_target->image()->extent(),
-				.dispatch_threads = true,
-				.sets_layouts = _sets_layouts,
-				.bindings = {
-					Binding{
-						.image = _deferred_pipeline._albedo,
-						.binding = 0,
+			{
+				ComputeCommand::CI base_shade_from_gbuffer_ci{
+					.app = application(),
+					.name = name() + ".ShadeFromGBuffer",
+					.shader_path = shaders / "ShadeFromGBuffer.comp",
+					.extent = _render_target->image()->extent(),
+					.dispatch_threads = true,
+					.sets_layouts = _sets_layouts,
+					.bindings = {
+						Binding{
+							.image = _render_target,
+							.binding = 0,
+						},
+						Binding{
+							.image = _ambient_occlusion->target(),
+							.sampler = bilinear_sampler,
+							.binding = 1,
+						},
 					},
-					Binding{
-						.image = _deferred_pipeline._position,
-						.binding = 1,
+					.definitions = [this](DefinitionsList& res)
+					{
+						res = {
+							_use_ao_glsl_def,
+							_shadow_method_glsl_def,
+						};
 					},
-					Binding{
-						.image = _deferred_pipeline._normal,
-						.binding = 2,
-					},
-					Binding{
-						.image = _deferred_pipeline._tangent,
-						.binding = 3,
-					},
-					Binding{
-						.image = _ambient_occlusion->target(),
-						.sampler = bilinear_sampler,
-						.binding = 4,
-					},
-					Binding{
-						.image = _render_target,
-						.binding = 5,
-					},
-				},
-				.definitions = [this](DefinitionsList & res)
+				};
+				const uint32_t base_shader_binding = base_shade_from_gbuffer_ci.bindings.size32();
+				
+				auto create_command = [&](std::string_view name, MyVector<Binding> const& bindings, Dyn<DefinitionsList> const& definitions)
 				{
-					res = {
-						_use_ao_glsl_def,
-						_shadow_method_glsl_def,
-					};
-				},
-			});
+					return create_derived_compute_command(base_shade_from_gbuffer_ci, std::format("{}.ShaderFrom{}GBuffer", this->name(), name), bindings, definitions);
+				};
+
+				_fat_deferred_pipeline.shade_from_gbuffer = create_command("Fat", 
+					{
+						Binding{
+							.image = _fat_deferred_pipeline.albedo,
+							.binding = base_shader_binding + 0,
+						},
+						Binding{
+							.image = _fat_deferred_pipeline.position,
+							.binding = base_shader_binding + 1,
+						},
+						Binding{
+							.image = _fat_deferred_pipeline.normal,
+							.binding = base_shader_binding + 2,
+						},
+						Binding{
+							.image = _fat_deferred_pipeline.tangent,
+							.binding = base_shader_binding + 3,
+						},
+					},
+					fat_definitions
+				);
+
+				_minimal_deferred_pipeline.shade_from_gbuffer = create_command("Minimal", 
+					{
+						Binding{
+							.image = _minimal_deferred_pipeline.ids,
+							.binding = base_shader_binding + 0,
+						},
+						Binding{
+							.image = _minimal_deferred_pipeline.uvs,
+							.binding = base_shader_binding + 1,
+						},
+					},
+					minimal_definitions
+				);
+			}
 
 			_spot_light_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
 				.app = application(),
@@ -657,6 +794,57 @@ namespace vkl
 		_scene->setMaintainRT(_maintain_rt);
 	}
 
+	void SimpleRenderer::ForwardPipelineV1::updateResources(UpdateContext& ctx, bool update_direct, bool update_indirect)
+	{
+		render_pass->updateResources(ctx);
+		ctx.resourcesToUpdateLater() += framebuffer;
+		if (update_direct)
+		{
+			for (auto& [m, cmd] : render_scene_direct)
+			{
+				ctx.resourcesToUpdateLater() += cmd;
+			}
+		}
+		if (update_indirect)
+		{
+			ctx.resourcesToUpdateLater() += render_scene_indirect;
+		}
+	}
+
+	void SimpleRenderer::DeferredPipelineBase::updateResources(UpdateContext& ctx, bool update_direct, bool update_indirect)
+	{
+		render_pass->updateResources(ctx);
+		ctx.resourcesToUpdateLater() += framebuffer;
+		if (update_direct)
+		{
+			for (auto& [m, cmd] : raster_gbuffer)
+			{
+				ctx.resourcesToUpdateLater() += cmd.raster;
+			}
+		}
+		if (update_indirect)
+		{
+			ctx.resourcesToUpdateLater() += raster_gbuffer_indirect;
+		}
+		ctx.resourcesToUpdateLater() += shade_from_gbuffer;
+	}
+
+	void SimpleRenderer::FatDeferredPipeline::updateResources(UpdateContext& ctx, bool update_direct, bool update_indirect)
+	{
+		albedo->updateResource(ctx);
+		position->updateResource(ctx);
+		normal->updateResource(ctx);
+		tangent->updateResource(ctx);
+		DeferredPipelineBase::updateResources(ctx, update_direct, update_indirect);
+	}
+
+	void SimpleRenderer::MinimalDeferredPipeline::updateResources(UpdateContext& ctx, bool update_direct, bool update_indirect)
+	{
+		ids->updateResource(ctx);
+		uvs->updateResource(ctx);
+		DeferredPipelineBase::updateResources(ctx, update_direct, update_indirect);
+	}
+
 	void SimpleRenderer::updateResources(UpdateContext & ctx)
 	{
 		bool update_all_anyway = ctx.updateAnyway();
@@ -684,47 +872,20 @@ namespace vkl
 
 		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Forward || update_all_anyway)
 		{
-			_direct_pipeline._render_pass->updateResources(ctx);
-			_direct_pipeline._framebuffer->updateResources(ctx);
-			if (_use_indirect_rendering || update_all_anyway)
-			{
-				ctx.resourcesToUpdateLater() += _direct_pipeline._render_scene_indirect;
-			}
-			if (!_use_indirect_rendering || update_all_anyway)
-			{
-				for (auto& cmd : _direct_pipeline._render_scene_direct)
-				{
-					ctx.resourcesToUpdateLater() += cmd.second;
-				}
-			}
+			_forward_pipeline.updateResources(ctx, !_use_indirect_rendering || update_all_anyway, _use_indirect_rendering || update_all_anyway);
 		}
 		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Deferred || update_all_anyway)
 		{
-			_deferred_pipeline._albedo->updateResource(ctx);
-			_deferred_pipeline._position->updateResource(ctx);
-			_deferred_pipeline._normal->updateResource(ctx);
-			_deferred_pipeline._tangent->updateResource(ctx);
-
-			_deferred_pipeline._render_pass->updateResources(ctx);
-			_deferred_pipeline._framebuffer->updateResources(ctx);
-
-			if (_use_indirect_rendering || update_all_anyway)
+			if (_use_fat_gbuffer || update_all_anyway)
 			{
-				ctx.resourcesToUpdateLater() += _deferred_pipeline._raster_gbuffer_indirect;
+				_fat_deferred_pipeline.updateResources(ctx, !_use_indirect_rendering || update_all_anyway, _use_indirect_rendering || update_all_anyway);
 			}
-			if(!_use_indirect_rendering || update_all_anyway)
+			if (!_use_fat_gbuffer || update_all_anyway)
 			{
-				for (auto& cmd : _deferred_pipeline._raster_gbuffer)
-				{
-					auto & raster_commands = cmd.second;
-					ctx.resourcesToUpdateLater() += raster_commands.raster;	
-				}
+				_minimal_deferred_pipeline.updateResources(ctx, !_use_indirect_rendering || update_all_anyway, _use_indirect_rendering || update_all_anyway);
 			}
 
 			_ambient_occlusion->updateResources(ctx);
-
-			ctx.resourcesToUpdateLater() += _deferred_pipeline._shade_from_gbuffer;
-
 		}
 		if ((RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
 		{
@@ -955,7 +1116,7 @@ namespace vkl
 					VkClearValue{.depthStencil = VkClearDepthStencilValue{.depth = 1.0f}},
 				};
 				RenderPassBeginInfo render_pass{
-					.framebuffer = _direct_pipeline._framebuffer->instance(),
+					.framebuffer = _forward_pipeline.framebuffer->instance(),
 					.clear_value_count = static_cast<uint32_t>(clear_values.size()),
 					.ptr_clear_values = clear_values.data(),
 				};
@@ -963,7 +1124,7 @@ namespace vkl
 				if (_use_indirect_rendering)
 				{
 					VertexCommand::DrawInfo& my_draw_list = (_cached_draw_list.begin())->second;
-					exec(_direct_pipeline._render_scene_indirect->with(my_draw_list));
+					exec(_forward_pipeline.render_scene_indirect->with(my_draw_list));
 				}
 				else
 				{
@@ -971,7 +1132,7 @@ namespace vkl
 					{
 						if (draw_list[model_type].calls.size())
 						{
-							exec(_direct_pipeline._render_scene_direct[model_type]->with(draw_list[model_type]));
+							exec(_forward_pipeline.render_scene_direct[model_type]->with(draw_list[model_type]));
 						}
 					}
 				}
@@ -984,22 +1145,42 @@ namespace vkl
 				}
 				exec.popDebugLabel();
 			}
-			else
+			else if(selected_pipeline == RenderPipeline::Deferred)
 			{
 				exec.pushDebugLabel("DeferredPipeline", true);
 				
 				tick_tock.tick();
 
-				std::array<VkClearValue, 5> clear_values = {
-					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
-					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
-					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
-					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
-					VkClearValue{.depthStencil = VkClearDepthStencilValue{.depth = 1.0f}},
-				};
+				DeferredPipelineBase * gbuffer = nullptr;
+				if(_use_fat_gbuffer) gbuffer = &_fat_deferred_pipeline;
+				else gbuffer = &_minimal_deferred_pipeline;
+
+				VkClearValue clear_depth = VkClearValue{ .depthStencil = VkClearDepthStencilValue{.depth = 1.0f} };
+				std::array<VkClearValue, 5> clear_values; 
+				uint32_t clear_count;
+				if (_use_fat_gbuffer)
+				{
+					clear_values = {
+						VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+						VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+						VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+						VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+						clear_depth,
+					};
+					clear_count = 5;
+				}
+				else
+				{
+					clear_values = clear_values = {
+						VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+						VkClearColorValue{.uint32 = {0, 0, 0, 0}},
+						clear_depth,
+					};
+					clear_count = 3;
+				}
 				RenderPassBeginInfo render_pass{
-					.framebuffer = _deferred_pipeline._framebuffer->instance(),
-					.clear_value_count = static_cast<uint32_t>(clear_values.size()),
+					.framebuffer = gbuffer->framebuffer->instance(),
+					.clear_value_count = clear_count,
 					.ptr_clear_values = clear_values.data(),
 				};
 
@@ -1009,7 +1190,7 @@ namespace vkl
 				{
 					VertexCommand::DrawInfo & my_draw_list = (_cached_draw_list.begin())->second;
 					{
-						exec(_deferred_pipeline._raster_gbuffer_indirect->with(my_draw_list));
+						exec(gbuffer->raster_gbuffer_indirect->with(my_draw_list));
 					}
 				}
 				else
@@ -1018,7 +1199,7 @@ namespace vkl
 					{
 						if (draw_list[model_type].calls.size())
 						{
-							exec(_deferred_pipeline._raster_gbuffer[model_type].raster->with(draw_list[model_type]));
+							exec(gbuffer->raster_gbuffer[model_type].raster->with(draw_list[model_type]));
 						}
 					}
 				}
@@ -1032,7 +1213,7 @@ namespace vkl
 
 				_ambient_occlusion->execute(exec, camera);
 
-				exec(_deferred_pipeline._shade_from_gbuffer);
+				exec(gbuffer->shade_from_gbuffer);
 				
 				exec.popDebugLabel();
 			}
