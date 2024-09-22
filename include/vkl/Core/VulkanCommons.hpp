@@ -388,6 +388,13 @@ namespace vkl
 		std::string asString()const;
 	};
 
+	template<class Stream>
+	Stream& operator<<(Stream& s, vkl::BindingIndex const& b)
+	{
+		s << "(set = " << b.set << ", binding = " << b.binding << ")";
+		return s;
+	}
+
 	struct DescriptorSetBindingGlobalOptions
 	{
 		bool use_push_descriptors = false;
@@ -864,15 +871,8 @@ namespace vkl
 	};
 
 	using DefinitionsList = that::ExtensibleStringContainer32;
-}
 
-template<class Stream>
-Stream& operator<<(Stream& s, vkl::BindingIndex const& b)
-{
-	s << "(set = " << b.set << ", binding = " << b.binding << ")";
-	return s;
 }
-
 
 constexpr bool operator==(VkImageSubresourceRange const& a, VkImageSubresourceRange const& b)
 {
