@@ -63,20 +63,30 @@ struct GeometryShadingInfo
 	vec3 geometry_normal;
 	vec3 vertex_shading_normal;
 	vec3 shading_normal;
-	vec3 shading_tangent;
+	vec3 vertex_shading_tangent;
 };
 
-PBMaterialData readMaterial(uint material_id, vec2 uv)
+PBMaterialSampleData readMaterial(uint material_id, vec2 uv)
 {
 	const PBMaterialProperties props = scene_pb_materials[material_id].props;
-	PBMaterialData res;
+	PBMaterialSampleData res;
 	res.flags = props.flags;
 	res.albedo = 0..xxx;
+	res.alpha = 1.0f;
 	res.normal = vec3(0, 0, 1);
-	const ScenePBMaterialTextures textures = scene_pb_materials_textures.ids[material_id];
-	if(SHADING_MATERIAL_READ_TEXTURES && ((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0) && textures.albedo_texture_id != uint(-1))
+	const MaterialTextureIds textures = scene_pb_materials_textures.ids[material_id];
+	const uint albedo_texture_id = GetMaterialTextureId(textures, ALBEDO_ALPHA_TEXTURE_SLOT);
+	if(SHADING_MATERIAL_READ_TEXTURES && ((res.flags & (MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT | MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT)) != 0) && albedo_texture_id != uint(-1))
 	{
-		res.albedo = texture(SceneTextures2D[NonUniformEXT(textures.albedo_texture_id)], uv).xyz;
+		const vec4 albedo_alpha = texture(SceneTextures2D[NonUniformEXT(albedo_texture_id)], uv);
+		if((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0)
+		{
+			res.albedo = albedo_alpha.rgb;
+		}
+		if((res.flags & MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT) != 0)
+		{
+			res.alpha = albedo_alpha.a;
+		}
 	}
 	else
 	{
@@ -84,9 +94,10 @@ PBMaterialData readMaterial(uint material_id, vec2 uv)
 	}
 
 #if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
-	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0) && textures.normal_texture_id != uint(-1))
+	const uint normal_texture_id = GetMaterialTextureId(textures, NORMAL_TEXTURE_SLOT);
+	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0) && normal_texture_id != uint(-1))
 	{
-		res.normal = texture(SceneTextures2D[NonUniformEXT(textures.normal_texture_id)], uv).xyz;
+		res.normal = texture(SceneTextures2D[NonUniformEXT(normal_texture_id)], uv).xyz;
 		res.normal = normalize(res.normal * 2 - 1);
 	}
 #endif
@@ -110,7 +121,7 @@ PBMaterialData readMaterial(uint material_id, vec2 uv)
 // wi: incoming direction
 // Assume directions vectors are normalized
 // The returned BSDF is NOT multiplied by cos_theta
-vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in PBMaterialData material)
+vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in PBMaterialSampleData material)
 {
 	vec3 res = 0..xxx;
 	
@@ -370,7 +381,7 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 	return res;
 }
 
-vec3 shade(const in GeometryShadingInfo geom, vec3 wo, const in PBMaterialData material)
+vec3 shade(const in GeometryShadingInfo geom, vec3 wo, const in PBMaterialSampleData material)
 {
 	vec3 res = 0..xxx;
 

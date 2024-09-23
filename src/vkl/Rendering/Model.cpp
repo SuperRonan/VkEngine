@@ -248,10 +248,12 @@ namespace vkl
 
 		if (!warn.empty())
 		{
+			std::unique_lock lock(g_mutex);
 			std::cout << "Warning: " << warn << std::endl;
 		}
 		if (!err.empty())
 		{
+			std::unique_lock lock(g_mutex);
 			std::cerr << "Error: " << err << std::endl;
 		}
 
@@ -272,6 +274,12 @@ namespace vkl
 
 				std::filesystem::path albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname;
 				std::filesystem::path normal_path = tm.normal_texname.empty() ? std::filesystem::path() : mtl_path / tm.normal_texname;
+
+				if (!tm.alpha_texname.empty())
+				{
+					VKL_BREAKPOINT_HANDLE;
+				}
+				
 				if (normal_path.empty() && !tm.displacement_texname.empty())
 				{
 					normal_path = mtl_path / tm.displacement_texname;
@@ -284,6 +292,8 @@ namespace vkl
 					.app = info.app,
 					.name = tm.name,
 					.albedo = glm::vec3(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
+					.metallic = tm.metallic,
+					.roughness = tm.roughness,
 					.sampler = sampler,
 					.albedo_texture = albedo_texture,
 					.normal_texture = normal_texture,

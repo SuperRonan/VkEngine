@@ -23,6 +23,8 @@ namespace vkl
 
 		bool _is_ready = false;
 
+		that::FormatInfo _original_format = {};
+
 		std::shared_ptr<ImageView> _view = nullptr;
 
 		//std::vector<Callback> _resource_update_callback = {};
@@ -74,6 +76,11 @@ namespace vkl
 			bool synch = true;
 		};
 
-		static std::shared_ptr<Texture> MakeNew(MakeInfo const& mi);
+		that::FormatInfo getOriginalFormat() const
+		{
+			return _original_format;
+		}
+
+		static std::shared_ptr<Texture> MakeShared(MakeInfo const& mi);
 	};
 }

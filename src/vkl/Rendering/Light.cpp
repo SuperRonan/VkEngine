@@ -96,7 +96,7 @@ namespace vkl
 			_emission *= (intensity / old_intensity);
 		}
 		
-		ImGui::ColorPicker3("Emission", &_emission.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR);
+		ImGui::ColorEdit3("Emission", &_emission.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs);
 
 		static thread_local ImGuiListSelection gui_shadow_bias_mode = ImGuiListSelection::CI{
 			.name = "Shadow Bias Mode",

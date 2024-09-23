@@ -42,7 +42,7 @@ void main()
 	const uint model_id = model_indices.index[draw_id];
 	const uint material_id = scene_objects_table.table[model_id].material_id;
 	PBMaterialProperties material_props;
-	ScenePBMaterialTextures textures;
+	MaterialTextureIds textures;
 	if(material_id != uint(-1))
 	{
 		textures = scene_pb_materials_textures.ids[material_id];
@@ -51,7 +51,7 @@ void main()
 	else
 	{
 		material_props = NoMaterialProps();
-		textures = NoPBMaterialTextures();
+		textures = NoMaterialTextureIds();
 	}
 	
 
@@ -67,7 +67,6 @@ void main()
 	geom.position = position;
 	geom.vertex_shading_normal = normal;
 
-	geom.geometry_normal = geom.vertex_shading_normal;
 	geom.geometry_normal = normalize(cross(dFdy(geom.position), dFdx(geom.position)));
 
 #if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_VERTEX
@@ -76,14 +75,19 @@ void main()
 	geom.shading_normal = geom.geometry_normal;
 #endif
 
-	geom.shading_tangent = tangent;
+	geom.vertex_shading_tangent = tangent;
 
-	PBMaterialData material = readMaterial(material_id, uv);
+	PBMaterialSampleData material = readMaterial(material_id, uv);
+
+	if(material.alpha <= 0.25f)
+	{
+		discard;
+	}
 
 #if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 	if(material.normal.z != 0)
 	{
-		const mat3 TBN = mat3(tangent, bi_tangent, normal);
+		const mat3 TBN = mat3(geom.vertex_shading_tangent, bi_tangent, geom.vertex_shading_normal);
 		geom.shading_normal = TBN * material.normal;
 	}
 #endif

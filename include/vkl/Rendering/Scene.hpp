@@ -24,6 +24,8 @@
 
 #include <cassert>
 
+#include <that/stl_ext/array.hpp>
+
 namespace vkl
 {
 	class Scene : public VkObject
@@ -297,10 +299,9 @@ namespace vkl
 
 		struct MaterialReference
 		{
-			uint32_t albedo_id;
-			uint32_t normal_id;
-			uint32_t pad1;
-			uint32_t pad2;
+			using Ids = std::array<uint16_t, Material::MAX_TEXTURE_COUNT>;
+			static constexpr const Ids DefaultIds = std::MakeUniformArray<uint16_t, Material::MAX_TEXTURE_COUNT>(uint16_t(-1));
+			Ids ids = DefaultIds;
 		};
 
 		struct ModelReference

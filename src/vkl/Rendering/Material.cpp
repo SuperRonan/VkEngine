@@ -6,8 +6,28 @@ namespace vkl
 	Material::Material(CreateInfo const& ci):
 		VkObject(ci.app, ci.name),
 		_type(ci.type),
-		_synch(ci.synch)
+		_synch(ci.synch),
+		_sampler(ci.sampler)
 	{}
+
+	Material::~Material()
+	{
+		for (size_t i = 0; i < _registered_sets; ++i)
+		{
+			auto & reg = _registered_sets[i];
+			if (reg.include_textures)
+			{
+				for (size_t t = 0; t < _textures.size(); ++t)
+				{
+					std::shared_ptr<Texture> & tex = _textures[t];
+					if (tex)
+					{
+						tex->unRegistgerFromDescriptorSet(reg.registration.set, reg.registration.binding, reg.registration.array_index);
+					}
+				}
+			}
+		}
+	}
 
 	std::vector<DescriptorSetLayout::Binding> Material::getSetLayoutBindings(Type type, uint32_t offset)
 	{
@@ -20,17 +40,90 @@ namespace vkl
 	}
 
 
+	void Material::updateResources(UpdateContext& ctx)
+	{
+		for (size_t t = 0; t < _textures.size(); ++t)
+		{
+			std::shared_ptr<Texture> & tex = _textures[t];
+			if (tex)
+			{
+				tex->updateResources(ctx);
+			}
+		}
+		if (_sampler)
+		{
+			_sampler->updateResources(ctx);
+		}
+	}
+
+	void Material::registerTexturesToDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index, bool stack_on_array)
+	{
+		for (uint32_t i = 0; i < static_cast<uint32_t>(_textures.size()); ++i)
+		{
+			std::shared_ptr<Texture> & tex = _textures[i];
+			if (tex)
+			{
+				uint32_t b = binding;
+				uint32_t ai = array_index;
+				if (stack_on_array)
+				{
+					ai += i;
+				}
+				else
+				{
+					b += i;
+				}
+				tex->registerToDescriptorSet(set, b, ai);
+			}
+		}
+	}
+
+	void Material::unRegisterTexturesFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, uint32_t binding, uint32_t array_index, bool stack_on_array)
+	{
+		for (uint32_t i = 0; i < static_cast<uint32_t>(_textures.size()); ++i)
+		{
+			std::shared_ptr<Texture>& tex = _textures[i];
+			if (tex)
+			{
+				uint32_t b = binding;
+				uint32_t ai = array_index;
+				if (stack_on_array)
+				{
+					ai += i;
+				}
+				else
+				{
+					b += i;
+				}
+				tex->unRegistgerFromDescriptorSet(set, b, ai);
+			}
+		}
+	}
+
+
 	PhysicallyBasedMaterial::PhysicallyBasedMaterial(CreateInfo const& ci) :
-		Material(Material::CI{.app = ci.app, .name = ci.name, .type = Type::PhysicallyBased, .synch = ci.synch}),
+		Material(Material::CI{
+			.app = ci.app, 
+			.name = ci.name, 
+			.type = Type::PhysicallyBased, 
+			.synch = ci.synch,
+			.sampler = ci.sampler,
+		}),
 		_albedo(ci.albedo),
 		_metallic(ci.metallic),
 		_roughness(ci.roughness),
 		_cavity(ci.cavity),
-		_sampler(ci.sampler),
-		_albedo_texture(ci.albedo_texture),
-		_normal_texture(ci.normal_texture),
 		_cached_props({})
 	{
+		if (ci.albedo_texture)
+		{
+			_textures[static_cast<uint>(TextureSlot::AlbedoAlpha)] = ci.albedo_texture;
+		}
+		if (ci.normal_texture)
+		{
+			_textures[static_cast<uint>(TextureSlot::Normal)] = ci.normal_texture;
+		}
+
 		if (!_roughness.hasValue())
 		{
 			_roughness = 1.0f;
@@ -49,7 +142,7 @@ namespace vkl
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
 
-		if (_albedo_texture || _normal_texture)
+		if (std::any_of(_textures.begin(), _textures.end(), [](std::shared_ptr<Texture> const& tex){return tex.operator bool();}))
 		{
 			if (!_sampler)
 			{
@@ -67,15 +160,21 @@ namespace vkl
 		{
 			auto & reg = _registered_sets[i];
 			reg.registration.set->setBinding(reg.registration.binding, reg.registration.array_index, 1, (const BufferAndRange*)nullptr);
-			if (reg.include_textures)
-			{
-				if (_albedo_texture)
-				{
-					_albedo_texture->unRegistgerFromDescriptorSet(reg.registration.set, reg.registration.binding, reg.registration.array_index);
-				}
-			}
 		}
-		_registered_sets.clear();
+	}
+
+	bool PhysicallyBasedMaterial::useAlphaTexture() const
+	{
+		bool res = textureIsReady(TextureSlot::AlbedoAlpha);
+		if (res)
+		{
+			res = getTexture(TextureSlot::AlbedoAlpha)->getOriginalFormat().channels == 4;
+			// A RGB texture will be stored with a RGBA format
+			//const VkFormat vk_format = _albedo_texture->getView()->format().value();
+			//const DetailedVkFormat fmt = DetailedVkFormat::Find(vk_format);
+			//res = fmt.color.channels == 4;
+		}
+		return res;
 	}
 
 	PhysicallyBasedMaterial::Properties PhysicallyBasedMaterial::getProperties() const
@@ -87,12 +186,17 @@ namespace vkl
 
 		if (useAlbedoTexture())
 		{
-			flags.textures |= 1;
+			flags.textures |= (1 << 0);
+		}
+
+		if (useAlphaTexture())
+		{
+			flags.textures |= (1 << 1);
 		}
 
 		if (useNormalTexture())
 		{
-			flags.textures |= 2;
+			flags.textures |= (1 << 2);
 		}
 
 		flags.bsdf_hemispheres |= 1;
@@ -113,6 +217,8 @@ namespace vkl
 		ImGui::Text("Name: ");
 		ImGui::SameLine();
 		ImGui::Text(name().c_str());
+
+		const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float;
 
 		auto declare_dynamic = [&]<class T>(Dyn<T> &dv, std::string_view label, auto const& imgui_f)
 		{
@@ -139,7 +245,7 @@ namespace vkl
 		auto declare_color = [&](Dyn<vec3>& dv, std::string_view label)
 		{
 			declare_dynamic(dv, label, [&](vec3* ptr) {
-				return ImGui::ColorPicker3(label.data(), reinterpret_cast<float*>(ptr));
+				return ImGui::ColorEdit3(label.data(), reinterpret_cast<float*>(ptr), color_flags);
 			});
 		};
 
@@ -165,19 +271,8 @@ namespace vkl
 
 	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)
 	{
+		Material::updateResources(ctx);
 		_props_buffer->updateResource(ctx);
-		if (_albedo_texture)
-		{
-			_albedo_texture->updateResources(ctx);
-		}
-		if (_normal_texture)
-		{
-			_normal_texture->updateResources(ctx);
-		}
-		if (_sampler)
-		{
-			_sampler->updateResources(ctx);
-		}
 
 		const Properties new_props = getProperties();
 		if (new_props.flags != _cached_props.flags)
@@ -281,14 +376,7 @@ namespace vkl
 
 		if (include_textures)
 		{
-			if(_albedo_texture)
-			{
-				_albedo_texture->registerToDescriptorSet(set, binding + 1, array_index);
-			}
-			if (_normal_texture)
-			{
-				_normal_texture->registerToDescriptorSet(set, binding + 2, array_index);
-			}
+			Material::registerTexturesToDescriptorSet(set, binding + 1, array_index, false);
 		}
 
 		callRegistrationCallback(reg, include_textures);
@@ -307,17 +395,7 @@ namespace vkl
 					reg.set->setBinding(reg.binding, reg.array_index, 1, (const BufferAndRange*)nullptr);
 					if (include_textures)
 					{
-						std::shared_ptr<ImageView> null_view = nullptr;
-						std::shared_ptr<Sampler> null_sampler = nullptr;
-						if (_albedo_texture)
-						{
-							_albedo_texture->unRegistgerFromDescriptorSet(reg.set, reg.binding, reg.array_index);
-						}
-						if (_normal_texture)
-						{
-							_normal_texture->unRegistgerFromDescriptorSet(reg.set, reg.binding, reg.array_index);
-						}
-						reg.set->setBinding(reg.binding + 1, reg.array_index, 1, &null_view, &null_sampler);
+						unRegisterTexturesFromDescriptorSet(set, reg.binding + 1, reg.array_index, false);
 					}
 				}
 				it = _registered_sets.erase(it);

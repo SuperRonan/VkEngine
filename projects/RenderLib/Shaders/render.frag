@@ -22,7 +22,7 @@ void main()
 {
 	const PBMaterialProperties props = material_props.props;
 	const vec2 uv = v_uv;
-	PBMaterialData material = readBoundMaterial(uv);
+	PBMaterialSampleData material = readBoundMaterial(uv);
 	GeometryShadingInfo geom;
 	geom.position = v_w_position;
 	const vec3 a_normal = normalize(v_w_normal);
@@ -37,14 +37,14 @@ void main()
 	geom.shading_normal = geom.geometry_normal;
 #endif
 
-	geom.shading_tangent = safeNormalize(v_w_tangent);
-	geom.shading_tangent = safeNormalize(geom.shading_tangent - dot(geom.shading_tangent, geom.vertex_shading_normal) * geom.vertex_shading_normal);
-	const vec3 bi_tangent = cross(geom.shading_tangent, geom.vertex_shading_normal);
+	geom.vertex_shading_tangent = safeNormalize(v_w_tangent);
+	geom.vertex_shading_tangent = safeNormalize(geom.vertex_shading_tangent - dot(geom.vertex_shading_tangent, geom.vertex_shading_normal) * geom.vertex_shading_normal);
+	const vec3 bi_tangent = cross(geom.vertex_shading_tangent, geom.vertex_shading_normal);
 	
 #if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 	if(material.normal.z != 0)
 	{
-		const mat3 TBN = mat3(geom.shading_tangent, bi_tangent, geom.vertex_shading_normal);
+		const mat3 TBN = mat3(geom.vertex_shading_tangent, bi_tangent, geom.vertex_shading_normal);
 		geom.shading_normal = TBN * material.normal;
 	}
 #endif

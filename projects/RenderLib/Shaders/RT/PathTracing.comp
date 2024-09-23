@@ -37,7 +37,7 @@ struct BSDFSample
 	float pdf;
 };
 
-BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMaterialData material, inout rng_t rng)
+BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMaterialSampleData material, inout rng_t rng)
 {
 	BSDFSample res;
 	res.pdf = 1.0f;
@@ -88,7 +88,7 @@ uint drawLight(inout rng_t rng, out float pdf)
 }
 
 // TODO add geometry normal
-vec3 drawLightSample(const in GeometryShadingInfo vertex, vec3 wo, const in PBMaterialData material, inout rng_t rng)
+vec3 drawLightSample(const in GeometryShadingInfo vertex, vec3 wo, const in PBMaterialSampleData material, inout rng_t rng)
 {
 	vec3 res = 0..xxx;
 	float pdf = 0;
@@ -189,10 +189,10 @@ vec3 trace(Ray ray, inout rng_t rng)
 			gsi.position = world_vertex.position;
 			gsi.geometry_normal = geometry_normal_world;
 			gsi.vertex_shading_normal = world_vertex.normal;
-			gsi.shading_tangent = world_vertex.tangent;
-			const vec3 shading_bt = cross(gsi.shading_tangent, gsi.vertex_shading_normal);
-			const mat3 shading_TBN = mat3(gsi.shading_tangent, shading_bt, gsi.vertex_shading_normal);
-			PBMaterialData material = readMaterial(hit_object_ref.material_id, vertex.uv);
+			gsi.vertex_shading_tangent = world_vertex.tangent;
+			const vec3 shading_bt = cross(gsi.vertex_shading_tangent, gsi.vertex_shading_normal);
+			const mat3 shading_TBN = mat3(gsi.vertex_shading_tangent, shading_bt, gsi.vertex_shading_normal);
+			PBMaterialSampleData material = readMaterial(hit_object_ref.material_id, vertex.uv);
 			gsi.shading_normal = shading_TBN * material.normal;
 			//gsi.shading_normal = gsi.vertex_shading_normal;
 			

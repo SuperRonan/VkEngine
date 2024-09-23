@@ -274,7 +274,7 @@ namespace vkl
 		ImGui::PushID(name().c_str());
 		if (ImGui::CollapsingHeader("Options"))
 		{
-			ImGui::ColorPicker3("Ambient", &_scene->_ambient.x);
+			ImGui::ColorEdit3("Ambient", &_scene->_ambient.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
 			ImGui::Checkbox("show world 3D basis", &_show_world_basis);
 			ImGui::Checkbox("show view 3D basis", &_show_view_basis);
 

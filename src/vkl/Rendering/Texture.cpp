@@ -28,7 +28,9 @@ namespace vkl
 			const auto & reg = *it;
 			if (reg == target)
 			{
-				reg.set->setBinding(reg.binding, reg.array_index, 1, nullptr, nullptr);
+				std::shared_ptr<ImageView> null_image = nullptr;
+				std::shared_ptr<Sampler> null_sampler = nullptr;
+				reg.set->setBinding(reg.binding, reg.array_index, 1, &null_image, &null_sampler);
 				it = _registered_sets.erase(it);
 				break;
 			}
@@ -72,7 +74,7 @@ namespace vkl
 
 
 
-	std::shared_ptr<Texture> Texture::MakeNew(MakeInfo const& mi)
+	std::shared_ptr<Texture> Texture::MakeShared(MakeInfo const& mi)
 	{
 		std::shared_ptr<TextureFromFile> res = std::make_shared<TextureFromFile>(TextureFromFile::CI{
 			.app = mi.app,

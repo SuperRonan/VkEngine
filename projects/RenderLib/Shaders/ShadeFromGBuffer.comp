@@ -63,10 +63,10 @@ void main()
 		geom.geometry_normal = normal;
 		geom.vertex_shading_normal = normal;
 		geom.shading_normal = normal;
-		geom.shading_tangent = tangent;
+		geom.vertex_shading_tangent = tangent;
 
 		uint material_id = 0;
-		PBMaterialData material;
+		PBMaterialSampleData material;
 		material.albedo = albedo;
 		material.flags = MATERIAL_TYPE_PB | MATERIAL_FLAG_REFLECTION_BIT;
 		material.metallic = 0;

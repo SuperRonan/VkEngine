@@ -24,20 +24,24 @@ struct SceneObjectReference
 	uint flags;
 };
 
-struct ScenePBMaterialTextures
+struct MaterialTextureIds
 {
-	uint albedo_texture_id;
-	uint normal_texture_id;
-	uint pad1;
-	uint pad2;
+	uint16_t ids[8];
 };
 
-ScenePBMaterialTextures NoPBMaterialTextures()
+MaterialTextureIds NoMaterialTextureIds()
 {
-	ScenePBMaterialTextures res;
-	res.albedo_texture_id = -1;
-	res.normal_texture_id = -1;
+	MaterialTextureIds res;
+	for(uint i = 0; i < 8; ++i)
+	{
+		res.ids[i] = uint16_t(-1);
+	}
 	return res;
+}
+
+uint GetMaterialTextureId(const in MaterialTextureIds m, uint slot)
+{
+	return uint(m.ids[slot]);
 }
 
 #if BIND_SCENE
@@ -221,7 +225,7 @@ layout(SCENE_MATERIAL_BINDING + 0) buffer restrict SCENE_MATERIAL_ACCESS ScenePB
 
 layout(SCENE_MATERIAL_BINDING + 1) buffer restrict SCENE_MATERIAL_ACCESS ScenePBMaterialsRefBinding
 {
-	ScenePBMaterialTextures ids[];
+	MaterialTextureIds ids[];
 } scene_pb_materials_textures;
 
 

@@ -688,73 +688,55 @@ namespace vkl
 
 				if(material)
 				{
-					PBMaterial * pb_material = dynamic_cast<PBMaterial*>(material.get());
-					if (pb_material)
+					bool write_material = false;
+					if (!_unique_materials.contains(material.get()))
 					{
-						TextureAndSampler albedo_tex = pb_material->albedoTextureAndSampler();
-						TextureAndSampler normal_tex = pb_material->normalTextureAndSampler();
-						uint32_t albedo_texture_id = uint32_t(-1);
-						uint32_t normal_texture_id = uint32_t(-1);
-						if (albedo_tex.texture)
+						material_unique_id = _unique_material_index_pool.allocate();
+						_unique_materials[material.get()] = MaterialData{
+							.unique_index = material_unique_id,
+						};
+						material->registerToDescriptorSet(_set, _material_bindings_base + 0, material_unique_id, false);
+						write_material = true;
+					}
+					else
+					{
+						material_unique_id = _unique_materials[material.get()].unique_index;
+					}
+					const MaterialReference& old_ref = _material_ref_buffer->get<MaterialReference>(material_unique_id);
+
+
+					MaterialReference mat_ref = {};
+					bool write_mat_ref = false;
+					for (uint i = 0; i < Material::MAX_TEXTURE_COUNT; ++i)
+					{
+						uint16_t & id = mat_ref.ids[i];
+						const TextureAndSampler tas = material->getTextureAndSampler(i);
+						if (tas.texture)
 						{
-							if (!_unique_textures.contains(albedo_tex.texture.get()))
+							if (!_unique_textures.contains(tas.texture.get()))
 							{
-								albedo_texture_id = _unique_texture_2D_index_pool.allocate();
-								albedo_tex.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, albedo_texture_id);
-								// TODO 
-								// With this impl, a sampler change will not propagate to the set
-								// The should be managed inside of the material
-								_set->setBinding(_textures_bindings_base + 0, albedo_texture_id, 1, nullptr, &albedo_tex.sampler);
-								_unique_textures[albedo_tex.texture.get()] = TextureData{.unique_index = albedo_texture_id };
+								id = _unique_texture_2D_index_pool.allocate();
+								tas.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, id);
+								_unique_textures[tas.texture.get()] = TextureData{
+									.unique_index = static_cast<uint32_t>(id),
+								};
+								// TODO register the sample change too
+								_set->setBinding(_textures_bindings_base + 0, id, 1, nullptr, &tas.sampler);
 							}
 							else
 							{
-								albedo_texture_id = _unique_textures.at(albedo_tex.texture.get()).unique_index;
+								id = static_cast<uint16_t>(_unique_textures.at(tas.texture.get()).unique_index);
 							}
-						}
-						// TODO factorize this code with the above one
-						if (normal_tex.texture)
-						{
-							if (!_unique_textures.contains(normal_tex.texture.get()))
+							if (old_ref.ids[i] != id)
 							{
-								normal_texture_id = _unique_texture_2D_index_pool.allocate();
-								normal_tex.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, normal_texture_id);
-								_set->setBinding(_textures_bindings_base + 0, normal_texture_id, 1, nullptr, &normal_tex.sampler);
-								_unique_textures[normal_tex.texture.get()] = TextureData{ .unique_index = normal_texture_id };
-							}
-							else
-							{
-								normal_texture_id = _unique_textures.at(normal_tex.texture.get()).unique_index;
+								write_mat_ref |= true;
 							}
 						}
+					}
 
-						bool set_material = false;
-
-						if (!_unique_materials.contains(pb_material))
-						{
-							material_unique_id = _unique_material_index_pool.allocate();
-							_unique_materials[pb_material] = MaterialData{.unique_index = material_unique_id};
-							pb_material->registerToDescriptorSet(_set, _material_bindings_base + 0, material_unique_id, false);
-							set_material = true;
-						}
-						else
-						{
-							material_unique_id = _unique_materials.at(pb_material).unique_index;
-							const MaterialReference& mat_ref = _material_ref_buffer->get<MaterialReference>(material_unique_id);
-							if (mat_ref.albedo_id != albedo_texture_id)
-							{
-								set_material = true;
-							}
-						}
-
-						if (set_material)
-						{
-							MaterialReference mat_ref{
-								.albedo_id = albedo_texture_id,
-								.normal_id = normal_texture_id,
-							};
-							_material_ref_buffer->set<MaterialReference>(material_unique_id, mat_ref);
-						}
+					if (write_mat_ref)
+					{
+						_material_ref_buffer->set<MaterialReference>(material_unique_id, mat_ref);
 					}
 				}
 
