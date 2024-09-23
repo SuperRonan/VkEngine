@@ -72,6 +72,9 @@ namespace vkl
 			features.features_12.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
 			features.features_12.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
 			features.features_12.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
+
+			features.features2.features.shaderInt16 = VK_TRUE;
+			features.features_11.storageBuffer16BitAccess = VK_TRUE;
 		}
 
 		virtual std::set<std::string_view> getDeviceExtensions() override
