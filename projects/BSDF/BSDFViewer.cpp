@@ -17,6 +17,12 @@ namespace vkl
 
 		uint32_t reference_function;
 		uint32_t seed;
+		uint32_t pad1, pad2;
+
+		float roughness;
+		float metallic;
+		float shininess;
+		float pad3;
 	};
 
 	BSDFViewer::BSDFViewer(CreateInfo const& ci):
@@ -210,6 +216,10 @@ namespace vkl
 					{
 						res.pushBack("BSDF_RENDER_MODE BSDF_RENDER_MODE_WIREFRAME");
 					}
+					if (_display_in_log2)
+					{
+						res.pushBack("DISPLAY_IN_LOG2 1");
+					}
 					res.pushBackFormatted("TARGET_PRIMITIVE {}", _polygon_mode_3D == VK_POLYGON_MODE_FILL ? "TARGET_TRIANGLES" : "TARGET_IMPLICIT_LINES");
 				},
 			});
@@ -244,6 +254,7 @@ namespace vkl
 			.sets_layouts = _sets_layouts,
 			.extern_render_pass = _render_pass,
 			.subpass_index = 0,
+			.render_in_log_space = &_display_in_log2,
 		});
 		
 
@@ -298,6 +309,9 @@ namespace vkl
 			.direction = Vector3f(std::sin(_inclination), std::cos(_inclination), 0),
 			.common_alpha = _common_alpha,
 			.reference_function = _reference_function_index,
+			.roughness = _roughness,
+			.metallic = _metallic,
+			.shininess = _shininess,
 		};
 
 		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
@@ -416,6 +430,7 @@ namespace vkl
 			assert(_colors.size() == _statistics->vector.size());
 			for (uint32_t i = 0; i < _colors.size32(); ++i)
 			{
+				ImGui::PushID(i);
 				label = std::format("{}", i);
 				Vector4f & color = _colors[i];
 				if (ImGui::RadioButton(label.c_str(), _reference_function_index == i))
@@ -431,17 +446,35 @@ namespace vkl
 				FunctionStatistics const& fs = _statistics->vector[i];
 				ImGui::SameLine();
 				ImGui::Text("Integral: %.3f, Variance: %.3f", fs.integral, fs.variance_with_reference);
-
+				ImGui::PopID();
 			}
 		}
 		_statistics->mutex.unlock_shared();
 		ImGui::EndListBox();
 
 		ImGui::SliderFloat("Common alpha", &_common_alpha, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
-
+		ImGui::Checkbox("Display in log2 scale", &_display_in_log2);
+		ImGui::SameLine();
 		ImGui::Checkbox("Hemisphere", &_hemisphere);
 		if (ImGui::SliderAngle("Inclination", &_inclination, 0, _hemisphere ? 90 : 180, "%.1f deg", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_AlwaysClamp))
 		{
+			_generate_statistics |= true;
+		}
+
+		if (ImGui::SliderFloat("Roughness", &_roughness, 0, 1, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+		{
+			_generate_statistics |= true;
+		}
+
+		if (ImGui::SliderFloat("Metallic", &_metallic, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat))
+		{
+			_generate_statistics |= true;
+		}
+
+		float log_shininess = std::log2(_shininess);
+		if (ImGui::SliderFloat("log2(Shininess)", &log_shininess, 1, 10, "%.3f", ImGuiSliderFlags_NoRoundToFormat))
+		{
+			_shininess = std::exp2(log_shininess);
 			_generate_statistics |= true;
 		}
 
@@ -450,6 +483,24 @@ namespace vkl
 			ImGui::InputInt("Resolution", &resolution, _alignment, 16 * _alignment);
 			_resolution = std::max(std::alignUpAssumePo2<uint32_t>(std::max(1, resolution), _alignment), _alignment);
 		}
+
+		{
+			int log_samples = std::bit_width(_statistics_samples) - 1;
+			if (ImGui::InputInt("log2(Statistics Samples)", &log_samples))
+			{
+				log_samples = std::max(log_samples, 0);
+				_statistics_samples = (1 << log_samples);
+				_generate_statistics |= true;
+			}
+			ImGui::BeginDisabled();
+			ImGui::InputInt("Statistics Samples", (int*) & _statistics_samples);
+			ImGui::EndDisabled();
+			if (ImGui::InputInt("Statisitcs Seed", (int*)&_statistics_seed))
+			{
+				_generate_statistics |= true;
+			}
+		}
+
 
 		static thread_local ImGuiListSelection gui_polygon_mode = ImGuiListSelection::CI{
 			.name = "Polygon Mode",

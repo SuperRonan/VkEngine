@@ -39,6 +39,12 @@ namespace vkl
 
 		float _common_alpha = 0.9;
 
+		float _roughness = 1.0f;
+		float _metallic = 0.0f;
+		float _shininess = 1.0f;
+
+		bool _display_in_log2 = true;
+
 		uint32_t _reference_function_index = 0;
 
 		ImVec4 _clear_color = ImVec4(0, 0, 0, 0);

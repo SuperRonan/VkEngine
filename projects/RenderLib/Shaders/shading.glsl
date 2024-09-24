@@ -2,8 +2,13 @@
 
 #include "common.glsl"
 
+#ifndef BIND_SCENE
 #define BIND_SCENE 1
+#endif
+#ifndef LIGHTS_ACCESS
 #define LIGHTS_ACCESS readonly
+#endif
+
 #include <ShaderLib:/Rendering/Scene/Scene.glsl>
 
 #include <ShaderLib:/Rendering/Ray.glsl>
@@ -66,6 +71,8 @@ struct GeometryShadingInfo
 	vec3 vertex_shading_tangent;
 };
 
+#if BIND_SCENE
+
 PBMaterialSampleData readMaterial(uint material_id, vec2 uv)
 {
 	const PBMaterialProperties props = scene_pb_materials[material_id].props;
@@ -104,17 +111,26 @@ PBMaterialSampleData readMaterial(uint material_id, vec2 uv)
 
 #if SHADING_FORCE_WHITE_DIFFUSE
 	res.metallic = 0;
-	res.roughness = 0;
+	res.roughness = 1;
 	res.cavity = 0;
 	res.albedo = vec3(1);
 #else
 	res.metallic = props.metallic;
 	res.roughness = props.roughness;
 	res.cavity = props.cavity;
+#if 0
+	const float rt = 5e-2;
+	if(res.roughness != 0 && res.roughness < rt)
+	{
+		res.roughness = rt;
+	}
+#endif
 #endif
 
 	return res;
 }
+
+#endif
 
 
 // wo: outcoming direction
@@ -144,7 +160,7 @@ vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in P
 
 	if((same_hemisphere && can_reflect) || (!same_hemisphere && can_transmit))
 	{
-		
+
 		const vec3 reflected = reflect(-wo, normal);
 		const vec3 halfway = normalize(wo + wi);
 
@@ -164,6 +180,12 @@ vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in P
 
 		if(nonZero(F0) && (material.roughness < 1.0f || material.metallic != 0.0f))
 		{
+		
+#if 0
+			const vec2 shiny = EstimatePhongParamsApprox(cos_theta_o, material.roughness, material.metallic);
+			res += specular_F * EvaluateShinyLobe(reflected, wi, shiny.x);
+			return res;	
+#endif
 			const float specular_D = microfacetD(alpha2, normal, halfway);
 			const float specular_Go = microfacetGGX(normal, wo, specular_k);
 			const float specular_Gi = microfacetGGX(normal, wi, specular_k);
@@ -190,6 +212,8 @@ uint shadingFaceFlags(bool front)
 	uint res = front ? BSDF_REFLECTION_BIT : BSDF_TRANSMISSION_BIT;
 	return res;
 }
+
+#if BIND_SCENE
 
 LightSample getLightSample(uint light_id, vec3 position, vec3 normal, uint shading_flags)
 {
@@ -274,6 +298,8 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, uint shadi
 	return res;
 }
 
+#endif
+
 float applyShadowBias2(float depth, const in Light light, vec3 geometry_normal)
 {
 	return depth;
@@ -308,6 +334,8 @@ float applyShadowBias(float depth, uint light_flags, uint bias_data, float cos_t
 
 	return res;
 }
+
+#if BIND_SCENE
 
 // cos_theta: abs(dot(light_forward_dir, geometry_normal))
 float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample light_sample)
@@ -416,3 +444,7 @@ vec3 shade(const in GeometryShadingInfo geom, vec3 wo, const in PBMaterialSample
 
 	return res;
 }
+
+
+#endif
+

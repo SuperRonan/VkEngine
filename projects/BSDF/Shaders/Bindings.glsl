@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SphericalFunctions.glsl"
+#include <ShaderLib:/common.glsl>
 
 #ifndef BSDF_BINDING_BASE
 #define BSDF_BINDING_BASE MODULE_DESCRIPTOR_BINDING
@@ -16,6 +16,12 @@ layout(BSDF_BINDING_BASE + 0) uniform UBO
 
 	uint reference_function;
 	uint seed;
+	uint pad1, pad2;
+
+	float roughness;
+	float metallic;
+	float shininess;
+	float pad3;
 } ubo;
 
 #ifndef BSDF_COLOR_ACCESS

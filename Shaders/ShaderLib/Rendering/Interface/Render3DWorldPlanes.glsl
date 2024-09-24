@@ -82,6 +82,10 @@ void main()
 	vec4 color = in_color;
 #if RENDER_3D_WORLD_PLANES_CHECKERBOARD
 	vec2 uv = in_uv + 1..xx;
+#if DISPLAY_IN_LOG2
+	vec2 cp = in_uv;
+	uv = sign(cp) * exp2(abs(cp)) + 2;
+#endif
 	uv *= ((_pc.line_count_f - 1) / 2);
 	ivec2 uvi = ivec2(uv);
 	bool cb = (((uvi.x) ^ (uvi.y)) & 1) == 0;

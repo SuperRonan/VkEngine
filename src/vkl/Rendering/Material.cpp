@@ -262,7 +262,7 @@ namespace vkl
 
 
 		declare_float(_metallic, "metallic", ImGuiSliderFlags_NoRoundToFormat);
-		declare_float(_roughness, "roughness", ImGuiSliderFlags_NoRoundToFormat);
+		declare_float(_roughness, "roughness", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 		declare_float(_cavity, "cavity", ImGuiSliderFlags_NoRoundToFormat);
 
 

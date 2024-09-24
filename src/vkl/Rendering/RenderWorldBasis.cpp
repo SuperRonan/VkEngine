@@ -10,7 +10,8 @@ namespace vkl
 		_render_pass(ci.extern_render_pass),
 		_subpass_index(ci.subpass_index),
 		_target(ci.target),
-		_depth(ci.depth)
+		_depth(ci.depth),
+		_render_in_log_space(ci.render_in_log_space)
 	{
 		createInternals();
 	}
@@ -70,6 +71,14 @@ namespace vkl
 			.vertex_shader_path = shaders / "Render3DWorldPlanes.glsl",
 			.geometry_shader_path = shaders / "Render3DWorldPlanes.glsl",
 			.fragment_shader_path = shaders / "Render3DWorldPlanes.glsl",
+			.definitions = [this](DefinitionsList& res)
+			{
+				res.clear();
+				if (_render_in_log_space.valueOr(false))
+				{
+					res.pushBack("DISPLAY_IN_LOG2 1");
+				}
+			},
 		});
 
 		_render_lines = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -92,6 +101,14 @@ namespace vkl
 			.vertex_shader_path = shaders / "Render3DWorldLines.glsl",
 			.geometry_shader_path = shaders / "Render3DWorldLines.glsl",
 			.fragment_shader_path = shaders / "Render3DWorldLines.glsl",
+			.definitions = [this](DefinitionsList& res)
+			{
+				res.clear();
+				if (_render_in_log_space.valueOr(false))
+				{
+					res.pushBack("DISPLAY_IN_LOG2 1");
+				}
+			},
 		});
 	}
 

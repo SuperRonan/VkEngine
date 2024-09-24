@@ -1,6 +1,8 @@
 #version 460
 
 #define BIND_SINGLE_MATERIAL 0
+#define BIND_SCENE 1
+#define BIND_RENDERER_SET 1
 
 #include "common.glsl"
 #include "shading.glsl"

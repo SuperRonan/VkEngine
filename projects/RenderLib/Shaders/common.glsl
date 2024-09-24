@@ -10,6 +10,12 @@
 
 #define RENDERER_BINDING_COUNT 1
 
+#ifndef BIND_RENDERER_SET
+#define BIND_RENDERER_SET 0
+#endif
+
+#if BIND_RENDERER_SET
+
 layout(RENDERER_BINDING + 0) uniform UBO
 {
 	float time;
@@ -21,3 +27,5 @@ layout(RENDERER_BINDING + 0) uniform UBO
 
 
 layout(RENDERER_BINDING + 1) uniform samplerShadow LightDepthSampler;
+
+#endif

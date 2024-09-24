@@ -96,14 +96,22 @@ namespace vkl
 					const size_t mp_path_begin = include_line.find("<") + 1;
 					const size_t mp_path_end = include_line.rfind(">");
 
-					if(rel_path_end != std::string::npos)
+					const auto validate = [&](size_t begin, size_t end)
+					{
+						bool res = (end - begin) < include_line.size();
+						res &= (begin != std::string::npos);
+						res &= (end != std::string::npos);
+						return res;
+					};
+
+					if(validate(rel_path_begin, rel_path_end))
 					{
 						const std::string_view include_path_relative(include_line.data() + rel_path_begin, rel_path_end - rel_path_begin);
 
 						const std::filesystem::path path_to_include = folder.string() + (std::string("/") + std::string(include_path_relative));
 						return path_to_include;
 					}
-					else if(mp_path_end != std::string::npos)
+					else if(validate(mp_path_begin, mp_path_end))
 					{
 						if (!preprocessing_state.mounting_points)
 						{

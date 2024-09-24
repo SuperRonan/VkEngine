@@ -8,7 +8,7 @@
 
 #extension GL_EXT_shader_atomic_float : require
 
-#include "Bindings.glsl"
+#include "SphericalFunctions.glsl"
 
 #include <ShaderLib:/random.glsl>
 
@@ -84,3 +84,4 @@ void main()
 
 	}
 }
+

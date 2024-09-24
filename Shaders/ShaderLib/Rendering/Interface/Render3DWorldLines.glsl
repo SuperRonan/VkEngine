@@ -58,7 +58,10 @@ void main()
 		
 		vec4 color = vec4(1..xxx, 0.5);
 
-		const float u = (float(id_in_plane) * _pc.oo_line_count_minus_one) * 2.0f - 1.0f;
+		float u = (float(id_in_plane) * _pc.oo_line_count_minus_one) * 2.0f - 1.0f;
+#if DISPLAY_IN_LOG2
+		u = sign(u) * log2(1 + abs(u));
+#endif
 
 		if(id_in_plane == GetLineCount())
 		{

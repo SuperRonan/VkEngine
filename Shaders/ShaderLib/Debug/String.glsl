@@ -457,10 +457,22 @@ void append(inout ShaderString s, float f, uint flt_precision, bool show_plus)
 	}
 
 
-	const uint integral_part = uint(abs(f));
+	uint integral_part = uint(abs(f));
 	const float dec = abs(f - trunc(f));
-	uint dec_part = uint(dec * pow(basis, flt_precision) + 0.5);
-	
+	const float pow_mult = pow(basis, flt_precision);
+	const float dec_f = dec * pow_mult;
+	uint dec_part = uint(dec_f); 
+	// TODO round to nearest to show
+	// if((dec_f - floor(dec_f)) > 0.5)
+	// {
+	// 	//++dec_part;
+	// 	if(dec_part == uint(pow_mult))
+	// 	{
+	// 		++integral_part;
+	// 		dec_part = 0;
+	// 	}
+	// }
+
 	append(s, integral_part, basis);
 	appendOneChar(s, CHAR_dot);
 	append(s, dec_part, basis, flt_precision);

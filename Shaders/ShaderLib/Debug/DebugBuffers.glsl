@@ -362,9 +362,9 @@ DECLARE_pushToDebug_gvec_all_types
 
 // Wish I had templates
 
-#define DECLARE_pushToDebug_space_type_param_eol_color(Type, Space)  Caret pushToDebug##Space(const in Type t, Caret c, bool ln, vec4 color) { 	return pushToDebug(t, c, ln, color, debugStringDefaultBackColor(), debugStringDefaultGlyphSize(GET_DEBUG_SPACE_FLAG(Space)), GET_DEBUG_SPACE_FLAG(Space)); }
+#define DECLARE_pushToDebug_space_type_param_eol_color(Type, Space) Caret pushToDebug##Space(const in Type t, Caret c, bool ln, vec4 color, vec4 bg_color) { 	return pushToDebug(t, c, ln, color, bg_color, debugStringDefaultGlyphSize(GET_DEBUG_SPACE_FLAG(Space)), GET_DEBUG_SPACE_FLAG(Space)); } Caret pushToDebug##Space(const in Type t, Caret c, bool ln, vec4 color) { return pushToDebug##Space(t, c, ln, color, debugStringDefaultBackColor()); } 
 
-#define DECLARE_pushToDebug_space_type_eol_color(Type, Space, eol) Caret pushToDebug##Space##eol(const in Type t, Caret c, vec4 color) { return pushToDebug##Space(t, c, true, color);}
+#define DECLARE_pushToDebug_space_type_eol_color(Type, Space, eol) Caret pushToDebug##Space##eol(const in Type t, Caret c, vec4 color, vec4 bg_color) { return pushToDebug##Space(t, c, true, color, bg_color);} Caret pushToDebug##Space##eol(const in Type t, Caret c, vec4 color) { return pushToDebug##Space(t, c, true, color);}
 #define DECLARE_pushToDebug_space_type_eol(Type, Space, eol) Caret pushToDebug##Space##eol(const in Type t, Caret c) { return pushToDebug##Space(t, c, true, debugStringDefaultFrontColor());}
 
 #define DECLARE_pushToDebug_space_type_eol_2(Type, Space, eol) DECLARE_pushToDebug_space_type_eol_color(Type, Space, eol) DECLARE_pushToDebug_space_type_eol(Type, Space, eol)

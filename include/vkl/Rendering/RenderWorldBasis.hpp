@@ -32,6 +32,8 @@ namespace vkl
 
 		uint32_t _flags = (0b111u << 29u) | 10;
 
+		Dyn<bool> _render_in_log_space = {};
+
 		void createInternals();
 
 	public:
@@ -45,6 +47,7 @@ namespace vkl
 			uint32_t subpass_index = 0;
 			std::shared_ptr<ImageView> target = nullptr;
 			std::shared_ptr<ImageView> depth = nullptr;
+			Dyn<bool> render_in_log_space = {};
 		};
 		using CI = CreateInfo;
 

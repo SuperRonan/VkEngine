@@ -128,7 +128,7 @@ namespace vkl
 					const float metallic = float(i_m) / float(n_m - 1);
 					for (size_t i_r = 0; i_r < n_r; ++i_r)
 					{
-						const float roughness = float(i_r) / float(n_r - 1);
+						const float roughness = std::pow(float(i_r) / float(n_r - 1), 3);
 
 						const vec3 position = base + float(i_m) * dir_m + float(i_r) * dir_r;
 

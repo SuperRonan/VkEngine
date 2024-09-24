@@ -34,3 +34,4 @@ void main()
 
 	imageStore(bsdf_image, ivec3(gid3), intensity.xxxx);
 }
+

@@ -1,7 +1,14 @@
 #version 460
 
-#define I_WANT_TO_DEBUG 1
-#define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
+#define BIND_SCENE 1
+#define BIND_RENDERER_SET 1
+
+#ifndef FORCE_COSINE_SAMPLING 
+#define FORCE_COSINE_SAMPLING 0
+#endif
+
+#define I_WANT_TO_DEBUG 0
+#define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
 #include <ShaderLib:/Debug/DebugBuffers.glsl>
 
 #include "../common.glsl"
@@ -28,7 +35,12 @@ layout(push_constant) uniform PushConstant
 } _pc;
 
 #define MAX_DEPTH 2
-#define LIGHT_SAMPLES 16
+#define LIGHT_SAMPLES 1
+
+#if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+const uvec2 debug_pixel = uvec2(500, 500);
+Caret caret;
+#endif
 
 struct BSDFSample
 {
@@ -49,32 +61,73 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 	const float alpha2 = sqr(alpha);
 	const float specular_k = sqr(material.roughness + 1) / 8;
 
+	const float cos_theta_o = dot(normal, wo);
+
 	const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
-	bool sample_diffuse = true;
-	if(material.roughness == 0)
+
+	const vec2 specular_params = EstimatePhongParamsApprox(cos_theta_o, material.roughness, material.metallic);
+	float specular_weight = specular_params.y;
+	const float specular_shininess = specular_params.x;
+
+	const bool has_dielectric = material.roughness == 0.0f;
+
+	const float specular_selection = randomFloat01(rng);
+	const bool sample_specular = specular_selection < specular_weight;
+
+	if(sample_specular && has_dielectric)
 	{
-		const float dielectric_probability = material.metallic;
-		const float dielectric_selection = randomFloat01(rng);
-		if(dielectric_selection < dielectric_probability)
-		{
 			res.direction = reflected;
-			res.pdf = dielectric_probability;
+			res.pdf = specular_weight;
 			res.bsdf = F0;
-			sample_diffuse = false;
+	}
+	else
+	{
+		float cosine_pdf = 0.0f;
+		float specular_pdf = 0.0f;
+		
+		const mat3 reflected_basis = BasisFromDir(reflected);
+
+#if FORCE_COSINE_SAMPLING
+		specular_weight = 0.0f;
+		if(false)
+#else
+		if(sample_specular)
+#endif
+		{
+			const vec3 local_direction = GenerateRandomSpecularDirection(specular_shininess, rng);
+			res.direction = reflected_basis * local_direction;
+			specular_pdf = EvaluateShinyLobe(reflected, res.direction, specular_shininess);
+			cosine_pdf = dot(res.direction, normal) * oo_PI;
+
+#if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+			if(_g_debug_signal)
+			{
+				caret = pushToDebugPixLn(specular_shininess, caret);
+				caret = pushToDebugPixLn(specular_weight, caret);
+				caret = pushToDebugPixLn(vec2(specular_pdf, cosine_pdf), caret);
+				
+			}
+#endif
 		}
 		else
 		{
-			res.pdf = (1.0f - dielectric_probability);
+			const vec3 local_direction = randomCosineDirOnHemisphere(rng);
+			res.direction = local_to_world_basis * local_direction;
+			specular_pdf = EvaluateShinyLobe(reflected, res.direction, specular_shininess);
+			cosine_pdf = local_direction.z * oo_PI;
 		}
-	}
-	if(sample_diffuse)
-	{
-		const vec3 local_direction = randomCosineDirOnHemisphere(rng);
-		res.direction = local_to_world_basis * local_direction;
-		res.pdf *= local_direction.z / M_PI;
 		res.bsdf = evaluateBSDF(gsi, wo, res.direction, material);
+		res.pdf = lerp(cosine_pdf, specular_pdf, specular_weight);
+
+#if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+		if(_g_debug_signal)
+		{
+			caret = pushToDebugPixLn(res.bsdf, caret);			
+			caret = pushToDebugPixLn(res.pdf, caret);			
+			caret = pushToDebugPixLn(res.bsdf / res.pdf, caret);			
+		}
+#endif
 	}
-	
 	return res;
 }
 
@@ -193,6 +246,12 @@ vec3 trace(Ray ray, inout rng_t rng)
 			const vec3 shading_bt = cross(gsi.vertex_shading_tangent, gsi.vertex_shading_normal);
 			const mat3 shading_TBN = mat3(gsi.vertex_shading_tangent, shading_bt, gsi.vertex_shading_normal);
 			PBMaterialSampleData material = readMaterial(hit_object_ref.material_id, vertex.uv);
+			if(material.alpha == 0.0)
+			{
+				//throughput *= vec3(1, 0, 0);
+				//ray.origin = gsi.position;
+				//continue;
+			}
 			gsi.shading_normal = shading_TBN * material.normal;
 			//gsi.shading_normal = gsi.vertex_shading_normal;
 			
@@ -244,8 +303,20 @@ void main()
 	const vec2 oo_dims = rcp(dims);
 	if(all(lessThan(pixel, dims)))
 	{
-
 		rng_t rng = hash(pixel) ^ hash(ubo.frame_idx);
+
+#if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+		if(pixel == debug_pixel)
+		{
+			rng = 12;
+			_g_debug_signal = true;
+			caret = Caret2D(vec2(debug_pixel), 0);
+			caret = pushToDebugPixLn("\Debug", caret, vec4(1, 0, 1, 0.8), vec4(0..xxx, 0.5));
+
+			caret = Caret2D(vec2(100, 100), 0);
+		}
+#endif
+
 		vec3 res = 0..xxx;
 		const vec2 subpixel_uv = lerp(0.1.xx, 0.9.xx, randomVec2_01(rng));
 		//const vec2 subpixel_uv = 0.5.xx;
@@ -263,13 +334,20 @@ void main()
 		vec4 dir_h = p2c * vec4(UVToClipSpace(uv), 1, 1);
 		dir_h.xyz = c2w_dir * normalize(dir_h.xyz);
 
-		Ray ray = Ray(camera_pos, dir_h.xyz);
+		Ray ray = Ray(camera_pos, normalize(dir_h.xyz));
 
 
 		res = trace(ray, rng);
 		
 		//res = subpixel_uv.xyx;
 		//res = ray.direction;
+
+#if I_WANT_TO_DEBUG && DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
+		if(distance(vec2(pixel), vec2(debug_pixel)) < 0)
+		{
+			res = vec3(1, 0, 1);
+		}
+#endif
 
 		imageStore(Target, ivec2(pixel), vec4(res, 1));
 	}

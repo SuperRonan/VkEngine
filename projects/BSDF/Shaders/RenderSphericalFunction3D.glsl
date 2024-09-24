@@ -1,6 +1,6 @@
 #version 460
 
-#include "Bindings.glsl"
+#include "SphericalFunctions.glsl"
 
 #include <ShaderLib:/random.glsl>
 
@@ -102,7 +102,13 @@ float fetchIntensity(const in CenterInfo c, uvec2 offset)
 #else
 	const vec3 wi = GetDirection(c.gid + offset);
 	const vec3 wo = ubo.direction;
-	return EvaluateSphericalFunction(c.layer, wo, wi);
+	float res =EvaluateSphericalFunction(c.layer, wo, wi);
+	
+#if DISPLAY_IN_LOG2
+	res = log2(1 + res);
+#endif
+
+	return res;
 #endif
 }
 
@@ -239,3 +245,4 @@ void main()
 }
 
 #endif
+
