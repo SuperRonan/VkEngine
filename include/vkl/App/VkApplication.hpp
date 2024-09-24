@@ -181,6 +181,9 @@ namespace vkl
 			PFN_vkGetRayTracingShaderGroupStackSizeKHR _vkGetRayTracingShaderGroupStackSizeKHR = nullptr;
 			PFN_vkCmdSetRayTracingPipelineStackSizeKHR _vkCmdSetRayTracingPipelineStackSizeKHR = nullptr;
 			PFN_vkGetRayTracingShaderGroupHandlesKHR _vkGetRayTracingShaderGroupHandlesKHR = nullptr;
+
+			// VK_KHR_present_wait
+			PFN_vkWaitForPresentKHR _vkWaitForPresentKHR = nullptr;
 		};
 
 		ExtFunctionsPtr _ext_functions;

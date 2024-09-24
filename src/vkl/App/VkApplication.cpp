@@ -153,7 +153,7 @@ namespace vkl
 		const VkBool32 f = VK_FALSE;
 		
 		features.features_13.synchronization2 = t;
-		//features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
+		features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
 		features.present_id_khr.presentId = t;
 
 		features.features2.features.geometryShader = t;
@@ -733,6 +733,11 @@ namespace vkl
 			_ext_functions._vkGetRayTracingShaderGroupStackSizeKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupStackSizeKHR>(vkGetDeviceProcAddr(_device, "vkGetRayTracingShaderGroupStackSizeKHR"));
 			_ext_functions._vkCmdSetRayTracingPipelineStackSizeKHR = reinterpret_cast<PFN_vkCmdSetRayTracingPipelineStackSizeKHR>(vkGetDeviceProcAddr(_device, "vkCmdSetRayTracingPipelineStackSizeKHR"));
 			_ext_functions._vkGetRayTracingShaderGroupHandlesKHR = reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(_device, "vkGetRayTracingShaderGroupHandlesKHR"));
+		}
+
+		if (_available_features.present_wait_khr.presentWait)
+		{
+			_ext_functions._vkWaitForPresentKHR = reinterpret_cast<PFN_vkWaitForPresentKHR>(vkGetDeviceProcAddr(_device, "vkWaitForPresentKHR"));
 		}
 	}
 

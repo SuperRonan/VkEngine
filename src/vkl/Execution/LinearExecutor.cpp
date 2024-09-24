@@ -599,7 +599,7 @@ namespace vkl
 			createDebugRenderer();
 		}
 
-		if (_window && useSpecificPresentSignalFence())
+		if (_window && !useSpecificPresentSignalFence())
 		{
 			_window->swapchain()->setInvalidationCallback(Callback{
 				.callback = [this]() {
@@ -620,7 +620,7 @@ namespace vkl
 	LinearExecutor::~LinearExecutor()
 	{
 		vkDeviceWaitIdle(device());
-		if (_window && useSpecificPresentSignalFence())
+		if (_window && !useSpecificPresentSignalFence())
 		{
 			_window->swapchain()->removeInvalidationCallback(this);
 		}
@@ -768,6 +768,12 @@ namespace vkl
 		event->swapchain = _window->swapchain()->instance();
 		event->index = aquired.swap_index;
 
+		if(false)
+		{
+			std::unique_lock lock(g_mutex);
+			std::cout << "Aquired Swapchain index: " << event->index << std::endl;
+		}
+
 		assert(aquired.swap_index < _window->swapchainSize());
 
 		if (!use_specific_present_signal_fence)
@@ -778,7 +784,7 @@ namespace vkl
 			while (it != _previous_swapchain_events.rend())
 			{
 				std::shared_ptr<SwapchainEvent> & e = *it;
-				if ((e->swapchain == event->swapchain) && (e->index == event->index))
+				if ((e->swapchain == event->swapchain) && (e->index == event->index) && !e->present_signal_fence)
 				{
 					break;
 				}
@@ -1164,7 +1170,8 @@ namespace vkl
 				cb_trash_can = &_trash_cbs;
 			}
 			const bool cb_break_on_first_stall = false;
-			const bool swapchain_break_on_first_stall = true;
+			// It seems there is a bug with this to true, leading to an accumulation of previous swapchain event
+			const bool swapchain_break_on_first_stall = false;
 			_cb_mutex.lock();
 			{
 				if (cb_break_on_first_stall)
@@ -1217,6 +1224,10 @@ namespace vkl
 						if (e->present_signal_fence)
 						{
 							res = e->present_signal_fence->getStatus();
+						}
+						else if (application()->availableFeatures().present_wait_khr.presentWait)
+						{
+							res = application()->extFunctions()._vkWaitForPresentKHR(device(), e->swapchain->handle(), e->present_id, 0);
 						}
 						VkResult aquire_status = e->aquire_signal_fence->getStatus();
 						if (res == VK_SUCCESS && aquire_status != VK_SUCCESS)
