@@ -164,8 +164,8 @@ vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in P
 		const vec3 reflected = reflect(-wo, normal);
 		const vec3 halfway = normalize(wo + wi);
 
-		const float alpha = sqr(material.roughness);
-		const float alpha2 = sqr(alpha);
+		const float alpha2 = sqr(material.roughness);
+		//const float alpha2 = sqr(alpha);
 		const float specular_k = sqr(material.roughness + 1) / 8;
 
 		const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
@@ -173,7 +173,7 @@ vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in P
 		const vec3 Kd = 1..xxx - specular_F; 
 
 		const float diffuse_rho = oo_PI;
-		const vec3 diffuse_contribution = Kd * material.albedo * diffuse_rho * (1.0 - material.metallic);
+		vec3 diffuse_contribution = Kd * material.albedo * diffuse_rho * (1.0 - material.metallic);
 		res += diffuse_contribution;
 
 		//const vec3 F0 = material.F0;
@@ -187,11 +187,11 @@ vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in P
 			return res;	
 #endif
 			const float specular_D = microfacetD(alpha2, normal, halfway);
-			const float specular_Go = microfacetGGX(normal, wo, specular_k);
-			const float specular_Gi = microfacetGGX(normal, wi, specular_k);
-			const float specular_G = specular_Go * specular_Gi; 
+			const float specular_G = microfacetG(normal, wo, wi, specular_k);
 
-			const vec3 specular_cook_torrance = specular_F * specular_D * specular_G / max(4.0f * abs_cos_theta_i * abs_cos_theta_o, EPSILON_f);
+			const float div = max(4.0f * abs_cos_theta_i * abs_cos_theta_o, EPSILON_f);
+
+			const vec3 specular_cook_torrance = specular_F * specular_D * specular_G / div;
 			if(!any(isWrong(specular_cook_torrance)))
 			{
 				res += specular_cook_torrance;

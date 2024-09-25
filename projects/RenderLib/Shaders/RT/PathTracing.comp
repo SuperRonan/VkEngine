@@ -53,7 +53,7 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 {
 	BSDFSample res;
 	res.pdf = 1.0f;
-	const vec3 normal = gsi.shading_normal;
+	const vec3 normal = (gsi.shading_normal);
 	const mat3 local_to_world_basis = BasisFromDir(normal);
 	const vec3 reflected = reflect(-wo, normal);
 
@@ -65,19 +65,17 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 
 	const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
 
-	const vec2 specular_params = EstimatePhongParamsApprox(cos_theta_o, material.roughness, material.metallic);
-	float specular_weight = specular_params.y;
-	const float specular_shininess = specular_params.x;
+	MicrofacetApproximation approx = EstimateMicrofacetApprox(cos_theta_o, material.roughness, material.metallic);
 
 	const bool has_dielectric = material.roughness == 0.0f;
 
 	const float specular_selection = randomFloat01(rng);
-	const bool sample_specular = specular_selection < specular_weight;
+	const bool sample_specular = specular_selection < approx.specular_weight;
 
 	if(sample_specular && has_dielectric)
 	{
 			res.direction = reflected;
-			res.pdf = specular_weight;
+			res.pdf = approx.specular_weight;
 			res.bsdf = F0;
 	}
 	else
@@ -88,15 +86,15 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 		const mat3 reflected_basis = BasisFromDir(reflected);
 
 #if FORCE_COSINE_SAMPLING
-		specular_weight = 0.0f;
+		approx.specular_weight = 0.0f;
 		if(false)
 #else
 		if(sample_specular)
 #endif
 		{
-			const vec3 local_direction = GenerateRandomSpecularDirection(specular_shininess, rng);
+			const vec3 local_direction = GenerateRandomSpecularDirection(approx.shininess, rng);
 			res.direction = reflected_basis * local_direction;
-			specular_pdf = EvaluateShinyLobe(reflected, res.direction, specular_shininess);
+			specular_pdf = EvaluateShinyLobe(reflected, res.direction, approx.shininess);
 			cosine_pdf = dot(res.direction, normal) * oo_PI;
 
 #if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
@@ -113,11 +111,27 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 		{
 			const vec3 local_direction = randomCosineDirOnHemisphere(rng);
 			res.direction = local_to_world_basis * local_direction;
-			specular_pdf = EvaluateShinyLobe(reflected, res.direction, specular_shininess);
+			specular_pdf = EvaluateShinyLobe(reflected, res.direction, approx.shininess);
 			cosine_pdf = local_direction.z * oo_PI;
 		}
 		res.bsdf = evaluateBSDF(gsi, wo, res.direction, material);
-		res.pdf = lerp(cosine_pdf, specular_pdf, specular_weight);
+		res.pdf = lerp(cosine_pdf, specular_pdf, approx.specular_weight);
+		
+		// {
+		// 	const vec3 h = normalize(wo + res.direction);
+
+		// 	const float cos_theta_geom_i = dot(gsi.geometry_normal, res.direction);
+		// 	const float cos_theta_geom_o = dot(gsi.geometry_normal, wo);
+		// 	const bool same_hemisphere = sign(cos_theta_geom_i) == sign(cos_theta_geom_o);
+
+		// 	float b = 0;
+		// 	if(same_hemisphere)
+		// 	{
+		// 		b = 1;
+		// 	}
+		// 	//res.bsdf = b.xxx;
+		// 	res.pdf = 1.;
+		// }
 
 #if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 		if(_g_debug_signal)

@@ -10,22 +10,24 @@
 #define NORMAL vec3(0, 1, 0)
 #define TANGENT vec3(1, 0, 0)
 
-float EvaluateSpecularBSDF(vec3 normal, vec3 wo, vec3 wi, float shininess)
-{
-	const float cos_theta_i = max(dot(normal, wi), 0);
-	if(cos_theta_i == 0)
-	{
-		return 0.0f;
-	}
-	const vec3 refl = reflect(-wo, normal);
-	const float cos_r = max(dot(refl, wi), 0);
+float EvaluateShinyApprox(const in PBMaterialSampleData material, vec3 n, vec3 wo, vec3 wi)
+{	
+	const float cos_theta_i = dot(n, wi);
+	const float abs_cos_theta_i = abs(cos_theta_i);
+	const float cos_theta_o = dot(n, wo);
 
-	const float norm = (shininess + 1) / TWO_PI;
+	const vec3 reflected = reflect(-wo, n);
 
-	return pow(cos_r, shininess) * norm;
+	MicrofacetApproximation approx = EstimateMicrofacetApprox(cos_theta_o, material.roughness, material.metallic);
+
+	float diffuse_term = max(cos_theta_i, 0) * oo_PI;
+	float specular_term = EvaluateShinyLobe(reflected, wi, approx.shininess);
+
+	float res = lerp(diffuse_term, specular_term, approx.specular_weight);
+	return res;
 }
 
-float EvaluateSphericalFunction(uint index, vec3 wo, vec3 wi)
+float EvaluateSphericalFunction(const uint index, vec3 wo, vec3 wi)
 {
 	const vec3 n = NORMAL;
 	const vec3 halfway = safeNormalize(wo + wi);
@@ -33,6 +35,8 @@ float EvaluateSphericalFunction(uint index, vec3 wo, vec3 wi)
 
 	const float cos_theta_i = dot(n, wi);
 	const float abs_cos_theta_i = abs(cos_theta_i);
+	const float cos_theta_o = dot(n, wo);
+	const float abs_cos_theta_o = abs(cos_theta_o);
 
 	PBMaterialSampleData material;
 	material.albedo = 1..xxx;
@@ -49,34 +53,50 @@ float EvaluateSphericalFunction(uint index, vec3 wo, vec3 wi)
 	geom.shading_normal = geom.vertex_shading_normal;
 	geom.vertex_shading_tangent = TANGENT;
 
+	const float alpha2 = sqr(material.roughness);
+	const float k = sqr(material.roughness + 1) / 8;
+	const vec3 F0 = lerp(vec3(0.04), material.albedo, material.metallic);
+	
+	const float D = microfacetD(alpha2, n, halfway);
+	const float G = microfacetG(n, wo, wi, k);
+	const float F = FresnelSchlick(F0, wo, halfway).x;
+	const float div = max(4.0f * abs_cos_theta_i * abs_cos_theta_o, EPSILON_f);
+	
 	float res = 0;
 
 	bool apply_cos = true;
 
 	if(index == 0)
 	{
-		if(cos_theta_i != 0)
+		res = evaluateBSDF(geom, wo, wi, material).x;
+		if(cos_theta_i > 0)
 		{
-			res = evaluateBSDF(geom, wo, wi, material).x;
+			res = D * F * G / div;
 		}
 	}
 	else if (index == 1)
 	{
-		if(cos_theta_i > 0)
-		{
-			res = oo_PI;
-		}
+		// if(cos_theta_i > 0)
+		// {
+		// 	res = oo_PI;
+		// }
+		float s = pow(material.roughness, -2 + 0.5);
+
+		res = EvaluateShinyLobe(reflected, wi, s);
+
+		apply_cos = false;
 	}
 	if(index == 2)
 	{
-		float shininess = ubo.shininess;
-		shininess = pow(max(ubo.roughness, 0.01), -4.0);
-		float diffuse_term = cos_theta_i > 0.0f ? oo_PI : 0.0f;
-		float specular_term = EvaluateSpecularBSDF(geom.geometry_normal, wo, wi, shininess) / abs_cos_theta_i;
-
-		float specular_weight = max(ubo.metallic, 0.04);
-
-		res = lerp(diffuse_term, specular_term, specular_weight);
+		res = EvaluateShinyApprox(material, n, wo, wi);
+		apply_cos = false;
+	}
+	if(index == 3)
+	{
+		float a = evaluateBSDF(geom, wo, wi, material).x * abs_cos_theta_i;
+		float b = EvaluateShinyApprox(material, n, wo, wi);
+		apply_cos = false;
+		res = sqr(a - b);
 	}
 
 	if(apply_cos)

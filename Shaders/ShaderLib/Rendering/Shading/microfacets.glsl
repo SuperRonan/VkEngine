@@ -2,6 +2,9 @@
 
 #include <ShaderLib:/common.glsl>
 
+// https://blog.selfshadow.com/publications/s2012-shading-course/hoffman/s2012_pbs_physics_math_notes.pdf
+
+// Normal distribution
 float microfacetD(float alpha2, vec3 normal, vec3 halfway)
 {
 	return alpha2 / (M_PI * sqr(sqr(dot(normal, halfway)) * (alpha2 - 1) + 1));
@@ -11,6 +14,16 @@ float microfacetGGX(vec3 n, vec3 v, float k)
 {
 	const float d = dot(n, v);
 	return d / (d * (1.0 - k) + k);
+}
+
+// Shadowing masking function
+float microfacetG(vec3 n, vec3 wo, vec3 wi, float k)
+{
+	const float gi = microfacetGGX(n, wi, k);
+	const float go = microfacetGGX(n, wo, k);
+	float res;
+	res = gi * go;
+	return res;
 }
 
 float specularFresnelNormalIncidence(float n)
@@ -26,25 +39,34 @@ vec3 FresnelSchlick(vec3 F0, vec3 v, vec3 h)
 	return F0 + (1.0.xxx - F0) * pow(2, (a * d + b) * d);
 }
 
-// .x = specular shininess in R+ 
-// .y = specular weight in [0, 1]
-vec2 EstimatePhongParamsApprox(float cos_theta_o, float roughness, float metallic)
+struct MicrofacetApproximation
 {
-	vec2 res = vec2(0, 0);
+	float specular_weight;
+	float shininess;	
+};
 
-	res.y = metallic;
+MicrofacetApproximation EstimateMicrofacetApprox(float cos_theta_o, float roughness, float metallic)
+{
+	MicrofacetApproximation res = MicrofacetApproximation(0, 0);
+
+	res.specular_weight = max(metallic, 0.04);
 	if(roughness == 0)
 	{
 		//res.x = 1.0f / 0.0f;
 	}
 	else
 	{
-		const float limit = 2e-2;
+		// const float soft_limit = 0.2;
+		// if(roughness < (soft_limit))
+		// {
+		// 	//roughness = lerp(soft_limit * 0.35, soft_limit, roughness / soft_limit);
+		// }
+		const float limit = 2e-4;
 		if(roughness < limit)
 		{
 			roughness = limit;
 		}
-		res.x = pow(roughness, -4);
+		res.shininess = pow(roughness, -2);
 		//res.x = rcp(sqr(sqr(roughness)));
 		//res.x = clamp(res.x, 1, 1e5);
 	}
