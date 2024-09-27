@@ -12,17 +12,17 @@ namespace vkl
 	{
 		_pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.same_line = true,
 			.labels = {"Forward V1"s, "Deferred V1"s, "Path Tacing"s},
 			.default_index = 0,
-			.same_line = true,
 		};
 
 		_shadow_method = ImGuiListSelection::CI{
 			.name = "Shadows",
 			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.same_line = true,
 			.labels = {"None", "Shadow Maps", "Ray Tracing"},
 			.default_index = 1,
-			.same_line = true,
 		};
 		_shadow_method_glsl_def = "SHADING_SHADOW_METHOD 0";
 		_use_ao_glsl_def = "USE_AO 0";
@@ -122,7 +122,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".render_target",
 			.type = _output_target->image()->type(),
-			.format = VK_FORMAT_R16G16B16A16_SFLOAT,
+			.format = _output_target->format(),
 			.extent = _output_target->image()->extent(),
 			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
@@ -130,7 +130,7 @@ namespace vkl
 
 		_taau = std::make_shared<TemporalAntiAliasingAndUpscaler>(TemporalAntiAliasingAndUpscaler::CI{
 			.app = application(),
-			.name = name() + "TAAU",
+			.name = name() + ".TAAU",
 			.input = _render_target,
 			.sets_layouts = _sets_layouts,
 		});

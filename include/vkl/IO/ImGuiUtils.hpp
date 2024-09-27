@@ -25,16 +25,23 @@ namespace vkl
 			bool disable = false;
 		};
 
+		struct OptionView
+		{
+			std::string_view name = {};
+			std::string_view desc = {};
+			bool disable = false;
+		};
+
 	protected:
 
 		std::string _name = {};
 		
 		Mode _mode = Mode::Combo;
+		bool _same_line = false;
 
 		size_t _index = 0;
 		MyVector<Option> _options = {};
 		
-		bool _same_line = false;
 
 	public:
 
@@ -42,12 +49,12 @@ namespace vkl
 		{
 			std::string name = {};
 			Mode mode = Mode::Combo;
+			bool same_line = false;
 			// labels xor options
 			MyVector<std::string> labels;
 			// labels xor options
 			MyVector<Option> options;
 			size_t default_index = 0;
-			bool same_line = false;
 		};
 		using CI = CreateInfo;
 
@@ -58,36 +65,67 @@ namespace vkl
 		ImGuiListSelection& operator=(ImGuiListSelection const&) = default;
 		ImGuiListSelection& operator=(ImGuiListSelection&&) = default;
 		
+		void setOptionsCount(uint32_t count);
+
+		void enableOptions(size_t index, bool enable = true)
+		{
+			assert(index < _options.size());
+			_options[index].disable = !enable;
+		}
+
+		void setOption(size_t index, OptionView const& opt);
+		void setOption(size_t index, Option && opt);
+
 		void setIndex(size_t index)
 		{
 			_index = index;
 		}
 
-		bool declareRadioButtons(bool same_line);
+		bool declareRadioButtons(size_t & active_index, bool same_line) const;
+		
+		bool declareRadioButtons(bool same_line)
+		{
+			return declareRadioButtons(_index, same_line);
+		}
 		
 		bool declareRadioButtons()
 		{
 			return declareRadioButtons(_same_line);
 		}
 
-		bool declareCombo();
+		bool declareCombo(size_t & acive_index) const;
+		
+		bool declareCombo()
+		{
+			return declareCombo(_index);
+		}
+
+		bool declareDropdown(size_t & active_index)
+		{
+			return declareCombo(_index);
+		}
 
 		bool declareDropdown()
 		{
-			return declareCombo();
+			return declareDropdown();
+		}
+
+		bool declare(size_t & active_index)
+		{
+			if (_mode == Mode::RadioButtons)
+			{
+				return declareRadioButtons(active_index, _same_line);
+			}
+			else if (_mode == Mode::Combo)
+			{
+				return declareCombo(active_index);
+			}
+			return false;
 		}
 
 		bool declare()
 		{
-			if (_mode == Mode::RadioButtons)
-			{
-				return declareRadioButtons(_same_line);
-			}
-			else if (_mode == Mode::Combo)
-			{
-				return declareCombo();
-			}
-			return false;
+			return declare(_index);
 		}
 
 		constexpr size_t index()const
@@ -98,12 +136,6 @@ namespace vkl
 		const auto& options()const
 		{
 			return _options;
-		}
-
-		void enableOptions(size_t index, bool enable = true)
-		{
-			assert(index < _options.size());
-			_options[index].disable = !enable;
 		}
 	};
 

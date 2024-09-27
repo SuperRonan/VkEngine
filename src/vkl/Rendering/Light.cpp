@@ -101,6 +101,7 @@ namespace vkl
 		static thread_local ImGuiListSelection gui_shadow_bias_mode = ImGuiListSelection::CI{
 			.name = "Shadow Bias Mode",
 			.mode = ImGuiListSelection::Mode::Combo,
+			.same_line = true,
 			.options = {
 				ImGuiListSelection::Option{
 					.name = "None",
@@ -116,7 +117,6 @@ namespace vkl
 					.name = "Float Addition",
 				},
 			},
-			.same_line = true,
 		};
 		gui_shadow_bias_mode.setIndex(size_t(_shadow_bias_mode));
 		if (gui_shadow_bias_mode.declare())
@@ -302,8 +302,8 @@ namespace vkl
 		static ImGuiListSelection gui_attenuation(ImGuiListSelection::CI{
 			.name = "Attenuation",
 			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.labels = {"None", "Linear", "Quadratic", "Root"},
 			.same_line = true,
+			.labels = {"None", "Linear", "Quadratic", "Root"},
 		});
 		gui_attenuation.setIndex(_attenuation);
 		if (gui_attenuation.declare())

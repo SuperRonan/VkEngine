@@ -505,8 +505,8 @@ namespace vkl
 		static thread_local ImGuiListSelection gui_polygon_mode = ImGuiListSelection::CI{
 			.name = "Polygon Mode",
 			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.labels = {"Fill", "Line"},
 			.same_line = true,
+			.labels = {"Fill", "Line"},
 		};
 
 		gui_polygon_mode.setIndex(static_cast<uint32_t>(_polygon_mode_3D));

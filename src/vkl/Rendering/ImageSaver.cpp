@@ -44,9 +44,9 @@ namespace vkl
 		_gui_extension = ImGuiListSelection::CI{
 			.name = "File type",
 			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.same_line = true,
 			.options = std::move(extensions_options),
 			.default_index = extensions_list.size(),
-			.same_line = true,
 		};
 		_dst_folder = std::filesystem::weakly_canonical(_dst_folder);
 		_dst_folder_str = _dst_folder.string();

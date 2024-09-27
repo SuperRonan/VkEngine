@@ -10,13 +10,13 @@ namespace vkl
 	{
 		_gui_type = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
+			.same_line = true,
 			.labels = {
 				"Perspective",
 				"Orthographic",
 				//"ReversedPerspective"
 			},
 			.default_index = 0,
-			.same_line = true,
 		};
 	}
 

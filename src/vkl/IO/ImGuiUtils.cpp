@@ -11,7 +11,6 @@ namespace vkl
 		_index(ci.default_index),
 		_same_line(ci.same_line)
 	{
-		assert(ci.labels.empty() xor ci.options.empty());
 		if (ci.options.empty())
 		{
 			_options.resize(ci.labels.size());
@@ -30,7 +29,32 @@ namespace vkl
 		if (_index > _options.size())	_index = 0;
 	}
 
-	bool ImGuiListSelection::declareRadioButtons(bool same_line)
+	void ImGuiListSelection::setOptionsCount(uint32_t count)
+	{
+		_options.resize(count);
+	}
+
+	void ImGuiListSelection::setOption(size_t index, Option&& option)
+	{
+		if (_options.size() <= index)
+		{
+			setOptionsCount(index + 1);
+		}
+		_options[index] = std::move(option);
+	}
+
+	void ImGuiListSelection::setOption(size_t index, OptionView const& option)
+	{
+		if (_options.size() <= index)
+		{
+			setOptionsCount(index + 1);
+		}
+		_options[index].name = option.name;
+		_options[index].desc = option.desc;
+		_options[index].disable = option.disable;
+	}
+
+	bool ImGuiListSelection::declareRadioButtons(size_t &active_index, bool same_line) const
 	{
 		if (!_name.empty())
 		{
@@ -40,11 +64,11 @@ namespace vkl
 				ImGui::SameLine();
 			}
 		}
-		size_t active_index = _index;
+		const size_t old_index = active_index;
 		for (size_t i = 0; i < _options.size(); ++i)
 		{
 			ImGui::BeginDisabled(_options[i].disable);
-			const bool b = ImGui::RadioButton(_options[i].name.c_str(), i == _index);
+			const bool b = ImGui::RadioButton(_options[i].name.c_str(), i == old_index);
 			if (!_options[i].desc.empty())
 			{
 				ImGui::SetItemTooltip(_options[i].desc.c_str());
@@ -54,25 +78,35 @@ namespace vkl
 				ImGui::SameLine();
 			ImGui::EndDisabled();
 		}
-		bool changed = _index != active_index;
-		if (changed)
-		{
-			_index = active_index;
-		}
+		bool changed = old_index != active_index;
 		return changed;
 	}
 
-	bool ImGuiListSelection::declareCombo()
+	bool ImGuiListSelection::declareCombo(size_t &active_index) const
 	{
 		bool res = false;
 		assert(!_name.empty());
-		if (ImGui::BeginCombo(_name.c_str(), _options[_index].name.c_str()))
+		bool begin = false;
+		if (active_index < _options.size())
 		{
-			size_t active_index = _index;
+			begin = ImGui::BeginCombo(_name.c_str(), _options[active_index].name.c_str());
+		}
+		else
+		{
+			constexpr const size_t max_size = 64;
+			char preview_label[max_size];
+			size_t write_count = std::format_to_n(preview_label, max_size, "option {} (unknown)", active_index).size;
+			assert(write_count < max_size);
+			preview_label[write_count] = char(0);
+			begin = ImGui::BeginCombo(_name.c_str(), preview_label);
+		}
+		if (begin)
+		{
+			const size_t old_index = active_index;
 			for (size_t i = 0; i < _options.size(); ++i)
 			{
 				ImGui::BeginDisabled(_options[i].disable);
-				const bool b = active_index == i;
+				const bool b = old_index == i;
 				if (ImGui::Selectable(_options[i].name.c_str(), b))
 				{
 					active_index = i;
@@ -88,8 +122,7 @@ namespace vkl
 				ImGui::EndDisabled();
 			}
 			ImGui::EndCombo();
-			res = _index != active_index;
-			_index = active_index;
+			res = old_index != active_index;
 		}
 		return res;
 	}
