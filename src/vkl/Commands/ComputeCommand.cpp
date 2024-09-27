@@ -79,7 +79,7 @@ namespace vkl
 	{
 		std::shared_ptr<Shader> shader = std::make_shared<Shader>(Shader::CI{
 			.app = application(),
-			.name = _shader_path.string(),
+			.name = name() + ".Shader",
 			.source_path = _shader_path,
 			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
 			.definitions = _definitions,
@@ -87,14 +87,14 @@ namespace vkl
 	
 		_program = std::make_shared<ComputeProgram>(ComputeProgram::CI{
 			.app = application(),
-			.name = shader->name(),
+			.name = name() + ".Program",
 			.sets_layouts = _provided_sets_layouts,
 			.shader = shader,
 		});
 
 		_pipeline = std::make_shared<ComputePipeline>(ComputePipeline::CI{
 			.app = application(),
-			.name = _program->name(),
+			.name = name() + ".Pipeline",
 			.program = _program,
 		});
 
