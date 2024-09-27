@@ -34,8 +34,8 @@ layout(push_constant) uniform PushConstant
 	uint value;
 } _pc;
 
-#define MAX_DEPTH 2
-#define LIGHT_SAMPLES 1
+#define MAX_DEPTH 5
+#define LIGHT_SAMPLES 16
 
 #if DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 const uvec2 debug_pixel = uvec2(500, 500);

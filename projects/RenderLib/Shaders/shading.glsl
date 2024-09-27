@@ -181,11 +181,6 @@ vec3 evaluateBSDF(const in GeometryShadingInfo gsi, vec3 wo, vec3 wi, const in P
 		if(nonZero(F0) && (material.roughness < 1.0f || material.metallic != 0.0f))
 		{
 		
-#if 0
-			const vec2 shiny = EstimatePhongParamsApprox(cos_theta_o, material.roughness, material.metallic);
-			res += specular_F * EvaluateShinyLobe(reflected, wi, shiny.x);
-			return res;	
-#endif
 			const float specular_D = microfacetD(alpha2, normal, halfway);
 			const float specular_G = microfacetG(normal, wo, wi, specular_k);
 

@@ -36,12 +36,15 @@ void main()
 		if((_pc.flags & TAAU_FLAG_RESET_BIT) != 0)
 		{
 		 	result = new_data;
+			result.w = 1;
 		}
 		else
 		{
 			const vec4 old_data = imageLoad(Output, ivec2(pixel));
+			// float precision issue as lim alpha -> 1
+			// The image darkens
+			// In C++, the alpha is limited to a numer of samples before the darkening is too visible
 			result.xyz = lerp(new_data.xyz, old_data.xyz, alpha);
-			result.w = 1;
 		}
 
 		imageStore(Output, ivec2(pixel), result);

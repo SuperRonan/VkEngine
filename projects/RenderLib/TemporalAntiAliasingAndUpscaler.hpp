@@ -23,10 +23,14 @@ namespace vkl
 		bool _enable = true;
 		ImGuiListSelection _mode;
 		float _alpha = 0.9;
+		uint _max_samples = 128;
 
 		uint32_t _accumulated_samples = 0;
 		bool _reset = true;
 
+
+		ImGuiListSelection _gui_acc_format;
+		Dyn<VkFormat> _accumation_format = {};
 		std::string _format_glsl;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
