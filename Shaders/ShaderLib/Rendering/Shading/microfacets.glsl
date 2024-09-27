@@ -12,8 +12,11 @@ float microfacetD(float alpha2, vec3 normal, vec3 halfway)
 
 float microfacetGGX(vec3 n, vec3 v, float k)
 {
-	const float d = dot(n, v);
-	return d / (d * (1.0 - k) + k);
+	const float d = max(dot(n, v), 0);
+	float res = d / (d * (1.0 - k) + k);
+	//res = abs(res);
+	//res = max(res, 0);
+	return res;
 }
 
 // Shadowing masking function
@@ -23,6 +26,7 @@ float microfacetG(vec3 n, vec3 wo, vec3 wi, float k)
 	const float go = microfacetGGX(n, wo, k);
 	float res;
 	res = gi * go;
+	//res = max(res, 0);
 	return res;
 }
 
@@ -49,7 +53,14 @@ MicrofacetApproximation EstimateMicrofacetApprox(float cos_theta_o, float roughn
 {
 	MicrofacetApproximation res = MicrofacetApproximation(0, 0);
 
-	res.specular_weight = max(metallic, 0.04);
+	// if(roughness == 0 && metallic == 0)
+	// {
+
+	// }
+	// else
+	{
+		res.specular_weight = max(metallic, 0.04);
+	}
 	if(roughness == 0)
 	{
 		//res.x = 1.0f / 0.0f;
