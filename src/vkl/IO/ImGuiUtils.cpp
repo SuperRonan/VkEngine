@@ -54,11 +54,11 @@ namespace vkl
 		_options[index].disable = option.disable;
 	}
 
-	bool ImGuiListSelection::declareRadioButtons(size_t &active_index, bool same_line) const
+	bool ImGuiListSelection::declareRadioButtons(const char * name, size_t &active_index, bool same_line) const
 	{
-		if (!_name.empty())
+		if (name)
 		{
-			ImGui::Text(_name.c_str());
+			ImGui::Text(name);
 			if (same_line)
 			{
 				ImGui::SameLine();
@@ -82,14 +82,14 @@ namespace vkl
 		return changed;
 	}
 
-	bool ImGuiListSelection::declareCombo(size_t &active_index) const
+	bool ImGuiListSelection::declareCombo(const char * name, size_t &active_index) const
 	{
 		bool res = false;
-		assert(!_name.empty());
+		assert(name);
 		bool begin = false;
 		if (active_index < _options.size())
 		{
-			begin = ImGui::BeginCombo(_name.c_str(), _options[active_index].name.c_str());
+			begin = ImGui::BeginCombo(name, _options[active_index].name.c_str());
 		}
 		else
 		{
@@ -98,7 +98,7 @@ namespace vkl
 			size_t write_count = std::format_to_n(preview_label, max_size, "option {} (unknown)", active_index).size;
 			assert(write_count < max_size);
 			preview_label[write_count] = char(0);
-			begin = ImGui::BeginCombo(_name.c_str(), preview_label);
+			begin = ImGui::BeginCombo(name, preview_label);
 		}
 		if (begin)
 		{

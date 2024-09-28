@@ -1,5 +1,5 @@
 #include <vkl/Rendering/Material.hpp>
-#include <imgui/imgui.h>
+#include <vkl/IO/ImGuiDynamic.hpp>
 
 namespace vkl
 {
@@ -214,57 +214,30 @@ namespace vkl
 	{
 		
 		ImGui::PushID(name().c_str());
-		ImGui::Text("Name: ");
-		ImGui::SameLine();
-		ImGui::Text(name().c_str());
+		ImGui::Text("Name: %s", name().c_str());
 
 		const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float;
 
-		auto declare_dynamic = [&]<class T>(Dyn<T> &dv, std::string_view label, auto const& imgui_f)
+		auto declare_color = [&](const char* label, vec3& dv)
 		{
-			if (dv.hasValue())
-			{
-				T value = dv.value();
-				ImGui::BeginDisabled(!dv.canSetValue());
-
-				bool changed = imgui_f(&value);
-				_should_update_props_buffer |= changed;
-				if (changed)
-				{
-					dv.setValue(value);
-				}
-
-				ImGui::EndDisabled();
-			}
-			else
-			{
-				ImGui::Text("%s: no value!", label.data());
-			}
+			return ImGui::ColorEdit3(label, reinterpret_cast<float*>(&dv.r), color_flags);	
 		};
 
-		auto declare_color = [&](Dyn<vec3>& dv, std::string_view label)
+		auto declare_float = [&](ImGuiSliderFlags flags = 0)
 		{
-			declare_dynamic(dv, label, [&](vec3* ptr) {
-				return ImGui::ColorEdit3(label.data(), reinterpret_cast<float*>(ptr), color_flags);
-			});
-		};
-
-		auto declare_float = [&](Dyn<float>& dv, std::string_view label, ImGuiSliderFlags flags = 0)
-		{
-			declare_dynamic(dv, label, [&](float* ptr) {
-				return ImGui::SliderFloat(label.data(), ptr, 0, 1, "%.3f", flags);
-			});
+			return [flags](const char* label, float& value)
+			{
+				return ImGui::SliderFloat(label, &value, 0, 1, "%.3f", flags);
+			};
 		};
 
 		_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_force_albedo_prop);
 		
-		declare_color(_albedo, "albedo");
+		_should_update_props_buffer |= GUIDeclareDynamic("albedo", _albedo, declare_color);
 
-
-		declare_float(_metallic, "metallic", ImGuiSliderFlags_NoRoundToFormat);
-		declare_float(_roughness, "roughness", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-		declare_float(_cavity, "cavity", ImGuiSliderFlags_NoRoundToFormat);
-
+		_should_update_props_buffer |= GUIDeclareDynamic("metallic", _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+		_should_update_props_buffer |= GUIDeclareDynamic("roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
+		_should_update_props_buffer |= GUIDeclareDynamic("cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
 
 		ImGui::PopID();
 	}

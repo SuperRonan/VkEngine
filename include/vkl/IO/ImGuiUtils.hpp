@@ -65,6 +65,11 @@ namespace vkl
 		ImGuiListSelection& operator=(ImGuiListSelection const&) = default;
 		ImGuiListSelection& operator=(ImGuiListSelection&&) = default;
 		
+		const auto& name()const
+		{
+			return _name;
+		}
+
 		void setOptionsCount(uint32_t count);
 
 		void enableOptions(size_t index, bool enable = true)
@@ -81,11 +86,21 @@ namespace vkl
 			_index = index;
 		}
 
-		bool declareRadioButtons(size_t & active_index, bool same_line) const;
+		bool declareRadioButtons(const char* name, size_t & active_index, bool same_line) const;
 		
 		bool declareRadioButtons(bool same_line)
 		{
-			return declareRadioButtons(_index, same_line);
+			return declareRadioButtons(_name.c_str(), _index, same_line);
+		}
+
+		bool declareRadioButtons(size_t& active_index, bool same_line) const
+		{
+			return declareRadioButtons(_name.c_str(), active_index, same_line);
+		}
+
+		bool declareRadioButtons(const char* name, bool same_line)
+		{
+			return declareRadioButtons(name, _index, same_line);
 		}
 		
 		bool declareRadioButtons()
@@ -93,34 +108,64 @@ namespace vkl
 			return declareRadioButtons(_same_line);
 		}
 
-		bool declareCombo(size_t & acive_index) const;
+		bool declareCombo(const char* name, size_t & active_index) const;
 		
-		bool declareCombo()
+		bool declareCombo(const char* name)
 		{
-			return declareCombo(_index);
+			return declareCombo(name, _index);
 		}
 
-		bool declareDropdown(size_t & active_index)
+		bool declareCombo(size_t& active_index) const
 		{
-			return declareCombo(_index);
+			return declareCombo(_name.c_str(), active_index);
+		}
+
+		bool declareCombo()
+		{
+			return declareCombo(_name.c_str(), _index);
+		}
+
+		bool declareDropdown(const char* name, size_t& active_index) const
+		{
+			return declareCombo(name, active_index);
+		}
+
+		bool declareDropdown(size_t & active_index) const
+		{
+			return declareDropdown(_name.c_str(), active_index);
+		}
+
+		bool declareDropdown(const char* name)
+		{
+			return declareDropdown(name, _index);
 		}
 
 		bool declareDropdown()
 		{
-			return declareDropdown();
+			return declareCombo();
 		}
 
-		bool declare(size_t & active_index)
+		bool declare(const char* name, size_t & active_index) const
 		{
 			if (_mode == Mode::RadioButtons)
 			{
-				return declareRadioButtons(active_index, _same_line);
+				return declareRadioButtons(name, active_index, _same_line);
 			}
 			else if (_mode == Mode::Combo)
 			{
-				return declareCombo(active_index);
+				return declareCombo(name, active_index);
 			}
 			return false;
+		}
+
+		bool declare(size_t& active_index) const
+		{
+			return declare(_name.c_str(), active_index);
+		}
+
+		bool declare(const char* name)
+		{
+			return declare(name, _index);
 		}
 
 		bool declare()

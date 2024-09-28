@@ -6,6 +6,8 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
+#include <vkl/IO/ImGuiDynamic.hpp>
+
 namespace vkl
 {
 	namespace taau
@@ -242,18 +244,16 @@ namespace vkl
 			_reset |= ImGui::Button("Reset");
 			ImGui::PopStyleColor();
 
-			if (_accumation_format.canSetValue())
+			GUIDeclareDynamic(_gui_acc_format.name().c_str(), _accumation_format, [&](const char*, VkFormat& f)
 			{
-				VkFormat f = _accumation_format.value();
 				size_t index = taau::GetFormatIndex(f);
-
-				if (_gui_acc_format.declare())
+				bool res = _gui_acc_format.declare(index);
+				if (res)
 				{
-					f = taau::_formats[_gui_acc_format.index()];
-					_accumation_format.setValue(f);
+					f = taau::_formats[index];
 				}
-			}
-			
+				return res;
+			});
 		}
 		ImGui::PopID();
 	}
