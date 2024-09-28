@@ -16,6 +16,8 @@
 
 #include <that/math/Half.hpp>
 
+#include "helper.hpp"
+
 void TestUniqueIdAllocator()
 {
 	vkl::UniqueIndexAllocator pool(vkl::UniqueIndexAllocator::Policy::FitCapacity);
@@ -110,13 +112,69 @@ static_assert(CombinableWithOperator<int, float, MyPlus<int, float>>);
 
 //static_assert(std::concepts::GenericContainer<vkl::OptVector<int>>);
 
+
+void StressTestParallelDynamicValue(int count = 1024)
+{
+	using namespace vkl;
+
+	const auto fill = [&](DefinitionsList& res)
+	{
+		for (int i = 0; i < count; ++i)
+		{
+			res += GetString(i);
+		}
+	};
+
+	Dyn<DefinitionsList> dv;
+	dv = [&]()
+	{
+		DefinitionsList res;
+		fill(res);
+		return res;
+	};
+
+	dv = [&](DefinitionsList& res)
+	{
+		res.clear();
+		fill(res);
+	};
+
+	auto thread_main = [&dv]()
+	{
+		const DefinitionsList & l = dv.value();
+
+		std::unique_lock lock(g_mutex);
+		
+		for (size_t i = 0; i < l.size(); ++i)
+		{
+			std::cout << l.at(i) << "\n";
+		}
+	};
+
+	const uint n = 2;std::thread::hardware_concurrency();
+	MyVector<std::jthread> threads;
+	for (uint i = 0; i < n; ++i)
+	{
+		threads.push_back(std::jthread(thread_main));
+	}
+
+
+	for (uint i = 0; i < n; ++i)
+	{
+		threads[i].join();
+	}
+}
+
+
 int main(int argc, const char** argv)
 {
 	using namespace vkl;
 	using namespace std::containers_append_operators;
 	using namespace std::string_literals;
 
-	TestHalf();
+	StressTestParallelDynamicValue(4096);
+
+	//TestHalf();
 
 	Dyn<VkExtent3D> ex = makeUniformExtent3D(0);
 

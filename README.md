@@ -136,3 +136,18 @@ Objectives:
 - [x] Explicitely instancify Resources
 - [x] ExecutionNodes are Command's instances, as such, they should only reference resources instances. 
 - [ ] Have a separate render thread
+
+# Big problem with DynamicValue
+In its current implementation, DynamicValue is not thread safe and may lead to crashes!
+DynValueInstance::value() is marked as const, which would be thread safe, but is it not because of the mutable cached value.
+The problem is currently 99% under control (it has probably never occured while using the engine, but only as a thought experiment and in a stress test designed for it)
+So its resolution is necessary, but not urgent. 
+I see 3 possible solutions:
+- Add a (shared_)mutex to DynValueInstance to lock the evaluation (common solution to keep mutable in a multi threaded context). This might not be enough since we would need to keep the lock when viewing the cached value with a reference. Maybe create a wrapped type like SharedLockedView? 
+- Remove the mutable cached value from DynValueInstance (maybe move it to DynValue)
+- Rethink the whole DynValue architechture
+	- Evalute DV's with an EvaluationContext, which would contain a index of the cycle
+	- Each DV would keep a cached value, assiciated with a cycle index, and shared_mutex
+	- Uppon evaluation, DV's would be recursivly evaluated with a ctx, only evaluating when the ctx cycle index is greater than the cached value's one. The mutex would be locked during the evaluation 
+	- So each DV would idealy be evaluated only once
+	- Maybe keep not just one cached value, bu a small buffer of n values to keep a history, a be able to access previous values (allowing to evaluate the next frame DV's while reading their value for the previous frame)
