@@ -70,7 +70,7 @@ namespace vkl
 						.data = 0, // later
 					},
 				},
-				.flags = g.flags,
+				.flags = g.flags | _geometry_flags,
 			};
 
 			const uint32_t max_capacity = _geometries[i].instances_buffer.size() / sizeof(VkAccelerationStructureInstanceKHR);

@@ -46,7 +46,7 @@ namespace vkl
 						.transformData = 0,
 					},
 				},
-				.flags = src.flags,
+				.flags = src.flags | _geometry_flags,
 			};
 			_max_primitive_count[i] = src.max_primitive;
 		}

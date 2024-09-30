@@ -4,6 +4,12 @@
 
 namespace vkl
 {
+	struct VertexDescriptionAS
+	{
+		VkFormat format;
+		VkDeviceSize stride;
+	};
+
 	class BottomLevelAccelerationStructureInstance : public AccelerationStructureInstance
 	{
 	public:
