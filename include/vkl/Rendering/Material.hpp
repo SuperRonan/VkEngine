@@ -71,6 +71,11 @@ namespace vkl
 			return _synch;
 		}
 
+		virtual bool isOpaque() const
+		{
+			return false;
+		}
+
 		virtual void updateResources(UpdateContext & ctx);
 
 		virtual void declareGui(GuiContext & ctx) = 0;
@@ -207,6 +212,11 @@ namespace vkl
 		PhysicallyBasedMaterial(CreateInfo const& ci);
 
 		virtual ~PhysicallyBasedMaterial() override;
+
+		virtual bool isOpaque() const override
+		{
+			return !useAlphaTexture();
+		}
 
 		virtual void declareGui(GuiContext & ctx) override;
 
