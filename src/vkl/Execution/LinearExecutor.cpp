@@ -9,6 +9,8 @@
 #include <vkl/Execution/ExecutionStackReport.hpp>
 #include <vkl/Execution/FramePerfReport.hpp>
 
+#include <vkl/App/ImGuiApp.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
@@ -591,6 +593,8 @@ namespace vkl
 				.queue = _main_queue,
 			});
 			_internal_resources += _render_gui;
+
+			_frame_end_fences.resize(8);
 		}
 
 		buildCommonSetLayout();
@@ -632,6 +636,8 @@ namespace vkl
 
 	void LinearExecutor::init()
 	{
+		
+
 		_blit_to_present = std::make_shared<BlitImage>(BlitImage::CI{
 			.app = _app,
 			.name = name() + std::string(".BlitToPresent"),
@@ -675,6 +681,7 @@ namespace vkl
 	void LinearExecutor::beginFrame(bool capture_report)
 	{
 		++_frame_index;
+		
 		_context._timestamp_query_count = 0;
 		_context._tick_tock.tick();
 		if (capture_report)
@@ -829,6 +836,18 @@ namespace vkl
 		assert(_latest_swapchain_event);
 		assert(_latest_swapchain_event->present_queue == nullptr);
 		_latest_synch_cb->wait_semaphores.push_back(_latest_swapchain_event->aquire_signal_semaphore);
+
+		if (_frame_end_fences)
+		{
+			const size_t fence_index = _frame_index % _frame_end_fences.size();
+			std::shared_ptr<Fence>& fence = _frame_end_fences[fence_index];
+			if (fence)
+			{
+				fence->wait();
+			}
+
+			fence = _latest_synch_cb->signal_fence;
+		}
 
 		{
 			std::shared_ptr<ImageView> blit_target = _latest_swapchain_event->swapchain->views()[_latest_swapchain_event->index];

@@ -8,6 +8,7 @@
 #include <vkl/VkObjects/DescriptorPool.hpp>
 #include <vkl/VkObjects/Swapchain.hpp>
 #include <vkl/VkObjects/Queue.hpp>
+#include <vkl/VkObjects/Fence.hpp>
 
 namespace vkl
 {
@@ -27,6 +28,8 @@ namespace vkl
 		VkFormat _imgui_init_format = VK_FORMAT_B8G8R8A8_UNORM;
 
 		Dyn<size_t> _index;
+
+		MyVector<std::shared_ptr<Fence>> _fences_to_wait = {};
 
 		void createRenderPassIFP();
 
@@ -71,5 +74,18 @@ namespace vkl
 		}
 
 		virtual bool updateResources(UpdateContext & ctx) override;
+
+		void setFenceToWait(uint index, std::shared_ptr<Fence> const& fence)
+		{
+			_fences_to_wait[index] = fence;
+		}
+
+		void clearFencesToWait()
+		{
+			for (uint32_t i = 0; i < _fences_to_wait.size32(); ++i)
+			{
+				_fences_to_wait[i].reset();
+			}
+		}
 	};
 }

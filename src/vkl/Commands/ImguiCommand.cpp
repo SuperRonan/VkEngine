@@ -34,6 +34,8 @@ namespace vkl
 		size_t _index = 0;
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+		std::shared_ptr<Fence> _fence_to_wait;
+
 		virtual void clear() override
 		{
 			ExecutionNode::clear();
@@ -42,10 +44,15 @@ namespace vkl
 			_swapchain.reset();
 			_desc_pool.reset();
 			_index = 0;
+			_fence_to_wait.reset();
 		}
 
 		virtual void execute(ExecutionContext& ctx)
 		{
+			if (_fence_to_wait)
+			{
+				_fence_to_wait->wait();
+			}
 			std::shared_ptr<CommandBuffer> cmd = ctx.getCommandBuffer();
 
 			ImGui::Render();
@@ -161,6 +168,17 @@ namespace vkl
 			.sizes = sizes,
 		});
 
+		auto check_vk_result = [](VkResult res)
+		{
+			if (res == VK_ERROR_DEVICE_LOST)
+			{
+				VKL_BREAKPOINT_HANDLE;
+				std::unique_lock lock(g_mutex);
+				std::cout << "ImGui Failed!" << std::endl;
+			}
+			VK_CHECK(res, "ImGui Failed!");
+		};
+
 		ImGui_ImplVulkan_InitInfo ii{
 			.Instance = _app->instance(),
 			.PhysicalDevice = _app->physicalDevice(),
@@ -181,10 +199,13 @@ namespace vkl
 				.depthAttachmentFormat = VK_FORMAT_UNDEFINED,
 				.stencilAttachmentFormat = VK_FORMAT_UNDEFINED,
 			},
+			.CheckVkResultFn = check_vk_result,
 		};
 		
 		ImGui_ImplVulkan_Init(&ii);
 		ImGui_ImplVulkan_CreateFontsTexture();
+
+		_fences_to_wait.resize(ii.ImageCount);
 	}
 
 	void ImguiCommand::shutdownImGui()

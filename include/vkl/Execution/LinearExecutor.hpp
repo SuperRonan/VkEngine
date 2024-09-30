@@ -176,6 +176,8 @@ namespace vkl
 		size_t _frame_index = size_t(-1);
 		size_t _cb_count = 0;
 
+		MyVector<std::shared_ptr<Fence>> _frame_end_fences;
+
 		std::shared_ptr<VkWindow> _window = nullptr;
 
 		std::shared_ptr<Queue> _main_queue = nullptr;

@@ -10,6 +10,7 @@
 #include <vkl/Commands/GraphicsCommand.hpp>
 #include <vkl/Commands/TransferCommand.hpp>
 #include <vkl/Commands/ImguiCommand.hpp>
+#include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
 #include <vkl/Execution/LinearExecutor.hpp>
 #include <vkl/Execution/Module.hpp>
@@ -442,7 +443,11 @@ namespace vkl
 						if(!imgui_io.WantCaptureKeyboard)
 						{
 						}
-						if(!imgui_io.WantCaptureMouse)
+						if (imgui_io.WantCaptureMouse)
+						{
+
+						}
+						else
 						{
 							mouse.processEventCheckRelevent(event);
 						}
@@ -458,6 +463,14 @@ namespace vkl
 				mouse.update();
 				gamepad.update();
 				camera_controller.updateCamera(dt);
+
+				bool my_debug_signal = false;
+
+				if (mouse.getButton(SDL_BUTTON_LEFT).justReleased())
+				{
+					std::cout << "Mouse button released" << std::endl;
+					my_debug_signal = true;
+				}
 
 				{
 					GuiContext * gui_ctx = beginImGuiFrame();
@@ -568,7 +581,8 @@ namespace vkl
 					sui->execute(exec_thread, camera);
 
 					gamma_correction.execute(exec_thread);
-					 
+					
+					if(my_debug_signal)
 					pip.execute(exec_thread);
 
 					exec_thread.bindSet(BindSetInfo{
@@ -579,6 +593,14 @@ namespace vkl
 					exec.renderDebugIFP();
 					image_saver.execute(exec_thread);
 					exec.endCommandBuffer(ptr_exec_thread);
+
+					//if (my_debug_signal)
+					//{
+					//	exec_thread(getPrebuiltTransferCommands().clear_image.with(ClearImage::ClearInfo{
+					//		.view = final_image,
+					//		.value = VkClearValue{.color = VkClearColorValue{.float32 = {1, 0, 1, 1}}},
+					//	}));
+					//}
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);
 					exec.aquireSwapchainImage();
