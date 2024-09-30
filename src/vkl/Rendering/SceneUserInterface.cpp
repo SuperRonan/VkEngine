@@ -271,7 +271,7 @@ namespace vkl
 
 	void SceneUserInterface::declareGui(GuiContext& ctx)
 	{
-		ImGui::PushID(name().c_str());
+		ImGui::PushID(this);
 		if (ImGui::CollapsingHeader("Options"))
 		{
 			ImGui::ColorEdit3("Ambient", &_scene->_ambient.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
@@ -369,8 +369,8 @@ namespace vkl
 			declare_node(_scene->getRootNode(), root_matrix, true, declare_node);
 		} // Tree
 
-
-		if (ImGui::Begin("Node Inspector"))
+		bool inspect_node = ImGui::Begin("Node Inspector");
+		if (inspect_node)
 		{
 			if (_gui_selected_node.hasValue())
 			{
@@ -451,8 +451,8 @@ namespace vkl
 
 				ImGui::PopID();
 			}
-			ImGui::End();
 		}
+		ImGui::End();
 
 		ImGui::PopID();
 	}
