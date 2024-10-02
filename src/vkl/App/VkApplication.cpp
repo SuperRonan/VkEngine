@@ -13,10 +13,12 @@
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
 #include <vkl/IO/File.hpp>
+#include <vkl/IO/Logging.hpp> 
 
 #include <argparse/argparse.hpp>
 
 #include <ShaderLib/Vulkan/ShaderAtomicFlags.h>
+
 
 #include <exception>
 #include <set>
@@ -1238,6 +1240,7 @@ namespace vkl
 		{
 			const Logger::Options tag = options & Logger::Options::TagMask;
 			// TODO color the message depending of the tag
+
 			const bool lock_mutex = !(options & Logger::Options::NoLock);
 			if (lock_mutex)
 			{
@@ -1247,27 +1250,17 @@ namespace vkl
 			auto & stream = std::cout;
 			if (!(options & Logger::Options::NoTime))
 			{
-				const auto prev_precision = stream.precision();
-				const auto prev_fill = stream.fill();
-				const auto prev_w = stream.width();
 				Clock::time_point rn = Clock::now();
 				Clock::duration diff = (rn - _time_begin);
-				stream << '[';
-				stream << std::setfill('0');
-				std::chrono::hours h = std::chrono::duration_cast<std::chrono::hours>(diff);
-				stream << h.count() << "h ";
-				std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(diff);
-				stream << std::setw(2) << m.count() % 60 << "m ";
-				std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(diff);
-				stream << std::setw(2) << std::setfill(' ') << s.count() % 60 << ".";
-				std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(diff);
-				stream << std::setw(3) << ms.count() % 1000;
-				stream << "s]: ";
-				stream << std::setprecision(prev_precision);
-				stream << std::setfill(prev_fill);
-				stream << std::setw(prev_w);
+				LogDurationAsTimePoint(stream, diff);
 			}
+
+			const TagStr tag_str = GetTagStr(tag);
+
+			stream << tag_str.openning; 
+			stream << tag_str.token << " ";
 			stream << sv;
+			stream << tag_str.closing;
 			if (!(options & Logger::Options::NoEndL))
 			{
 				stream << std::endl;

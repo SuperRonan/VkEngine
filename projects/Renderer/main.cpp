@@ -482,14 +482,6 @@ namespace vkl
 				{
 					AppWithImGui::_enable_imgui = !AppWithImGui::_enable_imgui;
 				}
-
-				bool my_debug_signal = false;
-
-				if (mouse.getButton(SDL_BUTTON_LEFT).justReleased())
-				{
-					std::cout << "Mouse button released" << std::endl;
-					my_debug_signal = true;
-				}
 				
 				
 				if (ImGuiIsEnabled())
@@ -611,7 +603,6 @@ namespace vkl
 
 					gamma_correction.execute(exec_thread);
 					
-					if(my_debug_signal)
 					pip.execute(exec_thread);
 
 					exec_thread.bindSet(BindSetInfo{
@@ -621,14 +612,6 @@ namespace vkl
 
 					exec.renderDebugIFP();
 					image_saver.execute(exec_thread);
-
-					if (my_debug_signal)
-					{
-						exec_thread(getPrebuiltTransferCommands().clear_image.with(ClearImage::ClearInfo{
-							.view = final_image,
-							.value = VkClearValue{.color = VkClearColorValue{.float32 = {1, 0, 1, 1}}},
-						}));
-					}
 					exec.endCommandBuffer(ptr_exec_thread);
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);
@@ -687,6 +670,9 @@ namespace vkl
 
 int main(int argc, char** argv)
 {
+#ifdef _WINDOWS
+	bool can_utf8 = SetConsoleOutputCP(CP_UTF8);
+#endif
 	try
 	{
 		argparse::ArgumentParser args;
