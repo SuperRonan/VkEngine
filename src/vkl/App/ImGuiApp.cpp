@@ -34,6 +34,8 @@ namespace vkl
 			.imgui_context = _imgui_ctx,
 		};
 
+		_enable_imgui = true;
+
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 		
 
@@ -132,14 +134,17 @@ namespace vkl
 
 	AppWithImGui::~AppWithImGui()
 	{
-		ImGui_ImplSDL2_Shutdown();
-
-		if (_imgui_ctx)
+		if (ImGuiIsEnabled())
 		{
-			ImGui::DestroyContext(_imgui_ctx);
-			_imgui_ctx = nullptr;
-		}
+			ImGui_ImplSDL2_Shutdown();
 
-		g_app = nullptr;
+			if (_imgui_ctx)
+			{
+				ImGui::DestroyContext(_imgui_ctx);
+				_imgui_ctx = nullptr;
+			}
+
+			g_app = nullptr;
+		}
 	}
 }

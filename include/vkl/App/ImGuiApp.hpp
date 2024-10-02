@@ -36,6 +36,8 @@ namespace vkl
 
 		GuiContext _gui_context;
 
+		bool _enable_imgui = false;
+
 		GuiContext * beginImGuiFrame()
 		{			
 			ImGui_ImplVulkan_NewFrame();
@@ -72,6 +74,16 @@ namespace vkl
 		ImGuiConfigFlags imguiConfigFlags() const
 		{
 			return _imgui_init_flags;
+		}
+
+		bool ImGuiIsEnabled()const
+		{
+			return _enable_imgui;
+		}
+
+		bool ImGuiIsInit() const
+		{
+			return !!_imgui_ctx;
 		}
 	};
 }
