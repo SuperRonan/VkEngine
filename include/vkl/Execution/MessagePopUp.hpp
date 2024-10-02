@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vkl/Core/VulkanCommons.hpp>
+#include <vkl/Core/LogOptions.hpp>
 
 #if _WINDOWS
 #include <Windows.h>
@@ -86,7 +87,7 @@ namespace vkl
 		std::string _message = {};
 		std::vector<Button> _buttons = {};
 		bool _beep = false;
-		bool _log_cout = false;
+		const Logger * _logger = nullptr;
 
 #if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
 		UINT getButtonsFlagsWindows() const;
@@ -101,7 +102,7 @@ namespace vkl
 			std::string message = {};
 			std::vector<Button> buttons = {};
 			bool beep = true;
-			bool log_cout = true;
+			const Logger * logger = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -121,7 +122,7 @@ namespace vkl
 			std::string message = {};
 			std::vector<Button> buttons = {};
 			bool beep = true;
-			bool log_cout = true;
+			const Logger * logger = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -132,7 +133,7 @@ namespace vkl
 				.message = ci.message,
 				.buttons = ci.buttons,
 				.beep = ci.beep,
-				.log_cout = ci.log_cout,
+				.logger = ci.logger,
 			})
 		{
 

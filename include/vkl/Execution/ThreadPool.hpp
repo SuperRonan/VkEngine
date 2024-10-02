@@ -6,6 +6,7 @@
 #include <thread>
 #include <deque>
 #include <atomic>
+#include <functional>
 
 namespace vkl
 {
@@ -13,11 +14,13 @@ namespace vkl
 	class DelayedTaskExecutor
 	{
 	protected:
-		int _log_level;
+		
+		const Logger * _logger;
+
 	public:
 
-		DelayedTaskExecutor(int log_level):
-			_log_level(log_level)
+		DelayedTaskExecutor(const Logger * logger):
+			_logger(logger)
 		{}
 
 		virtual ~DelayedTaskExecutor()
@@ -44,7 +47,7 @@ namespace vkl
 		{
 			bool multi_thread = true;
 			size_t n_threads = 0;
-			int log_level = 0;
+			const Logger * logger = nullptr;
 		};
 		static DelayedTaskExecutor * MakeNew(MakeInfo const& mi);
 	};
@@ -61,7 +64,7 @@ namespace vkl
 
 		struct CreateInfo
 		{
-			int log_level = 0;
+			const Logger * logger = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -148,7 +151,7 @@ namespace vkl
 		struct CreateInfo
 		{
 			size_t n = 0;
-			int log_level = 0;
+			const Logger * logger = nullptr;
 		};
 		using CI = CreateInfo;
 

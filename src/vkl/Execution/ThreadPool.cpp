@@ -14,13 +14,13 @@ namespace vkl
 		{
 			res = new ThreadPool(ThreadPool::CI{
 				.n = mi.n_threads,
-				.log_level = mi.log_level,
+				.logger = mi.logger,
 			});
 		}
 		else
 		{
 			res = new SingleThreadTaskExecutor(SingleThreadTaskExecutor::CI{
-				.log_level = mi.log_level,
+				.logger = mi.logger,
 			});
 		}
 		return res;
@@ -44,7 +44,7 @@ namespace vkl
 
 
 	SingleThreadTaskExecutor::SingleThreadTaskExecutor(CreateInfo const& ci) :
-		DelayedTaskExecutor(ci.log_level)
+		DelayedTaskExecutor(ci.logger)
 	{
 
 	}
@@ -54,7 +54,7 @@ namespace vkl
 		assert(!!task);
 		if (task->isReady())
 		{
-			task->run(_log_level);
+			task->run(_logger);
 			while (true)
 			{
 				bool none_ready = true;
@@ -64,7 +64,7 @@ namespace vkl
 					std::shared_ptr<AsynchTask> it_task = *it;
 					if (it_task->isReady())
 					{
-						std::vector<std::shared_ptr<AsynchTask>> new_tasks = it_task->run(_log_level);
+						std::vector<std::shared_ptr<AsynchTask>> new_tasks = it_task->run(_logger);
 						it = _pending_tasks.erase(it);
 						
 						for (std::shared_ptr<AsynchTask> ntsk : new_tasks)
@@ -104,7 +104,7 @@ namespace vkl
 
 
 	ThreadPool::ThreadPool(CreateInfo const& ci) :
-		DelayedTaskExecutor(ci.log_level)
+		DelayedTaskExecutor(ci.logger)
 	{
 		size_t n = ci.n;
 		if (n == 0)
@@ -148,7 +148,7 @@ namespace vkl
 				worker->task = task;
 				worker->mutex.unlock();
 
-				new_tasks = task->run(_log_level);
+				new_tasks = task->run(_logger);
 				
 				worker->mutex.lock();
 				worker->task = nullptr;
@@ -422,7 +422,7 @@ namespace vkl
 			std::unique_lock lock(_ready_mutex);
 			for (auto& task : _ready_tasks)
 			{
-				task->cancel(_log_level);
+				task->cancel(_logger);
 			}
 		}
 
@@ -430,7 +430,7 @@ namespace vkl
 			std::unique_lock lock(_pending_mutex);
 			for (auto& task : _pending_tasks)
 			{
-				task->cancel(_log_level);
+				task->cancel(_logger);
 			}
 		}
 

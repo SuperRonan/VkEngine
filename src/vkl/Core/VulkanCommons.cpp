@@ -5,7 +5,7 @@
 
 namespace vkl
 {
-	std::mutex g_mutex = {};
+	std::mutex g_common_mutex = {};
 
 
 	using namespace std::string_literals;

@@ -189,7 +189,7 @@ namespace vkl
 	template <class T>
 	using Array = MyVector<T>;
 
-	extern std::mutex g_mutex;
+	extern std::mutex g_common_mutex;
 	
 	struct Callback
 	{

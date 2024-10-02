@@ -275,6 +275,7 @@ namespace vkl
 			_desired_window_options.name = PROJECT_NAME;
 			_desired_window_options.queue_families_indices = std::set<uint32_t>({desiredQueuesIndices()[0].family});
 			_desired_window_options.resizeable = true;
+			_desired_window_options.present_mode = VK_PRESENT_MODE_FIFO_KHR;
 			//_desired_window_options.mode = VkWindow::Mode::WindowedFullscreen;
 			createMainWindow();
 			initImGui();
@@ -427,6 +428,10 @@ namespace vkl
 			std::TickTock_hrc frame_tick_tock;
 			frame_tick_tock.tick();
 
+			std::TickTock_hrc tt;
+			bool log = false;
+
+			const int flip_imgui_key = SDL_SCANCODE_F1;
 			while (!_main_window->shouldClose())
 			{
 				{
@@ -434,35 +439,49 @@ namespace vkl
 					dt = new_t - t;
 					t = new_t;
 				}
-				const auto& imgui_io = ImGui::GetIO();
+				const ImGuiIO * imgui_io = ImGuiIsInit() ?  &ImGui::GetIO() : nullptr;
 				{
+					tt.tick();
 					SDL_Event event;
 					while (SDL_PollEvent(&event))
 					{
-						ImGui_ImplSDL2_ProcessEvent(&event);
-						if(!imgui_io.WantCaptureKeyboard)
+						bool forward_mouse_event = true;
+						bool forward_keyboard_event = true;
+						if (ImGuiIsEnabled())
 						{
+							ImGui_ImplSDL2_ProcessEvent(&event);
+							forward_mouse_event = !imgui_io->WantCaptureMouse;
+							forward_keyboard_event = !imgui_io->WantCaptureKeyboard;
 						}
-						if (imgui_io.WantCaptureMouse)
-						{
-
-						}
-						else
+						
+						if(forward_mouse_event)
 						{
 							mouse.processEventCheckRelevent(event);
 						}
 						gamepad.processEventCheckRelevent(event);
 						_main_window->processEventCheckRelevent(event);
 					}
+					tt.tock();
+					if (log)
+					{
+						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+						logger()(std::format("Total PollEvent time: {}us", waited.count()), Logger::Options::TagInfo);
+					}
 				}
 
-				if (!imgui_io.WantCaptureKeyboard)
+				if (imgui_io && !imgui_io->WantCaptureKeyboard)
 				{
 					keyboard.update();
 				}
 				mouse.update();
 				gamepad.update();
 				camera_controller.updateCamera(dt);
+
+				bool flip_imgui_enable = keyboard.getKey(flip_imgui_key).justReleased();
+				if (flip_imgui_enable)
+				{
+					AppWithImGui::_enable_imgui = !AppWithImGui::_enable_imgui;
+				}
 
 				bool my_debug_signal = false;
 
@@ -471,11 +490,13 @@ namespace vkl
 					std::cout << "Mouse button released" << std::endl;
 					my_debug_signal = true;
 				}
-
+				
+				
+				if (ImGuiIsEnabled())
 				{
 					GuiContext * gui_ctx = beginImGuiFrame();
+					
 					//ImGui::ShowDemoWindow();
-
 					if(ImGui::Begin("Rendering"))
 					{
 						camera.declareGui(*gui_ctx);
@@ -516,8 +537,16 @@ namespace vkl
 						_main_window->declareGui(*gui_ctx);
 					}
 					ImGui::End();
+					
 					endImGuiFrame(gui_ctx);
 				}
+				else if (flip_imgui_enable)
+				{
+					GuiContext* gui_ctx = beginImGuiFrame();
+					endImGuiFrame(gui_ctx);
+				}
+
+				
 
 				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{
@@ -592,24 +621,46 @@ namespace vkl
 
 					exec.renderDebugIFP();
 					image_saver.execute(exec_thread);
-					exec.endCommandBuffer(ptr_exec_thread);
 
-					//if (my_debug_signal)
-					//{
-					//	exec_thread(getPrebuiltTransferCommands().clear_image.with(ClearImage::ClearInfo{
-					//		.view = final_image,
-					//		.value = VkClearValue{.color = VkClearColorValue{.float32 = {1, 0, 1, 1}}},
-					//	}));
-					//}
+					if (my_debug_signal)
+					{
+						exec_thread(getPrebuiltTransferCommands().clear_image.with(ClearImage::ClearInfo{
+							.view = final_image,
+							.value = VkClearValue{.color = VkClearColorValue{.float32 = {1, 0, 1, 1}}},
+						}));
+					}
+					exec.endCommandBuffer(ptr_exec_thread);
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);
+					tt.tick();
 					exec.aquireSwapchainImage();
-					exec.preparePresentation(final_image);
-					
-					
+					tt.tock();
+					if (log)
+					{
+						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+						logger()(std::format("Total Aquire time: {}us", waited.count()), Logger::Options::TagInfo);
+					}
+					exec.preparePresentation(final_image, ImGuiIsEnabled());
 					exec.endCommandBuffer(ptr_exec_thread);
+					
+					tt.tick();
 					exec.submit();
+					tt.tock();
+					if (log)
+					{
+						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+						logger()(std::format("Total Submit time: {}us", waited.count()), Logger::Options::TagInfo);
+					}
+
+					tt.tick();
 					exec.present();
+					tt.tock();
+					if (log)
+					{
+						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+						logger()(std::format("Total Present time: {}us", waited.count()), Logger::Options::TagInfo);
+					}
+
 					exec.endFrame();
 
 

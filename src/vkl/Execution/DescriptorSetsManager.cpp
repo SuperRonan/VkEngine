@@ -808,6 +808,7 @@ namespace vkl
 				{
 					_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 						.name = "Creating DescriptorSetAndPool " + name(),
+						.verbosity = AsynchTask::Verbosity::High,
 						.priority = TaskPriority::ASAP(),
 						.lambda = [this]()
 						{

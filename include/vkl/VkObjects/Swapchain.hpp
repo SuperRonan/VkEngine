@@ -8,6 +8,12 @@
 
 namespace vkl
 {
+
+	constexpr static bool PresentModeIsFIFO(VkPresentModeKHR pmode)
+	{
+		return pmode == VK_PRESENT_MODE_FIFO_KHR || pmode == VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+	}
+
 	class SwapchainInstance : public AbstractInstance
 	{
 	protected:

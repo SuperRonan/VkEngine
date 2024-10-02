@@ -12,7 +12,9 @@
 
 namespace vkl
 {
-	
+	std::mutex AsynchTask::s_mutex;
+
+
 	AsynchTask::AsynchTask(CreateInfo const& ci) :
 		_name(ci.name),
 		_verbosity(ci.verbosity),
@@ -61,7 +63,7 @@ namespace vkl
 		return res;
 	}
 
-	void AsynchTask::cancel(bool lock_mutex, bool verbose)
+	void AsynchTask::cancel(bool lock_mutex, const Logger * logger)
 	{
 		if (lock_mutex)
 		{
@@ -76,10 +78,9 @@ namespace vkl
 		}
 		else if (!StatusIsFinish(_status))
 		{
-			if (verbose)
+			if (logger && logger->canLog(_verbosity))
 			{
-				std::unique_lock lock(g_mutex);
-				std::cout << "Canceling task: " << name() << std::endl;
+				logger->log(std::format("Canceling task: {}", name()));
 			}
 
 			_status = Status::Canceled;
@@ -102,13 +103,13 @@ namespace vkl
 		_dependencies.clear();
 	}
 
-	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(int verbosity)
+	std::vector<std::shared_ptr<AsynchTask>> AsynchTask::run(const Logger * logger)
 	{
 		assert(_lambda);
 		Status prev_satus = _status;
 		setRunning();
 		_begin_time = Clock::now();
-		const bool can_log = _verbosity >= verbosity;
+		const bool can_log = logger && logger->canLog(_verbosity);
 
 		bool all_success = std::all_of(_dependencies.begin(), _dependencies.end(), [](std::shared_ptr<AsynchTask> const& dep) {
 			return dep->getStatus() == Status::Success;
@@ -120,8 +121,7 @@ namespace vkl
 			// Cancel
 			if (can_log)
 			{
-				std::unique_lock lock(g_mutex);
-				std::cout << "Canceling task: " << name() << std::endl;
+				logger->log(std::format("Canceling task: {}", name()));
 			}
 
 			_status = Status::Canceled;
@@ -133,7 +133,7 @@ namespace vkl
 
 		std::vector<std::shared_ptr<AsynchTask>> new_tasks = {};
 
-		bool g_mutex_locked = false;
+		bool common_mutex_locked = false;
 		while (try_run)
 		{
 			if (_status == Status::Canceled || _cancel_while_running)
@@ -147,11 +147,7 @@ namespace vkl
 			{
 				if (can_log)
 				{
-					if(!g_mutex_locked)
-						g_mutex.lock();
-					std::cout << "Launching task: " << name() << std::endl;
-					if (!g_mutex_locked)
-						g_mutex.unlock();
+					logger->log(std::format("Launching Task: {}", name()));
 				}
 				res = _lambda();
 			}
@@ -173,11 +169,11 @@ namespace vkl
 			}
 			else
 			{
-				if (!g_mutex_locked)
+				if (!common_mutex_locked)
 				{
 					// Lock until the problem is resolved
-					g_mutex.lock();
-					g_mutex_locked = true;
+					s_mutex.lock();
+					common_mutex_locked = true;
 				}
 				if (res.can_retry)
 				{
@@ -185,9 +181,9 @@ namespace vkl
 					{
 						if (res.auto_retry_f())
 						{
-							assert(g_mutex_locked);
-							g_mutex.unlock();
-							g_mutex_locked = false;
+							assert(common_mutex_locked);
+							s_mutex.unlock();
+							common_mutex_locked = false;
 							continue;
 						}
 					}
@@ -198,9 +194,9 @@ namespace vkl
 						.message = res.error_message,
 						.buttons = {Retry, Cancel},
 						.beep = true,
-						.log_cout = true,
+						.logger = logger,
 					};
-					MessagePopUp::Button selected_button = popup(!g_mutex_locked);
+					MessagePopUp::Button selected_button = popup(false);
 
 					//MessageBeep(MB_ICONERROR);
 					//int selected_option = MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_RETRYCANCEL);
@@ -229,9 +225,9 @@ namespace vkl
 						.message = res.error_message,
 						.buttons = {Ok},
 						.beep = true,
-						.log_cout = true,
+						.logger = logger,
 					};
-					popup(!g_mutex_locked);
+					popup(false);
 					//MessageBeep(MB_ICONERROR);
 					//MessageBoxA(nullptr, res.error_title.c_str(), res.error_message.c_str(), MB_ICONERROR | MB_SETFOREGROUND | MB_OK);
 					_status = Status::AbsoluteFail;
@@ -240,10 +236,10 @@ namespace vkl
 			}
 		}
 
-		if (g_mutex_locked)
+		if (common_mutex_locked)
 		{
-			g_mutex.unlock();
-			g_mutex_locked = false;
+			s_mutex.unlock();
+			common_mutex_locked = false;
 		}
 
 		std::chrono::time_point<Clock> finish_time = Clock::now();

@@ -490,6 +490,7 @@ namespace vkl
 		waitForInstanceCreationIFN();
 		_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 			.name = "Creating Program " + name(),
+			.verbosity = AsynchTask::Verbosity::High,
 			.priority = TaskPriority::ASAP(),
 			.lambda = [this]() {
 				createInstanceIFP();

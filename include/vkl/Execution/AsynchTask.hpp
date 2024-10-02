@@ -7,6 +7,8 @@
 #include <shared_mutex>
 #include <chrono>
 
+#include <vkl/Core/LogOptions.hpp>
+
 namespace vkl
 {
 	struct TaskPriority
@@ -42,6 +44,8 @@ namespace vkl
 	public:
 
 		using Clock = std::chrono::high_resolution_clock;
+
+		static std::mutex s_mutex;
 		
 		enum class Status
 		{
@@ -102,7 +106,7 @@ namespace vkl
 		mutable std::shared_mutex _mutex;
 		std::condition_variable_any _finish_condition;
 
-		void cancel(bool lock_mutex, bool verbose);
+		void cancel(bool lock_mutex, const Logger * logger = {});
 
 	public:
 
@@ -137,9 +141,9 @@ namespace vkl
 			return _priority;
 		}
 
-		void cancel(bool verbose)
+		void cancel(const Logger * logger = {})
 		{
-			cancel(true, verbose);
+			cancel(true, logger);
 		}
 
 		bool isCanceled()
@@ -163,7 +167,7 @@ namespace vkl
 
 		bool isReadyOrSoonToBe()const;
 
-		std::vector<std::shared_ptr<AsynchTask>> run(int verbosity);
+		std::vector<std::shared_ptr<AsynchTask>> run(const Logger * logger);
 
 		void reset();
 

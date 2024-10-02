@@ -11,7 +11,7 @@ namespace vkl
 		_message(ci.message),
 		_buttons(ci.buttons),
 		_beep(ci.beep),
-		_log_cout(ci.log_cout)
+		_logger(ci.logger)
 	{}
 
 #if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
@@ -60,7 +60,7 @@ namespace vkl
 	{
 		if (lock_mutex)
 		{
-			g_mutex.lock();
+			g_common_mutex.lock();
 		}
 		if (_beep)
 		{
@@ -71,10 +71,9 @@ namespace vkl
 		Button res;
 #if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
 		
-		if (_log_cout)
+		if (_logger)
 		{
-			std::cout << _title << std::endl;
-			std::cout << _message << std::endl;
+			_logger->log(std::format("{}\n{}", _title, _message));
 		}
 
 		UINT flags = static_cast<UINT>(_type) | getButtonsFlagsWindows();
@@ -85,7 +84,7 @@ namespace vkl
 #endif
 		if (lock_mutex)
 		{
-			g_mutex.unlock();
+			g_common_mutex.unlock();
 		}
 		return res;
 	}

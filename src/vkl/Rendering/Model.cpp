@@ -248,13 +248,11 @@ namespace vkl
 
 		if (!warn.empty())
 		{
-			std::unique_lock lock(g_mutex);
-			std::cout << "Warning: " << warn << std::endl;
+			info.app->logger()(warn, Logger::Options::TagWarning | Logger::Options::VerbosityImportant);
 		}
 		if (!err.empty())
 		{
-			std::unique_lock lock(g_mutex);
-			std::cerr << "Error: " << err << std::endl;
+			info.app->logger()(warn, Logger::Options::TagError | Logger::Options::VerbosityImportant);
 		}
 
 		TextureFileCache & texture_file_cache = info.app->textureFileCache();

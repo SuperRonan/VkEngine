@@ -143,7 +143,7 @@ void StressTestParallelDynamicValue(int count = 1024)
 	{
 		const DefinitionsList & l = dv.value();
 
-		std::unique_lock lock(g_mutex);
+		std::unique_lock lock(g_common_mutex);
 		
 		for (size_t i = 0; i < l.size(); ++i)
 		{

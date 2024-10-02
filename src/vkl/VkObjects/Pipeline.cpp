@@ -39,6 +39,7 @@ namespace vkl
 
 		_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 			.name = "Create Pipeline " + name(),
+			.verbosity = AsynchTask::Verbosity::High,
 			.priority = TaskPriority::ASAP(),
 			.lambda = [this]() {
 				createInstanceIFP();
@@ -77,7 +78,7 @@ namespace vkl
 	{
 		if (_create_instance_task)
 		{
-			_create_instance_task->cancel(false);
+			_create_instance_task->cancel();
 		}
 		destroyInstanceIFN();
 		_program->removeInvalidationCallback(this);

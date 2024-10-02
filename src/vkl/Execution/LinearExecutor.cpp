@@ -17,6 +17,10 @@
 
 namespace vkl
 {
+	const bool log = false;
+	const bool use_swapchain_signal_fence = true;
+	const bool use_only_fifo_fence = false;
+
 	ExecutionThread::ExecutionThread(CreateInfo const& ci):
 		ExecutionRecorder(ci.app, ci.name),
 		_record_context(RecordContext::CI{
@@ -586,15 +590,17 @@ namespace vkl
 
 		if (ci.use_ImGui)
 		{
-			_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
-				.app = application(),
-				.name = name() + ".RenderGui",
-				.swapchain = _window->swapchain(),
-				.queue = _main_queue,
-			});
-			_internal_resources += _render_gui;
-
-			_frame_end_fences.resize(8);
+			AppWithImGui * imgui_app = dynamic_cast<AppWithImGui *>(application());
+			if (imgui_app && imgui_app->ImGuiIsInit())
+			{
+				_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
+					.app = application(),
+					.name = name() + ".RenderGui",
+					.swapchain = _window->swapchain(),
+					.queue = _main_queue,
+				});
+				_internal_resources += _render_gui;
+			}
 		}
 
 		buildCommonSetLayout();
@@ -660,6 +666,15 @@ namespace vkl
 		if (_window->updateResources(context))
 		{
 			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
+			if (PresentModeIsFIFO(swapchain->createInfo().presentMode))
+			{
+				_fifo_aquire_fences.resize(use_only_fifo_fence ? 1 : swapchain->images().size());
+			}
+			else
+			{
+				_fifo_aquire_fences.clear();
+				_fifo_fence_to_wait_index = 0;
+			}
 		}
 
 		if (_debug_renderer)
@@ -680,6 +695,11 @@ namespace vkl
 
 	void LinearExecutor::beginFrame(bool capture_report)
 	{
+		if (log)
+		{
+			application()->logger()("----------------Executor Begin Frame----------------");
+		}
+		_frame_tt.tick();
 		++_frame_index;
 		
 		_context._timestamp_query_count = 0;
@@ -738,6 +758,14 @@ namespace vkl
 			_context._stack_report = nullptr;
 		}
 		_timestamp_query_pool_capacity = std::max(_timestamp_query_pool_capacity, _context._timestamp_query_count * 2);
+
+		_frame_tt.tock();
+		if (log)
+		{
+			std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(_frame_tt.duration());
+			application()->logger()(std::format("Executor Frame time (CPU): {}us", waited.count()), Logger::Options::TagInfo);
+			application()->logger()("----------------Executor  End  Frame----------------");
+		}
 	}
 
 	//ExecutionRecorder* LinearExecutor::beginTransferCommandBuffer(bool synch)
@@ -761,6 +789,9 @@ namespace vkl
 
 	void LinearExecutor::aquireSwapchainImage()
 	{
+		std::TickTock_hrc tt;
+		std::TickTock_hrc whole_function_tt;
+		whole_function_tt.tick();
 		const bool use_specific_present_signal_fence = useSpecificPresentSignalFence();
 		std::shared_ptr<SwapchainEvent> & event = _latest_swapchain_event;
 		event = std::make_shared<SwapchainEvent>(SwapchainEvent::CI{
@@ -771,14 +802,63 @@ namespace vkl
 			.create_present_fence = use_specific_present_signal_fence,
 		});
 
+		const SwapchainInstance & si = *_window->swapchain()->instance();
+		const VkPresentModeKHR present_mode = si.createInfo().presentMode;
+		if (PresentModeIsFIFO(present_mode))
+		{
+			_fifo_fence_to_wait_index = (_fifo_fence_to_wait_index + 1) % _fifo_aquire_fences.size();
+			std::shared_ptr<Fence> & fence_to_wait = _fifo_aquire_fences[_fifo_fence_to_wait_index];
+			if (fence_to_wait)
+			{
+				tt.tick();
+				fence_to_wait->wait();
+				tt.tock();
+				if (log)
+				{
+					std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+					application()->logger()(std::format("FIFO wait: {}us", waited.count()), Logger::Options::TagInfo);
+				}
+			}
+			if (use_swapchain_signal_fence)
+			{
+				fence_to_wait = event->aquire_signal_fence;
+			}
+		}
+
+		static std::TickTock_hrc over_frame_tt;
+		over_frame_tt.tock();
+		if (log)
+		{
+			std::chrono::microseconds time_since_last_aquire = std::chrono::duration_cast<std::chrono::microseconds>(over_frame_tt.duration());
+			application()->logger()(std::format("Time since last aquire: {}us", time_since_last_aquire.count()), Logger::Options::TagInfo);
+		}
+		over_frame_tt.tick();
+
+
+
+		
+		tt.tick();
 		VkWindow::AquireResult aquired = _window->aquireNextImage(event->aquire_signal_semaphore, event->aquire_signal_fence);
+		tt.tock();
+
 		event->swapchain = _window->swapchain()->instance();
 		event->index = aquired.swap_index;
 
-		if(false)
+		if(log)
 		{
-			std::unique_lock lock(g_mutex);
-			std::cout << "Aquired Swapchain index: " << event->index << std::endl;
+			std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+			application()->logger()(std::format("Aquired Swapchain index: {} (wait: {}us)", event->index, waited.count()), Logger::Options::TagInfo);
+		}
+
+		if (log && false)
+		{
+			tt.tick();
+			event->aquire_signal_fence->wait();
+			tt.tock();
+			{
+				std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+				application()->logger()(std::format("Direct Aquire wait: {}us", waited.count()), Logger::Options::TagInfo);
+			}
 		}
 
 		assert(aquired.swap_index < _window->swapchainSize());
@@ -821,6 +901,13 @@ namespace vkl
 		}
 
 		VKL_BREAKPOINT_HANDLE;
+
+		whole_function_tt.tock();
+		if(log)
+		{
+			std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(whole_function_tt.duration());
+			application()->logger()(std::format("Whole Aquire time: {}us", waited.count()), Logger::Options::TagInfo);
+		}
 	}
 
 	void LinearExecutor::renderDebugIFP()
@@ -837,19 +924,18 @@ namespace vkl
 		assert(_latest_swapchain_event->present_queue == nullptr);
 		_latest_synch_cb->wait_semaphores.push_back(_latest_swapchain_event->aquire_signal_semaphore);
 
-		if (_frame_end_fences)
+		const SwapchainInstance& si = *_window->swapchain()->instance();
+		const VkPresentModeKHR present_mode = si.createInfo().presentMode;
+		if (PresentModeIsFIFO(present_mode))
 		{
-			const size_t fence_index = _frame_index % _frame_end_fences.size();
-			std::shared_ptr<Fence>& fence = _frame_end_fences[fence_index];
-			if (fence)
+			if (!use_swapchain_signal_fence)
 			{
-				fence->wait();
+				_fifo_aquire_fences[_fifo_fence_to_wait_index] = _latest_synch_cb->signal_fence;
 			}
-
-			fence = _latest_synch_cb->signal_fence;
 		}
 
 		{
+			
 			std::shared_ptr<ImageView> blit_target = _latest_swapchain_event->swapchain->views()[_latest_swapchain_event->index];
 			execute((*_blit_to_present)(BlitImage::BI{
 				.src = img_to_present,
@@ -961,9 +1047,18 @@ namespace vkl
 
 		assert(_present_queue);
 		_present_queue->mutex().lock();
+		std::TickTock_hrc tt;
+		tt.tick();
 		VkResult present_res = vkQueuePresentKHR(_present_queue->handle(), &presentation);
+		tt.tock();
 		_present_queue->mutex().unlock();
 		
+		if (log)
+		{
+			std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+			application()->logger()(std::format("Presented (id = {}, latency = {}us)", present_ids[0], waited.count()), Logger::Options::TagInfo);
+		}
+
 		for (uint32_t i = 0; i < n; ++i)
 		{
 			// TODO keep a list of windows
@@ -1313,7 +1408,7 @@ namespace vkl
 			};
 			_previous_recycle_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 				.name = name() + ".Recycle()",
-				.verbosity = 0,
+				.verbosity = AsynchTask::Verbosity::High,
 				.priority = TaskPriority::ASAP(),
 				.lambda = lambda,
 				
@@ -1372,9 +1467,18 @@ namespace vkl
 			VkFence fence_to_signal = pending->signal_fence->handle();
 			assert(pending->queue);
 			pending->queue->mutex().lock();
+			std::TickTock_hrc tt;
+			tt.tick();
 			VkResult res = vkQueueSubmit(pending->queue->handle(), 1, &submission, fence_to_signal);
+			tt.tock();
 			pending->queue->mutex().unlock();
 			VK_CHECK(res, "Failed submission");
+			if (log)
+			{
+				std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+				application()->logger()(std::format("Submitted (latency = {}us)", waited.count()), Logger::Options::TagInfo);
+			}
+
 			//vkDeviceWaitIdle(device());
 			_previous_cbs.push_back(pending);
 		}

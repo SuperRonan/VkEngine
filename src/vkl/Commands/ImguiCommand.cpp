@@ -173,8 +173,6 @@ namespace vkl
 			if (res == VK_ERROR_DEVICE_LOST)
 			{
 				VKL_BREAKPOINT_HANDLE;
-				std::unique_lock lock(g_mutex);
-				std::cout << "ImGui Failed!" << std::endl;
 			}
 			VK_CHECK(res, "ImGui Failed!");
 		};
@@ -189,6 +187,7 @@ namespace vkl
 			.MinImageCount = static_cast<uint32_t>(2),
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+			.Subpass = 0,
 			.UseDynamicRendering = _render_pass ? false : true,
 			.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
@@ -290,7 +289,7 @@ namespace vkl
 		{
 			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
 			vkDeviceWaitIdle(device());
-			ImGui_ImplVulkan_CreateMainPipeline(vk_render_pass, swapchain_format);
+			ImGui_ImplVulkan_ReCreateMainPipeline(vk_render_pass, 0, VK_SAMPLE_COUNT_1_BIT);
 			_imgui_format = swapchain_format;
 		}
 

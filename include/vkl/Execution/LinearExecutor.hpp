@@ -175,9 +175,10 @@ namespace vkl
 
 		size_t _frame_index = size_t(-1);
 		size_t _cb_count = 0;
+		std::TickTock_hrc _frame_tt;
 
-		MyVector<std::shared_ptr<Fence>> _frame_end_fences;
-
+		size_t _fifo_fence_to_wait_index = 0;
+		MyVector<std::shared_ptr<Fence>> _fifo_aquire_fences;
 		std::shared_ptr<VkWindow> _window = nullptr;
 
 		std::shared_ptr<Queue> _main_queue = nullptr;

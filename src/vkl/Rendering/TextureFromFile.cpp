@@ -145,6 +145,7 @@ namespace vkl
 	{
 		_load_image_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 			.name = name() + ".loadHostImage()",
+			.verbosity = AsynchTask::Verbosity::High,
 			.priority = TaskPriority::WhenPossible(),
 			.lambda = [this]() {
 				//std::this_thread::sleep_for(5s);
@@ -192,7 +193,7 @@ namespace vkl
 	{
 		if (_load_image_task)
 		{
-			_load_image_task->cancel(false);
+			_load_image_task->cancel();
 			_load_image_task->wait();
 		}
 	}
