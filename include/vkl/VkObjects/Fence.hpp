@@ -46,7 +46,7 @@ namespace vkl
 			return _handle;
 		}
 
-		void wait(uint64_t timeout = UINT64_MAX);
+		VkResult wait(uint64_t timeout = UINT64_MAX);
 
 		VkResult getStatus()const
 		{
@@ -55,6 +55,6 @@ namespace vkl
 
 		void reset();
 
-		void waitAndReset();
+		VkResult waitAndReset(uint64_t timeout = UINT64_MAX);
 	};
 }

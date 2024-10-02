@@ -44,10 +44,10 @@ namespace vkl
 		_handle = VK_NULL_HANDLE;
 	}
 
-	void Fence::wait(uint64_t timeout)
+	VkResult Fence::wait(uint64_t timeout)
 	{
 		assert(_handle);
-		VK_CHECK(vkWaitForFences(_app->device(), 1, &_handle, true, timeout), "Failed to wait for a fence.");
+		return vkWaitForFences(_app->device(), 1, &_handle, true, timeout);
 	}
 
 	void Fence::reset()
@@ -56,9 +56,13 @@ namespace vkl
 		VK_CHECK(vkResetFences(_app->device(), 1, &_handle), "Failed to reset a fence.");
 	}
 
-	void Fence::waitAndReset()
+	VkResult Fence::waitAndReset(uint64_t timeout)
 	{
-		wait();
-		reset();
+		VkResult res = wait(timeout);
+		if (res == VK_SUCCESS)
+		{
+			reset();
+		}
+		return res;
 	}
 }
