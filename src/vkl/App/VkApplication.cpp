@@ -40,10 +40,10 @@ namespace vkl
 #if VKL_BUILD_ANY_DEBUG
 		default_validation = 1;
 		default_cmd_labels = 1;
-		default_verbosity = 1;
+		default_verbosity = 2;
 #endif
 #if VKL_BUILD_RELEASE_WITH_DEBUG_INFO
-		default_verbosity = 2;
+		default_verbosity = 1;
 #endif
 		int default_name_vk_objects = std::max(default_validation, default_cmd_labels);
 
@@ -245,7 +245,7 @@ namespace vkl
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL VkApplication::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data)
 	{
-
+		const VkApplication * app = reinterpret_cast<const VkApplication*>(user_data);
 		bool ignore = message_severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
 		// There is a bug in the current SDK's VLL which emits this incorrect error
 		std::string_view message = callback_data->pMessage;
@@ -255,7 +255,8 @@ namespace vkl
 		ignore |= ((message.find("VUID-VkShaderModuleCreateInfo-pCode-08737") != std::string_view::npos) && (message.find("Expected Image to have the same type as Result Type Image") != std::string_view::npos));
 		if (!ignore)
 		{
-			VK_LOG << "[VL]: " << callback_data->pMessage << std::endl << std::endl;
+			Logger::Options options = Logger::Options::VerbosityMostImportant;
+			app->logger()(callback_data->pMessage, options);
  			VKL_BREAKPOINT_HANDLE;
 		}
 		
@@ -359,6 +360,7 @@ namespace vkl
 			.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
 			.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
 			.pfnUserCallback = debugCallback,
+			.pUserData = reinterpret_cast<void*>(const_cast<VkApplication*>(this)),
 		};
 	}
 
@@ -1040,7 +1042,7 @@ namespace vkl
 
 		bool mt = true;
 		size_t n_threads = 0;
-		int verbosity = ci.args.get<int>("--verbosity");
+		_verbosity = ci.args.get<int>("--verbosity");
 
 		std::string arg_helper_threads = ci.args.get<std::string>("--helper_threads");
 		if (arg_helper_threads == "all")
@@ -1061,10 +1063,16 @@ namespace vkl
 			n_threads = n;
 		}
 
+		_logger.max_verbosity = _verbosity;
+		_logger.log_f = [this](std::string_view sv, Logger::Options options)
+		{
+			this->log(sv, options);
+		};
+
 		_thread_pool = std::unique_ptr<DelayedTaskExecutor>(DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
 			.multi_thread = mt,
 			.n_threads = n_threads,
-			.log_level = verbosity,
+			.logger = &_logger,
 		}));
 	}
 
@@ -1219,6 +1227,56 @@ namespace vkl
 		if (!_mounting_points.contains("ProjectShaders"))
 		{
 			_mounting_points["ProjectShaders"] = exe_folder.string() + "/Shaders/";
+		}
+	}
+
+	void VkApplication::log(std::string_view sv, Logger::Options options)
+	{
+		const uint verbosity = static_cast<uint>(options & Logger::Options::VerbosityMask);
+		const bool can_log = verbosity <= _verbosity;
+		if (can_log)
+		{
+			const Logger::Options tag = options & Logger::Options::TagMask;
+			// TODO color the message depending of the tag
+			const bool lock_mutex = !(options & Logger::Options::NoLock);
+			if (lock_mutex)
+			{
+				g_common_mutex.lock();
+			}
+
+			auto & stream = std::cout;
+			if (!(options & Logger::Options::NoTime))
+			{
+				const auto prev_precision = stream.precision();
+				const auto prev_fill = stream.fill();
+				const auto prev_w = stream.width();
+				Clock::time_point rn = Clock::now();
+				Clock::duration diff = (rn - _time_begin);
+				stream << '[';
+				stream << std::setfill('0');
+				std::chrono::hours h = std::chrono::duration_cast<std::chrono::hours>(diff);
+				stream << h.count() << "h ";
+				std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(diff);
+				stream << std::setw(2) << m.count() % 60 << "m ";
+				std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(diff);
+				stream << std::setw(2) << std::setfill(' ') << s.count() % 60 << ".";
+				std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(diff);
+				stream << std::setw(3) << ms.count() % 1000;
+				stream << "s]: ";
+				stream << std::setprecision(prev_precision);
+				stream << std::setfill(prev_fill);
+				stream << std::setw(prev_w);
+			}
+			stream << sv;
+			if (!(options & Logger::Options::NoEndL))
+			{
+				stream << std::endl;
+			}
+
+			if (lock_mutex)
+			{
+				g_common_mutex.unlock();
+			}
 		}
 	}
 }

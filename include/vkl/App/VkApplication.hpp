@@ -11,6 +11,7 @@
 #include <memory>
 #include <type_traits>
 #include <shared_mutex>
+#include <chrono>
 
 #include <vkl/Utils/stl_extension.hpp>
 
@@ -20,6 +21,7 @@
 
 #include <vkl/Execution/DefinitionMap.hpp>
 
+#include <that/utils/EnumClassOperators.hpp>
 
 namespace argparse
 {
@@ -217,6 +219,11 @@ namespace vkl
 
 		DefinitionsMap _common_shader_definitions = {};
 
+		using Clock = std::chrono::system_clock;
+		Clock::time_point _time_begin = Clock::now();
+		Logger _logger;
+		int _verbosity = 0;
+
 		void fillCommonShaderDefinitions();
 
 		MountingPoints _mounting_points;
@@ -296,6 +303,8 @@ namespace vkl
 		virtual void cleanup();
 
 		void loadMountingPoints();
+
+		void log(std::string_view sv, Logger::Options options);
 
 	public:
 
@@ -448,6 +457,11 @@ namespace vkl
 		MountingPoints const & mountingPoints()const
 		{
 			return _mounting_points;
+		}
+
+		const Logger& logger() const
+		{
+			return _logger;
 		}
 	};
 
