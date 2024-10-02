@@ -80,9 +80,9 @@ namespace vkl
 
 		virtual void declareGui(GuiContext & ctx) = 0;
 
-		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
+		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
-		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(Type type, uint32_t offset);
+		static MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(Type type, uint32_t offset);
 
 		//virtual ShaderBindings getShaderBindings(uint32_t offset) = 0;
 
@@ -222,12 +222,12 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext& ctx) override;
 
-		virtual std::vector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override
+		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override
 		{
 			return getSetLayoutBindingsStatic(offset);
 		}
 
-		static std::vector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
+		static MyVector<DescriptorSetLayout::Binding> getSetLayoutBindingsStatic(uint32_t offset);
 
 		//virtual ShaderBindings getShaderBindings(uint32_t offset) override;
 

@@ -29,9 +29,9 @@ namespace vkl
 		}
 	}
 
-	std::vector<DescriptorSetLayout::Binding> Material::getSetLayoutBindings(Type type, uint32_t offset)
+	MyVector<DescriptorSetLayout::Binding> Material::getSetLayoutBindings(Type type, uint32_t offset)
 	{
-		std::vector<DescriptorSetLayout::Binding> res;
+		MyVector<DescriptorSetLayout::Binding> res;
 		if (type == Type::PhysicallyBased)
 		{
 			res = PhysicallyBasedMaterial::getSetLayoutBindingsStatic(offset);
@@ -271,9 +271,9 @@ namespace vkl
 		}
 	}
 
-	std::vector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)
+	MyVector<DescriptorSetLayout::Binding> PhysicallyBasedMaterial::getSetLayoutBindingsStatic(uint32_t offset)
 	{
-		std::vector<DescriptorSetLayout::Binding> res;
+		MyVector<DescriptorSetLayout::Binding> res;
 		using namespace std::containers_append_operators;
 		res += DescriptorSetLayout::Binding{
 			.name = "MaterialPropertiesBuffer",
