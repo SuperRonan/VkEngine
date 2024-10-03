@@ -28,11 +28,11 @@ namespace vkl
 		std::chrono::hours h = std::chrono::duration_cast<std::chrono::hours>(d);
 		stream << h.count() << "h ";
 		std::chrono::minutes m = std::chrono::duration_cast<std::chrono::minutes>(d);
-		stream << std::setw(2) << m.count() % 60 << "m ";
+		stream << std::setw(2) << std::setfill(' ') << m.count() % 60 << "m ";
 		std::chrono::seconds s = std::chrono::duration_cast<std::chrono::seconds>(d);
 		stream << std::setw(2) << std::setfill(' ') << s.count() % 60 << ".";
 		std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(d);
-		stream << std::setw(3) << ms.count() % 1000;
+		stream << std::setw(3) << std::setfill('0') << ms.count() % 1000;
 		stream << "s]";
 		stream << std::setprecision(prev_precision);
 		stream << std::setfill(prev_fill);

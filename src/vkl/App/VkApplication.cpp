@@ -257,9 +257,48 @@ namespace vkl
 		ignore |= ((message.find("VUID-VkShaderModuleCreateInfo-pCode-08737") != std::string_view::npos) && (message.find("Expected Image to have the same type as Result Type Image") != std::string_view::npos));
 		if (!ignore)
 		{
-			Logger::Options options = Logger::Options::VerbosityMostImportant;
+			bool bp = message_severity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+			Logger::Options tag = Logger::Options::None;
+			Logger::Options verbose = Logger::Options::None;
+			switch (message_severity)
+			{
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+				tag = Logger::Options::TagInfo3;
+				verbose = Logger::Options::VerbosityLeastImportant;
+			break;
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+				tag = Logger::Options::TagInfo2;
+				verbose = Logger::Options::VerbosityMedium;
+			break;
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+				tag = Logger::Options::TagWarning;
+			break;
+			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+				tag = Logger::Options::TagError;
+			break;
+			}
+
+			switch (message_type)
+			{
+			case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
+			
+			break;
+			case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
+			
+			break;
+			case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
+			
+			break;
+			case VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT:
+			
+			break;
+			}
+			const Logger::Options options = tag | verbose;
 			app->logger()(callback_data->pMessage, options);
- 			VKL_BREAKPOINT_HANDLE;
+			if (bp)
+			{
+ 				VKL_BREAKPOINT_HANDLE;
+			}
 		}
 		
 		return VK_FALSE;
@@ -305,9 +344,10 @@ namespace vkl
 		{
 			if (!checkValidLayerSupport())
 			{
-				throw std::runtime_error("Missing Validation Layer!");
+				_logger("Missing Validation Layer!", Logger::Options::TagError);
+				_options.enable_validation = false;
 			}
-			VK_LOG << "Found All Required Validation Layers!\n";
+			_logger("Found All Required Validation Layers!", Logger::Options::TagSuccess);
 		}
 	}
 
@@ -465,11 +505,12 @@ namespace vkl
 		return res;
 	}
 
-	bool VkApplication::isDeviceSuitable(CandidatePhysicalDevice const& candidate, DesiredDeviceInfo const& desired) {
+	bool VkApplication::isDeviceSuitable(CandidatePhysicalDevice & candidate, DesiredDeviceInfo const& desired) {
 		bool res = true;
 
 		VkBool32 present_support = false;
 		DeviceCandidateQueues candidate_queues = findQueueFamilies(candidate.device, desired.queues);
+		candidate.queues = candidate_queues;
 
 		if (desired.queues.need_presentation && candidate_queues.present_queues.empty())
 		{
@@ -483,7 +524,7 @@ namespace vkl
 
 		// Check for known necessary features
 		//const uint32_t min_version = VK_MAKE_VERSION(1, 3, 0);
-		const uint32_t min_version = VK_MAKE_API_VERSION(1, 3, 0, 0);
+		const uint32_t min_version = VK_MAKE_API_VERSION(0, 1, 3, 0);
 		res &= candidate.props.props2.properties.apiVersion >= min_version;
 
 		res &= candidate.features.features_13.synchronization2 != VK_FALSE;
@@ -528,8 +569,6 @@ namespace vkl
 
 		res = (1 + ext_count + num_features) * discrete_multiplicator;
 
-		VK_LOG << "Rated " << candidate.props.props2.properties.deviceName << ": " << res << "\n";
-
 		return res;
 	}
 
@@ -545,32 +584,40 @@ namespace vkl
 
 		if (physical_device_count == 0)
 		{
+			_logger("No physical device found!", Logger::Options::TagFatalError);
 			throw std::runtime_error("No physical device found!");
 		}
 
 		std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
 		vkEnumeratePhysicalDevices(_instance, &physical_device_count, physical_devices.data());
 
-		VK_LOG << "Found " << physical_device_count << " physical device(s):\n";
-		for (size_t i=0; i < physical_devices.size(); ++i)
+		std::stringstream ss;
+		ss << "Found " << physical_device_count << " physical device(s):\n";
+		int64_t best_score = std::numeric_limits<int64_t>::min();
+		size_t best_index = 0;
+		for (size_t i = 0; i < physical_devices.size(); ++i)
 		{
 			VkPhysicalDeviceProperties props;
 			vkGetPhysicalDeviceProperties(physical_devices[i], &props);
-			VK_LOG << " - " << i << ": " << props.deviceName << std::endl;
+			int64_t rating = ratePhysicalDevice(physical_devices[i], desired);
+			ss << " - " << i << ": " << props.deviceName << ", Rated: " << rating;
+			if (i != (physical_devices.size() - 1))
+			{
+				ss << "\n";
+			}
+			if (rating > best_score)
+			{
+				best_index = i;
+				best_score = rating;
+			}
 		}
+		_logger(ss.str(), Logger::Options::VerbosityMostImportant | Logger::Options::TagInfo3);
 
 		if (_options.gpu_id < physical_device_count)
 		{
-			_physical_device = physical_devices[_options.gpu_id];
+			best_index = _options.gpu_id;
 		}
-		else
-		{
-			auto it = std::findBest(physical_devices.cbegin(), physical_devices.cend(), 
-				[&](VkPhysicalDevice const& d) {return ratePhysicalDevice(d, desired); }
-			);
-			_physical_device = *it;
-
-		}
+		_physical_device = physical_devices[best_index];
 
 		_device_extensions = std::make_unique<VulkanExtensionsSet>(desired.extensions, _physical_device);
 		VkPhysicalDeviceProperties2 & physical_device_props = _device_props.link(
@@ -579,7 +626,7 @@ namespace vkl
 		);
 		vkGetPhysicalDeviceProperties2(_physical_device, &physical_device_props);
 
-		VK_LOG << "Using " << _device_props.props2.properties.deviceName << " as physical device.\n";
+		_logger(std::format("Using {} as physical device", _device_props.props2.properties.deviceName), Logger::Options::VerbosityMostImportant | Logger::Options::TagSuccess);
 	}
 
 	void VkApplication::createLogicalDevice()
@@ -1002,6 +1049,8 @@ namespace vkl
 	VkApplication::VkApplication(CreateInfo const& ci) :
 		_name(ci.name)
 	{
+		const auto big_bang = std::chrono::system_clock::now();
+
 		if(ci.args.is_used("--name"))
 		{
 			std::string args_name = ci.args.get<std::string>("--name");	
@@ -1070,6 +1119,11 @@ namespace vkl
 		{
 			this->log(sv, options);
 		};
+
+		{
+			const std::time_t big_bang_time_t = std::chrono::system_clock::to_time_t(big_bang);
+			_logger("Engine started at "s + std::ctime(&big_bang_time_t), Logger::Options::TagSuccess);
+		}
 
 		_thread_pool = std::unique_ptr<DelayedTaskExecutor>(DelayedTaskExecutor::MakeNew(DelayedTaskExecutor::MakeInfo{
 			.multi_thread = mt,
@@ -1234,13 +1288,10 @@ namespace vkl
 
 	void VkApplication::log(std::string_view sv, Logger::Options options)
 	{
-		const uint verbosity = static_cast<uint>(options & Logger::Options::VerbosityMask);
+		const uint verbosity = static_cast<uint>(options & Logger::Options::_VerbosityMask);
 		const bool can_log = verbosity <= _verbosity;
 		if (can_log)
 		{
-			const Logger::Options tag = options & Logger::Options::TagMask;
-			// TODO color the message depending of the tag
-
 			const bool lock_mutex = !(options & Logger::Options::NoLock);
 			if (lock_mutex)
 			{
@@ -1255,10 +1306,10 @@ namespace vkl
 				LogDurationAsTimePoint(stream, diff);
 			}
 
-			const TagStr tag_str = GetTagStr(tag);
+			const TagStr tag_str = GetTagStr(options);
 
 			stream << tag_str.openning; 
-			stream << tag_str.token << " ";
+			//stream << tag_str.token << " ";
 			stream << sv;
 			stream << tag_str.closing;
 			if (!(options & Logger::Options::NoEndL))

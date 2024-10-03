@@ -209,7 +209,7 @@ namespace vkl
 
 	void ImguiCommand::shutdownImGui()
 	{
-		std::cout << "Shutdown ImGui Vulkan" << std::endl;
+		application()->logger()("Shutdown ImGui Vulkan", Logger::Options::TagInfo);
 		vkDeviceWaitIdle(device());
 		ImGui_ImplVulkan_DestroyFontsTexture();
 		ImGui_ImplVulkan_Shutdown();

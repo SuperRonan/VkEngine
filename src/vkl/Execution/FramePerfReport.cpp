@@ -170,6 +170,7 @@ namespace vkl
 			{
 				_finish_task = std::make_shared<AsynchTask>(AsynchTask::CI{
 					.name = report->name(),
+					.verbosity = AsynchTask::Verbosity::High,
 					.priority = TaskPriority::Soon(),
 					.lambda = [f]()
 					{

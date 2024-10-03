@@ -80,7 +80,7 @@ namespace vkl
 		{
 			if (logger && logger->canLog(_verbosity))
 			{
-				logger->log(std::format("Canceling task: {}", name()));
+				logger->log(std::format("Canceling task: {}", name()), Logger::Options::TagWarning | _verbosity);
 			}
 
 			_status = Status::Canceled;
@@ -121,7 +121,7 @@ namespace vkl
 			// Cancel
 			if (can_log)
 			{
-				logger->log(std::format("Canceling task: {}", name()));
+				logger->log(std::format("Canceling task: {}", name()), Logger::Options::TagWarning | _verbosity);
 			}
 
 			_status = Status::Canceled;
@@ -147,7 +147,7 @@ namespace vkl
 			{
 				if (can_log)
 				{
-					logger->log(std::format("Launching Task: {}", name()));
+					logger->log(std::format("Launching Task: {}", name()), Logger::Options::TagInfo | _verbosity);
 				}
 				res = _lambda();
 			}

@@ -277,7 +277,7 @@ namespace vkl
 
 		DeviceCandidateQueues findQueueFamilies(VkPhysicalDevice device, DesiredQueuesInfo const& desired_queues);
 
-		virtual bool isDeviceSuitable(CandidatePhysicalDevice const& candiate, DesiredDeviceInfo const& desired);
+		virtual bool isDeviceSuitable(CandidatePhysicalDevice & candiate, DesiredDeviceInfo const& desired);
 
 		virtual int64_t ratePhysicalDevice(VkPhysicalDevice device, DesiredDeviceInfo const& desired);
 
