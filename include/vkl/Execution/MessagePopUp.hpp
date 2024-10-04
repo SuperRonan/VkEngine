@@ -3,81 +3,50 @@
 #include <vkl/Core/VulkanCommons.hpp>
 #include <vkl/Core/LogOptions.hpp>
 
-#if _WINDOWS
-#include <Windows.h>
-#endif
-
-#define MESSAGE_POPUP_USE_STANDALONE 0
-#define MESSAGE_POPUP_USE_WINDOWS 1
-
-#if _WINDOWS
-#define MESSAGE_POPUP_POLICY MESSAGE_POPUP_USE_WINDOWS
-#endif
-
-#ifndef MESSAGE_POPUP_POLICY
-#define MESSAGE_POPUP_POLICY MESSAGE_POPUP_USE_STANDALONE 
-#endif
+#include <SDL2/SDL.h>
 
 #include <string>
 
 namespace vkl
 {
+	class VkWindow;
+
 	class MessagePopUp
 	{
 	public:
 		
-		enum class Type
+		enum class Type : uint
 		{
-#if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_STANDALONE
-			Error,
-			Stop = Error,
-			Hand = Error,
-			
-			Question,
-			
-			Warning,
-			Exclamation = Warning,
-			
-			Information,
-			Asterisk = Information,
-#elif MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
-			Error = MB_ICONERROR,
-			Stop = MB_ICONSTOP,
-			Hand = MB_ICONHAND,
+			Error = 0,
+			Stop = Error + 1,
+			Hand = Stop + 1,
 
-			Question = MB_ICONQUESTION,
+			Question = Hand + 1,
 
-			Warning = MB_ICONWARNING,
-			Exclamation = MB_ICONEXCLAMATION,
+			Warning = Question + 1,
+			Exclamation = Warning + 1,
 
-			Information = MB_ICONINFORMATION,
-			Asterisk = MB_ICONASTERISK,
-#endif
+			Information = Exclamation + 1,
+			Asterisk = Information + 1,
+
+			MAX_VALUE = Asterisk + 1,
 		};
 
-		enum class Button
+		enum class Button : uint
 		{
-#if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_STANDALONE
-			Ok,
-			Cancel,
-			Abort,
-			Retry,
-			Ignore,
-			Yes,
-			No,
-			TryAgain,
-			Continue,
-#elif MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
-			Ok = IDOK,
-			Cancel = IDCANCEL,
-			Abort = IDABORT,
-			Retry = IDRETRY,
-			Ignore = IDIGNORE,
-			Yes = IDYES,
-			No = IDNO,
-			TryAgain = IDTRYAGAIN,
-			Continue = IDCONTINUE,
-#endif
+			Ok = 0,
+			Cancel = Ok + 1,
+			Abort = Cancel + 1,
+			Retry = Abort + 1,
+			Ignore = Retry + 1,
+			Yes = Ignore + 1,
+			No = Yes + 1,
+			Close = No + 1,
+			Help = Close + 1,
+			TryAgain = Help + 1,
+			Continue = TryAgain + 1,
+			
+			MAX_VALUE = Continue + 1,
 		};
 		
 	protected:
@@ -88,10 +57,7 @@ namespace vkl
 		std::vector<Button> _buttons = {};
 		bool _beep = false;
 		const Logger * _logger = nullptr;
-
-#if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
-		UINT getButtonsFlagsWindows() const;
-#endif
+		VkWindow * _parent_window = nullptr;
 
 	public:
 
@@ -103,6 +69,7 @@ namespace vkl
 			std::vector<Button> buttons = {};
 			bool beep = true;
 			const Logger * logger = nullptr;
+			VkWindow * parent_window = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -123,6 +90,7 @@ namespace vkl
 			std::vector<Button> buttons = {};
 			bool beep = true;
 			const Logger * logger = nullptr;
+			VkWindow* parent_window = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -134,6 +102,7 @@ namespace vkl
 				.buttons = ci.buttons,
 				.beep = ci.beep,
 				.logger = ci.logger,
+				.parent_window = ci.parent_window,
 			})
 		{
 
