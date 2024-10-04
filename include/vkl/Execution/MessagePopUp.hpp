@@ -3,8 +3,6 @@
 #include <vkl/Core/VulkanCommons.hpp>
 #include <vkl/Core/LogOptions.hpp>
 
-#include <SDL2/SDL.h>
-
 #include <string>
 
 namespace vkl

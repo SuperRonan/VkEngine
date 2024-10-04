@@ -12,7 +12,7 @@
 #define MESSAGE_POPUP_USE_SDL 1
 #define MESSAGE_POPUP_USE_WINDOWS 2
 
-#if defined SDL_h_ && 0
+#if defined SDL_h_ && 1
 #define MESSAGE_POPUP_POLICY MESSAGE_POPUP_USE_SDL
 #elif _WINDOWS
 #define MESSAGE_POPUP_POLICY MESSAGE_POPUP_USE_WINDOWS
@@ -26,7 +26,7 @@ namespace vkl
 {
 
 #ifdef _WINDOWS
-	std::array<UINT, 8> Windows_Types = {
+	static const std::array<UINT, static_cast<size_t>(MessagePopUp::Type::MAX_VALUE)> Windows_Types = {
 		MB_ICONERROR,
 		MB_ICONSTOP,
 		MB_ICONHAND,
@@ -55,6 +55,20 @@ namespace vkl
 		return static_cast<MessagePopUp::Button>(wid - 1);
 	}
 #endif
+
+	static const std::array<std::string_view, static_cast<size_t>(MessagePopUp::Button::MAX_VALUE)> Sdl_Button_Labels = {
+		"Ok",
+		"Cancel",
+		"Abort",
+		"Retry",
+		"Ignore",
+		"Yes",
+		"No",
+		"Close",
+		"Help",
+		"TryAgain",
+		"Continue",
+	};
 
 #if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
 	static UINT GetButtonsFlagsWindows(std::vector<MessagePopUp::Button> const& buttons)
@@ -153,8 +167,6 @@ namespace vkl
 #endif
 		}
 		Button res;
-#if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
-		
 		if (_logger)
 		{
 			Logger::Options tag = Logger_Tags[static_cast<uint>(_type)];
@@ -162,6 +174,8 @@ namespace vkl
 			options |= tag;
 			_logger->log(std::format("{}\n{}", _title, _message), options);
 		}
+#if MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_WINDOWS
+		
 
 		HWND owner = nullptr;
 		if (_parent_window)
@@ -178,12 +192,62 @@ namespace vkl
 		int ires = MessageBoxA(owner, _message.c_str(), _title.c_str(), flags);
 		res = GetButtonFromWindowsID(ires);
 #elif MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_SDL
-		SDL_MessageBoxData data;
+		SDL_MessageBoxData data = {};
+		std::memset(&data, 0, sizeof(data));
+		data.window = _parent_window ? _parent_window->handle() : nullptr;
+		data.title = _title.c_str();
+		data.message = _message.c_str();
+
+		data.flags = SDL_MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT;
+		switch(_type)
+		{
+			case Type::Error:
+			case Type::Stop:
+			case Type::Hand:
+				data.flags |= SDL_MESSAGEBOX_ERROR;
+			break;
+			case Type::Question:
+				data.flags |= SDL_MESSAGEBOX_QUESTION;
+			break;
+			case Type::Warning:
+			case Type::Exclamation:
+				data.flags |= SDL_MESSAGEBOX_WARNING;
+			break;
+			case Type::Information:
+			case Type::Asterisk:
+				data.flags |= SDL_MESSAGEBOX_INFORMATION;
+			break;
+		};
+
+		MyVector<SDL_MessageBoxButtonData> sdl_buttons_storage(_buttons.size());
+		data.numbuttons = static_cast<int>(_buttons.size());
+		SDL_MessageBoxButtonData * sdl_buttons = sdl_buttons_storage.data();
+
+
+		data.buttons = sdl_buttons;
+		for (size_t i = 0; i < static_cast<size_t>(data.numbuttons); ++i)
+		{
+			SDL_MessageBoxButtonData & b = sdl_buttons[i];
+			b.buttonid = static_cast<int>(_buttons[i]);
+			b.text = Sdl_Button_Labels[b.buttonid].data();
+			b.flags = 0;
+			if(i == 0)
+			{
+				b.flags |= SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT;
+			}
+			if((i + 1) == static_cast<size_t>(data.numbuttons))
+			{
+				b.flags |= SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT;
+			}
+		}
+
+		data.colorScheme = nullptr;
+		res = _buttons[0];
 		int res_id;
 		const int sdl_res = SDL_ShowMessageBox(&data, &res_id);
 		if (sdl_res != 0)
 		{
-
+			res = static_cast<Button>(res_id);
 		}
 #elif MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_STANDALONE
 		NOT_YET_IMPLEMENTED;
