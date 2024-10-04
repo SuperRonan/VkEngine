@@ -101,5 +101,13 @@ void main()
 	
 	res += material.albedo * scene_ubo.ambient;
 
+	if(false)
+	{
+		const uint c = ubo.frame_idx % 3;
+		vec3 mask = vec3(0);
+		mask[c] = 3;
+		res *= mask;
+	}
+
 	o_color = vec4(res, 1);
 }
