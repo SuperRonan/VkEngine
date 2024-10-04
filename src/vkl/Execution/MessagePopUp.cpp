@@ -25,6 +25,8 @@
 namespace vkl
 {
 
+#define SDL_MESSAGEBOX_QUESTION SDL_MESSAGEBOX_INFORMATION
+
 #ifdef _WINDOWS
 	static const std::array<UINT, static_cast<size_t>(MessagePopUp::Type::MAX_VALUE)> Windows_Types = {
 		MB_ICONERROR,
