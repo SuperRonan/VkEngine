@@ -33,7 +33,10 @@ set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${THAT_LIB_INCLUDE_DIR})
 
 
 # SDL (2)
-# TODO Maybe not require SDL2 -> we can still use the engine, but without any functionality provided by SDL 
+# TODO Maybe not require SDL -> we can still use the engine, but without any functionality provided by SDL 
+set(SDL_STATIC ON)
+set(SDL_SHARED OFF)
+set(VKL_SDL_VERSION 3)
 add_subdirectory(ext/SDL)
 # set(SDL_DIRECTX OFF)
 # set(SDL_OPENGL OFF)
@@ -41,10 +44,10 @@ add_subdirectory(ext/SDL)
 # set(SDL_RENDER OFF)
 # set(SDL_RENDERD3D OFF)
 # set(SDL_VULKAN ON)
-set(SDL2_LIBRARIES SDL2-static)
-set(SDL2_INCLUDE_DIRS ext/SDL/include)
-set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${SDL2_LIBRARIES})
-set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${SDL2_INCLUDE_DIRS})
+set(SDL_LIBRARIES SDL${VKL_SDL_VERSION}-static)
+set(SDL_INCLUDE_DIRS ext/SDL/include)
+set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${SDL_LIBRARIES})
+set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${SDL_INCLUDE_DIRS})
 
 # GLM
 add_subdirectory(ext/glm)
@@ -131,11 +134,11 @@ file(GLOB IMGUI_SOURCES
 "${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp"
 
 "${IMGUI_DIR}backends/imgui_impl_vulkan.cpp"
-"${IMGUI_DIR}backends/imgui_impl_sdl2.cpp"
+"${IMGUI_DIR}backends/imgui_impl_sdl${VKL_SDL_VERSION}.cpp"
 "${IMGUI_DIR}backends/imgui_impl_win32.cpp"
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES} ${SDL2_INCLUDE_DIRS})
+target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES} ${SDL_INCLUDE_DIRS})
 
 set(IMGUI_LIBS imgui)
 
