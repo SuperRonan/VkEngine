@@ -76,10 +76,12 @@ namespace vkl
 			AppWithImGui * app = dynamic_cast<AppWithImGui*>(application());
 			if (app)
 			{
+#ifdef IMGUI_HAS_VIEWPORT
 				if (app->imguiConfigFlags() & ImGuiConfigFlags_ViewportsEnable)
 				{
 					ImGui::RenderPlatformWindowsDefault();
 				}
+#endif
 			}
 		}
 	};

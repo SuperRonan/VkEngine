@@ -50,10 +50,12 @@ namespace vkl
 		{
 			assert(ctx == &_gui_context);
 			ImGui::EndFrame();
+#ifdef IMGUI_HAS_VIEWPORT
 			if (_imgui_init_flags & ImGuiConfigFlags_ViewportsEnable)
 			{
 				ImGui::UpdatePlatformWindows();
 			}
+#endif
 		}
 
 	public:
@@ -79,6 +81,24 @@ namespace vkl
 		bool ImGuiIsEnabled()const
 		{
 			return _enable_imgui;
+		}
+
+		bool hasImGuiViewports() const
+		{
+			bool res = false;
+#ifdef IMGUI_HAS_VIEWPORT
+			res = (_imgui_init_flags & ImGuiConfigFlags_ViewportsEnable);
+#endif
+			return res;
+		}
+
+		bool hasImGuiDocking() const
+		{
+			bool res = false;
+#ifdef IMGUI_HAS_DOCKING
+			res = (_imgui_init_flags & ImGuiConfigFlags_DockingEnable);
+#endif
+			return res;
 		}
 
 		bool ImGuiIsInit() const

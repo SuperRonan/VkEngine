@@ -105,6 +105,7 @@ namespace vkl
 
 		_imgui_init_flags |= ImGuiConfigFlags_NavEnableKeyboard;
 		
+#ifdef IMGUI_HAS_DOCKING
 		if (ci.args.is_used("--imgui_docking"))
 		{
 			if (ci.args.get<unsigned int>("--imgui_docking") == 1)
@@ -117,7 +118,9 @@ namespace vkl
 			// Might be platform dependant
 			_imgui_init_flags |= ImGuiConfigFlags_DockingEnable;
 		}
+#endif
 
+#ifdef IMGUI_HAS_VIEWPORT
 		if (ci.args.is_used("--imgui_multi_viewport"))
 		{
 			if (ci.args.get<unsigned int>("--imgui_multi_viewport") == 1)
@@ -130,6 +133,7 @@ namespace vkl
 			// Might be platform dependant
 			_imgui_init_flags |= ImGuiConfigFlags_ViewportsEnable;
 		}
+#endif
 	}
 
 	AppWithImGui::~AppWithImGui()
