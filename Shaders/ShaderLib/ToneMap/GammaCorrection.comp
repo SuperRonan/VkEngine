@@ -12,6 +12,14 @@ layout(local_size_x = 16, local_size_y = 16) in;
 #define USE_SEPARATE_SOURCE 0
 #endif
 
+#define MODE_NONE 0
+#define MODE_GAMMA 1
+#define MODE_HLG 2
+
+#ifndef MODE
+#define MODE MODE_NONE
+#endif
+
 layout(SHADER_DESCRIPTOR_BINDING + 0, DST_FORMAT) uniform restrict image2D Desination;
 
 #if USE_SEPARATE_SOURCE
@@ -20,9 +28,60 @@ layout(SHADER_DESCRIPTOR_BINDING + 1) uniform sampler2D Source;
 
 layout(push_constant) uniform PushConstantBlock
 {
+#if MODE == MODE_GAMMA
 	float exposure;
 	float gamma;
+#elif MODE == MODE_HLG
+	float ref_white;
+	float gamma;
+#else
+	uint pad;
+#endif
 } _pc;
+
+float HLG(float linear, float reference)
+{
+	const float a = 0.17883277;
+	const float b = 1.0 - 4.0 * a;
+	const float c = 0.5 - a * log(4.0 * a);
+	float res;
+	bool rec2100 = false;
+	if(rec2100)
+	{
+		linear = min(linear, 1);
+		if(linear <= 1.0 / 12.0)
+		{
+			res = sqrt(3 * linear);
+		}
+		else
+		{
+			res = (a * log(12 * linear - b) + c);
+		}
+	}
+	else
+	{
+		linear *= reference;
+		if(linear <= 1.0)
+		{
+			res = 0.5 * sqrt(linear);
+		}
+		else
+		{
+			res = a * log(linear - b) + c;
+		}
+	}
+	return res;
+}
+
+vec3 HLG(vec3 src, float ref_white)
+{	
+	vec3 res;
+	for(uint i = 0; i < 3; ++i)
+	{
+		res[i] = HLG(src[i], ref_white);
+	}
+	return res;
+}
 
 void main()
 {
@@ -40,7 +99,11 @@ void main()
 #endif
 
 		vec4 dst = src;
+#if MODE == MODE_GAMMA
 		dst.xyz = pow(src.xyz * _pc.exposure, vec3(_pc.gamma));
+#elif MODE == MODE_HLG
+		dst.xyz = HLG(src.xyz, _pc.ref_white);
+#endif
 
 		imageStore(Desination, pixel, dst);
 

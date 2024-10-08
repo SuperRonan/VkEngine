@@ -4,12 +4,14 @@
 #include <vkl/Commands/ComputeCommand.hpp>
 #include <vkl/Execution/Executor.hpp>
 #include <vkl/IO/GuiContext.hpp>
-#include <vkl/VkObjects/Swapchain.hpp>
+#include <vkl/VkObjects/VkWindow.hpp>
 
 namespace vkl
 {
 	class GammaCorrection : public Module
 	{
+	public:
+
 	protected:
 
 		MultiDescriptorSetsLayouts _sets_layouts;
@@ -20,8 +22,8 @@ namespace vkl
 
 		std::shared_ptr<ComputeCommand> _compute_tonemap = nullptr;
 
-		std::shared_ptr<Swapchain> _swapchain = nullptr;
-		bool _auto_fit_to_swapchain = true;
+		std::shared_ptr<VkWindow> _target_window = nullptr;
+		bool _auto_fit_to_window = true;
 		struct SwapchainInfo 
 		{
 			VkSurfaceFormatKHR format = VkSurfaceFormatKHR{
@@ -41,22 +43,15 @@ namespace vkl
 		};
 		SwapchainInfo _prev_swapchain_info = {};
 
-		struct ComputePC 
-		{
-			float exposure;
-			float gamma;
-		};
-
-		bool  _enable = false;
-		float _exposure = 1.0f;
-		float _log_exposure = 0.0f;
-		float _gamma = 1.0f;
+		ColorCorrectionMode _mode = ColorCorrectionMode::PassThrough;
+		GammaColorCorrectionParams _gamma_params;
+		HLGColorCorrectionParams _hlg_params;
 
 		size_t _plot_samples = 100;
 		size_t _plot_min_radiance = 0;
 		size_t _plot_max_radiance = 1;
 		std::vector<float> _plot_raw_radiance;
-		std::vector<float> _plot_gamma_radiance;
+		std::vector<float> _plot_corrected_radiance;
 
 		void createInternalResources();
 
@@ -70,7 +65,7 @@ namespace vkl
 			std::shared_ptr<ImageView> dst = nullptr;
 			std::shared_ptr<Sampler> sampler = nullptr;
 			MultiDescriptorSetsLayouts sets_layouts;
-			std::shared_ptr<Swapchain> swapchain = nullptr;
+			std::shared_ptr<VkWindow> target_window = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -82,6 +77,6 @@ namespace vkl
 
 		void declareGui(GuiContext & ctx);
 
-		float computeGammaCorrection(float f)const;
+		float computeTransferFunction(float linear)const;
 	};
 }

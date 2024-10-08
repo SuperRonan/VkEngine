@@ -596,7 +596,7 @@ namespace vkl
 				_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
 					.app = application(),
 					.name = name() + ".RenderGui",
-					.swapchain = _window->swapchain(),
+					.target_window = _window,
 					.queue = _main_queue,
 				});
 				_internal_resources += _render_gui;

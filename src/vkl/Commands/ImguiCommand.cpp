@@ -7,12 +7,26 @@
 
 #include <vkl/App/ImGuiApp.hpp>
 
+#include <vkl/VkObjects/DetailedVkFormat.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 namespace vkl
 {
+	static inline ImGui_ImplVulkan_ColorCorrectionMethod Convert(ColorCorrectionMode mode)
+	{
+		ImGui_ImplVulkan_ColorCorrectionMethod res = ImGui_ImplVulkan_ColorCorrectionMethod::ImGui_ImplVulkan_ColorCorrection_None;
+		switch(mode)
+		{
+		case ColorCorrectionMode::Gamma:
+			res = ImGui_ImplVulkan_ColorCorrectionMethod::ImGui_ImplVulkan_ColorCorrection_Gamma;
+		break;
+		};
+		return res;
+	};
+
 	struct ImGuiCommandNode : public ExecutionNode
 	{
 		struct CreateInfo
@@ -29,7 +43,6 @@ namespace vkl
 		{}
 
 		RenderPassBeginInfo _render_pass_info = {};
-		std::shared_ptr<SwapchainInstance> _swapchain;
 		std::shared_ptr<DescriptorPool> _desc_pool;
 		size_t _index = 0;
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -41,7 +54,6 @@ namespace vkl
 			ExecutionNode::clear();
 
 			_render_pass_info.clear();
-			_swapchain.reset();
 			_desc_pool.reset();
 			_index = 0;
 			_fence_to_wait.reset();
@@ -89,24 +101,31 @@ namespace vkl
 	ImguiCommand::ImguiCommand(CreateInfo const& ci) :
 		DeviceCommand(ci.app, ci.name),
 		_queue(ci.queue),
-		_swapchain(ci.swapchain)
+		_target_window(ci.target_window)
 	{
 		createRenderPassIFP();
 
 		initImGui();
 		
-		_swapchain->setInvalidationCallback({
+		_target_window->swapchain()->setInvalidationCallback({
 			.callback = [this]() {
 				_framebuffers.clear();
 			},
 			.id = this,
 		});
+
+		std::memset(&_color_correction_info, -1, sizeof(ColorCorrectionInfo));
 	}
 
 	ImguiCommand::~ImguiCommand()
 	{
-		_swapchain->removeInvalidationCallback(this);
+		_target_window->swapchain()->removeInvalidationCallback(this);
 		
+		if (_render_pass)
+		{
+			_render_pass->removeInvalidationCallback(this);
+		}
+
 		shutdownImGui();
 		_desc_pool = nullptr;
 		_render_pass = nullptr;
@@ -115,7 +134,7 @@ namespace vkl
 
 	void ImguiCommand::createFramebuffers()
 	{
-		const size_t n = _swapchain->instance()->images().size();
+		const size_t n = _target_window->swapchain()->instance()->images().size();
 		_framebuffers.resize(n);
 		for (size_t i = 0; i < n; ++i)
 		{
@@ -123,7 +142,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + std::string(".Framebuffer ") + std::to_string(i),
 				.render_pass = _render_pass,
-				.attachments = {_swapchain->instance()->views()[i]},
+				.attachments = {_target_window->swapchain()->instance()->views()[i]},
 			});
 		}
 	}
@@ -138,10 +157,15 @@ namespace vkl
 			.colors = {
 				AttachmentDescription2{
 					.flags = AttachmentDescription2::Flags::Blend,
-					.format = [this]() { return _swapchain->format().value().format; },
+					.format = [this]() { return _target_window->swapchain()->format().value().format; },
 					.samples = VK_SAMPLE_COUNT_1_BIT, // swapchain images appears to be only with 1 sample
 				},
 			}
+		});
+
+		_render_pass->setInvalidationCallback(Callback{
+			.callback = [this](){_re_create_imgui_pipeline |= true;},
+			.id = this,
 		});
 	}
 
@@ -179,6 +203,8 @@ namespace vkl
 			VK_CHECK(res, "ImGui Failed!");
 		};
 
+		const float gamma = 2.2f;
+
 		ImGui_ImplVulkan_InitInfo ii{
 			.Instance = _app->instance(),
 			.PhysicalDevice = _app->physicalDevice(),
@@ -189,7 +215,13 @@ namespace vkl
 			.MinImageCount = static_cast<uint32_t>(2),
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+			.colorCorrectionParams = ImGui_ImplVulkan_ColorCorrectionParameters{
+				.param1 = gamma,
+				.param2 = 1.0f,
+				.param3 = 1.0f / gamma,
+			},
 			.Subpass = 0,
+			.useStaticColorCorrectionsParams = false,
 			.UseDynamicRendering = _render_pass ? false : true,
 			.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
@@ -286,13 +318,41 @@ namespace vkl
 
 		}
 
-		const VkFormat swapchain_format = _swapchain->instance()->createInfo().imageFormat;
-		if (swapchain_format != _imgui_format)
+		_imgui_init_format = _target_window->swapchain()->instance()->createInfo().imageFormat;
+		const ColorCorrectionInfo cci = _target_window->getColorCorrectionInfo();
+		std::memcpy(&_color_correction_info.params, &cci.params, sizeof(ColorCorrectionParams));
+		{
+			ImGui_ImplVulkan_ColorCorrectionParameters imgui_params;
+			std::memset(&imgui_params, 0, sizeof(ImGui_ImplVulkan_ColorCorrectionParameters));
+			imgui_params.param1 = cci.params.gamma.gamma;
+			imgui_params.param2 = cci.params.gamma.exposure;
+			// Hax, the GUI is too dark in this mode with default exposure
+			if (_imgui_init_format == VK_FORMAT_R16G16B16A16_SFLOAT && cci.mode == ColorCorrectionMode::Gamma)
+			{
+				imgui_params.param2 *= 2;		
+			}
+			ImGui_ImplVulkan_SetMainColorCorrectionParams(imgui_params);
+		}
+
+		if (cci.mode != _color_correction_info.mode)
+		{
+			_color_correction_info.mode = cci.mode;
+			_re_create_imgui_pipeline |= true;
+		}
+		
+
+		if(_re_create_imgui_pipeline)
 		{
 			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
 			vkDeviceWaitIdle(device());
-			ImGui_ImplVulkan_ReCreateMainPipeline(vk_render_pass, 0, VK_SAMPLE_COUNT_1_BIT);
-			_imgui_format = swapchain_format;
+			ImGui_ImplVulkan_MainPipelineCreateInfo info{
+				.renderPass = vk_render_pass,
+				.subpass = 0,
+				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+				.colorCorrectionMethod = Convert(_color_correction_info.mode),
+			};
+			ImGui_ImplVulkan_ReCreateMainPipeline(info);
+			_re_create_imgui_pipeline = false;
 		}
 
 		return res;

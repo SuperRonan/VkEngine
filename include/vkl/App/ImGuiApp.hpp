@@ -95,7 +95,7 @@ namespace vkl
 		bool hasImGuiDocking() const
 		{
 			bool res = false;
-#ifdef IMGUI_HAS_DOCKING
+#ifdef IMGUI_HAS_DOCK
 			res = (_imgui_init_flags & ImGuiConfigFlags_DockingEnable);
 #endif
 			return res;

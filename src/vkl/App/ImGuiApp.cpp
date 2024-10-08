@@ -105,7 +105,7 @@ namespace vkl
 
 		_imgui_init_flags |= ImGuiConfigFlags_NavEnableKeyboard;
 		
-#ifdef IMGUI_HAS_DOCKING
+#ifdef IMGUI_HAS_DOCK
 		if (ci.args.is_used("--imgui_docking"))
 		{
 			if (ci.args.get<unsigned int>("--imgui_docking") == 1)

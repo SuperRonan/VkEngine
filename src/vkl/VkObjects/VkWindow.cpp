@@ -1,4 +1,7 @@
 #include <vkl/VkObjects/VkWindow.hpp>
+
+#include <vkl/VkObjects/DetailedVkFormat.hpp>
+
 #include "imgui.h"
 #include <algorithm>
 #include <format>
@@ -155,6 +158,38 @@ namespace vkl
 		}
 	}
 
+	void VkWindow::deduceColorCorrection()
+	{
+		if (_swapchain && _swapchain->instance())
+		{
+			const SwapchainInstance & si = *_swapchain->instance();
+			const VkFormat format = si.createInfo().imageFormat;
+			const DetailedVkFormat detailed_format = DetailedVkFormat::Find(format);
+			const VkColorSpaceKHR color_space = si.createInfo().imageColorSpace;
+
+			// TODO
+			const float sdl_window_gamma = 2.2;//SDL_GetWindowBrightness(_window);
+
+			if (detailed_format.color.type == DetailedVkFormat::Type::SRGB)
+			{
+				_color_correction_mode = ColorCorrectionMode::Gamma;
+				_gamma_color_correction_params.gamma = sdl_window_gamma;
+			}
+			else if (detailed_format.color.type == DetailedVkFormat::Type::SFLOAT)
+			{
+				_color_correction_mode = ColorCorrectionMode::Gamma;
+				_gamma_color_correction_params.gamma = sdl_window_gamma;
+			}
+			else if (color_space == VK_COLOR_SPACE_HDR10_HLG_EXT || color_space == VK_COLOR_SPACE_HDR10_ST2084_EXT)
+			{
+				_color_correction_mode = ColorCorrectionMode::HLG;
+			}
+			else
+			{
+				_color_correction_mode = ColorCorrectionMode::PassThrough;
+			}
+		}
+	}
 
 	void VkWindow::createSwapchain()
 	{
@@ -575,8 +610,10 @@ namespace vkl
 		bool res = false;
 		updateWindowIFP();
 
-
 		res |= _swapchain->updateResources(ctx);
+
+		deduceColorCorrection();
+
 		return res;
 	}
 

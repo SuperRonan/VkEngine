@@ -2,6 +2,7 @@
 #include <imgui/imgui.h>
 #include <vkl/Execution/SamplerLibrary.hpp>
 #include <vkl/VkObjects/DetailedVkFormat.hpp>
+#include <vkl/IO/ImGuiUtils.hpp>
 
 namespace vkl
 {
@@ -11,7 +12,7 @@ namespace vkl
 		_dst(ci.dst),
 		_sampler(ci.sampler),
 		_sets_layouts(ci.sets_layouts),
-		_swapchain(ci.swapchain)
+		_target_window(ci.target_window)
 	{
 		if (!_src)
 		{
@@ -52,6 +53,7 @@ namespace vkl
 			const char d = (_src == _dst) ? '0' : '1';
 			res.pushBackFormatted("USE_SEPARATE_SOURCE {:c}"sv, d);
 			res.pushBackFormatted("DST_FORMAT {:s}", _dst_glsl_format);
+			res.pushBackFormatted("MODE {}", static_cast<uint32_t>(_mode));
 			return res;
 		};
 
@@ -67,35 +69,23 @@ namespace vkl
 
 	void GammaCorrection::updateResources(UpdateContext& ctx)
 	{
-		if (_auto_fit_to_swapchain && _swapchain && _swapchain->instance())
+		if (_auto_fit_to_window && _target_window)
 		{
 			SwapchainInfo info{
-				.format = _swapchain->instance()->format(),
+				.format = _target_window->swapchain()->instance()->format(),
 			};
 
 			if (info != _prev_swapchain_info)
 			{
-				switch (info.format.colorSpace)
+				ColorCorrectionInfo info = _target_window->getColorCorrectionInfo();
+				_mode = info.mode;
+				switch (_mode)
 				{
-					case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
-						_enable = false;
-						_gamma = 1;
-						if (info.format.format == VK_FORMAT_R8G8B8A8_SRGB || info.format.format == VK_FORMAT_B8G8R8A8_SRGB)
-						{
-							_enable = true;
-							_gamma = 2.2;
-						}
+					case ColorCorrectionMode::Gamma:
+						_gamma_params = info.params.gamma;
 					break;
-					case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
-						_enable = true;
-						_gamma = 2.2;
-					break;
-					case VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT:
-						_enable = false;
-						_gamma = 1;
-					break;
-					case VK_COLOR_SPACE_HDR10_ST2084_EXT:
-						// ???, maybe a complete color correction rather than just a simple gamma correction?
+					case ColorCorrectionMode::HLG:
+						_hlg_params = info.params.hlg;
 					break;
 				}
 			}
@@ -110,12 +100,30 @@ namespace vkl
 
 	void GammaCorrection::execute(ExecutionRecorder& exec)
 	{
-		if (_enable)
+		bool enable = false;
+		enable |= (_mode != ColorCorrectionMode::PassThrough);
+		enable |= (_src != _dst);
+		if (enable)
 		{
-			const ComputePC pc{
-				.exposure = _exposure,
-				.gamma = _gamma,
+			struct PC
+			{
+				union
+				{
+					float exposure;
+					float ref_white;
+				};
+				float gamma;
 			};
+			PC pc;
+			if (_mode == ColorCorrectionMode::Gamma)
+			{
+				pc.exposure = _gamma_params.exposure;
+				pc.gamma = _gamma_params.gamma;
+			}
+			else if (_mode == ColorCorrectionMode::HLG)
+			{
+				pc.ref_white = _hlg_params.white_point;
+			}
 			exec(_compute_tonemap->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _dst->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
@@ -125,9 +133,35 @@ namespace vkl
 		}
 	}
 
-	float GammaCorrection::computeGammaCorrection(float x) const
+	float GammaCorrection::computeTransferFunction(float linear) const
 	{
-		return std::pow(x * _exposure, _gamma);
+		float res;
+		switch (_mode)
+		{
+			case ColorCorrectionMode::PassThrough:
+				res = linear;
+			break;
+			case ColorCorrectionMode::Gamma:
+				res = std::pow(linear * _gamma_params.exposure, _gamma_params.gamma);
+			break;
+			case ColorCorrectionMode::HLG:
+			{
+				linear *= _hlg_params.white_point;
+				const float a = 0.17883277;
+				const float b = 1.0 - 4.0 * a;
+				const float c = 0.5 - a * std::log(4.0 * a);
+				if (linear <= 1)
+				{
+					res = 0.5 * std::sqrt(linear);
+				}
+				else
+				{
+					res = a * std::log(linear - b) + c;
+				}
+			}
+			break;
+		}
+		return res;
 	}
 
 	void GammaCorrection::declareGui(GuiContext & ctx)
@@ -136,36 +170,94 @@ namespace vkl
 		{
 			ImGui::PushID(name().c_str());
 	
-			ImGui::Checkbox("Auto Fit to swapchain: ", &_auto_fit_to_swapchain);
+			ImGui::Checkbox("Auto Fit to window: ", &_auto_fit_to_window);
 
-			ImGui::Checkbox("Enable", &_enable);
+			static thread_local ImGuiListSelection gui_mode = ImGuiListSelection::CI{
+				.name = "Mode",
+				.mode = ImGuiListSelection::Mode::RadioButtons,
+				.same_line = true,
+				.options = {
+					ImGuiListSelection::Option{
+						.name = "None",
+					},
+					ImGuiListSelection::Option{
+						.name = "Gamma",
+					},
+					ImGuiListSelection::Option{
+						.name = "HLG",
+						.desc = "Hybrid Log Gamma",
+					},
+				},
+			};
 
 			bool changed = false;
+			{
+				size_t mode_index = static_cast<size_t>(_mode);
+				if (gui_mode.declare(mode_index))
+				{
+					_mode = static_cast<ColorCorrectionMode>(mode_index);
+					changed = true;
+				}
+			}
 
-			changed |= ImGui::SliderFloat("log2(Exposure)", &_log_exposure, -5, 5);
-			_exposure = std::exp2f(_log_exposure);
-			ImGui::Text("Exposure: %f", _exposure);
-			//ImGui::Text("Snap to: ");
-			//ImGui::SameLine();
+
+			if (_mode == ColorCorrectionMode::Gamma)
+			{
+				float log_exposure = std::log2(_gamma_params.exposure);
+				bool exposure_changed = false;
+				exposure_changed = ImGui::SliderFloat("log2(Exposure)", &log_exposure, -5, 5, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
+				ImGui::SameLine();
+				if (ImGui::Button("-"))
+				{
+					exposure_changed |= true;
+					log_exposure -= 0.5;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("+"))
+				{
+					exposure_changed |= true;
+					log_exposure += 0.5;
+				}
+				if (exposure_changed)
+				{
+					changed = true;
+					_gamma_params.exposure = std::exp2f(log_exposure);
+				}
+				ImGui::Text("Exposure: %f", _gamma_params.exposure);
+				//ImGui::Text("Snap to: ");
+				//ImGui::SameLine();
 			
-			changed |= ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
+				ImGui::PushID('G');
+				changed |= ImGui::SliderFloat("Gamma", &_gamma_params.gamma, 0.1, 4);
+				ImGui::PopID();
+				ImGui::Text("Snap Gamma: ");
+				std::array<float, 4> snap_values = {1.0, 1.2, 2.0, 2.2};
+				char str_buffer[16];
+				for (size_t i = 0; i < snap_values.size(); ++i)
+				{
+					ImGui::SameLine();
+					*std::format_to(str_buffer, "{:1}", snap_values[i]) = char(0);
+					bool snap = ImGui::Button(str_buffer);
+					if (snap)
+					{
+						_gamma_params.gamma = snap_values[i];
+						changed |= true;
+					}
+				}
+				ImGui::Separator();
 
-			ImGui::Text("Snap Gamma: ");
-			ImGui::SameLine();
-			bool snap_1 = ImGui::Button("1.0");
-			ImGui::SameLine();
-			bool snap_2_2 = ImGui::Button("2.2");
-			if(snap_1)	_gamma = 1.0f, changed = true;
-			if(snap_2_2)	_gamma = 2.2f, changed = true;
+			}
+			else if (_mode == ColorCorrectionMode::HLG)
+			{
+				changed = ImGui::SliderFloat("White Point", &_hlg_params.white_point, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
+			}
 
-
-			ImGui::Separator();
 
 			if (_plot_raw_radiance.size() != _plot_samples)
 			{
 				changed = true;
 				_plot_raw_radiance.resize(_plot_samples);
-				_plot_gamma_radiance.resize(_plot_samples);
+				_plot_corrected_radiance.resize(_plot_samples);
 			}
 
 			if (changed)
@@ -174,12 +266,12 @@ namespace vkl
 				{
 					float t = (float(i) + (float(i) / float(_plot_samples - 1))) / float(_plot_samples);
 					_plot_raw_radiance[i] = std::lerp(_plot_min_radiance, _plot_max_radiance, t);
-					_plot_gamma_radiance[i] = computeGammaCorrection(_plot_raw_radiance[i]);
+					_plot_corrected_radiance[i] = computeTransferFunction(_plot_raw_radiance[i]);
 				}
 
 			}
 
-			ImGui::PlotLines("Gamma Correction Preview", _plot_gamma_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_gamma_radiance.back(), ImVec2(0, 200));
+			ImGui::PlotLines("Gamma Correction Preview", _plot_corrected_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_corrected_radiance.back(), ImVec2(0, 200));
 			
 			ImGui::PopID();
 		}
