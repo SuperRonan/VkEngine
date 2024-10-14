@@ -204,6 +204,7 @@ namespace vkl
 		};
 
 		const float gamma = 2.2f;
+		const ImGui_ImplVulkan_ColorCorrectionParameters gamma_params = ImGui_ImplVulkan_ColorCorrectionParameters::MakeGamma(gamma, 1);
 
 		ImGui_ImplVulkan_InitInfo ii{
 			.Instance = _app->instance(),
@@ -215,13 +216,9 @@ namespace vkl
 			.MinImageCount = static_cast<uint32_t>(2),
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-			.colorCorrectionParams = ImGui_ImplVulkan_ColorCorrectionParameters{
-				.param1 = gamma,
-				.param2 = 1.0f,
-				.param3 = 1.0f / gamma,
-			},
+			.ColorCorrectionParams = gamma_params,
 			.Subpass = 0,
-			.useStaticColorCorrectionsParams = false,
+			.UseStaticColorCorrectionsParams = false,
 			.UseDynamicRendering = _render_pass ? false : true,
 			.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
@@ -234,6 +231,10 @@ namespace vkl
 			},
 			.CheckVkResultFn = check_vk_result,
 		};
+
+#ifdef IMGUI_HAS_VIEWPORT
+		
+#endif
 		
 		ImGui_ImplVulkan_Init(&ii);
 		ImGui_ImplVulkan_CreateFontsTexture();
@@ -318,21 +319,22 @@ namespace vkl
 
 		}
 
+		const VkSurfaceFormatKHR surface_format = _target_window->swapchain()->instance()->format();
 		_imgui_init_format = _target_window->swapchain()->instance()->createInfo().imageFormat;
 		const ColorCorrectionInfo cci = _target_window->getColorCorrectionInfo();
 		std::memcpy(&_color_correction_info.params, &cci.params, sizeof(ColorCorrectionParams));
+		
+		ImGui_ImplVulkan_ColorCorrectionParameters imgui_params;
+		std::memset(&imgui_params, 0, sizeof(ImGui_ImplVulkan_ColorCorrectionParameters));
+		imgui_params.param1 = cci.params.gamma.gamma;
+		imgui_params.param2 = cci.params.gamma.exposure;
+		// Hax, the GUI is too dark in this mode with default exposure
+		if (_imgui_init_format == VK_FORMAT_R16G16B16A16_SFLOAT && cci.mode == ColorCorrectionMode::Gamma)
 		{
-			ImGui_ImplVulkan_ColorCorrectionParameters imgui_params;
-			std::memset(&imgui_params, 0, sizeof(ImGui_ImplVulkan_ColorCorrectionParameters));
-			imgui_params.param1 = cci.params.gamma.gamma;
-			imgui_params.param2 = cci.params.gamma.exposure;
-			// Hax, the GUI is too dark in this mode with default exposure
-			if (_imgui_init_format == VK_FORMAT_R16G16B16A16_SFLOAT && cci.mode == ColorCorrectionMode::Gamma)
-			{
-				imgui_params.param2 *= 2;		
-			}
-			ImGui_ImplVulkan_SetMainColorCorrectionParams(imgui_params);
+			imgui_params.param2 *= 2;		
 		}
+		ImGui_ImplVulkan_SetMainColorCorrectionParams(imgui_params);
+		
 
 		if (cci.mode != _color_correction_info.mode)
 		{
@@ -346,13 +348,21 @@ namespace vkl
 			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
 			vkDeviceWaitIdle(device());
 			ImGui_ImplVulkan_MainPipelineCreateInfo info{
-				.renderPass = vk_render_pass,
-				.subpass = 0,
+				.RenderPass = vk_render_pass,
+				.Subpass = 0,
 				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-				.colorCorrectionMethod = Convert(_color_correction_info.mode),
+				.ColorCorrectionMethod = Convert(_color_correction_info.mode),
 			};
 			ImGui_ImplVulkan_ReCreateMainPipeline(info);
 			_re_create_imgui_pipeline = false;
+#ifdef IMGUI_HAS_VIEWPORT
+			ImGui_ImplVulkan_SecondaryViewportInfo vp_info{
+				.SurfaceFormat = surface_format,
+				.ColorCorrectionMethod = info.ColorCorrectionMethod,
+				.ColorCorrectionParams = &imgui_params,
+			};
+			ImGui_ImplVulkan_RequestSecondaryViewportsChanges(vp_info);
+#endif
 		}
 
 		return res;
