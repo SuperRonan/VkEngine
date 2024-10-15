@@ -248,22 +248,22 @@ namespace vkl
 
 		if (gamepad)
 		{
-			delta.movement.x += gamepad->getAxis(SDL_CONTROLLER_AXIS_LEFTX).current;
-			delta.movement.z -= gamepad->getAxis(SDL_CONTROLLER_AXIS_LEFTY).current;
+			delta.movement.x += gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFTX).current;
+			delta.movement.z -= gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFTY).current;
 
-			if (gamepad->getButton(SDL_CONTROLLER_BUTTON_A).currentlyPressed())
+			if (gamepad->getButton(SDL_GAMEPAD_BUTTON_LABEL_A).currentlyPressed())
 			{
 				delta.movement.y += 1;
 			}
-			if (gamepad->getButton(SDL_CONTROLLER_BUTTON_B).currentlyPressed())
+			if (gamepad->getButton(SDL_GAMEPAD_BUTTON_LABEL_B).currentlyPressed())
 			{
 				delta.movement.y -= 1;
 			}
 
-			delta.angle.x += gamepad->getAxis(SDL_CONTROLLER_AXIS_RIGHTX).current * dt * _joystick_sensitivity;
-			delta.angle.y += gamepad->getAxis(SDL_CONTROLLER_AXIS_RIGHTY).current * dt * _joystick_sensitivity;
+			delta.angle.x += gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHTX).current * dt * _joystick_sensitivity;
+			delta.angle.y += gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHTY).current * dt * _joystick_sensitivity;
 
-			float fov_zoom = gamepad->getAxis(SDL_CONTROLLER_AXIS_TRIGGERLEFT).current - gamepad->getAxis(SDL_CONTROLLER_AXIS_TRIGGERRIGHT).current;
+			float fov_zoom = gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER).current - gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER).current;
 			delta.fov *= exp(fov_zoom * _fov_sensitivity * dt * 1e1);
 		}
 

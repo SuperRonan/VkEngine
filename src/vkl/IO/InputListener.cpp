@@ -1,7 +1,7 @@
 #include <vkl/IO/InputListener.hpp>
-#include <SDL_mouse.h>
-#include <SDL_keyboard.h>
-#include <SDL_gamecontroller.h>
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_gamepad.h>
 
 namespace vkl
 {
@@ -17,7 +17,7 @@ namespace vkl
 
 	void KeyboardStateListener::update()
 	{
-		const uint8_t * sdl_keys = SDL_GetKeyboardState(nullptr);
+		const bool * sdl_keys = SDL_GetKeyboardState(nullptr);
 		const auto queryKeys = [&](int begin, int end)
 		{
 			for (int k = begin; k < end; ++k)
@@ -34,7 +34,7 @@ namespace vkl
 	{	
 		_buttons.resize(SDL_BUTTON_X2 + 1);
 
-		int x, y;
+		float x, y;
 		SDL_GetMouseState(&x, &y);
 		_mouse_pos = glm::vec2(x, y);
 
@@ -50,22 +50,23 @@ namespace vkl
 	bool MouseEventListener::eventIsRelevent(SDL_Event const& event) const
 	{
 		bool res = false;
-		res |= event.type == SDL_MOUSEMOTION;
-		res |= event.type == SDL_MOUSEBUTTONDOWN;
-		res |= event.type == SDL_MOUSEBUTTONUP;
-		res |= event.type == SDL_MOUSEWHEEL;
+		res |= event.type == SDL_EVENT_MOUSE_MOTION;
+		res |= event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+		res |= event.type == SDL_EVENT_MOUSE_BUTTON_UP;
+		res |= event.type == SDL_EVENT_MOUSE_WHEEL;
 		return res;
 	}
 
 	void MouseEventListener::processEventAssumeRelevent(SDL_Event const& event) 
 	{
-		if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
+		if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP)
 		{
 			if (event.button.button < _buttons.size())
 			{
-				_buttons[event.button.button].latest_event_value = event.button.state;
+				int value = event.button.down ? 1 : 0;
+				_buttons[event.button.button].latest_event_value = value;
 				glm::vec2 pos = glm::vec2(event.button.x, event.button.y);
-				if (event.type == SDL_MOUSEBUTTONDOWN)
+				if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
 				{
 					_buttons[event.button.button].pressed_pos = pos;
 				}
@@ -75,16 +76,16 @@ namespace vkl
 				}
 			}
 		}
-		else if (event.type == SDL_MOUSEMOTION)
+		else if (event.type == SDL_EVENT_MOUSE_MOTION)
 		{
 			glm::vec2 pos = glm::vec2(event.motion.x, event.motion.y);
 			glm::vec2 rel = glm::vec2(event.motion.xrel, event.motion.yrel);
 			_latest_event_pos = pos;
 			_event_motion_accumulation += rel;
 		}
-		else if (event.type == SDL_MOUSEWHEEL)
+		else if (event.type == SDL_EVENT_MOUSE_WHEEL)
 		{
-			glm::vec2 event_scroll = glm::vec2(event.wheel.preciseX, event.wheel.preciseY);
+			glm::vec2 event_scroll = glm::vec2(event.wheel.x, event.wheel.y);
 			_event_scroll_accumulation += event_scroll;
 		}
 	}
@@ -93,7 +94,7 @@ namespace vkl
 	{
 		_focus = SDL_GetMouseFocus();
 
-		int x, y;
+		float x, y;
 		uint32_t buttons_bits = SDL_GetMouseState(&x, &y);
 		// Compare with _latest_event_pos
 		_mouse_pos << glm::vec2(x, y);
@@ -112,12 +113,14 @@ namespace vkl
 	}
 	
 
-	SDL_GameController* GamepadListener::FindController()
+	SDL_Gamepad* GamepadListener::FindController()
 	{
-		SDL_GameController* res = nullptr;
-		for (int i = 0; i < SDL_NumJoysticks(); i++) {
-			if (SDL_IsGameController(i)) {
-				res = SDL_GameControllerOpen(i);
+		int count;
+		SDL_JoystickID * ids = SDL_GetGamepads(&count);
+		SDL_Gamepad* res = nullptr;
+		for (int i = 0; i < count; i++) {
+			if (SDL_IsGamepad(ids[i])) {
+				res = SDL_OpenGamepad(ids[i]);
 				break;
 			}
 		}
@@ -132,15 +135,16 @@ namespace vkl
 
 		if (_sdl_handle)
 		{
-			std::cout << "Connected to controller: " << SDL_GameControllerName(_sdl_handle) << std::endl;
+			// TODO use logger
+			std::cout << "Connected to controller: " << SDL_GetGamepadName(_sdl_handle) << std::endl;
 		}
 
-		_buttons.resize(SDL_CONTROLLER_BUTTON_MAX);
+		_buttons.resize(SDL_GAMEPAD_BUTTON_COUNT);
 		for (int b = 0; b < _buttons.size(); ++b)
 		{
 			_buttons[b].state = 0;
 		}
-		_axis.resize(SDL_CONTROLLER_AXIS_MAX);
+		_axis.resize(SDL_GAMEPAD_AXIS_COUNT);
 		for (int a = 0; a < _axis.size(); ++a)
 		{
 			_axis[a] = 0;
@@ -153,13 +157,13 @@ namespace vkl
 		bool res = false;
 		switch (event.type)
 		{
-			case SDL_CONTROLLERDEVICEADDED:
-			case SDL_CONTROLLERDEVICEREMOVED:
+			case SDL_EVENT_GAMEPAD_ADDED:
+			case SDL_EVENT_GAMEPAD_REMOVED:
 				res = true;
 			break;
-			case SDL_CONTROLLERBUTTONDOWN:
-			case SDL_CONTROLLERBUTTONUP:
-			case SDL_CONTROLLERAXISMOTION:
+			case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+			case SDL_EVENT_GAMEPAD_BUTTON_UP:
+			case SDL_EVENT_GAMEPAD_AXIS_MOTION:
 				res = true;
 			break;
 		}
@@ -170,21 +174,23 @@ namespace vkl
 	{
 		switch (event.type)
 		{
-		case SDL_CONTROLLERDEVICEADDED:
+		case SDL_EVENT_GAMEPAD_ADDED:
 		{
 			if (!_sdl_handle)
 			{
-				_sdl_handle = SDL_GameControllerOpen(event.cdevice.which);
-				std::cout << "Connected to controller " << SDL_GameControllerName(_sdl_handle) << std::endl;
+				_sdl_handle = SDL_OpenGamepad(event.gdevice.which);
+				// TODO use logger
+				std::cout << "Connected to controller " << SDL_GetGamepadName(_sdl_handle) << std::endl;
 			}
 		}
 		break;
-		case SDL_CONTROLLERDEVICEREMOVED:
+		case SDL_EVENT_GAMEPAD_REMOVED:
 		{
-			if (_sdl_handle && event.cdevice.which == SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(_sdl_handle)))
+			if (_sdl_handle && event.gdevice.which == SDL_GetJoystickID(SDL_GetGamepadJoystick(_sdl_handle)))
 			{
+				// TODO use logger
 				std::cout << "Lost Controller!" << std::endl; 
-				SDL_GameControllerClose(_sdl_handle);
+				SDL_CloseGamepad(_sdl_handle);
 				_sdl_handle = FindController();
 			}
 		}
@@ -198,12 +204,12 @@ namespace vkl
 		{
 			for (int b = 0; b < _buttons.size(); ++b)
 			{
-				int button_state = SDL_GameControllerGetButton(_sdl_handle, (SDL_GameControllerButton)b);
+				int button_state = SDL_GetGamepadButton(_sdl_handle, (SDL_GamepadButton)b);
 				_buttons[b] << button_state;
 			}
 			for (int a = 0; a < _axis.size(); ++a)
 			{
-				int value = SDL_GameControllerGetAxis(_sdl_handle, (SDL_GameControllerAxis)a);
+				sint16_t value = SDL_GetGamepadAxis(_sdl_handle, (SDL_GamepadAxis)a);
 				float f = float(value) / float(32768);
 				if (std::abs(f) < _deadzone)
 				{

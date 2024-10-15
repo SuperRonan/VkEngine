@@ -242,7 +242,7 @@ namespace vkl
 					SDL_Event event;
 					while (SDL_PollEvent(&event))
 					{
-						ImGui_ImplSDL2_ProcessEvent(&event);
+						ImGui_ImplSDL3_ProcessEvent(&event);
 						if(!imgui_io.WantCaptureKeyboard)
 						{
 						}

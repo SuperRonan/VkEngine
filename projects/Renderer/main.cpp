@@ -401,7 +401,7 @@ namespace vkl
 			//		std::cout << "Joystick " << jid << ": " << glfwGetJoystickName(jid) << std::endl;
 			//	}
 			//}
-
+			
 			KeyboardStateListener keyboard;
 			MouseEventListener mouse;
 			GamepadListener gamepad;
@@ -449,7 +449,7 @@ namespace vkl
 						bool forward_keyboard_event = true;
 						if (ImGuiIsEnabled())
 						{
-							ImGui_ImplSDL2_ProcessEvent(&event);
+							ImGui_ImplSDL3_ProcessEvent(&event);
 							forward_mouse_event = !imgui_io->WantCaptureMouse;
 							forward_keyboard_event = !imgui_io->WantCaptureKeyboard;
 						}

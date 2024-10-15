@@ -87,7 +87,7 @@ namespace vkl
 		//	w->_window->setSize(static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y));
 		//};
 		assert(!!_main_window);
-		ImGui_ImplSDL2_InitForVulkan(_main_window->handle());
+		ImGui_ImplSDL3_InitForVulkan(_main_window->handle());
 		//ImGui_ImplWin32_Init(glfwGetWin32Window(main_window->handle()));
 	}
 
@@ -140,7 +140,7 @@ namespace vkl
 	{
 		if (ImGuiIsEnabled())
 		{
-			ImGui_ImplSDL2_Shutdown();
+			ImGui_ImplSDL3_Shutdown();
 
 			if (_imgui_ctx)
 			{

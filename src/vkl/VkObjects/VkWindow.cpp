@@ -6,15 +6,19 @@
 #include <algorithm>
 #include <format>
 
-#include <SDL_video.h>
-#include <SDL_syswm.h>
+#include <SDL3/SDL_video.h>
 
 namespace vkl
 {
+
+#define SDL_WINDOW_FULLSCREEN_DESKTOP (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS)
+
 	void VkWindow::frameBufferResizeCallback(SDL_Window* window, int width, int height)
 	{
-		VkWindow* vk_window = reinterpret_cast<VkWindow*>(SDL_GetWindowData(window, nullptr));
-		vk_window->_sdl_resized = true;
+		NOT_YET_IMPLEMENTED;
+		//
+		//VkWindow* vk_window = reinterpret_cast<VkWindow*>(SDL_GetWindowData(window, nullptr));
+		//vk_window->_sdl_resized = true;
 	}
 
 
@@ -23,13 +27,14 @@ namespace vkl
 #if _WIN32
 		// Prevent flickering when changing focus in fullscreen
 		// Thanks to http://forum.lwjgl.org/index.php?topic=4785.0
-		SDL_SysWMinfo info;
-		SDL_VERSION(&info.version);
-		SDL_GetWindowWMInfo(_window, &info);
-		HWND hwnd = info.info.win.window;
-		LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
-		style &= ~WS_POPUP;
-		SetWindowLongPtr(hwnd, GWL_STYLE, style);
+		// SDL3 appears to handle this natively
+		//SDL_SysWMinfo info;
+		//SDL_VERSION(&info.version);
+		//SDL_GetWindowWMInfo(_window, &info);
+		//HWND hwnd = info.info.win.window;
+		//LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
+		//style &= ~WS_POPUP;
+		//SetWindowLongPtr(hwnd, GWL_STYLE, style);
 #endif
 	}
 
@@ -50,7 +55,7 @@ namespace vkl
 			flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 		break;
 		}
-		_window = SDL_CreateWindow(name().c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _width, _height, flags);
+		_window = SDL_CreateWindow(name().c_str(), _width, _height, flags);
 
 		if (_window_mode != Mode::Windowed)
 		{
@@ -407,7 +412,7 @@ namespace vkl
 
 	bool VkWindow::eventIsRelevent(SDL_Event const& event) const
 	{
-		return (event.type == SDL_EventType::SDL_WINDOWEVENT) && (SDL_GetWindowFromID(event.window.windowID) == _window);
+		return (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST) && (SDL_GetWindowFromID(event.window.windowID) == _window);
 	}
 
 	bool VkWindow::processEventCheckRelevent(SDL_Event const& event)
@@ -424,12 +429,12 @@ namespace vkl
 	void VkWindow::processEventAssumeRelevent(SDL_Event const& event)
 	{
 		SDL_WindowEvent const& wevent = event.window;
-		switch (wevent.event)
+		switch (event.type)
 		{
-		case SDL_WindowEventID::SDL_WINDOWEVENT_CLOSE:
+		case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
 			_should_close = true;
 			break;
-		case SDL_WINDOWEVENT_RESIZED:
+		case SDL_EVENT_WINDOW_RESIZED:
 			_desired_resolution = glm::ivec2(wevent.data1, wevent.data2);
 			_sdl_resized = true;
 		break;
@@ -617,31 +622,38 @@ namespace vkl
 		return res;
 	}
 
-	std::string GetSDLDisplayModeAsStringWithFormat(SDL_DisplayMode const dm)
+	std::string GetSDLDisplayModeAsStringWithFormat(SDL_DisplayMode const& dm)
 	{
 		const char * fmt_name = SDL_GetPixelFormatName(dm.format);
 		std::string res = std::format("{}, {}x{} @ {}Hz", fmt_name, dm.w, dm.h, dm.refresh_rate);
 		return res;
 	}
 
-	std::string GetSDLDisplayModeAsString(SDL_DisplayMode const dm)
+	std::string GetSDLDisplayModeAsString(SDL_DisplayMode const& dm)
 	{
 		std::string res = std::format("{}x{} @ {}Hz", dm.w, dm.h, dm.refresh_rate);
 		return res;
 	}
-
-	std::string GetSDLDisplayModeAsString(SDL_Window * w)
+	
+	std::string GetSDLDisplayModeAsString(const SDL_DisplayMode * dm, bool with_format = false)
 	{
-		SDL_DisplayMode dm;
-		SDL_GetWindowDisplayMode(w, &dm);
-		return GetSDLDisplayModeAsString(dm);
-	}
-
-	std::string GetSDLDisplayModeAsString(int display_index, int mode_index)
-	{
-		SDL_DisplayMode dm;
-		SDL_GetDisplayMode(display_index, mode_index, &dm);
-		return GetSDLDisplayModeAsString(dm);
+		std::string res;
+		if (dm)
+		{
+			if (with_format)
+			{
+				res = GetSDLDisplayModeAsStringWithFormat(*dm);
+			}
+			else
+			{
+				res = GetSDLDisplayModeAsString(*dm);
+			}
+		}
+		else
+		{
+			res = "No display mode!";
+		}
+		return res;
 	}
 
 	void VkWindow::declareGui(GuiContext & ctx)
@@ -715,15 +727,19 @@ namespace vkl
 			{
 				ImGui::BeginDisabled();
 			}
-			if (ImGui::BeginCombo("Display Mode", GetSDLDisplayModeAsString(_window).c_str()))
+			if (ImGui::BeginCombo("Display Mode", GetSDLDisplayModeAsString(SDL_GetWindowFullscreenMode(_window)).c_str()))
 			{
-				int display_index = SDL_GetWindowDisplayIndex(_window);
-				int num_display_mode = SDL_GetNumDisplayModes(display_index);
-				for (int i = 0; i < num_display_mode; ++i)
+				SDL_DisplayID display_index = SDL_GetDisplayForWindow(_window);
+				int num_display_mode;
+				SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(display_index, &num_display_mode);
+				if (modes)
 				{
-					if (ImGui::Selectable(GetSDLDisplayModeAsString(display_index, i).c_str(), _desired_display_mode_index == i))
+					for (int i = 0; i < num_display_mode; ++i)
 					{
-						_desired_display_mode_index = i;
+						if (ImGui::Selectable(GetSDLDisplayModeAsString(*modes[i]).c_str(), _desired_display_mode_index == i))
+						{
+							_desired_display_mode_index = i;
+						}
 					}
 				}
 				ImGui::EndCombo();
@@ -733,8 +749,9 @@ namespace vkl
 				ImGui::EndDisabled();
 			}
 
-			int display_index = SDL_GetWindowDisplayIndex(_window);
-			int num_displays = SDL_GetNumVideoDisplays();
+			SDL_DisplayID display_index = SDL_GetDisplayForWindow(_window);
+			int num_displays;
+			const SDL_DisplayID* displays = SDL_GetDisplays(&num_displays);
 			const bool display_read_only = (_window_mode == Mode::Windowed) || true;
 			if (display_read_only)
 			{

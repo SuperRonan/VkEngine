@@ -24,6 +24,17 @@ set(VK_ENGINE_LINK_RELEASE_LIBS "")
 set(VK_ENGINE_LINK_DIRS "")
 set(VK_ENGINE_DEFINITIONS "")
 
+add_definitions(-DNOMINMAX)
+add_compile_definitions($<IF:$<CONFIG:Debug>,_ITERATOR_DEBUG_LEVEL=2,_ITERATOR_DEBUG_LEVEL=0>)
+
+add_compile_definitions($<IF:$<CONFIG:Debug>,VKL_BUILD_DEBUG=1,VKL_BUILD_DEBUG=0>)
+add_compile_definitions($<IF:$<CONFIG:FastDebug>,VKL_BUILD_FAST_DEBUG=1,VKL_BUILD_FAST_DEBUG=0>)
+add_compile_definitions($<IF:$<CONFIG:RelWithDebInfo>,VKL_BUILD_RELEASE_WITH_DEBUG_INFO=1,VKL_BUILD_RELEASE_WITH_DEBUG_INFO=0>)
+add_compile_definitions($<IF:$<CONFIG:Release>,VKL_BUILD_RELEASE=1,VKL_BUILD_RELEASE=0>)
+add_compile_definitions($<IF:$<CONFIG:MinSizeRel>,VKL_BUILD_MIN_SIZE_RELEASE=1,VKL_BUILD_MIN_SIZE_RELEASE=0>)
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
 # ThatLib
 add_subdirectory(ext/thatlib)
 set(THAT_LIB "thatlib")
@@ -32,11 +43,11 @@ set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${THAT_LIB})
 set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${THAT_LIB_INCLUDE_DIR})
 
 
-# SDL (2)
+# SDL
 # TODO Maybe not require SDL -> we can still use the engine, but without any functionality provided by SDL 
 set(SDL_STATIC ON)
 set(SDL_SHARED OFF)
-set(VKL_SDL_VERSION 2)
+set(VKL_SDL_VERSION 3)
 add_subdirectory(ext/SDL)
 # set(SDL_DIRECTX OFF)
 # set(SDL_OPENGL OFF)
@@ -45,9 +56,9 @@ add_subdirectory(ext/SDL)
 # set(SDL_RENDERD3D OFF)
 # set(SDL_VULKAN ON)
 set(SDL_LIBRARIES SDL${VKL_SDL_VERSION}-static)
-set(SDL_INCLUDE_DIRS ext/SDL/include)
 set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${SDL_LIBRARIES})
-set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${SDL_INCLUDE_DIRS})
+#set(SDL_INCLUDE_DIRS ext/SDL/include)
+#set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${SDL_INCLUDE_DIRS})
 
 # GLM
 add_subdirectory(ext/glm)
@@ -138,7 +149,11 @@ file(GLOB IMGUI_SOURCES
 "${IMGUI_DIR}backends/imgui_impl_win32.cpp"
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES} ${SDL_INCLUDE_DIRS})
+target_compile_definitions(imgui PRIVATE )
+target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${VULKAN_INCLUDES})
+#target_include_directories(imgui PUBLIC ${SDL_INCLUDE_DIRS})
+target_link_libraries(imgui PUBLIC ${SDL_LIBRARIES})
+target_compile_definitions(imgui PRIVATE "SDL_ENABLE_OLD_NAMES")
 
 set(IMGUI_LIBS imgui)
 
@@ -168,16 +183,7 @@ set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${ARGPARSE_INCLUDE_DIRS})
 # VkEngine
 
 
-add_definitions(-DNOMINMAX)
-add_compile_definitions($<IF:$<CONFIG:Debug>,_ITERATOR_DEBUG_LEVEL=2,_ITERATOR_DEBUG_LEVEL=0>)
 
-add_compile_definitions($<IF:$<CONFIG:Debug>,VKL_BUILD_DEBUG=1,VKL_BUILD_DEBUG=0>)
-add_compile_definitions($<IF:$<CONFIG:FastDebug>,VKL_BUILD_FAST_DEBUG=1,VKL_BUILD_FAST_DEBUG=0>)
-add_compile_definitions($<IF:$<CONFIG:RelWithDebInfo>,VKL_BUILD_RELEASE_WITH_DEBUG_INFO=1,VKL_BUILD_RELEASE_WITH_DEBUG_INFO=0>)
-add_compile_definitions($<IF:$<CONFIG:Release>,VKL_BUILD_RELEASE=1,VKL_BUILD_RELEASE=0>)
-add_compile_definitions($<IF:$<CONFIG:MinSizeRel>,VKL_BUILD_MIN_SIZE_RELEASE=1,VKL_BUILD_MIN_SIZE_RELEASE=0>)
-
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 
 

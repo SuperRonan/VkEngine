@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vkl/VkObjects/VkWindow.hpp>
+#include <SDL3/SDL_events.h>
 
 namespace vkl
 {
@@ -44,12 +45,14 @@ namespace vkl
 
 		bool currentlyPressed() const
 		{
-			return state.current == SDL_PRESSED;
+			// TODO
+			return state.current != 0;
 		}
 
 		bool currentlyReleased() const
 		{
-			return state.current == SDL_RELEASED;
+			// TODO
+			return state.current != 0;
 		}
 
 		bool justPressed() const
@@ -218,7 +221,7 @@ namespace vkl
 	{
 	protected:
 
-		SDL_GameController * _sdl_handle = nullptr;
+		SDL_Gamepad * _sdl_handle = nullptr;
 
 		std::vector<KeyState> _buttons;
 		
@@ -227,7 +230,7 @@ namespace vkl
 
 	public:
 
-		static SDL_GameController* FindController();
+		static SDL_Gamepad* FindController();
 
 		GamepadListener();
 

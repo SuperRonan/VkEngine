@@ -4,7 +4,7 @@
 #include <vkl/VkObjects/VkWindow.hpp>
 
 #include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_sdl2.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_win32.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
@@ -41,7 +41,7 @@ namespace vkl
 		GuiContext * beginImGuiFrame()
 		{			
 			ImGui_ImplVulkan_NewFrame();
-			ImGui_ImplSDL2_NewFrame();
+			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
 			return &_gui_context;
 		}

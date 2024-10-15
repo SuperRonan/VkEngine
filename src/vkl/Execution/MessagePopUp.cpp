@@ -6,8 +6,6 @@
 #include <iostream>
 #include <cassert>
 
-#include <SDL2/SDL_syswm.h>
-
 #define MESSAGE_POPUP_USE_STANDALONE 0
 #define MESSAGE_POPUP_USE_SDL 1
 #define MESSAGE_POPUP_USE_WINDOWS 2
@@ -230,8 +228,8 @@ namespace vkl
 		for (size_t i = 0; i < static_cast<size_t>(data.numbuttons); ++i)
 		{
 			SDL_MessageBoxButtonData & b = sdl_buttons[i];
-			b.buttonid = static_cast<int>(_buttons[i]);
-			b.text = Sdl_Button_Labels[b.buttonid].data();
+			b.buttonID = static_cast<int>(_buttons[i]);
+			b.text = Sdl_Button_Labels[b.buttonID].data();
 			b.flags = 0;
 			if(i == 0)
 			{

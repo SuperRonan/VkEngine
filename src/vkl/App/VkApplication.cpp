@@ -24,6 +24,7 @@
 #include <set>
 #include <limits>
 #include <fstream>
+#include <span>
 
 
 namespace vkl
@@ -216,10 +217,8 @@ namespace vkl
 	std::set<std::string_view> VkApplication::getInstanceExtensions()
 	{
 		uint32_t sdl_ext_count = 0;
-		SDL_Vulkan_GetInstanceExtensions(nullptr, &sdl_ext_count, nullptr);
-		MyVector<const char*> extensions(sdl_ext_count, nullptr);
-		SDL_Vulkan_GetInstanceExtensions(nullptr, &sdl_ext_count, extensions.data());
-		std::set<std::string_view> res(extensions.begin(), extensions.end());
+		const char* const * sdl_extensions_ptr = SDL_Vulkan_GetInstanceExtensions(&sdl_ext_count);
+		std::set<std::string_view> res(sdl_extensions_ptr, sdl_extensions_ptr + sdl_ext_count);
 		
 		if (_options.enable_validation || _options.enable_object_naming || _options.enable_command_buffer_labels)
 		{
@@ -1037,8 +1036,8 @@ namespace vkl
 		uint32_t init = 0;
 		init |= SDL_INIT_VIDEO;
 		init |= SDL_INIT_EVENTS;
-		init |= SDL_INIT_GAMECONTROLLER;
-		if (SDL_Init(init) < 0)
+		init |= SDL_INIT_GAMEPAD;
+		if (!SDL_Init(init))
 		{
 			std::cout << SDL_GetError() << std::endl;
 			exit(-1);
