@@ -40,7 +40,7 @@ namespace vkl
 
 	void VkWindow::initSDL()
 	{
-		uint32_t flags = 0;
+		SDL_WindowFlags flags = 0;
 		flags |= SDL_WINDOW_VULKAN;
 		if (_resizeable)
 		{
@@ -172,26 +172,79 @@ namespace vkl
 			const DetailedVkFormat detailed_format = DetailedVkFormat::Find(format);
 			const VkColorSpaceKHR color_space = si.createInfo().imageColorSpace;
 
-			// TODO
-			const float sdl_window_gamma = 2.2;//SDL_GetWindowBrightness(_window);
+			ColorCorrectionMode & _mode = _color_correction.mode;
+			float & _gamma = _color_correction.params.gamma;
+			float & _exposure = _color_correction.params.exposure;
 
-			if (detailed_format.color.type == DetailedVkFormat::Type::SRGB)
+			_gamma = 1.0f;
+			_exposure = 1.0f;
+
+			switch (color_space)
 			{
-				_color_correction_mode = ColorCorrectionMode::Gamma;
-				_gamma_color_correction_params.gamma = sdl_window_gamma;
-			}
-			else if (detailed_format.color.type == DetailedVkFormat::Type::SFLOAT)
-			{
-				_color_correction_mode = ColorCorrectionMode::Gamma;
-				_gamma_color_correction_params.gamma = sdl_window_gamma;
-			}
-			else if (color_space == VK_COLOR_SPACE_HDR10_HLG_EXT || color_space == VK_COLOR_SPACE_HDR10_ST2084_EXT)
-			{
-				_color_correction_mode = ColorCorrectionMode::HLG;
-			}
-			else
-			{
-				_color_correction_mode = ColorCorrectionMode::PassThrough;
+			case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:	{
+				if (detailed_format.color.type == DetailedVkFormat::Type::SRGB)
+				{
+					_mode = ColorCorrectionMode::None;
+					_gamma = 1.0f;
+				}
+				else
+				{
+					_mode = ColorCorrectionMode::sRGB;
+					_gamma = 1.0 / 2.4;
+				}
+			} break;
+			case VK_COLOR_SPACE_DISPLAY_P3_NONLINEAR_EXT:	{
+				_mode = ColorCorrectionMode::DisplayP3;
+			} break;
+			case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:	{
+				_mode = ColorCorrectionMode::None;
+				if (detailed_format.color.type == DetailedVkFormat::Type::SFLOAT || detailed_format.color.type == DetailedVkFormat::Type::UFLOAT)
+				{
+					_exposure *= 3;
+				}
+			} break;
+			case VK_COLOR_SPACE_DISPLAY_P3_LINEAR_EXT:	{
+				_mode = ColorCorrectionMode::PassThrough; // TODO check
+			} break;
+			case VK_COLOR_SPACE_DCI_P3_NONLINEAR_EXT:	{
+				_mode = ColorCorrectionMode::DCI_P3;
+			} break;
+			case VK_COLOR_SPACE_BT709_LINEAR_EXT:	{
+				_mode = ColorCorrectionMode::PassThrough; // TODO check
+			} break;
+			case VK_COLOR_SPACE_BT709_NONLINEAR_EXT:	{
+				_mode = ColorCorrectionMode::ITU;
+				_gamma = 1.0 / 2.2;
+			} break;
+			case VK_COLOR_SPACE_BT2020_LINEAR_EXT:	{
+				_mode = ColorCorrectionMode::PassThrough; // TODO check
+			} break;
+			case VK_COLOR_SPACE_HDR10_ST2084_EXT:	{
+				_mode = ColorCorrectionMode::PerceptualQuantization;
+				_exposure *= 128 * 2;
+			} break;
+			case VK_COLOR_SPACE_DOLBYVISION_EXT:	{
+				_mode = ColorCorrectionMode::HybridLogGamma;
+			} break;
+			case VK_COLOR_SPACE_HDR10_HLG_EXT:	{
+				_mode = ColorCorrectionMode::HybridLogGamma;
+			} break;
+			case VK_COLOR_SPACE_ADOBERGB_LINEAR_EXT:	{
+				_mode = ColorCorrectionMode::PassThrough; // TODO check
+			} break;
+			case VK_COLOR_SPACE_ADOBERGB_NONLINEAR_EXT:	{
+				_mode = ColorCorrectionMode::AdobeRGB;
+			} break;
+			case VK_COLOR_SPACE_PASS_THROUGH_EXT:	{
+				_mode = ColorCorrectionMode::PassThrough; // TODO check
+			} break;
+			case VK_COLOR_SPACE_EXTENDED_SRGB_NONLINEAR_EXT:	{
+				_mode = ColorCorrectionMode::scRGB;
+				_gamma = 1.0 / 2.4;
+			} break;
+			case VK_COLOR_SPACE_DISPLAY_NATIVE_AMD:	{
+				_mode = ColorCorrectionMode::PassThrough; // TODO check
+			} break;
 			}
 		}
 	}
@@ -504,9 +557,9 @@ namespace vkl
 		VkSemaphore sem_to_signal = !!semaphore_to_signal ? (VkSemaphore) * semaphore_to_signal : VK_NULL_HANDLE;
 		VkFence fence_to_signal = !!_fence_to_signal ? (VkFence) * _fence_to_signal : VK_NULL_HANDLE;
 		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), *_swapchain->instance(), UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
-		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR)
+		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR || aquire_res == VK_SUBOPTIMAL_KHR)
 		{
-			assert(false);
+			NOT_YET_IMPLEMENTED;
 			return AquireResult();
 		}
 		else if (aquire_res != VK_SUCCESS && aquire_res != VK_SUBOPTIMAL_KHR)
@@ -692,7 +745,7 @@ namespace vkl
 				if (_swapchain)
 				{
 					VkPresentModeKHR pm = _swapchain->instance() ? _swapchain->instance()->createInfo().presentMode :  _swapchain->presentMode().value();
-					ImGui::Text("Format: %s", getVkPresentModeKHRName(pm));
+					ImGui::Text("Present Mode: %s", getVkPresentModeKHRName(pm));
 				}
 			}
 			else
@@ -721,6 +774,8 @@ namespace vkl
 					_target_format = (sd.formats[_gui_formats.index()]);
 				}
 			}
+			float max_brightness = _color_correction.mode == ColorCorrectionMode::PerceptualQuantization ? 1e4 : 10;
+			ImGui::SliderFloat("Brightness", &_brightness, 0, max_brightness, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
 			
 			const bool display_mode_read_only = (_window_mode == Mode::Windowed) || true;
 			if (display_mode_read_only)

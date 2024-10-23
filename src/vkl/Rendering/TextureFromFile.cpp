@@ -54,6 +54,12 @@ namespace vkl
 		if (!_path.empty())
 		{
 			_host_image = that::img::io::ReadFormatedImage(_path);
+			if (_host_image.format().type == that::ElementType::UNORM)
+			{
+				that::FormatInfo new_format = _host_image.format();
+				new_format.type = that::ElementType::sRGB;
+				_host_image.setFormat(new_format, _host_image.rowMajor());
+			}
 			_original_format = _host_image.format();
 
 			if (!_host_image.empty())

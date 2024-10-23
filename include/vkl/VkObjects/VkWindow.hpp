@@ -21,30 +21,33 @@ namespace vkl
 	enum class ColorCorrectionMode
 	{
 		PassThrough = 0,
-		None = 0,
-		Gamma = 1,
-		HybridLogGamma = 2,
+		None = PassThrough,
+		Id = None,
+		ITU,
+		sRGB,
+		scRGB,
+		BT1886,
+		HybridLogGamma,
 		HLG = HybridLogGamma,
-	};
-
-	struct GammaColorCorrectionParams
-	{
-		float gamma = 1.0;
-		float exposure = 1.0;
-	};
-
-	struct HLGColorCorrectionParams
-	{
-		float white_point = 0.5;
+		PerceptualQuantization,
+		PQ = PerceptualQuantization,
+		DisplayP3,
+		DCI_P3,
+		LegacyNTSC,
+		LegacyPAL,
+		ST240,
+		AdobeRGB,
+		SonySLog,
+		SonySLog2,
+		ACEScc,
+		ACEScct,
+		Gamma,
 	};
 
 	struct ColorCorrectionParams
 	{
-		union
-		{
-			GammaColorCorrectionParams gamma;
-			HLGColorCorrectionParams hlg;
-		};
+		float exposure = 1.0f;
+		float gamma = 1.0f;
 	};
 
 	struct ColorCorrectionInfo
@@ -152,9 +155,8 @@ namespace vkl
 		std::chrono::time_point<std::chrono::system_clock> _present_time_point = std::chrono::system_clock::now();
 		size_t _present_frame = 0;
 
-		ColorCorrectionMode _color_correction_mode = ColorCorrectionMode::None;
-		GammaColorCorrectionParams _gamma_color_correction_params = {};
-		HLGColorCorrectionParams _hlg_color_correction_params = {};
+		ColorCorrectionInfo _color_correction;
+		float _brightness = 1.0f;
 
 		void deduceColorCorrection();
 
@@ -278,17 +280,8 @@ namespace vkl
 
 		ColorCorrectionInfo getColorCorrectionInfo() const
 		{
-			ColorCorrectionInfo res;
-			res.mode = _color_correction_mode;
-			switch (_color_correction_mode)
-			{
-				case ColorCorrectionMode::Gamma:
-					res.params.gamma = _gamma_color_correction_params;
-				break;
-				case ColorCorrectionMode::HybridLogGamma:
-					res.params.hlg = _hlg_color_correction_params;
-				break;
-			}
+			ColorCorrectionInfo res = _color_correction;
+			res.params.exposure *= _brightness;
 			return res;
 		}
 

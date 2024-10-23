@@ -29,7 +29,7 @@
 #include <vkl/Rendering/Scene.hpp>
 #include <vkl/Rendering/SceneLoader.hpp>
 #include <vkl/Rendering/SceneUserInterface.hpp>
-#include <vkl/Rendering/GammaCorrection.hpp>
+#include <vkl/Rendering/ColorCorrection.hpp>
 #include <vkl/Rendering/ImagePicker.hpp>
 #include <vkl/Rendering/ImageSaver.hpp>
 
@@ -106,6 +106,7 @@ namespace vkl
 		{
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
 
+			if(false)
 			{
 				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
 					.app = this,
@@ -239,7 +240,7 @@ namespace vkl
 				for (int i = 0; i < 3; ++i)
 				{
 					glm::vec3 color = glm::vec3(0);
-					color[i] = 10 * 5;
+					color[i] = 10 * 5 * 2;
 					std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
 						.app = this,
 						.name = "SpotLight" + std::to_string(i),
@@ -336,9 +337,9 @@ namespace vkl
 				exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
 			}
 
-			GammaCorrection gamma_correction = GammaCorrection::CI{
+			ColorCorrection color_correction = ColorCorrection::CI{
 				.app = this,
-				.name = "GammaCorrection",
+				.name = "ColorCorrection",
 				.dst = final_image,
 				.sets_layouts = sets_layouts,
 				.target_window = _main_window,
@@ -416,6 +417,9 @@ namespace vkl
 				.resolution = _main_window->extent2D(),
 				.znear = 0.01,
 				.zfar = 100,
+			});
+			camera.update(Camera::CameraDelta{
+				.angle = vec2(glm::pi<float>(), 0),
 			});
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
@@ -495,7 +499,7 @@ namespace vkl
 
 						renderer.declareGui(*gui_ctx);
 
-						gamma_correction.declareGui(*gui_ctx);
+						color_correction.declareGui(*gui_ctx);
 
 						pip.declareGui(*gui_ctx);
 
@@ -566,7 +570,7 @@ namespace vkl
 						frame_counters.update_scene_time = update_scene_tt.tockd().count();
 					}
 					renderer.updateResources(*update_context);
-					gamma_correction.updateResources(*update_context);
+					color_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					image_picker.updateResources(*update_context);
 					image_saver.updateResources(*update_context);
@@ -601,7 +605,7 @@ namespace vkl
 
 					sui->execute(exec_thread, camera);
 
-					gamma_correction.execute(exec_thread);
+					color_correction.execute(exec_thread);
 					
 					pip.execute(exec_thread);
 

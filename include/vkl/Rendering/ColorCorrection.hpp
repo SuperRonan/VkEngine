@@ -8,7 +8,7 @@
 
 namespace vkl
 {
-	class GammaCorrection : public Module
+	class ColorCorrection : public Module
 	{
 	public:
 
@@ -19,6 +19,9 @@ namespace vkl
 		std::string _dst_glsl_format;
 		std::shared_ptr<ImageView> _src = nullptr, _dst = nullptr;
 		std::shared_ptr<Sampler> _sampler = nullptr;
+
+		bool _show_test_card = false;
+		std::shared_ptr<ComputeCommand> _render_test_card = nullptr;
 
 		std::shared_ptr<ComputeCommand> _compute_tonemap = nullptr;
 
@@ -44,8 +47,8 @@ namespace vkl
 		SwapchainInfo _prev_swapchain_info = {};
 
 		ColorCorrectionMode _mode = ColorCorrectionMode::PassThrough;
-		GammaColorCorrectionParams _gamma_params;
-		HLGColorCorrectionParams _hlg_params;
+		float _exposure = 1.0f;
+		float _gamma = 1.0f;
 
 		size_t _plot_samples = 100;
 		size_t _plot_min_radiance = 0;
@@ -69,7 +72,7 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		GammaCorrection(CreateInfo const& ci);
+		ColorCorrection(CreateInfo const& ci);
 
 		void updateResources(UpdateContext & ctx);
 

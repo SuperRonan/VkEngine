@@ -29,7 +29,7 @@
 #include <vkl/Rendering/Scene.hpp>
 #include <vkl/Rendering/SceneLoader.hpp>
 #include <vkl/Rendering/SceneUserInterface.hpp>
-#include <vkl/Rendering/GammaCorrection.hpp>
+#include <vkl/Rendering/ColorCorrection.hpp>
 #include <vkl/Rendering/ImagePicker.hpp>
 #include <vkl/Rendering/ImageSaver.hpp>
 
@@ -166,9 +166,9 @@ namespace vkl
 				.sets_layouts = sets_layouts
 			};
 
-			GammaCorrection gamma_correction = GammaCorrection::CI{
+			ColorCorrection color_correction = ColorCorrection::CI{
 				.app = this,
-				.name = "GammaCorrection",
+				.name = "ColorCorrection",
 				.dst = final_image,
 				.sets_layouts = sets_layouts,
 				.target_window = _main_window,
@@ -276,7 +276,7 @@ namespace vkl
 
 						camera.declareGui(*gui_ctx);
 
-						gamma_correction.declareGui(*gui_ctx);
+						color_correction.declareGui(*gui_ctx);
 
 						pip.declareGui(*gui_ctx);
 
@@ -319,7 +319,7 @@ namespace vkl
 
 					bsdf_viewer.updateResources(*update_context);
 
-					gamma_correction.updateResources(*update_context);
+					color_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					image_saver.updateResources(*update_context);
 					script_resources.update(*update_context);
@@ -343,7 +343,7 @@ namespace vkl
 
 					bsdf_viewer.execute(exec_thread);
 
-					gamma_correction.execute(exec_thread);
+					color_correction.execute(exec_thread);
 					 
 					pip.execute(exec_thread);
 

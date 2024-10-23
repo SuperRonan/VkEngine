@@ -1,4 +1,4 @@
-#include <vkl/Rendering/GammaCorrection.hpp>
+#include <vkl/Rendering/ColorCorrection.hpp>
 #include <imgui/imgui.h>
 #include <vkl/Execution/SamplerLibrary.hpp>
 #include <vkl/VkObjects/DetailedVkFormat.hpp>
@@ -6,7 +6,7 @@
 
 namespace vkl
 {
-	GammaCorrection::GammaCorrection(CreateInfo const& ci):
+	ColorCorrection::ColorCorrection(CreateInfo const& ci):
 		Module(ci.app, ci.name),
 		_src(ci.src),
 		_dst(ci.dst),
@@ -21,7 +21,7 @@ namespace vkl
 		createInternalResources();
 	}
 
-	void GammaCorrection::createInternalResources()
+	void ColorCorrection::createInternalResources()
 	{
 		const bool use_separate_src = _src != _dst;
 		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/ToneMap/";
@@ -60,15 +60,31 @@ namespace vkl
 		_compute_tonemap = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
 			.name = name() + ".shader",
-			.shader_path = folder / "GammaCorrection.comp",
+			.shader_path = folder / "ColorCorrection.comp",
+			.sets_layouts = _sets_layouts,
+			.bindings = bindings,
+			.definitions = definitions,
+		});
+
+
+		_render_test_card = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+			.app = application(),
+			.name = name() + ".RenderTestCard",
+			.shader_path = folder / "RenderTestCard.comp",
+			.extent = _dst->image()->extent(),
+			.dispatch_threads = true,
 			.sets_layouts = _sets_layouts,
 			.bindings = bindings,
 			.definitions = definitions,
 		});
 	}
 
-	void GammaCorrection::updateResources(UpdateContext& ctx)
+	void ColorCorrection::updateResources(UpdateContext& ctx)
 	{
+		if (_show_test_card)
+		{
+			ctx.resourcesToUpdateLater() += _render_test_card;
+		}
 		if (_auto_fit_to_window && _target_window)
 		{
 			SwapchainInfo info{
@@ -79,14 +95,9 @@ namespace vkl
 			{
 				ColorCorrectionInfo info = _target_window->getColorCorrectionInfo();
 				_mode = info.mode;
-				switch (_mode)
+				if (_mode == ColorCorrectionMode::Gamma)
 				{
-					case ColorCorrectionMode::Gamma:
-						_gamma_params = info.params.gamma;
-					break;
-					case ColorCorrectionMode::HLG:
-						_hlg_params = info.params.hlg;
-					break;
+					_gamma = info.params.gamma;
 				}
 			}
 
@@ -98,32 +109,37 @@ namespace vkl
 		ctx.resourcesToUpdateLater() += _compute_tonemap;
 	}
 
-	void GammaCorrection::execute(ExecutionRecorder& exec)
+	void ColorCorrection::execute(ExecutionRecorder& exec)
 	{
+		if (_show_test_card)
+		{
+			exec(_render_test_card);
+		}
+
+		float window_exposure = 1.0;
+		if (_target_window && _auto_fit_to_window)
+		{
+			window_exposure = _target_window->getColorCorrectionInfo().params.exposure;
+		}
+
+		float exposure = _exposure * window_exposure;
+
 		bool enable = false;
 		enable |= (_mode != ColorCorrectionMode::PassThrough);
+		enable |= (exposure != 1.0f);
 		enable |= (_src != _dst);
 		if (enable)
 		{
 			struct PC
 			{
-				union
-				{
-					float exposure;
-					float ref_white;
-				};
+				float exposure;
 				float gamma;
 			};
-			PC pc;
-			if (_mode == ColorCorrectionMode::Gamma)
-			{
-				pc.exposure = _gamma_params.exposure;
-				pc.gamma = _gamma_params.gamma;
-			}
-			else if (_mode == ColorCorrectionMode::HLG)
-			{
-				pc.ref_white = _hlg_params.white_point;
-			}
+			
+			PC pc{
+				.exposure = exposure,
+				.gamma = _gamma,
+			};
 			exec(_compute_tonemap->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _dst->image()->instance()->createInfo().extent,
 				.dispatch_threads = true,
@@ -133,38 +149,16 @@ namespace vkl
 		}
 	}
 
-	float GammaCorrection::computeTransferFunction(float linear) const
+	float ColorCorrection::computeTransferFunction(float linear) const
 	{
-		float res;
+		float res = linear;
 		switch (_mode)
 		{
-			case ColorCorrectionMode::PassThrough:
-				res = linear;
-			break;
-			case ColorCorrectionMode::Gamma:
-				res = std::pow(linear * _gamma_params.exposure, _gamma_params.gamma);
-			break;
-			case ColorCorrectionMode::HLG:
-			{
-				linear *= _hlg_params.white_point;
-				const float a = 0.17883277;
-				const float b = 1.0 - 4.0 * a;
-				const float c = 0.5 - a * std::log(4.0 * a);
-				if (linear <= 1)
-				{
-					res = 0.5 * std::sqrt(linear);
-				}
-				else
-				{
-					res = a * std::log(linear - b) + c;
-				}
-			}
-			break;
 		}
 		return res;
 	}
 
-	void GammaCorrection::declareGui(GuiContext & ctx)
+	void ColorCorrection::declareGui(GuiContext & ctx)
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{
@@ -174,18 +168,62 @@ namespace vkl
 
 			static thread_local ImGuiListSelection gui_mode = ImGuiListSelection::CI{
 				.name = "Mode",
-				.mode = ImGuiListSelection::Mode::RadioButtons,
+				.mode = ImGuiListSelection::Mode::Combo,
 				.same_line = true,
 				.options = {
 					ImGuiListSelection::Option{
 						.name = "None",
 					},
 					ImGuiListSelection::Option{
-						.name = "Gamma",
+						.name = "ITU",
 					},
 					ImGuiListSelection::Option{
-						.name = "HLG",
-						.desc = "Hybrid Log Gamma",
+						.name = "sRGB",
+					},
+					ImGuiListSelection::Option{
+						.name = "scRGB",
+					},
+					ImGuiListSelection::Option{
+						.name = "BT1886",
+					},
+					ImGuiListSelection::Option{
+						.name = "HybridLogGamma",
+					},
+					ImGuiListSelection::Option{
+						.name = "PerceptualQuantization",
+					},
+					ImGuiListSelection::Option{
+						.name = "DisplayP3",
+					},
+					ImGuiListSelection::Option{
+						.name = "DCI_P3",
+					},
+					ImGuiListSelection::Option{
+						.name = "LegacyNTSC",
+					},
+					ImGuiListSelection::Option{
+						.name = "LegacyPAL",
+					},
+					ImGuiListSelection::Option{
+						.name = "ST240",
+					},
+					ImGuiListSelection::Option{
+						.name = "AdobeRGB",
+					},
+					ImGuiListSelection::Option{
+						.name = "SonySLog",
+					},
+					ImGuiListSelection::Option{
+						.name = "SonySLog2",
+					},
+					ImGuiListSelection::Option{
+						.name = "ACEScc",
+					},
+					ImGuiListSelection::Option{
+						.name = "ACEScct",
+					},
+					ImGuiListSelection::Option{
+						.name = "Gamma",
 					},
 				},
 			};
@@ -200,12 +238,16 @@ namespace vkl
 				}
 			}
 
-
-			if (_mode == ColorCorrectionMode::Gamma)
 			{
-				float log_exposure = std::log2(_gamma_params.exposure);
+				float log_exposure = std::log2(_exposure);
 				bool exposure_changed = false;
 				exposure_changed = ImGui::SliderFloat("log2(Exposure)", &log_exposure, -5, 5, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
+				ImGui::SameLine();
+				if (ImGui::Button("0"))
+				{
+					exposure_changed |= true;
+					log_exposure = 0;
+				}
 				ImGui::SameLine();
 				if (ImGui::Button("-"))
 				{
@@ -221,57 +263,56 @@ namespace vkl
 				if (exposure_changed)
 				{
 					changed = true;
-					_gamma_params.exposure = std::exp2f(log_exposure);
+					_exposure = std::exp2f(log_exposure);
 				}
-				ImGui::Text("Exposure: %f", _gamma_params.exposure);
-				//ImGui::Text("Snap to: ");
-				//ImGui::SameLine();
-			
+				ImGui::Text("Exposure: %f", _exposure);
+			}
+
+			if (_mode == ColorCorrectionMode::Gamma)
+			{
 				ImGui::PushID('G');
-				changed |= ImGui::SliderFloat("Gamma", &_gamma_params.gamma, 0.1, 4);
+				changed |= ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
 				ImGui::PopID();
 				ImGui::Text("Snap Gamma: ");
-				std::array<float, 4> snap_values = {1.0, 1.2, 2.0, 2.2};
-				char str_buffer[16];
+				std::array<float, 9> snap_values = {1.0 / 2.4, 1.0 / 2.2, 0.5, 1.0 / 1.2, 1.0, 1.2, 2.0, 2.2, 2.4};
+				char str_buffer[64];
 				for (size_t i = 0; i < snap_values.size(); ++i)
 				{
 					ImGui::SameLine();
-					*std::format_to(str_buffer, "{:1}", snap_values[i]) = char(0);
+					*std::format_to(str_buffer, "{:.2f}", snap_values[i]) = char(0);
 					bool snap = ImGui::Button(str_buffer);
 					if (snap)
 					{
-						_gamma_params.gamma = snap_values[i];
+						_gamma = snap_values[i];
 						changed |= true;
 					}
 				}
 				ImGui::Separator();
 
 			}
-			else if (_mode == ColorCorrectionMode::HLG)
-			{
-				changed = ImGui::SliderFloat("White Point", &_hlg_params.white_point, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
-			}
 
 
-			if (_plot_raw_radiance.size() != _plot_samples)
-			{
-				changed = true;
-				_plot_raw_radiance.resize(_plot_samples);
-				_plot_corrected_radiance.resize(_plot_samples);
-			}
+			//if (_plot_raw_radiance.size() != _plot_samples)
+			//{
+			//	changed = true;
+			//	_plot_raw_radiance.resize(_plot_samples);
+			//	_plot_corrected_radiance.resize(_plot_samples);
+			//}
 
-			if (changed)
-			{
-				for (size_t i = 0; i < _plot_samples; ++i)
-				{
-					float t = (float(i) + (float(i) / float(_plot_samples - 1))) / float(_plot_samples);
-					_plot_raw_radiance[i] = std::lerp(_plot_min_radiance, _plot_max_radiance, t);
-					_plot_corrected_radiance[i] = computeTransferFunction(_plot_raw_radiance[i]);
-				}
+			//if (changed)
+			//{
+			//	for (size_t i = 0; i < _plot_samples; ++i)
+			//	{
+			//		float t = (float(i) + (float(i) / float(_plot_samples - 1))) / float(_plot_samples);
+			//		_plot_raw_radiance[i] = std::lerp(_plot_min_radiance, _plot_max_radiance, t);
+			//		_plot_corrected_radiance[i] = computeTransferFunction(_plot_raw_radiance[i]);
+			//	}
 
-			}
+			//}
 
-			ImGui::PlotLines("Gamma Correction Preview", _plot_corrected_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_corrected_radiance.back(), ImVec2(0, 200));
+			//ImGui::PlotLines("Gamma Correction Preview", _plot_corrected_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_corrected_radiance.back(), ImVec2(0, 200));
+
+			ImGui::Checkbox("Show Test Card", &_show_test_card);
 			
 			ImGui::PopID();
 		}
