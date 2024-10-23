@@ -1,5 +1,6 @@
 *.vscode
 x64
 build
+build_SDL2
 docs
 gen
