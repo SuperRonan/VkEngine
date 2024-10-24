@@ -242,7 +242,7 @@ namespace vkl
 				float log_exposure = std::log2(_exposure);
 				bool exposure_changed = false;
 				exposure_changed = ImGui::SliderFloat("log2(Exposure)", &log_exposure, -5, 5, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
-				ImGui::SameLine();
+				//ImGui::SameLine();
 				if (ImGui::Button("0"))
 				{
 					exposure_changed |= true;
