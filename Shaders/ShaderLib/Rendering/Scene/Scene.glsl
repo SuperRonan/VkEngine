@@ -101,7 +101,10 @@ layout(SCENE_BINDING + 0) uniform SceneUBOBinding
 	vec3 ambient;
 } scene_ubo;
 
-
+float GetSceneOpaqueAlphaThreshold()
+{
+	return 0.1f;
+}
 
 
 layout(SCENE_LIGHTS_BINDING + 0) restrict LIGHTS_ACCESS buffer LightsBufferBinding
@@ -133,7 +136,7 @@ layout(SCENE_MESHS_BINDING + 1, std430) buffer restrict SCENE_MESH_ACCESS SceneM
 
 Vertex readSceneVertex(uint mesh_id, uint vertex_id)
 {
-	return scene_mesh_vertices[mesh_id].vertices[vertex_id];
+	return scene_mesh_vertices[NonUniformEXT(mesh_id)].vertices[vertex_id];
 }
 
 Vertex interpolateSceneVertex(uint mesh_id, uvec3 vertex_ids, vec2 triangle_uv)
@@ -168,7 +171,7 @@ void readSceneTriangleVertexPositions(uint mesh_id, uvec3 vertex_ids, out vec3 r
 {
 	for(uint i=0; i < 3; ++i)
 	{
-		res[i] = vec3(scene_mesh_vertices[mesh_id].vertices[vertex_ids[i]].position);
+		res[i] = vec3(scene_mesh_vertices[NonUniformEXT(mesh_id)].vertices[vertex_ids[i]].position);
 	}
 }
 
@@ -177,7 +180,7 @@ mat3 readSceneTriangleVertexPositions(uint mesh_id, uvec3 vertex_ids)
 	mat3 res;
 	for(uint i=0; i < 3; ++i)
 	{
-		res[i] = vec3(scene_mesh_vertices[mesh_id].vertices[vertex_ids[i]].position);
+		res[i] = vec3(scene_mesh_vertices[NonUniformEXT(mesh_id)].vertices[vertex_ids[i]].position);
 	}
 	return res;
 }
@@ -255,7 +258,63 @@ layout(SCENE_XFORM_BINDING + 1) buffer restrict SCENE_XFORM_ACCESS ScenePrevXFor
 
 #if CAN_BIND_TLAS
 layout(SCENE_TLAS_BINDING + 0) uniform TLAS_t SceneTLAS;
-#endif
 
+#if SHADER_RAY_QUERY_AVAILABLE
+
+bool SceneRayQueryVisibility(const in Ray ray, vec2 range)
+{
+	RayQuery_t rq;
+	uint ray_flags = gl_RayFlagsSkipAABBEXT | gl_RayFlagsTerminateOnFirstHitEXT;
+#ifdef SHADING_MATERIAL_READ_TEXTURES
+#if !SHADING_MATERIAL_READ_TEXTURES
+	ray_flags |= gl_RayFlagsOpaqueEXT;
+#endif
+#endif
+	const uint cull_mask = 0xFF;
+	rayQueryInitializeEXT(rq, SceneTLAS, ray_flags, cull_mask, ray.origin, range.x, ray.direction, range.y);
+	bool res = true;
+	while(rayQueryProceedEXT(rq))
+	{
+		if(((ray_flags & gl_RayFlagsSkipAABBEXT) != 0) || (rayQueryGetIntersectionTypeEXT(rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT))
+		{
+			const uint custom_index = rayQueryGetIntersectionInstanceCustomIndexEXT(rq, false);
+			const uint instance_index = rayQueryGetIntersectionInstanceIdEXT(rq, false);
+			const uint sbt_index = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rq, false);
+			const uint geometry_index = rayQueryGetIntersectionGeometryIndexEXT(rq, false);
+			const uint object_index = custom_index;
+			const int primitive_id = rayQueryGetIntersectionPrimitiveIndexEXT(rq, false);
+			const vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rq, false);
+			const mat4x3 object_to_world = rayQueryGetIntersectionObjectToWorldEXT(rq, false);
+			const mat3 object_to_world_4dir = DirectionMatrix(mat3(object_to_world));
+
+			SceneObjectReference hit_object_ref = scene_objects_table.table[object_index];
+			
+			const MeshHeader mesh_header = scene_mesh_headers[NonUniformEXT(hit_object_ref.mesh_id)].headers;
+			const uvec3 vertices_id = getSceneMeshTriangleVerticexIndices(hit_object_ref.mesh_id, primitive_id, mesh_header.flags);
+			const vec2 texture_uv = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, barycentrics).uv;
+
+			const uint material_id = hit_object_ref.material_id;
+			const PBMaterialProperties props = scene_pb_materials[NonUniformEXT(material_id)].props;
+
+			//if((props.flags & MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT) != 0) // assumed to be true since not opaque
+			{
+				const uint tex_id = GetMaterialTextureId(scene_pb_materials_textures.ids[material_id], ALBEDO_ALPHA_TEXTURE_SLOT);
+				// TextureLod for now, then deduce LOD from ray derivatives
+				float alpha = textureLod(SceneTextures2D[NonUniformEXT(tex_id)], texture_uv, 0).w;
+				if(alpha >= GetSceneOpaqueAlphaThreshold())
+				{
+					rayQueryConfirmIntersectionEXT(rq);
+				}
+			}
+		}
+	}
+	res = (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT);
+	return res;	
+}
+
+#endif // SHADER_RAY_QUERY_AVAILABLE
+
+
+#endif // CAN_BIND_TLAS
 
 #endif

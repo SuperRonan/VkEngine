@@ -592,7 +592,7 @@ namespace vkl
 			_blas = std::make_shared<BLAS>(BLAS::CI{
 				.app = application(),
 				.name = name() + ".BLAS",
-				.geometry_flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
+				.geometry_flags = {},
 				.build_flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
 				.geometries = {
 					BLAS::Geometry{

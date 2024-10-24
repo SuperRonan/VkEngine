@@ -81,7 +81,7 @@ void main()
 
 	PBMaterialSampleData material = readMaterial(material_id, uv);
 
-	if(material.alpha <= 0.25f)
+	if(material.alpha < GetSceneOpaqueAlphaThreshold())
 	{
 		discard;
 	}

@@ -799,6 +799,15 @@ namespace vkl
 					const uint32_t tlas_geometry_id = 0;
 					if (mesh && mesh->isReadyToDraw())
 					{
+						VkGeometryInstanceFlagsKHR geometry_flags = 0;
+						if (material->isOpaque())
+						{
+							geometry_flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+						}
+						else
+						{
+							VKL_BREAKPOINT_HANDLE;
+						}
 						bool register_to_tlas = true;
 						if (unique_model_id < _tlas->geometries()[tlas_geometry_id].blases.size())
 						{
@@ -815,12 +824,16 @@ namespace vkl
 								.instanceCustomIndex = unique_model_id,
 								.mask = 0xFF,
 								.instanceShaderBindingTableRecordOffset = 0,
-								.flags = VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR,
+								.flags = geometry_flags,
 							});
 						}
 						else if (changed_xform)
 						{
 							_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setXForm(matrix);
+						}
+						if (!register_to_tlas)
+						{
+							_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setFlagsIFN(geometry_flags);
 						}
 					}
 				}

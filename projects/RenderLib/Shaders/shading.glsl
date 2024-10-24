@@ -32,7 +32,7 @@
 #define SHADING_NORMAL_LEVEL_TEXTURE 2
 
 #ifndef SHADING_FORCE_MAX_NORMAL_LEVEL
-#define SHADING_FORCE_MAX_NORMAL_LEVEL SHADING_NORMAL_LEVEL_TEXTURE
+#define SHADING_FORCE_MAX_NORMAL_LEVEL SHADING_NORMAL_LEVEL_VERTEX
 #endif
 
 #ifndef SHADING_FORCE_WHITE_DIFFUSE
@@ -398,7 +398,7 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 	{
 		//t_max = 0.1;
 	}
-	bool v = QueryVisibilityRayOpaqueOnlyTriangles(SceneTLAS, ray, vec2(t_min, t_max));
+	bool v = SceneRayQueryVisibility(ray, vec2(t_min, t_max));
 	res = v ? 1.0f : 0.0f;
 #endif
 	return res;

@@ -106,7 +106,7 @@ namespace vkl
 		{
 			scene->setAmbient(vec3(0.02));
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
-			if(false)
+			if(true)
 			{
 				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
 					.app = this,

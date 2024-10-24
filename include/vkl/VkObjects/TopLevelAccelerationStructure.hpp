@@ -100,6 +100,15 @@ namespace vkl
 				xform = ConvertXFormToVk(m);
 				_mark_for_update = true;
 			}
+
+			void setFlagsIFN(VkGeometryInstanceFlagsKHR f)
+			{
+				if (flags != f)
+				{
+					flags = f;
+					_mark_for_update = true;
+				}
+			}
 		};
 
 		struct Geometry
