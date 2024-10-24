@@ -104,8 +104,8 @@ namespace vkl
 
 		void createScene(std::shared_ptr<Scene> & scene)
 		{
+			scene->setAmbient(vec3(0.02));
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
-
 			if(false)
 			{
 				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
@@ -218,7 +218,7 @@ namespace vkl
 						.app = this,
 						.name = "PointLight",
 						.position = glm::vec3(0, 0, 0),
-						.emission = glm::vec3(1, 0.8, 0.6) * 15.0f * 3.0f,
+						.emission = glm::vec3(1, 0.8, 0.6) * 15.0f,
 						.enable_shadow_map = true,
 						
 					});

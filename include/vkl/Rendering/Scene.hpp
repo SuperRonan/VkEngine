@@ -440,6 +440,16 @@ namespace vkl
 
 		void setMaintainRT(bool maintain_rt);
 
+		void setAmbient(vec3 a)
+		{
+			_ambient = a;
+		}
+
+		vec3 getAmbient() const
+		{
+			return _ambient;
+		}
+
 		friend class SceneUserInterface;
 		friend class SimpleRenderer;
 	};
