@@ -207,8 +207,6 @@ Vertex normalize(Vertex v)
 vec3 trace(Ray ray, inout rng_t rng)
 {
 	vec3 res = 0..xxx;
-	RayQuery_t rq;
-	const uint ray_flags = gl_RayFlagsSkipAABBEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
 	const uint cull_mask = 0xFF;
 	vec2 range = vec2(0, 1000);
 
@@ -217,8 +215,8 @@ vec3 trace(Ray ray, inout rng_t rng)
 	int depth = 0;
 	while(depth < MAX_DEPTH)
 	{
-		rayQueryInitializeEXT(rq, SceneTLAS, ray_flags, cull_mask, ray.origin, range.x, ray.direction, range.y);
-		rayQueryProceedEXT(rq);		
+		RayQuery_t rq;
+		TraceSceneRayQuery(rq, ray, range);
 
 		if(rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT)
 		{

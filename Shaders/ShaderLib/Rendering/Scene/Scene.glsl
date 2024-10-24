@@ -256,65 +256,51 @@ layout(SCENE_XFORM_BINDING + 1) buffer restrict SCENE_XFORM_ACCESS ScenePrevXFor
 } scene_prev_xforms;
 
 
+// Returns true if Opaque
+bool SceneTestTriangleOpacity(uint object_index, uint primitive_id, vec2 triangle_uv)
+{
+	bool res = false;
+	const SceneObjectReference hit_object_ref = scene_objects_table.table[object_index];
+	const MeshHeader mesh_header = scene_mesh_headers[NonUniformEXT(hit_object_ref.mesh_id)].headers;
+	const uvec3 vertices_id = getSceneMeshTriangleVerticexIndices(hit_object_ref.mesh_id, primitive_id, mesh_header.flags);
+	const vec2 texture_uv = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, triangle_uv).uv;
+	
+	const uint material_id = hit_object_ref.material_id;
+	const PBMaterialProperties props = scene_pb_materials[NonUniformEXT(material_id)].props;
+
+	//if((props.flags & MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT) != 0) // assumed to be true since not opaque
+	{
+		const uint tex_id = GetMaterialTextureId(scene_pb_materials_textures.ids[material_id], ALBEDO_ALPHA_TEXTURE_SLOT);
+		// TextureLod for now, then deduce LOD from ray derivatives
+		float alpha = textureLod(SceneTextures2D[NonUniformEXT(tex_id)], texture_uv, 0).w;
+		res = alpha >= GetSceneOpaqueAlphaThreshold();
+	}
+	return res;
+}
+
+bool SceneTestTriangleOpacityIFN(uint object_index, uint primitive_id, vec2 triangle_uv)
+{
+	bool res = false;
+	const SceneObjectReference hit_object_ref = scene_objects_table.table[object_index];
+	const uint material_id = hit_object_ref.material_id;
+	const PBMaterialProperties props = scene_pb_materials[NonUniformEXT(material_id)].props;
+	if((props.flags & MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT) != 0)
+	{
+		res = SceneTestTriangleOpacity(object_index, primitive_id, triangle_uv);
+	}
+	return res;
+}
+
+
 #if CAN_BIND_TLAS
 layout(SCENE_TLAS_BINDING + 0) uniform TLAS_t SceneTLAS;
 
 #if SHADER_RAY_QUERY_AVAILABLE
 
-bool SceneRayQueryVisibility(const in Ray ray, vec2 range)
-{
-	RayQuery_t rq;
-	uint ray_flags = gl_RayFlagsSkipAABBEXT | gl_RayFlagsTerminateOnFirstHitEXT;
-#ifdef SHADING_MATERIAL_READ_TEXTURES
-#if !SHADING_MATERIAL_READ_TEXTURES
-	ray_flags |= gl_RayFlagsOpaqueEXT;
-#endif
-#endif
-	const uint cull_mask = 0xFF;
-	rayQueryInitializeEXT(rq, SceneTLAS, ray_flags, cull_mask, ray.origin, range.x, ray.direction, range.y);
-	bool res = true;
-	while(rayQueryProceedEXT(rq))
-	{
-		if(((ray_flags & gl_RayFlagsSkipAABBEXT) != 0) || (rayQueryGetIntersectionTypeEXT(rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT))
-		{
-			const uint custom_index = rayQueryGetIntersectionInstanceCustomIndexEXT(rq, false);
-			const uint instance_index = rayQueryGetIntersectionInstanceIdEXT(rq, false);
-			const uint sbt_index = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rq, false);
-			const uint geometry_index = rayQueryGetIntersectionGeometryIndexEXT(rq, false);
-			const uint object_index = custom_index;
-			const int primitive_id = rayQueryGetIntersectionPrimitiveIndexEXT(rq, false);
-			const vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rq, false);
-			const mat4x3 object_to_world = rayQueryGetIntersectionObjectToWorldEXT(rq, false);
-			const mat3 object_to_world_4dir = DirectionMatrix(mat3(object_to_world));
-
-			SceneObjectReference hit_object_ref = scene_objects_table.table[object_index];
-			
-			const MeshHeader mesh_header = scene_mesh_headers[NonUniformEXT(hit_object_ref.mesh_id)].headers;
-			const uvec3 vertices_id = getSceneMeshTriangleVerticexIndices(hit_object_ref.mesh_id, primitive_id, mesh_header.flags);
-			const vec2 texture_uv = interpolateSceneVertex(hit_object_ref.mesh_id, vertices_id, barycentrics).uv;
-
-			const uint material_id = hit_object_ref.material_id;
-			const PBMaterialProperties props = scene_pb_materials[NonUniformEXT(material_id)].props;
-
-			//if((props.flags & MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT) != 0) // assumed to be true since not opaque
-			{
-				const uint tex_id = GetMaterialTextureId(scene_pb_materials_textures.ids[material_id], ALBEDO_ALPHA_TEXTURE_SLOT);
-				// TextureLod for now, then deduce LOD from ray derivatives
-				float alpha = textureLod(SceneTextures2D[NonUniformEXT(tex_id)], texture_uv, 0).w;
-				if(alpha >= GetSceneOpaqueAlphaThreshold())
-				{
-					rayQueryConfirmIntersectionEXT(rq);
-				}
-			}
-		}
-	}
-	res = (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT);
-	return res;	
-}
-
 #endif // SHADER_RAY_QUERY_AVAILABLE
-
 
 #endif // CAN_BIND_TLAS
 
-#endif
+
+
+#endif // BIND_SCENE

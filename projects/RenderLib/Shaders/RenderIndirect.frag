@@ -81,10 +81,12 @@ void main()
 
 	PBMaterialSampleData material = readMaterial(material_id, uv);
 
-	if(material.alpha < GetSceneOpaqueAlphaThreshold())
+#if SHADING_ENABLE_OPACITY_TEST
+	if(!TestOpacity(material.alpha))
 	{
 		discard;
 	}
+#endif
 
 #if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 	if(material.normal.z != 0)

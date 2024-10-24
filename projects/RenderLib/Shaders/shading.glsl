@@ -35,6 +35,10 @@
 #define SHADING_FORCE_MAX_NORMAL_LEVEL SHADING_NORMAL_LEVEL_VERTEX
 #endif
 
+#ifndef SHADING_ENABLE_OPACITY_TEST
+#define SHADING_ENABLE_OPACITY_TEST 1
+#endif
+
 #ifndef SHADING_FORCE_WHITE_DIFFUSE
 #define SHADING_FORCE_WHITE_DIFFUSE 0
 #endif
@@ -332,6 +336,68 @@ float applyShadowBias(float depth, uint light_flags, uint bias_data, float cos_t
 
 #if BIND_SCENE
 
+#if SHADER_RAY_QUERY_AVAILABLE
+
+void ProcessRayQueryCandidateIntersection(RayQuery_t rq)
+{
+	const uint ray_flags = rayQueryGetRayFlagsEXT(rq);
+	if(((ray_flags & gl_RayFlagsSkipAABBEXT) != 0) || (rayQueryGetIntersectionTypeEXT(rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT))
+	{
+		const uint custom_index = rayQueryGetIntersectionInstanceCustomIndexEXT(rq, false);
+		const uint instance_index = rayQueryGetIntersectionInstanceIdEXT(rq, false);
+		const uint sbt_index = rayQueryGetIntersectionInstanceShaderBindingTableRecordOffsetEXT(rq, false);
+		const uint geometry_index = rayQueryGetIntersectionGeometryIndexEXT(rq, false);
+		const uint object_index = custom_index;
+		const int primitive_id = rayQueryGetIntersectionPrimitiveIndexEXT(rq, false);
+		const vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rq, false);
+		const mat4x3 object_to_world = rayQueryGetIntersectionObjectToWorldEXT(rq, false);
+		const mat3 object_to_world_4dir = DirectionMatrix(mat3(object_to_world));
+
+		if(SceneTestTriangleOpacity(object_index, primitive_id, barycentrics))
+		{
+			rayQueryConfirmIntersectionEXT(rq);
+		}
+	}
+}
+
+
+void TraceSceneRayQuery(RayQuery_t rq, const in Ray ray, vec2 range, uint extra_ray_flags)
+{
+	uint ray_flags = gl_RayFlagsSkipAABBEXT | extra_ray_flags;
+#if (!SHADING_MATERIAL_READ_TEXTURES) ||(!SHADING_ENABLE_OPACITY_TEST) 
+	ray_flags |= gl_RayFlagsOpaqueEXT;
+#endif
+	const uint cull_mask = 0xFF;
+	rayQueryInitializeEXT(rq, SceneTLAS, ray_flags, cull_mask, ray.origin, range.x, ray.direction, range.y);
+	while(rayQueryProceedEXT(rq))
+	{
+		ProcessRayQueryCandidateIntersection(rq);
+	}
+}
+
+void TraceSceneRayQuery(RayQuery_t rq, const in Ray ray, vec2 range)
+{
+	TraceSceneRayQuery(rq, ray, range, 0);
+}
+
+bool RayQuerySceneVisibility(const in Ray ray, vec2 range, uint extra_ray_flags)
+{
+	
+	RayQuery_t rq;
+	TraceSceneRayQuery(rq, ray, range, gl_RayFlagsTerminateOnFirstHitEXT | extra_ray_flags);
+	bool res = (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT);
+	return res;	
+}
+
+bool RayQuerySceneVisibility(const in Ray ray, vec2 range)
+{
+	return RayQuerySceneVisibility(ray, range, 0);
+}
+
+
+
+#endif
+
 // cos_theta: abs(dot(light_forward_dir, geometry_normal))
 float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample light_sample)
 {
@@ -398,7 +464,7 @@ float computeShadow(vec3 position, vec3 geometry_normal, const in LightSample li
 	{
 		//t_max = 0.1;
 	}
-	bool v = SceneRayQueryVisibility(ray, vec2(t_min, t_max));
+	bool v = RayQuerySceneVisibility(ray, vec2(t_min, t_max));
 	res = v ? 1.0f : 0.0f;
 #endif
 	return res;
@@ -443,3 +509,8 @@ vec3 shade(const in GeometryShadingInfo geom, vec3 wo, const in PBMaterialSample
 
 #endif
 
+
+bool TestOpacity(float sampled_alpha)
+{
+	return sampled_alpha >= GetSceneOpaqueAlphaThreshold();
+}

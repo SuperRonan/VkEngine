@@ -13,6 +13,8 @@
 
 #include "IndirectCommon.glsl"
 
+#include <ShaderLib:/Maths/transforms.glsl>
+
 // layout(location = 0) in vec3 a_position;
 // layout(location = 1) in vec3 a_normal;
 // layout(location = 2) in vec3 a_tangent;
@@ -35,16 +37,15 @@ void main()
 	const vec2 a_uv = vertex.uv;
 
 	const mat4 w2p = GetCameraWorldToProj(ubo.camera);
-	const mat4 o2w = mat4(vd.matrix);
-	const mat4 o2p = w2p * o2w;
+	const mat4x3 o2w = vd.matrix;
+	const mat4 o2p = w2p * mat4(o2w);
 	
 	
 	gl_Position = o2p * vec4(a_position, 1);
 
-	const mat3 normal_matrix = mat3(o2w);
+	const mat3 normal_matrix = DirectionMatrix(mat3(o2w));
 
 	v_uv = a_uv;
-	// TODO Use the correct matrix (works as long as the scale is uniform)
 	v_w_normal = normal_matrix * a_normal;
 	v_w_tangent = normal_matrix * a_tangent;
 	v_w_position = (o2w * vec4(a_position, 1)).xyz;
