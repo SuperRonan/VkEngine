@@ -286,6 +286,7 @@ namespace vkl
 			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
 			{
+				ImGui::PushID(node.get());
 				Mat4 node_matrix = matrix * node->matrix4x4();
 				const std::string & node_gui_name = node->name();
 				const bool node_visible = node->visible();
@@ -363,6 +364,7 @@ namespace vkl
 
 					ImGui::TreePop();
 				}
+				ImGui::PopID();
 			};
 
 			Mat4 root_matrix = Mat4(1);
