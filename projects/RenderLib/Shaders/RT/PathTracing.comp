@@ -306,6 +306,115 @@ vec3 trace(Ray ray, inout rng_t rng)
 	return res;
 }
 
+struct CameraSample
+{
+	Ray ray;
+	float pdf;
+	float importance;
+};
+
+vec2 SampleUniformPointOnIsocelesTriangle(inout rng_t rng, float half_angle)
+{
+	vec2 xi = randomVec2_01(rng);
+	vec2 uv = xi;
+	if(uv.x + uv.y > 1)
+	{
+		uv = 1.0 - uv;
+	}
+	const mat2 edges = mat2(vec2(cos(-half_angle), sin(-half_angle)), vec2(cos(half_angle), sin(half_angle)));
+	
+	vec2 res = edges * uv;
+	return res;
+}
+
+vec2 SampleUniformPointOnEquilateralTriangle(inout rng_t rng)
+{
+	const float half_angle = PI/6;
+	const mat2 edges = mat2(vec2(cos(-half_angle), sin(-half_angle)), vec2(cos(half_angle), sin(half_angle)));
+	const vec2 base = -edges * vec2(1.0 / 3.0);
+	return SampleUniformPointOnIsocelesTriangle(rng, half_angle) + base;
+}
+
+vec2 SampleUniformPointOnCenteredRegularPolygon(inout rng_t rng, uint sides)
+{
+	vec2 res;
+	if(sides == 0)
+	{
+		res = randomUniformPointInUnitDiskFromPolar(rng);
+	}
+	else if(sides == 1)
+	{
+		res.x = randomFloat01(rng) * 2 - 1;
+		res.y = 0;
+	}
+	else if(sides == 3)
+	{
+		res = SampleUniformPointOnEquilateralTriangle(rng);
+	}
+	else if(sides == 4)
+	{
+		res = randomVec2_01(rng) * 2 - 1;
+	}
+	else
+	{
+		uint side = randomUint(rng) % sides;
+		
+		float rotation_angle = float(side) * TWO_PI / float(sides);
+		mat2 R = Rotation2(rotation_angle);
+
+
+		float opening_angle = TWO_PI / float(sides);
+		
+		vec2 point_on_triangle = SampleUniformPointOnIsocelesTriangle(rng, opening_angle / 2);
+
+		res = R * point_on_triangle;
+		
+	}
+	return res;
+}
+
+CameraSample Sample_We(inout rng_t rng, uvec2 pixel, vec2 oo_dims)
+{
+	CameraSample res;
+	res.pdf = 0;
+	res.importance = 0;
+
+	res.importance = 1;
+	res.pdf = 1;
+	res.ray.origin = GetCameraWorldPosition(ubo.camera);
+
+	const vec2 subpixel_uv = lerp(0.0.xx, 1..xx, randomVec2_01(rng));
+	const vec2 uv = (vec2(pixel) + subpixel_uv) * oo_dims;
+
+#if 0
+	const mat4 p2c = GetCameraProjToCam(ubo.camera);
+	const mat3 c2w_dir = mat3(GetCameraCamToWorld(ubo.camera));
+
+	vec4 dir_h = p2c * vec4(UVToClipSpace(uv), 1, 1);
+	dir_h.xyz = c2w_dir * normalize(dir_h.xyz);
+
+	res.ray.direction = normalize(dir_h.xyz);
+#else 
+
+	const vec2 point_on_lens = SampleUniformPointOnCenteredRegularPolygon(rng, 6);
+	mat3 camera_basis = GetCameraWorldBasis(ubo.camera);
+
+	const float radius = 0.01;
+	const float lens_distance = GetPerspectiveCameraInvTan(ubo.camera);
+
+	vec3 direction = camera_basis * vec3(UVToClipSpace(uv) * vec2(oo_dims.y / oo_dims.x, 1), lens_distance);
+
+	res.ray.origin += radius * camera_basis * vec3(point_on_lens, 0);
+
+	res.ray.direction = normalize(direction);
+
+#endif
+
+
+
+
+	return res;
+}
 
 void main()
 {
@@ -328,28 +437,15 @@ void main()
 			caret = Caret2D(vec2(100, 100), 0);
 		}
 #endif
-
 		vec3 res = 0..xxx;
-		const vec2 subpixel_uv = lerp(0.1.xx, 0.9.xx, randomVec2_01(rng));
-		//const vec2 subpixel_uv = 0.5.xx;
-		const vec2 uv = (vec2(pixel) + subpixel_uv) * oo_dims;
 
-		const mat4 w2p = GetCameraWorldToProj(ubo.camera);
-		const mat4 p2c = GetCameraProjToCam(ubo.camera);
-		const mat4x3 c2w = GetCameraCamToWorld(ubo.camera);
-		// Assumes c2w is a Rigid matrix
-		const mat3 c2w_dir = mat3(c2w);
-		const mat4 p2w = GetCameraProjToWorld(ubo.camera);
-		
-		const vec3 camera_pos = GetCameraWorldPosition(ubo.camera);
+		CameraSample camera_sample = Sample_We(rng, pixel, oo_dims);
 
-		vec4 dir_h = p2c * vec4(UVToClipSpace(uv), 1, 1);
-		dir_h.xyz = c2w_dir * normalize(dir_h.xyz);
+		if(camera_sample.pdf > 0 && nonZero(camera_sample.importance.xxx))
+		{
+			res = trace(camera_sample.ray, rng) * camera_sample.importance / camera_sample.pdf;
+		}
 
-		Ray ray = Ray(camera_pos, normalize(dir_h.xyz));
-
-
-		res = trace(ray, rng);
 		
 		//res = subpixel_uv.xyx;
 		//res = ray.direction;
