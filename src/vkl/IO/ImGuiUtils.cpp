@@ -182,6 +182,15 @@ namespace vkl
 			changed |= changed2;
 		}
 
+		if (!_read_only)
+		{
+			if (ImGui::Button("Reset"))
+			{
+				changed = true;
+				*_matrix = Mat4x3(1);
+			}
+		}
+
 
 		ImGui::EndDisabled();
 		return changed;
