@@ -69,6 +69,54 @@ namespace vkl
 
 		SelectedNode _gui_selected_node;
 
+		class CreateNodePopUp
+		{
+		protected:
+
+			ImVec2 _center;
+			ImGuiPopupFlags _flags = ImGuiWindowFlags_AlwaysAutoResize * 0;
+
+			std::string _path_str = {};
+			std::filesystem::path _path = {};
+			bool _synch = false;
+			bool _popup_open = true;
+			bool _file_dialog_open;
+
+			std::mutex _file_dialog_mutex;
+
+			//friend void FileDialogCallback(void* p_user_data, const char* const* file_list, int filter);
+
+		public:
+
+			void open();
+
+			void openFileDialog();
+
+			void close();
+
+			// Returns:
+			// -1 on close
+			// 0 on pending
+			// 1 on finish
+			int declareGUI(GuiContext& ctx);
+
+			std::shared_ptr<Scene::Node> createNode(VkApplication * app);
+
+			bool canCreateNodeFromFile() const;
+
+			std::string_view name() const
+			{
+				return "Node Creating"sv;
+			}
+
+			ImGuiPopupFlags flags()const
+			{
+				return _flags;
+			}
+		};
+
+		CreateNodePopUp _create_node_popup = {};
+
 		bool _show_world_basis = false;
 		bool _show_view_basis = false;
 

@@ -1,5 +1,9 @@
 #include <vkl/Rendering/SceneUserInterface.hpp>
 
+#include <vkl/Rendering/SceneLoader.hpp>
+
+#include <imgui/misc/cpp/imgui_stdlib.h>
+
 namespace vkl
 {
 	void SceneUserInterface::SelectedNode::bindMatrices()
@@ -269,6 +273,134 @@ namespace vkl
 		vertex_draw_info.clear();
 	}
 
+	bool SceneUserInterface::CreateNodePopUp::canCreateNodeFromFile() const
+	{
+		return std::filesystem::exists(_path) && std::filesystem::is_regular_file(_path);
+	}
+
+	void SceneUserInterface::CreateNodePopUp::open()
+	{
+		ImGui::OpenPopup(name().data(), flags());
+	}
+
+	void SceneUserInterface::CreateNodePopUp::close()
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	std::array<SDL_DialogFileFilter, 1> Wavefront_file_filter = {
+		SDL_DialogFileFilter{
+			.name = "Wavefront OBJ",
+			.pattern = "obj",
+		}
+	};
+
+	void SceneUserInterface::CreateNodePopUp::openFileDialog()
+	{
+		SDL_DialogFileCallback cb = [](void* p_user_data, const char* const* file_list, int filter)
+		{
+			auto* that = static_cast<CreateNodePopUp*>(p_user_data);;
+
+			if (file_list && *file_list && filter == 0)
+			{
+				const char* file_path = *file_list;
+				std::unique_lock lock(that->_file_dialog_mutex);
+				that->_path = file_path;
+				that->_path_str = that->_path.string();
+			}
+			that->_file_dialog_open = false;
+		};
+
+		SDL_Window* parent_sdl_window = static_cast<SDL_Window*>(ImGui::GetWindowViewport()->PlatformHandle);
+		;
+		SDL_ShowOpenFileDialog(cb, this, parent_sdl_window, Wavefront_file_filter.data(), static_cast<int>(Wavefront_file_filter.size()), nullptr, false);
+	}
+
+	int SceneUserInterface::CreateNodePopUp::declareGUI(GuiContext& ctx)
+	{
+		int res = 0;
+		if (ImGui::BeginPopupModal(name().data(), nullptr, _flags))
+		{
+			std::unique_lock lock(_file_dialog_mutex, std::defer_lock);
+			if (_file_dialog_open)
+			{
+				lock.lock();
+			}
+
+			if (ImGui::InputText("Path", &_path_str))
+			{
+				_path = _path_str;
+			}
+			ImGui::SameLine();
+			ImGui::BeginDisabled(_file_dialog_open);
+			if (ImGui::Button("..."))
+			{
+				openFileDialog();
+			}
+			ImGui::EndDisabled();
+			ImGui::Checkbox("Synchronous load", &_synch);
+			
+			const char * create_label;
+			bool can_create = true;
+			if (_path.empty())
+			{
+				create_label = "Create Empty Node";
+			}
+			else
+			{
+				create_label = "Create Node from file";
+				if (!canCreateNodeFromFile())
+				{
+					can_create = false;
+				}
+			}
+			ImGui::BeginDisabled(!can_create);
+			if (ImGui::Button(create_label))
+			{
+				close();
+				res = 1;
+			}
+			ImGui::EndDisabled();
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel"))
+			{
+				close();
+				res = -1;
+			}
+			ImGui::EndPopup();
+		}
+		else
+		{
+			close();
+			res = -1;
+		}
+
+		return res;
+	}
+
+	std::shared_ptr<Scene::Node> SceneUserInterface::CreateNodePopUp::createNode(VkApplication * app)
+	{
+		std::shared_ptr<Scene::Node> res;
+		if (_path.empty())
+		{
+			res = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "Empty Node",
+				.matrix = Mat4x3(1),
+			});
+		}
+		else if (canCreateNodeFromFile())
+		{
+			res = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+				.app = app,
+				.name = _path.filename().string(),
+				.matrix = Mat4x3(1),
+				.path = _path,
+				.synch = _synch,
+			});
+		}
+		return res;
+	}
+
 	void SceneUserInterface::declareGui(GuiContext& ctx)
 	{
 		ImGui::PushID(this);
@@ -283,6 +415,35 @@ namespace vkl
 
 		if (ImGui::CollapsingHeader("Tree"))
 		{
+			
+			if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
+			{
+				bool show_create_window = false;
+				if (ImGui::MenuItem("New"))
+				{
+					show_create_window = true;
+				}
+				ImGui::EndMenu();
+
+				if (show_create_window)
+				{
+					_create_node_popup.open();
+				}
+			}
+			
+			{
+				int popup_res = _create_node_popup.declareGUI(ctx);
+				if (popup_res > 0)
+				{
+					std::shared_ptr<Scene::Node> new_node = _create_node_popup.createNode(application());
+					if (new_node)
+					{
+						_scene->getRootNode()->addChild(std::move(new_node));
+					}
+				}
+			}
+
+
 			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
 			{
@@ -350,6 +511,14 @@ namespace vkl
 					};
 					_gui_selected_node.path = path;
 					_gui_selected_node.bindMatrices();
+				}
+				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
+				{
+					if (ImGui::MenuItem("Remove"))
+					{
+
+					}
+					ImGui::EndPopup();
 				}
 
 				if (node_open)
