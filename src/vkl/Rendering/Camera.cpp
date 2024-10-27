@@ -162,6 +162,9 @@ namespace vkl
 				{
 					_fov = f;
 				}
+
+				ImGui::SliderFloat("Aperture", &_aperture, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+				ImGui::SliderFloat("Focal length", &_focal_length, 0, 100, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 			}
 			else if (_type == Type::Orthographic)
 			{
@@ -181,6 +184,8 @@ namespace vkl
 			.flags = 0,
 			.inv_tan_half_fov = rcp(TanHalfFOV(_fov)),
 			.inv_aspect = rcp(_aspect),
+			.aperture = _aperture,
+			.focal_length = _focal_length,
 		};
 		res.flags |= static_cast<uint32_t>(_type);
 		return res;

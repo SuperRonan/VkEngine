@@ -332,7 +332,7 @@ vec2 SampleUniformPointOnEquilateralTriangle(inout rng_t rng)
 	const float half_angle = PI/6;
 	const mat2 edges = mat2(vec2(cos(-half_angle), sin(-half_angle)), vec2(cos(half_angle), sin(half_angle)));
 	const vec2 base = -edges * vec2(1.0 / 3.0);
-	return SampleUniformPointOnIsocelesTriangle(rng, half_angle) + base;
+	return (SampleUniformPointOnIsocelesTriangle(rng, half_angle) + base) * 2;
 }
 
 vec2 SampleUniformPointOnCenteredRegularPolygon(inout rng_t rng, uint sides)
@@ -344,7 +344,7 @@ vec2 SampleUniformPointOnCenteredRegularPolygon(inout rng_t rng, uint sides)
 	}
 	else if(sides == 1)
 	{
-		res.x = randomFloat01(rng) * 2 - 1;
+		res.x = (randomFloat01(rng) * 2 - 1);
 		res.y = 0;
 	}
 	else if(sides == 3)
@@ -353,7 +353,7 @@ vec2 SampleUniformPointOnCenteredRegularPolygon(inout rng_t rng, uint sides)
 	}
 	else if(sides == 4)
 	{
-		res = randomVec2_01(rng) * 2 - 1;
+		res = (randomVec2_01(rng) * 2 - 1) * oo_SQRT_2;
 	}
 	else
 	{
@@ -396,17 +396,25 @@ CameraSample Sample_We(inout rng_t rng, uvec2 pixel, vec2 oo_dims)
 	res.ray.direction = normalize(dir_h.xyz);
 #else 
 
-	const vec2 point_on_lens = SampleUniformPointOnCenteredRegularPolygon(rng, 6);
+	const float radius = GetPerspectiveCameraApertureRadius(ubo.camera);
 	mat3 camera_basis = GetCameraWorldBasis(ubo.camera);
-
-	const float radius = 0.01;
 	const float lens_distance = GetPerspectiveCameraInvTan(ubo.camera);
+	vec3 direction_cam = vec3(UVToClipSpace(uv) * vec2(oo_dims.y / oo_dims.x, 1), lens_distance);
+	vec3 direction_cam_norm = normalize(direction_cam);
+	vec3 direction = camera_basis * direction_cam_norm;
+	vec2 point_on_lens = vec2(0);
+	res.ray.direction = (direction);
+	if(radius > 0)
+	{
+		point_on_lens = Rotation2(GetPerspectiveCameraApertureRotation(ubo.camera)) * SampleUniformPointOnCenteredRegularPolygon(rng, GetPerspectiveCameraApertureShape(ubo.camera));
 
-	vec3 direction = camera_basis * vec3(UVToClipSpace(uv) * vec2(oo_dims.y / oo_dims.x, 1), lens_distance);
+		const float focal_length = GetPerspectiveCameraFocalLength(ubo.camera);
+		float ft = focal_length / direction_cam_norm.z;
+		vec3 point_of_focus = sampleRay(res.ray, ft);
 
-	res.ray.origin += radius * camera_basis * vec3(point_on_lens, 0);
-
-	res.ray.direction = normalize(direction);
+		res.ray.origin += radius * camera_basis * vec3(point_on_lens, 0);
+		res.ray.direction = normalize(point_of_focus - res.ray.origin);
+	}
 
 #endif
 

@@ -35,7 +35,8 @@ namespace vkl
 			
 			float inv_tan_half_fov;
 			float inv_aspect;
-			uint pad1, pad2;
+			float aperture;
+			float focal_length;
 		};
 		
 
@@ -52,6 +53,9 @@ namespace vkl
 		float _fov = glm::radians(90.0);
 		float _near = 0.1;
 		float _far = 10.0;
+
+		float _aperture = 0;
+		float _focal_length = 1;
 
 		float _ortho_size = 1;
 

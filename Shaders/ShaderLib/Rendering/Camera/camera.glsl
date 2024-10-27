@@ -30,7 +30,8 @@ struct StorageCamera
 	
 	float inv_tan_half_fov_or_ortho_size;
 	float aspect_maybe_inv;
-	uint pad1, pad2;
+	float aperture;
+	float focal_length;
 };
 
 uint GetCameraType(const in StorageCamera cam)
@@ -104,6 +105,26 @@ float GetPerspectiveCameraInvTan(const in StorageCamera cam)
 float GetOrthoCameraFrameSize(const in StorageCamera cam)
 {
 	return cam.inv_tan_half_fov_or_ortho_size;
+}
+
+float GetPerspectiveCameraApertureRadius(const in StorageCamera cam)
+{
+	return cam.aperture;
+}
+
+uint GetPerspectiveCameraApertureShape(const in StorageCamera cam)
+{
+	return 6;
+}
+
+float GetPerspectiveCameraApertureRotation(const in StorageCamera cam)
+{
+	return 0 * M_PI / 180.0f;
+}
+
+float GetPerspectiveCameraFocalLength(const in StorageCamera cam)
+{
+	return cam.focal_length;
 }
 
 mat2x3 GetCameraOrthoAABB(const in StorageCamera cam)
