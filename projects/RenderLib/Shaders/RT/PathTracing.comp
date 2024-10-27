@@ -381,7 +381,7 @@ CameraSample Sample_We(inout rng_t rng, uvec2 pixel, vec2 oo_dims)
 
 	res.importance = 1;
 	res.pdf = 1;
-	res.ray.origin = GetCameraWorldPosition(ubo.camera);
+	res.ray.origin = vec3(0);
 
 	const vec2 subpixel_uv = lerp(0.0.xx, 1..xx, randomVec2_01(rng));
 	const vec2 uv = (vec2(pixel) + subpixel_uv) * oo_dims;
@@ -391,17 +391,16 @@ CameraSample Sample_We(inout rng_t rng, uvec2 pixel, vec2 oo_dims)
 	const mat3 c2w_dir = mat3(GetCameraCamToWorld(ubo.camera));
 
 	vec4 dir_h = p2c * vec4(UVToClipSpace(uv), 1, 1);
-	dir_h.xyz = c2w_dir * normalize(dir_h.xyz);
+	//dir_h.xyz = c2w_dir * normalize(dir_h.xyz);
 
 	res.ray.direction = normalize(dir_h.xyz);
 #else 
 
 	const float radius = GetPerspectiveCameraApertureRadius(ubo.camera);
-	mat3 camera_basis = GetCameraWorldBasis(ubo.camera);
 	const float lens_distance = GetPerspectiveCameraInvTan(ubo.camera);
 	vec3 direction_cam = vec3(UVToClipSpace(uv) * vec2(oo_dims.y / oo_dims.x, 1), lens_distance);
 	vec3 direction_cam_norm = normalize(direction_cam);
-	vec3 direction = camera_basis * direction_cam_norm;
+	vec3 direction = direction_cam_norm;
 	vec2 point_on_lens = vec2(0);
 	res.ray.direction = (direction);
 	if(radius > 0)
@@ -412,14 +411,15 @@ CameraSample Sample_We(inout rng_t rng, uvec2 pixel, vec2 oo_dims)
 		float ft = focal_length / direction_cam_norm.z;
 		vec3 point_of_focus = sampleRay(res.ray, ft);
 
-		res.ray.origin += radius * camera_basis * vec3(point_on_lens, 0);
+		res.ray.origin += radius * vec3(point_on_lens, 0);
 		res.ray.direction = normalize(point_of_focus - res.ray.origin);
 	}
 
 #endif
 
-
-
+	const mat4x3 cam_to_world = GetCameraCamToWorld(ubo.camera);
+	
+	res.ray = TransformAssumeRigid(cam_to_world, res.ray);
 
 	return res;
 }

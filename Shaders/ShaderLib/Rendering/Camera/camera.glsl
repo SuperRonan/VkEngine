@@ -15,6 +15,14 @@
 #define FORCE_CAMERA_INFINITE_ZFAR 0
 #endif
 
+#ifndef FORCE_CAMERA_APERTURE_SHAPE
+#define FORCE_CAMERA_APERTURE_SHAPE 6
+#endif
+
+#ifndef FORCE_CAMERA_APERTURE_ROTATION
+#define FORCE_CAMERA_APERTURE_ROTATION (0.0 * M_PI / 180.0)
+#endif
+
 struct StorageCamera
 { 
 	// The direction vectors should be normalized
@@ -114,12 +122,12 @@ float GetPerspectiveCameraApertureRadius(const in StorageCamera cam)
 
 uint GetPerspectiveCameraApertureShape(const in StorageCamera cam)
 {
-	return 6;
+	return FORCE_CAMERA_APERTURE_SHAPE;
 }
 
 float GetPerspectiveCameraApertureRotation(const in StorageCamera cam)
 {
-	return 0 * M_PI / 180.0f;
+	return FORCE_CAMERA_APERTURE_ROTATION;
 }
 
 float GetPerspectiveCameraFocalLength(const in StorageCamera cam)
