@@ -13,9 +13,12 @@
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
+#define IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION 1
+#define IMGUI_IMPL_VULKAN_HAS_SECONDARY_VIEWPORTS_CONTROL 1
+
 namespace vkl
 {
-#if IMGUI_IMPL_VULKAN_SECONDARY_VIEWPORTS_CONTROL
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 	static inline ImGui_ImplVulkan_ColorCorrectionMethod Convert(ColorCorrectionMode mode)
 	{
 		ImGui_ImplVulkan_ColorCorrectionMethod res = ImGui_ImplVulkan_ColorCorrectionMethod::ImGui_ImplVulkan_ColorCorrection_None;
@@ -207,7 +210,7 @@ namespace vkl
 		};
 
 		const float gamma = 2.4f;
-#if IMGUI_IMPL_VULKAN_SECONDARY_VIEWPORTS_CONTROL
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 		const ImGui_ImplVulkan_ColorCorrectionParameters gamma_params = ImGui_ImplVulkan_ColorCorrectionParameters::MakeGamma(gamma, 1);
 #endif
 
@@ -222,11 +225,11 @@ namespace vkl
 			.MinImageCount = static_cast<uint32_t>(2),
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-#if IMGUI_IMPL_VULKAN_SECONDARY_VIEWPORTS_CONTROL
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 			.ColorCorrectionParams = gamma_params,
 #endif
 			.Subpass = 0,
-#if IMGUI_IMPL_VULKAN_SECONDARY_VIEWPORTS_CONTROL
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 			.UseStaticColorCorrectionsParams = false,
 #endif
 			.UseDynamicRendering = _render_pass ? false : true,
@@ -329,14 +332,15 @@ namespace vkl
 
 		}
 
-		const VkSurfaceFormatKHR surface_format = _target_window->swapchain()->instance()->format();
-		_imgui_init_format = _target_window->swapchain()->instance()->createInfo().imageFormat;
+		SwapchainInstance & swapchain = *_target_window->swapchain()->instance();
+		const VkSurfaceFormatKHR surface_format = swapchain.format();
+		_imgui_init_format = surface_format.format;
 		ColorCorrectionInfo cci = _target_window->getColorCorrectionInfo();
 		_color_correction_info.params = cci.params;
 
 
 
-#if IMGUI_IMPL_VULKAN_SECONDARY_VIEWPORTS_CONTROL
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION 
 		ImGui_ImplVulkan_ColorCorrectionMethod imgui_method = ImGui_ImplVulkan_ColorCorrection_None;
 		ImGui_ImplVulkan_ColorCorrectionParameters imgui_params;
 
@@ -390,8 +394,7 @@ namespace vkl
 			_color_correction_info.mode = cci.mode;
 			_re_create_imgui_pipeline |= true;
 		}
-		
-
+#endif
 		if(_re_create_imgui_pipeline)
 		{
 			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
@@ -400,29 +403,38 @@ namespace vkl
 				.RenderPass = vk_render_pass,
 				.Subpass = 0,
 				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 				.ColorCorrectionMethod = imgui_method, //ImGui_ImplVulkan_ColorCorrection_None
+#endif
 			};
 			ImGui_ImplVulkan_ReCreateMainPipeline(info);
 			_re_create_imgui_pipeline = false;
 #ifdef IMGUI_HAS_VIEWPORT
+#if IMGUI_IMPL_VULKAN_HAS_SECONDARY_VIEWPORTS_CONTROL
+			VkPresentModeKHR present_mode = swapchain.createInfo().presentMode;
 			ImGui_ImplVulkan_SecondaryViewportInfo vp_info{
 				.SurfaceFormat = surface_format,
-				.ColorCorrectionMethod = imgui_method,
-				.ColorCorrectionParams = &imgui_params,
+				.PresentMode = &present_mode,
 			};
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION	
+			vp_info.ColorCorrectionMethod = imgui_method,
+			vp_info.ColorCorrectionParams = &imgui_params,
+#endif
 			ImGui_ImplVulkan_RequestSecondaryViewportsChanges(vp_info);
+#endif
 #endif
 		}
 		else
 		{
 #ifdef IMGUI_HAS_VIEWPORT
+#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 			ImGui_ImplVulkan_SecondaryViewportInfo vp_info = {};
 			vp_info.ColorCorrectionMethod = imgui_method;
 			vp_info.ColorCorrectionParams = &imgui_params;
 			ImGui_ImplVulkan_RequestSecondaryViewportsChanges(vp_info);
 #endif
-		}
 #endif
+		}
 
 		return res;
 	}
