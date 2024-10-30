@@ -81,47 +81,74 @@
 
 #define TF_MASK 0xFFFF
 
-// https://registry.khronos.org/DataFormat/specs/1.3/dataformat.1.3.html#TRANSFER_ITU
-float ITU_OETF(float l, float alpha, float beta)
+float RectifiedGammaTF(float linear_value, float gamma, float lambda, float beta, float alpha)
 {
-	return (l < beta) ? (l * 4.5) : (alpha * pow(l, 0.45) - (alpha - 1));
+	if(linear_value <= beta)	return linear_value * lambda;
+	else						return (1 + alpha) * pow(linear_value, gamma) - alpha;
+}
+
+float RectifiedGammaBetaConstant(float gamma, float lambda, const uint iterations)
+{
+	// Solve with Newton's method, should be constexpr
+	// Equation: 0 = b * (1 - rcp(g)) + rcp(g) * pow(b, 1 - g) - rcp(l)
+	// Derivative: (1 - rcp(g)) * (1 - pow(b, -g))
+	float beta = 0.5 * pow(rcp(lambda), rcp(1-gamma));
+	const float rg = rcp(gamma);
+	for(uint i = 0; i < iterations; ++i)
+	{
+		const float f = beta * (1 - rg) + rg * pow(beta, 1 - gamma) - rcp(lambda);
+		const float df = (1 - rg) * (1 - pow(beta, -gamma));
+		beta -= f / df;
+	}
+	return beta;
+}
+
+float RectifiedGammaBetaConstant(float gamma, float lambda)
+{
+	return RectifiedGammaBetaConstant(gamma, lambda, 4);
+}
+
+float RectifiedGammaAlphaConstant(float gamma, float lambda, float beta)
+{
+	return lambda * rcp(gamma) * pow(beta, 1 - gamma) - 1;
+}
+
+float RectifiedGammaDeltaConstant(float lambda, float beta)
+{
+	return lambda * beta;
+}
+
+float RectifiedGammaTF(float linear_value, float gamma, float lambda, float beta)
+{
+	const float alpha = RectifiedGammaAlphaConstant(gamma, lambda, beta);
+	return RectifiedGammaTF(linear_value, gamma, lambda, beta, alpha);
+}
+
+float RectifiedGammaTF(float linear_value, float gamma, float lambda)
+{
+	const float beta = RectifiedGammaBetaConstant(gamma, lambda);
+	return RectifiedGammaTF(linear_value, gamma, lambda, beta);
 }
 
 float ITU_OETF(float l)
 {
-	// The alpha and beta factors are slightly off for 12 bit encoding
-	const float alpha = 0.018053968510808;
-	const float beta = 1.099296826809443;
-	return ITU_OETF(l, alpha, beta);
-}
-
-float sRGB_OETF_pow(float l, float alpha, float inv_gamma)
-{
-	return (1 + alpha) * pow(l, inv_gamma) - alpha;
+	return RectifiedGammaTF(l, 0.45, 4.5);//, 0.018053968510808);
 }
 
 float sRGB_OETF(float l)
 {
-	const float alpha = 0.055;
-	const float gamma = 2.4;
-	const float t = 0.0031308;
-	return (l <= t) ? (l * 12.92) : sRGB_OETF_pow(l, alpha, rcp(gamma));
+	const float gamma = rcp(2.4);
+	const float lambda = 12.92;
+	const float beta = RectifiedGammaBetaConstant(gamma, lambda);
+	//const float beta = 0.003041282560128;
+	const float alpha = RectifiedGammaAlphaConstant(gamma, lambda, beta);// 0.05501;
+	//return l <= beta ? lambda * l : ((1 + alpha) * pow(l, gamma) - alpha);
+	return RectifiedGammaTF(l, gamma, lambda);
 }
 
 float scRGB_OETF(float l)
 {
-	const float alpha = 0.055;
-	const float gamma = 2.4;
-	const float t = 0.0031308;
-	float res;
-	// Weird: can output negative values???
-	if(l <= -t)
-		res = -sRGB_OETF_pow(-l, alpha, rcp(gamma));
-	else if(l < t)
-		res = l * 12.92;
-	else
-		res = sRGB_OETF_pow(l, alpha, rcp(gamma));
-	return res;
+	return sign(l) * sRGB_OETF(abs(l));
 }
 
 // l in [0, 1]
