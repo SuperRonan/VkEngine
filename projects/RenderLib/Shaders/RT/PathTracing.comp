@@ -253,7 +253,11 @@ vec3 trace(Ray ray, inout rng_t rng)
 			GeometryShadingInfo gsi;
 			gsi.position = world_vertex.position;
 			gsi.geometry_normal = geometry_normal_world;
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_VERTEX 
 			gsi.vertex_shading_normal = world_vertex.normal;
+#else
+			gsi.vertex_shading_normal = gsi.geometry_normal;
+#endif
 			gsi.vertex_shading_tangent = world_vertex.tangent;
 			const vec3 shading_bt = cross(gsi.vertex_shading_tangent, gsi.vertex_shading_normal);
 			const mat3 shading_TBN = mat3(gsi.vertex_shading_tangent, shading_bt, gsi.vertex_shading_normal);
