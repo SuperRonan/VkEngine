@@ -29,6 +29,7 @@ namespace vkl
 		_imgui_ctx = ImGui::CreateContext();
 		ImGui::SetCurrentContext(_imgui_ctx);
 		ImGui::GetIO().ConfigFlags |= (_imgui_init_flags | ImGuiConfigFlags_IsSRGB);
+		ImGui::GetIO().ConfigViewportsNoDefaultParent = true;
 		
 		_gui_context = GuiContext::CI{
 			.imgui_context = _imgui_ctx,
