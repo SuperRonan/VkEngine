@@ -110,6 +110,11 @@ float sqr(float x)
 	return x*x;
 }
 
+vec2 sqr(vec2 v)
+{
+	return v*v;
+}
+
 float rcp(float f)
 {
 	return 1.0f / f;
