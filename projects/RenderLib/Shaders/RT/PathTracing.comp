@@ -53,7 +53,9 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 {
 	BSDFSample res;
 	res.pdf = 1.0f;
-	const vec3 normal = (gsi.shading_normal);
+
+	const vec3 oriented_normal = (gsi.shading_normal);
+	const vec3 normal = dot(oriented_normal, wo) < 0 ? -oriented_normal : oriented_normal;
 	const mat3 local_to_world_basis = BasisFromDir(normal);
 	const vec3 reflected = reflect(-wo, normal);
 
@@ -74,9 +76,9 @@ BSDFSample sampleBSDF(const in GeometryShadingInfo gsi, vec3 wo, const in PBMate
 
 	if(sample_specular && has_dielectric)
 	{
-			res.direction = reflected;
-			res.pdf = approx.specular_weight;
-			res.bsdf = F0;
+		res.direction = reflected;
+		res.pdf = approx.specular_weight;
+		res.bsdf = F0;
 	}
 	else
 	{
@@ -270,8 +272,17 @@ vec3 trace(Ray ray, inout rng_t rng)
 				//ray.origin = gsi.position;
 				//continue;
 			}
+#if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_TEXTURE
 			gsi.shading_normal = shading_TBN * material.normal;
-			//gsi.shading_normal = gsi.vertex_shading_normal;
+#else
+			gsi.shading_normal = gsi.vertex_shading_normal;
+#endif
+
+			if(false)
+			{
+				res = gsi.shading_normal * 0.5 + 0.5;
+				break;
+			}
 			
 
 			vec3 light_samples = 0..xxx;
@@ -289,11 +300,17 @@ vec3 trace(Ray ray, inout rng_t rng)
 					vec3 next_dir_world = bsdf_sample.direction;
 					ray.origin = gsi.position;
 					ray.direction = next_dir_world;
-					range.x = rayTMin(ray, geometry_normal_world);
+					vec3 ray_normal = geometry_normal_world;
+					if(dot(ray_normal, ray.direction) < 0) ray_normal = -ray_normal;
+					range.x = rayTMin(ray, ray_normal);
 
 					const float cos_theta = abs(dot(gsi.shading_normal, ray.direction));
 
 					throughput *= (bsdf_sample.bsdf * cos_theta / bsdf_sample.pdf);
+					if(any(isWrong(throughput)))
+					{
+						throughput = vec3(0);
+					}
 				}
 				else
 				{
