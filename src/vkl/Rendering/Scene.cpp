@@ -273,6 +273,7 @@ namespace vkl
 		UBO res{
 			.num_lights = _num_lights,
 			.ambient = _ambient,
+			.sky = _uniform_sky * _uniform_sky_brightness,
 		};
 		return res;
 	}

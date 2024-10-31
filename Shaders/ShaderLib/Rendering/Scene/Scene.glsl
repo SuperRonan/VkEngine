@@ -99,6 +99,7 @@ layout(SCENE_BINDING + 0) uniform SceneUBOBinding
 	uint num_textures;
 	
 	vec3 ambient;
+	vec3 sky;
 } scene_ubo;
 
 float GetSceneOpaqueAlphaThreshold()

@@ -220,6 +220,8 @@ vec3 trace(Ray ray, inout rng_t rng)
 
 		if(rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT)
 		{
+			const vec3 sky = scene_ubo.sky;
+			res += (throughput * sky);
 			break;
 		}
 		else

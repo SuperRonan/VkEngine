@@ -407,6 +407,9 @@ namespace vkl
 		if (ImGui::CollapsingHeader("Options"))
 		{
 			ImGui::ColorEdit3("Ambient", &_scene->_ambient.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			ImGui::ColorEdit3("Sky", &_scene->_uniform_sky.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			ImGui::SliderFloat("Sky brightness", &_scene->_uniform_sky_brightness, 0, 12, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+
 			ImGui::Checkbox("show world 3D basis", &_show_world_basis);
 			ImGui::Checkbox("show view 3D basis", &_show_view_basis);
 

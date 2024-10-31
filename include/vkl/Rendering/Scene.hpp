@@ -333,9 +333,12 @@ namespace vkl
 			uint32_t num_materials;
 			uint32_t num_textures;
 			ubo_vec3 ambient;
+			ubo_vec3 sky;
 		};
 
 		vec3 _ambient = vec3(0.1f);
+		vec3 _uniform_sky = vec3(0);
+		float _uniform_sky_brightness = 1;
 
 
 		std::shared_ptr<Buffer> _ubo_buffer;
