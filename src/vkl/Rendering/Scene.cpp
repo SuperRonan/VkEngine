@@ -798,44 +798,49 @@ namespace vkl
 				{
 					Mesh * mesh = model->mesh().get();
 					const uint32_t tlas_geometry_id = 0;
-					if (mesh && mesh->isReadyToDraw())
+					if (mesh)
 					{
-						VkGeometryInstanceFlagsKHR geometry_flags = 0;
-						if (material->isOpaque())
+						const bool should_be_registered_to_tlas = node->visible() && mesh->isReadyToDraw();
+						const bool is_already_registered_to_tlas = (unique_model_id < _tlas->geometries()[tlas_geometry_id].blases.size()) && (_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].blas == mesh->blas());
+						if (should_be_registered_to_tlas)
 						{
-							geometry_flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
-						}
-						else
-						{
-							VKL_BREAKPOINT_HANDLE;
-						}
-						bool register_to_tlas = true;
-						if (unique_model_id < _tlas->geometries()[tlas_geometry_id].blases.size())
-						{
-							if (_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].blas == mesh->blas())
+							VkGeometryInstanceFlagsKHR geometry_flags = 0;
+							if (material->isOpaque())
 							{
-								register_to_tlas = false;
+								geometry_flags |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+							}
+							else
+							{
+								VKL_BREAKPOINT_HANDLE;
+							}
+							bool register_to_tlas = !is_already_registered_to_tlas;
+							if (register_to_tlas)
+							{
+								_tlas->registerBLAS(tlas_geometry_id, unique_model_id, TLAS::BLASInstance{
+									.blas = mesh->blas(),
+									.xform = ConvertXFormToVk(matrix),
+									.instanceCustomIndex = unique_model_id,
+									.mask = 0xFF,
+									.instanceShaderBindingTableRecordOffset = 0,
+									.flags = geometry_flags,
+								});
+							}
+							else if (changed_xform)
+							{
+								_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setXForm(matrix);
+							}
+							if (!register_to_tlas)
+							{
+								_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setFlagsIFN(geometry_flags);
 							}
 						}
-						if (register_to_tlas)
+						else if(!should_be_registered_to_tlas && is_already_registered_to_tlas)
 						{
 							_tlas->registerBLAS(tlas_geometry_id, unique_model_id, TLAS::BLASInstance{
-								.blas = mesh->blas(),
-								.xform = ConvertXFormToVk(matrix),
-								.instanceCustomIndex = unique_model_id,
-								.mask = 0xFF,
-								.instanceShaderBindingTableRecordOffset = 0,
-								.flags = geometry_flags,
+								.blas = nullptr,
 							});
 						}
-						else if (changed_xform)
-						{
-							_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setXForm(matrix);
-						}
-						if (!register_to_tlas)
-						{
-							_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].setFlagsIFN(geometry_flags);
-						}
+
 					}
 				}
 			}
