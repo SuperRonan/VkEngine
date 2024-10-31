@@ -250,7 +250,7 @@ mat3 BasisFromDir(vec3 dir)
 	vec3 o;
 	o = vec3(1, 0, 0);
 	const float l = 0.5;
-	if(dot(o, Z) >= l)
+	if(abs(dot(o, Z)) >= l)
 	{
 		o = vec3(0, 1, 0);
 		// if(dot(o, Z) >= l)
