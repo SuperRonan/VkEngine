@@ -264,4 +264,44 @@ namespace vkl
 		}
 
 	};
+
+}
+	
+namespace ImGui
+{
+	
+	bool SliderAngleN(const char* label, float * v_rad, uint N, float v_degrees_min=-180, float v_degrees_max=180, const char * format = "%.1f", ImGuiSliderFlags flags = 0, uint8_t* changed_bit_field = nullptr);
+
+	// Returns a bit field (bit N -> axis N changed)
+	static inline uint SliderAngle3(const char* label, float* v_rad, float v_degrees_min = -180, float v_degrees_max = 180, const char* format = "%.1f", ImGuiSliderFlags flags = 0)
+	{
+		uint res = 0;
+		bool b = SliderAngleN(label, v_rad, 3, v_degrees_min, v_degrees_max, format, flags, reinterpret_cast<uint8_t*>(&res));
+		assert((res != 0) == b);
+		return res;
+	}
+
+	static inline bool DragMatrix4x3(const char* label, ::vkl::Matrix4x3f& matrix, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+	{
+		::vkl::Matrix3x4f t = glm::transpose(matrix);
+		bool res = false;
+		for (uint i = 0; i < 3; ++i)
+		{
+			ImGui::PushID(i);
+			res |= DragFloat4("", &t[i].x, 1, 0, 0, format, flags);
+			ImGui::PopID();
+		}
+		if (res)
+		{
+			matrix = glm::transpose(t);
+		}
+		return res;
+	}
+
+	static inline void DragMatrix4x3(const char* label, const ::vkl::Matrix4x3f& matrix, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+	{
+		ImGui::BeginDisabled();
+		DragMatrix4x3(label, const_cast<::vkl::Matrix4x3f&>(matrix), format, flags);
+		ImGui::EndDisabled();
+	}
 }

@@ -3,6 +3,10 @@
 
 #include <vkl/Maths/Transforms.hpp>
 
+#include <numbers>
+
+#include <imgui/imgui_internal.h>
+
 namespace vkl
 {
 	ImGuiListSelection::ImGuiListSelection(CreateInfo const& ci) :
@@ -195,5 +199,55 @@ namespace vkl
 		ImGui::EndDisabled();
 		return changed;
 
+	}
+}
+
+
+namespace ImGui
+{
+	bool SliderAngleN(const char* label, float* v_rad, uint N, float v_degrees_min, float v_degrees_max, const char* format, ImGuiSliderFlags flags, uint8_t* changed_bit_field)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		if (format == NULL)
+			format = "%.0f deg";
+		if (changed_bit_field)
+		{
+			std::memset(changed_bit_field, 0, std::divUpAssumeNoOverflow<uint>(N, 8));
+		}
+
+		ImGuiContext& g = *GetCurrentContext();
+		bool value_changed = false;
+		BeginGroup();
+		PushID(label);
+		PushMultiItemsWidths(N, CalcItemWidth());
+		for (uint i = 0; i < N; i++)
+		{
+			PushID(i);
+			if (i > 0)
+				SameLine(0, g.Style.ItemInnerSpacing.x);
+			bool changed = false;
+			changed = SliderAngle("", v_rad + i, v_degrees_min, v_degrees_max, format, flags);
+			value_changed |= changed;
+			if(changed && changed_bit_field)
+			{
+				changed_bit_field[i / 8] |= uint8_t(1 << (i % 8));
+			}
+			PopID();
+			PopItemWidth();
+		}
+		PopID();
+
+		const char* label_end = FindRenderedTextEnd(label);
+		if (label != label_end)
+		{
+			SameLine(0, g.Style.ItemInnerSpacing.x);
+			TextEx(label, label_end);
+		}
+
+		EndGroup();
+		return value_changed;
 	}
 }
