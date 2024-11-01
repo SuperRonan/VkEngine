@@ -15,6 +15,21 @@
 
 using namespace std::literals;
 
+namespace glm
+{
+	template <class T, uint N, uint M, glm::qualifier q>
+	struct MultiLinePrintMatrix
+	{
+		glm::mat<N, M, T, q> const& m;
+	};
+
+	template <class T, uint N, uint M, glm::qualifier q>
+	static constexpr MultiLinePrintMatrix<T, N, M, q> MultiLinePrint(glm::mat<N, M, T, q> const& m)
+	{
+		return MultiLinePrintMatrix<T, N, M, q>{.m = m};
+	}
+}
+
 namespace glm_operators
 {
 	template <class Stream, class Float, glm::length_t N, glm::qualifier q>
@@ -38,6 +53,23 @@ namespace glm_operators
 			stream << mat[i] << ", ";
 		}
 		stream << "]";
+		return stream;
+	}
+
+	template <class Stream, class Float, glm::length_t N, glm::length_t M, glm::qualifier q>
+	Stream& operator<<(Stream& stream, glm::MultiLinePrintMatrix<Float, N, M, q> const& m)
+	{
+		for (unsigned int i = 0; i < M; ++i)
+		{
+			stream << "[";
+			for (unsigned int j = 0; j < N; ++j)
+			{
+				stream << m.m[j][i];
+				if(j != (N - 1))	stream << ", ";
+			}
+			stream << "]";
+			if(i != (M - 1))	stream << "\n";
+		}
 		return stream;
 	}
 }
