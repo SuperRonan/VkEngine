@@ -6,20 +6,6 @@
 
 namespace vkl
 {
-	void SceneUserInterface::SelectedNode::bindMatrices()
-	{
-		if (hasValue())
-		{
-			gui_collapsed_matrix.bindMatrix((const Mat4x3*)&node.matrix);
-			gui_node_matrix.bindMatrix(&node.node->matrix4x3(), false);
-		}
-		else
-		{
-			gui_collapsed_matrix.bindMatrix(nullptr);
-			gui_node_matrix.bindMatrix(nullptr);
-		}
-	}
-
 	void SceneUserInterface::checkSelectedNode(SelectedNode& selected_node)
 	{
 		Scene::DAG::PositionedNode found = _scene->getTree()->findNode(selected_node.path);
@@ -230,7 +216,7 @@ namespace vkl
 					_box_mesh->fillVertexDrawCallInfo(vdcr);
 
 					const AABB3f & aabb = mesh->getAABB();
-					Mat4 aabb_matrix = TranslationMatrix<4, float>(aabb.bottom())* ScalingMatrix<4, float>(aabb.diagonal());
+					Mat4 aabb_matrix = TranslationMatrix<4, float>(aabb.bottom()) * ScalingMatrix<4, float>(aabb.diagonal());
 					
 					const std::string name = mesh->name() + "::AABB";
 					const Render3DBoxPC pc{
@@ -513,7 +499,6 @@ namespace vkl
 						.matrix = node_matrix,
 					};
 					_gui_selected_node.path = path;
-					_gui_selected_node.bindMatrices();
 				}
 				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
 				{
@@ -581,17 +566,17 @@ namespace vkl
 					if (ImGui::CollapsingHeader("Transform"))
 					{
 						bool changed = false;
-						ImGui::PushID(1);
+						
 						ImGui::Text("Collapsed Matrix");
-						_gui_selected_node.gui_collapsed_matrix.declare();
-						ImGui::PopID();
+						ImGui::DragMatrix4x3("", node->matrix4x3());
 
 						ImGui::Separator();
+						float range = 10;
+						ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
+						ImGui::SliderFloat3("Scale", &node->scale().x, -range, range, "%.3f", flags);
+						ImGui::SliderAngle3("Rotation", &node->rotation().x, -180, 180, "%.2f", flags);
+						ImGui::SliderFloat3("Translation", &node->translation().x, -range, range, "%.3f", flags);
 
-						ImGui::PushID(2);
-						ImGui::Text("Node Matrix");
-						changed = _gui_selected_node.gui_node_matrix.declare();
-						ImGui::PopID();
 					}
 
 					if (ImGui::CollapsingHeader("Model"))

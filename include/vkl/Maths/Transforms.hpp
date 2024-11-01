@@ -71,17 +71,131 @@ namespace vkl
 	constexpr MatrixN<2, Float> RotationMatrix(Float angle)
 	{
 		MatrixN<2, Float> res;
-		res[0][0] = res[1][1] = cos(angle);
-		res[0][1] = sin(angle);
+		res[0][0] = res[1][1] = std::cos(angle);
+		res[0][1] = std::sin(angle);
 		res[1][0] = -res[0][1];
 		return res;
 	}
 
-	template <uint N, class Float>
-	constexpr MatrixN<N, Float> ScalingMatrix(Vector<N-1, Float> const& vector)
+	template <class Float>
+	constexpr Matrix2<Float> BasisFromDir(Vector2<Float> const& dir)
+	{
+		const Vector2<Float> v(-dir[0], dir[1]);
+		return Matrix2<Float>(dir, v);
+	}
+
+	// Assume dot(Z, X) = 0
+	// |X| = |Z| = 1
+	template<class Float>
+	constexpr Matrix3<Float> BasisFrom2DBasisZX(Vector3<Float> const& Z, Vector3<Float> const& X)
+	{
+		const Vector3<Float> Y = glm::cross(Z, X);
+		Matrix3<Float> res;
+		res[0] = X;
+		res[1] = Y;
+		res[2] = Z;
+		return res;
+	}
+
+	template<class Float>
+	constexpr Matrix3<Float> BasisFromDirFast(Vector3<Float> const& dir)
+	{
+		const Vector3<Float> Z = dir;
+		Vector3<Float> o;
+		o = Vector3<Float>(1, 0, 0);
+		const float l = 0.5;
+		if (std::abs(glm::dot(o, Z)) >= l)
+		{
+			o = Vector3<Float>(0, 1, 0);
+			//if(dot(o, Z) >= l)
+			//{
+			//	o = Vector3<Float>(0, 0, 1);
+			//}
+		}
+		const Vector3<Float> X = glm::normalize(cross(o, Z));
+		return BasisFrom2DBasisZX(Z, X);
+	}
+
+	// https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
+	template<class Float>
+	constexpr Matrix3<Float> BasisFromDir_frisvad(Vector3<Float> const& Z)
+	{
+		Vector3<Float> X;
+		if (Z.z < Float(-0.9999))
+		{
+			X = Vector3<Float>(0, -1, 0);
+		}
+		else
+		{
+			const Float a = rcp(Float(1) + Z.z);
+			const Float b = -Z.x * Z.y * a;
+			X = Vector3f(Float(1) - sqr(Z.x) * a, b, -Z.x);
+		}
+		return BasisFrom2DBasisZX(Z, X);
+	}
+
+	template<class Float>
+	constexpr Matrix3<Float> BasisFromDir_hughes_moeller(Vector3<Float> const& Z)
+	{
+		Vector3<Float> Y;
+		if(std::abs(Z.x) > std::abs(Z.z))	Y = Vector3<Float>(-Z.y, Z.x, 0);
+		else								Y = Vector3<Float>(0, -Z.z, Z.y);
+		Y = glm::normalize(Y);
+		Vector3<Float> X = glm::cross(Y, Z);
+		return Matrix3<Float>(X, Y, Z);
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrix(Vector3<Float> const& axis, Float angle)
+	{
+		// Basis not tested for an arbitrary axis
+		Matrix3<Float> basis = BasisFromDirFast(axis);
+		Matrix2<Float> R2 = RotationMatrix(angle);
+		Matrix3<Float> res = (basis) * Matrix3<Float>(R2) * glm::transpose(basis);
+		return res;
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrixX(Float angle)
+	{
+		return RotationMatrix(Vector3<Float>(1, 0, 0), angle);
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrixY(Float angle)
+	{
+		return RotationMatrix(Vector3<Float>(0, 1, 0), angle);
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrixZ(Float angle)
+	{
+		return RotationMatrix(Vector3<Float>(0, 0, 1), angle);
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrixIntrinsic(Vector3<Float> const& angles)
+	{
+		return RotationMatrixZ(angles[0]) * RotationMatrixY(angles[1]) * RotationMatrixX(angles[2]);
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrixExtrinsic(Vector3<Float> const& angles)
+	{
+		return RotationMatrixIntrinsic(Vector3<Float>(angles[2], angles[1], angles[0]));
+	}
+
+	template <class Float>
+	constexpr Matrix3<Float> RotationMatrix(Vector3<Float> const& angles, bool extrinsic = true)
+	{
+		return extrinsic ? RotationMatrixExtrinsic(angles) : RotationMatrixIntrinsic(angles);
+	}
+
+	template <uint N, class Float, uint M>
+	constexpr MatrixN<N, Float> ScalingMatrix(Vector<M, Float> const& vector)
 	{
 		MatrixN<N, Float> res(Float(1.0));
-		for (int i = 0; i < N-1; ++i)
+		for (int i = 0; i < std::min(N, M); ++i)
 		{
 			res[i][i] = vector[i];
 		}

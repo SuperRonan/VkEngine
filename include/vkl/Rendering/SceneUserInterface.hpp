@@ -34,13 +34,7 @@ namespace vkl
 				node.node = nullptr;
 				node.matrix = Mat4(1);
 				path.path.clear();
-				bindMatrices();
 			}
-
-			void bindMatrices();
-
-			ImGuiTransform3D gui_collapsed_matrix = {};
-			ImGuiTransform3D gui_node_matrix = {};
 		};
 
 	protected:

@@ -186,13 +186,13 @@ namespace vkl
 		PositionedNode res;
 
 		std::shared_ptr<Node> n = _root;
-		Mat4 matrix = n->matrix4x4();
+		Mat4x3 matrix = n->matrix4x3();
 		for (size_t i = 0; i < path.path.size(); ++i)
 		{
 			if (path.path[i] < n->children().size())
 			{
 				n = n->children()[path.path[i]];
-				matrix *= n->matrix4x4();
+				matrix = matrix * (n->matrix4x4());
 			}
 			else
 			{

@@ -33,6 +33,8 @@ namespace vkl
 	
 	public:
 
+		using Vec3 = Vector3f;
+		using Mat3 = Matrix3f;
 		using Mat4 = Matrix4f;
 		using Mat4x3 = Matrix4x3f;
 		using Mat3x4 = Matrix3x4f;
@@ -44,6 +46,10 @@ namespace vkl
 			
 			std::string _name = {};
 			Mat4x3 _matrix = Mat4x3(1);
+
+			Vec3 _translation = Vec3(0);
+			Vec3 _scale = Vec3(1);
+			Vec3 _rotation = Vec3(0);
 
 			bool _visible = true;
 			
@@ -73,26 +79,6 @@ namespace vkl
 			constexpr const std::string& name() const
 			{
 				return _name;
-			}
-
-			constexpr Mat4 matrix4x4() const
-			{
-				return Mat4(_matrix);
-			}
-
-			constexpr const Mat4x3& matrix4x3() const
-			{
-				return _matrix;
-			}
-
-			constexpr Mat4x3& matrix4x3()
-			{
-				return _matrix;
-			}
-
-			constexpr void setMatrix(Mat4 const& matrix)
-			{
-				_matrix = matrix;
 			}
 
 			constexpr void setMatrix(Mat4x3 const& matrix)
@@ -150,7 +136,69 @@ namespace vkl
 				}
 			}
 
+			Mat4x3 getAuxiliaryTransform() const
+			{
+				Mat3 R = RotationMatrix(_rotation);
+				Mat3 S = ScalingMatrix<3>(_scale);
+				Mat3 Q = R * S;
+				Mat4x3 res = MakeAffineTransform(Q, _translation);
+				return res;
+			}
+
+			constexpr Mat4x3 matrix4x3() const
+			{
+				return mul(_matrix, getAuxiliaryTransform());
+			}
+
+			constexpr Mat4 matrix4x4() const
+			{
+				return Mat4(matrix4x3());
+			}
+			
+			constexpr const Mat4x3& getXForm() const
+			{
+				return matrix4x3();
+			}
+			
+			void collapseAuxiliaryTransforms()
+			{
+				_matrix = matrix4x3();
+				_rotation = Vec3(0);
+				_translation = Vec3(0);
+				_scale = Vec3(1);
+			}
+
 			virtual void updateResources(UpdateContext & ctx);
+
+			Vec3& scale()
+			{
+				return _scale;
+			}
+
+			Vec3& rotation()
+			{
+				return _rotation;
+			}
+
+			Vec3& translation()
+			{
+				return _translation;
+			}
+
+			const Vec3& scale()const 
+			{
+				return _scale;
+			}
+
+			const Vec3& rotation()const 
+			{
+				return _rotation;
+			}
+
+			const Vec3& translation()const 
+			{
+				return _translation;
+			}
 
 		};
 		

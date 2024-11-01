@@ -44,7 +44,7 @@ namespace vkl
 		Vector2 compensate_vector = camera_pos * (1 - mult);
 		Matrix3 compensate_matrix = vkl::TranslationMatrix<3, Float>(compensate_vector);
 
-		Matrix3 mult_matrix = vkl::ScalingMatrix<3, Float>({ mult, mult });
+		Matrix3 mult_matrix = vkl::ScalingMatrix<3, Float, 2>({ mult, mult });
 
 		_zoom_matrix = compensate_matrix * mult_matrix * _zoom_matrix;
 	}
