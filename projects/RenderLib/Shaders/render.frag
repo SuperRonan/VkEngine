@@ -1,6 +1,8 @@
 #version 460
 
 #define BIND_SINGLE_MATERIAL 1
+#define BIND_SCENE 1
+#define BIND_RENDERER_SET 1
 
 #include "common.glsl"
 #include "shading.glsl"
@@ -23,6 +25,8 @@ void main()
 	const PBMaterialProperties props = material_props.props;
 	const vec2 uv = v_uv;
 	PBMaterialSampleData material = readBoundMaterial(uv);
+
+
 	GeometryShadingInfo geom;
 	geom.position = v_w_position;
 	const vec3 a_normal = normalize(v_w_normal);
@@ -30,6 +34,14 @@ void main()
 
 	geom.geometry_normal = geom.vertex_shading_normal;
 	geom.geometry_normal = normalize(cross(dFdy(geom.position), dFdx(geom.position)));
+
+// discard after using the screen space derivative 
+#if SHADING_ENABLE_OPACITY_TEST
+	if(!TestOpacity(material.alpha))
+	{
+		discard;
+	}
+#endif
 
 #if SHADING_FORCE_MAX_NORMAL_LEVEL >= SHADING_NORMAL_LEVEL_VERTEX
 	geom.shading_normal = geom.vertex_shading_normal;

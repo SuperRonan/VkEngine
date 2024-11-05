@@ -1,5 +1,7 @@
 #version 460
 
+#define BIND_RENDERER_SET 1
+
 #include "common.glsl"
 
 #define I_WANT_TO_DEBUG 0

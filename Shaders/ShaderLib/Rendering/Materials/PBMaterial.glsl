@@ -74,8 +74,7 @@ vec3 getBoundMaterialAlbedo(vec2 uv)
 }
 
 #if BIND_SINGLE_MATERIAL
-
-PBMaterialSampleData readBoundMaterial(vec2 uv)
+PBMaterialSampleData readBoundMaterial(vec2 uv, bool read_textures)
 {
 	const PBMaterialProperties props = material_props.props;
 	PBMaterialSampleData res;
@@ -83,16 +82,24 @@ PBMaterialSampleData readBoundMaterial(vec2 uv)
 	res.albedo = 0..xxx;
 	res.alpha = 1.0f;
 	res.normal = vec3(0, 0, 1);
-	if(((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0))
+	if(read_textures && ((res.flags & (MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT | MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT)) != 0))
 	{
-		res.albedo = texture(AlbedoTexture, uv).xyz;
+		const vec4 albedo_alpha = texture(AlbedoTexture, uv);
+		if((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0)
+		{
+			res.albedo = albedo_alpha.rgb;
+		}
+		if((res.flags & MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT) != 0)
+		{
+			res.alpha = albedo_alpha.a;
+		}
 	}
 	else
 	{
 		res.albedo = props.albedo;
 	}
 
-	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0))
+	if(read_textures && ((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0))
 	{
 		res.normal = texture(NormalTexture, uv).xyz;
 		res.normal = normalize(res.normal * 2 - 1);
@@ -103,6 +110,11 @@ PBMaterialSampleData readBoundMaterial(vec2 uv)
 	res.cavity = props.cavity;
 
 	return res;
+}
+
+PBMaterialSampleData readBoundMaterial(vec2 uv)
+{
+	return readBoundMaterial(uv, true);
 }
 
 #endif
