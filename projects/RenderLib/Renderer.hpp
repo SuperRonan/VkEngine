@@ -17,6 +17,7 @@
 
 #include "AmbientOcclusion.hpp"
 #include "TemporalAntiAliasingAndUpscaler.hpp"
+#include "DepthOfField.hpp"
 
 #include <vkl/Commands/AccelerationStructureCommands.hpp>
 
@@ -164,6 +165,7 @@ namespace vkl
 		std::shared_ptr<VertexCommand> _render_point_light_depth = nullptr;
 
 		std::shared_ptr<AmbientOcclusion> _ambient_occlusion = nullptr;
+		std::shared_ptr<DepthOfField> _depth_of_field = nullptr;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 
@@ -177,6 +179,8 @@ namespace vkl
 
 			alignas(16) Camera::AsGLSL camera;
 		};
+
+		const Camera* _camera = nullptr;
 
 		template <class DrawInfoType>
 		using MultiDrawCallLists = std::map<uint32_t, DrawInfoType>;
@@ -210,6 +214,7 @@ namespace vkl
 			MultiDescriptorSetsLayouts sets_layouts;
 			std::shared_ptr<Scene> scene = nullptr;
 			std::shared_ptr<ImageView> target = nullptr;
+			const Camera* camera = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -219,7 +224,7 @@ namespace vkl
 
 		void updateResources(UpdateContext & ctx);
 
-		void execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id);
+		void execute(ExecutionRecorder& exec, float time, float dt, uint32_t frame_id);
 
 		std::shared_ptr<ImageView> depth() const
 		{

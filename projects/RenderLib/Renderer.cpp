@@ -8,7 +8,8 @@ namespace vkl
 		Module(ci.app, ci.name),
 		_sets_layouts(ci.sets_layouts),
 		_scene(ci.scene),
-		_output_target(ci.target) 
+		_output_target(ci.target),
+		_camera(ci.camera)
 	{
 		_pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
@@ -559,6 +560,15 @@ namespace vkl
 				.can_rt = can_as && (can_rt || can_rq),
 			});
 
+			_depth_of_field = std::make_shared<DepthOfField>(DepthOfField::CI{
+				.app = application(),
+				.name = name() + ".DOF",
+				.target = _render_target,
+				.depth = _depth,
+				.camera = _camera,
+				.sets_layouts = _sets_layouts,
+			});
+
 			std::shared_ptr<Sampler> bilinear_sampler = application()->getSamplerLibrary().getSampler(SamplerLibrary::SamplerInfo{
 				.filter = VK_FILTER_LINEAR,
 				.address_mode = VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
@@ -960,6 +970,8 @@ namespace vkl
 			}
 		}
 
+		_depth_of_field->updateResources(ctx);
+
 		_light_depth_sampler->updateResources(ctx);
 
 		_ubo_buffer->updateResources(ctx);
@@ -968,7 +980,7 @@ namespace vkl
 		_set->updateResources(ctx);
 	}
 
-	void SimpleRenderer::execute(ExecutionRecorder& exec, Camera const& camera, float time, float dt, uint32_t frame_id)
+	void SimpleRenderer::execute(ExecutionRecorder& exec, float time, float dt, uint32_t frame_id)
 	{
 		exec.pushDebugLabel(name() + ".execute()", true);
 
@@ -976,8 +988,7 @@ namespace vkl
 			.time = time,
 			.delta_time = dt,
 			.frame_idx = frame_id,
-			
-			.camera = camera.getAsGLSL(),
+			.camera = _camera->getAsGLSL(),
 		};
 		_ubo_buffer->set(0, &ubo, sizeof(ubo));
 
@@ -1211,20 +1222,22 @@ namespace vkl
 					exec.framePerfCounters()->render_draw_list_time = tick_tock.tockd().count();
 				}
 
-				_ambient_occlusion->execute(exec, camera);
+				_ambient_occlusion->execute(exec, *_camera);
 
 				exec(gbuffer->shade_from_gbuffer);
 				
 				exec.popDebugLabel();
 			}
-		}
 
+			_depth_of_field->record(exec);
+		}
+		
 		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
 		{
 			exec(_path_tracer._path_trace);
 		}
 
-		_taau->execute(exec, camera);
+		_taau->execute(exec, *_camera);
 
 		{
 			// Clear the cached draw list
@@ -1285,6 +1298,12 @@ namespace vkl
 			if (ImGui::CollapsingHeader("TAAU"))
 			{
 				_taau->declareGui(ctx);
+				ImGui::Separator();
+			}
+
+			if (ImGui::CollapsingHeader("Depth Of Field"))
+			{
+				_depth_of_field->declareGUI(ctx);
 				ImGui::Separator();
 			}
 		}

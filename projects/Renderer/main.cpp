@@ -299,6 +299,15 @@ namespace vkl
 				.use_debug_renderer = true,
 			});
 
+			Camera camera(Camera::CreateInfo{
+				.resolution = _main_window->extent2D(),
+				.znear = 0.01,
+				.zfar = 100,
+			});
+			camera.update(Camera::CameraDelta{
+				.angle = vec2(glm::pi<float>(), 0),
+			});
+
 			VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			//VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			std::shared_ptr<ImageView> final_image = std::make_shared<ImageView>(Image::CI{
@@ -331,6 +340,7 @@ namespace vkl
 				.sets_layouts = sets_layouts,
 				.scene = scene,
 				.target = final_image,
+				.camera = &camera,
 			});
 			if (exec.getDebugRenderer())
 			{
@@ -413,14 +423,7 @@ namespace vkl
 			double t = 0, dt = 0.0;
 			size_t frame_index = 0;
 
-			Camera camera(Camera::CreateInfo{
-				.resolution = _main_window->extent2D(),
-				.znear = 0.01,
-				.zfar = 100,
-			});
-			camera.update(Camera::CameraDelta{
-				.angle = vec2(glm::pi<float>(), 0),
-			});
+			
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
 				.camera = &camera, 
@@ -599,7 +602,7 @@ namespace vkl
 						.set = scene->set(),
 					});
 					scene->prepareForRendering(exec_thread);
-					renderer.execute(exec_thread, camera, t, dt, frame_index);
+					renderer.execute(exec_thread, t, dt, frame_index);
 
 					image_picker.execute(exec_thread);
 
