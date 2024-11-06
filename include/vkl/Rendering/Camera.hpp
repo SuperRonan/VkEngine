@@ -177,11 +177,32 @@ namespace vkl
 			return _aspect;
 		}
 
+		constexpr float zNear() const
+		{
+			return _near;
+		}
+
 		constexpr float zFar() const
 		{
 			return _infinite_perspective ? std::numeric_limits<float>::infinity() : _far;
 		}
 
+		constexpr float aperture() const
+		{
+			return _aperture;
+		}
+
+		constexpr float focalLength() const
+		{
+			return _focal_length;
+		}
+
+		constexpr Type type() const
+		{
+			return _type;
+		}
+
+		// uv in clip space
 		Ray getRay(vec2 uv = vec2(0)) const;
 
 		void update(CameraDelta const& delta);
