@@ -163,8 +163,17 @@ namespace vkl
 					_fov = f;
 				}
 
-				ImGui::SliderFloat("Aperture", &_aperture, 0, 1, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-				ImGui::SliderFloat("Focal length", &_focal_length, 0, 100, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+				ImGui::SliderFloat("Aperture", &_aperture, 0, 100, "%.1f mm", ImGuiSliderFlags_NoRoundToFormat);
+				ImGui::SliderFloat("Focal distance", &_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+				
+				float f = focalLength() * 1e3f;
+				if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					// Auto focus
+					float fm = f / 1e3f;
+					_focal_distance = fm * distanceFilmLens() * rcp(abs(fm - distanceFilmLens()));
+				}
+				ImGui::Text("f-number: f / %.1f", fNumber());
 			}
 			else if (_type == Type::Orthographic)
 			{
@@ -184,8 +193,8 @@ namespace vkl
 			.flags = 0,
 			.inv_tan_half_fov = rcp(TanHalfFOV(_fov)),
 			.inv_aspect = rcp(_aspect),
-			.aperture = _aperture,
-			.focal_length = _focal_length,
+			.aperture = aperatureRadiusUnit(),
+			.focal_distance = _focal_distance,
 		};
 		res.flags |= static_cast<uint32_t>(_type);
 		return res;

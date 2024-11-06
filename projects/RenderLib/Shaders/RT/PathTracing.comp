@@ -429,9 +429,9 @@ CameraSample Sample_We(inout rng_t rng, uvec2 pixel, vec2 oo_dims)
 	if(radius > 0)
 	{
 		point_on_lens = Rotation2(GetPerspectiveCameraApertureRotation(ubo.camera)) * SampleUniformPointOnCenteredRegularPolygon(rng, GetPerspectiveCameraApertureShape(ubo.camera));
-
-		const float focal_length = GetPerspectiveCameraFocalLength(ubo.camera);
-		float ft = focal_length / direction_cam_norm.z;
+		
+		const float focal_distance = GetPerspectiveCameraFocalDistance(ubo.camera);
+		float ft = focal_distance / (direction_cam_norm.z);
 		vec3 point_of_focus = sampleRay(res.ray, ft);
 
 		res.ray.origin += radius * vec3(point_on_lens, 0);

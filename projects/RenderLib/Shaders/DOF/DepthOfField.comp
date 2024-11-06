@@ -30,6 +30,7 @@ layout(push_constant) uniform PushConstant
 	float z_far;
 	float aperture;
 	float focal_length;
+	float focal_distance;
 } pc;
 
 #ifndef DEPTH_OF_FIELD_METHOD
@@ -42,19 +43,24 @@ float ConvertDepth(float depth)
 	mat2 inv_proj = mat2(0);
 	const float zn = pc.z_near;
 	const float zf = pc.z_far;
+	if(depth == 1)
+	{
+		return zf;
+	}
 	if(isinf(zf))
 	{
 		inv_proj[1][0] = 1;
-		inv_proj[0][1] = -2 * zn;
-		inv_proj[1][1] = +2 * zn;
+		const float z = -rcp(zn) / 2;
+		inv_proj[0][1] = +z;
+		inv_proj[1][1] = -z;
 	}
 	else
 	{
 		const float z = zf / (zf - zn);
-		const float w = -zn;
+		const float w = -zn * z;
 		inv_proj[1][0] = 1;
 		inv_proj[0][1] = rcp(w);
-		inv_proj[1][1] = - z * rcp(w);
+		inv_proj[1][1] = rcp(zn);
 	}
 	vec2 cam = inv_proj * cp;
 	float z = cam.x / cam.y;
@@ -69,7 +75,7 @@ void main()
 	if(all(lessThan(gid, dims)))
 	{
 		DepthOfFieldParams params;
-		params.radius = pc.aperture;
+		params.radius = pc.aperture * pc.focal_length;
 		params.center_uv = pixelToUV(gid, dims);
 		params.method = DEPTH_OF_FIELD_METHOD;
 
@@ -78,12 +84,22 @@ void main()
 			float z = ConvertDepth(depth);
 			float d1 = 1;
 			float f = pc.focal_length;
-			float zf = 1;
-
-			params.radius *= abs(f * (z - zf) / (z * (f + zf)));
+			float zf = pc.focal_distance;
+			
+			float right_term;
+			if(isinf(z))
+			{
+				right_term = (f / (f + zf));
+			}
+			else
+			{
+				right_term = (f * (z - zf) / (z * (f + zf)));
+			}
+			params.radius *= (right_term);
 		}
 
 		vec4 res = computeDOF(SourceColor, Sampler, params);
+
 		imageStore(Target, ivec2(gid), res);
 	}
 }

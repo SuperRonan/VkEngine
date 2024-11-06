@@ -47,14 +47,14 @@ namespace vkl
 		_sampler = std::make_shared<Sampler>(Sampler::CI{
 			.app = application(),
 			.name = name() + ".Sampler",
-			.filter = VK_FILTER_NEAREST,
+			.filter = VK_FILTER_LINEAR,
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		});
 
 		_depth_sampler = std::make_shared<Sampler>(Sampler::CI{
 			.app = application(),
 			.name = name() + ".DepthSampler",
-			.filter = VK_FILTER_NEAREST,
+			.filter = VK_FILTER_LINEAR,
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		});
 
@@ -119,12 +119,14 @@ namespace vkl
 				float z_far;
 				float aperture;
 				float focal_length;
+				float focal_distance;
 			};
 			PC pc{
 				.z_near = _camera->zNear(),
 				.z_far = _camera->zFar(),
-				.aperture = _camera->aperture(),
+				.aperture = _camera->aperatureRadiusUnit(),
 				.focal_length = _camera->focalLength(),
+				.focal_distance = _camera->focalDistance(),
 			};
 			exec(_command->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _target->image()->extent().value(),

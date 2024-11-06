@@ -24,7 +24,7 @@ namespace vkl
 
 		struct AsGLSL
 		{
-			vec3 position;
+			ubo_vec3 position;
 			float z_near;
 
 			vec3 direction;
@@ -35,8 +35,9 @@ namespace vkl
 			
 			float inv_tan_half_fov;
 			float inv_aspect;
-			float aperture;
-			float focal_length;
+			float aperture; // radius in m
+			float focal_distance; // in m
+
 		};
 		
 
@@ -54,8 +55,10 @@ namespace vkl
 		float _near = 0.1;
 		float _far = 10.0;
 
+		// diameter in mm
 		float _aperture = 0;
-		float _focal_length = 1;
+		// in m
+		float _focal_distance = 1;
 
 		float _ortho_size = 1;
 
@@ -192,9 +195,30 @@ namespace vkl
 			return _aperture;
 		}
 
+		constexpr float aperatureRadiusUnit() const
+		{
+			return aperture() / 2e3f;
+		}
+
+		constexpr float focalDistance() const
+		{
+			return _focal_distance;
+		}
+
+		constexpr float distanceFilmLens() const
+		{
+			return rcp(TanHalfFOV(_fov));
+		}
+
+		// in meters
 		constexpr float focalLength() const
 		{
-			return _focal_length;
+			return rcp(TanHalfFOV(_fov) + rcp(focalDistance()));
+		}
+
+		constexpr float fNumber() const
+		{
+			return focalLength() / (aperture() / 1000.0f);
 		}
 
 		constexpr Type type() const
