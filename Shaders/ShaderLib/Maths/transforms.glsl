@@ -127,45 +127,85 @@ mat4 Translate4(vec3 t)
 	return res;
 }
 
+// Assume dir is normalized
+mat3 BasisFromDir(vec3 dir)
+{
+	const vec3 Z = dir;
+	mat3 res;
+	res[2] = Z;
+	vec3 o;
+	o = vec3(1, 0, 0);
+	const float l = 0.5;
+	if(abs(dot(o, Z)) >= l)
+	{
+		o = vec3(0, 1, 0);
+		// if(dot(o, Z) >= l)
+		// {
+		// 	o = vec3(0, 0, 1);
+		// }
+	}
+	const vec3 X = normalize(cross(o, Z));
+	const vec3 Y = cross(X, Z);
+	res[0] = X;
+	res[1] = Y;
+	return res;
+}
+
+mat3 CrossProductMatrix(vec3 u)
+{
+	mat3 res = mat3(0);
+	res[0].y = +u.z;
+	res[0].z = -u.y;
+	res[1].x = -u.z;
+	res[1].z = +u.x;
+	res[2].x = +u.y;
+	res[2].y = -u.x;
+	return res;
+}
+
 
 mat2 Rotation2(float theta)
 {
 	const float c = cos(theta);
 	const float s = sin(theta);
-	return mat2(c, -s, s, c);
+	return mat2(c, s, -s, c);
+}
+
+mat3 Rotation3_1(vec3 axis, float angle)
+{
+	mat3 b = BasisFromDir(axis);
+	mat2 R2 = Rotation2(angle);
+	mat3 res = b * mat3(R2) * transpose(b);
+	return res;
+}
+
+mat3 Rotation3_2(vec3 axis, float theta)
+{
+	const float c = cos(theta);
+	const float s = sin(theta);
+	mat3 res = mat3(c) + s * CrossProductMatrix(axis) + (1.0 - c) * outerProduct(axis, axis);
+	return res;
+}
+
+mat3 Rotation3(vec3 axis, float angle)
+{
+	//return Rotation3_1(axis, angle);
+	return Rotation3_2(axis, angle);
 }
 
 mat3 Rotation3X(float theta)
 {
-	const float c = cos(theta);
-	const float s = sin(theta);
-	mat3 res = mat3(0);
-	res[0].x = 1;
-	res[1].yz = vec2(c, -s);
-	res[2].yz = vec2(c, s); 
-	return res;
+	return Rotation3(vec3(1, 0, 0), theta);
 }
 
 mat3 Rotation3Y(float theta)
 {
-	const float c = cos(theta);
-	const float s = sin(theta);
-	mat3 res = mat3(0);
-	res[1].y = 1;
-	res[0].xz = vec2(c, -s);
-	res[2].xz = vec2(c, s); 
-	return res;
+	return Rotation3(vec3(0, 1, 0), theta);
 }
 
 mat3 Rotation3Z(float theta)
 {
-	const float c = cos(theta);
-	const float s = sin(theta);
-	mat3 res = mat3(0);
-	res[2].z = 1;
-	res[0].xy = vec2(c, -s);
-	res[1].xy = vec2(c, s); 
-	return res;
+	return Rotation3(vec3(0, 0, 1), theta);
 }
 
 mat4 Rotation4X(float theta)
@@ -241,29 +281,7 @@ mat4x3 LookAt4x3(vec3 position, vec3 center, vec3 up)
 	return LookAtDir4x3(position, normalize(center - position), up);
 }
 
-// Assume dir is normalized
-mat3 BasisFromDir(vec3 dir)
-{
-	const vec3 Z = dir;
-	mat3 res;
-	res[2] = Z;
-	vec3 o;
-	o = vec3(1, 0, 0);
-	const float l = 0.5;
-	if(abs(dot(o, Z)) >= l)
-	{
-		o = vec3(0, 1, 0);
-		// if(dot(o, Z) >= l)
-		// {
-		// 	o = vec3(0, 0, 1);
-		// }
-	}
-	const vec3 X = normalize(cross(o, Z));
-	const vec3 Y = cross(X, Z);
-	res[0] = X;
-	res[1] = Y;
-	return res;
-}
+
 
 
 mat2x4 homogenizeAsVectorArray(const in mat2x3 m, float h)
