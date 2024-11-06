@@ -98,9 +98,9 @@ constexpr CLIP_SPACE_INL_Vector(4) GetInversePerspectiveProjCoefsFromTan(CLIP_SP
 	res.x = tan_half_fov * aspect;
 	res.y = tan_half_fov;
 	const CLIP_SPACE_INL_Scalar z = z_range.y / (z_range.y - z_range.x);
-	const CLIP_SPACE_INL_Scalar w = -z_range.x * res.z;
+	const CLIP_SPACE_INL_Scalar w = -z_range.x * z;
 	res.w = rcp(w);
-	res.z = - z * res.w;
+	res.z = rcp(z_range.x);
 	return res;
 }
 
