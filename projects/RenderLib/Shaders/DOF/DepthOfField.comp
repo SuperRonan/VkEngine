@@ -1,0 +1,89 @@
+#version 460
+
+#include "DepthOfField.glsl"
+
+#ifndef LOCAL_SIZE_X
+#define LOCAL_SIZE_X 16
+#endif
+
+#ifndef LOCAL_SIZE_Y
+#define LOCAL_SIZE_Y 16
+#endif
+
+layout(local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y) in;
+
+#ifndef TARGET_FORMAT
+#error "TARGET_FORMAT is not defined"
+#endif
+
+layout(SHADER_DESCRIPTOR_BINDING + 0, TARGET_FORMAT) uniform restrict image2D Target;
+
+layout(SHADER_DESCRIPTOR_BINDING + 1) uniform texture2D SourceColor;
+
+layout(SHADER_DESCRIPTOR_BINDING + 2) uniform sampler Sampler;
+
+layout(SHADER_DESCRIPTOR_BINDING + 3) uniform sampler2D SourceDepth;
+
+layout(push_constant) uniform PushConstant
+{
+	float z_near;
+	float z_far;
+	float aperture;
+	float focal_length;
+} pc;
+
+#ifndef DEPTH_OF_FIELD_METHOD
+#define DEPTH_OF_FIELD_METHOD DEPTH_OF_FIELD_METHOD_EXPLICIT
+#endif
+
+float ConvertDepth(float depth)
+{
+	vec2 cp = vec2(depth, 1);
+	mat2 inv_proj = mat2(0);
+	const float zn = pc.z_near;
+	const float zf = pc.z_far;
+	if(isinf(zf))
+	{
+		inv_proj[1][0] = 1;
+		inv_proj[0][1] = -2 * zn;
+		inv_proj[1][1] = +2 * zn;
+	}
+	else
+	{
+		const float z = zf / (zf - zn);
+		const float w = -zn;
+		inv_proj[1][0] = 1;
+		inv_proj[0][1] = rcp(w);
+		inv_proj[1][1] = - z * rcp(w);
+	}
+	vec2 cam = inv_proj * cp;
+	float z = cam.x / cam.y;
+	return z;
+}
+
+void main()
+{
+	const uvec2 dims = uvec2(imageSize(Target).xy);
+	const uvec2 gid = uvec2(gl_GlobalInvocationID.xy);
+
+	if(all(lessThan(gid, dims)))
+	{
+		DepthOfFieldParams params;
+		params.radius = pc.aperture;
+		params.center_uv = pixelToUV(gid, dims);
+		params.method = DEPTH_OF_FIELD_METHOD;
+
+		{
+			float depth = textureLod(SourceDepth, params.center_uv, 0).x;
+			float z = ConvertDepth(depth);
+			float d1 = 1;
+			float f = pc.focal_length;
+			float zf = 1;
+
+			params.radius *= abs(f * (z - zf) / (z * (f + zf)));
+		}
+
+		vec4 res = computeDOF(SourceColor, Sampler, params);
+		imageStore(Target, ivec2(gid), res);
+	}
+}
