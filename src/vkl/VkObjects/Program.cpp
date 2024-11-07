@@ -82,12 +82,11 @@ namespace vkl
 		};
 		std::map<uint32_t, std::map<uint32_t, BindingInfo>> all_bindings;
 
-		const bool keep_unused_bindings = false;
-
-		//if (name() == "")
-		//{
-		//	VKL_BREAKPOINT_HANDLE;
-		//}
+		const bool keep_unused_bindings = [&]()
+		{
+			bool keep = false;
+			return keep;
+		}();
 
 		for (size_t sh = 0; sh < _shaders.size(); ++sh)
 		{
