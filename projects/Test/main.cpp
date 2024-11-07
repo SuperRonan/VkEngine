@@ -18,6 +18,8 @@
 
 #include "helper.hpp"
 
+#include <vkl/Maths/Transforms.hpp>
+
 void TestUniqueIdAllocator()
 {
 	vkl::UniqueIndexAllocator pool(vkl::UniqueIndexAllocator::Policy::FitCapacity);
@@ -116,7 +118,6 @@ static_assert(CombinableWithOperator<int, float, MyPlus<int, float>>);
 void StressTestParallelDynamicValue(int count = 1024)
 {
 	using namespace vkl;
-
 	const auto fill = [&](DefinitionsList& res)
 	{
 		for (int i = 0; i < count; ++i)
@@ -151,7 +152,7 @@ void StressTestParallelDynamicValue(int count = 1024)
 		}
 	};
 
-	const uint n = 2;std::thread::hardware_concurrency();
+	const uint n = 2;//std::thread::hardware_concurrency();
 	MyVector<std::jthread> threads;
 	for (uint i = 0; i < n; ++i)
 	{
@@ -172,7 +173,25 @@ int main(int argc, const char** argv)
 	using namespace std::containers_append_operators;
 	using namespace std::string_literals;
 
-	StressTestParallelDynamicValue(4096);
+	using namespace vkl;
+
+	Matrix3f Rx = RotationMatrixX(glm::radians(60.0));
+	Matrix3f Ry = RotationMatrixY(glm::radians(60.0));
+	Matrix3f Rz = RotationMatrixZ(glm::radians(60.0));
+
+	using namespace glm_operators;
+
+	std::cout << std::setprecision(3);
+
+	std::cout << glm::MultiLinePrint(Rx) << std::endl << std::endl;
+	std::cout << glm::MultiLinePrint(Ry) << std::endl << std::endl;
+	std::cout << glm::MultiLinePrint(Rz) << std::endl << std::endl;
+
+	std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(1, 0, 0))) << std::endl << std::endl;
+	std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(0, 1, 0))) << std::endl << std::endl;
+	std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(0, 0, 1))) << std::endl << std::endl;
+
+	//StressTestParallelDynamicValue(4096);
 
 	//TestHalf();
 
