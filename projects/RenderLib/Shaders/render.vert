@@ -33,12 +33,12 @@ void main()
 	
 	gl_Position = o2p * vec4(a_position, 1);
 
-	const mat3 normal_matrix = mat3(o2w);
+	const mat3 normal_matrix = DirectionMatrix(mat3(o2w));
 
 	v_uv = a_uv;
 	// TODO Use the correct matrix (works as long as the scale is uniform)
-	v_w_normal = normal_matrix * a_normal;
-	v_w_tangent = normal_matrix * a_tangent;
+	v_w_normal = normalize(normal_matrix * a_normal);
+	v_w_tangent = normalize(normal_matrix * a_tangent);
 	v_w_position = (o2w * vec4(a_position, 1)).xyz;
 
 	{

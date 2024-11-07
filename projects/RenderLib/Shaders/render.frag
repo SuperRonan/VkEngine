@@ -69,7 +69,7 @@ void main()
 
 	const float ds = dot(geom.geometry_normal, geom.shading_normal);
 	const float dvs = dot(geom.geometry_normal, geom.vertex_shading_normal);
-	res *= ds;
+	//res *= ds;
 
 	// if( > 0)
 	// {
