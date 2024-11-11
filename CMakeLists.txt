@@ -94,7 +94,7 @@ if(AUTO_LOCATE_VULKAN)
 
 	message(STATUS "Attempting to locate Vulkan SDK using manual path......")
 	set(VULKAN_SDK "C:/VulkanSDK")
-	set(VULKAN_VERSION "1.3.290.0")
+	set(VULKAN_VERSION "1.3.296.0")
 	set(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
 	message(STATUS "Using manual specified path: ${VULKAN_PATH}")
 
@@ -111,8 +111,8 @@ add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 
 set(VULKAN_LIBS "vulkan-1")
 
-set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OSDependent")
-set(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OSDependentd")
+set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OSDependent;slang;slang-rt")
+set(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OSDependentd;slangd;slang-rtd")
 
 set(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
 set(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
@@ -122,6 +122,9 @@ set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${VULKAN_LIBS})
 set(VK_ENGINE_LINK_DEBUG_LIBS "${VK_ENGINE_LINK_DEBUG_LIBS}" ${VULKAN_SHADER_LIBS_DEBUG})
 set(VK_ENGINE_LINK_RELEASE_LIBS "${VK_ENGINE_LINK_RELEASE_LIBS}" ${VULKAN_SHADER_LIBS_RELEASE})
 set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${VULKAN_INCLUDES})
+
+
+
 
 # VMA
 add_subdirectory(ext/VMA)
@@ -261,9 +264,9 @@ target_link_directories(VkEngine PUBLIC ${VK_ENGINE_LINK_DIRS})
 
 
 
-option(BUILD_PROJECTS ON)
+option(VKL_BUILD_PROJECTS "Build example projects" ON)
 
-if(${BUILD_PROJECTS})
+if(${VKL_BUILD_PROJECTS})
 
 add_subdirectory(projects)
 
