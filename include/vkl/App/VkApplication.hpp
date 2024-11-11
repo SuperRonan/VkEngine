@@ -23,9 +23,16 @@
 
 #include <that/utils/EnumClassOperators.hpp>
 
+#include <slang/slang-com-ptr.h>
+
 namespace argparse
 {
 	class ArgumentParser;
+}
+
+namespace slang
+{
+	struct IGlobalSession;
 }
 
 namespace vkl
@@ -218,6 +225,8 @@ namespace vkl
 		std::unique_ptr<PrebuilTransferCommands> _prebuilt_transfer_commands = nullptr;
 
 		DefinitionsMap _common_shader_definitions = {};
+
+		Slang::ComPtr<slang::IGlobalSession> _slang_session;
 
 		using Clock = std::chrono::system_clock;
 		Clock::time_point _time_begin = Clock::now();
@@ -429,6 +438,11 @@ namespace vkl
 		const Options& options()const
 		{
 			return _options;
+		}
+
+		Slang::ComPtr<slang::IGlobalSession> const& getSlangSession() const
+		{
+			return _slang_session;
 		}
 
 		std::shared_ptr<DescriptorSetLayoutInstance> getEmptyDescSetLayout();

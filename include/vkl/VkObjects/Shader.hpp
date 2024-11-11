@@ -14,11 +14,23 @@
 namespace vkl
 {
 
+	enum class ShadingLanguage
+	{
+		Unknown = 0,
+		SPIR_V,
+		GLSL,
+		Slang,
+		HLSL,
+	};
+
 	class ShaderInstance : public AbstractInstance
 	{
+	public:
+
 	protected:
 
 		std::filesystem::path _main_path;
+		ShadingLanguage _source_language = ShadingLanguage::Unknown;
 		
 		VkShaderStageFlagBits _stage;
 		VkShaderModule _module = VK_NULL_HANDLE;
@@ -41,6 +53,8 @@ namespace vkl
 
 		std::string preprocessStrings(std::string const& glsl);
 
+		bool deduceShadingLanguageIFP(std::string & source);
+
 	public:
 
 		struct CreateInfo
@@ -48,6 +62,7 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::filesystem::path const& source_path = {};
+			ShadingLanguage source_language = ShadingLanguage::Unknown;
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DefinitionsList const& definitions = {};
 			size_t shader_string_packed_capacity = 32;

@@ -11,6 +11,16 @@
 
 #include <vkl/IO/File.hpp>
 
+#include <slang/slang.h>
+#include <slang/slang-gfx.h>
+
+#define SWITCH_CASE_CONVERT(CASE, VALUE, target) \
+case CASE: \
+	target = VALUE; \
+break;
+
+#define SWITCH_CASE_CONVERT2(CASE, VALUE) SWITCH_CASE_CONVERT(CASE, VALUE, res)
+
 namespace vkl
 {
 	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, DefinitionsList const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level)
@@ -28,7 +38,6 @@ namespace vkl
 			return e.what();
 		}
 
-
 		std::stringstream oss;
 
 		const std::filesystem::path folder = path.parent_path();
@@ -42,6 +51,9 @@ namespace vkl
 
 		if (!definitions.empty())
 		{
+			// TODO temporary hack
+			if (_source_language != ShadingLanguage::Slang)
+			{
 			const size_t version_begin = content.find("#version", copied_so_far);
 			if (!(version_begin < content.size()))
 			{
@@ -60,6 +72,7 @@ namespace vkl
 
 			oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);
 			copied_so_far = version_end;
+			}
 			for (size_t i = 0; i < definitions.size(); ++i)
 			{
 				oss << "#define " << definitions[i] << "\n";
@@ -375,7 +388,50 @@ namespace vkl
 		const std::string _res = res.str();
 		return _res;
 	}
+		
+	static const std::set<const char*> glsl_extensions = []()
+	{
+		std::set<const char*> res = { ".glsl"};//, ".comp", ".vert", ".tesc", ".tese", ".geom", ".frag", ".task", ".mesh", ".rgen", ".rint", ".rahit", ".rchit", ".rmiss", ".rcall" };
+		return res;
+	}();
+	
+	static const std::set<const char*> slang_extensions = []()
+	{
+		std::set<const char*> res = {".slang"};
+		return res;
+	}();
+	
+	bool ShaderInstance::deduceShadingLanguageIFP(std::string& source)
+	{
+		if (_source_language == ShadingLanguage::Unknown)
+		{
+			size_t pos = source.find("#version");
+			if (pos != std::string::npos)
+			{
+				// TODO check that the macro is in an active line
+				_source_language = ShadingLanguage::GLSL;
+			}
+		}
 
+		if (_source_language == ShadingLanguage::Unknown)
+		{
+			// Scan the source for a "#lang glsl/slang/hlsl"
+			size_t scanned_so_far = 0;
+			while (true)
+			{
+				size_t pos = source.find("#lang ", scanned_so_far);
+				// TODO
+				NOT_YET_IMPLEMENTED;
+				if (pos == std::string::npos)
+				{
+					break;
+				}
+
+			}
+		}
+		return _source_language != ShadingLanguage::Unknown;
+	}
+	
 	std::string ShaderInstance::preprocess(std::filesystem::path const& path, DefinitionsList const& definitions, const MountingPoints* mounting_points)
 	{
 		PreprocessingState preprocessing_state = {
@@ -383,6 +439,33 @@ namespace vkl
 		};
 		_dependencies.clear();
 		std::string full_source;
+
+		if (_source_language == ShadingLanguage::Unknown)
+		{
+			const std::filesystem::path ext = path.extension();
+			if (ext == ".spv")
+			{
+				_source_language = ShadingLanguage::SPIR_V;
+			}
+			else if (ext == ".glsl")
+			{
+				_source_language = ShadingLanguage::GLSL;
+			}
+			else if (ext == ".slang")
+			{
+				_source_language = ShadingLanguage::Slang;
+			}
+			else if (ext == ".hlsl")
+			{
+				_source_language = ShadingLanguage::HLSL;
+			}
+			else
+			{
+				// Still unknown!
+				_source_language = ShadingLanguage::Unknown;
+			}
+		}
+
 		try
 		{
 			full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0);
@@ -418,151 +501,250 @@ namespace vkl
 			};
 			return {};
 		}
-		
-		std::string final_source = preprocessStrings(full_source);
-		if (_creation_result.success == false)
+
+		if (!deduceShadingLanguageIFP(full_source))
 		{
+			_creation_result = AsynchTask::ReturnType{
+				.success = false,
+				.can_retry = true,
+				.error_title = "Unknown shading language",
+				.error_message = 
+					"Could not deduce shading language of shader:\n" + _main_path.string(),
+			};
+		}
+		
+		std::string final_source;
+		if (_source_language == ShadingLanguage::GLSL)
+		{
+			final_source = preprocessStrings(full_source);
+			if (_creation_result.success == false)
+			{
 			
+			}
+		}
+		else
+		{
+			final_source = std::move(full_source);
 		}
 		return final_source;
 	}
 
-	shaderc_shader_kind getShaderKind(VkShaderStageFlagBits stage)
+	constexpr shaderc_shader_kind getShaderKind(VkShaderStageFlagBits stage)
 	{
-		shaderc_shader_kind kind = (shaderc_shader_kind)-1;
+		shaderc_shader_kind res = (shaderc_shader_kind)-1;
 		switch (stage)
 		{
-		case VK_SHADER_STAGE_VERTEX_BIT:
-			kind = shaderc_vertex_shader;
-			break;
-		case VK_SHADER_STAGE_FRAGMENT_BIT:
-			kind = shaderc_fragment_shader;
-			break;
-		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			kind = shaderc_geometry_shader;
-			break;
-		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-			kind = shaderc_tess_control_shader;
-			break;
-		case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-			kind = shaderc_tess_evaluation_shader;
-			break;
-		case VK_SHADER_STAGE_TASK_BIT_NV:
-			kind = shaderc_task_shader;
-			break;
-		case VK_SHADER_STAGE_MESH_BIT_NV:
-			kind = shaderc_mesh_shader;
-			break;
-		case VK_SHADER_STAGE_COMPUTE_BIT:
-			kind = shaderc_compute_shader;
-			break;
-		case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
-			kind = shaderc_raygen_shader;
-			break;
-		case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
-			kind = shaderc_intersection_shader;
-			break;
-		case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
-			kind = shaderc_anyhit_shader;
-			break;
-		case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
-			kind = shaderc_closesthit_shader;
-			break;
-		case VK_SHADER_STAGE_MISS_BIT_KHR:
-			kind = shaderc_miss_shader;
-			break;
-		case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
-			kind = shaderc_callable_shader;
-			break;
-		default:
-			assert(false);
-			break;
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_VERTEX_BIT, shaderc_vertex_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shaderc_tess_control_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shaderc_tess_evaluation_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_GEOMETRY_BIT, shaderc_geometry_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_FRAGMENT_BIT, shaderc_fragment_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_COMPUTE_BIT, shaderc_compute_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TASK_BIT_EXT, shaderc_task_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MESH_BIT_EXT, shaderc_mesh_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_RAYGEN_BIT_KHR, shaderc_raygen_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_ANY_HIT_BIT_KHR, shaderc_anyhit_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, shaderc_closesthit_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MISS_BIT_KHR, shaderc_miss_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_INTERSECTION_BIT_KHR, shaderc_intersection_shader);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CALLABLE_BIT_KHR, shaderc_callable_shader);
 		}
-		return kind;
+		return res;
 	}
 
-	std::string getShaderStageName(VkShaderStageFlagBits stage)
+	std::string_view getShaderStageName(VkShaderStageFlagBits stage)
 	{
-		std::string res = {};
+		std::string_view res = {};
 		switch (stage)
 		{
-		case VK_SHADER_STAGE_VERTEX_BIT:
-			res = "VERTEX";
-			break;
-		case VK_SHADER_STAGE_FRAGMENT_BIT:
-			res = "FRAGMENT";
-			break;
-		case VK_SHADER_STAGE_GEOMETRY_BIT:
-			res = "GEOMETRY";
-			break;
-		case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-			res = "TESSELLATION_CONTROL";
-			break;
-		case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-			res = "TESSELLATION_EVALUATION";
-			break;
-		case VK_SHADER_STAGE_TASK_BIT_NV:
-			res = "TASK";
-			break;
-		case VK_SHADER_STAGE_MESH_BIT_NV:
-			res = "MESH";
-			break;
-		case VK_SHADER_STAGE_COMPUTE_BIT:
-			res = "COMPUTE";
-			break;
-		case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
-			res = "RAYGEN";
-			break;
-		case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
-			res = "INTERSECTION";
-			break;
-		case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
-			res = "ANY_HIT";
-			break;
-		case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
-			res = "CLOSEST_HIT";
-			break;
-		case VK_SHADER_STAGE_MISS_BIT_KHR:
-			res = "MISS";
-			break;
-		case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
-			res = "CALLABLE";
-			break;
-		default:
-			assert(false);
-			break;
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_VERTEX_BIT, "VERTEX");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, "TESSELLATION_CONTROL");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, "TESSELLATION_EVALUATION");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_GEOMETRY_BIT, "GEOMETRY");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_FRAGMENT_BIT, "FRAGMENT");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_COMPUTE_BIT, "COMPUTE");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TASK_BIT_EXT, "TASK");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MESH_BIT_EXT, "MESH");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_RAYGEN_BIT_KHR, "RAYGEN");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_ANY_HIT_BIT_KHR, "ANY_HIT");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "CLOSEST_HIT");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MISS_BIT_KHR, "MISS");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_INTERSECTION_BIT_KHR, "INTERSECTION");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CALLABLE_BIT_KHR, "CALLABLE");
+		}
+		return res;
+	}
+
+	constexpr SlangStage ConvertToSlang(VkShaderStageFlagBits stage)
+	{
+		SlangStage res = {};
+		switch (stage)
+		{
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_VERTEX_BIT, SLANG_STAGE_VERTEX);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, SLANG_STAGE_HULL);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, SLANG_STAGE_DOMAIN);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_GEOMETRY_BIT, SLANG_STAGE_GEOMETRY);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_FRAGMENT_BIT, SLANG_STAGE_FRAGMENT);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_COMPUTE_BIT, SLANG_STAGE_COMPUTE);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TASK_BIT_EXT, SLANG_STAGE_AMPLIFICATION);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MESH_BIT_EXT, SLANG_STAGE_MESH);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_RAYGEN_BIT_KHR, SLANG_STAGE_RAY_GENERATION);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_ANY_HIT_BIT_KHR, SLANG_STAGE_ANY_HIT);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, SLANG_STAGE_CLOSEST_HIT);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MISS_BIT_KHR, SLANG_STAGE_MISS);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_INTERSECTION_BIT_KHR, SLANG_STAGE_INTERSECTION);
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CALLABLE_BIT_KHR, SLANG_STAGE_CALLABLE);
+		}
+		return res;
+	}
+
+	constexpr VkShaderStageFlagBits ConvertFromSlang(SlangStage stage)
+	{
+		VkShaderStageFlagBits res = {};
+		switch (stage)
+		{
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_VERTEX, VK_SHADER_STAGE_VERTEX_BIT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_HULL, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_DOMAIN, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_GEOMETRY, VK_SHADER_STAGE_GEOMETRY_BIT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_FRAGMENT, VK_SHADER_STAGE_FRAGMENT_BIT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_COMPUTE, VK_SHADER_STAGE_COMPUTE_BIT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_RAY_GENERATION, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_INTERSECTION, VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_ANY_HIT, VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_CLOSEST_HIT, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_MISS, VK_SHADER_STAGE_MISS_BIT_KHR);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_CALLABLE, VK_SHADER_STAGE_CALLABLE_BIT_KHR);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_MESH, VK_SHADER_STAGE_MESH_BIT_EXT);
+			SWITCH_CASE_CONVERT2(SLANG_STAGE_AMPLIFICATION, VK_SHADER_STAGE_TASK_BIT_EXT);
+		}
+		return res;
+	}
+
+
+	std::string_view GetShadingLanguageName(ShadingLanguage l)
+	{
+		std::string_view res;
+		switch (l)
+		{
+			SWITCH_CASE_CONVERT2(ShadingLanguage::Unknown, "Unknown");
+			SWITCH_CASE_CONVERT2(ShadingLanguage::SPIR_V, "SPIR-V");
+			SWITCH_CASE_CONVERT2(ShadingLanguage::GLSL, "GLSL");
+			SWITCH_CASE_CONVERT2(ShadingLanguage::Slang, "SLang");
+			SWITCH_CASE_CONVERT2(ShadingLanguage::HLSL, "HLSL");
 		}
 		return res;
 	}
 
 	bool ShaderInstance::compile(std::string const& code, std::string const& filename)
 	{	
-		shaderc::CompileOptions options;
-		//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
-		options.SetTargetSpirv(shaderc_spirv_version_1_6);
-		options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-		options.SetGenerateDebugInfo(); // To link the glsl source for nsight
-		options.SetWarningsAsErrors();
-		shaderc::Compiler compiler;
+		if (_source_language == ShadingLanguage::GLSL)
+		{
+			shaderc::CompileOptions options;
+			//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
+			options.SetTargetSpirv(shaderc_spirv_version_1_6);
+			options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
+			options.SetWarningsAsErrors();
+			shaderc::Compiler compiler;
 		
-		shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
-		size_t errors = res.GetNumErrors();
-		size_t warns = res.GetNumWarnings();
 
-		if (errors)
+			shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
+			size_t errors = res.GetNumErrors();
+			size_t warns = res.GetNumWarnings();
+
+			if (errors)
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: "s,
+					.error_message =
+						"Error while compiling shader: \n"s +
+						"Main Shader: "s + filename + ":\n"s +
+						res.GetErrorMessage(),
+				};
+				return false;
+			}
+			_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
+		}
+		else if(_source_language == ShadingLanguage::Slang)
+		{
+			Slang::ComPtr<slang::IGlobalSession> const& global_session = application()->getSlangSession();
+			Slang::ComPtr<slang::ISession> session;
+			slang::TargetDesc target{
+				.format = SLANG_SPIRV,
+				.profile = global_session->findProfile("glsl_460"),
+			};
+			slang::SessionDesc session_desc{
+				.targets = &target,
+				.targetCount = 1,
+			};
+			global_session->createSession(session_desc, session.writeRef());
+
+			Slang::ComPtr<slang::ICompileRequest> compiler;
+			session->createCompileRequest(compiler.writeRef());
+			compiler->setCodeGenTarget(SLANG_SPIRV);
+			compiler->setCompileFlags(SLANG_COMPILE_FLAG_NO_MANGLING);
+			int index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
+			compiler->addTranslationUnitSourceStringSpan(index, filename.c_str(), code.c_str(), code.c_str() + code.size());
+			if (_stage != 0)
+			{
+				//compiler->addEntryPoint(index, "main", ConvertToSlang(_stage));
+			}
+			//compiler->setFileSystem
+
+			SlangResult compilation_result = compiler->compile();
+			Slang::ComPtr<slang::IBlob> diagnostic;
+			if (SLANG_SUCCEEDED(compilation_result))
+			{
+				SlangResult sr;
+				Slang::ComPtr<slang::IComponentType> slang_program;
+				sr = compiler->getProgram(slang_program.writeRef());
+				if (SLANG_SUCCEEDED(sr))
+				{
+					Slang::ComPtr<slang::IComponentType> linked;
+					sr = slang_program->link(linked.writeRef(), diagnostic.writeRef());
+					if (SLANG_SUCCEEDED(sr))
+					{
+						Slang::ComPtr<slang::IBlob> blob;
+						sr = linked->getTargetCode(0, blob.writeRef(), diagnostic.writeRef());
+						//sr = linked->getEntryPointCode(0, 0, blob.writeRef(), diagnostic.writeRef());
+						if (SLANG_SUCCEEDED(sr))
+						{
+							const size_t size = blob->getBufferSize();
+							_spv_code.resize(size / sizeof(uint32_t));
+							std::memcpy(_spv_code.data(), blob->getBufferPointer(), size);
+						}
+					}
+
+				}
+			}
+			if(_spv_code.empty())
+			{
+				std::string_view error = compiler->getDiagnosticOutput();
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: ",
+					.error_message = 
+						"Error while compiling shader: \n"s +
+						"Main Shader: "s + filename + ":\n"s +
+						std::string(error),
+				};
+				return false;
+			}
+		}
+		else
 		{
 			_creation_result = AsynchTask::ReturnType{
 				.success = false,
 				.can_retry = true,
 				.error_title = "Shader Compilation Error: "s,
-				.error_message =
-					"Error while compiling shader: \n"s +
-					"Main Shader: "s + _main_path.string() + ":\n"s +
-					res.GetErrorMessage(),
+				.error_message = std::format("Unsuported shading language: {}", GetShadingLanguageName(_source_language)),
 			};
 			return false;
 		}
-		_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
 
 		const bool dump_spv = _stage == false;
 		if (dump_spv)
@@ -603,6 +785,7 @@ namespace vkl
 	ShaderInstance::ShaderInstance(CreateInfo const& ci) :
 		AbstractInstance(ci.app, ci.name),
 		_main_path(ci.source_path),
+		_source_language(ci.source_language),
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection)),
 		_shader_string_packed_capacity(ci.shader_string_packed_capacity)
@@ -611,7 +794,7 @@ namespace vkl
 		using namespace std::containers_append_operators;
 		std::filesystem::file_time_type compile_time = std::chrono::file_clock::now();
 
-		std::string semantic_definition = "SHADER_SEMANTIC_" + getShaderStageName(_stage) + " 1";
+		std::string semantic_definition = std::format("SHADER_SEMANTIC_{} 1", getShaderStageName(_stage));
 		DefinitionsList defines = { semantic_definition };
 		defines += application()->commonShaderDefinitions().collapsed();
 		defines += ci.definitions;

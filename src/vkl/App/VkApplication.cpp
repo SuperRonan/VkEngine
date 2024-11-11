@@ -19,6 +19,7 @@
 
 #include <ShaderLib/Vulkan/ShaderAtomicFlags.h>
 
+#include <slang/slang.h>
 
 #include <exception>
 #include <set>
@@ -1158,10 +1159,26 @@ namespace vkl
 
 		_prebuilt_transfer_commands = std::make_unique<PrebuilTransferCommands>(this);
 
+		SlangResult slang_result = slang::createGlobalSession(_slang_session.writeRef());
+		if (!SLANG_SUCCEEDED(slang_result))
+		{
+			_logger("Failed to init slang!", Logger::Options::TagError);
+			_slang_session = nullptr;
+		}
+		else
+		{
+			
+		}
+		
 	}
 
 	void VkApplication::cleanup()
 	{
+		if (_slang_session)
+		{
+			slang::shutdown();
+		}
+
 		_prebuilt_transfer_commands.reset();
 		_texture_file_cache.reset();
 		_sampler_library.reset();
