@@ -414,7 +414,7 @@ namespace vkl
 			VkPresentModeKHR present_mode = swapchain.createInfo().presentMode;
 			ImGui_ImplVulkan_SecondaryViewportInfo vp_info{
 				.SurfaceFormat = surface_format,
-				.PresentMode = &present_mode,
+				//.PresentMode = &present_mode,
 			};
 #if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION	
 			vp_info.ColorCorrectionMethod = imgui_method,
