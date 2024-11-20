@@ -74,7 +74,7 @@ namespace vkl
 			std::filesystem::path _path = {};
 			bool _synch = false;
 			bool _popup_open = true;
-			bool _file_dialog_open;
+			bool _file_dialog_open = false;
 
 			std::mutex _file_dialog_mutex;
 
