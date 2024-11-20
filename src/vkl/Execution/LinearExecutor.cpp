@@ -1531,9 +1531,10 @@ namespace vkl
 		for (auto it = _previous_swapchain_events.begin(), end = _previous_swapchain_events.end(); it != end; ++it)
 		{
 			_fences.push_back(it->get()->aquire_signal_fence->handle());
-			//fences.push_back(it->get()->present_signal_fence->handle());
-			//VkResult result = it->get()->signal_fence->getStatus();
-			//assert(result != VK_NOT_READY);
+			if (it->get()->present_signal_fence)
+			{
+				_fences.push_back(it->get()->present_signal_fence->handle());
+			}
 		}
 		if (_fences)
 		{
