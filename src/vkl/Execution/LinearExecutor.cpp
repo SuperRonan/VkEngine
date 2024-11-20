@@ -629,7 +629,7 @@ namespace vkl
 
 	LinearExecutor::~LinearExecutor()
 	{
-		vkDeviceWaitIdle(device());
+		application()->deviceWaitIdle();
 		if (_window && !useSpecificPresentSignalFence())
 		{
 			_window->swapchain()->removeInvalidationCallback(this);
@@ -1479,7 +1479,7 @@ namespace vkl
 				application()->logger()(std::format("Submitted (latency = {}us)", waited.count()), Logger::Options::TagInfo);
 			}
 
-			//vkDeviceWaitIdle(device());
+			application()->deviceWaitIdle();
 			_previous_cbs.push_back(pending);
 		}
 		_pending_cbs.clear();
@@ -1495,7 +1495,7 @@ namespace vkl
 		_cb_mutex.lock();
 		if (global_wait)
 		{
-			result = vkDeviceWaitIdle(device());
+			result = application()->deviceWaitIdle();
 		}
 		else
 		{

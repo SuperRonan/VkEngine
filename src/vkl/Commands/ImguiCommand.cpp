@@ -258,7 +258,7 @@ namespace vkl
 	void ImguiCommand::shutdownImGui()
 	{
 		application()->logger()("Shutdown ImGui Vulkan", Logger::Options::TagInfo);
-		vkDeviceWaitIdle(device());
+		application()->deviceWaitIdle();
 		ImGui_ImplVulkan_DestroyFontsTexture();
 		ImGui_ImplVulkan_Shutdown();
 		_desc_pool = nullptr;
@@ -398,7 +398,7 @@ namespace vkl
 		if(_re_create_imgui_pipeline)
 		{
 			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
-			vkDeviceWaitIdle(device());
+			application()->deviceWaitIdle();
 			ImGui_ImplVulkan_MainPipelineCreateInfo info{
 				.RenderPass = vk_render_pass,
 				.Subpass = 0,

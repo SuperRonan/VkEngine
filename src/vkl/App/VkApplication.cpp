@@ -1044,6 +1044,13 @@ namespace vkl
 		return _empty_set_layout;
 	}
 
+	VkResult VkApplication::deviceWaitIdle()
+	{
+		// TODO aquire all queues mutexes
+		VkResult res = vkDeviceWaitIdle(_device);
+		return res;
+	}
+
 	void VkApplication::initSDL()
 	{
 		uint32_t init = 0;

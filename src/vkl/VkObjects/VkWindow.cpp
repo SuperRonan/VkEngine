@@ -360,7 +360,7 @@ namespace vkl
 
 		if (_desired_window_mode != _window_mode)
 		{
-			vkDeviceWaitIdle(_app->device());
+			application()->deviceWaitIdle();
 			if (_desired_window_mode == Mode::Windowed)
 			{
 				SDL_SetWindowFullscreen(_window, 0);
@@ -402,7 +402,7 @@ namespace vkl
 				//	glfwWaitEvents();
 
 				// I don't think it is necessary to do it, but for now we have some validation errors if we don't
-				vkDeviceWaitIdle(_app->device());
+				application()->deviceWaitIdle();
 
 				setSize(width, height);
 
@@ -412,7 +412,7 @@ namespace vkl
 			}
 			else if (_gui_resized)
 			{
-				vkDeviceWaitIdle(_app->device());
+				application()->deviceWaitIdle();
 				
 				_width = static_cast<uint32_t>(_desired_resolution[0]);
 				_height = static_cast<uint32_t>(_desired_resolution[1]);

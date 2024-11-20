@@ -122,7 +122,7 @@ namespace vkl
 
 			if (wait)
 			{
-				vkDeviceWaitIdle(device());
+				application()->deviceWaitIdle();
 			}
 
 			vkUpdateDescriptorSets(device(), _writes.size(), _writes.data(), 0, nullptr);

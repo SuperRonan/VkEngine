@@ -476,6 +476,8 @@ namespace vkl
 		{
 			return _logger;
 		}
+
+		VkResult deviceWaitIdle();
 	};
 
 	class VkObject
