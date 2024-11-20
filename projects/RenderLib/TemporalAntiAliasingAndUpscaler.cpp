@@ -114,7 +114,7 @@ namespace vkl
 
 		setFormat();
 
-		const std::filesystem::path shaders = application()->mountingPoints()["RenderLibShaders"];
+		const std::filesystem::path shaders = "RenderLibShaders:/";
 
 		Callback reset_callback{
 			.callback = [this]() {_reset = true; },

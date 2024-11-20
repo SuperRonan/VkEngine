@@ -24,7 +24,7 @@ namespace vkl
 	void ColorCorrection::createInternalResources()
 	{
 		const bool use_separate_src = _src != _dst;
-		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/ToneMap/";
+		const std::filesystem::path folder = "ShaderLib:/ToneMap/";
 
 		ShaderBindings bindings;
 		bindings.push_back(Binding{

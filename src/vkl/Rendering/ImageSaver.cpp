@@ -117,8 +117,6 @@ namespace vkl
 			{
 				path += _extension;
 			}
-			const MountingPoints & mp = application()->mountingPoints();
-			path = ReplaceMountingPoints(mp, path);
 			std::shared_ptr<SaveInfo> ptr_save_info = std::make_shared<SaveInfo>(SaveInfo{
 				.full_path = std::move(path),
 				.extension = _extension,
@@ -145,9 +143,12 @@ namespace vkl
 
 					that::img::io::WriteInfo write_info{
 						.quality = _jpg_quality,
-						.create_folder_ifn = _create_folder_ifn,
+						.can_modify_image = true,
+						.image = &image,
+						.path = &ptr_save_info->full_path,
+						.filesystem = application()->fileSystem(),
 					};
-					that::Result write_result = that::img::io::Write(std::move(image), ptr_save_info->full_path, write_info);
+					that::Result write_result = that::img::io::Write(write_info);
 					if (write_result != that::Result::Success)
 					{
 						result = write_result;

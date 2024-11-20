@@ -293,7 +293,6 @@ namespace vkl
 				.app = this,
 				.name = "exec",
 				.window = _main_window,
-				.mounting_points = resources_manager.mountingPoints(),
 				.common_definitions = resources_manager.commonDefinitions(),
 				.use_ImGui = true,
 				.use_debug_renderer = true,

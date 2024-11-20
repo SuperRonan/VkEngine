@@ -941,10 +941,3 @@ namespace std
 		}
 	};
 }
-
-namespace vkl
-{
-	using MountingPoints = std::HMap<std::string, std::string>;
-
-	extern std::filesystem::path ReplaceMountingPoints(MountingPoints const& mp, std::filesystem::path const& p);
-}

@@ -221,7 +221,7 @@ namespace vkl
 			model_layout[model_type] = Model::setLayout(application(), Model::SetLayoutOptions{ .type = model_type, .bind_mesh = true, .bind_material = true, });
 		}
 
-		const std::filesystem::path shaders = application()->mountingPoints()["RenderLibShaders"];
+		const std::filesystem::path shaders = "RenderLibShaders:/";
 
 		_prepare_draw_list = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),

@@ -34,9 +34,9 @@ namespace vkl
 		
 		VkShaderStageFlagBits _stage;
 		VkShaderModule _module = VK_NULL_HANDLE;
-		std::vector<uint32_t> _spv_code;
+		MyVector<uint32_t> _spv_code;
 		SpvReflectShaderModule _reflection;
-		std::vector<std::filesystem::path> _dependencies;
+		MyVector<std::filesystem::path> _dependencies;
 		size_t _shader_string_packed_capacity = 32;
 
 		std::string _preprocessed_source;
@@ -46,7 +46,6 @@ namespace vkl
 		struct PreprocessingState
 		{
 			std::set<std::filesystem::path> pragma_once_files = {};
-			const MountingPoints * mounting_points;
 		};
 
 		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level);
@@ -66,7 +65,6 @@ namespace vkl
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DefinitionsList const& definitions = {};
 			size_t shader_string_packed_capacity = 32;
-			const MountingPoints * mounting_points = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -82,7 +80,7 @@ namespace vkl
 
 
 
-		std::string preprocess(std::filesystem::path const& path, DefinitionsList const& definitions, const MountingPoints * mounting_points);
+		std::string preprocess(std::filesystem::path const& path, DefinitionsList const& definitions);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 
@@ -179,7 +177,7 @@ namespace vkl
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points);
+		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity);
 
 		virtual void destroyInstanceIFN() override;
 

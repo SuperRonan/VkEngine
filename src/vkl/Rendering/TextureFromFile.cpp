@@ -53,14 +53,27 @@ namespace vkl
 	{
 		if (!_path.empty())
 		{
-			_host_image = that::img::io::ReadFormatedImage(_path);
-			if (_host_image.format().type == that::ElementType::UNORM)
+			that::img::io::ReadImageInfo read_info{
+				.path = &_path,
+				.filesystem = application()->fileSystem(),
+				.target = &_host_image,
+			};
+			that::Result read_result = that::img::io::ReadFormatedImage(read_info);
+			if (read_result != that::Result::Success)
 			{
-				that::FormatInfo new_format = _host_image.format();
-				new_format.type = that::ElementType::sRGB;
-				_host_image.setFormat(new_format, _host_image.rowMajor());
+				application()->logger()(std::format("Could not read texture image: {}", _path.string()), Logger::Options::TagLowWarning);
+				_host_image = {};
 			}
-			_original_format = _host_image.format();
+			else
+			{
+				if (_host_image.format().type == that::ElementType::UNORM)
+				{
+					that::FormatInfo new_format = _host_image.format();
+					new_format.type = that::ElementType::sRGB;
+					_host_image.setFormat(new_format, _host_image.rowMajor());
+				}
+				_original_format = _host_image.format();
+			}
 
 			if (!_host_image.empty())
 			{

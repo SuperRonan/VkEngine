@@ -230,7 +230,6 @@ namespace vkl
 			VkApplication* app = nullptr;
 			std::string name = {};
 			std::shared_ptr<VkWindow> window = nullptr;
-			MountingPoints * mounting_points = nullptr;
 			DefinitionsMap * common_definitions = nullptr;
 			bool use_ImGui = false;
 			bool use_debug_renderer = true;

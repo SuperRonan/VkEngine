@@ -25,6 +25,8 @@
 
 #include <slang/slang-com-ptr.h>
 
+#include <that/IO/FileSystem.hpp>
+
 namespace argparse
 {
 	class ArgumentParser;
@@ -64,12 +66,14 @@ namespace vkl
 			
 			uint32_t gpu_id = uint32_t(-1);
 			
-			bool enable_validation = false;
-			bool enable_object_naming = false;
-			bool enable_command_buffer_labels = false;
-			bool prefer_render_pass_with_dynamic_rendering = false;
-			bool query_render_pass_creation_feedback = false;
-			bool render_pass_disallow_merging = false;
+			bool enable_validation : 1 = false;
+			bool enable_object_naming : 1 = false;
+			bool enable_command_buffer_labels : 1 = false;
+			bool prefer_render_pass_with_dynamic_rendering : 1 = false;
+			bool query_render_pass_creation_feedback : 1 = false;
+			bool render_pass_disallow_merging : 1 = false;
+			bool dump_shader_source : 1 = false;
+			bool dump_shader_spv : 1 = false;
 
 			// bit field per image usage (VkImageUsageFlagBits)
 
@@ -235,7 +239,7 @@ namespace vkl
 
 		void fillCommonShaderDefinitions();
 
-		MountingPoints _mounting_points;
+		std::unique_ptr<that::FileSystem> _file_system = nullptr;
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -255,33 +259,33 @@ namespace vkl
 		{
 			struct QueueInfo
 			{
-				VkQueueFamilyProperties props;
-				MyVector<float> priorities;
-				MyVector<std::string> names;
+				VkQueueFamilyProperties props = {};
+				MyVector<float> priorities = {};
+				MyVector<std::string> names = {};
 			};
 			// Indexed by queue family id
-			MyVector<QueueInfo> queues;
-			MyVector<uint32_t> present_queues;
-			MyVector<QueueIndex> desired_to_info;
+			MyVector<QueueInfo> queues = {};
+			MyVector<uint32_t> present_queues = {};
+			MyVector<QueueIndex> desired_to_info = {};
 			VkQueueFlags total_flags = 0;
 			bool all_required = true;
 		};
 
 		struct DesiredDeviceInfo
 		{
-			std::set<std::string_view> extensions;
-			VulkanFeatures features;
-			DesiredQueuesInfo queues;
+			std::set<std::string_view> extensions = {};
+			VulkanFeatures features = {};
+			DesiredQueuesInfo queues = {};
 		};
 
 		struct CandidatePhysicalDevice
 		{
-			VkPhysicalDevice device;
+			VkPhysicalDevice device = VK_NULL_HANDLE;
 			
-			VulkanExtensionsSet extensions;
-			VulkanFeatures features;
-			DeviceCandidateQueues queues;
-			VulkanDeviceProps props;
+			VulkanExtensionsSet extensions = {};
+			VulkanFeatures features = {};
+			DeviceCandidateQueues queues = {};
+			VulkanDeviceProps props = {};
 		};
 
 		DeviceCandidateQueues findQueueFamilies(VkPhysicalDevice device, DesiredQueuesInfo const& desired_queues);
@@ -311,7 +315,7 @@ namespace vkl
 
 		virtual void cleanup();
 
-		void loadMountingPoints();
+		void loadFileSystem();
 
 		void log(std::string_view sv, Logger::Options options);
 
@@ -463,14 +467,9 @@ namespace vkl
 			return _common_shader_definitions;
 		}
 
-		MountingPoints& mountingPoints()
+		that::FileSystem * fileSystem() const
 		{
-			return _mounting_points;
-		}
-
-		MountingPoints const & mountingPoints()const
-		{
-			return _mounting_points;
+			return _file_system.get();
 		}
 
 		const Logger& logger() const

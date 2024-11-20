@@ -122,13 +122,12 @@ namespace vkl
 				.app = this,
 				.name = "exec",
 				.window = _main_window,
-				.mounting_points = resources_manager.mountingPoints(),
 				.common_definitions = resources_manager.commonDefinitions(),
 				.use_ImGui = true,
 				.use_debug_renderer = true,
 			});
 
-			const std::filesystem::path shaders = mountingPoints()["ProjectShaders"];
+			const std::filesystem::path shaders = "ProjectShaders:/";
 
 			VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			//VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;

@@ -104,7 +104,7 @@ namespace vkl
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
 		});
 
-		const std::filesystem::path folder = application()->mountingPoints()["ShaderLib"] + "/Rendering/AmbientOcclusion/";
+		const std::filesystem::path folder = "ShaderLib:/Rendering/AmbientOcclusion/";
 		_method_glsl = "AO_METHOD 0";
 		Dyn<DefinitionsList> defs = [this](DefinitionsList & res)
 		{

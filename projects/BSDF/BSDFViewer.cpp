@@ -187,7 +187,7 @@ namespace vkl
 			},
 		});
 
-		const std::filesystem::path shaders = application()->mountingPoints()["ProjectShaders"];
+		const std::filesystem::path shaders = "ProjectShaders:/";
 
 		_blending = AttachmentBlending::DefaultAlphaBlending();
 

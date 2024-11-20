@@ -49,7 +49,7 @@ namespace vkl
 
 		_framebuffer = std::make_shared<Framebuffer>(std::move(fb_ci));
 
-		const std::filesystem::path shader_lib = application()->mountingPoints()["ShaderLib"];
+		const std::filesystem::path shader_lib = "ShaderLib:/";
 		GraphicsPipeline::LineRasterizationState line_raster_state{
 			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
 		};

@@ -49,7 +49,7 @@ namespace vkl
 			_framebuffer = std::make_shared<Framebuffer>(std::move(fb_ci));
 		}
 
-		std::filesystem::path shaders = application()->mountingPoints()["ShaderLib"] + "/Rendering/Interface";
+		std::filesystem::path shaders = "ShaderLib:/Rendering/Interface";
 
 		_blending = AttachmentBlending::DefaultAlphaBlending();
 

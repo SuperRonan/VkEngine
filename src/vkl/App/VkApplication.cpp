@@ -12,7 +12,7 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
-#include <vkl/IO/File.hpp>
+#include <that/IO/File.hpp>
 #include <vkl/IO/Logging.hpp> 
 
 #include <argparse/argparse.hpp>
@@ -89,6 +89,18 @@ namespace vkl
 			.help("Set the console verbosity level (int)")
 			.default_value(default_verbosity)
 			.scan<'d', int>()
+		;
+
+		args.add_argument("--dump_shader_source")
+			.help("Enable shaders source dump in the gen folder")
+			.scan<'d', int>()
+			.default_value(0)
+		;
+		
+		args.add_argument("--dump_spv")
+			.help("Enable shaders SPIR-V binary dump in the gen folder")
+			.scan<'d', int>()
+			.default_value(0)
 		;
 	}
 
@@ -1067,6 +1079,8 @@ namespace vkl
 			.enable_validation = intToBool(ci.args.get<int>("--validation")),
 			.enable_object_naming = intToBool(ci.args.get<int>("--name_vk_objects")),
 			.enable_command_buffer_labels = intToBool(ci.args.get<int>("--cmd_labels")),
+			.dump_shader_source = intToBool(ci.args.get<int>("--dump_shader_source")),
+			.dump_shader_spv = intToBool(ci.args.get<int>("--dump_spv")),
 		};
 
 		std::string arg_image_layout = ci.args.get<std::string>("image_layout");
@@ -1134,7 +1148,7 @@ namespace vkl
 
 	void VkApplication::init()
 	{
-		loadMountingPoints();
+		loadFileSystem();
 		initSDL();
 		preChecks();
 
@@ -1225,12 +1239,18 @@ namespace vkl
 		cleanup();
 	}
 
-	void VkApplication::loadMountingPoints()
+	void VkApplication::loadFileSystem()
 	{
 		const std::filesystem::path current_path = std::filesystem::current_path();
-		const std::filesystem::path exe_path = GetCurrentExecutableAbsolutePath();
+		const std::filesystem::path exe_path = that::GetCurrentExecutableAbsolutePath();
 		const std::filesystem::path exe_folder = exe_path.parent_path();
 
+		_file_system = std::make_unique<that::FileSystem>(that::FileSystem::CI{
+
+		});
+
+		that::MountingPoints & _mounting_points = _file_system->mountingPoints();
+		using T = const char[4];
 		// Default values
 		_mounting_points["exec"] = exe_folder.string();
 		_mounting_points["ShaderLib"] = exe_folder.string() + "/ShaderLib/";
@@ -1241,9 +1261,10 @@ namespace vkl
 
 		if (std::filesystem::exists(mp_file_path))
 		{
-			try 
+			std::string file;
+			that::Result read_file_result = that::ReadFileToString(mp_file_path, file);
+			if (read_file_result == that::Result::Success)
 			{
-				const std::string file = ReadFileToString(mp_file_path);
 				const std::vector<std::string> parsed = [&]()
 				{
 					std::vector<std::string> res;
@@ -1281,19 +1302,19 @@ namespace vkl
 					}
 					_mounting_points[key] = path.string();
 				}
-
 				// Special case when developping:
 				if(_mounting_points.contains("DevProjectsFolder"))
 				{
 					if (!_mounting_points.contains("ProjectShaders"))
 					{
-						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] + getProjectName() + "/Shaders/"s;
+						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] / getProjectName() / "Shaders/"s;
 					}
 				}
+			
 			}
-			catch (std::exception const& e)
+			else
 			{
-				std::cout << "Could not find the Mounting Points file. Using Executable folder in place." << std::endl;
+				_logger("Could not find the Mounting Points file. Using Executable folder in place.", Logger::Options::TagHighWarning);
 			};
 		}
 		if (!_mounting_points.contains("ProjectShaders"))

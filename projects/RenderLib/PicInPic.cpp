@@ -9,7 +9,7 @@ namespace vkl
 		_target(ci.target),
 		_sets_layouts(ci.sets_layouts)
 	{
-		const std::filesystem::path common_shaders = application()->mountingPoints()["ShaderLib"];
+		const std::filesystem::path common_shaders = "ShaderLib:/";
 
 		_definitions = [this](DefinitionsList& res){
 			res.clear();

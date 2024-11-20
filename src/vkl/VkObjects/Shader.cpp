@@ -9,8 +9,6 @@
 #include <format>
 #include <thread>
 
-#include <vkl/IO/File.hpp>
-
 #include <slang/slang.h>
 #include <slang/slang-gfx.h>
 
@@ -27,15 +25,27 @@ namespace vkl
 	{
 		_dependencies.push_back(path);
 		std::string content;
-		try
 		{
-			content = ReadFileToString(path);
-		}
-		catch (std::exception const& e)
-		{
-			_creation_result.success = false;
-			// Handle the error in the caller
-			return e.what();
+			that::Result read_result = application()->fileSystem()->readFile(that::FileSystem::ReadFileInfo{
+				.path_is_native = false,
+				.path = &path,
+				.result_string = &content,
+			});
+			if (read_result != that::Result::Success)
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: Could not read file"s,
+					.error_message = std::format(
+						"Error while preprocessing shader : Could not read file : {} \n"
+						"Returned code : {} (code: {})\n"
+						"Main Shader: {}\n",
+						path.string(), that::GetResultStr(read_result), static_cast<uint64_t>(read_result), _main_path.string()
+					),
+				};
+				return std::string();
+			}
 		}
 
 		std::stringstream oss;
@@ -126,47 +136,15 @@ namespace vkl
 					}
 					else if(validate(mp_path_begin, mp_path_end))
 					{
-						if (!preprocessing_state.mounting_points)
+						that::FileSystem & fs = *application()->fileSystem();
+						const std::string_view mp_path_view(include_line.data() + mp_path_begin, mp_path_end - mp_path_begin);
+						const std::filesystem::path mp_path = mp_path_view;
+						const that::ResultAnd<that::FileSystem::PathStringView> result_mounting_point = fs.ExtractMountingPoint(mp_path);
+						const that::FileSystem::PathStringView & mounting_point = result_mounting_point.value;
+						const bool path_is_valid = (result_mounting_point.result == that::Result::Success) && (mounting_point.empty() || fs.mountingPointIsNative(mounting_point) || fs.knowsMountingPoint(mounting_point));
+						if (path_is_valid)
 						{
-							_creation_result = AsynchTask::ReturnType{
-								.success = false,
-								.can_retry = false,
-								.error_title = "Shader Compilation Error: Preprocess Includes"s,
-								.error_message =
-									"Error while preprocessing shader: Inclusion error \n"s +
-									"Main Shader: "s + _main_path.string() + ":\n"s +
-									"In file "s + path.string() + ":\n"s +
-									"Mounting points are not loaded!"s,
-							};
-							return std::filesystem::path();
-						}
-						const size_t mp_end = include_line.find(":");
-						if (mp_end == std::string::npos)
-						{
-							size_t line_index = countLines(0, line_end);
-							_creation_result = AsynchTask::ReturnType{
-								.success = false,
-								.can_retry = true,
-								.error_title = "Shader Compilation Error: Preprocess Includes"s,
-								.error_message =
-									"Error while preprocessing shader: Inclusion error \n"s +
-									"Main Shader: "s + _main_path.string() + ":\n"s +
-									"In file "s + path.string() + ":\n"s +
-									"Line "s + std::to_string(line_index) + "\n"s +
-									"Could not parse mouting point path (missing ':'?):\n"s +
-									std::string(include_line),
-							};
-							return std::filesystem::path();
-						}
-						const std::string_view mounting_point(include_line.data() + mp_path_begin, mp_end - mp_path_begin);
-						const MountingPoints & mps = *preprocessing_state.mounting_points;
-						const std::string mp_str = std::string(mounting_point);
-						if (mps.contains(mp_str))
-						{
-							std::string const& mp_path = mps.at(mp_str);
-							const std::string_view rel_path(include_line.data() + mp_end + 1, mp_path_end - mp_end - 1);
-							const std::filesystem::path path_to_include = mp_path + std::string(rel_path);
-							return path_to_include;
+							return mp_path;
 						}
 						else
 						{
@@ -174,14 +152,16 @@ namespace vkl
 							_creation_result = AsynchTask::ReturnType{
 								.success = false,
 								.can_retry = true,
-								.error_title = "Shader Compilation Error: Preprocess Includes"s,
-								.error_message =
-									"Error while preprocessing shader: Inclusion error \n"s +
-									"Main Shader: "s + _main_path.string() + ":\n"s +
-									"In file "s + path.string() + ":\n"s +
-									"Line "s + std::to_string(line_index) + "\n"s +
-									std::string(include_line) + "\n"s +
-									"Could not find mounting point "s + mp_str + "\n"s,
+								.error_title = "Shader Compilation Error: Preprocess Includes",
+								.error_message = std::format(
+									"Error while preprocessing shader: Inclusion error \n"
+									"Main Shader: {}\n" 
+									// TODO format as a clickable link
+									"In file: {}\n"
+									"Line: {}\n"
+									"Incorrect mp path in #include directive: {}\n",
+									_main_path.string(), path.string(), line_index, include_line
+								),	
 							};
 							return std::filesystem::path();
 						}
@@ -192,14 +172,16 @@ namespace vkl
 						_creation_result = AsynchTask::ReturnType{
 							.success = false,
 							.can_retry = true,
-							.error_title = "Shader Compilation Error: Preprocess Includes"s,
-							.error_message =
-								"Error while preprocessing shader: Inclusion error \n"s +
-								"Main Shader: "s + _main_path.string() + ":\n"s +
-								"In file "s + path.string() + ":\n"s +
-								"Line "s + std::to_string(line_index) + "\n"s +
-								"Could not parse #include directive:\n"s +
-								std::string(include_line),
+							.error_title = "Shader Compilation Error: Preprocess Includes",
+							.error_message = std::format(
+								"Error while preprocessing shader: Inclusion error \n"
+								"Main Shader: {}\n"
+								// TODO format as a clickable link
+								"In file: {}\n"
+								"Line: {}\n"
+								"Could not parse #include directive: {}\n",
+								_main_path.string(), path.string(), line_index, include_line
+							),
 						};
 						return std::filesystem::path();
 					}
@@ -432,10 +414,9 @@ namespace vkl
 		return _source_language != ShadingLanguage::Unknown;
 	}
 	
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, DefinitionsList const& definitions, const MountingPoints* mounting_points)
+	std::string ShaderInstance::preprocess(std::filesystem::path const& path, DefinitionsList const& definitions)
 	{
 		PreprocessingState preprocessing_state = {
-			.mounting_points = mounting_points,
 		};
 		_dependencies.clear();
 		std::string full_source;
@@ -488,17 +469,20 @@ namespace vkl
 			}
 		}
 
-		if (_creation_result.success == false && _creation_result.error_message.empty())
+		if (_creation_result.success == false)
 		{
-			_creation_result = AsynchTask::ReturnType{
-				.success = false,
-				.can_retry = false,
-				.error_title = "Shader Compilation Error: Preprocess Includes"s,
-				.error_message =
-					"Error while preprocessing shader: \n"s +
-					"Could not read main shader: " + _main_path.string() + "\n"s +
-					full_source,
-			};
+			if (_creation_result.error_message.empty())
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = false,
+					.error_title = "Shader Compilation Error: Preprocess Includes"s,
+					.error_message =
+						"Error while preprocessing shader: \n"s +
+						"Could not read main shader: " + _main_path.string() + "\n"s +
+						full_source,
+				};
+			}
 			return {};
 		}
 
@@ -638,6 +622,8 @@ namespace vkl
 
 	bool ShaderInstance::compile(std::string const& code, std::string const& filename)
 	{	
+		const bool dump_source = application()->options().dump_shader_source;
+		const bool dump_spv = application()->options().dump_shader_spv;
 		if (_source_language == ShadingLanguage::GLSL)
 		{
 			shaderc::CompileOptions options;
@@ -647,7 +633,6 @@ namespace vkl
 			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
 			options.SetWarningsAsErrors();
 			shaderc::Compiler compiler;
-		
 
 			shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
 			size_t errors = res.GetNumErrors();
@@ -686,6 +671,9 @@ namespace vkl
 			session->createCompileRequest(compiler.writeRef());
 			compiler->setCodeGenTarget(SLANG_SPIRV);
 			compiler->setCompileFlags(SLANG_COMPILE_FLAG_NO_MANGLING);
+			compiler->setDebugInfoLevel(SLANG_DEBUG_INFO_LEVEL_MAXIMAL);
+			compiler->setDebugInfoFormat(SLANG_DEBUG_INFO_FORMAT_C7);
+			compiler->setTargetEmbedDownstreamIR(0, true);
 			int index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
 			compiler->addTranslationUnitSourceStringSpan(index, filename.c_str(), code.c_str(), code.c_str() + code.size());
 			if (_stage != 0)
@@ -746,10 +734,42 @@ namespace vkl
 			return false;
 		}
 
-		const bool dump_spv = _stage == false;
-		if (dump_spv)
+		if (dump_source || dump_spv)
 		{
-			WriteFile(application()->mountingPoints()["gen"] + "/shader.spv.bin", _spv_code);
+			// Path without mounting point
+			that::ResultAnd<that::FileSystem::PathStringView> rel_path = that::FileSystem::ExtractRelative(_main_path);
+			that::ResultAnd<that::FileSystem::PathStringView> mp = application()->fileSystem()->ExtractMountingPoint(_main_path);
+			if (_source_language == ShadingLanguage::Slang)
+			{
+				VKL_BREAKPOINT_HANDLE;
+			}
+			if (rel_path.result == that::Result::Success && mp.result == that::Result::Success)
+			{
+				if (dump_source)
+				{
+					that::FileSystem::Path write_folder = "gen:/shaders_source/";
+					that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
+					that::FileSystem::WriteFileInfo info = {};
+					info.path = &write_path;
+					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(code.data()), code.size());
+					application()->fileSystem()->writeFile(info);
+				}
+				if (dump_spv)
+				{
+					that::FileSystem::Path spv_rel_path = rel_path.value;
+					spv_rel_path += ".spv.bin";
+					that::FileSystem::Path write_folder = "gen:/shaders_SPIRV-V/";
+					that::FileSystem::Path write_path = write_folder / mp.value / spv_rel_path;
+					that::FileSystem::WriteFileInfo info = {};
+					info.path = &write_path;
+					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(_spv_code.data()), _spv_code.byte_size());
+					application()->fileSystem()->writeFile(info);
+				}
+			}
+			else
+			{
+				application()->logger()(std::format("Could not extract dump path for shader {}!", _main_path.string()), Logger::Options::TagWarning);
+			}
 		}
 		
 		VkShaderModuleCreateInfo module_ci{
@@ -799,7 +819,7 @@ namespace vkl
 		defines += application()->commonShaderDefinitions().collapsed();
 		defines += ci.definitions;
 
-		_preprocessed_source = preprocess(ci.source_path, defines, ci.mounting_points);
+		_preprocessed_source = preprocess(ci.source_path, defines);
 		
 		if (_creation_result.success)
 		{
@@ -866,7 +886,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, const MountingPoints * mounting_points)
+	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity)
 	{
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
@@ -887,7 +907,7 @@ namespace vkl
 				.name = "Compiling shader " + _path.string(),
 				.verbosity = AsynchTask::Verbosity::Medium,
 				.priority = TaskPriority::ASAP(),
-				.lambda = [this, definitions = std::move(definitions), mounting_points, string_packed_capacity, lkey]() {
+				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey]() {
 
 					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 						.app = application(),
@@ -896,7 +916,6 @@ namespace vkl
 						.stage = _stage,
 						.definitions = definitions,
 						.shader_string_packed_capacity = string_packed_capacity,
-						.mounting_points = mounting_points,
 					});
 
 					const AsynchTask::ReturnType & res = _inst->getCreationResult();
@@ -941,8 +960,8 @@ namespace vkl
 				waitForInstanceCreationIFN();
 				for (const auto& dep : _dependencies)
 				{
-					const std::filesystem::file_time_type new_time = std::filesystem::last_write_time(dep);
-					if (new_time > _instance_time)
+					const that::ResultAnd<std::filesystem::file_time_type> new_time = application()->fileSystem()->getFileTime(dep, false);
+					if (new_time.result == that::Result::Success && new_time.value > _instance_time)
 					{
 						_specializations.clear();
 						res = true;
@@ -987,7 +1006,7 @@ namespace vkl
 					// TODO use a better function that checks the result and can parse hex
 					packed_capcity = std::atoi(capacity.c_str());
 				}
-				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), ctx.mountingPoints());
+				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity));
 				res = true;
 			}
 		}

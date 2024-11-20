@@ -25,9 +25,6 @@ namespace vkl
 		
 		const DefinitionsMap * _common_definitions;
 
-
-		const MountingPoints* _mounting_points = nullptr;
-
 		ResourcesLists _resources_to_update_later;
 
 		// Synchronous upload
@@ -51,7 +48,6 @@ namespace vkl
 			size_t update_tick = 0;
 			size_t shader_check_tick = 0;
 			const DefinitionsMap* common_definitions;
-			MountingPoints* mounting_points = nullptr;
 			UploadQueue * upload_queue = nullptr;
 			MipMapComputeQueue * mips_queue = nullptr;
 			DescriptorWriter& descriptor_writer;
@@ -63,7 +59,6 @@ namespace vkl
 			_update_tick(ci.update_tick),
 			_shader_check_tick(ci.shader_check_tick),
 			_common_definitions(ci.common_definitions),
-			_mounting_points(ci.mounting_points),
 			_upload_queue(ci.upload_queue),
 			_mips_queue(ci.mips_queue),
 			_descriptor_writer(ci.descriptor_writer)
@@ -84,16 +79,6 @@ namespace vkl
 		constexpr const DefinitionsMap * commonDefinitions() const
 		{
 			return _common_definitions;
-		}
-
-		const MountingPoints* mountingPoints()
-		{
-			return _mounting_points;
-		}
-
-		const MountingPoints* mountingPoints() const
-		{
-			return _mounting_points;
 		}
 
 		ResourcesLists& resourcesToUpdateLater()

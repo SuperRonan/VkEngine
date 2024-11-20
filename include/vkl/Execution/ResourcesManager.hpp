@@ -22,8 +22,6 @@ namespace vkl
 		// and other possibly non const definitions
 		std::unique_ptr<DefinitionsMap> _common_definitions;
 
-		std::unique_ptr<MountingPoints> _mounting_points;
-
 		UploadQueue _upload_queue;
 		MipMapComputeQueue _mips_queue;
 
@@ -61,11 +59,6 @@ namespace vkl
 		DefinitionsMap* commonDefinitions()const
 		{
 			return _common_definitions.get();
-		}
-
-		MountingPoints* mountingPoints()const
-		{
-			return _mounting_points.get();
 		}
 	};
 }

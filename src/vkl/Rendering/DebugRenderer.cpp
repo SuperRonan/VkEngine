@@ -71,8 +71,9 @@ namespace vkl
 
 	void DebugRenderer::createRenderShader()
 	{
-		const std::filesystem::path string_shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugStrings.glsl";
-		const std::filesystem::path lines_shaders = application()->mountingPoints()["ShaderLib"] + "Debug/RenderDebugLines.glsl";
+		const std::filesystem::path shaders = "ShaderLib:/Debug/";
+		const std::filesystem::path string_shaders = shaders / "RenderDebugStrings.glsl";
+		const std::filesystem::path lines_shaders = shaders / "RenderDebugLines.glsl";
 
 		DefinitionsList defs;
 		using namespace std::containers_append_operators;
@@ -249,7 +250,7 @@ namespace vkl
 			.id = this,
 		});
 
-		const std::filesystem::path font_path = application()->mountingPoints()["ShaderLib"] + "/16x16_linear.png";
+		const std::filesystem::path font_path = "ShaderLib:/16x16_linear.png";
 
 		_font = std::make_shared<TextureFromFile>(TextureFromFile::CI{
 			.app = application(),
@@ -261,9 +262,16 @@ namespace vkl
 			.layers = 256,
 		});
 
-		const VkExtent3D extent = _font->getView()->image()->extent().value();
-		_glyph_size.x = extent.width;
-		_glyph_size.y = extent.height;
+		if (_font->getView())
+		{
+			const VkExtent3D extent = _font->getView()->image()->extent().value();
+			_glyph_size.x = extent.width;
+			_glyph_size.y = extent.height;
+		}
+		else
+		{
+			_enable_debug = false;
+		}
 
 		_sampler = std::make_shared<Sampler>(Sampler::CI{
 			.app = application(),

@@ -9,7 +9,6 @@ namespace vkl
 		VkObject(ci.app, ci.name),
 		_shader_check_period(ci.shader_check_period),
 		_common_definitions(std::make_unique<DefinitionsMap>()),
-		_mounting_points(std::make_unique<MountingPoints>()),
 		_upload_queue(UploadQueue::CI{
 			.app = application(),
 			.name = name() + ".uploadQueue",
@@ -30,11 +29,7 @@ namespace vkl
 
 	void ResourcesManager::populateCommonObjects()
 	{
-		// Copy common mounting points
-		for (auto it : application()->mountingPoints())
-		{
-			(*_mounting_points).insert(it);
-		}
+
 	}
 
 
@@ -59,7 +54,6 @@ namespace vkl
 			.update_tick = _update_tick,
 			.shader_check_tick = _shader_check_tick,
 			.common_definitions = _common_definitions.get(),
-			.mounting_points = _mounting_points.get(),
 			.upload_queue = &_upload_queue,
 			.mips_queue = &_mips_queue,
 			.descriptor_writer = _descriptor_writer,

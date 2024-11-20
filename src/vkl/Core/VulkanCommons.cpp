@@ -825,20 +825,4 @@ namespace vkl
 		
 		return res;
 	}
-
-	std::filesystem::path ReplaceMountingPoints(MountingPoints const& mp, std::filesystem::path const& p)
-	{
-		std::filesystem::path res = p;
-		const std::string s = p.string();
-		size_t pos = s.find(':', 0);
-		if (pos != std::string::npos)
-		{
-			std::string candidate = s.substr(0, pos);
-			if (mp.contains(candidate))
-			{
-				res = mp.at(candidate) + s.substr(pos + 1);
-			}
-		}
-		return res;
-	}
 }
