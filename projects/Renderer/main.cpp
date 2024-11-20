@@ -189,7 +189,7 @@ namespace vkl
 					.app = this,
 					.name = "Sponza",
 					.matrix = ScalingMatrix<4, float>(0.01),
-					.path = ENGINE_SRC_PATH "/../gen/models/Sponza_2/sponza.obj",
+					.path = "gen:/models/Sponza_2/sponza.obj",
 					.synch = false,
 				});
 

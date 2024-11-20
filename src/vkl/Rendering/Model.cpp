@@ -241,10 +241,16 @@ namespace vkl
 
 		std::string warn, err;
 
-		const std::filesystem::path mtl_path = [&info]() {
-			return info.path.parent_path();
+		auto [result, path] = info.app->fileSystem()->resolve(info.path);
+		if (result != that::Result::Success)
+		{
+			return {};
+		}
+
+		const std::filesystem::path mtl_path = [&]() {
+			return path.parent_path();
 		}();
-		const bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, info.path.string().c_str(), mtl_path.string().c_str());
+		const bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str(), mtl_path.string().c_str());
 
 		if (!warn.empty())
 		{
@@ -252,7 +258,7 @@ namespace vkl
 		}
 		if (!err.empty())
 		{
-			info.app->logger()(warn, Logger::Options::TagError | Logger::Options::VerbosityImportant);
+			info.app->logger()(err, Logger::Options::TagError | Logger::Options::VerbosityImportant);
 		}
 
 		TextureFileCache & texture_file_cache = info.app->textureFileCache();
