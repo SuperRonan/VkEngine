@@ -29,14 +29,14 @@ namespace vkl
 
 	protected:
 
-		std::filesystem::path _main_path;
+		that::FileSystem::Path _main_path;
 		ShadingLanguage _source_language = ShadingLanguage::Unknown;
 		
 		VkShaderStageFlagBits _stage;
 		VkShaderModule _module = VK_NULL_HANDLE;
 		MyVector<uint32_t> _spv_code;
 		SpvReflectShaderModule _reflection;
-		MyVector<std::filesystem::path> _dependencies;
+		MyVector<that::FileSystem::Path> _dependencies;
 		size_t _shader_string_packed_capacity = 32;
 
 		std::string _preprocessed_source;
@@ -45,10 +45,18 @@ namespace vkl
 
 		struct PreprocessingState
 		{
-			std::set<std::filesystem::path> pragma_once_files = {};
+			std::set<that::FileSystem::Path> pragma_once_files = {};
+			MyVector<that::FileSystem::Path> include_directories = {};
 		};
 
-		std::string preprocessIncludesAndDefinitions(std::filesystem::path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level);
+		enum class IncludeType
+		{
+			None,
+			Quotes,
+			Brackets,
+		};
+
+		std::string preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type);
 
 		std::string preprocessStrings(std::string const& glsl);
 
@@ -60,7 +68,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::filesystem::path const& source_path = {};
+			that::FileSystem::Path const& source_path = {};
 			ShadingLanguage source_language = ShadingLanguage::Unknown;
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DefinitionsList const& definitions = {};
@@ -80,7 +88,7 @@ namespace vkl
 
 
 
-		std::string preprocess(std::filesystem::path const& path, DefinitionsList const& definitions);
+		std::string preprocess(that::FileSystem::Path const& path, DefinitionsList const& definitions);
 
 		bool compile(std::string const& code, std::string const& filename = "");
 
@@ -189,7 +197,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			std::filesystem::path const& source_path = {};
+			that::FileSystem::Path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DynamicValue<DefinitionsList> definitions;
 			Dyn<bool> hold_instance = true;

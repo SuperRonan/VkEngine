@@ -21,36 +21,94 @@ break;
 
 namespace vkl
 {
-	std::string ShaderInstance::preprocessIncludesAndDefinitions(std::filesystem::path const& path, DefinitionsList const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level)
+	std::string ShaderInstance::preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, DefinitionsList const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level, IncludeType include_type)
 	{
-		_dependencies.push_back(path);
 		std::string content;
 		{
-			that::Result read_result = application()->fileSystem()->readFile(that::FileSystem::ReadFileInfo{
-				.path_is_native = false,
-				.path = &path,
-				.result_string = &content,
-			});
-			if (read_result != that::Result::Success)
+			that::FileSystem & fs = *application()->fileSystem();
+			that::ResultAnd<that::FileSystem::Path> resolved_path = fs.resolve(path);
+			if (resolved_path.result != that::Result::Success)
 			{
 				_creation_result = AsynchTask::ReturnType{
 					.success = false,
 					.can_retry = true,
-					.error_title = "Shader Compilation Error: Could not read file"s,
+					.error_title = "Shader Compilation Error: Could not parse file path"s,
 					.error_message = std::format(
-						"Error while preprocessing shader : Could not read file : {} \n"
+						"Error while preprocessing shader : Could not parse file path : {} \n"
 						"Returned code : {} (code: {})\n"
 						"Main Shader: {}\n",
-						path.string(), that::GetResultStr(read_result), static_cast<uint64_t>(read_result), _main_path.string()
+						path.string(), that::GetResultStr(resolved_path.result), static_cast<uint64_t>(resolved_path.result), _main_path.string()
 					),
 				};
 				return std::string();
 			}
+			that::FileSystem::Path full_path = resolved_path.value;
+			const auto validate_path = [&]() -> bool
+			{
+				return (fs.checkFileExists(full_path, that::FileSystem::Hint::PathIsNative) == that::Result::Success);
+			};
+			bool path_is_valid = false;
+			full_path = resolved_path.value;
+			path_is_valid = validate_path();
+			if (include_type == IncludeType::Brackets)
+			{
+				if (!path_is_valid)
+				{
+					for (const auto& include_dir : preprocessing_state.include_directories)
+					{
+						full_path = include_dir / resolved_path.value;
+						path_is_valid = validate_path();
+						if (path_is_valid)
+						{
+							break;
+						}
+					}
+				}
+			}
+
+			if (path_is_valid)
+			{
+				_dependencies.push_back(full_path);
+				that::Result read_result = application()->fileSystem()->readFile(that::FileSystem::ReadFileInfo{
+					.hint = that::FileSystem::Hint::PathIsNative,
+					.path = &full_path,
+					.result_string = &content,
+				});
+				if (read_result != that::Result::Success)
+				{
+					_creation_result = AsynchTask::ReturnType{
+						.success = false,
+						.can_retry = true,
+						.error_title = "Shader Compilation Error: Could not read file"s,
+						.error_message = std::format(
+							"Error while preprocessing shader : Could not read file : {} \n"
+							"Returned code : {} (code: {})\n"
+							"Main Shader: {}\n",
+							path.string(), that::GetResultStr(read_result), static_cast<uint64_t>(read_result), _main_path.string()
+						),
+					};
+					return std::string();
+				}
+			}
+			else
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: Invalid file path"s,
+					.error_message = std::format(
+						"Error while preprocessing shader : Could not find file : {} \n"
+						"Resolved path: {}\n"
+						"Main Shader: {}\n",
+						path.string(), resolved_path.value.string(), _main_path.string()
+					),
+				};
+				return std::string();
+			}
+			
 		}
 
 		std::stringstream oss;
-
-		const std::filesystem::path folder = path.parent_path();
 
 		size_t copied_so_far = 0;
 
@@ -111,7 +169,7 @@ namespace vkl
 				const size_t line_end = content.find("\n", include_begin);
 				const std::string_view include_line(content.data() + include_begin, line_end - include_begin);
 
-				std::filesystem::path path_to_include = [&]() 
+				const auto [path_to_include, include_type] = [&]() -> std::pair<that::FileSystem::Path, IncludeType>
 				{
 					const size_t rel_path_begin = include_line.find("\"") + 1;
 					const size_t rel_path_end = include_line.rfind("\"");
@@ -129,22 +187,22 @@ namespace vkl
 
 					if(validate(rel_path_begin, rel_path_end))
 					{
+						const that::FileSystem::Path folder = path.parent_path();
 						const std::string_view include_path_relative(include_line.data() + rel_path_begin, rel_path_end - rel_path_begin);
-
-						const std::filesystem::path path_to_include = folder.string() + (std::string("/") + std::string(include_path_relative));
-						return path_to_include;
+						const that::FileSystem::Path path_to_include = folder.string() + ("/"s + std::string(include_path_relative));
+						return {path_to_include, IncludeType::Quotes};
 					}
 					else if(validate(mp_path_begin, mp_path_end))
 					{
 						that::FileSystem & fs = *application()->fileSystem();
 						const std::string_view mp_path_view(include_line.data() + mp_path_begin, mp_path_end - mp_path_begin);
-						const std::filesystem::path mp_path = mp_path_view;
+						const that::FileSystem::Path mp_path = mp_path_view;
 						const that::ResultAnd<that::FileSystem::PathStringView> result_mounting_point = fs.ExtractMountingPoint(mp_path);
 						const that::FileSystem::PathStringView & mounting_point = result_mounting_point.value;
 						const bool path_is_valid = (result_mounting_point.result == that::Result::Success) && (mounting_point.empty() || fs.mountingPointIsNative(mounting_point) || fs.knowsMountingPoint(mounting_point));
 						if (path_is_valid)
 						{
-							return mp_path;
+							return {mp_path, IncludeType::Brackets};
 						}
 						else
 						{
@@ -163,7 +221,7 @@ namespace vkl
 									_main_path.string(), path.string(), line_index, include_line
 								),	
 							};
-							return std::filesystem::path();
+							return {that::FileSystem::Path(), IncludeType::None};
 						}
 					}
 					else
@@ -183,7 +241,7 @@ namespace vkl
 								_main_path.string(), path.string(), line_index, include_line
 							),
 						};
-						return std::filesystem::path();
+						return { that::FileSystem::Path(), IncludeType::None };
 					}
 				}();
 				if (_creation_result.success == false)
@@ -195,22 +253,37 @@ namespace vkl
 				
 				if (!preprocessing_state.pragma_once_files.contains(path_to_include))
 				{
-					const std::string included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state, recursion_level + 1);
+					const std::string included_code = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state, recursion_level + 1, include_type);
 					if (_creation_result.success == false)
 					{
+						size_t line_index = countLines(0, line_end);
 						if (_creation_result.error_message.empty())
 						{
 							_creation_result = AsynchTask::ReturnType{
 								.success = false,
 								.can_retry = true,
 								.error_title = "Shader Compilation Error: Preprocess Includes"s,
-								.error_message =
-									"Error while preprocessing shader: Inclusion error \n"s +
-									"Main Shader: "s + _main_path.string() + ":\n"s +
-									"In file "s + path.string() + ":\n"s +
-									"Could not include "s + path_to_include.string() + ":\n"s +
-									included_code,
+								.error_message = std::format(
+									"Error while preprocessing shader: Inclusion error \n",
+									"Main Shader: {}\n"
+									// TODO format as a clickable link
+									"In file: {}\n"
+									"Line: {}\n"
+									"Could not include: {}",
+									_main_path.string(), path.string(), line_index, path_to_include.string()
+								),
 							};
+						}
+						else
+						{
+							_creation_result.error_message += std::format(
+								"\n"
+								"While processing include directive: \n"
+								"In file: {}\n"
+								"Line: {}\n"
+								"{}\n",
+								path.string(), line_index, include_line
+							);
 						}
 						return {};
 					}
@@ -414,16 +487,17 @@ namespace vkl
 		return _source_language != ShadingLanguage::Unknown;
 	}
 	
-	std::string ShaderInstance::preprocess(std::filesystem::path const& path, DefinitionsList const& definitions)
+	std::string ShaderInstance::preprocess(that::FileSystem::Path const& path, DefinitionsList const& definitions)
 	{
 		PreprocessingState preprocessing_state = {
+			.include_directories = application()->includeDirectories(),
 		};
 		_dependencies.clear();
 		std::string full_source;
 
 		if (_source_language == ShadingLanguage::Unknown)
 		{
-			const std::filesystem::path ext = path.extension();
+			const that::FileSystem::Path ext = path.extension();
 			if (ext == ".spv")
 			{
 				_source_language = ShadingLanguage::SPIR_V;
@@ -449,7 +523,7 @@ namespace vkl
 
 		try
 		{
-			full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0);
+			full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0, IncludeType::None);
 		}
 		catch (std::exception const& e)
 		{
@@ -459,12 +533,25 @@ namespace vkl
 				// When the last line of the of the file #include <path>, this exception is thrown
 				// TODO fix it
 				_creation_result = AsynchTask::ReturnType{
-				.success = false,
-				.can_retry = true,
-				.error_title = "Shader Compilation Error: Preprocess Includes"s,
-				.error_message =
-					"Error while preprocessing shader: "s + _main_path.string() + "\n"s + 
-					"Bug in the includer : Check that a file does not finish by an #include directive (add a new line after to fix)",
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: Preprocess Includes"s,
+					.error_message =
+						"Error while preprocessing shader: "s + _main_path.string() + "\n"s + 
+						"Bug in the includer : Check that a file does not finish by an #include directive (add a new line after to fix)",
+				};
+			}
+			else
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: Preprocess Includes"s,
+					.error_message = std::format(
+						"Error while preprocessing shader: {}\n"
+						"Error: {}",
+						_main_path.string(), e.what()
+					),
 				};
 			}
 		}
@@ -632,6 +719,7 @@ namespace vkl
 			options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
 			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
 			options.SetWarningsAsErrors();
+			options.AddMacroDefinition("__glsl", "460");
 			shaderc::Compiler compiler;
 
 			shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
@@ -676,6 +764,7 @@ namespace vkl
 			compiler->setTargetEmbedDownstreamIR(0, true);
 			int index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
 			compiler->addTranslationUnitSourceStringSpan(index, filename.c_str(), code.c_str(), code.c_str() + code.size());
+			compiler->addPreprocessorDefine("__slang", "1");
 			if (_stage != 0)
 			{
 				//compiler->addEntryPoint(index, "main", ConvertToSlang(_stage));
@@ -839,13 +928,14 @@ namespace vkl
 			_creation_result.auto_retry_f = [this, compile_time]() -> bool
 			{
 				const std::filesystem::file_time_type update_time = [&]() {
+					that::FileSystem & fs = *application()->fileSystem();
 					std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
 					for (const auto& dep : _dependencies)
 					{
-						if (std::filesystem::exists(dep))
+						that::ResultAnd<that::FileSystem::TimePoint> file_time = fs.getFileLastWriteTime(dep, that::FileSystem::Hint::PathIsNative);
+						if (file_time.result == that::Result::Success)
 						{
-							std::filesystem::file_time_type ft = std::filesystem::last_write_time(dep);
-							res = std::max(res, ft);
+							res = std::max(res, file_time.value);
 						}
 					}
 					return res;
@@ -960,7 +1050,7 @@ namespace vkl
 				waitForInstanceCreationIFN();
 				for (const auto& dep : _dependencies)
 				{
-					const that::ResultAnd<std::filesystem::file_time_type> new_time = application()->fileSystem()->getFileTime(dep, false);
+					const that::ResultAnd<std::filesystem::file_time_type> new_time = application()->fileSystem()->getFileLastWriteTime(dep);
 					if (new_time.result == that::Result::Success && new_time.value > _instance_time)
 					{
 						_specializations.clear();

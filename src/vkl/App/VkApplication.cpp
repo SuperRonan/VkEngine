@@ -1266,9 +1266,9 @@ namespace vkl
 		using T = const char[4];
 		// Default values
 		_mounting_points["exec"] = exe_folder.string();
-		_mounting_points["ShaderLib"] = exe_folder.string() + "/ShaderLib/";
+		_mounting_points["ShaderLib"] = exe_folder.string() + "/ShaderLib";
 		
-		_mounting_points["gen"] = exe_folder.string() + "/gen/";
+		_mounting_points["gen"] = exe_folder.string() + "/gen";
 
 		std::filesystem::path mp_file_path = exe_folder / "MountingPoints.txt";
 
@@ -1320,7 +1320,7 @@ namespace vkl
 				{
 					if (!_mounting_points.contains("ProjectShaders"))
 					{
-						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] / getProjectName() / "Shaders/"s;
+						_mounting_points["ProjectShaders"] = _mounting_points["DevProjectsFolder"] / getProjectName() / "Shaders"s;
 					}
 				}
 			
@@ -1332,7 +1332,24 @@ namespace vkl
 		}
 		if (!_mounting_points.contains("ProjectShaders"))
 		{
-			_mounting_points["ProjectShaders"] = exe_folder.string() + "/Shaders/";
+			_mounting_points["ProjectShaders"] = exe_folder.string() + "/Shaders";
+		}
+
+		// Copy Mounting points to macros
+		{
+			that::FileSystem::MacroMap & macros = _file_system->macros();
+			for (auto const& [key, value] : _mounting_points.getUnderlyingContainer())
+			{
+				macros[key] = value.native();
+			}
+		}
+
+		// Fill default include directories
+		{
+			for (auto const& [key, value] : _mounting_points.getUnderlyingContainer())
+			{
+				_include_directories.push_back(value.parent_path());
+			}
 		}
 	}
 

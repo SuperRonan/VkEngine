@@ -1,6 +1,6 @@
 include(CMakeParseArguments)
 
-set(PROJECTS_FOLDER "${CMAKE_CURRENT_LIST_DIR}/")
+set(PROJECTS_FOLDER "${CMAKE_CURRENT_LIST_DIR}")
 
 set(EXECUTABLES "")
 
@@ -13,7 +13,7 @@ function(AddLib target)
 	file(GLOB_RECURSE ${target}_SOURCES ${folder}/*)
 	add_library(${target} ${${target}_SOURCES})
 	
-	source_group(TREE ${PROJECTS_FOLDER}${folder} FILES ${${target}_SOURCES})
+	source_group(TREE "${PROJECTS_FOLDER}/${folder}" FILES ${${target}_SOURCES})
 
 	target_include_directories(${target} PUBLIC  ${folder})
 
@@ -34,7 +34,7 @@ function(AddExec target)
 	file(GLOB_RECURSE ${target}_SOURCES ${folder}/*)
 	add_executable(${target} ${folder}/main.cpp ${${target}_SOURCES})
 	
-	source_group(TREE ${PROJECTS_FOLDER}${folder} FILES ${${target}_SOURCES})
+	source_group(TREE "${PROJECTS_FOLDER}/${folder}" FILES ${${target}_SOURCES})
 	
 	target_include_directories(${target} PRIVATE ${folder})
 	
@@ -72,10 +72,10 @@ AddExec(Test)
 AddExec(Renderer DEPENDENCIES RenderLib)
 AddExec(BSDF DEPENDENCIES RenderLib)
 
-set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/ShaderLib/\"")
-set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen/\"")
+set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/ShaderLib\"")
+set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${PROJECTS_FOLDER}\"")
-set(MP_CONTENT "${MP_CONTENT}\n\"RenderLibShaders\" \"${PROJECTS_FOLDER}RenderLib/Shaders/\"")
+set(MP_CONTENT "${MP_CONTENT}\n\"RenderLibShaders\" \"${PROJECTS_FOLDER}/RenderLib/Shaders\"")
 file(GENERATE OUTPUT "$<CONFIG>/MountingPoints.txt" CONTENT ${MP_CONTENT})
 
 install(TARGETS ${EXECUTABLES} DESTINATION bin)

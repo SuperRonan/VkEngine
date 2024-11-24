@@ -240,6 +240,7 @@ namespace vkl
 		void fillCommonShaderDefinitions();
 
 		std::unique_ptr<that::FileSystem> _file_system = nullptr;
+		MyVector<that::FileSystem::Path> _include_directories = {};
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -470,6 +471,16 @@ namespace vkl
 		that::FileSystem * fileSystem() const
 		{
 			return _file_system.get();
+		}
+
+		MyVector<that::FileSystem::Path> const& includeDirectories() const
+		{
+			return _include_directories;
+		}
+
+		MyVector<that::FileSystem::Path> & includeDirectories()
+		{
+			return _include_directories;
 		}
 
 		const Logger& logger() const
