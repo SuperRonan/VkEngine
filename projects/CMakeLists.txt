@@ -75,7 +75,7 @@ AddExec(BSDF DEPENDENCIES RenderLib)
 set(MP_CONTENT "\"ShaderLib\" \"${VKL_SHADER_FOLDER}/ShaderLib\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"gen\" \"${ENGINE_SRC_PATH}/../gen\"")
 set(MP_CONTENT "${MP_CONTENT}\n\"DevProjectsFolder\" \"${PROJECTS_FOLDER}\"")
-set(MP_CONTENT "${MP_CONTENT}\n\"RenderLibShaders\" \"${PROJECTS_FOLDER}/RenderLib/Shaders\"")
+set(MP_CONTENT "${MP_CONTENT}\n\"RenderLibShaders\" \"${PROJECTS_FOLDER}/RenderLib/RenderLibShaders\"")
 file(GENERATE OUTPUT "$<CONFIG>/MountingPoints.txt" CONTENT ${MP_CONTENT})
 
 install(TARGETS ${EXECUTABLES} DESTINATION bin)
