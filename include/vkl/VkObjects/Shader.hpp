@@ -56,7 +56,15 @@ namespace vkl
 			Brackets,
 		};
 
-		std::string preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type);
+		that::FileSystem::Path resolveIncludePath(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state, IncludeType include_type);
+
+		struct PreprocessResult
+		{
+			std::string content = {};
+			int flags = 0;
+		};
+
+		PreprocessResult preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type);
 
 		std::string preprocessStrings(std::string const& glsl);
 
