@@ -1,5 +1,9 @@
 #pragma once
 
+#define GLM_FORCE_SIZE_T_LENGTH 1
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE 1
+#define GLM_FORCE_LEFT_HANDED 1
+
 #include <that/core/BasicTypes.hpp>
 
 #include <glm/glm.hpp>
