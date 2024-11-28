@@ -1,0 +1,8 @@
+#pragma once
+
+#define COMMA ,
+
+#define NOARG
+
+#define BIT_MASK(n) ((1 << n) - 1)
+

@@ -1,28 +1,10 @@
 #pragma once
 
-#include "core.glsl"
+#include "core"
+#include "bindings"
+
 
 #define NonUniformEXT(X) nonuniformEXT(X)
-
-#ifndef COMMON_DESCRIPTOR_BINDING
-#define COMMON_DESCRIPTOR_BINDING set = 0, binding = 0
-#endif
-
-#ifndef SCENE_DESCRIPTOR_BINDING
-#define SCENE_DESCRIPTOR_BINDING set = 1, binding = 0
-#endif
-
-#ifndef MODULE_DESCRIPTOR_BINDING
-#define MODULE_DESCRIPTOR_BINDING set = 2, binding = 0
-#endif
-
-#ifndef SHADER_DESCRIPTOR_BINDING
-#define SHADER_DESCRIPTOR_BINDING set = 3, binding = 0
-#endif
-
-#ifndef INVOCATION_DESCRIPTOR_BINDING
-#define INVOCATION_DESCRIPTOR_BINDING set = 4, binding = 0
-#endif
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 
@@ -563,20 +545,4 @@ bool nonZero(vec3 rgb)
 	return any(notEqual(rgb, 0..xxx));
 }
 
-#define PI 3.1415926535897932384626433832795
-#define M_PI PI
-#define HALF_PI (PI / 2.0)
-#define QUART_PI (PI / 4.0)
-#define TWO_PI (2.0 * PI)
-#define oo_PI rcp(PI)
-#define EULER_e 2.7182818284590452353602874713527
-#define SQRT_2 (sqrt(2.0))
-#define oo_SQRT_2 rcp(SQRT_2)
-#define GOLDEN_RATIO ((1.0 + sqrt(5.0)) / 2.0)
-#define M_PHI GOLDEN_RATIO
-#define EPSILON_f 1.19209e-07f
-#define EPSILON_d double(2.22045e-16)
-#define EPSILON_h float16_t(1e-3) // TODO
-#define EPSILON EPSILON_f
-#define POSITIVE_INF_f (1.0f / 0.0f)
-#define NEGATIVE_INF_f (-1.0f / 0.f)
+#include "constants"

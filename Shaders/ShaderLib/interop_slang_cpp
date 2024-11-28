@@ -1,0 +1,11 @@
+#pragma once
+
+#if __cplusplus
+
+#define typealias using
+
+#elif __slang
+
+#define template __generic
+
+#endif
