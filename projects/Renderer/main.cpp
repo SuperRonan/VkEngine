@@ -393,6 +393,30 @@ namespace vkl
 				.dst_filename = "renderer_",
 			};
 
+			std::shared_ptr<ComputeCommand> slang_test;
+			if (true)
+			{
+				slang_test = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+					.app = this,
+					.name = "SlangTest",
+					.shader_path = "ProjectShaders:/test.slang",
+					.extent = final_image->image()->extent(),
+					.dispatch_threads = true,
+					.sets_layouts = sets_layouts,
+					.bindings = {
+						Binding{
+							.image = final_image,
+							.binding = 0,
+						},
+					},
+					.definitions = [&](DefinitionsList& res) {
+						res.clear();
+						DetailedVkFormat df = DetailedVkFormat::Find(final_image->format().value());
+						res.pushBackFormatted("TARGET_FORMAT {}", df.getGLSLName());
+					},
+				});
+			}
+
 			exec.init();
 
 			
@@ -579,6 +603,11 @@ namespace vkl
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
 
+					if (slang_test)
+					{
+						update_context->resourcesToUpdateLater() += slang_test;
+					}
+
 					resources_manager.finishUpdateCycle(update_context);
 				}
 				frame_counters.update_time = update_context->tickTock().tockd().count();
@@ -610,6 +639,11 @@ namespace vkl
 					color_correction.execute(exec_thread);
 					
 					pip.execute(exec_thread);
+
+					if (slang_test)
+					{
+						exec_thread(slang_test);
+					}
 
 					exec_thread.bindSet(BindSetInfo{
 						.index = 1,
