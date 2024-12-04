@@ -4,8 +4,10 @@
 
 #define typealias using
 
-#elif __slang
+#elif _slang
 
 #define template __generic
+#define constexpr
+#define noexecpt
 
 #endif

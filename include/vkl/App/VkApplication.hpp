@@ -73,6 +73,7 @@ namespace vkl
 			bool query_render_pass_creation_feedback : 1 = false;
 			bool render_pass_disallow_merging : 1 = false;
 			bool dump_shader_source : 1 = false;
+			bool dump_shader_preprocessed : 1 = false;
 			bool dump_shader_spv : 1 = false;
 
 			// bit field per image usage (VkImageUsageFlagBits)

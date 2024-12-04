@@ -102,6 +102,12 @@ namespace vkl
 			.scan<'d', int>()
 			.default_value(0)
 		;
+
+		args.add_argument("--dump_preprocessed_shader")
+			.help("Enable preprocessed shaders source dump in the gen folder")
+			.scan<'d', int>()
+			.default_value(0)
+		;
 		
 		args.add_argument("--dump_spv")
 			.help("Enable shaders SPIR-V binary dump in the gen folder")
@@ -1093,6 +1099,7 @@ namespace vkl
 			.enable_object_naming = intToBool(ci.args.get<int>("--name_vk_objects")),
 			.enable_command_buffer_labels = intToBool(ci.args.get<int>("--cmd_labels")),
 			.dump_shader_source = intToBool(ci.args.get<int>("--dump_shader_source")),
+			.dump_shader_preprocessed = intToBool(ci.args.get<int>("--dump_preprocessed_shader")),
 			.dump_shader_spv = intToBool(ci.args.get<int>("--dump_spv")),
 		};
 

@@ -47,6 +47,8 @@ namespace vkl
 		{
 			std::set<that::FileSystem::Path> pragma_once_files = {};
 			MyVector<that::FileSystem::Path> include_directories = {};
+			DefinitionsList definitions = {};
+			bool full_manual_preprocess = false;
 		};
 
 		enum class IncludeType
@@ -64,12 +66,18 @@ namespace vkl
 			int flags = 0;
 		};
 
-		PreprocessResult preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, DefinitionsList const& definitions, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type);
+		PreprocessResult includeFile(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type, that::FileSystem::Path * resolved_path = nullptr);
 
-		std::string preprocessStrings(std::string const& glsl);
+		bool checkPragmaOnce(std::string & source, size_t copied_so_far = 0) const;
+
+		PreprocessResult preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type);
+
+		std::string preprocessStrings(std::string const& glsl, bool ignore_includes = false);
 
 		bool deduceShadingLanguageIFP(std::string & source);
 
+		friend class ShaderCIncluderInterface;
+		friend class SlangFileSystemInterface;
 	public:
 
 		struct CreateInfo
@@ -94,11 +102,9 @@ namespace vkl
 		ShaderInstance& operator=(ShaderInstance const&) = delete;
 		ShaderInstance& operator=(ShaderInstance &&) = delete;
 
+		std::string preprocess(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state);
 
-
-		std::string preprocess(that::FileSystem::Path const& path, DefinitionsList const& definitions);
-
-		bool compile(std::string const& code, std::string const& filename = "");
+		bool compile(std::string const& source, PreprocessingState & preprocessing_state);
 
 		void reflect();
 

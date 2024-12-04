@@ -8,6 +8,7 @@
 #include <string_view>
 #include <format>
 #include <thread>
+#include <set>
 
 #include <slang/slang.h>
 #include <slang/slang-gfx.h>
@@ -110,10 +111,12 @@ namespace vkl
 		return res;
 	}
 
-	ShaderInstance::PreprocessResult ShaderInstance::preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, DefinitionsList const& definitions, PreprocessingState & preprocessing_state, size_t recursion_level, IncludeType include_type)
+	ShaderInstance::PreprocessResult ShaderInstance::includeFile(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type, that::FileSystem::Path * resolved_path)
 	{
-		std::string content;
-		const that::FileSystem::Path full_path = resolveIncludePath(path, preprocessing_state, include_type);
+		that::FileSystem::Path _full_path;
+		that::FileSystem::Path & full_path = resolved_path ? *resolved_path : _full_path;
+		full_path = resolveIncludePath(path, preprocessing_state, include_type);
+		PreprocessResult res;
 		if (!full_path.empty())
 		{
 			_dependencies.push_back(full_path);
@@ -121,14 +124,14 @@ namespace vkl
 			if ((include_type != IncludeType::None) && preprocessing_state.pragma_once_files.contains(full_path))
 			{
 				_creation_result.success = true;
-				return {std::string(), 1};
+				return { std::string(), 1 };
 			}
 			else
 			{
 				that::Result read_result = application()->fileSystem()->readFile(that::FileSystem::ReadFileInfo{
 					.hint = that::FileSystem::Hint::PathIsNative | that::FileSystem::Hint::PathIsCannon,
 					.path = &full_path,
-					.result_string = &content,
+					.result_string = &res.content,
 				});
 				if (read_result != that::Result::Success)
 				{
@@ -151,7 +154,34 @@ namespace vkl
 		{
 			return {};
 		}
+		return res;
+	}
 
+	bool ShaderInstance::checkPragmaOnce(std::string& content, size_t copied_so_far) const
+	{
+		const size_t pragma_once_begin = content.find("#pragma once", copied_so_far); // TODO regex?
+		bool res = false;
+		// TODO ckeck it is not in a commented section
+		if (pragma_once_begin != std::string::npos)
+		{
+			// Comment the #pragma once so the glsl compiler doesn't print a warning
+			content[pragma_once_begin] = '/';
+			content[pragma_once_begin + 1] = '/';
+			res = true;
+		}
+		return res;
+	}
+
+	ShaderInstance::PreprocessResult ShaderInstance::preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, PreprocessingState & preprocessing_state, size_t recursion_level, IncludeType include_type)
+	{
+		that::FileSystem::Path full_path;
+		PreprocessResult included = includeFile(path, preprocessing_state, recursion_level, include_type, &full_path);
+		std::string & content = included.content;
+		if (!_creation_result.success || included.flags & 1)
+		{
+			return included;
+		}
+		
 		std::stringstream oss;
 
 		size_t copied_so_far = 0;
@@ -161,55 +191,54 @@ namespace vkl
 			return std::count(content.data() + b, content.data() + e, '\n');
 		};
 
-		if (!definitions.empty())
+		if (!preprocessing_state.definitions.empty())
 		{
+			DefinitionsList & definitions = preprocessing_state.definitions;
 			// TODO temporary hack
 			if (_source_language != ShadingLanguage::Slang)
 			{
-			const size_t version_begin = content.find("#version", copied_so_far);
-			if (!(version_begin < content.size()))
-			{
-				_creation_result = AsynchTask::ReturnType{
-					.success = false,
-					.can_retry = true,
-					.error_title = "Shader Compilation Error: No declared #version"s,
-					.error_message =
-						"Error while preprocessing shader: No declared #version \n"s +
-						"Main Shader: "s + _main_path.string() + ":\n"s +
-						"In file "s + path.string() + ":\n"s,
-				};
-				return {};
-			}
-			const size_t version_end = content.find("\n", version_begin);
+				const size_t version_begin = content.find("#version", copied_so_far);
+				if (!(version_begin < content.size()))
+				{
+					_creation_result = AsynchTask::ReturnType{
+						.success = false,
+						.can_retry = true,
+						.error_title = "Shader Compilation Error: No declared #version"s,
+						.error_message =
+							"Error while preprocessing shader: No declared #version \n"s +
+							"Main Shader: "s + _main_path.string() + ":\n"s +
+							"In file "s + path.string() + ":\n"s,
+					};
+					return {};
+				}
+				const size_t version_end = content.find("\n", version_begin);
 
-			oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);
-			copied_so_far = version_end;
+				oss << std::string_view(content.data() + copied_so_far, version_end - copied_so_far);
+				copied_so_far = version_end;
 			}
 			for (size_t i = 0; i < definitions.size(); ++i)
 			{
 				oss << "#define " << definitions[i] << "\n";
 			}
-			oss << "#line " << (countLines(0, copied_so_far) + 1) << ' ' << path << "\n";
+			oss << "#line " << (countLines(0, copied_so_far) + 1) << ' ' << full_path << "\n";
+			definitions.clear();
+		}
+
+
+		if (checkPragmaOnce(content, copied_so_far))
+		{
+			preprocessing_state.pragma_once_files.emplace(full_path);
 		}
 
 
 		while (true)
 		{
+
 			// TODO check if not in comment
 			const size_t include_begin = content.find("#include", copied_so_far);
-			const size_t pragma_once_begin = content.find("#pragma once", copied_so_far); // TODO regex?
-
-			if (pragma_once_begin != std::string::npos)
-			{
-				preprocessing_state.pragma_once_files.emplace(full_path);
-				// Comment the #pragma once so the glsl compiler doesn't print a warning
-				content[pragma_once_begin] = '/';
-				content[pragma_once_begin + 1] = '/';
-			}	
-
+				
 			if (std::string::npos != include_begin)
 			{
-
 				const size_t line_end = content.find("\n", include_begin);
 				const std::string_view include_line(content.data() + include_begin, line_end - include_begin);
 
@@ -296,7 +325,7 @@ namespace vkl
 				oss << std::string_view(content.data() + copied_so_far, include_begin - copied_so_far);
 				
 				{
-					const auto [included_code, include_flags] = preprocessIncludesAndDefinitions(path_to_include, {}, preprocessing_state, recursion_level + 1, include_type);
+					const auto [included_code, include_flags] = preprocessIncludesAndDefinitions(path_to_include, preprocessing_state, recursion_level + 1, include_type);
 					if (_creation_result.success == false)
 					{	
 						size_t line_index = countLines(0, line_end);
@@ -341,7 +370,7 @@ namespace vkl
 						{
 							oss << "#line 1 " << path_to_include << "\n";
 							oss << included_code;
-							oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path << "\n";
+							oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path_to_include << "\n";
 						}
 					}
 				}
@@ -357,7 +386,7 @@ namespace vkl
 		return {oss.str(), 0};
 	}
 	
-	std::string ShaderInstance::preprocessStrings(const std::string& glsl)
+	std::string ShaderInstance::preprocessStrings(const std::string& glsl, bool ignore_includes)
 	{
 		std::stringstream res;
 
@@ -408,6 +437,14 @@ namespace vkl
 			if (macro_line_begin != std::string::npos)
 			{
 				return true;
+			}
+			if (!ignore_includes)
+			{
+				const size_t include_line_begin = line.find("#include");
+				if (include_line_begin != std::string::npos)
+				{
+					return true;
+				}
 			}
 			// TODO check if literal is in a comment, but not necessary
 			return false;
@@ -534,11 +571,8 @@ namespace vkl
 		return _source_language != ShadingLanguage::Unknown;
 	}
 	
-	std::string ShaderInstance::preprocess(that::FileSystem::Path const& path, DefinitionsList const& definitions)
+	std::string ShaderInstance::preprocess(that::FileSystem::Path const& path, PreprocessingState & preprocessing_state)
 	{
-		PreprocessingState preprocessing_state = {
-			.include_directories = application()->includeDirectories(),
-		};
 		_dependencies.clear();
 		std::string full_source;
 
@@ -568,39 +602,52 @@ namespace vkl
 			}
 		}
 
-		try
+		if (_source_language == ShadingLanguage::Slang)
 		{
-			full_source = preprocessIncludesAndDefinitions(path, definitions, preprocessing_state, 0, IncludeType::None).content;
+			preprocessing_state.full_manual_preprocess = true;
 		}
-		catch (std::exception const& e)
+
+		if (preprocessing_state.full_manual_preprocess)
 		{
-			if (e.what() == "string too long"s)
+			try
 			{
-				// There appears to be a bug in the includer:
-				// When the last line of the of the file #include <path>, this exception is thrown
-				// TODO fix it
-				_creation_result = AsynchTask::ReturnType{
-					.success = false,
-					.can_retry = true,
-					.error_title = "Shader Compilation Error: Preprocess Includes"s,
-					.error_message =
-						"Error while preprocessing shader: "s + _main_path.string() + "\n"s + 
-						"Bug in the includer : Check that a file does not finish by an #include directive (add a new line after to fix)",
-				};
+				full_source = preprocessIncludesAndDefinitions(path, preprocessing_state, 0, IncludeType::None).content;
 			}
-			else
+			catch (std::exception const& e)
 			{
-				_creation_result = AsynchTask::ReturnType{
-					.success = false,
-					.can_retry = true,
-					.error_title = "Shader Compilation Error: Preprocess Includes"s,
-					.error_message = std::format(
-						"Error while preprocessing shader: {}\n"
-						"Error: {}",
-						_main_path.string(), e.what()
-					),
-				};
+				if (e.what() == "string too long"s)
+				{
+					// There appears to be a bug in the includer:
+					// When the last line of the of the file #include <path>, this exception is thrown
+					// TODO fix it
+					_creation_result = AsynchTask::ReturnType{
+						.success = false,
+						.can_retry = true,
+						.error_title = "Shader Compilation Error: Preprocess Includes"s,
+						.error_message =
+							"Error while preprocessing shader: "s + _main_path.string() + "\n"s + 
+							"Bug in the includer : Check that a file does not finish by an #include directive (add a new line after to fix)",
+					};
+				}
+				else
+				{
+					_creation_result = AsynchTask::ReturnType{
+						.success = false,
+						.can_retry = true,
+						.error_title = "Shader Compilation Error: Preprocess Includes"s,
+						.error_message = std::format(
+							"Error while preprocessing shader: {}\n"
+							"Error: {}",
+							_main_path.string(), e.what()
+						),
+					};
+				}
 			}
+		}
+		else
+		{
+			PreprocessResult included = includeFile(path, preprocessing_state, 0, IncludeType::None);
+			full_source = std::move(included.content);
 		}
 
 		if (_creation_result.success == false)
@@ -754,42 +801,143 @@ namespace vkl
 		return res;
 	}
 
-	bool ShaderInstance::compile(std::string const& code, std::string const& filename)
+	// Given something like:
+	// "IDENTIFIER VALUE" -> {"IDENTIFIER", "VALUE"}
+	// "IDENTIFIER" -> {"IDENTIFIER", {}}
+	// The input is not expected to be of the form: "#define IDENTIFIER VALUE"
+	std::pair<std::string_view, std::string_view> ParseDefinition(std::string_view def)
+	{
+		using namespace std::string_literals;
+		std::pair<std::string_view, std::string_view> res = {};
+		const std::string_view whitespace = " \t"sv;
+		const size_t it0 = def.find_first_not_of(whitespace);
+		const size_t it = def.find_first_of(whitespace, it0);
+		if (it != std::string_view::npos)
+		{
+			res.first = std::string_view(def.data(), it);
+
+			const size_t it2 = def.find_first_not_of(whitespace, it);
+			if (it2 != std::string_view::npos)
+			{
+				res.second = std::string_view(def.data() + it2, def.size() - it2);
+			}
+		}
+		return res;
+	}
+
+
+	struct ShaderCIncluderInterface : public::shaderc::CompileOptions::IncluderInterface
+	{
+		ShaderInstance * that = nullptr;
+		ShaderInstance::PreprocessingState * preprocessing_state;
+
+		struct Result
+		{
+			// Don't use std::string because we can't allow short string optimization 
+			MyVector<char> name = {};
+			MyVector<char> content = {};
+		};
+
+		// Both the same size
+		MyVector<std::unique_ptr<shaderc_include_result>> _produced_results = {};
+		MyVector<Result> _results = {};
+		
+		virtual ~ShaderCIncluderInterface()
+		{}
+
+		virtual shaderc_include_result* GetInclude(const char* requested_source, const shaderc_include_type type, const char* requesting_source, size_t include_depth) final override
+		{
+			that::FileSystem::Path path = requested_source;
+			that::FileSystem::Path resolved_path;
+			ShaderInstance::IncludeType include_type = {};
+			switch (type)
+			{
+				SWITCH_CASE_CONVERT(shaderc_include_type_relative, ShaderInstance::IncludeType::Quotes, include_type);
+				SWITCH_CASE_CONVERT(shaderc_include_type_standard, ShaderInstance::IncludeType::Brackets, include_type);
+			}
+			if (include_type == ShaderInstance::IncludeType::Quotes)
+			{
+				that::FileSystem::Path folder = that::FileSystem::Path(requesting_source);
+				//folder = that->application()->fileSystem()->resolve(folder).value;
+				folder = folder.parent_path();
+				path = folder / path;
+			}
+
+			ShaderInstance::PreprocessResult included = that->includeFile(path, *preprocessing_state, include_depth, include_type, &resolved_path);
+			bool success = that->_creation_result.success;
+			
+			std::unique_ptr<shaderc_include_result> res = std::make_unique<shaderc_include_result>();
+			shaderc_include_result * res_ptr = res.get();
+			size_t index = _produced_results.size();
+			reinterpret_cast<size_t&>(res->user_data) = index;
+
+			_produced_results.emplace_back(std::move(res));
+			_results.push_back({});
+			Result & storage = _results.back();
+
+			
+			if (success)
+			{
+				std::string tmp = resolved_path.string();
+				storage.name = MyVector<char>(tmp.begin(), tmp.end());
+				std::string & code = included.content;
+
+				// shaderc does not handle #pragma once itself
+				if (that->checkPragmaOnce(code))
+				{
+					preprocessing_state->pragma_once_files.insert(resolved_path);
+				}
+
+				code = that->preprocessStrings(code);
+				storage.content = MyVector<char>(code.begin(), code.end());
+			}
+			else
+			{
+				storage.name = {};
+				storage.content = MyVector<char>(that->_creation_result.error_message.begin(), that->_creation_result.error_message.end());
+			}
+
+			res_ptr->source_name = storage.name.data();
+			res_ptr->source_name_length = storage.name.size();
+			res_ptr->content = storage.content.data();
+			res_ptr->content_length = storage.content.size();
+
+			return res_ptr;
+		}
+
+		virtual void ReleaseInclude(shaderc_include_result* data) final override
+		{
+			size_t index = reinterpret_cast<size_t>(data->user_data);
+			if (index < _produced_results.size())
+			{
+				_produced_results[index].reset();
+				_results[index] = {};
+			}
+		}
+	};
+
+	struct SlangFileSystemInterface : public ISlangFileSystem
+	{
+		ShaderInstance* that = nullptr;
+
+		virtual SLANG_NO_THROW SlangResult SLANG_MCALL loadFile(char const* path, ISlangBlob** outBlob)
+		{
+
+		}
+	};
+
+	bool ShaderInstance::compile(std::string const& pcode, PreprocessingState & preprocessing_state)
 	{	
 		const bool dump_source = application()->options().dump_shader_source;
+		const bool dump_preprocessed = application()->options().dump_shader_preprocessed;
 		const bool dump_spv = application()->options().dump_shader_spv;
-		if (_source_language == ShadingLanguage::GLSL)
-		{
-			shaderc::CompileOptions options;
-			//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
-			options.SetTargetSpirv(shaderc_spirv_version_1_6);
-			options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
-			options.SetWarningsAsErrors();
-			options.AddMacroDefinition("__glsl", "460");
-			options.AddMacroDefinition("__VKL", "1");
-			shaderc::Compiler compiler;
+		const std::string main_path_str = _main_path.string();
 
-			shaderc::CompilationResult res = compiler.CompileGlslToSpv(code, getShaderKind(_stage), filename.c_str(), options);
-			size_t errors = res.GetNumErrors();
-			size_t warns = res.GetNumWarnings();
+		std::string const * code = &pcode;
+		std::string preprocessed_tmp;
+		std::string const* preprocessed_code = nullptr;
 
-			if (errors)
-			{
-				_creation_result = AsynchTask::ReturnType{
-					.success = false,
-					.can_retry = true,
-					.error_title = "Shader Compilation Error: "s,
-					.error_message =
-						"Error while compiling shader: \n"s +
-						"Main Shader: "s + filename + ":\n"s +
-						res.GetErrorMessage(),
-				};
-				return false;
-			}
-			_spv_code = std::vector<uint32_t>(res.cbegin(), res.cend());
-		}
-		else if(_source_language == ShadingLanguage::Slang)
+		if (_source_language == ShadingLanguage::Slang)
 		{
 			Slang::ComPtr<slang::IGlobalSession> const& global_session = application()->getSlangSession();
 			Slang::ComPtr<slang::ISession> session;
@@ -811,9 +959,9 @@ namespace vkl
 			compiler->setDebugInfoFormat(SLANG_DEBUG_INFO_FORMAT_C7);
 			compiler->setTargetEmbedDownstreamIR(0, true);
 			int index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
-			compiler->addTranslationUnitSourceStringSpan(index, filename.c_str(), code.c_str(), code.c_str() + code.size());
-			compiler->addPreprocessorDefine("__slang", "1");
-			compiler->addPreprocessorDefine("__VKL", "1");
+			compiler->addTranslationUnitSourceStringSpan(index, main_path_str.c_str(), code->c_str(), code->c_str() + code->size());
+			compiler->addPreprocessorDefine("_slang", "1");
+
 			if (_stage != 0)
 			{
 				//compiler->addEntryPoint(index, "main", ConvertToSlang(_stage));
@@ -846,22 +994,109 @@ namespace vkl
 
 				}
 			}
-			if(_spv_code.empty())
+			if (_spv_code.empty())
 			{
 				std::string_view error = compiler->getDiagnosticOutput();
 				_creation_result = AsynchTask::ReturnType{
 					.success = false,
 					.can_retry = true,
 					.error_title = "Shader Compilation Error: ",
-					.error_message = 
-						"Error while compiling shader: \n"s +
-						"Main Shader: "s + filename + ":\n"s +
-						std::string(error),
+					.error_message = std::format(
+						"Error while compiling shader: \n"
+						"Main Shader: {}:\n"
+						"{}",
+						main_path_str, error
+					),
 				};
 				return false;
 			}
 		}
-		else
+		if (_source_language == ShadingLanguage::GLSL)
+		{
+			shaderc::CompileOptions options;
+			//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
+			options.SetTargetSpirv(shaderc_spirv_version_1_6);
+			options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
+			options.SetWarningsAsErrors();
+			options.AddMacroDefinition("_glsl", "460");
+
+			{
+				DefinitionsList & definitions = preprocessing_state.definitions;
+				for (size_t i = 0; i < definitions.size(); ++i)
+				{
+					std::string_view def = definitions.at(i);
+					auto [id, value] = ParseDefinition(def);
+					if (id.empty())
+					{
+						VKL_BREAKPOINT_HANDLE;
+					}
+					else
+					{
+						options.AddMacroDefinition(id.data(), id.size(), value.data(), value.size());
+					}
+				}
+				definitions.clear();
+			}
+			
+			std::unique_ptr<ShaderCIncluderInterface> includer = std::make_unique<ShaderCIncluderInterface>();
+			includer->that = this;
+			includer->preprocessing_state = &preprocessing_state;
+			options.SetIncluder(std::move(includer));
+
+			shaderc::Compiler compiler;
+
+			if (dump_preprocessed)
+			{
+				shaderc::CompilationResult preprocessed_res = compiler.PreprocessGlsl(*code, getShaderKind(_stage), main_path_str.c_str(), options);
+				preprocessed_tmp = std::string(preprocessed_res.cbegin(), preprocessed_res.cend());
+				preprocessed_code = &preprocessed_tmp;
+				size_t errors = preprocessed_res.GetNumErrors();
+				size_t warns = preprocessed_res.GetNumWarnings();
+				if (errors)
+				{
+					_creation_result = AsynchTask::ReturnType{
+						.success = false,
+						.can_retry = true,
+						.error_title = "Shader Compilation Error: "s,
+						.error_message = std::format(
+							"Error while preprocessing shader: \n"
+							"Main Shader: {}:\n"
+							"{}",
+							_main_path.string(), preprocessed_res.GetErrorMessage()
+						),
+					};
+					return false;
+				}
+			}
+
+			if (preprocessed_code)
+			{
+				code = preprocessed_code;
+			}
+
+			shaderc::CompilationResult compile_res = compiler.CompileGlslToSpv(*code, getShaderKind(_stage), main_path_str.c_str(), options);
+			size_t errors = compile_res.GetNumErrors();
+			size_t warns = compile_res.GetNumWarnings();
+
+			if (errors)
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Error: "s,
+					.error_message = std::format(
+						"Error while compiling shader: \n"
+						"Main Shader: {}:\n"
+						"{}",
+						_main_path.string(), compile_res.GetErrorMessage()
+					),
+				};
+				return false;
+			}
+			_spv_code = std::vector<uint32_t>(compile_res.cbegin(), compile_res.cend());
+		}
+		else if(_creation_result.success && _spv_code.empty())
 		{
 			_creation_result = AsynchTask::ReturnType{
 				.success = false,
@@ -872,7 +1107,7 @@ namespace vkl
 			return false;
 		}
 
-		if (dump_source || dump_spv)
+		if (dump_source || dump_preprocessed || dump_spv)
 		{
 			// Path without mounting point
 			that::ResultAnd<that::FileSystem::PathStringView> rel_path = that::FileSystem::ExtractRelative(_main_path);
@@ -889,7 +1124,16 @@ namespace vkl
 					that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
 					that::FileSystem::WriteFileInfo info = {};
 					info.path = &write_path;
-					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(code.data()), code.size());
+					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(code->data()), code->size());
+					application()->fileSystem()->writeFile(info);
+				}
+				if (dump_preprocessed && preprocessed_code)
+				{
+					that::FileSystem::Path write_folder = "gen:/preprocessed_shaders/";
+					that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
+					that::FileSystem::WriteFileInfo info = {};
+					info.path = &write_path;
+					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(preprocessed_code->data()), preprocessed_code->size());
 					application()->fileSystem()->writeFile(info);
 				}
 				if (dump_spv)
@@ -952,17 +1196,26 @@ namespace vkl
 		using namespace std::containers_append_operators;
 		std::filesystem::file_time_type compile_time = std::chrono::file_clock::now();
 
-		std::string semantic_definition = std::format("SHADER_SEMANTIC_{} 1", getShaderStageName(_stage));
-		DefinitionsList defines = { semantic_definition };
-		defines += application()->commonShaderDefinitions().collapsed();
-		defines += ci.definitions;
+		PreprocessingState preproc;
+		auto addDefinitions = [&]()
+		{
+			DefinitionsList& defines = preproc.definitions;
+			defines.pushBack(std::format("SHADER_SEMANTIC_{} 1", getShaderStageName(_stage)));
+			defines.pushBack("_VKL 1");
+			defines += application()->commonShaderDefinitions().collapsed();
+			defines += ci.definitions;
+		};
 
-		_preprocessed_source = preprocess(ci.source_path, defines);
+		preproc.include_directories = application()->includeDirectories();
+		addDefinitions();
+		preproc.full_manual_preprocess = _source_language == ShadingLanguage::Slang;
+
+		_preprocessed_source = preprocess(ci.source_path, preproc);
 		
 		if (_creation_result.success)
 		{
 			compile_time = std::chrono::file_clock::now();
-			compile(_preprocessed_source, ci.source_path.string());
+			compile(_preprocessed_source, preproc);
 
 			if (_creation_result.success)
 			{
