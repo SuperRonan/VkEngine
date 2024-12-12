@@ -1059,7 +1059,21 @@ namespace vkl
 	VkResult VkApplication::deviceWaitIdle()
 	{
 		// TODO aquire all queues mutexes
+		for (size_t i = 0; i < _queues_by_family.size(); ++i)
+		{
+			for (size_t j = 0; j < _queues_by_family[i].size(); ++j)
+			{
+				_queues_by_family[i][j]->mutex().lock();
+			}
+		}
 		VkResult res = vkDeviceWaitIdle(_device);
+		for (size_t i = 0; i < _queues_by_family.size(); ++i)
+		{
+			for (size_t j = 0; j < _queues_by_family[i].size(); ++j)
+			{
+				_queues_by_family[i][j]->mutex().unlock();
+			}
+		}
 		return res;
 	}
 
