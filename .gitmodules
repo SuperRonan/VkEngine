@@ -1,6 +1,3 @@
-[submodule "ext/glm"]
-	path = ext/glm
-	url = https://github.com/g-truc/glm.git
 [submodule "ext/thatlib"]
 	path = ext/thatlib
 	url = https://github.com/SuperRonan/thatlib.git
@@ -28,3 +25,6 @@
 [submodule "ext/SDL"]
 	path = ext/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "ext/eigen"]
+	path = ext/eigen
+	url = https://gitlab.com/libeigen/eigen.git

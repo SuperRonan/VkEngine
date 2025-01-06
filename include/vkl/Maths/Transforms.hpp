@@ -4,16 +4,8 @@
 
 #include <cmath>
 #include "Types.hpp"
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/matrix_inverse.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
 
 #include <ShaderLib/interop_glsl_cpp>
-
-namespace glm
-{
-	
-}
 
 namespace vkl
 {
@@ -56,261 +48,236 @@ namespace vkl
 		return c;
 	}
 
-	template <uint N, class Scalar>
-	constexpr MatrixN<N, Scalar> DiagonalMatrix(Vector<N, Scalar> const& d)
+	template <class Scalar>
+	constexpr Matrix2<Scalar> RotationMatrix(Scalar angle)
 	{
-		MatrixN<N, Scalar> res;
-		for (uint i = 0; i < N; ++i)
-		{
-			res[i][i] = d[i];
-		}
+		Matrix2<Scalar> res;
+		res.operator[](0);
+		res(0, 0) = res(1, 1) = std::cos(angle);
+		res(1, 0) = std::sin(angle);
+		res(0, 1) = -res(0, 1);
 		return res;
 	}
 
-	template <class Float>
-	constexpr MatrixN<2, Float> RotationMatrix(Float angle)
+	template <class Scalar>
+	constexpr Matrix2<Scalar> BasisFromDir(Vector2<Scalar> const& dir)
 	{
-		MatrixN<2, Float> res;
-		res[0][0] = res[1][1] = std::cos(angle);
-		res[0][1] = std::sin(angle);
-		res[1][0] = -res[0][1];
-		return res;
-	}
-
-	template <class Float>
-	constexpr Matrix2<Float> BasisFromDir(Vector2<Float> const& dir)
-	{
-		const Vector2<Float> v(-dir[0], dir[1]);
-		return Matrix2<Float>(dir, v);
+		const Vector2<Scalar> v(-dir[0], dir[1]);
+		return MakeFromColumns<Scalar, 2>({dir, v});
 	}
 
 	// Assume dot(Z, X) = 0
 	// |X| = |Z| = 1
-	template<class Float>
-	constexpr Matrix3<Float> BasisFrom2DBasisZX(Vector3<Float> const& Z, Vector3<Float> const& X)
+	template<class Scalar>
+	constexpr Matrix3<Scalar> BasisFrom2DBasisZX(Vector3<Scalar> const& Z, Vector3<Scalar> const& X)
 	{
-		const Vector3<Float> Y = glm::cross(Z, X);
-		Matrix3<Float> res;
-		res[0] = X;
-		res[1] = Y;
-		res[2] = Z;
+		const Vector3<Scalar> Y = Z.cross(X);
+		Matrix3<Scalar> res = MakeFromColumns<Scalar, 3>({X, Y, Z});
 		return res;
 	}
 
-	template<class Float>
-	constexpr Matrix3<Float> BasisFromDirFast(Vector3<Float> const& dir)
+	template<class Scalar>
+	constexpr Matrix3<Scalar> BasisFromDirFast(Vector3<Scalar> const& dir)
 	{
-		const Vector3<Float> Z = dir;
-		Vector3<Float> o;
-		o = Vector3<Float>(1, 0, 0);
-		const float l = 0.5;
-		if (std::abs(glm::dot(o, Z)) >= l)
+		const Vector3<Scalar> Z = dir;
+		Vector3<Scalar> o;
+		o = Vector3<Scalar>(1, 0, 0);
+		const Scalar l(0.5);
+		if (std::abs(Dot(o, Z)) >= l)
 		{
-			o = Vector3<Float>(0, 1, 0);
+			o = Vector3<Scalar>(0, 1, 0);
 			//if(dot(o, Z) >= l)
 			//{
-			//	o = Vector3<Float>(0, 0, 1);
+			//	o = Vector3<Scalar>(0, 0, 1);
 			//}
 		}
-		const Vector3<Float> X = glm::normalize(cross(o, Z));
+		const Vector3<Scalar> X = Normalize(Cross(o, Z));
 		return BasisFrom2DBasisZX(Z, X);
 	}
 
 	// https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
-	template<class Float>
-	constexpr Matrix3<Float> BasisFromDir_frisvad(Vector3<Float> const& Z)
+	template<class Scalar>
+	constexpr Matrix3<Scalar> BasisFromDir_frisvad(Vector3<Scalar> const& Z)
 	{
-		Vector3<Float> X;
-		if (Z.z < Float(-0.9999))
+		Vector3<Scalar> X;
+		if (Z.z() < Scalar(-0.9999))
 		{
-			X = Vector3<Float>(0, -1, 0);
+			X = Vector3<Scalar>(0, -1, 0);
 		}
 		else
 		{
-			const Float a = rcp(Float(1) + Z.z);
-			const Float b = -Z.x * Z.y * a;
-			X = Vector3f(Float(1) - sqr(Z.x) * a, b, -Z.x);
+			const Scalar a = rcp(Scalar(1) + Z.z());
+			const Scalar b = -Z.x() * Z.y() * a;
+			X = Vector3f(Scalar(1) - sqr(Z.x()) * a, b, -Z.x());
 		}
 		return BasisFrom2DBasisZX(Z, X);
 	}
 
-	template<class Float>
-	constexpr Matrix3<Float> BasisFromDir_hughes_moeller(Vector3<Float> const& Z)
+	template<class Scalar>
+	constexpr Matrix3<Scalar> BasisFromDir_hughes_moeller(Vector3<Scalar> const& Z)
 	{
-		Vector3<Float> Y;
-		if(std::abs(Z.x) > std::abs(Z.z))	Y = Vector3<Float>(-Z.y, Z.x, 0);
-		else								Y = Vector3<Float>(0, -Z.z, Z.y);
-		Y = glm::normalize(Y);
-		Vector3<Float> X = glm::cross(Y, Z);
-		return Matrix3<Float>(X, Y, Z);
+		Vector3<Scalar> Y;
+		if(std::abs(Z.x()) > std::abs(Z.z()))	Y = Vector3<Scalar>(-Z.y(), Z.x(), 0);
+		else									Y = Vector3<Scalar>(0, -Z.z(), Z.y());
+		Y = Normalize(Y);
+		Vector3<Scalar> X = Cross(Y, Z);
+		return Matrix3<Scalar>(X, Y, Z);
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrix(Vector3<Float> const& axis, Float angle)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrix(Vector3<Scalar> const& axis, Scalar angle)
 	{
 		// Basis not tested for an arbitrary axis
-		Matrix3<Float> basis = BasisFromDirFast(axis);
-		Matrix2<Float> R2 = RotationMatrix(angle);
-		Matrix3<Float> res = (basis) * Matrix3<Float>(R2) * glm::transpose(basis);
+		Matrix3<Scalar> basis = BasisFromDirFast(axis);
+		Matrix2<Scalar> R2 = RotationMatrix(angle);
+		Matrix3<Scalar> res = (basis) * Matrix3<Scalar>(R2) * Transpose(basis);
 		return res;
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrixX(Float angle)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrixX(Scalar angle)
 	{
-		return RotationMatrix(Vector3<Float>(1, 0, 0), angle);
+		return RotationMatrix(Vector3<Scalar>(1, 0, 0), angle);
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrixY(Float angle)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrixY(Scalar angle)
 	{
-		return RotationMatrix(Vector3<Float>(0, 1, 0), angle);
+		return RotationMatrix(Vector3<Scalar>(0, 1, 0), angle);
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrixZ(Float angle)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrixZ(Scalar angle)
 	{
-		return RotationMatrix(Vector3<Float>(0, 0, 1), angle);
+		return RotationMatrix(Vector3<Scalar>(0, 0, 1), angle);
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrixIntrinsic(Vector3<Float> const& angles)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrixIntrinsic(Vector3<Scalar> const& angles)
 	{
 		return RotationMatrixZ(angles[0]) * RotationMatrixY(angles[1]) * RotationMatrixX(angles[2]);
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrixExtrinsic(Vector3<Float> const& angles)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrixExtrinsic(Vector3<Scalar> const& angles)
 	{
-		return RotationMatrixIntrinsic(Vector3<Float>(angles[2], angles[1], angles[0]));
+		return RotationMatrixIntrinsic(Vector3<Scalar>(angles[2], angles[1], angles[0]));
 	}
 
-	template <class Float>
-	constexpr Matrix3<Float> RotationMatrix(Vector3<Float> const& angles, bool extrinsic = true)
+	template <class Scalar>
+	constexpr Matrix3<Scalar> RotationMatrix(Vector3<Scalar> const& angles, bool extrinsic = true)
 	{
 		return extrinsic ? RotationMatrixExtrinsic(angles) : RotationMatrixIntrinsic(angles);
 	}
 
-	template <uint N, class Float, uint M>
-	constexpr MatrixN<N, Float> ScalingMatrix(Vector<M, Float> const& vector)
+	// Returns a NxN matrix
+	template <uint N, class Scalar = float>
+	constexpr Matrix<Scalar, N> ScalingMatrix(Vector<Scalar, N> const& vector)
 	{
-		MatrixN<N, Float> res(Float(1.0));
-		for (int i = 0; i < std::min(N, M); ++i)
+		return DiagonalMatrix(vector);
+	}
+
+	// Returns a NxN matrix
+	template <uint N, class Scalar>
+	constexpr Matrix<Scalar, N> ScalingMatrix(Scalar s)
+	{
+		return MakeMatrix<Scalar, N>(s);
+	}
+
+	// Returns a R x R+1 matrix
+	template <uint R, class Scalar = float>
+	constexpr Matrix<Scalar, R, R+1> TranslationMatrix(ColVector<Scalar, R> const& vector)
+	{
+		Matrix<Scalar, R, R + 1> res = MakeMatrix<Scalar, R, R + 1>();
+		for (uint i = 0; i < R; ++i)
 		{
-			res[i][i] = vector[i];
+			res(i, R) = vector[i];
 		}
 		return res;
 	}
 
-	template <uint N, class Float>
-	constexpr MatrixN<N, Float> ScalingMatrix(Float s)
+	template <uint R, class Scalar = float>
+	constexpr Matrix<Scalar, R, R + 1> InverseTranslationMatrix(ColVector<Scalar, R> const& vector) 
 	{
-		MatrixN<N, Float> res(Float(1.0));
-		for (int i = 0; i < N - 1; ++i)
+		return TranslationMatrix(-vector);
+	}
+
+	template <class Scalar, uint R, uint C, int Options>
+		requires (C == R || C == (R + 1))
+	Matrix<Scalar, R, C, Options> InverseTranslateMatrix(Matrix<Scalar, R, C, Options> const& t_mat)
+	{
+		Matrix<Scalar, R, C, Options> res = MakeMatrix<Scalar, R, C, Options>();
+		constexpr const uint t_dim = C - 1;
+		for (uint i = 0; i < t_dim; ++i)
 		{
-			res[i][i] = s;
+			res(i, t_dim) = -t_mat(i, t_dim);
 		}
 		return res;
 	}
 
-	template <uint N, class Float>
-	constexpr MatrixN<N, Float> TranslationMatrix(Vector<N - 1, Float> const& vector)
+	template <uint N, class Scalar>
+	Vector<Scalar, N + 1> Homogenize(Vector<Scalar, N> const& vec, Scalar const& h=Scalar(1.0))
 	{
-		MatrixN<N, Float> res(Float(1.0));
-		for (int i = 0; i < N - 1; ++i)
+		Vector<Scalar, N + 1> res;
+		res << vec, h;
+		return vec;
+	}
+
+	template <uint N, class Scalar>
+		requires (N > 1)
+	Vector<Scalar, N - 1> DeHomogenize(Vector<Scalar, N> const& h_vec)
+	{
+		Vector<Scalar, N - 1> res = h_vec.block(0, 0, N - 1, 1);
+		if (h_vec[N - 1] != Scalar(0))
 		{
-			res[N-1][i] = vector[i];
+			res /= h_vec[N - 1];
 		}
 		return res;
 	}
 
-	template <uint N, class Float>
-	MatrixN<N, Float> InverseTranslateMatrix(Vector<N - 1, Float> const& vector)
+	template <class Scalar>
+	Matrix3<Scalar> DirectionMatrix(Matrix3<Scalar> const& mat)
 	{
-		MatrixN<N, Float> res(Float(1.0));
-		for (int i = 0; i < N - 1; ++i)
-		{
-			res[N - 1][i] = -vector[i];
-		}
-		return res;
-	}
-
-	template <uint N, class Float>
-	MatrixN<N, Float> InverseTranslateMatrix(MatrixN<N, Float> const& t_mat)
-	{
-		MatrixN<N, Float> res(Float(1.0));
-		for (int i = 0; i < N - 1; ++i)
-		{
-			res[N - 1][i] = -t_mat[N-1][i];
-		}
-		return res;
-	}
-
-	template <uint N, class Float>
-	Vector<N + 1, Float> Homogenize(Vector<N, Float> const& vec, Float h=Float(1.0))
-	{
-		return Vector<N + 1, Float>(vec, h);
-	}
-
-	template <uint N, class Float>
-	Vector<N, Float> DeHomogenize(Vector<N + 1, Float> const& h_vec)
-	{
-		Vector<N, Float> res;
-		if (h_vec[N] != 0)
-		{
-			for (int i = 0; i < N; ++i)
-				res[i] = h_vec[i] / h_vec[N];
-		}
-		else
-		{
-			for (int i = 0; i < N; ++i)
-				res[i] = h_vec[i];
-		}
-		return res;
-	}
-
-	template <class Float>
-	Matrix3<Float> DirectionMatrix(Matrix3<Float> const& mat)
-	{
-		return glm::transpose(glm::inverse(mat));
+		return Transpose(Inverse(mat));
 	}
 	
-	template <class Float>
-	Matrix3<Float> DirectionMatrix(Matrix4<Float> const& mat)
+	template <class Scalar>
+	Matrix3<Scalar> DirectionMatrix(Matrix4<Scalar> const& mat)
 	{
-		return DirectionMatrix(Matrix3<Float>(mat));
+		return DirectionMatrix(ResizeMatrix<3>(mat));
 	}
 
-	template <class Float>
-	Matrix3<Float> DirectionMatrix(Matrix4x3<Float> const& mat)
+	template <class Scalar>
+	Matrix3<Scalar> DirectionMatrix(Matrix4x3<Scalar> const& mat)
 	{
-		return DirectionMatrix(Matrix3<Float>(mat));
+		return DirectionMatrix(ResizeMatrix<3>(mat));
 	}
 
-	inline VkTransformMatrixKHR ConvertXFormToVk(Matrix4x3f const& mat)
+	template <std::convertible_to<float> Scalar, uint R, uint C, int Options>
+		requires (R == 3 || R == 4) && (C == 3 || C == 4)
+	static VkTransformMatrixKHR ConvertXFormToVk(Matrix<Scalar, R, C, Options> const& mat)
 	{
-		// glm::mat4x3 is stored as 4 vec3, so can't directly memcpy :(
 		VkTransformMatrixKHR res;
 		for (uint32_t i = 0; i < 3; ++i)
 		{
 			for (uint32_t j = 0; j < 4; ++j)
 			{
-				res.matrix[i][j] = mat[j][i];
+				res.matrix[i][j] = static_cast<float>(mat(i, j));
 			}
 		}
 		return res;
 	}
 
-	template <class Float>
-	constexpr Matrix4x3<Float> MakeRigidTransform(Matrix4x3<Float> const& rs, Vector3<Float> const& t)
+	template <class Scalar>
+	constexpr Matrix4x3<Scalar> MakeRigidTransform(Matrix4x3<Scalar> const& rs, Vector3<Scalar> const& t)
 	{
-		Matrix4x3<Float> res = Matrix4x3<Float>(rs);
+		Matrix4x3<Scalar> res = Matrix4x3<Scalar>(rs);
 		res[3] = t;
 		return res;
 	}
 
 #ifndef DEFAULT_SCALAR
-#define DEFAULT_SCALAR float
+#define DEFAULT_SCALAR Scalar
 #endif
 
 #define EQ_DFS = DEFAULT_SCALAR
