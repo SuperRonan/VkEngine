@@ -4,10 +4,38 @@
 
 #define typealias using
 
+#define CPP_ONLY(X) X
+#define SLANG_ONLY(X)
+
+// Use a common concept name between C++ and Slang
+#define CONCEPT_TYPE(CONCEPT, TYPE) CONCEPT TYPE
+
+#define CONCEPT_2_TYPE(CPP_CONCEPT, SLANG_CONCEPT, TYPE) CONCEPT_TYPE(CPP_CONCEPT, TYPE)
+
+#define REQUIRE_CLAUSE(C) requires (C)
+
+#define CREF(TYPE) TYPE const&
+#define MREF(TYPE) TYPE &
+#define OUT_REF(TYPE) TYPE &
+
 #elif _slang
 
 #define template __generic
 #define constexpr
 #define noexecpt
+
+#define CPP_ONLY(X)
+#define SLANG_ONLY(X) X
+
+// Use a common concept name between C++ and Slang
+#define CONCEPT_TYPE(CONCEPT, TYPE) typename TYPE : CONCEPT
+
+#define CONCEPT_2_TYPE(CPP_CONCEPT, SLANG_CONCEPT, TYPE) CONCEPT_TYPE(SLANG_CONCEPT, TYPE)
+
+#define REQUIRE_CLAUSE(C) where C
+
+#define CREF(TYPE) const in TYPE 
+#define MREF(TYPE) inout TYPE 
+#define OUT_REF(TYPE) out TYPE
 
 #endif

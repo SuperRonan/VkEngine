@@ -36,8 +36,59 @@ typealias Vector = vector<T, N>;
 template <typename T, uint R, uint C>
 typealias Matrix = matrix<T, R, C>;
 
+template <typename T>
+typealias Matrix2 = Matrix<T, 2, 2>;
+template <typename T>
+typealias Matrix3 = Matrix<T, 3, 3>;
+template <typename T>
+typealias Matrix4 = Matrix<T, 4, 4>;
+
+template <typename T>
+typealias Matrix2x2 = Matrix2<T>;
+template <typename T>
+typealias Matrix3x3 = Matrix3<T>;
+template <typename T>
+typealias Matrix4x4 = Matrix4<T>;
+
+template <typename T>
+typealias Matrix2x3 = Matrix<T, 2, 3>;
+template <typename T>
+typealias Matrix2x4 = Matrix<T, 2, 4>;
+
+template <typename T>
+typealias Matrix3x2 = Matrix<T, 3, 2>;
+template <typename T>
+typealias Matrix3x4 = Matrix<T, 3, 4>;
+
+template <typename T>
+typealias Matrix4x2 = Matrix<T, 4, 2>;
+template <typename T>
+typealias Matrix4x3 = Matrix<T, 4, 3>;
+
+template <uint R, uint C = R>
+typealias Matrixf = Matrix<float, R, C>;
+
+template <uint R, uint C = R>
+typealias Matrixd = Matrix<double, R, C>;
+
+template <uint R, uint C = R>
+typealias Matrixh = Matrix<half, R, C>;
+
+typealias Matrix2f = Matrix2<float>;
+typealias Matrix3f = Matrix3<float>;
+typealias Matrix4f = Matrix4<float>;
+
+typealias Matrix2x3f = Matrix2x3<float>;
+typealias Matrix2x4f = Matrix2x4<float>;
+
+typealias Matrix3x2f = Matrix3x2<float>;
+typealias Matrix3x4f = Matrix3x4<float>;
+
+typealias Matrix4x2f = Matrix4x2<float>;
+typealias Matrix4x3f = Matrix4x3<float>;
+
 template <typename T, uint R, uint C>
-Vector<T, R> GetColumn(Matrix<T, R, C> m, uint i)
+Vector<T, R> GetColumn(const in Matrix<T, R, C> m, uint i)
 {
 	Vector<T, R> res;
 	for(uint j = 0; j < R; ++j)
@@ -48,7 +99,7 @@ Vector<T, R> GetColumn(Matrix<T, R, C> m, uint i)
 }
 
 template <typename T, uint R, uint C>
-Vector<T, C> GetRow(Matrix<T, R, C> m, uint i)
+Vector<T, C> GetRow(const in Matrix<T, R, C> m, uint i)
 {
 	return m[i];
 }
@@ -66,6 +117,24 @@ template <typename T, uint R, uint C>
 void SetRow(inout Matrix<T, R, C> m, uint i, Vector<T, C> v)
 {
 	m[i] = v;
+}
+
+template <typename T, uint R, uint C>
+T GetCoeficient(const in Matrix<T, R, C> m, uint r, uint c)
+{
+	return GetRow(m, r)[c];
+}
+
+template <typename T, uint R, uint C>
+void SetCoeficient(inout Matrix<T, R, C> m, uint r, uint c, const inout T t)
+{
+	m[r][c] = t;
+}
+
+template<typename T : __BuiltinFloatingPointType, uint R, uint I, uint C>
+Matrix<T, R, C> operator*(const in Matrix<T, R, I> l, const in Matrix<T, I, C> r)
+{
+	return mul(l, r);
 }
 
 template <uint N>
@@ -104,6 +173,14 @@ typealias hvec2 = half2;
 typealias hvec3 = half3;
 typealias hvec4 = half4;
 
+template <typename T>
+typealias Vector2 = Vector<T, 2>;
+
+template <typename T>
+typealias Vector3 = Vector<T, 3>;
+
+template <typename T>
+typealias Vector4 = Vector<T, 4>;
 
 typealias mat2 = float2x2;
 typealias mat2x2 = mat2;
@@ -121,8 +198,9 @@ typealias dmat4x4 = dmat4;
 
 // Slang's matrix<T, Rows, Columns, L> (like floatRxC) follows the mathematical convension, 
 // and is stored in row major by default
-// m[i] returns the i-th row of the matrix
+// m[i] returns the i-th row of the matrix (even if the matrices are configured to be col major?)
 
+#if SLANG_USE_GLSL_MATRIX_TYPES
 // GLSL's matCxR follows the oposite convension,
 // and is stored in column major by default
 // And a GLSL's mat[i] returns the i-th column
@@ -147,6 +225,7 @@ typealias dmat3x4 = matrix<double, 4, 3>;
 
 typealias dmat4x2 = matrix<double, 2, 4>;
 typealias dmat4x3 = matrix<double, 4, 4>;
+#endif
 
 
 typealias fp16vecIFP<let N : uint> = vector<fp16IFP, N>;
@@ -387,6 +466,79 @@ bool NonZero(Vector<T, N> v)
 	Vector<T, N> z = Vector<T, N>(zero_t);
 	return any(v != z);
 }
+
+template <typename T : __BuiltinFloatingPointType, uint N>
+T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
+{
+	return dot(l, r);
+}
+
+template <typename T : __BuiltinIntegerType, uint N>
+T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
+{
+	return dot(l, r);
+}
+
+template <typename T : __BuiltinFloatingPointType, uint N>
+T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
+{
+	return dot(l, r);
+}
+
+template <typename T : __BuiltinIntegerType, uint N>
+T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
+{
+	return dot(l, r);
+}
+
+template <typename T : __BuiltinFloatingPointType, uint R, uint C>
+Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
+{
+	Matrix<T, R, C> res;
+	for(uint i = 0; i < R; ++i)
+	{
+		SetRow(res, i, l[i] * r);
+	}
+	return res;
+}
+
+template <typename T : __BuiltinIntegerType, uint R, uint C>
+Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
+{
+	Matrix<T, R, C> res;
+	for(uint i = 0; i < R; ++i)
+	{
+		SetRow(res, i, l[i] * r);
+	}
+	return res;
+}
+
+template <typename T : __BuiltinFloatingPointType>
+Vector3<T> Cross(const in Vector3<T> l, const in Vector3<T> r)
+{
+	return cross(l, r);
+}
+
+template <typename T : __BuiltinIntegerType>
+Vector3<T> Cross(const in Vector3<T> l, const in Vector3<T> r)
+{
+	return cross(l, r);
+}
+
+template <typename T : __BuiltinFloatingPointType, uint R, uint C>
+Matrix<T, C, R> Transpose(const in Matrix<T, R, C> m)
+{
+	return transpose(m);
+}
+
+template <typename T : __BuiltinFloatingPointType, uint N>
+Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m)
+{
+	Matrix<T, N, N> res;
+	return res;
+}
+
+
 
 #include "constants"
 
