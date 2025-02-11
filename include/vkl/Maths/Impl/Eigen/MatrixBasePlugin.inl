@@ -32,14 +32,55 @@ void makeFloor(const MatrixBase<OtherDerived>& other) { derived() = derived().cw
 template<typename OtherDerived>
 void makeCeil(const MatrixBase<OtherDerived>& other) { derived() = derived().cwiseMax(other.derived()); }
 
-const CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const Derived, const ConstantReturnType>
-operator+(const Scalar& scalar) const
+template <::vkl::concepts::SameCompatibleMatrix<Derived> Vec>
+	requires ((RowsAtCompileTime == 1 || ColsAtCompileTime == 1))
+constexpr auto operator*(Vec const& other) const
 {
-	return CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const Derived, const ConstantReturnType>(derived(), Constant(rows(), cols(), scalar));
+	return this->cwiseProduct(other);
 }
 
-friend const CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const ConstantReturnType, Derived>
-operator+(const Scalar& scalar, const MatrixBase<Derived>& mat)
+template <::vkl::concepts::SameCompatibleMatrix<Derived> Vec>
+	requires ((RowsAtCompileTime == 1 || ColsAtCompileTime == 1))
+constexpr auto operator/(Vec const& other) const
 {
-	return CwiseBinaryOp<internal::scalar_sum_op<Scalar>, const ConstantReturnType, Derived>(Constant(rows(), cols(), scalar), mat.derived());
+	return this->cwiseQuotient(other);
+}
+
+template <std::convertible_to<typename Derived::Scalar> OtherScalar>
+constexpr auto operator+(OtherScalar o) const
+{
+	return ((*this) + Derived::Constant(o)).eval();
+}
+
+template <std::convertible_to<typename Derived::Scalar> OtherScalar>
+constexpr auto operator-(OtherScalar o) const
+{
+	return ((*this) - Derived::Constant(o)).eval();
+}
+
+// AffineXForm = AffineXForm * AffineXForm 
+template <typename MatR>
+	requires (::vkl::concepts::SameCompatibleMatrix<MatR, Derived> && ((Derived::RowsAtCompileTime + 1) == Derived::ColsAtCompileTime) && std::derived_from<MatR, MatrixBase<MatR>>)
+constexpr auto operator*(MatR const& r) const
+{
+	constexpr uint N = Derived::RowsAtCompileTime;
+#if 0
+	using EVRT = typename std::remove_cvref<typename Derived::EvalReturnType>::type;
+	Matrix<typename Derived::Scalar, N, N + 1, EVRT::Options> res = res.Constant(Scalar(0));
+	const auto Ql = this->block(0, 0, N, N);
+	const auto Qr = r.block(0, 0, N, N);
+	decltype(auto) Q = res.block(0, 0, N, N);
+	Q = Ql * Qr;
+	const auto Tr = this->block(0, N, N - 1, 1);
+	const auto Tl = r.block(0, N, N - 1, 1);
+	decltype(auto) t = res.block(0, N, N - 1, 1);
+	t = Ql * Tr + Tl;
+	return res;
+#else
+	using EVRT_R = typename std::remove_cvref<typename MatR::EvalReturnType>::type;
+	using MatN = Matrix<typename MatR::Scalar, N + 1, N + 1, EVRT_R::Options>;
+	MatN R_N = MatN(r);	
+	auto res = ((*this) * R_N).eval();
+	return res;
+#endif
 }

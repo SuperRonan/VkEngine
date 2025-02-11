@@ -64,7 +64,7 @@ namespace vkl
 
 		void declareGui(GuiContext & ctx);
 
-		void setPosition(glm::vec2 const& pos)
+		void setPosition(Vector2f const& pos)
 		{
 			_pip_position = pos;
 		}

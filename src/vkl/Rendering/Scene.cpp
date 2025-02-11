@@ -30,9 +30,10 @@ namespace vkl
 		return true;
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat4 const& matrix, const PerNodeInstanceFunction& f)
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, const PerNodeInstanceFunction& f)
 	{
-		Mat4 new_matrix = matrix * node->matrix4x4();
+		Mat3x4 node_matrix = node->matrix3x4();
+		Mat3x4 new_matrix = matrix * node_matrix;
 		if (f(node, new_matrix))
 		{
 			for (std::shared_ptr<Node> const& n : node->children())
@@ -43,9 +44,10 @@ namespace vkl
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat4 const& matrix, const PerNodeInstanceFastPathFunction& f)
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, const PerNodeInstanceFastPathFunction& f)
 	{
-		Mat4 new_matrix = matrix * node->matrix4x4();
+		Mat3x4 node_matrix = node->matrix3x4();
+		Mat3x4 new_matrix = matrix * node_matrix;
 		if (f(node, path, new_matrix))
 		{
 			path.path.push_back(0);
@@ -60,9 +62,10 @@ namespace vkl
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath& path, Mat4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f)
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath& path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f)
 	{
-		Mat4 new_matrix = matrix * node->matrix4x4();
+		Mat3x4 node_matrix = node->matrix3x4();
+		Mat3x4 new_matrix = matrix * node_matrix;
 		bool visible = node->visible();
 		std::bitset<32> flags_bits(flags);
 		flags_bits.set(0, visible && flags_bits[0]);
@@ -84,17 +87,17 @@ namespace vkl
 
 	void Scene::DirectedAcyclicGraph::iterateOnDag(const PerNodeInstanceFunction& f)
 	{
-		Mat4 matrix = Mat4(1);
+		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
 			iterateOnNodeThenSons(root(), matrix, f);
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat4 const& matrix)> const& f)
+	void Scene::DirectedAcyclicGraph::iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat3x4 const& matrix)> const& f)
 	{
 		FastNodePath path;
-		Mat4 matrix = Mat4(1);
+		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
 			iterateOnNodeThenSons(root(), path, matrix, f);
@@ -104,7 +107,7 @@ namespace vkl
 	void Scene::DirectedAcyclicGraph::iterateOnDag(PerNodeInstanceRobustPathFunction const& f)
 	{
 		RobustNodePath path;
-		Mat4 matrix = Mat4(1);
+		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
 			iterateOnNodeThenSons(root(), path, matrix, 1, f);
@@ -142,7 +145,7 @@ namespace vkl
 	{
 		_flat_dag.clear();
 
-		const auto process_node = [&](std::shared_ptr<Node> const& node, Mat4 const& matrix)
+		const auto process_node = [&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix)
 		{
 			std::vector<PerNodeInstance> & matrices = _flat_dag[node];
 			matrices.push_back(PerNodeInstance{
@@ -186,7 +189,7 @@ namespace vkl
 		PositionedNode res;
 
 		std::shared_ptr<Node> n = _root;
-		Mat4x3 matrix = n->matrix4x3();
+		Mat3x4 matrix = n->matrix3x4();
 		for (size_t i = 0; i < path.path.size(); ++i)
 		{
 			if (path.path[i] < n->children().size())
@@ -217,7 +220,7 @@ namespace vkl
 		PositionedNode res;
 
 		std::shared_ptr<Node> n = _root;
-		Mat4 matrix = n->matrix4x4();
+		Mat3x4 matrix = n->matrix3x4();
 		for (size_t i = 0; i < path.path.size(); ++i)
 		{
 			size_t found = size_t(-1);
@@ -232,7 +235,7 @@ namespace vkl
 			if (found != size_t(-1))
 			{
 				n = n->children()[found];
-				matrix *= n->matrix4x4();
+				matrix *= n->matrix3x4();
 			}
 			else
 			{
@@ -522,7 +525,7 @@ namespace vkl
 		_xforms_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
 			.name = name() + ".xforms",
-			.size = sizeof(Mat4x3) * 256,
+			.size = sizeof(Mat3x4) * 256,
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -624,7 +627,7 @@ namespace vkl
 	{
 		_num_lights = 0;	
 		
-		_tree->iterateOnFlattenDag([&](std::shared_ptr<Node> const& node, Mat4 const& matrix)
+		_tree->iterateOnFlattenDag([&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix)
 		{
 			if (node->light())
 			{
@@ -646,9 +649,9 @@ namespace vkl
 		std::hash<DirectedAcyclicGraph::RobustNodePath> h;
 		static_assert(std::concepts::HashableFromMethod<DirectedAcyclicGraph::RobustNodePath>);
 
-		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat4 const& matrix4, uint32_t flags)
+		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat3x4 const& matrix4, uint32_t flags)
 		{
-			const Mat4x3 matrix = matrix4;
+			const Mat3x4 matrix = matrix4;
 			const bool visible = (flags & 1) && node->visible();
 			
 			_tree->_flat_dag[node].push_back(DirectedAcyclicGraph::PerNodeInstance{
@@ -747,7 +750,7 @@ namespace vkl
 				bool changed_xform = false;
 				uint32_t unique_model_id;
 				uint32_t model_flags = 0;
-				Mat4x3_rm model_matrix = ToRowMajor(matrix);
+				Mat3x4 model_matrix = matrix;
 				if(visible)
 					model_flags |= 1;
 				if (!_unique_models.contains(path))
@@ -774,7 +777,7 @@ namespace vkl
 						(mr.material_id || material_unique_id) || 
 						(mr.xform_id != xform_unique_id);
 
-					const Mat4x3_rm& registed_matrix = _xforms_buffer->get<Mat4x3_rm>(xform_unique_id);
+					const Mat3x4& registed_matrix = _xforms_buffer->get<Mat3x4>(xform_unique_id);
 					changed_xform = (registed_matrix != model_matrix);
 					set_xform |= changed_xform;
 				}
@@ -791,7 +794,7 @@ namespace vkl
 				
 				if (set_xform)
 				{
-					_xforms_buffer->set<Mat4x3_rm>(xform_unique_id, model_matrix);
+					_xforms_buffer->set<Mat3x4>(xform_unique_id, model_matrix);
 				}
 				
 				if (_maintain_rt)
@@ -915,7 +918,7 @@ namespace vkl
 				if (visible)
 				{
 					LightGLSL gl = light->getAsGLSL(matrix);
-					gl.textures.x = lid->depth_texture_unique_id;
+					gl.textures[0] = lid->depth_texture_unique_id;
 					_lights_buffer->set(lid->frame_light_id, gl);
 					++_num_lights;
 				}

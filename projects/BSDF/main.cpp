@@ -305,7 +305,7 @@ namespace vkl
 
 				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{
-					pip.setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / glm::vec2(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
+					pip.setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / Vector2f(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
 				}
 
 				frame_counters.reset();

@@ -92,7 +92,7 @@ namespace vkl
 
 		virtual void endRenderPass() = 0;
 
-		using vec4 = glm::vec4;
+		using vec4 = Vector4f;
 
 		virtual void pushDebugLabel(std::string_view const& label, vec4 const& color, bool timestamp = false) = 0;
 

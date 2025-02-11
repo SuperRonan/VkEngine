@@ -34,6 +34,7 @@
 #include <vkl/Rendering/ImageSaver.hpp>
 
 #include <vkl/Maths/Transforms.hpp>
+#include <vkl/Maths/AffineXForm.hpp>
 
 #include <argparse/argparse.hpp>
 
@@ -104,7 +105,7 @@ namespace vkl
 
 		void createScene(std::shared_ptr<Scene> & scene)
 		{
-			scene->setAmbient(vec3(0.02));
+			scene->setAmbient(Vector3f::Constant(0.02));
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
 			if(true)
 			{
@@ -120,9 +121,11 @@ namespace vkl
 				const vec3 dir_m(1, 0, 0);
 				const vec3 dir_r(0, 0, 1);
 
+				Matrix3x4f node_matrix = TranslationMatrix(vec3(-1, 1, -2)) * (DiagonalMatrix<3, 4>(0.2f));
+
 				std::shared_ptr<Scene::Node> test_material_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 					.name = "TestMaterials",
-					.matrix = glm::mat4x3(TranslationMatrix<4, float>(vec3(-1, 1, -2)) * ScalingMatrix<4, float>(0.2)),
+					.matrix = node_matrix,
 				});
 
 				for (size_t i_m = 0; i_m < n_m; ++i_m)
@@ -137,7 +140,7 @@ namespace vkl
 						std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
 							.app = this,
 							.name = std::format("TestMaterial_{0:d}_{1:d}", i_m, i_r),
-							.albedo = vec3(0.7),
+							.albedo = Vector3f::Constant(0.7).eval(),
 							.metallic = metallic,
 							.roughness = roughness,
 							.cavity = 0,
@@ -152,7 +155,7 @@ namespace vkl
 						
 						std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 							.name = "ModelNode",
-							.matrix = glm::mat4x3(TranslationMatrix<4, float>(position)),
+							.matrix = Matrix3x4f(TranslationMatrix(position)),
 							.model = model,
 						});
 						test_material_node->addChild(model_node);
@@ -165,7 +168,7 @@ namespace vkl
 				//std::shared_ptr<NodeFromFile> viking_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 				//	.app = this,
 				//	.name = "Vicking",
-				//	.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0))),
+				//	.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), Vector3f(1, 0, 0))),
 				//	.path = ENGINE_SRC_PATH "/../gen/models/viking_room/viking_room.obj",
 				//	.synch = false,
 				//});
@@ -185,15 +188,18 @@ namespace vkl
 				//	}
 				//}
 
-				std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
-					.app = this,
-					.name = "Sponza",
-					.matrix = ScalingMatrix<4, float>(0.01),
-					.path = "gen:/models/Sponza_2/sponza.obj",
-					.synch = false,
-				});
+				if (true)
+				{
+					std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+						.app = this,
+						.name = "Sponza",
+						.matrix = DiagonalMatrix<3, 4>(0.01f),
+						.path = "gen:/models/Sponza_2/sponza.obj",
+						.synch = false,
+					});
 
-				root->addChild(sponza_node);
+					root->addChild(sponza_node);
+				}
 				
 			}
 
@@ -202,13 +208,13 @@ namespace vkl
 				{
 					std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 						.name = "Light",
-						.matrix = glm::mat4x3(TranslationMatrix<4, float>(glm::vec3(1, 6, -1))),
+						.matrix = Matrix3x4f(TranslationMatrix(Vector3f(1, 6, -1))),
 					});
 					light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
 						.app = this,
 						.name = "Light",
-						.direction = glm::vec3(1, 1, -1),
-						.emission = glm::vec3(1, 0.8, 0.6),
+						.direction = Vector3f(1, 1, -1),
+						.emission = Vector3f(1, 0.8, 0.6),
 					});
 					root->addChild(light_node);
 				}
@@ -217,8 +223,8 @@ namespace vkl
 					std::shared_ptr<PointLight> pl = std::make_shared<PointLight>(PointLight::CI{
 						.app = this,
 						.name = "PointLight",
-						.position = glm::vec3(0, 0, 0),
-						.emission = glm::vec3(1, 0.8, 0.6) * 15.0f,
+						.position = Vector3f(0, 0, 0),
+						.emission = Vector3f(1, 0.8, 0.6) * 15.0f,
 						.enable_shadow_map = true,
 						
 					});
@@ -227,40 +233,40 @@ namespace vkl
 					{
 						std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 							.name = "PointLight" + std::to_string(i),
-							.matrix = glm::mat4x3(TranslationMatrix<4, float>(glm::vec3((i - (n_lights / 2)) * 6, 6, 0))),
+							.matrix = TranslationMatrix(Vector3f((i - (n_lights / 2)) * 6, 6, 0)),
 						});
 						light_node->light() = pl;
 						root->addChild(light_node);
 					}
 				}
 
-				//light_node->light() = std::make_shared<Light>(Light::MakePoint(glm::vec3(0), glm::vec3(1, 1, 1)));
+				//light_node->light() = std::make_shared<Light>(Light::MakePoint(Vector3f(0), Vector3f(1, 1, 1)));
 
 
 				for (int i = 0; i < 3; ++i)
 				{
-					glm::vec3 color = glm::vec3(0);
+					Vector3f color = Vector3f::Zero();
 					color[i] = 10 * 5 * 2;
 					std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
 						.app = this,
 						.name = "SpotLight" + std::to_string(i),
-						.direction = glm::vec3(0, 0, -1),
-						.up = glm::vec3(0, 1, 0),
+						.direction = Vector3f(0, 0, -1),
+						.up = Vector3f(0, 1, 0),
 						.emission = color,
 						.attenuation = 1,
 					});
-					vec3 position = glm::vec3(2, 1, -4 + 4);
+					vec3 position = Vector3f(2, 1, -4 + 4);
 					if (i == 1)
 					{
-						position += glm::vec3(0.5, 0, 0);
+						position += Vector3f(0.5, 0, 0);
 					}
 					else if (i == 2)
 					{
-						position += glm::vec3(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
+						position += Vector3f(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
 					}
 					std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 						.name = "SpotLight" + std::to_string(i),
-						.matrix = glm::mat4x3(TranslationMatrix<4, float>(position)),
+						.matrix = TranslationMatrix(position),
 					});
 					spot_light_node->light() = spot_light;
 					root->addChild(spot_light_node);
@@ -304,7 +310,7 @@ namespace vkl
 				.zfar = 100,
 			});
 			camera.update(Camera::CameraDelta{
-				.angle = vec2(glm::pi<float>(), 0),
+				.angle = Vector2f(std::numbers::pi, 0),
 			});
 
 			VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -394,7 +400,7 @@ namespace vkl
 			};
 
 			std::shared_ptr<ComputeCommand> slang_test;
-			if (true)
+			if (false)
 			{
 				slang_test = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 					.app = this,
@@ -572,7 +578,7 @@ namespace vkl
 
 				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{
-					pip.setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / glm::vec2(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
+					pip.setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / Vector2f(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
 				}
 
 				frame_counters.reset();

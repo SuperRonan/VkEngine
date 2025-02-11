@@ -22,14 +22,14 @@ namespace vkl
 
 	Ray Camera::getRay(vec2 uv) const
 	{
-		const vec2 cp = uvToClipSpace(uv);
+		const vec2 cp = UVToClipSpace(uv);
 		return Ray{
 			.origin = _position,
-			.direction = glm::normalize(_direction + cp.x * _right * _aspect - cp.y * _up),
+			.direction = Normalize(_direction + cp[0] * _right * _aspect - cp[1] * _up),
 		};
 	}
 
-	mat4 Camera::getCamToProj()const
+	Camera::mat4 Camera::getCamToProj()const
 	{
 		mat4 res;
 		if (_type == Type::Perspective)
@@ -50,15 +50,16 @@ namespace vkl
 		}
 		else if (_type == Type::ReversedPerspective)
 		{
-			mat4 p = glm::perspective(_fov, _aspect, _near, _far);
-			mat4 r = glm::rotate(mat4(1), glm::radians(180.0f), _up);
-			mat4 t = p;
-			res = p * r * t;
+			NOT_YET_IMPLEMENTED;
+			//mat4 p = Perspective(_fov, _aspect, _near, _far);
+			//mat4 r = glm::rotate(mat4(1), glm::radians(180.0f), _up);
+			//mat4 t = p;
+			//res = p * r * t;
 		}
 		return res;
 	}
 
-	mat4 Camera::getProjToCam() const
+	Camera::mat4 Camera::getProjToCam() const
 	{
 		mat4 res;
 		if (_type == Type::Perspective)
@@ -80,44 +81,45 @@ namespace vkl
 		return res;
 	}
 
-	mat4 Camera::getWorldToProj() const
+	Camera::mat4 Camera::getWorldToProj() const
 	{
 		return getCamToProj() * mat4(getWorldToCam());
 	}
 
-	mat4 Camera::GetProjToWorld() const
+	Camera::mat4 Camera::GetProjToWorld() const
 	{
-		return getCamToWorld() * getProjToCam();
+		return mat4(getCamToWorld() * getProjToCam());
 	}
 
 	void Camera::update(CameraDelta const& delta)
 	{
-		const vec3 front = glm::cross(_up, _right);
-		const float d = glm::dot(front, _direction);
-		vec3 dp = delta.movement.x * _right + delta.movement.y * _up + delta.movement.z * front;
+		const vec3 front = Cross(_up, _right);
+		const float d = Dot(front, _direction);
+		mat3 basis = MakeFromCols(_right, _up, front);
+		vec3 dp = basis * delta.movement;
 
-		dp = normalizeSafe(dp) * glm::length(delta.movement);
+		dp = SafeNormalize(dp) * Length(delta.movement);
 		_position += dp;
 
-		_direction = rotate(_direction, _up, -delta.angle.x);
+		_direction = Rotate(_direction, _up, -delta.angle[0]);
 		computeInternal();
 
 		const float y_angle = [&]() {
-			const float current_cos_angle = glm::dot(_direction, _up);
+			const float current_cos_angle = Dot(_direction, _up);
 			const float current_angle = std::acos(current_cos_angle);
 			const float margin = 0.01;
-			const float new_angle = std::clamp<float>(current_angle + delta.angle.y, margin * std::numbers::pi, (1.0f - margin) * std::numbers::pi);
+			const float new_angle = std::clamp<float>(current_angle + delta.angle[1], margin * std::numbers::pi, (1.0f - margin) * std::numbers::pi);
 			const float diff = new_angle - current_angle;
 			//std::cout << glm::degrees(new_angle) << ", " << glm::degrees(diff) << ", " << glm::degrees(_fov) << std::endl;
 			return diff;
 		}();
-		_direction = rotate(_direction, _right, -y_angle);
+		_direction = Rotate(_direction, _right, -y_angle);
 		//computeInternal();
 
 		if (_type == Type::Perspective)
 		{
 			_fov *= delta.fov;
-			_fov = std::clamp(_fov, glm::radians(1e-1f), glm::radians(179.0f));
+			_fov = std::clamp(_fov, Radians(1e-1f), Radians(179.0f));
 		}
 		else if (_type == Type::Orthographic)
 		{
@@ -222,30 +224,30 @@ namespace vkl
 
 			if (keyboard->getKey(_key_forward).currentlyPressed())
 			{
-				delta.movement.z += 1;
+				delta.movement[2] += 1;
 			}
 			if (keyboard->getKey(_key_backward).currentlyPressed())
 			{
-				delta.movement.z += -1;
+				delta.movement[2] += -1;
 			}
 			if (keyboard->getKey(_key_left).currentlyPressed())
 			{
-				delta.movement.x += -1;
+				delta.movement[0] += -1;
 			}
 			if (keyboard->getKey(_key_right).currentlyPressed())
 			{
-				delta.movement.x += 1;
+				delta.movement[0] += 1;
 			}
 			if (keyboard->getKey(_key_upward).currentlyPressed())
 			{
-				delta.movement.y += 1;
+				delta.movement[1] += 1;
 			}
 			if (keyboard->getKey(_key_downward).currentlyPressed())
 			{
-				delta.movement.y += -1;
+				delta.movement[1] += -1;
 			}
 
-			delta.movement = normalizeSafe(delta.movement);
+			delta.movement = SafeNormalize(delta.movement);
 		}
 
 
@@ -257,25 +259,25 @@ namespace vkl
 				delta.angle += mouse->getPos().delta() * _mouse_sensitivity;
 			}
 			
-			delta.fov *= exp2(-mouse->getScroll().current.y * _fov_sensitivity);
+			delta.fov *= std::exp2(-mouse->getScroll().current[1] * _fov_sensitivity);
 		}
 
 		if (gamepad)
 		{
-			delta.movement.x += gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFTX).current;
-			delta.movement.z -= gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFTY).current;
+			delta.movement[0] += gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFTX).current;
+			delta.movement[2] -= gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFTY).current;
 
 			if (gamepad->getButton(SDL_GAMEPAD_BUTTON_LABEL_A).currentlyPressed())
 			{
-				delta.movement.y += 1;
+				delta.movement[1] += 1;
 			}
 			if (gamepad->getButton(SDL_GAMEPAD_BUTTON_LABEL_B).currentlyPressed())
 			{
-				delta.movement.y -= 1;
+				delta.movement[1] -= 1;
 			}
 
-			delta.angle.x += gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHTX).current * dt * _joystick_sensitivity;
-			delta.angle.y += gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHTY).current * dt * _joystick_sensitivity;
+			delta.angle[0] += gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHTX).current * dt * _joystick_sensitivity;
+			delta.angle[1] += gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHTY).current * dt * _joystick_sensitivity;
 
 			float fov_zoom = gamepad->getAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER).current - gamepad->getAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER).current;
 			delta.fov *= exp(fov_zoom * _fov_sensitivity * dt * 1e1);

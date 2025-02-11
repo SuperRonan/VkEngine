@@ -6,6 +6,8 @@
 
 #include <vkl/Maths/Types.hpp>
 
+#include <vkl/Maths/View.hpp>
+
 #include <vkl/Maths/AlignedAxisBoundingBox.hpp>
 
 namespace vkl
@@ -13,6 +15,12 @@ namespace vkl
 	class Camera : public VkObject
 	{
 	public:
+		
+		using vec2 = Vector2f;
+		using vec3 = Vector3f;
+		using mat3 = Matrix3f;
+		using mat4 = Matrix4f;
+		using mat3x4 = Matrix3x4f;
 
 		enum class Type
 		{
@@ -43,7 +51,7 @@ namespace vkl
 
 	protected:
 
-		vec3 _position = vec3(0);
+		vec3 _position = vec3::Zero();
 		vec3 _direction = vec3(0, 0, 1);
 		vec3 _right = vec3(1, 0, 0);
 		vec3 _up = vec3(0, 1, 0);
@@ -51,7 +59,7 @@ namespace vkl
 		DynamicValue<VkExtent2D> _resolution_ifp = {};
 
 		float _aspect = 16.0 / 9.0;
-		float _fov = glm::radians(90.0);
+		float _fov = Radians(90.0f);
 		float _near = 0.1;
 		float _far = 10.0;
 
@@ -72,8 +80,8 @@ namespace vkl
 
 		struct CameraDelta
 		{
-			vec3 movement = vec3(0);
-			vec2 angle = vec2(0);
+			vec3 movement = vec3::Zero();
+			vec2 angle = vec2::Zero();
 			float fov = 1;
 		};
 
@@ -93,12 +101,12 @@ namespace vkl
 
 		mat4 getProjToCam()const;
 
-		mat4x3 getWorldToCam() const
+		mat3x4 getWorldToCam() const
 		{
 			return LookAtDir(_position, _direction, up());
 		}
 
-		mat4x3 getCamToWorld() const
+		mat3x4 getCamToWorld() const
 		{
 			return InverseLookAtDir(_position, _direction, up());
 		}
@@ -131,8 +139,8 @@ namespace vkl
 
 		void computeInternal()
 		{
-			_direction = glm::normalize(_direction);
-			_right = glm::normalize(glm::cross(_direction, _up));
+			_direction = Normalize(_direction);
+			_right = Normalize(Cross(_direction, _up));
 		}
 
 		constexpr vec3 position()const
@@ -160,14 +168,14 @@ namespace vkl
 			return _right;
 		}
 
-		constexpr vec3 up()const
+		vec3 up()const
 		{
-			return glm::cross(_direction, _right);
+			return Cross(_direction, _right);
 		}
 
 		float inclination()const
 		{
-			return std::acos(glm::dot(_direction, _up));
+			return std::acos(Dot(_direction, _up));
 		}
 
 		constexpr float fov()const
@@ -227,7 +235,7 @@ namespace vkl
 		}
 
 		// uv in clip space
-		Ray getRay(vec2 uv = vec2(0)) const;
+		Ray getRay(vec2 uv = vec2::Zero()) const;
 
 		void update(CameraDelta const& delta);
 

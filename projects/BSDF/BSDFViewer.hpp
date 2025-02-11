@@ -35,7 +35,7 @@ namespace vkl
 
 		// In radians
 		bool _hemisphere = true;
-		float _inclination = glm::radians(45.0f);
+		float _inclination = Radians(45.0f);
 
 		float _common_alpha = 0.9;
 

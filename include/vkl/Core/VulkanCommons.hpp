@@ -62,10 +62,10 @@ call
 
 #define UBO_ALIGNEMENT 16
 
-#define ubo_vec2 alignas(UBO_ALIGNEMENT / 2) glm::vec2
-#define ubo_vec3 alignas(UBO_ALIGNEMENT) glm::vec3
-#define ubo_vec4 alignas(UBO_ALIGNEMENT) glm::vec4
-#define ubo_mat4 alignas(UBO_ALIGNEMENT) glm::mat4 
+#define ubo_vec2 alignas(UBO_ALIGNEMENT / 2) Vector2f
+#define ubo_vec3 alignas(UBO_ALIGNEMENT) Vector3f
+#define ubo_vec4 alignas(UBO_ALIGNEMENT) Vector4f
+#define ubo_mat4 alignas(UBO_ALIGNEMENT) Matrix4f 
 
 template <class T, class Allocator>
 struct std::ContainerUseCommonAppendConcatAndOperators<std::vector<T, Allocator>> : public std::true_type

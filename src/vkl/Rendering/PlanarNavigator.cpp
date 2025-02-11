@@ -3,6 +3,8 @@
 
 #include <vkl/Utils/stl_extension.hpp>
 
+#include <vkl/Maths/AffineXForm.hpp>
+
 namespace vkl
 {
 	PlanarNavigator::PlanarNavigator(vec2 const t, Float zoom):
@@ -18,7 +20,7 @@ namespace vkl
 
 		if (mouse)
 		{
-			float scroll = mouse->getScroll().current.y;
+			float scroll = mouse->getScroll().current.y();
 			zoom_mult *= std::exp2(scroll * 0.1);
 
 			const auto& mouse_left = mouse->getButton(SDL_BUTTON_LEFT);
@@ -49,12 +51,10 @@ namespace vkl
 
 	PlanarNavigator::mat3 PlanarNavigator::getWorldToView() const
 	{
-		mat3 res = mat3(1);
-		const mat3 s = ScalingMatrix<3, Float>(_zoom);
-		const mat3 t = TranslationMatrix<3, Float>(-_translation);
+		mat3 res = mat3::Identity();
+		const mat3 s = mat3(DiagonalMatrix<2>(_zoom));
+		const mat3 t = mat3(TranslationMatrix((-_translation).eval()));
 		res = s * t;
-		using namespace glm_operators;
-		//std::cout << res << std::endl << std::endl;
 		return res;
 	}
 }

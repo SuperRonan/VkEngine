@@ -175,21 +175,19 @@ int main(int argc, const char** argv)
 
 	using namespace vkl;
 
-	Matrix3f Rx = RotationMatrixX(glm::radians(60.0));
-	Matrix3f Ry = RotationMatrixY(glm::radians(60.0));
-	Matrix3f Rz = RotationMatrixZ(glm::radians(60.0));
-
-	using namespace glm_operators;
+	Matrix3f Rx = Rotation3X(Radians(60.0f));
+	Matrix3f Ry = Rotation3Y(Radians(60.0f));
+	Matrix3f Rz = Rotation3Z(Radians(60.0f));
 
 	std::cout << std::setprecision(3);
 
-	std::cout << glm::MultiLinePrint(Rx) << std::endl << std::endl;
-	std::cout << glm::MultiLinePrint(Ry) << std::endl << std::endl;
-	std::cout << glm::MultiLinePrint(Rz) << std::endl << std::endl;
+	//std::cout << glm::MultiLinePrint(Rx) << std::endl << std::endl;
+	//std::cout << glm::MultiLinePrint(Ry) << std::endl << std::endl;
+	//std::cout << glm::MultiLinePrint(Rz) << std::endl << std::endl;
 
-	std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(1, 0, 0))) << std::endl << std::endl;
-	std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(0, 1, 0))) << std::endl << std::endl;
-	std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(0, 0, 1))) << std::endl << std::endl;
+	//std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(1, 0, 0))) << std::endl << std::endl;
+	//std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(0, 1, 0))) << std::endl << std::endl;
+	//std::cout << glm::MultiLinePrint(BasisFromDir_hughes_moeller(Vector3f(0, 0, 1))) << std::endl << std::endl;
 
 	//StressTestParallelDynamicValue(4096);
 

@@ -6,21 +6,21 @@
 
 namespace vkl
 {
-	template <int N, class Float>
+	template <uint N, class Float>
 	class AlignedAxisBoundingBox
 	{
 	public:
 		
-		using vecN = Vector<N, Float>;
+		using vecN = Vector<Float, N>;
 
 		static constexpr vecN defaultBottom()
 		{
-			return vecN(std::numeric_limits<Float>::max());
+			return MakeUniformVector<N>(std::numeric_limits<Float>::max());
 		}
 
 		static constexpr vecN defaultTop()
 		{
-			return vecN(std::numeric_limits<Float>::lowest());
+			return MakeUniformVector<N>(std::numeric_limits<Float>::lowest());
 		}
 
 	protected:
@@ -66,15 +66,15 @@ namespace vkl
 
 		constexpr AlignedAxisBoundingBox& operator+=(vecN const& p)
 		{
-			_bottom = glm::min(_bottom, p);
-			_top = glm::max(_top, p);
+			_bottom = _bottom.cwiseMin(p);
+			_top = _top.cwiseMax(p);
 			return *this;
 		}
 
 		constexpr AlignedAxisBoundingBox& operator+=(AlignedAxisBoundingBox const& o)
 		{
-			_bottom = glm::min(_bottom, o._bottom);
-			_top = glm::max(_top, o._top);
+			_bottom = _bottom.cwiseMin(o._bottom);
+			_top = _top.cwiseMax(o._top);
 			return *this;
 		}
 
@@ -95,7 +95,7 @@ namespace vkl
 		constexpr bool isInsideStrict(vecN const& p)const
 		{
 			bool res = true;
-			for (int i = 0; i < N; ++i)
+			for (uint i = 0; i < N; ++i)
 			{
 				res &= (p[i] > bottom()[i]);
 				res &= (p[i] < top()[i]);
@@ -106,7 +106,7 @@ namespace vkl
 		constexpr bool isInsideRelaxed(vecN const& p)const
 		{
 			bool res = true;
-			for (int i = 0; i < N; ++i)
+			for (uint i = 0; i < N; ++i)
 			{
 				res &= (p[i] >= bottom()[i]);
 				res &= (p[i] <= top()[i]);
@@ -122,8 +122,8 @@ namespace vkl
 		constexpr AlignedAxisBoundingBox intersection(AlignedAxisBoundingBox const& o)const
 		{
 			AlignedAxisBoundingBox res;
-			res._bottom = glm::max(_bottom, o._bottom);
-			res._top = glm::min(_top, o._top);
+			res._bottom = _bottom.cwiseMax(o._bottom);
+			res._top = _top.cwiseMin(o._top);
 			return res;
 		}
 
@@ -139,7 +139,7 @@ namespace vkl
 		{
 			Float res = Float(1);
 			const vecN d = diagonal();
-			for (int i = 0; i < N; ++i)
+			for (uint i = 0; i < N; ++i)
 			{
 				res *= d[i];
 			}
@@ -152,10 +152,10 @@ namespace vkl
 		{
 			const vecN d = diagonal();
 			Float res = 0;
-			for (int i = 0; i < N; ++i)
+			for (uint i = 0; i < N; ++i)
 			{
 				Float s = Float(1);
-				for (int j = 0; j < N; ++j)
+				for (uint j = 0; j < N; ++j)
 				{
 					if (i != j)
 					{
@@ -178,12 +178,12 @@ namespace vkl
 			clear();
 		}
 
-		constexpr bool empty()
+		constexpr bool empty() const
 		{
-			return _bottom == defaultBottom() && _top == defaultTop();
+			return (_bottom == defaultBottom() && _top == defaultTop());
 		}
 
-		//template <int M>
+		//template <uint M>
 		//Float dims()const
 		//{
 		//	if constexpr (M == N)
@@ -201,10 +201,10 @@ namespace vkl
 		//}
 	};
 
-	template <int N, class Float>
+	template <uint N, class Float>
 	using AABB = AlignedAxisBoundingBox<N, Float>;
 
-	template <int N>
+	template <uint N>
 	using AABBf = AABB<N, float>;
 
 	using AABB3f = AABBf<3>;

@@ -1,25 +1,40 @@
 
-template <typename Scalar>
-constexpr Matrix<Scalar, 4, 4> PerspectiveProjExplicit(ConstRef(CLIP_SPACE_INL_Vector(4)) coefs)
+#ifndef CLIP_SPACE_INL_TEMPLATE_DECL
+#error "CLIP_SPACE_INL_TEMPLATE_DECL not defined"
+#endif
+
+#ifndef CLIP_SPACE_INL_Scalar
+#error "CLIP_SPACE_INL_Scalar not defined"
+#endif
+
+#ifndef CLIP_SPACE_INL_Vector
+#error "CLIP_SPACE_INL_Vector not defined"
+#endif
+
+#ifndef CLIP_SPACE_INL_Matrix
+#error "Matrix not defined"
+#endif
+
+CLIP_SPACE_INL_TEMPLATE_DECL
+constexpr CLIP_SPACE_INL_Matrix(4) PerspectiveProjExplicit(ConstRef(CLIP_SPACE_INL_Vector(4)) coefs)
 {
 	CLIP_SPACE_INL_Matrix(4) res = CLIP_SPACE_INL_Matrix(4)(0);
-	SetCoeficient(res, 0, 0, coefs[0]);
-	SetCiefucuebt(res, 1, 1, coefs[1]);
-	SetCiefucuebt(res, 2, 2, coefs[2]);
-	SetCiefucuebt(res, 3, 2, Scalar(1));
-	SetCiefucuebt(res, 2, 3, coefs[3]);
-
+	res[0][0] = coefs.x;
+	res[1][1] = coefs.y;
+	res[2][2] = coefs.z;
+	res[2][3] = 1.0f;
+	res[3][2] = coefs.w;
 	return res;
 }
 
-template <typename Scalar>
-constexpr Vector<Scalar, 4> ExtractPerspectiveProjCoefs(ConstRef(CLIP_SPACE_INL_Matrix(4)) m)
+CLIP_SPACE_INL_TEMPLATE_DECL
+constexpr CLIP_SPACE_INL_Vector(4) ExtractPerspectiveProjCoefs(ConstRef(CLIP_SPACE_INL_Matrix(4)) m)
 {
 	return CLIP_SPACE_INL_Vector(4)(
-		GetCoeficient(m, 0, 0),
-		GetCoeficient(m, 1, 1),
-		GetCoeficient(m, 2, 2),
-		GetCoeficient(m, 2, 3)
+		m[0][0],
+		m[1][1],
+		m[2][2],
+		m[3][2]
 	);
 }
 

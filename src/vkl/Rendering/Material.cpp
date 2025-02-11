@@ -202,7 +202,7 @@ namespace vkl
 		flags.bsdf_hemispheres |= 1;
 		
 		return Properties{
-			.albedo = _albedo.valueOr(vec3(0)),
+			.albedo = _albedo.valueOr(vec3::Zero()),
 			.flags = flags_u32,
 			.metallic = _metallic.valueOr(0),
 			.roughness = _roughness.valueOr(0),
@@ -220,7 +220,7 @@ namespace vkl
 
 		auto declare_color = [&](const char* label, vec3& dv)
 		{
-			return ImGui::ColorEdit3(label, reinterpret_cast<float*>(&dv.r), color_flags);	
+			return ImGui::ColorEdit3(label, reinterpret_cast<float*>(dv.data()), color_flags);	
 		};
 
 		auto declare_float = [&](ImGuiSliderFlags flags = 0)

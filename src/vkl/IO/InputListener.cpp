@@ -36,7 +36,7 @@ namespace vkl
 
 		float x, y;
 		SDL_GetMouseState(&x, &y);
-		_mouse_pos = glm::vec2(x, y);
+		_mouse_pos = Vector2f(x, y);
 
 		for (int k = 0; k < _buttons.size(); ++k)
 		{
@@ -65,7 +65,7 @@ namespace vkl
 			{
 				int value = event.button.down ? 1 : 0;
 				_buttons[event.button.button].latest_event_value = value;
-				glm::vec2 pos = glm::vec2(event.button.x, event.button.y);
+				Vector2f pos = Vector2f(event.button.x, event.button.y);
 				if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
 				{
 					_buttons[event.button.button].pressed_pos = pos;
@@ -78,14 +78,14 @@ namespace vkl
 		}
 		else if (event.type == SDL_EVENT_MOUSE_MOTION)
 		{
-			glm::vec2 pos = glm::vec2(event.motion.x, event.motion.y);
-			glm::vec2 rel = glm::vec2(event.motion.xrel, event.motion.yrel);
+			Vector2f pos = Vector2f(event.motion.x, event.motion.y);
+			Vector2f rel = Vector2f(event.motion.xrel, event.motion.yrel);
 			_latest_event_pos = pos;
 			_event_motion_accumulation += rel;
 		}
 		else if (event.type == SDL_EVENT_MOUSE_WHEEL)
 		{
-			glm::vec2 event_scroll = glm::vec2(event.wheel.x, event.wheel.y);
+			Vector2f event_scroll = Vector2f(event.wheel.x, event.wheel.y);
 			_event_scroll_accumulation += event_scroll;
 		}
 	}
@@ -97,7 +97,7 @@ namespace vkl
 		float x, y;
 		uint32_t buttons_bits = SDL_GetMouseState(&x, &y);
 		// Compare with _latest_event_pos
-		_mouse_pos << glm::vec2(x, y);
+		_mouse_pos << Vector2f(x, y);
 		
 		_scroll << _event_scroll_accumulation;
 		_mouse_motion << _event_motion_accumulation;
@@ -108,8 +108,8 @@ namespace vkl
 		}
 
 
-		_event_motion_accumulation = glm::vec2(0);
-		_event_scroll_accumulation = glm::vec2(0);		
+		_event_motion_accumulation = Vector2f::Constant(0);
+		_event_scroll_accumulation = Vector2f::Constant(0);
 	}
 	
 

@@ -151,19 +151,19 @@ namespace vkl
 	{
 	protected:
 
-		VWP<glm::vec2> _scroll = glm::vec2(0);
-		glm::vec2 _event_scroll_accumulation = glm::vec2(0);
+		VWP<Vector2f> _scroll = Vector2f::Zero().eval();
+		Vector2f _event_scroll_accumulation = Vector2f::Zero().eval();
 		
-		VWP<glm::vec2> _mouse_pos = glm::vec2(0);
-		VWP<glm::vec2> _mouse_motion = glm::vec2(0);
-		glm::vec2 _latest_event_pos = glm::vec2(0);
-		glm::vec2 _event_motion_accumulation = glm::vec2(0);
+		VWP<Vector2f> _mouse_pos = Vector2f::Zero().eval();
+		VWP<Vector2f> _mouse_motion = Vector2f::Zero().eval();
+		Vector2f _latest_event_pos = Vector2f::Zero();
+		Vector2f _event_motion_accumulation = Vector2f::Zero();
 
 		struct MyButtonState
 		{
 			KeyState key;
-			glm::vec2 pressed_pos;
-			glm::vec2 released_pos;
+			Vector2f pressed_pos;
+			Vector2f released_pos;
 			int latest_event_value;
 		};
 
@@ -186,27 +186,27 @@ namespace vkl
 			return _buttons[b].key;
 		}
 
-		const VWP<glm::vec2>& getScroll()const
+		const VWP<Vector2f>& getScroll()const
 		{
 			return _scroll;
 		}
 
-		const VWP<glm::vec2>& getPos()const
+		const VWP<Vector2f>& getPos()const
 		{
 			return _mouse_pos;
 		}
 
-		const glm::vec2 getMotion()const
+		const Vector2f getMotion()const
 		{
 			return _mouse_motion.current;
 		}
 
-		glm::vec2 getPressedPos(int b)const
+		Vector2f getPressedPos(int b)const
 		{
 			return _buttons[b].pressed_pos;
 		}
 
-		glm::vec2 getReleasedPos(int b)const
+		Vector2f getReleasedPos(int b)const
 		{
 			return _buttons[b].released_pos;
 		}

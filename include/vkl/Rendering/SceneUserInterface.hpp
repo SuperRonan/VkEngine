@@ -16,8 +16,9 @@ namespace vkl
 	{
 	public:
 
+		using Vec4 = Scene::Vec4;
+		using Mat3x4 = Scene::Mat3x4;
 		using Mat4 = Scene::Mat4;
-		using Mat4x3 = Scene::Mat4x3;
 
 		struct SelectedNode
 		{
@@ -32,7 +33,7 @@ namespace vkl
 			void clear()
 			{
 				node.node = nullptr;
-				node.matrix = Mat4(1);
+				node.matrix = Mat3x4::Identity();
 				path.path.clear();
 			}
 		};
@@ -58,7 +59,7 @@ namespace vkl
 		struct Render3DBoxPC
 		{
 			Mat4 matrix;
-			glm::vec4 color;
+			Vec4 color;
 		};
 
 		SelectedNode _gui_selected_node;

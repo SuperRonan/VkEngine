@@ -1,9 +1,8 @@
 #include <vkl/Rendering/Light.hpp>
 
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
-
 #include <vkl/IO/ImGuiUtils.hpp>
+
+#include <vkl/Maths/View.hpp>
 
 namespace vkl
 {
@@ -28,16 +27,15 @@ namespace vkl
 		return res;
 	}
 
-	LightGLSL LightGLSL::transform(mat4 const& mat) const
+	LightGLSL LightGLSL::transform(Matrix3x4f const& mat) const
 	{
 		LightGLSL res;
 
 		res.flags = flags;
 		res.emission = emission;
 
-		vec4 hpos = (mat * vec4(position, 1));
-		res.position = hpos;
-		res.direction = glm::normalize(DirectionMatrix(mat) * direction);
+		res.position = mat * Homogeneous(position);
+		res.direction = Normalize(DirectionMatrix(mat3(mat)) * direction);
 		
 		return res;
 	}
@@ -76,18 +74,18 @@ namespace vkl
 
 		if (ImGui::Button("Snap to Gray average"))
 		{
-			float f = (_emission.x + _emission.y + _emission.z) / 3;
-			_emission = vec3(f);
+			float f = Average(_emission);
+			_emission = vec3::Constant(f);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Snap to Gray luminance"))
 		{
 			vec3 w(0.2126, 0.7152, 0.0722);
-			float f = glm::dot(w, _emission);
-			_emission = vec3(f);
+			float f = Dot(w, _emission);
+			_emission = vec3::Constant(f);
 		}
 
-		float intensity = (_emission.x + _emission.y + _emission.z) / 3;
+		float intensity = Average(_emission);
 		float old_intensity = intensity;
 		bool changed = ImGui::SliderFloat("Intensity", &intensity, 0, 50, "%.3f", ImGuiSliderFlags_Logarithmic);
 
@@ -96,7 +94,7 @@ namespace vkl
 			_emission *= (intensity / old_intensity);
 		}
 		
-		ImGui::ColorEdit3("Emission", &_emission.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs);
+		ImGui::ColorEdit3("Emission", _emission.data(), ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs);
 
 		static thread_local ImGuiListSelection gui_shadow_bias_mode = ImGuiListSelection::CI{
 			.name = "Shadow Bias Mode",
@@ -173,10 +171,10 @@ namespace vkl
 		_z_near(ci.z_near)
 	{}
 
-	LightGLSL PointLight::getAsGLSL(mat4 const& xform) const
+	LightGLSL PointLight::getAsGLSL(Matrix3x4f const& xform) const
 	{
-		const vec4 hpos = xform * vec4(_position, 1);
-		LightGLSL res = LightGLSL::MakePoint(vec3(hpos), _emission);
+		const vec3 hpos = xform * Homogeneous(_position);
+		LightGLSL res = LightGLSL::MakePoint(hpos, _emission);
 		res.flags = flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		res.z_near = _z_near;
@@ -212,7 +210,7 @@ namespace vkl
 			.emission = ci.emission,
 			.enable_shadow_map = false,
 		}),
-		_direction(glm::normalize(ci.direction))
+		_direction(Normalize(ci.direction))
 	{}
 
 	uint32_t DirectionalLight::flags()const
@@ -221,9 +219,9 @@ namespace vkl
 		return res;
 	}
 
-	LightGLSL DirectionalLight::getAsGLSL(mat4 const& xform) const
+	LightGLSL DirectionalLight::getAsGLSL(Matrix3x4f const& xform) const
 	{
-		const vec3 dir = glm::normalize(DirectionMatrix(xform) * _direction);
+		const vec3 dir = Normalize(DirectionMatrix(mat3(xform)) * _direction);
 		LightGLSL res = LightGLSL::MakeDirectional(dir, _emission);
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		return res;
@@ -250,8 +248,8 @@ namespace vkl
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position),
-		_direction(glm::normalize(ci.direction)),
-		_up(glm::normalize(ci.up)),
+		_direction(Normalize(ci.direction)),
+		_up(Normalize(ci.up)),
 		_ratio(ci.aspect_ratio),
 		_fov(ci.fov),
 		_attenuation(ci.attenuation)
@@ -266,7 +264,7 @@ namespace vkl
 		return res;
 	}
 
-	LightGLSL SpotLight::getAsGLSL(mat4 const& xform)const
+	LightGLSL SpotLight::getAsGLSL(Matrix3x4f const& xform)const
 	{
 		LightGLSL res;
 		res.emission = _emission;
@@ -276,13 +274,11 @@ namespace vkl
 		}
 		res.flags = SpotLight::flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
-		const mat3 dir_mat = DirectionMatrix(xform);
-		res.position = vec3(xform * vec4(_position, 1));
-		const vec3 direction = glm::normalize(dir_mat * _direction);
-		const vec3 up = glm::normalize(dir_mat * _up);
-		const mat4 look_at = glm::lookAt(res.position, res.position + direction, -up);
-		const mat4 proj = glm::infinitePerspective<float>(_fov, _ratio, _znear);
-		//const mat4 proj = glm::perspective<float>(_fov, _ratio, _znear, 2 * _znear);
+		const mat3 dir_mat = DirectionMatrix(mat3(xform));
+		vec3 h_position = xform * Homogeneous(_position);
+		res.position = h_position;
+		const vec3 direction = Normalize(dir_mat * _direction);
+		const vec3 up = Normalize(dir_mat * _up);
 		res.direction = direction;
 		res.z_near = _znear;
 		res.spot = LightGLSL::SpotLightSpecific{

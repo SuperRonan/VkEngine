@@ -129,8 +129,8 @@ namespace vkl
 			Roughness = 2,
 		};
 		
-		using vec3 = glm::vec3;
-		using vec4 = glm::vec4;
+		using vec3 = Vector3f;
+		using vec4 = Vector4f;
 
 		struct Properties
 		{

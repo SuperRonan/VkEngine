@@ -43,7 +43,7 @@
 #define ConstRef(T) T const&
 #define Ref(T) T &
 
-#define nmspc_glm glm::
+#define nmspc_glm 
 
 #else
 

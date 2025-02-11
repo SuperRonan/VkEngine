@@ -3,6 +3,8 @@
 #include "core"
 #include "bindings"
 
+ layout(row_major) uniform;
+ layout(row_major) buffer;
 
 #define NonUniformEXT(X) nonuniformEXT(X)
 

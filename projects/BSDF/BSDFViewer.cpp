@@ -11,7 +11,7 @@ namespace vkl
 	struct UBOBase
 	{
 		Matrix4f world_to_proj;
-		Matrix3x4f world_to_camera;
+		AffineXForm3Df world_to_camera;
 		ubo_vec3 direction;
 		float common_alpha;
 
@@ -81,7 +81,7 @@ namespace vkl
 		_ubo = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
 			.name = name() + ".UBO",
-			.size = ubo_size + 4 * sizeof(vec4),
+			.size = ubo_size + 4 * sizeof(Vector4f),
 			.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -292,20 +292,20 @@ namespace vkl
 			const size_t seed = i;
 			auto rng = std::mt19937_64(seed);
 			std::uniform_real_distribution<float> distrib(0, 1);
-			vec4 color{
+			Vector4f color{
 				distrib(rng),
 				distrib(rng),
 				distrib(rng),
 				1.0f,
-			};
-			color = glm::sqrt(color);
+			}; 
+			color = Sqrt(color);
 			_colors[i] = color;
 		}
 		
 
 		UBOBase ubo{
 			.world_to_proj = _camera->getWorldToProj(),
-			.world_to_camera = Matrix3x4f(glm::transpose(_camera->getWorldToCam())),
+			.world_to_camera = _camera->getWorldToCam(),
 			.direction = Vector3f(std::sin(_inclination), std::cos(_inclination), 0),
 			.common_alpha = _common_alpha,
 			.reference_function = _reference_function_index,
@@ -441,7 +441,7 @@ namespace vkl
 				ImGui::SameLine();
 				//ImGui::SaveIniSettingsToMemory
 				char lbl = 0;
-				ImGui::ColorEdit4(&lbl, &color.r, ImGuiColorEditFlags_NoInputs);
+				ImGui::ColorEdit4(&lbl, color.data(), ImGuiColorEditFlags_NoInputs);
 
 				FunctionStatistics const& fs = _statistics->vector[i];
 				ImGui::SameLine();
@@ -524,7 +524,7 @@ namespace vkl
 				const char label[2] = {'x' + i, char(0)};
 				if (ImGui::Button(label))
 				{
-					vec3 axis = vec3(0);
+					Vector3f axis = Vector3f::Zero();
 					axis[i] = -1.0f;
 					_camera->position() = axis;
 					_camera->direction() = -axis;

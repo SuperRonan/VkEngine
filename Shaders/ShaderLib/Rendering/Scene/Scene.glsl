@@ -242,12 +242,12 @@ layout(SCENE_TEXTURES_BINDING + 0) uniform sampler2D SceneTextures2D[];
 
 layout(SCENE_XFORM_BINDING + 0) buffer restrict SCENE_XFORM_ACCESS SceneXFormBinding
 {
-	mat3x4 xforms[];
+	mat4x3 xforms[];
 } scene_xforms;
 
 mat4x3 readSceneMatrix(uint id)
 {
-	const mat4x3 res = transpose(scene_xforms.xforms[id]);
+	const mat4x3 res = (scene_xforms.xforms[id]);
 	return res;
 }
 

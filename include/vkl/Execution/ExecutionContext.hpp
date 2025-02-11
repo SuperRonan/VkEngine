@@ -146,7 +146,7 @@ namespace vkl
 			return res;
 		}
 
-		using vec4 = glm::vec4;
+		using vec4 = Vector4f;
 
 		std::shared_ptr<ExecutionStackReport> _stack_report;
 

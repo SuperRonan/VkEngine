@@ -139,7 +139,7 @@ namespace vkl
 
 		struct PC
 		{
-			mat4 matrix;
+			Matrix4f matrix;
 			uint32_t flags;
 			float line_count_f;
 			float oo_line_count_minus_one;

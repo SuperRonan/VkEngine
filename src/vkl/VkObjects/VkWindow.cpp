@@ -282,8 +282,8 @@ namespace vkl
 			_desired_resolution = ci.resolution;
 		}
 
-		_width = _desired_resolution.x;
-		_height = _desired_resolution.y;
+		_width = _desired_resolution[0];
+		_height = _desired_resolution[1];
 		
 		if(ci.dynamic_present_mode.hasValue())
 		{
@@ -488,7 +488,7 @@ namespace vkl
 			_should_close = true;
 			break;
 		case SDL_EVENT_WINDOW_RESIZED:
-			_desired_resolution = glm::ivec2(wevent.data1, wevent.data2);
+			_desired_resolution = Vector2i(wevent.data1, wevent.data2);
 			_sdl_resized = true;
 		break;
 		}
@@ -725,7 +725,7 @@ namespace vkl
 			const bool can_resize = _window_mode == Mode::Windowed && !_extern_resolution.hasValue();
 			if (can_resize)
 			{
-				changed = ImGui::SliderInt2("Resolution: ", &_desired_resolution.x, 1, 3840);
+				changed = ImGui::SliderInt2("Resolution: ", &_desired_resolution[0], 1, 3840);
 				if (changed)
 				{
 					_gui_resized = true;
@@ -734,7 +734,7 @@ namespace vkl
 			else
 			{
 				ImGui::BeginDisabled(true);
-				ImGui::DragInt2("Resolution", &_desired_resolution.x, 1, 3840);
+				ImGui::DragInt2("Resolution", &_desired_resolution[0], 1, 3840);
 				ImGui::EndDisabled();
 			}
 

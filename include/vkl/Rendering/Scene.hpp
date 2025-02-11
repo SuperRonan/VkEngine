@@ -1,8 +1,10 @@
 #pragma once
 
-#include <vkl/Maths/Types.hpp>
-
 #include <vkl/App/VkApplication.hpp>
+
+#include <vkl/Maths/Types.hpp>
+#include <vkl/Maths/AffineXForm.hpp>
+
 
 #include <vkl/VkObjects/Buffer.hpp>
 #include <vkl/VkObjects/ImageView.hpp>
@@ -34,22 +36,21 @@ namespace vkl
 	public:
 
 		using Vec3 = Vector3f;
+		using Vec4 = Vector4f;
 		using Mat3 = Matrix3f;
 		using Mat4 = Matrix4f;
-		using Mat4x3 = Matrix4x3f;
 		using Mat3x4 = Matrix3x4f;
-		using Mat4x3_rm = Matrix4x3fRowMajor;
 
 		class Node
 		{
 		protected:
 			
 			std::string _name = {};
-			Mat4x3 _matrix = Mat4x3(1);
+			Mat3x4 _matrix = Mat3x4::Identity();
 
-			Vec3 _translation = Vec3(0);
-			Vec3 _scale = Vec3(1);
-			Vec3 _rotation = Vec3(0);
+			Vec3 _translation = Vec3::Zero();
+			Vec3 _scale = Vec3::Ones();
+			Vec3 _rotation = Vec3::Zero();
 
 			bool _visible = true;
 			
@@ -63,7 +64,7 @@ namespace vkl
 			struct CreateInfo 
 			{
 				std::string name = {};
-				Mat4x3 matrix = Mat4x3(1);
+				Mat3x4 matrix = Mat3x4::Identity();
 				std::shared_ptr<Model> model = nullptr;
 			};
 			using CI = CreateInfo;
@@ -81,7 +82,7 @@ namespace vkl
 				return _name;
 			}
 
-			constexpr void setMatrix(Mat4x3 const& matrix)
+			constexpr void setMatrix(Mat3x4 const& matrix)
 			{
 				_matrix = matrix;
 			}
@@ -136,33 +137,35 @@ namespace vkl
 				}
 			}
 
-			Mat4x3 getAuxiliaryTransform() const
+			Mat3x4 getAuxiliaryTransform() const
 			{
-				Mat3 R = RotationMatrix(_rotation);
-				Mat3 S = ScalingMatrix<3>(_scale);
+				Mat3 R = Rotation3D(_rotation);
+				Mat3 S = DiagonalMatrixV(_scale);
 				Mat3 Q = R * S;
-				Mat4x3 res = MakeAffineTransform(Q, _translation);
+				Mat3x4 res = MakeAffineTransform(Q, _translation);
 				return res;
 			}
 
-			constexpr Mat4x3 matrix4x3() const
+			Mat3x4 matrix3x4() const
 			{
-				return mul(_matrix, getAuxiliaryTransform());
+				Mat3x4 aux = getAuxiliaryTransform();
+				Mat3x4 res = _matrix * aux;
+				return res;
 			}
 
-			constexpr Mat4 matrix4x4() const
+			Mat4 matrix4x4() const
 			{
-				return Mat4(matrix4x3());
+				return Mat4(matrix3x4());
 			}
 			
-			constexpr const Mat4x3& getXForm() const
+			const Mat3x4& getXForm() const
 			{
-				return matrix4x3();
+				return matrix3x4();
 			}
 			
 			void collapseAuxiliaryTransforms()
 			{
-				_matrix = matrix4x3();
+				_matrix = Mat3x4::Identity();
 				_rotation = Vec3(0);
 				_translation = Vec3(0);
 				_scale = Vec3(1);
@@ -235,13 +238,13 @@ namespace vkl
 			
 			struct PerNodeInstance
 			{
-				Mat4x3 matrix;
+				Mat3x4 matrix;
 				bool visible;
 			};
 
-			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat4 const& matrix)>;
-			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node>, FastNodePath const&, Mat4 const&)>;
-			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node>, RobustNodePath const&, Mat4 const&, uint32_t)>;
+			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat3x4 const& matrix)>;
+			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node>, FastNodePath const&, Mat3x4 const&)>;
+			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node>, RobustNodePath const&, Mat3x4 const&, uint32_t)>;
 			using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<PerNodeInstance> const&)>;
 			using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
 
@@ -250,10 +253,10 @@ namespace vkl
 			
 			std::shared_ptr<Node> _root = nullptr;
 
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat4 const& matrix, const PerNodeInstanceFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, const PerNodeInstanceFunction& f);
 
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat4 const& matrix, const PerNodeInstanceFastPathFunction& f);
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, const PerNodeInstanceFastPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f);
 
 
 
@@ -274,7 +277,7 @@ namespace vkl
 
 
 			void iterateOnDag(const PerNodeInstanceFunction & f);
-			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat4 const& matrix)> const& f);
+			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat3x4 const& matrix)> const& f);
 			void iterateOnDag(PerNodeInstanceRobustPathFunction const& f);
 
 			void iterateOnFlattenDag(const PerNodeAllInstancesFunction& f);
@@ -286,7 +289,7 @@ namespace vkl
 			struct PositionedNode
 			{
 				std::shared_ptr<Node> node = nullptr;
-				Mat4x3 matrix;
+				Mat3x4 matrix;
 			};
 
 			PositionedNode findNode(FastNodePath const& path) const;
@@ -384,8 +387,8 @@ namespace vkl
 			ubo_vec3 sky;
 		};
 
-		vec3 _ambient = vec3(0.1f);
-		vec3 _uniform_sky = vec3(0);
+		vec3 _ambient = vec3::Constant(0.1f);
+		vec3 _uniform_sky = vec3::Constant(0);
 		float _uniform_sky_brightness = 1;
 
 

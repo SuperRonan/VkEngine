@@ -25,8 +25,8 @@ namespace vkl
 		if (ci.args.is_used("--resolution"))
 		{
 			auto args_resolution = ci.args.get<std::vector<unsigned int>>("--resolution");
-			_desired_window_options.resolution.x = args_resolution[0];
-			_desired_window_options.resolution.y = args_resolution[1];
+			_desired_window_options.resolution.x() = args_resolution[0];
+			_desired_window_options.resolution.y() = args_resolution[1];
 		}
 
 	}

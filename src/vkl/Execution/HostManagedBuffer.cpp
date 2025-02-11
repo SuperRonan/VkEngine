@@ -136,7 +136,7 @@ namespace vkl
 	void HostManagedBuffer::invalidateByteRange(Buffer::Range const& range)
 	{
 		const size_t align = 4;
-		using Vec = Vector<1, size_t>;
+		using Vec = Vector<size_t, 1>;
 		const UploadRange segment(Vec(std::alignDown(range.begin, align)), Vec(std::alignUp(range.end(), align)));
 		if (_use_single_upload_range)
 		{
@@ -159,8 +159,8 @@ namespace vkl
 	{
 		assert(!_upload_range.empty());
 		Buffer::Range range{
-			.begin = _upload_range.bottom().x,
-			.len = std::min(_upload_range.diagonal().x, _byte_size - _upload_range.bottom().x),
+			.begin = _upload_range.bottom().x(),
+			.len = std::min(_upload_range.diagonal().x(), _byte_size - _upload_range.bottom().x()),
 		};
 		_upload_range.reset();
 		ObjectView o((const uint8_t*)_data + range.begin, range.len);
@@ -177,8 +177,8 @@ namespace vkl
 		{
 			const bool transfer = _prev_buffer_inst.operator bool();
 			Buffer::Range range{
-				.begin = _upload_range.bottom().x,
-				.len = std::min(_upload_range.diagonal().x, _byte_size - _upload_range.bottom().x),
+				.begin = _upload_range.bottom().x(),
+				.len = std::min(_upload_range.diagonal().x(), _byte_size - _upload_range.bottom().x()),
 			};
 			bool upload_now = !transfer;
 			if (transfer)

@@ -23,14 +23,14 @@ namespace vkl
 
 	public:
 
-		using Mat4 = glm::mat4;
-		using Mat4x3 = glm::mat4x3;
+		using Mat4 = Matrix4f;
+		using XForm = AffineXForm3D<float>;
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			Mat4x3 matrix = Mat4x3(1);
+			XForm matrix = XForm::Identity();
 			std::filesystem::path path = {};
 			bool synch = true;
 		};

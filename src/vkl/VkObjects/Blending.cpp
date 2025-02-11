@@ -66,7 +66,7 @@ namespace vkl
 			.logicOp = Convert(static_cast<LogicOp>(detailed.logic_op)),
 			.attachmentCount = 0,
 			.pAttachments = nullptr,
-			.blendConstants = {blend_constants.r, blend_constants.g, blend_constants.b, blend_constants.a},
+			.blendConstants = {blend_constants.x(), blend_constants.y(), blend_constants.z(), blend_constants.w()},
 		};
 
 		if (detailed.use_advanced_blending)

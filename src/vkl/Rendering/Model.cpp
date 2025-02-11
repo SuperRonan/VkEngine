@@ -295,7 +295,7 @@ namespace vkl
 				my_materials[m] = std::make_shared<PBMaterial>(PBMaterial::CI{
 					.app = info.app,
 					.name = tm.name,
-					.albedo = glm::vec3(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
+					.albedo = Vector3f(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
 					.metallic = tm.metallic,
 					.roughness = tm.roughness,
 					.sampler = sampler,
@@ -316,11 +316,11 @@ namespace vkl
 
 				const auto readVec3 = [](std::vector<tinyobj::real_t> const& vec, size_t i)
 				{
-					return glm::vec3(vec[3 * i + 0], vec[3 * i + 1], vec[3 * i + 2]);
+					return Vector3f(vec[3 * i + 0], vec[3 * i + 1], vec[3 * i + 2]);
 				};
 				const auto readVec2 = [](std::vector<tinyobj::real_t> const& vec, size_t i)
 				{
-					return glm::vec2(vec[2 * i + 0], vec[2 * i + 1]);
+					return Vector2f(vec[2 * i + 0], vec[2 * i + 1]);
 				};
 
 				struct TinyIndexHasher
@@ -350,12 +350,12 @@ namespace vkl
 					if(!vertices_map.contains(tiny_index))
 					{
 						Vertex v{
-							.position = Vector4f(readVec3(attrib.vertices, tiny_index.vertex_index), 1),
-							.normal = Vector4f(readVec3(attrib.normals, tiny_index.normal_index), 0),
-							.uv = Vector4f(readVec2(attrib.texcoords, tiny_index.texcoord_index), 0, 0),
+							.position = Vector4f(readVec3(attrib.vertices, tiny_index.vertex_index)),
+							.normal = Vector4f(readVec3(attrib.normals, tiny_index.normal_index)),
+							.uv = Vector4f(readVec2(attrib.texcoords, tiny_index.texcoord_index)),
 						};
 						// .obj flips the texture
-						v.uv.y = 1.0f - v.uv.y;
+						v.uv.y() = 1.0f - v.uv.y();
 						vertices_map[tiny_index] = vertices.size();
 						vertices.push_back(v);
 					}

@@ -249,13 +249,13 @@ namespace vkl
 				Vector3f color;
 				if (charge < 0.5)
 				{
-					color = glm::mix(green, yellow, charge * 2.0);
+					color = Lerp(green, yellow, charge * 2.0f);
 				}
 				else
 				{
-					color = glm::mix(yellow, red, (charge - 0.5) * 2.0);
+					color = Lerp(yellow, red, (charge - 0.5f) * 2.0f);
 				}
-				ImVec4 gui_color(color.x, color.y, color.z, 1);
+				ImVec4 gui_color(color.x(), color.y(), color.z(), 1);
 				ImGui::PushStyleColor(ImGuiCol_Text | ImGuiCol_SliderGrab, gui_color);
 				ImGui::SliderInt("Save Queue", &queue_size, 0, _pending_capacity);
 				ImGui::PopStyleColor();

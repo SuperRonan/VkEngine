@@ -2,6 +2,8 @@
 
 #define COMMA ,
 
+#define FORWARD_MACRO(X) X
+
 #define NOARG
 
 #define BIT_MASK(n) ((1 << n) - 1)

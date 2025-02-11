@@ -81,7 +81,7 @@ namespace vkl
 			std::shared_ptr<VertexCommand> render_scene_indirect;
 			struct RenderSceneDirectPC
 			{
-				glm::mat4 object_to_world;
+				Matrix4f object_to_world;
 			};
 
 			void updateResources(UpdateContext& ctx, bool update_direct = true, bool update_indirect = true);
@@ -109,7 +109,7 @@ namespace vkl
 		{
 			struct RasterGBufferPC
 			{
-				glm::mat4 object_to_world;
+				Matrix4f object_to_world;
 			};
 
 			
@@ -127,7 +127,7 @@ namespace vkl
 		{
 			struct RasterGBufferPC
 			{
-				glm::mat4 object_to_world;
+				Matrix4f object_to_world;
 			};
 
 			struct RasterCommands

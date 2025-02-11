@@ -77,7 +77,7 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
 				.pNext = nullptr,
 				.pLabelName = label.data(),
-				.color = {color.r, color.g, color.b, color.a},
+				.color = {color.x(), color.y(), color.z(), color.w()},
 			};
 			application()->extFunctions()._vkCmdBeginDebugUtilsLabelEXT(*_command_buffer, &vk_label);
 		}
@@ -85,7 +85,7 @@ namespace vkl
 		const uint32_t end_timestamp = getNewTimestampIndex();
 		if (_stack_report)
 		{
-			ExecutionStackReport::Segment & segment = _stack_report->push(label, ImVec4(color.r, color.g, color.b, color.a));
+			ExecutionStackReport::Segment & segment = _stack_report->push(label, ImVec4(color.x(), color.y(), color.z(), color.w()));
 			if (timestamp)
 			{
 				segment.begin_timestamp = begin_timestamp;
@@ -106,10 +106,10 @@ namespace vkl
 		auto rng = std::mt19937_64(seed);
 		std::uniform_real_distribution<float> distrib(0, 1);
 		vec4 color;
-		color.r = distrib(rng);
-		color.g = distrib(rng);
-		color.b = distrib(rng);
-		color.a = 1;
+		color.x() = distrib(rng);
+		color.y() = distrib(rng);
+		color.z() = distrib(rng);
+		color.w() = 1;
 		pushDebugLabel(label, color, timestamp);
 	}
 
@@ -146,7 +146,7 @@ namespace vkl
 				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
 				.pNext = nullptr,
 				.pLabelName = label.data(),
-				.color = {color.r, color.g, color.b, color.a},
+				.color = {color.x(), color.y(), color.z(), color.w()},
 			};
 			application()->extFunctions()._vkCmdInsertDebugUtilsLabelEXT(*_command_buffer, &vk_label);
 		}

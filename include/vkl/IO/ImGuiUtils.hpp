@@ -187,12 +187,9 @@ namespace vkl
 	class ImGuiTransform3D
 	{
 	protected:
-		
-		using Mat4x3 = Matrix4x3f;
-		using Mat3x4 = Matrix3x4f;
 
-		Mat4x3 _own_matrix = Mat4x3(1);
-		Mat4x3 * _matrix = nullptr;
+		Matrix3x4f _own_matrix = DiagonalMatrix<3, 4>(1.0f);
+		Matrix3x4f* _matrix = nullptr;
 		bool _read_only = false;
 
 		bool _raw_view = true;
@@ -201,7 +198,7 @@ namespace vkl
 
 		ImGuiTransform3D() = default;
 
-		ImGuiTransform3D(Mat4x3 * ptr, bool read_only = false):
+		ImGuiTransform3D(Matrix3x4f* ptr, bool read_only = false):
 			_matrix(ptr),
 			_read_only(read_only)
 		{
@@ -211,8 +208,8 @@ namespace vkl
 			}
 		}
 
-		ImGuiTransform3D(const Mat4x3* ptr) :
-			_matrix(const_cast<Mat4x3*>(ptr)),
+		ImGuiTransform3D(const Matrix3x4f* ptr) :
+			_matrix(const_cast<Matrix3x4f*>(ptr)),
 			_read_only(true)
 		{
 			if (!_matrix)
@@ -221,7 +218,7 @@ namespace vkl
 			}
 		}
 		
-		void setMatrixValue(Mat4x3 const& m)
+		void setMatrixValue(Matrix3x4f const& m)
 		{
 			_own_matrix = m;
 		}
@@ -237,7 +234,7 @@ namespace vkl
 			_read_only = read_only;
 		}
 
-		void bindMatrix(Mat4x3* ptr, bool read_only = false)
+		void bindMatrix(Matrix3x4f* ptr, bool read_only = false)
 		{
 			if (ptr)
 			{
@@ -251,14 +248,14 @@ namespace vkl
 			_read_only = read_only;
 		}
 
-		void bindMatrix(const Mat4x3* ptr)
+		void bindMatrix(const Matrix3x4f* ptr)
 		{
-			bindMatrix(const_cast<Mat4x3*>(ptr), true);
+			bindMatrix(const_cast<Matrix3x4f*>(ptr), true);
 		}
 
 		bool declare();
 
-		Mat4x3 getMatrix() const
+		Matrix3x4f getMatrix() const
 		{
 			return *_matrix;
 		}
@@ -270,6 +267,30 @@ namespace vkl
 namespace ImGui
 {
 	
+	template <class Scalar>
+	static constexpr ImGuiDataType GetDataType() noexcept
+	{
+		ImGuiDataType type = ImGuiDataType_COUNT;
+		constexpr const size_t type_size_index = std::countr_zero(sizeof(Scalar));
+		if constexpr (std::signed_integral<Scalar>)
+		{
+			type = ImGuiDataType_S8 + 2 * type_size_index;
+		}
+		else if constexpr (std::unsigned_integral<Scalar>)
+		{
+			type = ImGuiDataType_U8 + 2 * type_size_index;
+		}
+		else if constexpr (std::floating_point<Scalar>)
+		{
+			type = ImGuiDataType_Float + (type_size_index - 2);
+		}
+		else if constexpr (std::is_same<Scalar, bool>::value)
+		{
+			type = type = ImGuiDataType_Bool;
+		}
+		return type;
+	}
+
 	bool SliderAngleN(const char* label, float * v_rad, uint N, float v_degrees_min=-180, float v_degrees_max=180, const char * format = "%.1f", ImGuiSliderFlags flags = 0, uint8_t* changed_bit_field = nullptr);
 
 	// Returns a bit field (bit N -> axis N changed)
@@ -281,27 +302,17 @@ namespace ImGui
 		return res;
 	}
 
-	static inline bool DragMatrix4x3(const char* label, ::vkl::Matrix4x3f& matrix, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+	template <class Scalar, uint R, uint C, int Options>
+		requires (((Options & Eigen::RowMajor) != 0))
+	static bool DragMatrix(const char* label, ::vkl::Matrix<Scalar, R, C, Options>& matrix, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 	{
-		::vkl::Matrix3x4f t = glm::transpose(matrix);
 		bool res = false;
-		for (uint i = 0; i < 3; ++i)
+		for (uint i = 0; i < matrix.rows(); ++i)
 		{
-			ImGui::PushID(i);
-			res |= DragFloat4("", &t[i].x, 1, 0, 0, format, flags);
-			ImGui::PopID();
-		}
-		if (res)
-		{
-			matrix = glm::transpose(t);
+			PushID(i);
+			res |= DragScalarN(label, GetDataType<Scalar>(), matrix.row(i).data(), matrix.cols(), 1.0f, nullptr, nullptr, format, flags);
+			PopID();
 		}
 		return res;
-	}
-
-	static inline void DragMatrix4x3(const char* label, const ::vkl::Matrix4x3f& matrix, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
-	{
-		ImGui::BeginDisabled();
-		DragMatrix4x3(label, const_cast<::vkl::Matrix4x3f&>(matrix), format, flags);
-		ImGui::EndDisabled();
 	}
 }

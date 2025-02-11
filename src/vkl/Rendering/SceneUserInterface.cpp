@@ -16,7 +16,7 @@ namespace vkl
 		else
 		{
 			selected_node.node.node.reset();
-			selected_node.node.matrix = Mat4x3(1);
+			selected_node.node.matrix = DiagonalMatrix<3, 4>(1.0f);
 		}
 	}
 
@@ -70,7 +70,7 @@ namespace vkl
 		_box_mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
 			.app = application(),
 			.name = name() + ".BoxMesh",
-			.center = glm::vec3(0.5),
+			.center = Vector3f::Constant(0.5),
 			.wireframe = true,
 		});
 		
@@ -169,7 +169,7 @@ namespace vkl
 		}
 		if (_show_view_basis)
 		{
-			glm::mat4 view_3D_basis_matrix = camera.getCamToProj() * TranslationMatrix<4, float>(glm::vec3(0, 0, -0.25)) * mat4(camera.getWorldRoationMatrix()) * ScalingMatrix<4, float>(0.03125);
+			Matrix4f view_3D_basis_matrix = (camera.getCamToProj() * Matrix4f(TranslationMatrix(Vector3f(0, 0, -0.25)))).eval() * (Matrix4f(camera.getWorldRoationMatrix()) * Matrix4f(DiagonalMatrix<3>(0.03125f))).eval();
 			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "view",
 				.pc_data = &view_3D_basis_matrix,
@@ -180,7 +180,7 @@ namespace vkl
 		}
 		if (_gui_selected_node.hasValue())
 		{
-			const mat4 pc = camera.getWorldToProj() * glm::mat4(_gui_selected_node.node.matrix);
+			const mat4 pc = camera.getWorldToProj() * Matrix4f(_gui_selected_node.node.matrix);
 			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "selected node",
 				.pc_data = &pc,
@@ -216,12 +216,13 @@ namespace vkl
 					_box_mesh->fillVertexDrawCallInfo(vdcr);
 
 					const AABB3f & aabb = mesh->getAABB();
-					Mat4 aabb_matrix = TranslationMatrix<4, float>(aabb.bottom()) * ScalingMatrix<4, float>(aabb.diagonal());
+					Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
 					
 					const std::string name = mesh->name() + "::AABB";
+					Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix)).eval() * aabb_matrix);
 					const Render3DBoxPC pc{
-						.matrix = camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix) * aabb_matrix,
-						.color = glm::vec4(1, 1, 1, 1),
+						.matrix = pc_matrix,
+						.color = vec4(1, 1, 1, 1),
 					};
 					draw_list.pushBack(VertexCommand::DrawCallInfo{
 						.name = name,
@@ -371,7 +372,7 @@ namespace vkl
 		{
 			res = std::make_shared<Scene::Node>(Scene::Node::CI{
 				.name = "Empty Node",
-				.matrix = Mat4x3(1),
+				.matrix = Matrix3x4f::Identity(),
 			});
 		}
 		else if (canCreateNodeFromFile())
@@ -379,7 +380,7 @@ namespace vkl
 			res = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 				.app = app,
 				.name = _path.filename().string(),
-				.matrix = Mat4x3(1),
+				.matrix = Matrix3x4f::Identity(),
 				.path = _path,
 				.synch = _synch,
 			});
@@ -392,8 +393,8 @@ namespace vkl
 		ImGui::PushID(this);
 		if (ImGui::CollapsingHeader("Options"))
 		{
-			ImGui::ColorEdit3("Ambient", &_scene->_ambient.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
-			ImGui::ColorEdit3("Sky", &_scene->_uniform_sky.x, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			ImGui::ColorEdit3("Ambient", _scene->_ambient.data(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			ImGui::ColorEdit3("Sky", _scene->_uniform_sky.data(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
 			ImGui::SliderFloat("Sky brightness", &_scene->_uniform_sky_brightness, 0, 12, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 
 			ImGui::Checkbox("show world 3D basis", &_show_world_basis);
@@ -434,10 +435,10 @@ namespace vkl
 
 
 			Scene::DAG::FastNodePath path;
-			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
+			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
 			{
 				ImGui::PushID(node.get());
-				Mat4 node_matrix = matrix * node->matrix4x4();
+				Mat3x4 node_matrix = matrix * node->matrix3x4();
 				const std::string & node_gui_name = node->name();
 				const bool node_visible = node->visible();
 
@@ -524,7 +525,7 @@ namespace vkl
 				ImGui::PopID();
 			};
 
-			Mat4 root_matrix = Mat4(1);
+			Mat3x4 root_matrix = Mat3x4::Identity();
 			declare_node(_scene->getRootNode(), root_matrix, true, declare_node);
 		} // Tree
 
@@ -568,14 +569,17 @@ namespace vkl
 						bool changed = false;
 						
 						ImGui::Text("Collapsed Matrix");
-						ImGui::DragMatrix4x3("", node->matrix4x3());
+						Matrix3x4f node_matrix = node->matrix3x4();
+						ImGui::BeginDisabled();
+						ImGui::DragMatrix("", node_matrix);
+						ImGui::EndDisabled();
 
 						ImGui::Separator();
 						float range = 10;
 						ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
-						ImGui::SliderFloat3("Scale", &node->scale().x, -range, range, "%.3f", flags);
-						ImGui::SliderAngle3("Rotation", &node->rotation().x, -180, 180, "%.2f", flags);
-						ImGui::SliderFloat3("Translation", &node->translation().x, -range, range, "%.3f", flags);
+						ImGui::SliderFloat3("Scale", node->scale().data(), -range, range, "%.3f", flags);
+						ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
+						ImGui::SliderFloat3("Translation", node->translation().data(), -range, range, "%.3f", flags);
 
 					}
 

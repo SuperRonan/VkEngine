@@ -95,7 +95,7 @@ namespace vkl
 			uint32_t _compact_id = uint32_t(-1);
 			std::shared_ptr<BottomLevelAccelerationStructureInstance> _blas_instance = nullptr;
 
-			void setXForm(Matrix4x3f const& m)
+			void setXForm(Matrix3x4fRowMajor const& m)
 			{
 				xform = ConvertXFormToVk(m);
 				_mark_for_update = true;

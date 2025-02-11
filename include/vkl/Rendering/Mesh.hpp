@@ -70,11 +70,11 @@ namespace vkl
 		using u8 = uint8_t;
 		using uint = u32;
 
-		using Vector2 = glm::vec2;
-		using Vector3 = glm::vec3;
-		using Vector4 = glm::vec4;
-		using Matrix3 = glm::mat3;
-		using Matrix4 = glm::mat4;
+		using Vector2 = Vector2f;
+		using Vector3 = Vector3f;
+		using Vector4 = Vector4f;
+		using Matrix3 = Matrix3f;
+		using Matrix4 = Matrix4f;
 
 		using vec2 = Vector2;
 		using vec3 = Vector3;
@@ -434,7 +434,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			Vector2 center = Vector2(0);
+			Vector2 center = Vector2::Zero();
 			bool wireframe = false;
 		};
 		static std::shared_ptr<RigidMesh> MakeSquare(Square2DMakeInfo const& smi);
@@ -458,7 +458,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			Vector3 center = Vector3(0);
+			Vector3 center = Vector3::Zero();
 			float radius = 1;
 			uint theta_divisions = 16;
 			uint phi_divisions = 32;
@@ -470,7 +470,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
-			Vector3 center = Vector3(0);
+			Vector3 center = Vector3::Zero();
 			float radius = 1;
 			int position = 1;
 			bool face_normal = false;

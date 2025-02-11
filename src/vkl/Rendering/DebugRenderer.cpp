@@ -265,8 +265,7 @@ namespace vkl
 		if (_font->getView())
 		{
 			const VkExtent3D extent = _font->getView()->image()->extent().value();
-			_glyph_size.x = extent.width;
-			_glyph_size.y = extent.height;
+			_glyph_size = {extent.width, extent.height};
 		}
 		else
 		{
@@ -382,13 +381,13 @@ namespace vkl
 		{
 			struct PC 
 			{
-				alignas(16) glm::uvec3 resolution;
-				alignas(16) glm::vec2 oo_resolution;
+				alignas(16) Vector3u resolution;
+				alignas(16) Vector2f oo_resolution;
 			};
 			const VkExtent3D ext = *_target->image()->extent();
 			PC pc = {
-				.resolution = glm::uvec3(ext.width, ext.height, 1),
-				.oo_resolution = glm::vec2(1.0 / float(ext.width), 1.0 / float(ext.height)),
+				.resolution = Vector3u(ext.width, ext.height, 1),
+				.oo_resolution = Vector2f(1.0 / float(ext.width), 1.0 / float(ext.height)),
 			};
 
 			RenderPassBeginInfo render_pass{

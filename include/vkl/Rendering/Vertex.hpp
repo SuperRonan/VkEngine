@@ -1,19 +1,20 @@
 #pragma once
 
 #include <vkl/Core/VulkanCommons.hpp>
-#include <glm/glm.hpp>
 #include <array>
 #include <type_traits>
+
+#include <vkl/Maths/Types.hpp>
 
 namespace vkl
 {
 	struct Vertex
 	{
-		using Vector4 = glm::vec4;
-		using Vector3 = glm::vec3;
-		using Vector2 = glm::vec2;
-		using Matrix4 = glm::mat4;
-		using Matrix3 = glm::mat3;
+		using Vector4 = Vector4f;
+		using Vector3 = Vector3f;
+		using Vector2 = Vector2f;
+		using Matrix4 = Matrix4f;
+		using Matrix3 = Matrix3f;
 
 		Vector4 position;
 		Vector4 normal;

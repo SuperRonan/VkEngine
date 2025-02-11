@@ -72,10 +72,10 @@ namespace vkl
 		auto rng = std::mt19937_64(seed);
 		std::uniform_real_distribution<float> distrib(0, 1);
 		vec4 color;
-		color.r = distrib(rng);
-		color.g = distrib(rng);
-		color.b = distrib(rng);
-		color.a = 1;
+		color.x() = distrib(rng);
+		color.y() = distrib(rng);
+		color.z() = distrib(rng);
+		color.w() = 1;
 		pushDebugLabel(label, color, timestamp);
 	}
 }

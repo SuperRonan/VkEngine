@@ -52,7 +52,7 @@ namespace vkl
 
 		struct CommandPC
 		{
-			glm::vec3 camera_position;
+			Vector3f camera_position;
 			uint32_t flags;
 			float radius;
 			uint32_t seed;

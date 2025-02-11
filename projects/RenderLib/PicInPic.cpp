@@ -64,7 +64,7 @@ namespace vkl
 		{
 			exec.pushDebugLabel(name(), true);
 			const float region_size = _pip_size / _zoom;
-			const Vector2f pip_pos = _pip_position - 0.5f * Vector2f(region_size);
+			const Vector2f pip_pos = _pip_position - 0.5f * Vector2f::Constant(region_size);
 			FastPiPPC pc{
 				.zoom = _zoom,
 				.pip_size = _pip_size,
@@ -75,9 +75,9 @@ namespace vkl
 			Vector3f extent_f = Vector3f(extent.width, extent.height, extent.depth);
 			extent_f = extent_f * _pip_size;
 			extent = VkExtent3D{
-				.width = static_cast<uint32_t>(std::ceil(extent_f.x)),
-				.height = static_cast<uint32_t>(std::ceil(extent_f.y)),
-				.depth = static_cast<uint32_t>(std::ceil(extent_f.z)),
+				.width = static_cast<uint32_t>(std::ceil(extent_f.x())),
+				.height = static_cast<uint32_t>(std::ceil(extent_f.y())),
+				.depth = static_cast<uint32_t>(std::ceil(extent_f.z())),
 			};
 
 			exec(_fast_pip->with(ComputeCommand::SingleDispatchInfo{
@@ -94,7 +94,7 @@ namespace vkl
 			};
 			ShowOutlinePC outline_pc{
 				.pos = pip_pos,
-				.size = Vector2f(region_size),
+				.size = Vector2f::Constant(region_size),
 				.color = Vector4f(1, 1, 1, 1),
 			};
 			vertex_draw_info.pushBack(VertexCommand::DrawCallInfo{
@@ -103,8 +103,8 @@ namespace vkl
 				.draw_count = 5,
 				.instance_count = 1,
 			});
-			outline_pc.pos = Vector2f(0);
-			outline_pc.size = Vector2f(_pip_size);
+			outline_pc.pos = Vector2f::Zero();
+			outline_pc.size = Vector2f::Constant(_pip_size);
 			vertex_draw_info.pushBack(VertexCommand::DrawCallInfo{
 				.pc_data = &outline_pc,
 				.pc_size = sizeof(outline_pc),
@@ -125,7 +125,7 @@ namespace vkl
 			ImGui::Checkbox("enable", &_enable);
 			ImGui::SliderFloat("zoom", &_zoom, 1, 16);
 			ImGui::SliderFloat("size", &_pip_size, 0, 1);
-			ImGui::SliderFloat2("position", &_pip_position.x, 0, 1);
+			ImGui::SliderFloat2("position", _pip_position.data(), 0, 1);
 		}
 	}
 }

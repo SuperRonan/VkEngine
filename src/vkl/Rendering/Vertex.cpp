@@ -1,17 +1,19 @@
 #include <vkl/Rendering/Vertex.hpp>
 
+#include <vkl/Maths/Transforms.hpp>
+
 namespace vkl
 {
 	void Vertex::transform(Matrix4 const& m, Matrix3 const& nm) noexcept
 	{
 		position = m * Vector4(Vector3(position), 1);
-		normal =  Vector4(glm::normalize(nm * Vector3(normal)), 0);
-		tangent = Vector4(glm::normalize(nm * Vector3(tangent)), 0);
+		normal =  Vector4(Normalize(nm * Vector3(normal)), 0.0f);
+		tangent = Vector4(Normalize(nm * Vector3(tangent)), 0.0f);
 	}
 
 	void Vertex::transform(Matrix4 const& m) noexcept
 	{
-		Matrix3 nm = glm::transpose(glm::inverse(glm::mat3(m)));
+		Matrix3 nm = DirectionMatrix(Matrix3(m));
 		transform(m, nm);
 	}
 

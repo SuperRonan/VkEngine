@@ -68,7 +68,7 @@
 //		Vector3<Float> direction()const
 //		{
 //			Vector3<Float> res;
-//			double r_yaw = glm::radians(m_yaw), r_pitch = -glm::radians(m_pitch);
+//			double r_yaw = Radians(m_yaw), r_pitch = -Radians(m_pitch);
 //			res.x = std::cos(r_yaw) * std::cos(r_pitch);
 //			res.y = std::sin(r_pitch);
 //			res.z = std::sin(r_yaw) * std::cos(r_pitch);

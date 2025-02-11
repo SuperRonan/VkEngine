@@ -60,9 +60,6 @@ namespace vkl
 	{
 	public:
 
-		using ivec2 = glm::ivec2;
-		using float2 = glm::vec2;
-
 		enum class Mode
 		{
 			Windowed = 0,
@@ -79,8 +76,8 @@ namespace vkl
 
 			std::set<uint32_t> queue_families_indices = {};
 			
-			glm::ivec2 resolution = {};
-			Dyn<glm::ivec2> dynamic_resolution = {};
+			Vector2i resolution = {};
+			Dyn<Vector2i> dynamic_resolution = {};
 			
 			VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 			Dyn<VkPresentModeKHR> dynamic_present_mode = {};
@@ -115,8 +112,8 @@ namespace vkl
 		std::shared_ptr<Swapchain> _swapchain = nullptr;
 		
 
-		Dyn<glm::ivec2> _extern_resolution = {};
-		glm::ivec2 _desired_resolution = {};
+		Dyn<Vector2i> _extern_resolution = {};
+		Vector2i _desired_resolution = {};
 		Dyn<VkExtent3D> _dynamic_extent = {};
 		
 

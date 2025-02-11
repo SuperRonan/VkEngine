@@ -141,49 +141,42 @@ namespace vkl
 		
 		if (_raw_view)
 		{
-			Mat3x4 t = glm::transpose(*_matrix);
+			Matrix3x4f t = (*_matrix);
 		
 			for (size_t i = 0; i < 3; ++i)
 			{
 				char row_name[2];
 				row_name[0] = 'x' + i;
 				row_name[1] = 0;
-				changed |= ImGui::DragFloat4(row_name, &t[i].x, 0.1);
-			}
-
-			if (changed)
-			{
-				*_matrix = glm::transpose(t);
+				changed |= ImGui::DragFloat4(row_name, t.row(i).data(), 0.1);
 			}
 		}
 		else
 		{
-			glm::vec3 & t = (*_matrix)[3];
-			changed |= ImGui::DragFloat3("Translation", &t.x, 0.1);
-
-			bool changed2 = false;
-
-			glm::vec3 scale(
-				glm::length((*_matrix)[0]),
-				glm::length((*_matrix)[1]),
-				glm::length((*_matrix)[2])
-			);
-			glm::mat3 rotation = glm::mat3(*_matrix);
-			rotation[0] /= scale[0];
-			rotation[1] /= scale[1];
-			rotation[2] /= scale[2];
-			glm::vec3 angles;
-
-			
-
-			changed2 |= ImGui::DragFloat3("Scale", &scale.x, 0.1);
-
-			if (changed2)
+			auto t = _matrix->col(3);
+			Vector3f t_ = t;
+			changed |= ImGui::DragFloat3("Translation", t_.data(), 0.1);
+			if (changed)
 			{
-				(*_matrix) = TranslationMatrix<4, float>(t) * ScalingMatrix<4, float>(scale) * glm::mat4(rotation);
+				t_ = t;
 			}
 
-			changed |= changed2;
+			//bool changed2 = false;
+
+			//glm::vec3 scale(
+			//	glm::length((*_matrix)[0]),
+			//	glm::length((*_matrix)[1]),
+			//	glm::length((*_matrix)[2])
+			//);
+			//glm::mat3 rotation = glm::mat3(*_matrix);
+			//rotation[0] /= scale[0];
+			//rotation[1] /= scale[1];
+			//rotation[2] /= scale[2];
+			//glm::vec3 angles;
+
+			//
+
+			//changed2 |= ImGui::DragFloat3("Scale", &scale.x, 0.1);
 		}
 
 		if (!_read_only)
@@ -191,7 +184,7 @@ namespace vkl
 			if (ImGui::Button("Reset"))
 			{
 				changed = true;
-				*_matrix = Mat4x3(1);
+				*_matrix = DiagonalMatrix<3, 4>(1.0f);
 			}
 		}
 

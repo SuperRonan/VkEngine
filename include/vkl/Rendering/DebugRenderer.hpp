@@ -45,7 +45,7 @@ namespace vkl
 		std::shared_ptr<MeshCommand> _render_lines_with_mesh = nullptr;
 
 		// Texture glyph size
-		glm::uvec2 _glyph_size = {16, 16};
+		Vector2u _glyph_size = {16, 16};
 
 		bool _enable_debug = true;
 		int _shader_string_chunks = 8;

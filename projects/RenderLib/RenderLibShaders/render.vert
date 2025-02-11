@@ -21,13 +21,13 @@ layout(location = 3) out vec3 v_w_tangent;
 
 layout(push_constant) uniform PushConstant
 {
-	mat4 object_to_world;
+	mat4x3 object_to_world;
 } _pc;
 
 void main()
 {	
 	const mat4 w2p = GetCameraWorldToProj(ubo.camera);
-	const mat4 o2w = _pc.object_to_world;
+	const mat4 o2w = mat4(_pc.object_to_world);
 	const mat4 o2p = w2p * o2w;
 	
 	
