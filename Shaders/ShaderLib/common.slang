@@ -122,11 +122,11 @@ void SetRow(inout Matrix<T, R, C> m, uint i, Vector<T, C> v)
 template <typename T, uint R, uint C>
 T GetCoeficient(const in Matrix<T, R, C> m, uint r, uint c)
 {
-	return GetRow(m, r)[c];
+	return m[r][c];
 }
 
 template <typename T, uint R, uint C>
-void SetCoeficient(inout Matrix<T, R, C> m, uint r, uint c, const inout T t)
+void SetCoeficient(inout Matrix<T, R, C> m, uint r, uint c, const in T t)
 {
 	m[r][c] = t;
 }
@@ -136,6 +136,42 @@ Matrix<T, R, C> operator*(const in Matrix<T, R, I> l, const in Matrix<T, I, C> r
 {
 	return mul(l, r);
 }
+
+template <uint R, uint C = R, typename T : __BuiltinFloatingPointType = float>
+Matrix<T, R, C> DiagonalMatrix(T d = T(1))
+{
+	Matrix<T, R, C> res = Matrix<T, R, C>(d);
+	return res;
+}
+
+template <uint BlockR, uint BlockC, typename T : __BuiltinFloatingPointType, uint SrcR, uint SrcC>
+Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint2 offset)
+	//where ((BlockR <= SrcR) && (BlockC <= SrcC))
+{
+	Matrix<T, BlockR, BlockC> res;
+	for(uint j = 0; j < BlockC; ++j)
+	{
+		for(uint i = 0; i < BlockR; ++i)
+		{
+			SetCoeficient(res, i, j, GetCoeficient(m, offset.x + i, offset.y + j));
+		}
+	}
+	return res;
+}
+
+template <uint BlockR, uint BlockC, typename T : __BuiltinFloatingPointType, uint DstR, uint DstC>
+void SetBlock(inout Matrix<T, DstR, DstC> m, uint2 offset, const in Matrix<T, BlockR, BlockC> block)
+	//where ((BlockR <= DstR) && (BlockC <= DstC))
+{
+	for(uint j = 0; j < BlockC; ++j)
+	{
+		for(uint i = 0; i < BlockR; ++i)
+		{
+			SetCoeficient(m, offset.x + i, offset.y + j, GetCoeficient(block, i, j));
+		}
+	}
+}
+
 
 template <uint N>
 typealias vec = vector<float, N>;
@@ -532,9 +568,82 @@ Matrix<T, C, R> Transpose(const in Matrix<T, R, C> m)
 }
 
 template <typename T : __BuiltinFloatingPointType, uint N>
-Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m)
+T Determinant(const in Matrix<T, N, N> m)
 {
-	Matrix<T, N, N> res;
+	return determinant(m);
+}
+
+template <typename T : __BuiltinFloatingPointType, uint N>
+T Trace(const in Matrix<T, N, N> m)
+{
+	T res = T(0);
+	for(uint i = 0; i < N; ++i)
+	{
+		res += m[i][i];
+	}
+	return res;
+}
+
+template<typename T : __BuiltinFloatingPointType, uint N>
+Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m);
+
+template<typename T : __BuiltinFloatingPointType>
+Matrix2<T> Inverse(const in Matrix2<T> m)
+{
+	Matrix2<T> res;
+	const T d = Determinant(m);
+	if(d != T(0))
+	{
+		SetCoeficient(res, 0, 0, GetCoeficient(m, 1, 1) / d);
+		SetCoeficient(res, 1, 1, GetCoeficient(m, 0, 0) / d);
+		SetCoeficient(res, 0, 1, -GetCoeficient(m, 1, 0) / d);
+		SetCoeficient(res, 1, 0, -GetCoeficient(m, 0, 1) / d);
+	}
+	return res;
+}
+
+template<typename T : __BuiltinFloatingPointType>
+Matrix3<T> Inverse(const in Matrix3<T> m)
+{
+	Matrix3<T> res;
+	const T d = Determinant(m);
+	if(d != T(0))
+	{
+#if 1
+		// Cayley Hamilton
+		const T tr = Trace(m);
+		const Matrix3<T> m2 = m * m;
+		res = rcp(d) * (DiagonalMatrix<3, 3>(T(0.5) * (sqr(tr) - Trace(m2))) + tr * m + m2);
+#else
+		// cross produc / triple product
+		for(uint i = 0; i < 3; ++i)
+		{
+			const uint x1 = (i + 1) % 3;
+			const uint x2 = (i + 2) % 3;
+			SetRow(res, i, Cross(GetColumn(m, x1), GetColumn(m, x2)));
+		}
+		res = res / d;
+#endif
+	}
+	return res;
+}
+
+template<typename T : __BuiltinFloatingPointType>
+Matrix4<T> Inverse(const in Matrix4<T> m)
+{
+	const Matrix2<T> A = ExtractBlock<2, 2>(m, uint2(0, 0));
+	const Matrix2<T> B = ExtractBlock<2, 2>(m, uint2(2, 0));
+	const Matrix2<T> C = ExtractBlock<2, 2>(m, uint2(0, 2));
+	const Matrix2<T> D = ExtractBlock<2, 2>(m, uint2(2, 2));
+
+	const Matrix2<T> P = Inverse(A - B * Inverse(D) * C);
+	const Matrix2<T> Di = Inverse(D);
+
+	Matrix4<T> res;
+	SetBlock(res, uint2(0, 0), P);
+	SetBlock(res, uint2(0, 2), -P * B * Di);
+	SetBlock(res, uint2(2, 0), -Di * C * P);
+	SetBlock(res, uint2(2, 2), Di + Di * C * P * B * Di);
 	return res;
 }
 
