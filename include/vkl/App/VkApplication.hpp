@@ -231,7 +231,10 @@ namespace vkl
 
 		DefinitionsMap _common_shader_definitions = {};
 
-		Slang::ComPtr<slang::IGlobalSession> _slang_session;
+		// Right now, the GlobalSession is not thread safe, 
+		// we need one per thread (linked to the thread pool size)
+		std::mutex _slang_mutex;
+		std::map<std::thread::id, Slang::ComPtr<slang::IGlobalSession>> _slang_sessions;
 
 		using Clock = std::chrono::system_clock;
 		Clock::time_point _time_begin = Clock::now();
@@ -446,10 +449,7 @@ namespace vkl
 			return _options;
 		}
 
-		Slang::ComPtr<slang::IGlobalSession> const& getSlangSession() const
-		{
-			return _slang_session;
-		}
+		Slang::ComPtr<slang::IGlobalSession> getSlangGlobalSession();
 
 		std::shared_ptr<DescriptorSetLayoutInstance> getEmptyDescSetLayout();
 

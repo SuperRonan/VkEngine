@@ -43,6 +43,8 @@ namespace vkl
 		// Returns false if some task could not be launched because some dependencies could not be completed
 		virtual bool waitAll() = 0;
 
+		virtual uint maxCapacity() const = 0;
+
 		struct MakeInfo
 		{
 			bool multi_thread = true;
@@ -85,6 +87,11 @@ namespace vkl
 		virtual bool isMultiThreaded() const override
 		{
 			return false;
+		}
+
+		virtual uint maxCapacity() const override
+		{
+			return 1;
 		}
 
 	};
@@ -170,5 +177,9 @@ namespace vkl
 			return true;
 		}
 
+		virtual uint maxCapacity() const override
+		{
+			return _workers.size();
+		}
 	};
 } // namespace vkl

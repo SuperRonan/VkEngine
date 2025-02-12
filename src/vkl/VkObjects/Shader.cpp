@@ -939,11 +939,12 @@ namespace vkl
 
 		if (_source_language == ShadingLanguage::Slang)
 		{
-			Slang::ComPtr<slang::IGlobalSession> const& global_session = application()->getSlangSession();
+			Slang::ComPtr<slang::IGlobalSession> global_session = application()->getSlangGlobalSession();
 			Slang::ComPtr<slang::ISession> session;
 			slang::TargetDesc target{
 				.format = SLANG_SPIRV,
 				.profile = global_session->findProfile("glsl_460"),
+				.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY,
 			};
 			slang::SessionDesc session_desc{
 				.targets = &target,
@@ -953,14 +954,16 @@ namespace vkl
 
 			Slang::ComPtr<slang::ICompileRequest> compiler;
 			session->createCompileRequest(compiler.writeRef());
-			compiler->setCodeGenTarget(SLANG_SPIRV);
+			//compiler->setCodeGenTarget(SLANG_SPIRV);
 			compiler->setCompileFlags(SLANG_COMPILE_FLAG_NO_MANGLING);
 			compiler->setDebugInfoLevel(SLANG_DEBUG_INFO_LEVEL_MAXIMAL);
 			compiler->setDebugInfoFormat(SLANG_DEBUG_INFO_FORMAT_C7);
-			compiler->setTargetEmbedDownstreamIR(0, true);
-			int index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
-			compiler->addTranslationUnitSourceStringSpan(index, main_path_str.c_str(), code->c_str(), code->c_str() + code->size());
+			//compiler->setTargetEmbedDownstreamIR(0, true);
 			compiler->addPreprocessorDefine("_slang", "1");
+			SlangInt translation_unit_index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
+			compiler->addTranslationUnitSourceStringSpan(translation_unit_index, main_path_str.c_str(), code->c_str(), code->c_str() + code->size());
+			SlangInt entry_point_index = compiler->addEntryPoint(translation_unit_index, "main", ConvertToSlang(_stage));
+			
 
 			if (_stage != 0)
 			{
@@ -974,15 +977,17 @@ namespace vkl
 			{
 				SlangResult sr;
 				Slang::ComPtr<slang::IComponentType> slang_program;
-				sr = compiler->getProgram(slang_program.writeRef());
+				sr = compiler->getProgramWithEntryPoints(slang_program.writeRef());
 				if (SLANG_SUCCEEDED(sr))
 				{
 					Slang::ComPtr<slang::IComponentType> linked;
-					sr = slang_program->link(linked.writeRef(), diagnostic.writeRef());
+					sr = slang_program->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
+					//sr = slang_program->link(linked.writeRef(), diagnostic.writeRef());
 					if (SLANG_SUCCEEDED(sr))
 					{
 						Slang::ComPtr<slang::IBlob> blob;
-						sr = linked->getTargetCode(0, blob.writeRef(), diagnostic.writeRef());
+						sr = linked->getEntryPointCode(entry_point_index, 0, blob.writeRef(), diagnostic.writeRef());
+						//sr = linked->getTargetCode(0, blob.writeRef(), diagnostic.writeRef());
 						//sr = linked->getEntryPointCode(0, 0, blob.writeRef(), diagnostic.writeRef());
 						if (SLANG_SUCCEEDED(sr))
 						{

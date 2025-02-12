@@ -89,7 +89,7 @@ if(AUTO_LOCATE_VULKAN)
 
 	message(STATUS "Attempting to locate Vulkan SDK using manual path......")
 	set(VULKAN_SDK "C:/VulkanSDK")
-	set(VULKAN_VERSION "1.3.296.0")
+	set(VULKAN_VERSION "1.4.304.1")
 	set(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
 	message(STATUS "Using manual specified path: ${VULKAN_PATH}")
 

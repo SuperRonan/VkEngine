@@ -1,4 +1,6 @@
 
+#define SLANG_COM_PTR_ENABLE_REF_OPERATOR
+
 #include <vkl/App/VkApplication.hpp>
 
 #include <vkl/VkObjects/CommandBuffer.hpp>
@@ -1077,6 +1079,31 @@ namespace vkl
 		return res;
 	}
 
+	Slang::ComPtr<slang::IGlobalSession> VkApplication::getSlangGlobalSession()
+	{
+		const auto id = std::this_thread::get_id();
+		Slang::ComPtr<slang::IGlobalSession> * res = nullptr;
+		{
+			std::unique_lock lock(_slang_mutex);
+			res = &(_slang_sessions[id]);
+		}
+		if (!(*res))
+		{
+			SlangResult slang_result = slang::createGlobalSession(res->writeRef());
+			if (!SLANG_SUCCEEDED(slang_result))
+			{
+				_logger(std::format("Failed to init slang seesion {}!", std::hash<std::thread::id>()(id)), Logger::Options::TagError);
+				*res = nullptr;
+			}
+			else
+			{
+
+			}
+		}
+		
+		return *res;
+	}
+
 	void VkApplication::initSDL()
 	{
 		uint32_t init = 0;
@@ -1205,25 +1232,16 @@ namespace vkl
 			.name = "TextureFileCache",
 		});
 
-		_prebuilt_transfer_commands = std::make_unique<PrebuilTransferCommands>(this);
-
-		SlangResult slang_result = slang::createGlobalSession(_slang_session.writeRef());
-		if (!SLANG_SUCCEEDED(slang_result))
-		{
-			_logger("Failed to init slang!", Logger::Options::TagError);
-			_slang_session = nullptr;
-		}
-		else
-		{
-			
-		}
-		
+		_prebuilt_transfer_commands = std::make_unique<PrebuilTransferCommands>(this);		
 	}
 
 	void VkApplication::cleanup()
 	{
-		if (_slang_session)
+		if (std::any_of(_slang_sessions.begin(), _slang_sessions.end(), [](auto const& s){return !!s.second;}))
 		{
+			for (auto& s : _slang_sessions)
+			{
+			}
 			slang::shutdown();
 		}
 
