@@ -370,7 +370,7 @@ namespace vkl
 						{
 							oss << "#line 1 " << path_to_include << "\n";
 							oss << included_code;
-							oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << path_to_include << "\n";
+							oss << "\n#line " << (countLines(0, line_end) + 1) << ' ' << full_path << "\n";
 						}
 					}
 				}
