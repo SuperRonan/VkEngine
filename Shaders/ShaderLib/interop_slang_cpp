@@ -4,8 +4,8 @@
 
 #define typealias using
 
-#define CPP_ONLY(X) X
-#define SLANG_ONLY(X)
+#define CPP_ONLY(__VA_ARGS__) __VA_ARGS__
+#define SLANG_ONLY(__VA_ARGS__)
 
 // Use a common concept name between C++ and Slang
 #define CONCEPT_TYPE(CONCEPT, TYPE) CONCEPT TYPE
@@ -26,8 +26,8 @@
 #define constexpr
 #define noexecpt
 
-#define CPP_ONLY(X)
-#define SLANG_ONLY(X) X
+#define CPP_ONLY(__VA_ARGS__)
+#define SLANG_ONLY(__VA_ARGS__) __VA_ARGS__
 
 // Use a common concept name between C++ and Slang
 #define CONCEPT_TYPE(CONCEPT, TYPE) typename TYPE : CONCEPT

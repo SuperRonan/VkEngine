@@ -30,10 +30,10 @@ typealias fp16IFP = half;
 typealias fp16IFP = float;
 #endif
 
-template <typename T, uint N>
+template <typename T, int N>
 typealias Vector = vector<T, N>;
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 typealias Matrix = matrix<T, R, C>;
 
 template <typename T>
@@ -65,13 +65,13 @@ typealias Matrix4x2 = Matrix<T, 4, 2>;
 template <typename T>
 typealias Matrix4x3 = Matrix<T, 4, 3>;
 
-template <uint R, uint C = R>
+template <int R, int C = R>
 typealias Matrixf = Matrix<float, R, C>;
 
-template <uint R, uint C = R>
+template <int R, int C = R>
 typealias Matrixd = Matrix<double, R, C>;
 
-template <uint R, uint C = R>
+template <int R, int C = R>
 typealias Matrixh = Matrix<half, R, C>;
 
 typealias Matrix2f = Matrix2<float>;
@@ -87,7 +87,7 @@ typealias Matrix3x4f = Matrix3x4<float>;
 typealias Matrix4x2f = Matrix4x2<float>;
 typealias Matrix4x3f = Matrix4x3<float>;
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 Vector<T, R> GetColumn(const in Matrix<T, R, C> m, uint i)
 {
 	Vector<T, R> res;
@@ -98,13 +98,13 @@ Vector<T, R> GetColumn(const in Matrix<T, R, C> m, uint i)
 	return res;
 }
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 Vector<T, C> GetRow(const in Matrix<T, R, C> m, uint i)
 {
 	return m[i];
 }
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 void SetColumn(inout Matrix<T, R, C> m, uint i, Vector<T, R> v)
 {
 	for(uint j = 0; j < R; ++j)
@@ -113,45 +113,92 @@ void SetColumn(inout Matrix<T, R, C> m, uint i, Vector<T, R> v)
 	}
 }
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 void SetRow(inout Matrix<T, R, C> m, uint i, Vector<T, C> v)
 {
 	m[i] = v;
 }
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 T GetCoeficient(const in Matrix<T, R, C> m, uint r, uint c)
 {
 	return m[r][c];
 }
 
-template <typename T, uint R, uint C>
+template <typename T, int R, int C>
 void SetCoeficient(inout Matrix<T, R, C> m, uint r, uint c, const in T t)
 {
 	m[r][c] = t;
 }
 
-template<typename T : __BuiltinFloatingPointType, uint R, uint I, uint C>
+template<typename T : __BuiltinFloatingPointType, int R, int I, int C>
 Matrix<T, R, C> operator*(const in Matrix<T, R, I> l, const in Matrix<T, I, C> r)
 {
 	return mul(l, r);
 }
 
-template <uint R, uint C = R, typename T : __BuiltinFloatingPointType = float>
+template <typename T : __BuiltinFloatingPointType, int R, int C>
+Vector<T, R> operator*(const in Matrix<T, R, C> m, const in Vector<T, C> v)
+{
+	return mul(m, v);
+} 
+
+
+template <int R, int C = R, typename T : __BuiltinArithmeticType>
 Matrix<T, R, C> DiagonalMatrix(T d = T(1))
 {
 	Matrix<T, R, C> res = Matrix<T, R, C>(d);
 	return res;
 }
 
-template <uint BlockR, uint BlockC, typename T : __BuiltinFloatingPointType, uint SrcR, uint SrcC>
+template <int R, int C = R, typename T : __BuiltinArithmeticType>
+Matrix<T, R, C> DiagonalMatrix(const in Vector<T, R> diag)
+{
+	Matrix<T, R, C> res = Matrix<T, R, C>(T(0));
+	for(uint i = 0; i < min(R, C); ++i)
+	{
+		res[i] = diag[i];
+	}
+	return res;
+}
+
+template <int R, typename T : __BuiltinArithmeticType>
+Matrix<T, R, R> DiagonalMatrixV(const in Vector<T, R> diag)
+{
+	return DiagonalMatrix<R, R>(diag);
+}
+
+template <int N, typename Scalar>
+Vector<Scalar, N> MakeUniformVector(Scalar v)
+{
+	Vector<Scalar, N> res = Vector<Scalar, N>(v);
+	return res;
+}
+
+template <int R, int C = R, typename Scalar>
+Matrix<Scalar, R, C> MakeUniformMatrix(Scalar v)
+{
+	Matrix<Scalar, R, C> res;
+	for(uint i = 0; i < R; ++i)
+	{
+		SetRow(res, i, MakeUniformVector<C>(v));
+	}
+	return res;
+}
+
+template <int BlockR, int BlockC, typename T, int SrcR, int SrcC>
 Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint2 offset)
 	//where ((BlockR <= SrcR) && (BlockC <= SrcC))
 {
 	Matrix<T, BlockR, BlockC> res;
-	for(uint j = 0; j < BlockC; ++j)
+	const uint2 ioffset = uint2(offset);
+	const uint2 iBlock = uint2(BlockR, BlockC);
+	const uint2 iSrc = uint2(SrcR, SrcC);
+	const uint2 imax = max(ioffset + iBlock, iSrc);
+	const uint2 irange = imax - iBlock; 
+	for(uint i = 0; i < irange.x; ++i)
 	{
-		for(uint i = 0; i < BlockR; ++i)
+		for(uint j = 0; j < irange.y; ++j)
 		{
 			SetCoeficient(res, i, j, GetCoeficient(m, offset.x + i, offset.y + j));
 		}
@@ -159,51 +206,156 @@ Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint2 o
 	return res;
 }
 
-template <uint BlockR, uint BlockC, typename T : __BuiltinFloatingPointType, uint DstR, uint DstC>
+template <int BlockR, int BlockC, typename T, int SrcR, int SrcC>
+Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint row_offset = 0, uint col_offset = 0)
+{
+	return ExtractBlock<BlockR, BlockC>(m, uint2(row_offset, col_offset));
+}
+
+template <int BlockR, int BlockC, typename T, int DstR, int DstC>
 void SetBlock(inout Matrix<T, DstR, DstC> m, uint2 offset, const in Matrix<T, BlockR, BlockC> block)
 	//where ((BlockR <= DstR) && (BlockC <= DstC))
 {
-	for(uint j = 0; j < BlockC; ++j)
+	const uint2 ioffset = uint2(offset);
+	const uint2 iBlock = uint2(BlockR, BlockC);
+	const uint2 iDst = uint2(DstR, DstC);
+	const uint2 imax = max(ioffset + iBlock, iDst);
+	const uint2 irange = imax - iBlock; 
+	for(uint i = 0; i < irange.x; ++i)
 	{
-		for(uint i = 0; i < BlockR; ++i)
+		for(uint j = 0; j < irange.y; ++j)
 		{
 			SetCoeficient(m, offset.x + i, offset.y + j, GetCoeficient(block, i, j));
 		}
 	}
 }
 
+template <int BlockR, int BlockC, typename T, int DstR, int DstC>
+void SetBlock(inout Matrix<T, DstR, DstC> m, uint row_offset, uint col_offset, const in Matrix<T, BlockR, BlockC> block)
+{
+	SetBlock(m, uint2(row_offset, col_offset), block);
+}
 
-template <uint N>
+template <int BlockR, int BlockC, typename T, int DstR, int DstC>
+void SetBlock(inout Matrix<T, DstR, DstC> m, const in Matrix<T, BlockR, BlockC> block)
+{
+	SetBlock(m, uint2(0, 0), block);
+}
+
+template <typename T, int R, int C>
+Matrix<T, R, C> MakeFromRows(const in Vector<T, C>[R] rows)
+{
+	Matrix<T, R, C> res;
+	for(uint i = 0; i < R; ++i)
+	{
+		SetRow(res, i, rows[i]);
+	}
+	return res;
+}
+
+template <typename T, int N>
+Matrix<T, 2, N> MakeFromRows(const in Vector<T, N> r0, const in Vector<T, N> r1)
+{
+	Vector<T, N> rows[] = {r0, r1};
+	return MakeFromRows(rows);
+}
+
+template <typename T, int N>
+Matrix<T, 3, N> MakeFromRows(const in Vector<T, N> r0, const in Vector<T, N> r1, const in Vector<T, N> r2)
+{
+	Vector<T, N> rows[] = {r0, r1, r2};
+	return MakeFromRows(rows);
+}
+
+template <typename T, int N>
+Matrix<T, 4, N> MakeFromRows(const in Vector<T, N> r0, const in Vector<T, N> r1, const in Vector<T, N> r2, const in Vector<T, N> r3)
+{
+	Vector<T, N> rows[] = {r0, r1, r2, r3};
+	return MakeFromRows(rows);
+}
+
+
+
+template <typename T, int R, int C>
+Matrix<T, R, C> MakeFromCols(const in Vector<T, R>[C] cols)
+{
+	Matrix<T, R, C> res;
+	for(uint i = 0; i < C; ++i)
+	{
+		SetColumn(res, i, cols[i]);
+	}
+	return res;
+}
+
+template <typename T, int N>
+Matrix<T, N, 2> MakeFromCols(const in Vector<T, N> c0, const in Vector<T, N> c1)
+{
+	Vector<T, N> cols[] = {c0, c1};
+	return MakeFromCols(cols);
+}
+
+template <typename T, int N>
+Matrix<T, N, 3> MakeFromCols(const in Vector<T, N> c0, const in Vector<T, N> c1, const in Vector<T, N> c2)
+{
+	Vector<T, N> cols[] = {c0, c1, c2};
+	return MakeFromCols(cols);
+}
+
+template <typename T, int N>
+Matrix<T, N, 4> MakeFromCols(const in Vector<T, N> c0, const in Vector<T, N> c1, const in Vector<T, N> c2, const in Vector<T, N> c3)
+{
+	Vector<T, N> cols[] = {c0, c1, c2, c3};
+	return MakeFromCols(cols);
+}
+
+template <int R, int C = R, typename T : __BuiltinArithmeticType, int SrcR, int SrcC>
+Matrix<T, R, C> ResizeMatrix(const in Matrix<T, SrcR, SrcC> m, T diag = T(1))
+{
+	Matrix<T, R, C> res = ExtractBlock<R, C>(m, uint2(0, 0));
+	const uint Src_square_N = min(SrcR, SrcC);
+	const uint Dst_square_N = min(R, C);
+	const uint N = Dst_square_N - Src_square_N;
+	for(uint i = 0; i < N; ++i)
+	{
+		SetCoeficient(res, i, i, diag);
+	}
+	return res;
+}
+
+
+template <int N>
 typealias vec = vector<float, N>;
+template <int N>
+typealias Vectorf = vector<float, N>;
 typealias vec2 = float2;
 typealias vec3 = float3;
 typealias vec4 = float4;
 
-template <uint N>
+template <int N>
 typealias ivec = vector<int, N>;
 typealias ivec2 = int2;
 typealias ivec3 = int3;
 typealias ivec4 = int4;
 
-template <uint N>
+template <int N>
 typealias uvec = vector<uint, N>;
 typealias uvec2 = uint2;
 typealias uvec3 = uint3;
 typealias uvec4 = uint4;
 
-template <uint N>
+template <int N>
 typealias bvec = vector<bool, N>;
 typealias bvec2 = bool2;
 typealias bvec3 = bool3;
 typealias bvec4 = bool4;
 
-template <uint N>
+template <int N>
 typealias dvec = vector<bool, N>;
 typealias dvec2 = double2;
 typealias dvec3 = double3;
 typealias dvec4 = double4;
 
-template <uint N>
+template <int N>
 typealias hvec = vector<half, N>;
 typealias hvec2 = half2;
 typealias hvec3 = half3;
@@ -240,7 +392,7 @@ typealias dmat4x4 = dmat4;
 // GLSL's matCxR follows the oposite convension,
 // and is stored in column major by default
 // And a GLSL's mat[i] returns the i-th column
-template <uint Colums, uint Rows>
+template <int Colums, int Rows>
 typealias mat = matrix<float, Colums, Rows>;
 
 typealias mat2x3 = matrix<float, 3, 2>;
@@ -264,7 +416,7 @@ typealias dmat4x3 = matrix<double, 4, 4>;
 #endif
 
 
-typealias fp16vecIFP<let N : uint> = vector<fp16IFP, N>;
+typealias fp16vecIFP<int N> = vector<fp16IFP, N>;
 typealias fp16vec2IFP = fp16vecIFP<2>;
 typealias fp16vec3IFP = fp16vecIFP<3>;
 typealias fp16vec4IFP = fp16vecIFP<4>;
@@ -339,7 +491,7 @@ Target ConvertBuiltInTo(From i)
 	return res;
 }
 
-template <typename Target : __BuiltinType, typename From : __BuiltinType, uint N>
+template <typename Target : __BuiltinType, typename From : __BuiltinType, int N>
 vector<Target, N> ConvertBuiltInTo(vector<From, N> src)
 {
 	vector<Target, N> res;
@@ -350,9 +502,9 @@ vector<Target, N> ConvertBuiltInTo(vector<From, N> src)
 	return res;
 }
 
-template <typename T, uint N>
+template <typename T, int N>
 T sum(vector<T, N> v)
-	where T : IArithmetic
+	where T : __BuiltinArithmeticType
 {
 	T res = {};
 	for(uint i = 0; i < N; ++i)
@@ -364,33 +516,36 @@ T sum(vector<T, N> v)
 
 template <typename T>
 T sqr(T x)
-	where T : IArithmetic
+	where T : __BuiltinArithmeticType
 {
 	return x * x;
 }
 
 
-template <typename T, uint N>
-T length2(vector<T, N> v)
-	where T : __BuiltinFloatingPointType
+template <typename T : __BuiltinFloatingPointType, int N>
+T Length2(vector<T, N> v)
 {
 	return dot(v, v);
 }
 
-template <typename T, uint N>
-T length2(vector<T, N> v)
-	where T : __BuiltinIntegerType
+template <typename T : __BuiltinIntegerType, int N>
+T Length2(vector<T, N> v)
 {
 	return dot(v, v);
 }
 
-template <typename T, uint N>
-float length(vector<T, N> v)
-	where T : __BuiltinIntegerType
+template <typename T : __BuiltinIntegerType, int N>
+float Length(vector<T, N> v)
 {
-	const T l2 = length2(v);
+	const T l2 = Length2(v);
 	const float f = ConvertBuiltInTo<float>(l2);
 	return sqrt(f);	
+}
+
+template <typename T : __BuiltinFloatingPointType, int N>
+T Length(const in Vector<T, N> v)
+{
+	return length(v);
 }
 
 template <typename T : __BuiltinIntegerType>
@@ -399,11 +554,16 @@ T BitMask(T n)
 	return (T(1) << n) - T(1);
 }
 
-
-template <typename Float : __BuiltinFloatingPointType, uint N>
-vector<Float, N> safeNormalize(vector<Float, N> v)
+template <typename T : __BuiltinFloatingPointType, int N>
+Vector<T, N> Normalize(const in Vector<T, N> v)
 {
-	return length2(v) == Float(0) ? v : normalize(v);
+	return normalize(v);
+}
+
+template <typename Float : __BuiltinFloatingPointType, int N>
+vector<Float, N> SafeNormalize(vector<Float, N> v)
+{
+	return Length2(v) == Float(0) ? v : Normalize(v);
 }
 
 f16 f16Offset(f16 f, int16_t o)
@@ -437,13 +597,13 @@ Float Luminance(vector<Float, 3> rgb)
 	return dot(rgb, p);
 }
 
-template <typename Scalar : IArithmetic, uint N>
+template <typename Scalar : __BuiltinArithmeticType, int N>
 Scalar Average(vector<Scalar, N> v)
 {
 	return sum(v) / Scalar(N);
 }
 
-template <typename Scalar : IArithmetic>
+template <typename Scalar : __BuiltinArithmeticType>
 Scalar Grey(vector<Scalar, 3> rgb)
 {
 	return Average(rgb);
@@ -455,7 +615,7 @@ bool IsWrong(Float f)
 	return isnan(f) || isinf(f);
 }
 
-template <typename Float : __BuiltinFloatingPointType, uint N>
+template <typename Float : __BuiltinFloatingPointType, int N>
 bvec<N> IsWrong(vector<Float, N> v)
 {
 	return isnan(v) || isinf(v);
@@ -467,7 +627,7 @@ Float FitWrongToZero(Float f)
 	return IsWrong(f) ? Float(0) : f;
 }
 
-template <typename Float : __BuiltinFloatingPointType, uint N>
+template <typename Float : __BuiltinFloatingPointType, int N>
 vector<Float, N> FitWrongToZero(vector<Float, N> v)
 {
 	for(uint i = 0; i < N; ++i)
@@ -477,7 +637,7 @@ vector<Float, N> FitWrongToZero(vector<Float, N> v)
 	return v;
 }
 
-template <typename Float : __BuiltinFloatingPointType, uint Rows, uint Cols>
+template <typename Float : __BuiltinFloatingPointType, int Rows, int Cols>
 matrix<Float, Rows, Cols> FitWrongToZero(matrix<Float, Rows, Cols> m)
 {
 	for(uint i = 0; i < Rows; ++i)
@@ -487,7 +647,7 @@ matrix<Float, Rows, Cols> FitWrongToZero(matrix<Float, Rows, Cols> m)
 	return m;
 }
 
-template <typename T : __BuiltinFloatingPointType, uint N>
+template <typename T : __BuiltinFloatingPointType, int N>
 bool NonZero(Vector<T, N> v)
 {
 	T zero_t = {};
@@ -495,7 +655,7 @@ bool NonZero(Vector<T, N> v)
 	return any(v != z);
 }
 
-template <typename T : __BuiltinIntegerType, uint N>
+template <typename T : __BuiltinIntegerType, int N>
 bool NonZero(Vector<T, N> v)
 {
 	T zero_t = {};
@@ -503,31 +663,31 @@ bool NonZero(Vector<T, N> v)
 	return any(v != z);
 }
 
-template <typename T : __BuiltinFloatingPointType, uint N>
+template <typename T : __BuiltinFloatingPointType, int N>
 T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
 {
 	return dot(l, r);
 }
 
-template <typename T : __BuiltinIntegerType, uint N>
+template <typename T : __BuiltinIntegerType, int N>
 T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
 {
 	return dot(l, r);
 }
 
-template <typename T : __BuiltinFloatingPointType, uint N>
+template <typename T : __BuiltinFloatingPointType, int N>
 T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
 {
 	return dot(l, r);
 }
 
-template <typename T : __BuiltinIntegerType, uint N>
+template <typename T : __BuiltinIntegerType, int N>
 T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
 {
 	return dot(l, r);
 }
 
-template <typename T : __BuiltinFloatingPointType, uint R, uint C>
+template <typename T : __BuiltinFloatingPointType, int R, int C>
 Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
 {
 	Matrix<T, R, C> res;
@@ -538,7 +698,7 @@ Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
 	return res;
 }
 
-template <typename T : __BuiltinIntegerType, uint R, uint C>
+template <typename T : __BuiltinIntegerType, int R, int C>
 Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
 {
 	Matrix<T, R, C> res;
@@ -561,19 +721,19 @@ Vector3<T> Cross(const in Vector3<T> l, const in Vector3<T> r)
 	return cross(l, r);
 }
 
-template <typename T : __BuiltinFloatingPointType, uint R, uint C>
+template <typename T : __BuiltinFloatingPointType, int R, int C>
 Matrix<T, C, R> Transpose(const in Matrix<T, R, C> m)
 {
 	return transpose(m);
 }
 
-template <typename T : __BuiltinFloatingPointType, uint N>
+template <typename T : __BuiltinFloatingPointType, int N>
 T Determinant(const in Matrix<T, N, N> m)
 {
 	return determinant(m);
 }
 
-template <typename T : __BuiltinFloatingPointType, uint N>
+template <typename T : __BuiltinFloatingPointType, int N>
 T Trace(const in Matrix<T, N, N> m)
 {
 	T res = T(0);
@@ -584,7 +744,7 @@ T Trace(const in Matrix<T, N, N> m)
 	return res;
 }
 
-template<typename T : __BuiltinFloatingPointType, uint N>
+template<typename T : __BuiltinFloatingPointType, int N>
 Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m);
 
 template<typename T : __BuiltinFloatingPointType>
@@ -651,3 +811,10 @@ Matrix4<T> Inverse(const in Matrix4<T> m)
 
 #include "constants"
 
+
+
+template <typename Scalar : __BuiltinFloatingPointType>
+Scalar Radians(Scalar deg)
+{
+	return deg * (Scalar(PI) / Scalar(180));
+}

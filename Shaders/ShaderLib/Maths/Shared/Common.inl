@@ -10,7 +10,7 @@ constexpr Scalar TanHalfFOVFast(CONST_REF(Scalar) fov)
 	const Scalar x = fov;
 	const Scalar x3 = x * sqr(x);
 	const Scalar x5 = x3 * sqr(x);
-	const Scalar res = (x + rcp<Scalar>(12) * x3 + rcp<Scalar>(120) * x5) * rcp<Scalar>(2);
+	const Scalar res = (x + rcp<Scalar>(Scalar(12)) * x3 + rcp<Scalar>(Scalar(120)) * x5) * rcp<Scalar>(Scalar(2));
 	return res;
 }
 
@@ -18,15 +18,15 @@ template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Scalar TanHalfFOVCorrect(CONST_REF(Scalar) fov)
 {
 	CPP_ONLY(using namespace std);
-	const auto res1 = tan(fov * rcp<Scalar>(2));
+	const Scalar res1 = tan(fov * rcp<Scalar>(Scalar(2)));
 	return res1;
 }
 
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Scalar TanHalfFOV(CONST_REF(Scalar) fov)
 {
-	const auto c = TanHalfFOVCorrect(fov);
-	const auto f = TanHalfFOVFast(fov);
+	const Scalar c = TanHalfFOVCorrect(fov);
+	const Scalar f = TanHalfFOVFast(fov);
 	return c;
 }
 
@@ -50,16 +50,16 @@ constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector2<Scalar>) theta_
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector3<Scalar>) theta_phi_rho)
 {
-	return SphericalToCartesian(Vector2<Scalar>(theta_phi_rho)) * theta_phi_rho[2];
+	return SphericalToCartesian(Vector2<Scalar>(theta_phi_rho[0], theta_phi_rho[1])) * theta_phi_rho[2];
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> ClipSpaceToUV(CONST_REF(Vector<Scalar, N>) cp)
 {
 	return cp / Scalar(2) + MakeUniformVector<N>(Scalar(2));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> UVToClipSpace(CONST_REF(Vector<Scalar, N>) uv)
 {
 	return uv * Scalar(2) - MakeUniformVector<N>(Scalar(1));

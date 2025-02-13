@@ -32,7 +32,7 @@ namespace vkl
 		return degrees * std::numbers::pi_v<T> / T(180);
 	}
 
-	template <class Scalar, uint Dimensions>
+	template <class Scalar, int Dimensions>
 	using AffineXForm = Matrix<Scalar, Dimensions, Dimensions + 1>;
 
 	template <class Scalar>
@@ -77,7 +77,7 @@ namespace vkl
 		return res;
 	}
 
-	template <std::convertible_to<float> Scalar, uint R, uint C, int Options>
+	template <std::convertible_to<float> Scalar, int R, int C, int Options>
 		requires (R == 3 || R == 4) && (C == 3 || C == 4)
 	static constexpr VkTransformMatrixKHR ConvertXFormToVk(Matrix<Scalar, R, C, Options> const& mat)
 	{
@@ -97,6 +97,13 @@ namespace vkl
 			}
 		}
 		return res;
+	}
+
+	template <concepts::CompileTimeSizedMatrixCompatible MatL, concepts::SameCompatibleMatrix<MatL> MatR>
+		requires ((MatL::RowsAtCompileTime + 1) == MatL::ColsAtCompileTime)
+	static constexpr auto mul(MatL const& l, MatR const& r)
+	{
+		return l * r;
 	}
 
 #include <ShaderLib/Maths/Shared/Common.inl>

@@ -4,7 +4,7 @@
 
 namespace vkl
 {
-	void test()
+	void test_Transforms()
 	{
 		using Scalar = float;
 		Vector3<Scalar> Z(0, 1, 0);

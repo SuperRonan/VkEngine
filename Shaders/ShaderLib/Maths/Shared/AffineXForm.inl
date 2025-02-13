@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ShaderLib/interop_slang_cpp>
+
 // Some vocabulary on linear transforms:
 // This headers deals with Affine linear transforms 
 // It is intended for 2D and 3D transforms, N will be the number of dimensions
@@ -11,26 +13,26 @@
 // A UniformSimilarity transfrom: Q = sR, s a scalar
 // These two special cases can be inverted more easily 
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> MakeAffineTransform(CONST_REF(Matrix<Scalar, N, N>) Q, CONST_REF(Vector<Scalar, N>) t)
 {
-	Matrix<Scalar, N, N + 1> res = Matrix<Scalar, N, N + 1>(Q);
+	AffineXForm<Scalar, N> res = ResizeMatrix<N, N+1>(Q);
 	SetColumn(res, N, t);
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> TranslationMatrix(CONST_REF(Vector<Scalar, N>) t)
 {
-	AffineXForm<Scalar, N> res = AffineXForm<Scalar, N>(DiagonalMatrix<N>(Scalar(1)));
+	AffineXForm<Scalar, N> res = ResizeMatrix<N, N+1>(DiagonalMatrix<N, N>(Scalar(1)));
 	SetColumn(res, N, t);
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> ScalingMatrix(CONST_REF(Vector<Scalar, N>) s)
 {
-	AffineXForm<Scalar, N> res = AffineXForm<Scalar, N>(DiagonalMatrix<N>(Scalar(0)));
+	AffineXForm<Scalar, N> res = ResizeMatrix<N, N+1>(DiagonalMatrix<N, N>(Scalar(0)));
 	for (uint i = 0; i < N; ++i)
 	{
 		SetCoeficient(res, i, i, s[i]);
@@ -38,29 +40,29 @@ constexpr AffineXForm<Scalar, N> ScalingMatrix(CONST_REF(Vector<Scalar, N>) s)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> ExtractTranslation(CONST_REF(Matrix<Scalar, N, N + 1>) m)
 {
 	return GetColumn(m, N);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
-constexpr Matrix<Scalar, N, N> ExtractQBlock(CONST_REF(AffineXForm<Scalar, N>) m)
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
+constexpr CPP_ONLY(auto) SLANG_ONLY(Matrix<Scalar COMMA N COMMA N>) ExtractQBlock(CONST_REF(AffineXForm<Scalar, N>) m)
 {
-	return Matrix<Scalar, N, N>(m);
+	return ExtractBlock<N, N>(m);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
-constexpr AffineXForm<Scalar, N> mul(CONST_REF(AffineXForm<Scalar, N>) l, CONST_REF(AffineXForm<Scalar, N>) r)
-{
-	const AffineXForm<Scalar, N> res1 = l * Matrix<Scalar, N, N>(r);
-	const Matrix<Scalar, N, N> Q = ExtractQBlock(l);
-	const AffineXForm<Scalar, N> res2 = MakeAffineTransform(Q * ExtractQBlock(r), Q * ExtractTranslation(r) + ExtractTranslation(l));
-	return res1;
-}
+// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
+// constexpr AffineXForm<Scalar, N> mul(CONST_REF(AffineXForm<Scalar, N>) l, CONST_REF(AffineXForm<Scalar, N>) r)
+// {
+// 	const AffineXForm<Scalar, N> res1 = l * ResizeMatrix<N, N>(r);
+// 	const Matrix<Scalar, N, N> Q = ExtractQBlock(l);
+// 	const AffineXForm<Scalar, N> res2 = MakeAffineTransform(Q * ExtractQBlock(r), Q * ExtractTranslation(r) + ExtractTranslation(l));
+// 	return res1;
+// }
 
 // To check: It probablya assumes Q = S R
-// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 // constexpr Vector<Scalar, N> ExtractScale(CONST_REF(Matrix<Scalar, N, N>) Q)
 // {
 // 	Matrix<Scalar, N, N> res;
@@ -71,13 +73,13 @@ constexpr AffineXForm<Scalar, N> mul(CONST_REF(AffineXForm<Scalar, N>) l, CONST_
 // 	return res;
 // }
 
-// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 // constexpr vec3R ExtractScale(CONST_REF(mat4x3R) m)
 // {
 // 	return ExtractScale(ExtractRSBlock(m));
 // }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>) sR)
 {
 	// If Q is indeed a sR, the two results should be the same
@@ -87,7 +89,7 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 	return res;
 }
 
-// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 // constexpr Matrix<Scalar, N, N> NormalizeRotationScale(CONST_REF(Matrix<Scalar, N, N>) Q)
 // {
 // 	Matrix<Scalar, N, N> res;
@@ -98,7 +100,7 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 // 	return res;
 // }
 
-// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+// template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 // constexpr mat3R NormalizeRotationScale(CONST_REF(mat3R) RS, CONST_REF(vec3R) S)
 // {
 // 	mat3R res;
@@ -111,7 +113,7 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 
 //#if TARGET_C_PLUS_PLUS || (AFFINE_XFORM_INL_Dims == 3)
 //
-//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 //constexpr Vector<Scalar, N> ExtractEulerAnglesFromRotationMatrix(CONST_REF(Matrix<Scalar, N, N>) R)
 //{
 //#if TARGET_C_PLUS_PLUS
@@ -132,7 +134,7 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 //#endif
 //}
 //
-//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 //constexpr Vector<Scalar, N> ExtractEulerAnglesAssumeUniformScale(CONST_REF(Matrix<Scalar, N, N>) sR)
 //{
 //	return ExtractEulerAnglesFromRotationMatrix(sR / ExtractUniformScaleAssumeQis_sR(sR));
@@ -142,7 +144,7 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 //
 //#if TARGET_C_PLUS_PLUS || (AFFINE_XFORM_INL_Dims == 2)
 //
-//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 //constexpr Scalar ExtractRotationAngle(CONST_REF(Matrix<Scalar, N, N>) R)
 //{
 //#if TARGET_C_PLUS_PLUS
@@ -161,7 +163,7 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 //#endif
 //}
 //
-//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+//template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 //constexpr Scalar ExtractRotationAngleAssumeUniformScale(CONST_REF(Matrix<Scalar, N, N>) sR)
 //{
 //	return ExtractRotationAngle(sR / ExtractUniformScaleAssumeQis_sR(sR));
@@ -173,13 +175,13 @@ constexpr Scalar ExtractUniformScaleAssumeQis_sR(CONST_REF(Matrix<Scalar, N, N>)
 
 
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Matrix<Scalar, N, N> InverseRotationMatrix(CONST_REF(Matrix<Scalar, N, N>) R)
 {
 	return Transpose(R);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Matrix<Scalar, N, N> Inverse_sR(CONST_REF(Matrix<Scalar, N, N>) sR)
 {
 	const Scalar s = ExtractUniformScaleAssumeQis_sR(sR);
@@ -189,14 +191,14 @@ constexpr Matrix<Scalar, N, N> Inverse_sR(CONST_REF(Matrix<Scalar, N, N>) sR)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Matrix<Scalar, N, N> InverseGenericQBlock(CONST_REF(Matrix<Scalar, N, N>) Q)
 {
 	// Probably the fastest
 	return Inverse(Q);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> InverseRigidTransformFast(CONST_REF(AffineXForm<Scalar, N>) m)
 {
 	const Matrix<Scalar, N, N> R = ExtractQBlock(m);
@@ -207,13 +209,13 @@ constexpr AffineXForm<Scalar, N> InverseRigidTransformFast(CONST_REF(AffineXForm
 	return MakeAffineTransform(inv_R, inv_T);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> InverseRigidTransform(CONST_REF(AffineXForm<Scalar, N>) m)
 {
 	return InverseRigidTransformFast(m);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> InverseUniformSimilarTransform(CONST_REF(AffineXForm<Scalar, N>) m)
 {
 	const Matrix<Scalar, N, N> sR = ExtractQBlock(m);
@@ -224,7 +226,7 @@ constexpr AffineXForm<Scalar, N> InverseUniformSimilarTransform(CONST_REF(Affine
 	return MakeAffineTransform(inv_sR, inv_T);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), uint N>
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> InverseAffineTransform(CONST_REF(AffineXForm<Scalar, N>) m)
 {
 	const Matrix<Scalar, N, N> Q = ExtractQBlock(m);
@@ -234,7 +236,3 @@ constexpr AffineXForm<Scalar, N> InverseAffineTransform(CONST_REF(AffineXForm<Sc
 	const Vector<Scalar, N> inv_T = -(inv_Q * T);
 	return MakeAffineTransform(inv_Q, inv_T);
 }
-
-
-
-#undef TARGET_C_PLUS_PLUS

@@ -19,7 +19,7 @@ constexpr Matrix3<Scalar> Rotation3_1(CONST_REF(Vector3<Scalar>) axis, Scalar an
 {
 	const Matrix3<Scalar> B = BasisFromDir(axis);
 	const Matrix2<Scalar> R2 = Rotation2(angle);
-	const Matrix3<Scalar> res = B * Matrix3<Scalar>(R2) * Transpose(B);
+	const Matrix3<Scalar> res = B * ResizeMatrix<3, 3>(R2) * Transpose(B);
 	return res;
 }
 
@@ -29,7 +29,7 @@ constexpr Matrix3<Scalar> Rotation3_2(CONST_REF(Vector3<Scalar>) axis, Scalar an
 	CPP_ONLY(using namespace std);
 	const Scalar c = cos(angle);
 	const Scalar s = sin(angle);
-	const Matrix3<Scalar> res = DiagonalMatrix<3>(c) + s * CrossProductMatrix(axis) + (Scalar(1) - c) * OuterProduct(axis, axis);
+	const Matrix3<Scalar> res = DiagonalMatrix<3, 3>(c) + s * CrossProductMatrix(axis) + (Scalar(1) - c) * OuterProduct(axis, axis);
 	return res;
 }
 
@@ -40,10 +40,10 @@ constexpr Matrix3<Scalar> Rotation3(CONST_REF(Vector3<Scalar>) axis, Scalar angl
 }
 
 template <uint Axis, CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
-	REQUIRE_CLAUSE(Axis >= 0 && Axis < 3)
+	CPP_ONLY(REQUIRE_CLAUSE(Axis >= 0 && Axis < 3))
 constexpr Matrix3<Scalar> Rotation3(Scalar angle)
 {
-	Vector3<Scalar> axis(0, 0, 0);
+	Vector3<Scalar> axis = MakeUniformVector<3>(Scalar(0));
 	axis[Axis] = Scalar(1);
 	return Rotation3(axis, angle);
 }

@@ -4,7 +4,7 @@
 
 namespace vkl
 {
-	void test()
+	void test_Types()
 	{
 		Vector4f u, v;
 

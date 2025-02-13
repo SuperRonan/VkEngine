@@ -60,15 +60,15 @@ namespace vkl
 		concept CONCEPT##Compatible = Plain##CONCEPT<C> || EvalTo##CONCEPT <C>; 
 
 #define DECLARE_NESTED_CONCEPT_RC(CONCEPT) \
-		template <class Candidate, uint R, uint C> \
+		template <class Candidate, int R, int C> \
 		concept EvalTo##CONCEPT = ((Candidate::IsPlainObjectBase == 0) && Plain##CONCEPT<typename Candidate::EvalReturnType, R, C>); \
-		template <class Candidate, uint R, uint C> \
+		template <class Candidate, int R, int C> \
 		concept CONCEPT##Compatible = Plain##CONCEPT<Candidate, R, C> || EvalTo##CONCEPT <Candidate, R, C>; 
 
 #define DECLARE_NESTED_CONCEPT_N(CONCEPT) \
-		template <class Candidate, uint N> \
+		template <class Candidate, int N> \
 		concept EvalTo##CONCEPT = ((Candidate::IsPlainObjectBase == 0) && Plain##CONCEPT<typename Candidate::EvalReturnType, N>); \
-		template <class Candidate, uint N> \
+		template <class Candidate, int N> \
 		concept CONCEPT##Compatible = Plain##CONCEPT<Candidate, N> || EvalTo##CONCEPT <Candidate, N>; 
 
 
@@ -97,26 +97,26 @@ namespace vkl
 		//template <class Candidate, class Scalar>
 		//concept SameScalar = std::same_as<typename Candidate::Scalar, typename std::remove_cvref_t<Scalar>>;
 		
-		template <class Candidate, uint R, uint C>
+		template <class Candidate, int R, int C>
 		concept PlainMatrixAny = (Candidate::IsPlainObjectBase != 0) && (Candidate::RowsAtCompileTime == R) && (Candidate::ColsAtCompileTime == C);
 
 		DECLARE_NESTED_CONCEPT_RC(MatrixAny)
 
-		template <class Candidate, uint N>
+		template <class Candidate, int N>
 		concept PlainColVectorAny = PlainMatrixAny<Candidate, N, 1>;
-		template <class Candidate, uint N> 
+		template <class Candidate, int N> 
 		concept PlainRowVectorAny = PlainMatrixAny<Candidate, 1, N>;
 
 		DECLARE_NESTED_CONCEPT_N(ColVectorAny)
 		DECLARE_NESTED_CONCEPT_N(RowVectorAny)
 
-		template <class Candidate, class Scalar, uint R, uint C>
+		template <class Candidate, class Scalar, int R, int C>
 		concept MatrixCompatible = MatrixAnyCompatible<Candidate, R, C> && CompatibleScalar<Candidate, Scalar>;
 
-		template <class Candidate, class Scalar, uint N>
+		template <class Candidate, class Scalar, int N>
 		concept ColVectorCompatible = ColVectorAnyCompatible<Candidate, N> && CompatibleScalar<Candidate, Scalar>;
 
-		template <class Candidate, class Scalar, uint N>
+		template <class Candidate, class Scalar, int N>
 		concept RowVectorCompatible = RowVectorAnyCompatible<Candidate, N>&& CompatibleScalar<Candidate, Scalar>;
 
 		template <class MatR, class MatL>
@@ -145,7 +145,7 @@ namespace vkl
 		return res;
 	}
 
-	static constexpr int MatrixOptions(uint R, uint C, bool row_major, bool auto_align)
+	static constexpr int MatrixOptions(int R, int C, bool row_major, bool auto_align)
 	{
 		if (R == 1)
 		{
@@ -158,7 +158,7 @@ namespace vkl
 		return MatrixOptions(row_major, auto_align);
 	}
 
-	static constexpr int GetBestOptions(uint R, uint C, int src_options)
+	static constexpr int GetBestOptions(int R, int C, int src_options)
 	{
 		const bool row_major = (src_options & eg::RowMajor) == eg::RowMajor;
 		const bool auto_align = (src_options & eg::DontAlign) != eg::DontAlign;
@@ -178,18 +178,18 @@ namespace vkl
 	// Follow the math convention
 	// Rows x Cols
 	// Direct template alias, can be used for template param deduction
-	template <class T, uint R, uint C = R, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <class T, int R, int C = R, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 	using Matrix = eg::Matrix<T, R, C, Options>;
 
-	template <class T, uint N, int Options = MatrixOptions(false, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <class T, int N, int Options = MatrixOptions(false, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 		requires ((Options & eg::RowMajor) == eg::ColMajor)
 	using ColVector = Matrix<T, N, 1, Options>;
 
-	template <class T, uint N, int Options = MatrixOptions(true, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <class T, int N, int Options = MatrixOptions(true, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 		requires ((Options & eg::RowMajor) == eg::RowMajor)
 	using RowVector = Matrix<T, 1, N, Options>;
 
-	template <class T, uint N, int Options = MatrixOptions(false, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <class T, int N, int Options = MatrixOptions(false, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 	using Vector = ColVector<T, N, Options>;
 
 	template <class Derived>
@@ -252,13 +252,13 @@ namespace vkl
 	template <class T>
 	using Matrix3x4 = Matrix<T, 3, 4>;
 
-	template <uint R, uint C>
+	template <int R, int C>
 	using Matrixf = Matrix<float, R, C>;
-	template <uint R, uint C>
+	template <int R, int C>
 	using Matrixd = Matrix<double, R, C>;
-	template <uint R, uint C>
+	template <int R, int C>
 	using Matrixi = Matrix<int, R, C>;
-	template <uint R, uint C>
+	template <int R, int C>
 	using Matrixu = Matrix<uint, R, C>;
 
 	using Matrix2f = Matrix2<float>;
@@ -271,10 +271,10 @@ namespace vkl
 	using Matrix3d = Matrix3<double>;
 	using Matrix4d = Matrix4<double>;
 
-	template <class T, uint R, uint C = R>
+	template <class T, int R, int C = R>
 	using MatrixRowMajor = Matrix<T, R, C, MatrixOptions(R, C, true, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>;
 
-	template <class T, uint R, uint C = R>
+	template <class T, int R, int C = R>
 	using MatrixColMajor = Matrix<T, R, C, MatrixOptions(R, C, false, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>;
 
 	template <class T>
@@ -282,25 +282,25 @@ namespace vkl
 
 	using Matrix3x4fRowMajor = Matrix3x4RowMajor<float>;
 
-	template <uint R, uint C = R, class Scalar = float, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <int R, int C = R, class Scalar = float, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 	static constexpr Matrix<Scalar, R, C, Options> MakeUniformMatrix(Scalar const& value)
 	{
 		return Matrix<Scalar, R, C, Options>::Constant(value);
 	}
 
-	template <uint N, class Scalar = float, bool auto_align = VKL_DEFAULT_MATRIX_AUTO_ALIGN>
+	template <int N, class Scalar = float, bool auto_align = VKL_DEFAULT_MATRIX_AUTO_ALIGN>
 	static constexpr auto MakeUniformColVector(Scalar const& value)
 	{
 		return MakeUniformMatrix<N, 1, Scalar, MatrixOptions(false, auto_align)>(value);
 	}
 
-	template <uint N, class Scalar = float, bool auto_align = VKL_DEFAULT_MATRIX_AUTO_ALIGN>
+	template <int N, class Scalar = float, bool auto_align = VKL_DEFAULT_MATRIX_AUTO_ALIGN>
 	static constexpr auto MakeUniformRowVector(Scalar const& value)
 	{
 		return MakeUniformMatrix<1, N, Scalar, MatrixOptions(true, auto_align)>(value);
 	}
 
-	template <uint N, class Scalar = float, bool auto_align = VKL_DEFAULT_MATRIX_AUTO_ALIGN>
+	template <int N, class Scalar = float, bool auto_align = VKL_DEFAULT_MATRIX_AUTO_ALIGN>
 	static constexpr auto MakeUniformVector(Scalar const& value)
 	{
 		return MakeUniformColVector<N, Scalar, auto_align>(value);
@@ -318,19 +318,19 @@ namespace vkl
 		return m.col(i);
 	}
 
-	template <class T, uint R, uint C, int Options, concepts::RowVectorCompatible<T, C> RowVector>
+	template <class T, int R, int C, int Options, concepts::RowVectorCompatible<T, C> RowVector>
 	static constexpr void SetRow(Matrix<T, R, C, Options>& m, uint i, RowVector const& v)
 	{
 		m.row(i) = v;
 	}
 
-	template <class T, uint R, uint C, int Options, concepts::ColVectorCompatible<T, R> ColVector>
+	template <class T, int R, int C, int Options, concepts::ColVectorCompatible<T, R> ColVector>
 	static constexpr void SetColumn(Matrix<T, R, C, Options>& m, uint i, ColVector const& v)
 	{
 		m.col(i) = v;
 	}
 
-	template<class T, uint R, uint C, int Options>
+	template<class T, int R, int C, int Options>
 	static constexpr auto MakeFromRows(std::array<RowVector<T, C, Options>, R> const& rows)
 	{
 		Matrix<T, R, C, MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, ExtractAutoAlignFromMatrixOptions(Options))> res;
@@ -341,7 +341,7 @@ namespace vkl
 		return res;
 	}
 
-	template<class T, uint R, uint C, int Options>
+	template<class T, int R, int C, int Options>
 	static constexpr auto MakeFromCols(std::array<ColVector<T, R, Options>, C> const& columns)
 	{
 		Matrix<T, R, C, MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, ExtractAutoAlignFromMatrixOptions(Options))> res;
@@ -358,25 +358,25 @@ namespace vkl
 		struct VectorPackTraits
 		{
 			//template <concepts::CompileTimeSizedVector Vec>
-			//static constexpr uint GetColsAtCompileTime() noexcept
+			//static constexpr int GetColsAtCompileTime() noexcept
 			//{
 			//	return Vec::ColsAtCompileTime;
 			//}
 
 			//template <concepts::CompileTimeSizedVector Vec>
-			//static constexpr uint GetRowsAtCompileTime() noexcept
+			//static constexpr int GetRowsAtCompileTime() noexcept
 			//{
 			//	return Vec::RowsAtCompileTime;
 			//}
 
 			static constexpr const size_t Count = sizeof...(Args);
-			static constexpr const uint MaxCols = std::max(std::initializer_list<size_t>{Args::ColsAtCompileTime...});
-			static constexpr const uint MaxRows = std::max(std::initializer_list<size_t>{Args::RowsAtCompileTime...});
+			static constexpr const int MaxCols = std::max(std::initializer_list<size_t>{Args::ColsAtCompileTime...});
+			static constexpr const int MaxRows = std::max(std::initializer_list<size_t>{Args::RowsAtCompileTime...});
 			using AsTuple = std::tuple<Args...>;
 			using FirstVectorType_ = typename std::tuple_element<0, AsTuple>::type;
 			using FirstVectorType = typename std::remove_cvref<typename FirstVectorType_::EvalReturnType>::type;
 			using Scalar = typename FirstVectorType::Scalar;
-			static constexpr const uint Options = FirstVectorType::Options;
+			static constexpr const int Options = FirstVectorType::Options;
 		};
 	}
 
@@ -421,7 +421,7 @@ namespace vkl
 	// Make a diagonal matrix 
 	// Returns the Identity matrix by default
 	// The matrix is square by default, but is can be rectangular
-	template <class T, uint R, uint C = R, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <class T, int R, int C = R, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 	static constexpr Matrix<T, R, C, Options> MakeMatrix(T const& t = T(1))
 	{
 		Matrix<T, R, C, Options> res = Matrix<T, R, C, Options>::Zero();
@@ -432,7 +432,7 @@ namespace vkl
 		return res;
 	}
 
-	template <uint R, uint C = R, class Scalar = float, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
+	template <int R, int C = R, class Scalar = float, int Options = MatrixOptions(R, C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
 	static constexpr Matrix<Scalar, R, C, Options> DiagonalMatrix(Scalar const& d = Scalar(1))
 	{
 		return MakeMatrix<Scalar, R, C, Options>(d);
@@ -442,7 +442,7 @@ namespace vkl
 	template <concepts::CompileTimeSizedVectorCompatible Vec>
 	static constexpr auto MakeMatrixV(Vec const& diag)
 	{
-		constexpr const uint N = std::max(Vec::RowsAtCompileTime, Vec::ColsAtCompileTime);
+		constexpr const int N = std::max(Vec::RowsAtCompileTime, Vec::ColsAtCompileTime);
 		using Scalar = typename Vec::Scalar;
 		constexpr const int Options = GetTypeOptions<Vec>();
 		using Res_t = Matrix<Scalar, N, N, Options>;
@@ -479,15 +479,33 @@ namespace vkl
 	{
 		return m.diagonal();
 	}
+
+	template <int R, int C = R, concepts::CompileTimeSizedMatrixCompatible Mat>
+	static constexpr auto ExtractBlock(Mat const& m, uint row_offset = 0, uint col_offset = 0)
+	{
+		return m.block<R, C>(row_offset, col_offset);
+	}
+
+	template <concepts::PlainCompileTimeSizedMatrix DstMat, concepts::CompileTimeSizedMatrixCompatible SrcMat>
+	static constexpr void SetBlock(DstMat& dst, uint row_offset, uint col_offset, SrcMat const& src)
+	{
+		dst.block<SrcMat::RowsAtCompileTime, SrcMat::ColsAtCompileTime>(row_offset, col_offset) = src;
+	}
+
+	template <concepts::PlainCompileTimeSizedMatrix DstMat, concepts::CompileTimeSizedMatrixCompatible SrcMat>
+	static constexpr void SetBlock(DstMat& dst, SrcMat const& src)
+	{
+		SetBlock(dst, 0, 0, src);
+	}
 	
 
 	template <
 		class DST_T, 
-		uint DST_R, 
-		uint DST_C = DST_R, 
+		int DST_R, 
+		int DST_C = DST_R, 
 		class SRC_T = DST_T, 
-		uint SRC_R = DST_R, 
-		uint SRC_C = DST_C, 
+		int SRC_R = DST_R, 
+		int SRC_C = DST_C, 
 		int DST_Options = MatrixOptions(DST_R, DST_C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN), 
 		int SRC_Options = MatrixOptions(SRC_R, SRC_C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN), 
 		concepts::Converter<DST_T, SRC_T> Converter = DefaultStaticCastConverter<DST_T, SRC_T>
@@ -500,10 +518,11 @@ namespace vkl
 		return res;
 	}
 
-	template <uint DST_R, uint DST_C = DST_R, class T = float, uint SRC_R = DST_R, uint SRC_C = DST_C, int DST_Options = MatrixOptions(DST_R, DST_C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN), int SRC_Options = MatrixOptions(SRC_R, SRC_C, VKL_DEFAULT_MATRIX_ROW_MAJOR, VKL_DEFAULT_MATRIX_AUTO_ALIGN)>
-	static constexpr Matrix<T, DST_R, DST_C, DST_Options> ResizeMatrix(Matrix<T, SRC_R, SRC_C, SRC_Options> const& src, T const& diag = T(1))
+	template <int R, int C = R, concepts::CompileTimeSizedMatrixCompatible SrcMatrix>
+	static constexpr auto ResizeMatrix(SrcMatrix const& src)
 	{
-		return ConvertAndResizeMatrix<T, DST_R, DST_C, T, SRC_R, SRC_C, DST_Options, SRC_Options>(src, diag);
+		using Ret_t = Matrix<typename SrcMatrix::Scalar, R, C>;
+		return Ret_t(src);
 	}
 
 	template <concepts::CompileTimeSizedMatrixCompatible Mat>
@@ -512,7 +531,7 @@ namespace vkl
 		return m(row, col);
 	}
 
-	template <class T, uint R, uint C, int Options>
+	template <class T, int R, int C, int Options>
 	static constexpr void SetCoeficient(Matrix<T, R, C, Options>& m, uint row, uint col, T const& value)
 	{
 		m(row, col) = value;

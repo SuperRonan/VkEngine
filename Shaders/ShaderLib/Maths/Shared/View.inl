@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ShaderLib/interop_slang_cpp>
+
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> LookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down, CONST_REF(Vector3<Scalar>) right)
 {
@@ -65,7 +67,7 @@ constexpr AffineXForm3D<Scalar> InverseLookAt(CONST_REF(Vector3<Scalar>) positio
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix<Scalar, 4, 4> PerspectiveProjExplicit(CONST_REF(Vector4<Scalar>) coefs)
 {
-	Matrix4<Scalar> res = MakeUniformMatrix<4>(Scalar(0));;
+	Matrix4<Scalar> res = MakeUniformMatrix<4, 4>(Scalar(0));
 	SetCoeficient(res, 0, 0, coefs[0]);
 	SetCoeficient(res, 1, 1, coefs[1]);
 	SetCoeficient(res, 2, 2, coefs[2]);
@@ -130,7 +132,7 @@ constexpr Vector4<Scalar> InversePerspectiveProjCoefs(Vector4<Scalar> coefs)
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InversePerspectiveProjExplicit(Vector4<Scalar> coefs)
 {
-	Matrix4<Scalar> res = MakeUniformMatrix<4>(Scalar(0));
+	Matrix4<Scalar> res = MakeUniformMatrix<4, 4>(Scalar(0));
 	SetCoeficient(res, 0, 0, coefs[0]);
 	SetCoeficient(res, 1, 1, coefs[1]);
 	SetCoeficient(res, 2, 3, Scalar(1));
@@ -174,7 +176,7 @@ constexpr Vector3<Scalar> InverseInfinitePerspectiveProjCoefs(Vector3<Scalar> co
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InfinitePerspectiveProjExplicit(Vector3<Scalar> coefs)
 {
-	Matrix4<Scalar> res = MakeUniformMatrix<4>(Scalar(0));;
+	Matrix4<Scalar> res = MakeUniformMatrix<4, 4>(Scalar(0));;
 	SetCoeficient(res, 0, 0, coefs[0]);
 	SetCoeficient(res, 1, 1, coefs[1]);
 	SetCoeficient(res, 2, 2, Scalar(1));
@@ -186,7 +188,7 @@ constexpr Matrix4<Scalar> InfinitePerspectiveProjExplicit(Vector3<Scalar> coefs)
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InverseInfinitePerspectiveProjExplicit(Vector3<Scalar> coefs)
 {
-	Matrix4<Scalar> res = MakeUniformMatrix<4>(Scalar(0));;
+	Matrix4<Scalar> res = MakeUniformMatrix<4, 4>(Scalar(0));;
 	SetCoeficient(res, 0, 0, coefs[0]);
 	SetCoeficient(res, 1, 1, coefs[1]);
 	SetCoeficient(res, 2, 3, Scalar(1));
@@ -266,11 +268,11 @@ constexpr Matrix4<Scalar> OrthoProj(Vector3<Scalar> lbn, Vector3<Scalar> rtf)
 {
 	const Vector3<Scalar> d = rtf - lbn;
 	const Vector3<Scalar> s = rtf + lbn;
-	const Vector3<Scalar> factors = Vector3<Scalar>(2, 2, 1);
+	const Vector3<Scalar> factors = Vector3<Scalar>(Scalar(2), Scalar(2), Scalar(1));
 	const Vector3<Scalar> diag = factors / d;
 	const Matrix3<Scalar> Q = DiagonalMatrixV(diag);
 	const Vector3<Scalar> T = Vector3<Scalar>(-s[0] / d[0], -s[1] / d[1], -lbn[2] / d[2]);
-	const Matrix4<Scalar> res = Matrix4<Scalar>(MakeAffineTransform(Q, T));
+	const Matrix4<Scalar> res = ResizeMatrix<4, 4>(MakeAffineTransform(Q, T));
 	return res;
 }
 
@@ -279,11 +281,11 @@ constexpr Matrix4<Scalar> InverseOrthoProj(Vector3<Scalar> lbn, Vector3<Scalar> 
 {
 	const Vector3<Scalar> d = rtf - lbn;
 	const Vector3<Scalar> s = rtf + lbn;
-	const Vector3<Scalar> factors = Vector3<Scalar>(2, 2, 1);
+	const Vector3<Scalar> factors = Vector3<Scalar>(Scalar(2), Scalar(2), Scalar(1));
 	const Vector3<Scalar> diag = d / factors;
 	const Matrix3<Scalar> Q = DiagonalMatrixV(diag);
 	const Vector3<Scalar> T = Vector3<Scalar>(s[0], s[1], lbn[2]) / factors;
-	const Matrix4<Scalar> res = Matrix4<Scalar>(MakeAffineTransform(Q, T));
+	const Matrix4<Scalar> res = ResizeMatrix<4, 4>(MakeAffineTransform(Q, T));
 	return res;
 }
 
