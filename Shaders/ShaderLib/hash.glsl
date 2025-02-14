@@ -1,16 +1,10 @@
 #pragma once
 
 #include <ShaderLib:/common.glsl>
+#include "TemplateImpl/default_hash.inl"
 
 #define fast_hash_t uint32_t
 #define slow_hash_t uint64_t
-
-#define HASH_POLICY_FAST 0
-#define HASH_POLICY_SLOW 1
-
-#ifndef DEFAULT_HASH_POLICY
-#define DEFAULT_HASH_POLICY HASH_POLICY_FAST
-#endif
 
 #if DEFAULT_HASH_POLICY == HASH_POLICY_FAST
 #define hash_t fast_hash_t

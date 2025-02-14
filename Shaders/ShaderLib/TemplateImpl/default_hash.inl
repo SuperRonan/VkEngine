@@ -1,0 +1,8 @@
+#pragma once
+
+#define HASH_POLICY_FAST 0
+#define HASH_POLICY_SLOW 1
+
+#ifndef DEFAULT_HASH_POLICY
+#define DEFAULT_HASH_POLICY HASH_POLICY_FAST
+#endif
