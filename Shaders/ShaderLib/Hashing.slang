@@ -3,7 +3,6 @@
 #include <ShaderLib/common.slang>
 #include "TemplateImpl/default_hash.inl"
 
-
 typealias fast_hash_t = uint32_t;
 typealias slow_hash_t = uint64_t;
 
@@ -44,9 +43,9 @@ template <typename UInt : __BuiltinIntegerType>
 fast_hash_t FastHashIntegral(UInt x)
 {
 	fast_hash_t res;
-	if (UInt is __BuiltinInt64Type)
+	if (sizeof(UInt) == 8)
 	{
-		res = FastHash64(reinterpret<uint64_t>(x));
+		res = FastHash64(bit_cast<uint64_t>(x));
 	}
 	else
 	{
@@ -58,8 +57,8 @@ fast_hash_t FastHashIntegral(UInt x)
 
 slow_hash_t SlowHash64(uint64_t x)
 {
-	x = ((x >> 33) ^ x) * 0xff51afd7ed558ccd;
-	x = ((x >> 33) ^ x) * 0xc4ceb9fe1a85ec53;
+	x = ((x >> 33) ^ x) * u64(0xff51afd7ed558ccd);
+	x = ((x >> 33) ^ x) * u64(0xc4ceb9fe1a85ec53);
 	x = (x >> 33) ^ x;
 	return x;
 }
@@ -76,11 +75,11 @@ T_Hash_t HashIntegral(UInt x)
 	T_Hash_t res;
 	if(T_Hash_t is fast_hash_t)
 	{
-		res = T_Hash_t(FastHashIntegral(x));
+		res = bit_cast<T_Hash_t>(FastHashIntegral(x));
 	}
 	else if(T_Hash_t is slow_hash_t)
 	{
-		res = T_Hash_t(SlowHashIntegral(x));
+		res = bit_cast<T_Hash_t>(SlowHashIntegral(x));
 	}
 	return res;
 }
@@ -91,15 +90,15 @@ T_Hash_t HashFloat(Float x)
 	T_Hash_t res;
 	if(Float is f32)
 	{
-		res = HashIntegral<T_Hash_t>(reinterpret<u32>(x));
+		res = HashIntegral<T_Hash_t>(bit_cast<u32>(x));
 	}
 	else if(Float is f64)
 	{
-		res = HashIntegral<T_Hash_t>(reinterpret<u64>(x));
+		res = HashIntegral<T_Hash_t>(bit_cast<u64>(x));
 	}
 	else if(Float is f16)
 	{
-		res = HashIntegral<T_Hash_t>(reinterpret<u16>(x));
+		res = HashIntegral<T_Hash_t>(bit_cast<u16>(x));
 	}
 	return res;
 }
@@ -108,37 +107,55 @@ template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithm
 T_Hash_t Hash_(T t)
 {
 	T_Hash_t res;
-	if(T is __BuiltinIntegerType)
+	if(IS_BUILTIN_INTEGER(T))
 	{
-		res = HashIntegral<T_Hash_t>((t as __BuiltinIntegerType).value);
+		if(sizeof(T_Hash_t) >= sizeof(T))
+		{
+			res = HashIntegral<T_Hash_t>(ConvertBuiltInTo<T_Hash_t>(t));
+		}
+		else
+		{
+			res = HashIntegral<T_Hash_t>(bit_cast<u64>(t));
+		}
 	}
-	else if(T is __BuiltinFloatingPointType)
+	else if(IS_BUILTIN_FLOAT(T))
 	{
-		res = HashFloat<T_Hash_t>((t as __BuiltinFloatingPointType).value);
+		if(T is f32)
+		{
+			res = HashIntegral<T_Hash_t>(bit_cast<u32>(t));
+		}
+		else if(T is f64)
+		{
+			res = HashIntegral<T_Hash_t>(bit_cast<u64>(t));
+		}
+		else if(T is f16)
+		{
+			res = HashIntegral<T_Hash_t>(bit_cast<u16>(t));
+		}
 	}
 	return res;
 }
 
-template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, int N>
-T_Hash_t Hash_(const in Vector<T, N> vec)
+// There are two ways to Hash a Scalar sequence:
+// Sequencial: res[i] = H(res[i-1] ^ H(vec[i]))
+// Recursive: H(vec4 v) = H(V.xy) ^ H(V.zw)
+
+template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, typename Array : IArray<T>>
+T_Hash_t HashSequencial(const in Array array)
 {
 	T_Hash_t res = T_Hash_t(0);
+	const uint N = array.getCount();
 	for(uint i = 0; i < N; ++i)
 	{
-		res = res ^ Hash_<T_Hash_t>(vec[i]);
+		res = Hash_<T_Hash_t>(res ^ Hash_<T_Hash_t>(array[i]));
 	}
 	return res;
 }
 
-template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, int R, int C>
-T_Hash_t Hash_(const in Matrix<T, R, C> mat)
+template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, typename Array : IArray<T>>
+T_Hash_t Hash_(const in Array array)
 {
-	T_Hash_t res = T_Hash_t(0);
-	for(uint i = 0; i < R; ++i)
-	{
-		res = res ^ Hash_<T_Hash_t>(mat[i]);
-	}
-	return res;
+	return HashSequencial<T_Hash_t>(array);
 }
 
 // TODO better

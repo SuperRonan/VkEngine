@@ -13,6 +13,11 @@ typealias i16 = int16_t;
 typealias i32 = int32_t;
 typealias i64 = int64_t;
 
+typealias s8 = i8;
+typealias s16 = i16;
+typealias s32 = i32;
+typealias s64 = i64;
+
 typealias u8  = uint8_t;
 typealias u16 = uint16_t;
 typealias u32 = uint32_t;
@@ -21,6 +26,15 @@ typealias u64 = uint64_t;
 typealias f16 = float16_t;
 typealias f32 = float32_t;
 typealias f64 = float64_t;
+
+
+#define IS_BUILTIN_FLOAT(T) ((T is f32) || (T is f64) || (T is f16))
+#define IS_BUILTIN_INTEGER_ANY_SIZE(T, Prefix) ((T is Prefix##8) || (T is Prefix##16) || (T is Prefix##32) || (T is Prefix##64))
+#define IS_BUILTIN_SIGNED_INT(T) IS_BUILTIN_INTEGER_ANY_SIZE(T, s)
+#define IS_BUILTIN_UNSIGNED_INT(T) IS_BUILTIN_INTEGER_ANY_SIZE(T, u)
+#define IS_BUILTIN_INTEGER(T) (IS_BUILTIN_SIGNED_INT(T) || IS_BUILTIN_UNSIGNED_INT(T))
+#define IS_BUILTIN_SIZED_ANY_INTEGER(T, SIZE) ((T is i##SIZE) || (T is u##SIZE))
+
 
 
 #if SHADER_FP16_AVAILABLE
