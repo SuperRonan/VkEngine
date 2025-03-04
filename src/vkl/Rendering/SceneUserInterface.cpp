@@ -87,8 +87,8 @@ namespace vkl
 			.extern_render_pass = _render_pass,
 			.write_depth = false,
 			.depth_compare_op = _depth ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS,
-			.vertex_shader_path = shader_lib / "Rendering/Mesh/renderOnlyPos.vert",
-			.fragment_shader_path = shader_lib / "Rendering/Mesh/renderUniColor.frag",
+			.vertex_shader_path = shader_lib / "Rendering/Geometry/renderOnlyPos.vert",
+			.fragment_shader_path = shader_lib / "Rendering/Geometry/renderUniColor.frag",
 			.definitions = std::move(render_box_3D_defs),
 		});
 	}
