@@ -35,8 +35,6 @@ typealias f64 = float64_t;
 #define IS_BUILTIN_INTEGER(T) (IS_BUILTIN_SIGNED_INT(T) || IS_BUILTIN_UNSIGNED_INT(T))
 #define IS_BUILTIN_SIZED_ANY_INTEGER(T, SIZE) ((T is i##SIZE) || (T is u##SIZE))
 
-
-
 #if SHADER_FP16_AVAILABLE
 // typedef half fp16IFP
 typealias fp16IFP = half;
@@ -47,8 +45,8 @@ typealias fp16IFP = float;
 template <typename T, int N>
 typealias Vector = vector<T, N>;
 
-template <typename T, int R, int C>
-typealias Matrix = matrix<T, R, C>;
+template <typename T, int R, int C, int L = 0>
+typealias Matrix = matrix<T, R, C, L>;
 
 template <typename T>
 typealias Matrix2 = Matrix<T, 2, 2>;
@@ -145,41 +143,111 @@ void SetCoeficient(inout Matrix<T, R, C> m, uint r, uint c, const in T t)
 	m[r][c] = t;
 }
 
-template<typename T : __BuiltinFloatingPointType, int R, int I, int C>
-Matrix<T, R, C> operator*(const in Matrix<T, R, I> l, const in Matrix<T, I, C> r)
+__generic<typename T : __BuiltinFloatingPointType, int R, int C>
+public Matrix<T, R, C> MultCWise(const in Matrix<T, R, C> a, const in Matrix<T, R, C> b)
 {
-	return mul(l, r);
+	// before the * operator is overloaded
+	return a * b; 
 }
 
-template <typename T : __BuiltinFloatingPointType, int R, int C>
-Vector<T, R> operator*(const in Matrix<T, R, C> m, const in Vector<T, C> v)
+[OverloadRank(15)]
+[ForceInline]
+public Matrix<float, N, N> operator*<let N:int>(const in matrix<float, N, N> m1, const in matrix<float, N, N> m2)
+{
+	return mul(m1, m2);
+}
+
+[OverloadRank(15)]
+[ForceInline]
+public Matrix<half, N, N> operator*<let N:int>(const in matrix<half, N, N> m1, const in matrix<half, N, N> m2)
+{
+	return mul(m1, m2);
+}
+
+[OverloadRank(15)]
+[ForceInline]
+public Matrix<double, N, N> operator*<let N:int>(const in matrix<double, N, N> m1, const in matrix<double, N, N> m2)
+{
+	return mul(m1, m2);
+}
+
+[ForceInline]
+[OverloadRank(15)]
+public Matrix<T, R, C> operator*<T:__BuiltinFloatingPointType, let L : int, let C : int, let R : int>(const in matrix<T, R, L> m1, const in matrix<T, L, C> m2)
+{
+	return mul(m1, m2);
+}
+
+
+// [ForceInline]
+// [OverloadRank(15)]
+// template <typename T :__BuiltinFloatingPointType, int R, int C>
+// public Vector<T, C> operator*(const in T v, const in Matrix<T, R, C> m)
+// {
+// 	return mul(v, m);
+// }
+
+// // This one breaks scalar * matrix, but why?
+// [ForceInline]
+// //[OverloadRank(15)]
+// template <typename T :__BuiltinFloatingPointType, int R, int C>
+// public Vector<T, C> operator*(const in Vector<T, R> v, const in Matrix<T, R, C> m)
+// {
+// 	return mul(v, m);
+// }
+
+[ForceInline]
+//[OverloadRank(15)]
+public Vector<T, R> operator*<T:__BuiltinFloatingPointType, let C : int, let R : int>(const in matrix<T, R, C> m, const in vector<T, C> v)
 {
 	return mul(m, v);
-} 
+}
+
+// [ForceInline]
+// [OverloadRank(15)]
+// public Matrix<T, R, C> operator*<T:__BuiltinFloatingPointType, let R : int, let C : int>(const in Matrix<T, R, C> m, T t)
+// {
+// 	return mul(m, t);
+// }
+
+// By default, Slang defines the product operator * between two matrices of the same size with a cwise product
+// But we prefer reserving the product operator * for inner product (classic matrix multiplication), since it is used much more often
+// Ideally, the language should not impose its choice and let the user decide.
+// Defining the * operator as we want it can easily be done above, but for the multiplication of two square matrices, the cwise mul is linked
+
+
+// [OverloadRank(15)]
+// [ForceInline]
+// //[require(cpp_cuda_glsl_hlsl_spirv, sm_4_0_version)]
+// __generic<int N>
+// public matrix<float, N, N> matmul(matrix<float, N, N> m1, matrix<float, N, N> m2)
+// {
+// 	return mul(m1, m2);
+// }
+
+
 
 
 template <int R, int C = R, typename T : __BuiltinArithmeticType>
 Matrix<T, R, C> DiagonalMatrix(T d = T(1))
 {
-	Matrix<T, R, C> res = Matrix<T, R, C>(d);
-	return res;
-}
-
-template <int R, int C = R, typename T : __BuiltinArithmeticType>
-Matrix<T, R, C> DiagonalMatrix(const in Vector<T, R> diag)
-{
 	Matrix<T, R, C> res = Matrix<T, R, C>(T(0));
 	for(uint i = 0; i < min(R, C); ++i)
 	{
-		res[i] = diag[i];
+		res[i][i] = d;
 	}
 	return res;
 }
 
-template <int R, typename T : __BuiltinArithmeticType>
-Matrix<T, R, R> DiagonalMatrixV(const in Vector<T, R> diag)
+template <int N, typename T : __BuiltinArithmeticType>
+Matrix<T, N, N> DiagonalMatrixV(const in Vector<T, N> diag)
 {
-	return DiagonalMatrix<R, R>(diag);
+	Matrix<T, N, N> res = Matrix<T, N, N>(0);
+	for(uint i = 0; i < N; ++i)
+	{
+		res[i][i] = diag[i];
+	}
+	return res;
 }
 
 template <int N, typename Scalar>
@@ -200,16 +268,16 @@ Matrix<Scalar, R, C> MakeUniformMatrix(Scalar v)
 	return res;
 }
 
-template <int BlockR, int BlockC, typename T, int SrcR, int SrcC>
+template <int BlockR, int BlockC, typename T : __BuiltinArithmeticType, int SrcR, int SrcC>
 Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint2 offset)
 	//where ((BlockR <= SrcR) && (BlockC <= SrcC))
 {
-	Matrix<T, BlockR, BlockC> res;
+	Matrix<T, BlockR, BlockC> res = MakeUniformMatrix<BlockR, BlockC>(T(0));
 	const uint2 ioffset = uint2(offset);
 	const uint2 iBlock = uint2(BlockR, BlockC);
 	const uint2 iSrc = uint2(SrcR, SrcC);
-	const uint2 imax = max(ioffset + iBlock, iSrc);
-	const uint2 irange = imax - iBlock; 
+	const uint2 imax = min(ioffset + iBlock, iSrc);
+	const uint2 irange = imax - ioffset; 
 	for(uint i = 0; i < irange.x; ++i)
 	{
 		for(uint j = 0; j < irange.y; ++j)
@@ -220,7 +288,7 @@ Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint2 o
 	return res;
 }
 
-template <int BlockR, int BlockC, typename T, int SrcR, int SrcC>
+template <int BlockR, int BlockC, typename T : __BuiltinArithmeticType, int SrcR, int SrcC>
 Matrix<T, BlockR, BlockC> ExtractBlock(const in Matrix<T, SrcR, SrcC> m, uint row_offset = 0, uint col_offset = 0)
 {
 	return ExtractBlock<BlockR, BlockC>(m, uint2(row_offset, col_offset));
@@ -233,8 +301,8 @@ void SetBlock(inout Matrix<T, DstR, DstC> m, uint2 offset, const in Matrix<T, Bl
 	const uint2 ioffset = uint2(offset);
 	const uint2 iBlock = uint2(BlockR, BlockC);
 	const uint2 iDst = uint2(DstR, DstC);
-	const uint2 imax = max(ioffset + iBlock, iDst);
-	const uint2 irange = imax - iBlock; 
+	const uint2 imax = min(iBlock, iDst + ioffset);
+	const uint2 irange = imax - ioffset; 
 	for(uint i = 0; i < irange.x; ++i)
 	{
 		for(uint j = 0; j < irange.y; ++j)
@@ -331,7 +399,7 @@ Matrix<T, R, C> ResizeMatrix(const in Matrix<T, SrcR, SrcC> m, T diag = T(1))
 	const uint N = Dst_square_N - Src_square_N;
 	for(uint i = 0; i < N; ++i)
 	{
-		SetCoeficient(res, i, i, diag);
+		SetCoeficient(res, Src_square_N + i, Src_square_N + i, diag);
 	}
 	return res;
 }
@@ -516,18 +584,6 @@ vector<Target, N> ConvertBuiltInTo(vector<From, N> src)
 	return res;
 }
 
-template <typename T, int N>
-T sum(vector<T, N> v)
-	where T : __BuiltinArithmeticType
-{
-	T res = {};
-	for(uint i = 0; i < N; ++i)
-	{
-		res = res + v[i];
-	}
-	return res;
-}
-
 template <typename T>
 T sqr(T x)
 	where T : __BuiltinArithmeticType
@@ -574,34 +630,171 @@ Vector<T, N> Normalize(const in Vector<T, N> v)
 	return normalize(v);
 }
 
+template <typename T : __BuiltinFloatingPointType, int N>
+Vector<T, N> Normalize2(const in Vector<T, N> v)
+{
+	return v / Length2(v);
+}
+
 template <typename Float : __BuiltinFloatingPointType, int N>
 vector<Float, N> SafeNormalize(vector<Float, N> v)
 {
 	return Length2(v) == Float(0) ? v : Normalize(v);
 }
 
+template <typename Float : __BuiltinFloatingPointType, typename Int : __BuiltinIntegerType>
+Float FloatOffset(Float f, Int o)
+{
+	if(Float is f16)
+	{
+		i16 i = bit_cast<i16>(f);
+		i += ConvertBuiltInTo<i16>(o);
+		f = bit_cast<Float>(i);
+	}
+	else if(Float is f32)
+	{
+		i32 i = bit_cast<i32>(f);
+		i += ConvertBuiltInTo<i32>(o);
+		f = bit_cast<Float>(i);
+	}
+	else if (Float is f64)
+	{
+		i64 i = bit_cast<i64>(f);
+		i += ConvertBuiltInTo<i64>(o);
+		f = bit_cast<Float>(i);
+	}
+	return f;
+}
+
 f16 f16Offset(f16 f, int16_t o)
 {
-	i16 i = asint16(f);
-	i += o;
-	f = asfloat16(i);
-	return f;
+	return FloatOffset(f, o);
 }
 
 f32 f32Offset(f32 f, int32_t o)
 {
-	i32 i = asint(f);
-	i += o;
-	f = asfloat(i);
-	return f;
+	return FloatOffset(f, o);
 }
 
 f64 f64Offset(f64 f, int64_t o)
 {
-	i64 i = bit_cast<i64>(f);
-	i += o;
-	f = bit_cast<f64>(i);
-	return f;
+	return FloatOffset(f, o);
+}
+
+
+// min/max/abs are only implemented for built-in int and float
+
+
+template <typename T : __BuiltinArithmeticType>
+T Min(const in T a, const in T b)
+{
+	return (a < b) ? a : b;
+}
+
+template <typename T : __BuiltinArithmeticType>
+T Max(const in T a, const in T b)
+{
+	return (a > b) ? a : b;
+}
+
+template <typename T : __BuiltinArithmeticType, typename Array : IRWArray<T>>
+Array Min(const in Array a, const in Array b)
+{
+	Array res;
+	for(uint i = 0; i < a.getCount(); ++i)
+	{
+		res[i] = Min(a[i], b[i]);
+	}
+	return res;
+}
+
+template <typename T : __BuiltinArithmeticType, typename Array : IRWArray<T>>
+Array Max(const in Array a, const in Array b)
+{
+	Array res;
+	for(uint i = 0; i < a.getCount(); ++i)
+	{
+		res[i] = Max(a[i], b[i]);
+	}
+	return res;
+}
+
+template <typename T : __BuiltinArithmeticType>
+T Abs(const in T t)
+{
+	return (t >= T(0)) ? t : -t;
+}
+
+template <typename T : __BuiltinArithmeticType, typename Array : IRWArray<T>>
+Array Abs(const in Array arr)
+{
+	Array res;
+	for(uint i = 0; i < arr.getCount(); ++i)
+	{
+		res[i] = Abs(arr[i]);
+	}
+	return res;
+}
+
+template <typename T>
+void Redux(const in IArray<T> array, inout T res, IFunc<T, T, T> combine)
+{
+	for(uint i = 0; i < array.getCount(); ++i)
+	{
+		res = combine(res, array[i]);
+	}
+}
+
+template <typename T : __BuiltinArithmeticType>
+T Sum(const in IArray<T> arr)
+{
+	T res = T(0);
+	struct Add : IFunc<T, T, T>
+	{
+		T operator()(T a, T b)
+		{
+			return a + b;
+		}
+	};
+	Redux(arr, res, Add());
+	return res;
+}
+
+template <typename T : __BuiltinArithmeticType>
+T Prod(const in IArray<T> arr)
+{
+	T res = T(1);
+	struct Prod : IFunc<T, T, T>
+	{
+		T operator()(T a, T b)
+		{
+			return a * b;
+		}
+	};
+	Redux(arr, res, Prod());
+	return res;
+}
+
+template <typename T : __BuiltinArithmeticType>
+T Max(const in IArray<T> arr)
+{
+	T res = arr[0];
+	for(uint i = 1; i < arr.getCount(); ++i)
+	{
+		res  = Max(res, arr[i]);
+	}
+	return res;
+}
+
+template <typename T : __BuiltinArithmeticType>
+T Min(const in IArray<T> arr)
+{
+	T res = arr[0];
+	for(uint i = 1; i < arr.getCount(); ++i)
+	{
+		res  = Min(res, arr[i]);
+	}
+	return res;
 }
 
 template <typename Float : __BuiltinFloatingPointType>
@@ -614,7 +807,7 @@ Float Luminance(vector<Float, 3> rgb)
 template <typename Scalar : __BuiltinArithmeticType, int N>
 Scalar Average(vector<Scalar, N> v)
 {
-	return sum(v) / Scalar(N);
+	return Sum(v) / Scalar(N);
 }
 
 template <typename Scalar : __BuiltinArithmeticType>
@@ -677,42 +870,24 @@ bool NonZero(Vector<T, N> v)
 	return any(v != z);
 }
 
-template <typename T : __BuiltinFloatingPointType, int N>
+#define DOT_DISPATCH_IMPL(TYPE)	else if(T is TYPE)	{res = bit_cast<T>(dot(bit_cast<Vector<TYPE, N>>(l), bit_cast<Vector<TYPE, N>>(r)));}
+
+template <typename T : __BuiltinArithmeticType, int N>
 T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
 {
-	return dot(l, r);
-}
-
-template <typename T : __BuiltinIntegerType, int N>
-T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
-{
-	return dot(l, r);
-}
-
-template <typename T : __BuiltinFloatingPointType, int N>
-T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
-{
-	return dot(l, r);
-}
-
-template <typename T : __BuiltinIntegerType, int N>
-T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
-{
-	return dot(l, r);
-}
-
-template <typename T : __BuiltinFloatingPointType, int R, int C>
-Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
-{
-	Matrix<T, R, C> res;
-	for(uint i = 0; i < R; ++i)
-	{
-		SetRow(res, i, l[i] * r);
-	}
+	T res;
+	if(false) {}
+	FOR_EACH_BUILTIN_TYPE(DOT_DISPATCH_IMPL)
 	return res;
 }
 
-template <typename T : __BuiltinIntegerType, int R, int C>
+template <typename T : __BuiltinArithmeticType, int N>
+T InnerProduct(const in Vector<T, N> l, const in Vector<T, N> r)
+{
+	return Dot(l, r);
+}
+
+template <typename T : __BuiltinArithmeticType, int R, int C>
 Matrix<T, R, C> OuterProduct(const in Vector<T, R> l, const in Vector<T, C> r)
 {
 	Matrix<T, R, C> res;
@@ -758,11 +933,8 @@ T Trace(const in Matrix<T, N, N> m)
 	return res;
 }
 
-template<typename T : __BuiltinFloatingPointType, int N>
-Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m);
-
 template<typename T : __BuiltinFloatingPointType>
-Matrix2<T> Inverse(const in Matrix2<T> m)
+Matrix2<T> Inverse2(const in Matrix2<T> m)
 {
 	Matrix2<T> res;
 	const T d = Determinant(m);
@@ -777,7 +949,7 @@ Matrix2<T> Inverse(const in Matrix2<T> m)
 }
 
 template<typename T : __BuiltinFloatingPointType>
-Matrix3<T> Inverse(const in Matrix3<T> m)
+Matrix3<T> Inverse3(const in Matrix3<T> m)
 {
 	Matrix3<T> res;
 	const T d = Determinant(m);
@@ -787,7 +959,8 @@ Matrix3<T> Inverse(const in Matrix3<T> m)
 		// Cayley Hamilton
 		const T tr = Trace(m);
 		const Matrix3<T> m2 = m * m;
-		res = rcp(d) * (DiagonalMatrix<3, 3>(T(0.5) * (sqr(tr) - Trace(m2))) + tr * m + m2);
+		const Matrix3<T> trm = tr * m;
+		res = rcp(d) * (DiagonalMatrix<3, 3>(T(0.5) * (sqr(tr) - Trace(m2))) + (trm + m2));
 #else
 		// cross produc / triple product
 		for(uint i = 0; i < 3; ++i)
@@ -803,15 +976,18 @@ Matrix3<T> Inverse(const in Matrix3<T> m)
 }
 
 template<typename T : __BuiltinFloatingPointType>
-Matrix4<T> Inverse(const in Matrix4<T> m)
+Matrix4<T> Inverse4(const in Matrix4<T> m)
 {
+	// m = 
+	// [A B]
+	// [C D]
 	const Matrix2<T> A = ExtractBlock<2, 2>(m, uint2(0, 0));
-	const Matrix2<T> B = ExtractBlock<2, 2>(m, uint2(2, 0));
-	const Matrix2<T> C = ExtractBlock<2, 2>(m, uint2(0, 2));
+	const Matrix2<T> B = ExtractBlock<2, 2>(m, uint2(0, 2));
+	const Matrix2<T> C = ExtractBlock<2, 2>(m, uint2(2, 0));
 	const Matrix2<T> D = ExtractBlock<2, 2>(m, uint2(2, 2));
 
-	const Matrix2<T> P = Inverse(A - B * Inverse(D) * C);
-	const Matrix2<T> Di = Inverse(D);
+	const Matrix2<T> Di = Inverse2(D);
+	const Matrix2<T> P = Inverse2(A - B * Di * C);
 
 	Matrix4<T> res;
 	SetBlock(res, uint2(0, 0), P);
@@ -821,7 +997,51 @@ Matrix4<T> Inverse(const in Matrix4<T> m)
 	return res;
 }
 
+template <typename T : __BuiltinFloatingPointType, int N>
+Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m)
+{
+	Matrix<T, N, N> res;
+	if(N == 2)
+	{
+		res = bit_cast<Matrix<T, N, N>>(Inverse2(bit_cast<Matrix2<T>>(m)));
+	}
+	else if(N == 3)
+	{
+		res = bit_cast<Matrix<T, N, N>>(Inverse3(bit_cast<Matrix3<T>>(m)));
+	}
+	else if(N == 4)
+	{
+		res = bit_cast<Matrix<T, N, N>>(Inverse4(bit_cast<Matrix4<T>>(m)));
+	}
+	if(N > 4)
+	{
+		const int pivot = N / 2;
+		const int remaining = N - pivot;
 
+		// m = 
+		// [A B]
+		// [C D]
+		
+		const Matrix<T, pivot, pivot> A = ExtractBlock<pivot, pivot>(m, uint2(0, 0));
+		const Matrix<T, pivot, remaining> B = ExtractBlock<pivot, remaining>(m, uint2(0, pivot));
+		const Matrix<T, remaining, pivot> C = ExtractBlock<remaining, pivot>(m, uint2(pivot, 0));
+		const Matrix<T, remaining, remaining> D = ExtractBlock<remaining, remaining>(m, uint2(pivot, pivot));
+
+		const Matrix<T, remaining, remaining> Di = Inverse<T, remaining>(D);
+		const Matrix<T, pivot, pivot> P = Inverse<T, pivot>(A - B * Di * C);
+
+		SetBlock(res, uint2(0, 0), P);
+		SetBlock(res, uint2(0, pivot), -P * B * Di);
+		SetBlock(res, uint2(pivot, 0), -Di * C * P);
+		SetBlock(res, uint2(pivot, pivot), Di + Di * C * P * B * Di);
+	}
+	else
+	{
+		
+	}
+
+	return res;
+}
 
 #include "constants"
 
@@ -832,3 +1052,115 @@ Scalar Radians(Scalar deg)
 {
 	return deg * (Scalar(PI) / Scalar(180));
 }
+
+// Currently, there is no way to select between a RW*Buffer and a *Buffer (read only) with the generics semantic
+// We could proprose to have (like Textures with _Texture)
+// _ByteAddressBuffer<Access>: 
+// ByteAddressBuffer = _ByteAddressBuffer<0>
+// RWByteAddressBuffer = _ByteAddressBuffer<1>
+// _StructuredBuffer<T, L, Access>:
+// StructuredBuffer<T, L> = _StructuredBuffer<T, L, 0>
+// RWStructuredBuffer<T, L> = _StructuredBuffer<T, L, 1>
+// It would be nice to also be able to express the writeonly access
+
+#define ACCESS_READ_ONLY 0
+#define ACCESS_READ_WRITE 1
+#define ACCESS_WRITE_ONLY ACCESS_READ_WRITE
+
+#define ACCESS_RO ACCESS_READ_ONLY
+#define ACCESS_RW ACCESS_READ_WRITE
+#define ACCESS_WO ACCESS_WRITE_ONLY
+
+// Read-Only Memory Access
+#define ROM ACCESS_RO
+// Read-Write Memory Access
+#define RWM ACCESS_RW
+// Write-Only Memory Access
+#define WOM ACCESS_WO
+
+#define SLANG_ACCESS_PREFIX_0
+#define SLANG_ACCESS_PREFIX_1 RW
+
+#define SLANG_ACCESS_PREFIX(Access) SLANG_ACCESS_PREFIX_##Access
+
+#define BINDING_HANDLE(BASE_TYPE, Access) SLANG_ACCESS_PREFIX(Access) ## FORWARD_MACRO(BASE_TYPE)
+
+
+template <T : ITexelElement>
+uvec2 TextureSize(const in RWTexture2D<T> texture)
+{
+	uvec2 res;
+	texture.GetDimensions(res.x, res.y);
+	return res;
+}
+
+float TextureLODOffset(vec2 grad_x, vec2 grad_y)
+{
+	float delta_max_sqr = Max(Length2(grad_x), Length2(grad_y));
+	return 0.5 * log2(delta_max_sqr);
+}
+
+[require(fragment)]
+float TextureLODOffsetInQuad(vec2 uv)
+{
+	vec2 gx = ddx(uv);
+	vec2 gy = ddy(uv);
+	return TextureLODOffset(gx, gy);
+}
+
+interface ITextureSamplingInfo
+{
+	template <typename T : ITexelElement>
+	T sample(const in Sampler2D<T> txt, vec2 uv);
+};
+
+struct DefaultTextureSampling : ITextureSamplingInfo
+{
+	float offset = 0;
+	
+	template <typename T : ITexelElement>
+	T sample(const in Sampler2D<T> txt, vec2 uv)
+	{
+		return txt.SampleLevel(uv, offset);
+	}
+};
+
+[require(SPV_NV_compute_shader_derivatives)]
+struct QuadDiffTextureSampling : ITextureSamplingInfo
+{
+	__init()
+	{}
+
+	template <typename T : ITexelElement>
+	T sample(const in Sampler2D<T> txt, vec2 uv)
+	{
+		return txt.Sample(uv);
+	}
+};
+
+struct RayDiffTextureSampling : ITextureSamplingInfo
+{
+	vec2 grad_x = vec2(0);
+	vec2 grad_y = vec2(0);
+
+	// All expressed in TBN space
+	[mutating]
+	void init(const in Matrix3f TBN, const in vec3 view_dir, const in Matrix3x2f ray_diff)
+	{
+		const Matrix3f TBN_ = Transpose(TBN);
+		const Matrix3x2f prod = TBN_ * ray_diff;
+		grad_x = GetRow(prod, 0).xy;
+		grad_y = GetRow(prod, 1).xy;
+	}
+
+	__init(const in Matrix3f TBN, vec3 view_dir, vec3 dx, vec3 dy)
+	{
+		init(TBN, view_dir, MakeFromCols(dx, dy));
+	}
+
+	template <typename T : ITexelElement>
+	T sample(const in Sampler2D<T> txt, vec2 uv)
+	{
+		return txt.SampleGrad(uv, grad_x, grad_y);
+	}
+};
