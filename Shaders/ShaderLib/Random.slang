@@ -39,7 +39,9 @@ interface IRandomNumberGenerator
 	[mutating]
 	template <typename Scalar : __BuiltinArithmeticType, int N>
 	Vector<Scalar, N> generate(Scalar min, Scalar length);
-}
+};
+
+typealias IRNG = IRandomNumberGenerator;
 
 namespace impl
 {
@@ -264,3 +266,4 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 typealias FastRNG_t = RandomNumberGenerator<fast_hash_t>;
 typealias SlowRNG_t = RandomNumberGenerator<slow_hash_t>;
 typealias RNG_t = RandomNumberGenerator<hash_t>;
+
