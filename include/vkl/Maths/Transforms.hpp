@@ -109,4 +109,17 @@ namespace vkl
 #include <ShaderLib/Maths/Shared/Common.inl>
 #include <ShaderLib/Maths/Shared/3DMatrices.inl>
 #include <ShaderLib/Maths/Shared/Rotations.inl>
+
+	template <concepts::CompileTimeSizedSquareMatrixCompatible Mat>
+	static constexpr auto DirectionMatrix(Mat const& m)
+	{
+		return Inverse(Transpose(m));
+	}
+
+	template <concepts::CompileTimeSizedMatrixCompatible Mat>
+		requires ((Mat::RowsAtCompileTime + 1) == Mat::ColsAtCompileTime)
+	static constexpr auto DirectionMatrix(Mat const& m)
+	{
+		return DirectionMatrix(ExtractQBlock(m.eval()));
+	}
 }
