@@ -4,6 +4,8 @@
 
 #include <ShaderLib:/random.glsl>
 
+#include "PBMaterialDefinitions.h"
+
 struct PBMaterialProperties
 {
 	vec3 albedo;
@@ -32,14 +34,6 @@ PBMaterialProperties NoMaterialProps()
 	return res;
 }
 
-#ifndef BIND_SINGLE_MATERIAL
-#define BIND_SINGLE_MATERIAL 0
-#endif
-
-#define ALBEDO_ALPHA_TEXTURE_SLOT 0
-#define NORMAL_TEXTURE_SLOT 1
-#define ROUGHNESS_TEXTURE_SLOT 2
-#define METALLIC_TEXTURE_SLOT 3
 
 #if BIND_SINGLE_MATERIAL
 
