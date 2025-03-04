@@ -147,11 +147,11 @@ namespace vkl
 								uint32_t decoration = d1;
 								if (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
 								{
-									decoration = d3;
+									decoration |= d3;
 								}
 								const bool readonly = decoration & SPV_REFLECT_DECORATION_NON_WRITABLE;
 								const bool writeonly = decoration & SPV_REFLECT_DECORATION_NON_READABLE;
-								if (readonly == writeonly) // Kind of an edge case
+								if (readonly == writeonly) // Kind of an edge case if both are true
 								{
 									res |= VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
 								}
