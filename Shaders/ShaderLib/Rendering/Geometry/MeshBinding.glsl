@@ -2,6 +2,8 @@
 
 #include <ShaderLib:/common.glsl>
 
+#include "MeshDefinitions.h"
+
 struct MeshHeader
 {
 	uint num_vertices;
@@ -36,37 +38,21 @@ Vertex MakeVertex(in const StorageVertex sv)
 	return res;
 }
 
-// TODO add NONE
-#define MESH_FLAG_INDEX_TYPE_UINT16 0
-#define MESH_FLAG_INDEX_TYPE_UINT32 1
-#define MESH_FLAG_INDEX_TYPE_UINT8  2
-#define MESH_FLAG_INDEX_TYPE_MASK	3
 
-#ifndef BIND_SINGLE_MESH
-#define BIND_SINGLE_MESH 0
-#endif
-
-#ifndef MESH_ACCESS
-#define MESH_ACCESS
-#endif
-
-#ifndef MESH_BINDING_BASE
-#define MESH_BINDING_BASE 0
-#endif
 
 #if BIND_SINGLE_MESH
 
-layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 0, std430) buffer restrict MESH_ACCESS MeshHeader
+layout(MESH_BINDING_BASE + 0, std430) buffer restrict MESH_ACCESS MeshHeader
 {
 	MeshHeader header;
 } bound_mesh_header;
 
-layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 1, std430) buffer restrict MESH_ACCESS MeshVertices
+layout(MESH_BINDING_BASE + 1, std430) buffer restrict MESH_ACCESS MeshVertices
 {
 	Vertex vertices[];
 } bound_mesh_vertices;
 
-layout(INVOCATION_DESCRIPTOR_BINDING + MESH_BINDING_BASE + 2, std430) buffer restrict MESH_ACCESS MeshIndices
+layout(MESH_BINDING_BASE + 2, std430) buffer restrict MESH_ACCESS MeshIndices
 {
 	uint indices[];
 } bound_mesh_indices32;
