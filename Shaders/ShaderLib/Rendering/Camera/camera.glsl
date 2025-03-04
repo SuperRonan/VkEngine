@@ -81,7 +81,11 @@ mat3 GetCameraWorldBasis(const in StorageCamera cam)
 
 bool CameraHasInfiniteDepth(const in StorageCamera cam)
 {
-	return (FORCE_CAMERA_INFINITE_ZFAR != 0) || isinf(cam.z_far);
+#if FORCE_CAMERA_ZFAR
+	return (FORCE_CAMERA_ZFAR == FORCE_CAMERA_ZFAR_INFINITE);
+#else
+	return isinf(cam.z_far);
+#endif
 }
 
 mat4x3 GetCameraWorldToCam(const in StorageCamera cam)
