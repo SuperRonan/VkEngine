@@ -3,17 +3,18 @@
 #include <ShaderLib:/common.glsl>
 #include <ShaderLib:/Rendering/Lights/Light.glsl>
 
-#include <ShaderLib:/Rendering/Mesh/MeshBinding.glsl>
+#include <ShaderLib:/Rendering/Geometry/MeshBinding.glsl>
 
 #include <ShaderLib:/Rendering/Materials/PBMaterial.glsl>
 
 #include <ShaderLib:/RayTracingCommon.glsl>
 
-#ifndef BIND_SCENE
-#define BIND_SCENE 0
+#ifndef BIND_ALL_SCENE_COMPONENTS
+#define BIND_ALL_SCENE_COMPONENTS 1
 #endif
 
-#define SCENE_OBJECT_FLAG_VISIBLE_BIT 1
+#include "SceneDefinitions.h"
+
 
 
 struct SceneObjectReference
@@ -26,7 +27,7 @@ struct SceneObjectReference
 
 struct MaterialTextureIds
 {
-	uint16_t ids[8];
+	uint16_t ids[SCENE_TEXTURE_ID_PER_MATERIAL];
 };
 
 MaterialTextureIds NoMaterialTextureIds()
@@ -48,47 +49,6 @@ uint GetMaterialTextureId(const in MaterialTextureIds m, uint slot)
 
 #extension GL_EXT_nonuniform_qualifier : require
 
-#define SCENE_BINDING SCENE_DESCRIPTOR_BINDING + 0
-
-#define SCENE_LIGHTS_BINDING SCENE_BINDING + 1
-#define SCENE_LIGHTS_NUM_BINDING 3
-#ifndef LIGHTS_ACCESS
-#define LIGHTS_ACCESS readonly
-#endif
-
-#define SCENE_OBJECTS_BINDING SCENE_LIGHTS_BINDING + SCENE_LIGHTS_NUM_BINDING
-#define SCENE_OBJECTS_NUM_BINDING 1
-#ifndef SCENE_OBJECTS_ACCESS
-#define SCENE_OBJECTS_ACCESS readonly
-#endif
-
-#define SCENE_MESHS_BINDING SCENE_OBJECTS_BINDING + SCENE_OBJECTS_NUM_BINDING
-#define SCENE_MESHS_NUM_BINDING 3
-#ifndef SCENE_MESH_ACCESS 
-#define SCENE_MESH_ACCESS readonly
-#endif
-
-#define SCENE_MATERIAL_BINDING SCENE_MESHS_BINDING + SCENE_MESHS_NUM_BINDING
-#define SCENE_MATERIAL_NUM_BINDING 2
-#ifndef SCENE_MATERIAL_ACCESS
-#define SCENE_MATERIAL_ACCESS readonly
-#endif
-
-#define SCENE_TEXTURES_BINDING SCENE_MATERIAL_BINDING + SCENE_MATERIAL_NUM_BINDING
-#define SCENE_TEXTURES_NUM_BINDING 1
-#ifndef SCENE_TEXTURE_ACCESS
-#define SCENE_TEXTURE_ACCESS readonly
-#endif
-
-#define SCENE_XFORM_BINDING SCENE_TEXTURES_BINDING + SCENE_TEXTURES_NUM_BINDING
-#define SCENE_XFORM_NUM_BINDING 2
-#ifndef SCENE_XFORM_ACCESS
-#define SCENE_XFORM_ACCESS readonly
-#endif
-
-#define SCENE_TLAS_BINDING SCENE_XFORM_BINDING + SCENE_XFORM_NUM_BINDING
-#define SCENE_TLAS_NUM_BINDING 1
-
 
 layout(SCENE_BINDING + 0) uniform SceneUBOBinding
 {
@@ -108,7 +68,7 @@ float GetSceneOpaqueAlphaThreshold()
 }
 
 
-layout(SCENE_LIGHTS_BINDING + 0) restrict LIGHTS_ACCESS buffer LightsBufferBinding
+layout(SCENE_LIGHTS_BINDING + 0) restrict SCENE_LIGHTS_ACCESS buffer LightsBufferBinding
 {
 	Light lights[];
 } lights_buffer;
