@@ -53,6 +53,9 @@ namespace vkl
 		template <class C>
 		concept PlainCompileTimeSizedMatrix = (C::IsPlainObjectBase != 0) && (C::RowsAtCompileTime != Eigen_Dynamic) && (C::ColsAtCompileTime != Eigen_Dynamic);
 
+		template <class C>
+		concept PlainCompileTimeSizedSquareMatrix = PlainCompileTimeSizedMatrix<C> && (C::RowsAtCompileTime == C::ColsAtCompileTime);
+
 #define DECLARE_NESTED_CONCEPT(CONCEPT) \
 		template <class C> \
 		concept EvalTo##CONCEPT = ((C::IsPlainObjectBase == 0) && Plain##CONCEPT<typename C::EvalReturnType>); \
@@ -73,6 +76,7 @@ namespace vkl
 
 
 		DECLARE_NESTED_CONCEPT(CompileTimeSizedMatrix)
+		DECLARE_NESTED_CONCEPT(CompileTimeSizedSquareMatrix)
 
 		template <class C>
 		concept PlainCompileTimeSizedVector = PlainCompileTimeSizedMatrix<C> && requires(C const& c)
@@ -100,7 +104,11 @@ namespace vkl
 		template <class Candidate, int R, int C>
 		concept PlainMatrixAny = (Candidate::IsPlainObjectBase != 0) && (Candidate::RowsAtCompileTime == R) && (Candidate::ColsAtCompileTime == C);
 
+		template <class Candidate, int N>
+		concept PlainSquareMatrixAny = PlainMatrixAny<Candidate, N, N>;
+
 		DECLARE_NESTED_CONCEPT_RC(MatrixAny)
+		DECLARE_NESTED_CONCEPT_N(SquareMatrixAny)
 
 		template <class Candidate, int N>
 		concept PlainColVectorAny = PlainMatrixAny<Candidate, N, 1>;
@@ -112,6 +120,9 @@ namespace vkl
 
 		template <class Candidate, class Scalar, int R, int C>
 		concept MatrixCompatible = MatrixAnyCompatible<Candidate, R, C> && CompatibleScalar<Candidate, Scalar>;
+
+		template <class Candidate, class Scalar, int N>
+		concept SquareMatrixCompatible = MatrixCompatible<Candidate, Scalar, N, N>;
 
 		template <class Candidate, class Scalar, int N>
 		concept ColVectorCompatible = ColVectorAnyCompatible<Candidate, N> && CompatibleScalar<Candidate, Scalar>;
