@@ -70,11 +70,17 @@ namespace vkl
 			bool enable_object_naming : 1 = false;
 			bool enable_command_buffer_labels : 1 = false;
 			bool prefer_render_pass_with_dynamic_rendering : 1 = false;
+
 			bool query_render_pass_creation_feedback : 1 = false;
 			bool render_pass_disallow_merging : 1 = false;
 			bool dump_shader_source : 1 = false;
 			bool dump_shader_preprocessed : 1 = false;
+			
 			bool dump_shader_spv : 1 = false;
+			bool dump_slang_to_glsl : 1 = false;
+
+			int shaderc_optimization_level = 0;
+			int slang_optiomization_level = 0;
 
 			// bit field per image usage (VkImageUsageFlagBits)
 
@@ -450,6 +456,8 @@ namespace vkl
 		}
 
 		Slang::ComPtr<slang::IGlobalSession> getSlangGlobalSession();
+
+		void releaseSlangGlobalSession(Slang::ComPtr<slang::IGlobalSession> const&);
 
 		std::shared_ptr<DescriptorSetLayoutInstance> getEmptyDescSetLayout();
 

@@ -116,6 +116,27 @@ namespace vkl
 			.scan<'d', int>()
 			.default_value(0)
 		;
+
+		args.add_argument("--dump_slang_to_glsl")
+			.help("Compile Slang Shaders to GLSL and dump in the gen folder")
+			.scan<'d', int>()
+			.default_value(0)
+		;
+
+		int default_shaderc_optimization_level = shaderc_optimization_level::shaderc_optimization_level_performance;
+		int default_slang_optimization_level = SLANG_OPTIMIZATION_LEVEL_MAXIMAL;
+
+		args.add_argument("--shaderc_optimization_level")
+			.help("Set ShaderC optimization level")
+			.scan<'d', int>()
+			.default_value(default_shaderc_optimization_level)
+		;
+
+		args.add_argument("--slang_optimization_level")
+			.help("Set Slang optimization level")
+			.scan<'d', int>()
+			.default_value(default_slang_optimization_level)
+		;
 	}
 
 
@@ -1100,8 +1121,18 @@ namespace vkl
 
 			}
 		}
+		else
+		{
+			VKL_BREAKPOINT_HANDLE;
+			_logger(std::format("Using already existing slang session {}", std::hash<std::thread::id>()(id)), Logger::Options::TagInfo);
+		}
 		
 		return *res;
+	}
+
+	void VkApplication::releaseSlangGlobalSession(Slang::ComPtr<slang::IGlobalSession> const& s)
+	{
+		
 	}
 
 	void VkApplication::initSDL()
@@ -1142,6 +1173,9 @@ namespace vkl
 			.dump_shader_source = intToBool(ci.args.get<int>("--dump_shader_source")),
 			.dump_shader_preprocessed = intToBool(ci.args.get<int>("--dump_preprocessed_shader")),
 			.dump_shader_spv = intToBool(ci.args.get<int>("--dump_spv")),
+			.dump_slang_to_glsl = intToBool(ci.args.get<int>("--dump_slang_to_glsl")),
+			.shaderc_optimization_level = ci.args.get<int>("--shaderc_optimization_level"),
+			.slang_optiomization_level = ci.args.get<int>("--slang_optimization_level"),
 		};
 
 		std::string arg_image_layout = ci.args.get<std::string>("image_layout");

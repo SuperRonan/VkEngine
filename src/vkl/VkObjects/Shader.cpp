@@ -786,6 +786,33 @@ namespace vkl
 		return res;
 	}
 
+	constexpr const char* GetGLSLShaderExtension(VkShaderStageFlagBits stage)
+	{
+		const char * res = nullptr;
+		switch (stage)
+		{
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_VERTEX_BIT, "vert");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, "tesc");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, "tese");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_GEOMETRY_BIT, "geom");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_FRAGMENT_BIT, "frag");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_COMPUTE_BIT, "comp");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_TASK_BIT_EXT, "task");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MESH_BIT_EXT, "mesh");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_RAYGEN_BIT_KHR, "rgen");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_ANY_HIT_BIT_KHR, "rahit");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, "rchit");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_MISS_BIT_KHR, "rmiss");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_INTERSECTION_BIT_KHR, "rint");
+			SWITCH_CASE_CONVERT2(VK_SHADER_STAGE_CALLABLE_BIT_KHR, "rcall");
+		}
+		if (!res)
+		{
+			res = "glsl";
+		}
+		return res;
+	}
+
 
 	std::string_view GetShadingLanguageName(ShadingLanguage l)
 	{
@@ -931,11 +958,17 @@ namespace vkl
 		const bool dump_source = application()->options().dump_shader_source;
 		const bool dump_preprocessed = application()->options().dump_shader_preprocessed;
 		const bool dump_spv = application()->options().dump_shader_spv;
+		const bool dump_slang_to_glsl = application()->options().dump_slang_to_glsl;
 		const std::string main_path_str = _main_path.string();
 
 		std::string const * code = &pcode;
 		std::string preprocessed_tmp;
 		std::string const* preprocessed_code = nullptr;
+
+		// TODO the dumped code is copied from already existing memory
+		// TODO avoid these copies;
+
+		std::string slang_to_glsl;
 
 		if (_source_language == ShadingLanguage::Slang)
 		{
@@ -954,7 +987,15 @@ namespace vkl
 
 			Slang::ComPtr<slang::ICompileRequest> compiler;
 			session->createCompileRequest(compiler.writeRef());
-			//compiler->setCodeGenTarget(SLANG_SPIRV);
+			const SlangOptimizationLevel opt_level = std::clamp(static_cast<SlangOptimizationLevel>(application()->options().slang_optiomization_level), SLANG_OPTIMIZATION_LEVEL_NONE, SLANG_OPTIMIZATION_LEVEL_MAXIMAL);
+			compiler->setOptimizationLevel(opt_level);
+			//const SlangInt32 spirv_target = compiler->addCodeGenTarget(SLANG_SPIRV);
+			std::optional<SlangInt32> glsl_target;
+			if (dump_slang_to_glsl)
+			{
+				glsl_target = compiler->addCodeGenTarget(SLANG_GLSL);
+			}
+
 			compiler->setCompileFlags(SLANG_COMPILE_FLAG_NO_MANGLING);
 			compiler->setDebugInfoLevel(SLANG_DEBUG_INFO_LEVEL_MAXIMAL);
 			compiler->setDebugInfoFormat(SLANG_DEBUG_INFO_FORMAT_C7);
@@ -971,33 +1012,63 @@ namespace vkl
 			}
 			//compiler->setFileSystem
 
-			SlangResult compilation_result = compiler->compile();
-			Slang::ComPtr<slang::IBlob> diagnostic;
-			if (SLANG_SUCCEEDED(compilation_result))
+			try
 			{
-				SlangResult sr;
-				Slang::ComPtr<slang::IComponentType> slang_program;
-				sr = compiler->getProgramWithEntryPoints(slang_program.writeRef());
-				if (SLANG_SUCCEEDED(sr))
+				SlangResult compilation_result = compiler->compile();
+				Slang::ComPtr<slang::IBlob> diagnostic;
+				if (SLANG_SUCCEEDED(compilation_result))
 				{
-					Slang::ComPtr<slang::IComponentType> linked;
-					sr = slang_program->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
-					//sr = slang_program->link(linked.writeRef(), diagnostic.writeRef());
+					SlangResult sr = {};
+					Slang::ComPtr<slang::IComponentType> slang_program;
+					sr = compiler->getProgramWithEntryPoints(slang_program.writeRef());
 					if (SLANG_SUCCEEDED(sr))
 					{
-						Slang::ComPtr<slang::IBlob> blob;
-						sr = linked->getEntryPointCode(entry_point_index, 0, blob.writeRef(), diagnostic.writeRef());
-						//sr = linked->getTargetCode(0, blob.writeRef(), diagnostic.writeRef());
-						//sr = linked->getEntryPointCode(0, 0, blob.writeRef(), diagnostic.writeRef());
+						Slang::ComPtr<slang::IComponentType> linked;
+						sr = slang_program->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
 						if (SLANG_SUCCEEDED(sr))
 						{
-							const size_t size = blob->getBufferSize();
-							_spv_code.resize(size / sizeof(uint32_t));
-							std::memcpy(_spv_code.data(), blob->getBufferPointer(), size);
+							auto get_target_code = [&](SlangInt32 target, auto & result_buffer)
+							{
+								SlangResult sr = {};
+								Slang::ComPtr<slang::IBlob> blob;
+								sr = linked->getEntryPointCode(entry_point_index, target, blob.writeRef(), diagnostic.writeRef());
+								//sr = linked->getTargetCode(0, blob.writeRef(), diagnostic.writeRef());
+								//sr = linked->getEntryPointCode(0, 0, blob.writeRef(), diagnostic.writeRef());
+								if (SLANG_SUCCEEDED(sr))
+								{
+									using Result_t = typename std::remove_cvref<decltype(result_buffer)>::type;
+									constexpr const size_t ElemSize = sizeof(typename Result_t::value_type);
+									const size_t size = blob->getBufferSize();
+									result_buffer.resize((size + ElemSize - 1) / ElemSize);
+									std::memcpy(result_buffer.data(), blob->getBufferPointer(), size);
+								}
+								return sr;
+							};
+
+							get_target_code(0, _spv_code);
+							if (glsl_target)
+							{
+								get_target_code(*glsl_target, slang_to_glsl);
+							}
 						}
 					}
-
 				}
+			}
+			catch (std::exception const& e)
+			{
+				std::string_view error = e.what();
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Exception Catched: ",
+					.error_message = std::format(
+						"Exception while compiling shader: \n"
+						"Main Shader: {}:\n"
+						"{}",
+						main_path_str, error
+					),
+				};
+				return false;
 			}
 			if (_spv_code.empty())
 			{
@@ -1025,6 +1096,8 @@ namespace vkl
 			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
 			options.SetWarningsAsErrors();
 			options.AddMacroDefinition("_glsl", "460");
+			shaderc_optimization_level opt_level = std::clamp(static_cast<shaderc_optimization_level>(application()->options().shaderc_optimization_level), shaderc_optimization_level_zero, shaderc_optimization_level_performance);
+			options.SetOptimizationLevel(opt_level);
 
 			{
 				DefinitionsList & definitions = preprocessing_state.definitions;
@@ -1112,7 +1185,7 @@ namespace vkl
 			return false;
 		}
 
-		if (dump_source || dump_preprocessed || dump_spv)
+		if (dump_source || dump_preprocessed || dump_spv || dump_slang_to_glsl)
 		{
 			// Path without mounting point
 			that::ResultAnd<that::FileSystem::PathStringView> rel_path = that::FileSystem::ExtractRelative(_main_path);
@@ -1152,6 +1225,25 @@ namespace vkl
 					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(_spv_code.data()), _spv_code.byte_size());
 					application()->fileSystem()->writeFile(info);
 				}
+				if (dump_slang_to_glsl && _source_language == ShadingLanguage::Slang)
+				{
+					if (!slang_to_glsl.empty())
+					{
+						that::FileSystem::Path write_folder = "gen:/shaders_GLSL_from_Slang/";
+						that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
+						const char * glsl_ext = GetGLSLShaderExtension(_stage);
+						write_path.replace_extension(glsl_ext);
+						that::FileSystem::WriteFileInfo info = {};
+						info.path = &write_path;
+						info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(slang_to_glsl.data()), slang_to_glsl.size());
+						application()->fileSystem()->writeFile(info);
+					}
+					else
+					{
+						application()->logger().log(std::format("Failed to generate GLSL code from Slang shader: {}", _main_path.string()), Logger::Options::TagWarning);
+					}
+				}
+
 			}
 			else
 			{
