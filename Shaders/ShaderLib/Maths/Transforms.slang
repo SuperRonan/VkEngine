@@ -37,5 +37,23 @@ Vector<Scalar, N - 1> HomogeneousNormalize(const in Vector<Scalar, N> vec)
 	return res;
 }
 
+// The function is generalized to a N-th dimensional simplex
+template <typename Scalar : __BuiltinArithmeticType, int N>
+Vector<Scalar, N + 1> UVToBarycentric(const in Vector<Scalar, N> v)
+{
+	Vector<Scalar, N + 1> res;
+	res[0] = Scalar(1) - Sum(v);
+	for(uint i = 0; i < N; ++i)
+	{
+		res[i + 1] = v[i];
+	}
+	return res;
+}
+
+template <typename Scalar : __BuiltinFloatingPointType, int N>
+Matrix<Scalar, N, N> DirectionMatrix(const in Matrix<Scalar, N, N> m)
+{
+	return Transpose(Inverse(m));
+}
 
 #include "Shared/Common.inl"

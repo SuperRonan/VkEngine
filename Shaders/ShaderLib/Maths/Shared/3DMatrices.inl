@@ -111,11 +111,3 @@ constexpr Matrix3<Scalar> CrossProductMatrix(CONST_REF(Vector3<Scalar>) u)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
-constexpr Matrix3<Scalar> DirectionMatrix(CONST_REF(Matrix3<Scalar>) m)
-{
-	return Transpose(Inverse(m));
-}
-
-
-

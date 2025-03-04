@@ -21,3 +21,9 @@ AffineXForm<T, N> operator*(const in AffineXForm<T, N> l, const in AffineXForm<T
 {
 	return mul(l, r);
 }
+
+template <typename Scalar : __BuiltinFloatingPointType, int N>
+Matrix<Scalar, N, N> DirectionMatrix(const in AffineXForm<Scalar, N> xform)
+{
+	return DirectionMatrix(ExtractQBlock(xform));
+}
