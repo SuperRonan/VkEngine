@@ -144,6 +144,7 @@ namespace vkl
 					that::img::io::WriteInfo write_info{
 						.quality = _jpg_quality,
 						.can_modify_image = true,
+						.format = format,
 						.image = &image,
 						.path = &ptr_save_info->full_path,
 						.filesystem = application()->fileSystem(),
