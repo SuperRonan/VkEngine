@@ -278,6 +278,8 @@ namespace vkl
 		
 		VkPhysicalDeviceRayTracingValidationFeaturesNV ray_tracing_validation_nv = {};
 
+		VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR compute_shader_derivative_khr = {};
+
 		VulkanFeatures();
 
 		VkPhysicalDeviceFeatures2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
@@ -313,6 +315,8 @@ namespace vkl
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_pipeline_khr = {};
 
 		VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV ray_tracing_invocation_reorder_nv = {};
+
+		VkPhysicalDeviceComputeShaderDerivativesPropertiesKHR compute_shader_derivative_khr = {};
 
 		VulkanDeviceProps();
 

@@ -58,6 +58,8 @@ namespace vkl
 
 		ray_tracing_validation_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_VALIDATION_FEATURES_NV;
 
+		compute_shader_derivative_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_KHR;
+
 		pNextChain chain = &features2;
 
 		if(version >= VK_MAKE_VERSION(1, 1, 0))
@@ -119,6 +121,9 @@ namespace vkl
 		if(filter_extensions(VK_NV_RAY_TRACING_VALIDATION_EXTENSION_NAME))
 			chain += &ray_tracing_validation_nv;
 
+		if(filter_extensions(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME))
+			chain += &compute_shader_derivative_khr;
+
 		chain += nullptr;
 		return features2;
 	}
@@ -147,6 +152,8 @@ namespace vkl
 		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 
 		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
+
+		compute_shader_derivative_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_PROPERTIES_KHR;
 
 		pNextChain chain = &props2;
 
@@ -177,6 +184,9 @@ namespace vkl
 
 		if (filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
 			chain += &ray_tracing_invocation_reorder_nv;
+
+		if (filter_extensions(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME))
+			chain += &compute_shader_derivative_khr;
 
 		chain += nullptr;
 		return props2;
@@ -242,6 +252,8 @@ namespace vkl
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
 		
 		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingValidationFeaturesNV, ray_tracing_validation_nv, rayTracingValidation, rayTracingValidation);
+
+		COMBINE_VK_FEATURES(VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR, compute_shader_derivative_khr, computeDerivativeGroupQuads, computeDerivativeGroupLinear);
 
 #undef COMBINE_VK_FEATURES_STD
 #undef COMBINE_VK_FEATURES
@@ -321,6 +333,8 @@ namespace vkl
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
 		
 		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingValidationFeaturesNV, ray_tracing_validation_nv, rayTracingValidation, rayTracingValidation);
+
+		res += COUNT_VK_FEATURES(VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR, compute_shader_derivative_khr, computeDerivativeGroupQuads, computeDerivativeGroupLinear);
 
 #undef COUNT_VK_FEATURES_STD
 #undef COUNT_VK_FEATURES
