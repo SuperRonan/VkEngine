@@ -3,6 +3,39 @@
 // https://github.com/shader-slang/slang/issues/5303
 //#pragma warning(disable: 15205)
 
+#ifndef __cplusplus
+#define __cplusplus 0
+#endif
+
+#ifndef SLANG_USE_GLSL_MATRIX_TYPES
+#define SLANG_USE_GLSL_MATRIX_TYPES 0
+#endif
+
+#ifndef SHADER_SEMANTIC_RAYGEN
+#define SHADER_SEMANTIC_RAYGEN 0
+#endif
+
+#ifndef SHADER_SEMANTIC_INTERSECTION
+#define SHADER_SEMANTIC_INTERSECTION 0
+#endif
+
+#ifndef SHADER_SEMANTIC_ANY_HIT
+#define SHADER_SEMANTIC_ANY_HIT 0
+#endif
+
+#ifndef SHADER_SEMANTIC_CLOSEST_HIT
+#define SHADER_SEMANTIC_CLOSEST_HIT 0
+#endif
+
+#ifndef SHADER_SEMANTIC_MISS
+#define SHADER_SEMANTIC_MISS 0
+#endif
+
+#ifndef SHADER_SEMANTIC_CALLABLE
+#define SHADER_SEMANTIC_CALLABLE 0
+#endif
+
+
 #include "core"
 #include "bindings"
 
@@ -532,7 +565,7 @@ Macro(u64)
 
 #define DECLARE_CONVERT_BUILTIN_To(Dst) \
 template <typename From : __BuiltinType> \
-Dst ConvertBuiltInTo_ ## Dst(From i) \
+constexpr Dst ConvertBuiltInTo_ ## Dst(From i) \
 { \
 	Dst res; \
 	typealias Target = Dst; \
@@ -565,7 +598,7 @@ namespace impl
 	else if(Target is test_type){res = reinterpret<Target>(impl :: ConvertBuiltInTo_ ## test_type (i));}
 
 template <typename Target : __BuiltinType, typename From : __BuiltinType>
-Target ConvertBuiltInTo(From i)
+constexpr Target ConvertBuiltInTo(From i)
 {
 	Target res;
 	if(false){}
@@ -574,7 +607,7 @@ Target ConvertBuiltInTo(From i)
 }
 
 template <typename Target : __BuiltinType, typename From : __BuiltinType, int N>
-vector<Target, N> ConvertBuiltInTo(vector<From, N> src)
+constexpr vector<Target, N> ConvertBuiltInTo(vector<From, N> src)
 {
 	vector<Target, N> res;
 	for(uint i = 0; i < N; ++i)
@@ -642,62 +675,23 @@ vector<Float, N> SafeNormalize(vector<Float, N> v)
 	return Length2(v) == Float(0) ? v : Normalize(v);
 }
 
-template <typename Float : __BuiltinFloatingPointType, typename Int : __BuiltinIntegerType>
-Float FloatOffset(Float f, Int o)
-{
-	if(Float is f16)
-	{
-		i16 i = bit_cast<i16>(f);
-		i += ConvertBuiltInTo<i16>(o);
-		f = bit_cast<Float>(i);
-	}
-	else if(Float is f32)
-	{
-		i32 i = bit_cast<i32>(f);
-		i += ConvertBuiltInTo<i32>(o);
-		f = bit_cast<Float>(i);
-	}
-	else if (Float is f64)
-	{
-		i64 i = bit_cast<i64>(f);
-		i += ConvertBuiltInTo<i64>(o);
-		f = bit_cast<Float>(i);
-	}
-	return f;
-}
-
-f16 f16Offset(f16 f, int16_t o)
-{
-	return FloatOffset(f, o);
-}
-
-f32 f32Offset(f32 f, int32_t o)
-{
-	return FloatOffset(f, o);
-}
-
-f64 f64Offset(f64 f, int64_t o)
-{
-	return FloatOffset(f, o);
-}
-
 
 // min/max/abs are only implemented for built-in int and float
 
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T : IComparable>
 T Min(const in T a, const in T b)
 {
 	return (a < b) ? a : b;
 }
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T : IComparable>
 T Max(const in T a, const in T b)
 {
 	return (a > b) ? a : b;
 }
 
-template <typename T : __BuiltinArithmeticType, typename Array : IRWArray<T>>
+template <typename T : IComparable, typename Array : IRWArray<T>>
 Array Min(const in Array a, const in Array b)
 {
 	Array res;
@@ -708,7 +702,7 @@ Array Min(const in Array a, const in Array b)
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType, typename Array : IRWArray<T>>
+template <typename T : IComparable, typename Array : IRWArray<T>>
 Array Max(const in Array a, const in Array b)
 {
 	Array res;
@@ -719,13 +713,13 @@ Array Max(const in Array a, const in Array b)
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T : IArithmetic>
 T Abs(const in T t)
 {
 	return (t >= T(0)) ? t : -t;
 }
 
-template <typename T : __BuiltinArithmeticType, typename Array : IRWArray<T>>
+template <typename T : IArithmetic, typename Array : IRWArray<T>>
 Array Abs(const in Array arr)
 {
 	Array res;
@@ -736,64 +730,100 @@ Array Abs(const in Array arr)
 	return res;
 }
 
-template <typename T>
-void Redux(const in IArray<T> array, inout T res, IFunc<T, T, T> combine)
+__generic <typename T>
+interface IReductor : IFunc<T, T, T>
+{};
+
+__generic <typename T>
+interface IAssociativeReductor : IReductor<T>
+{};
+
+__generic <typename T : IArithmetic>
+struct SumReductor : IAssociativeReductor<T>
 {
-	for(uint i = 0; i < array.getCount(); ++i)
+	__init(){}
+	T operator()(const in T a, const in T b)
 	{
-		res = combine(res, array[i]);
+		return a + b;
+	}
+};
+
+__generic <typename T : IArithmetic>
+struct ProductReductor : IAssociativeReductor<T>
+{
+	__init(){}
+	T operator()(const in T a, const in T b)
+	{
+		return a * b;
+	}
+};
+
+__generic <typename T : IComparable>
+struct MaxReductor : IAssociativeReductor<T>
+{
+	__init(){}
+	T operator()(const in T a, const in T b)
+	{
+		return Max(a, b);
+	}
+};
+
+__generic <typename T : IComparable>
+struct MinReductor : IAssociativeReductor<T>
+{
+	__init(){}
+	T operator()(const in T a, const in T b)
+	{
+		return Min(a, b);
+	}
+};
+
+template <typename T>
+void LinearRedux(const in IArray<T> array, inout T res, const in IReductor<T> reductor, uint offset, uint count)
+{
+	for(uint i = 0; i < count; ++i)
+	{
+		res = reductor(res, array[i + offset]);
 	}
 }
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T>
+void LinearRedux(const in IArray<T> array, inout T res, const in IReductor<T> reductor)
+{
+	LinearRedux(array, res, reductor, 0, array.getCount());
+}
+
+// TODO dichotomic redux 
+
+template <typename T : IArithmetic>
 T Sum(const in IArray<T> arr)
 {
 	T res = T(0);
-	struct Add : IFunc<T, T, T>
-	{
-		T operator()(T a, T b)
-		{
-			return a + b;
-		}
-	};
-	Redux(arr, res, Add());
+	LinearRedux(arr, res, SumReductor<T>());
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T : IArithmetic>
 T Prod(const in IArray<T> arr)
 {
 	T res = T(1);
-	struct Prod : IFunc<T, T, T>
-	{
-		T operator()(T a, T b)
-		{
-			return a * b;
-		}
-	};
-	Redux(arr, res, Prod());
+	LinearRedux(arr, res, ProductReductor<T>());
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T : IComparable>
 T Max(const in IArray<T> arr)
 {
 	T res = arr[0];
-	for(uint i = 1; i < arr.getCount(); ++i)
-	{
-		res  = Max(res, arr[i]);
-	}
+	LinearRedux(arr, res, MaxReductor<T>(), 1, arr.getCount() - 1);
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType>
+template <typename T : IComparable>
 T Min(const in IArray<T> arr)
 {
 	T res = arr[0];
-	for(uint i = 1; i < arr.getCount(); ++i)
-	{
-		res  = Min(res, arr[i]);
-	}
+	LinearRedux(arr, res, MinReductor<T>(), 1, arr.getCount() - 1);
 	return res;
 }
 
@@ -1081,86 +1111,9 @@ Scalar Radians(Scalar deg)
 #define SLANG_ACCESS_PREFIX_0
 #define SLANG_ACCESS_PREFIX_1 RW
 
-#define SLANG_ACCESS_PREFIX(Access) SLANG_ACCESS_PREFIX_##Access
+#define SLANG_ACCESS_PREFIX(Access) CAT(SLANG_ACCESS_PREFIX_, Access)
 
-#define BINDING_HANDLE(BASE_TYPE, Access) SLANG_ACCESS_PREFIX(Access) ## FORWARD_MACRO(BASE_TYPE)
+#define BINDING_HANDLE(BASE_TYPE, Access) CAT(SLANG_ACCESS_PREFIX(Access), BASE_TYPE)
 
 
-template <T : ITexelElement>
-uvec2 TextureSize(const in RWTexture2D<T> texture)
-{
-	uvec2 res;
-	texture.GetDimensions(res.x, res.y);
-	return res;
-}
 
-float TextureLODOffset(vec2 grad_x, vec2 grad_y)
-{
-	float delta_max_sqr = Max(Length2(grad_x), Length2(grad_y));
-	return 0.5 * log2(delta_max_sqr);
-}
-
-[require(fragment)]
-float TextureLODOffsetInQuad(vec2 uv)
-{
-	vec2 gx = ddx(uv);
-	vec2 gy = ddy(uv);
-	return TextureLODOffset(gx, gy);
-}
-
-interface ITextureSamplingInfo
-{
-	template <typename T : ITexelElement>
-	T sample(const in Sampler2D<T> txt, vec2 uv);
-};
-
-struct DefaultTextureSampling : ITextureSamplingInfo
-{
-	float offset = 0;
-	
-	template <typename T : ITexelElement>
-	T sample(const in Sampler2D<T> txt, vec2 uv)
-	{
-		return txt.SampleLevel(uv, offset);
-	}
-};
-
-[require(SPV_NV_compute_shader_derivatives)]
-struct QuadDiffTextureSampling : ITextureSamplingInfo
-{
-	__init()
-	{}
-
-	template <typename T : ITexelElement>
-	T sample(const in Sampler2D<T> txt, vec2 uv)
-	{
-		return txt.Sample(uv);
-	}
-};
-
-struct RayDiffTextureSampling : ITextureSamplingInfo
-{
-	vec2 grad_x = vec2(0);
-	vec2 grad_y = vec2(0);
-
-	// All expressed in TBN space
-	[mutating]
-	void init(const in Matrix3f TBN, const in vec3 view_dir, const in Matrix3x2f ray_diff)
-	{
-		const Matrix3f TBN_ = Transpose(TBN);
-		const Matrix3x2f prod = TBN_ * ray_diff;
-		grad_x = GetRow(prod, 0).xy;
-		grad_y = GetRow(prod, 1).xy;
-	}
-
-	__init(const in Matrix3f TBN, vec3 view_dir, vec3 dx, vec3 dy)
-	{
-		init(TBN, view_dir, MakeFromCols(dx, dy));
-	}
-
-	template <typename T : ITexelElement>
-	T sample(const in Sampler2D<T> txt, vec2 uv)
-	{
-		return txt.SampleGrad(uv, grad_x, grad_y);
-	}
-};
