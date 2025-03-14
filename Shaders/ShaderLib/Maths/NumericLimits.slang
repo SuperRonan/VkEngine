@@ -13,7 +13,7 @@ namespace std
 
 
 		// Returns the largest finite value
-		static T max()
+		static constexpr T max()
 		{
 			T res;
 			if(IS_BUILTIN_SIGNED_INT(T))
@@ -74,7 +74,7 @@ namespace std
 
 		// For integer: returns the minimum value (0 for uint, -max-1 for int)
 		// For float: returns the smallest positive normal value
-		static T min()
+		static constexpr T min()
 		{
 			T res = T(0);
 			if(IS_BUILTIN_SIGNED_INT(T))
@@ -120,21 +120,23 @@ namespace std
 
 		// For integer: returns the same as min()
 		// For float: returns -max()
-		static T lowest()
+		static constexpr T lowest()
 		{
+			T res;
 			if(IS_BUILTIN_INTEGER(T))
 			{
-				return this.min();
+				res = this.min();
 			}
 			else if(IS_BUILTIN_FLOAT(T))
 			{
-				return -this.max();
+				res = -this.max();
 			}
+			return res;
 		}
 
 		// Float: Returns the difference between one and the next representable value
 		// Integral: 0
-		static T epsilon()
+		static constexpr T epsilon()
 		{
 			T res = T(0);
 			if(T is f16)
@@ -159,7 +161,7 @@ namespace std
 
 		// Float: Returns +infinity
 		// Integral: 0
-		static T infinity()
+		static constexpr T infinity()
 		{
 			T res = T(0);
 			if(T is f16)
@@ -179,7 +181,7 @@ namespace std
 
 		// Float: Returns a qNaN
 		// Integral: 0
-		static T quiet_NaN()
+		static constexpr T quiet_NaN()
 		{
 			T res = T(0);
 			if(T is f16)
@@ -199,7 +201,7 @@ namespace std
 
 		// Float: Returns a sNaN
 		// Integral: 0
-		static T signaling_NaN()
+		static constexpr T signaling_NaN()
 		{
 			T res = T(0);
 			if(T is f16)
@@ -219,7 +221,7 @@ namespace std
 
 		// Returns the minimum positive sub-normal value (if T has denormalized numbers
 		// Integral: 0
-		static T denom_min()
+		static constexpr T denom_min()
 		{
 			T res = T(0);
 			if(T is f16)
@@ -237,7 +239,7 @@ namespace std
 			return res;
 		}
 
-		static uint GetMantissaBits()
+		static constexpr uint GetMantissaBits()
 		{
 			uint res = 0;
 			if(T is f16)
@@ -259,3 +261,4 @@ namespace std
 
 template <typename T : __BuiltinArithmeticType>
 typealias NumericLimits = std::numeric_limits<T>;
+
