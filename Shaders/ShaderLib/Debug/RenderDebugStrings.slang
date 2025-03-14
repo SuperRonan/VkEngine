@@ -1,14 +1,10 @@
-#version 460
+#pragma once
 
 #define I_WANT_TO_DEBUG 1
+#define DEBUG_BUFFER_ACCESS ROM
+#include "DebugBuffers.slang"
+
 #define DEBUG_BUFFER_ACCESS_readonly 1
-
-#include <ShaderLib:/common.glsl>
-#include "debugBuffers.glsl"
-
-#if SHADER_SEMANTIC_VERTEX
-
-#endif
 
 struct PushConstant
 {
@@ -23,11 +19,10 @@ struct PushConstant
 
 #if SHADER_SEMANTIC_VERTEX
 
-layout(location = 0) out uint vid;
-
-void main()
+[shader("vertex")]
+uint main(const in uint vertex_index : SV_VertexID)
 {
-	vid = gl_VertexIndex;
+	return vertex_index;
 }
 
 #endif
@@ -56,6 +51,7 @@ layout(push_constant) uniform PushConstantBinding
 	PushConstant pc;
 };
 
+[shader("geometry")]
 void main()
 {
 #if GLOBAL_ENABLE_GLSL_DEBUG

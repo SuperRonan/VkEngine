@@ -3,43 +3,10 @@
 #include <ShaderLib:/common.glsl>
 #include <ShaderLib:/interop_glsl_cpp>
 
-#ifndef I_WANT_TO_DEBUG
-#define I_WANT_TO_DEBUG 0
-#endif
+#include "StringDefinitions.h"
 
 #ifndef GLOBAL_ENABLE_GLSL_DEBUG
-#define GLOBAL_ENABLE_GLSL_DEBUG 0
-#endif
-
-
-#ifndef SHADER_STRING_CAPACITY
-#define SHADER_STRING_CAPACITY 32
-#endif
-
-#if ((SHADER_STRING_CAPACITY % 4) != 0)
-#error "SHADER_STRING_CAPACITY must be a multiple of 4"
-#endif
-
-#define SHADER_STRING_PACKED_CAPACITY (SHADER_STRING_CAPACITY / 4)
-
-#ifndef ENABLE_SHADER_STRING
-#define ENABLE_SHADER_STRING (GLOBAL_ENABLE_GLSL_DEBUG && I_WANT_TO_DEBUG)
-#endif
-
-#ifndef HEX_USE_CAPS
-#define HEX_USE_CAPS 0
-#endif
-
-#ifndef DEFAULT_NUMBER_BASIS
-#define DEFAULT_NUMBER_BASIS 10u
-#endif
-
-#ifndef DEFAULT_SHOW_PLUS
-#define DEFAULT_SHOW_PLUS false
-#endif
-
-#ifndef DEFAULT_FLOAT_PRECISION
-#define DEFAULT_FLOAT_PRECISION 3u
+#define GLOBAL_ENABLE_GLSL_DEBUG GLOBAL_ENABLE_SHADER_DEBUG
 #endif
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require
@@ -143,9 +110,10 @@ uint getShaderStringLength(const in ShaderString s)
 void setShaderStringLength(inout ShaderString s, uint l)
 {
 #if ENABLE_SHADER_STRING
-	uint32_t chunk = s.data[SHADER_STRING_PACKED_CAPACITY - 1];
-	setCharInChunk(chunk, SHADER_STRING_CAPACITY-1, char(l));
-	s.data[SHADER_STRING_PACKED_CAPACITY - 1] = chunk;
+	const uint chunk_id = SHADER_STRING_PACKED_CAPACITY - 1;
+	uint32_t chunk = s.data[chunk_id];
+	setCharInChunk(chunk, 3, char(l));
+	s.data[chunk_id] = chunk;
 #endif
 }
 
@@ -290,17 +258,17 @@ ShaderString concat(ShaderString a, const in ShaderString b)
 	return a;
 }
 
-#define CHAR_space 		char(0x20)
-#define CHAR_lpar 		char(0x28)
-#define CHAR_rpar 		char(0x29)
-#define CHAR_plus 		char(0x2B)
-#define CHAR_comma		char(0x2C)
-#define CHAR_minus 		char(0x2D)
-#define CHAR_dot 		char(0x2E)
-#define CHAR_0 			char(0x30)
-#define CHAR_A 			char(0x41)
-#define CHAR_at 		char(0x40)
-#define CHAR_a 			char(0x61)
+#define CHAR_space 		char(CHARCODE_space)
+#define CHAR_lpar 		char(CHARCODE_lpar)
+#define CHAR_rpar 		char(CHARCODE_rpar)
+#define CHAR_plus 		char(CHARCODE_plus)
+#define CHAR_comma		char(CHARCODE_comma)
+#define CHAR_minus 		char(CHARCODE_minus)
+#define CHAR_dot 		char(CHARCODE_dot)
+#define CHAR_0 			char(CHARCODE_0)
+#define CHAR_A 			char(CHARCODE_A)
+#define CHAR_at 		char(CHARCODE_at)
+#define CHAR_a 			char(CHARCODE_a)
 
 uint howManyDigits(uint n, uint basis)
 {

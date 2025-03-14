@@ -2,6 +2,7 @@
 
 #include "string.glsl"
 #include <ShaderLib:/common.glsl>
+#include "DebugBuffersDefinitions.h"
 
 #ifndef DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
@@ -35,20 +36,16 @@ bool _g_debug_signal = false;
 // TODO optimize memory (mainly fp16 for colors)
 struct BufferStringMeta
 {
-	vec4 position;
+	vec3 position;
+	uint layer;
+
 	DebugBufferVec4 color;
 	DebugBufferVec4 back_color;
+	
 	DebugBufferVec2 glyph_size;
-	uint layer;
 	uint len;
 	uint flags;
-};
-
-struct BufferString
-{
-	BufferStringMeta meta;
-	// Store in uvec4 for 128 bit memory transactions?
-	uint32_t data[BUFFER_STRING_PACKED_CAPACITY];
+	uint content_index;
 };
 
 struct BufferDebugLine
@@ -61,23 +58,13 @@ struct BufferDebugLine
 	uint flags;
 };
 
-#define DEBUG_ENABLE_MASK	0x1
-#define DEBUG_ENABLE_BIT	0x1
 
-#define DEBUG_SPACE_MASK		(0x3 << 1)
-#define DEBUG_CLIP_SPACE_BIT	(0x0 << 1)
-#define DEBUG_UV_SPACE_BIT		(0x1 << 1)
-#define DEBUG_PIXEL_SPACE_BIT	(0x2 << 1)
 
-#ifndef BIND_DEBUG_BUFFERS
-#define BIND_DEBUG_BUFFERS (I_WANT_TO_DEBUG & GLOBAL_ENABLE_GLSL_DEBUG)
-#endif
+
 
 #if BIND_DEBUG_BUFFERS
 
-#ifndef DEBUG_BUFFER_BINDING
-#define DEBUG_BUFFER_BINDING COMMON_DESCRIPTOR_BINDING
-#endif
+
 
 #if DEBUG_BUFFER_ACCESS_readonly
 #define DEBUG_BUFFER_ACCESS readonly
@@ -88,39 +75,51 @@ struct BufferDebugLine
 #endif
 
 // sizeof: 4 * 4 * u32
-struct DebugBufferHeader
+struct DebugBuffersHeader
 {
 	uint max_strings;
+	uint max_chunks;
 	uint max_lines;
-	uint pad1;
-	uint pad2;
-	// Store the two counters on a separate cache line for now (TODO test the perf)
+	uint pad_0_0;
+
 	uint strings_counter;
-	uint ppad1;
-	uint ppad2;
-	uint ppad3;
-	
+	uint pad_1_0;
+	uint pad_1_1;
+	uint pad_1_2;
+
+	uint chunks_counter;
+	uint pad_2_0;
+	uint pad_2_1;
+	uint pad_2_2;
+
 	uint lines_counter;
-	uint ppad4;
-	uint ppad5;
-	uint ppad6;
-	
-	uvec4 pad;
+	uint pad_3_0;
+	uint pad_3_1;
+	uint pad_3_2;
 };
 
 // TODO maybe store the capacities in a separate UBO (maybe even inline UBO)?
-layout(DEBUG_BUFFER_BINDING + 0) restrict DEBUG_BUFFER_ACCESS buffer DebugStringBuffer
+layout(DEBUG_BUFFER_BINDING + 0) restrict DEBUG_BUFFER_ACCESS buffer DebugBufferHeaderBinding
 {
-	DebugBufferHeader header;
-	BufferString strings
-#ifdef DEBUG_BUFFER_STRINGS_CAPACITY
-		[DEBUG_BUFFER_STRINGS_CAPACITY];
-#else 
-		[];
-#endif 
+	DebugBuffersHeader header; 
 } _debug;
 
-layout(DEBUG_BUFFER_BINDING + 1) restrict DEBUG_BUFFER_ACCESS buffer DebugLinesBuffer
+layout(DEBUG_BUFFER_BINDING + 1) restrict DEBUG_BUFFER_ACCESS buffer DebugStringMetaBinding
+{
+	BufferStringMeta meta
+#ifdef DEBUG_BUFFER_STRINGS_CAPACITY
+	[DEBUG_BUFFER_STRINGS_CAPACITY];
+#else
+	[];
+#endif
+} _debug_strings_meta;
+
+layout(DEBUG_BUFFER_BINDING + 2) restrict DEBUG_BUFFER_ACCESS buffer DebugStringContentBinding
+{
+	uint chunks[];
+} _debug_strings_content;
+
+layout(DEBUG_BUFFER_BINDING + 3) restrict DEBUG_BUFFER_ACCESS buffer DebugLinesBuffer
 {
 	BufferDebugLine lines
 #ifdef DEBUG_BUFFER_LINES_CAPACITY
@@ -182,6 +181,15 @@ uint allocateDebugString()
 	return allocateDebugStrings(1);
 }
 
+// len in chunks 
+uint allocateDebugStringContent(uint len)
+{
+#if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
+	return atomicAdd(_debug.header.chunks_counter, len);
+#endif
+	return 0;
+}
+
 uint allocateDebugLines(uint n)
 {
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
@@ -222,33 +230,11 @@ DebugStringCaret Caret3D(vec4 pos, uint layer)
 
 #define Caret DebugStringCaret
 
-#ifndef GLYPH_SIZE_PIX
-#define GLYPH_SIZE_PIX vec2(16, 16)
-#endif
 
-#define GLYPH_SIZE_TINY 0
-#define GLYPH_SIZE_SMALL 1
-#define GLYPH_SIZE_NORMAL 2
-#define GLYPH_SIZE_LARGE 3
-#define GLYPH_SIZE_HUGE 4
-
-#ifndef GLYPH_SIZE
-#define GLYPH_SIZE GLYPH_SIZE_NORMAL
-#endif
 
 float getGlyphSizeMult()
 {
-#if GLYPH_SIZE == GLYPH_SIZE_TINY
-	return 0.25f;
-#elif GLYPH_SIZE == GLYPH_SIZE_SMALL
-	return 0.5f;
-#elif GLYPH_SIZE == GLYPH_SIZE_NORMAL
-	return 1.0f;
-#elif GLYPH_SIZE == GLYPH_SIZE_LARGE
-	return 2.0f;
-#elif GLYPH_SIZE == GLYPH_SIZE_HUGE
-	return 4.0f;
-#endif
+	return exp2(float(GLYPH_SIZE - GLYPH_SIZE_NORMAL));
 }
 
 vec2 debugStringDefaultGlyphSizePix()
@@ -298,7 +284,7 @@ Caret pushToDebug(const in ShaderString str, Caret c, bool ln, vec4 ft_color, ve
 {
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
 	BufferStringMeta meta;
-	meta.position = c.pos;
+	meta.position = c.pos.xyz / c.pos.w;
 	meta.layer = c.layer;
 	meta.len = getShaderStringLength(str);
 	meta.glyph_size = DebugBufferVec2(glyph_size);
@@ -307,11 +293,14 @@ Caret pushToDebug(const in ShaderString str, Caret c, bool ln, vec4 ft_color, ve
 	meta.flags = flags;
 
 	const uint index = allocateDebugString();
+	const uint needed_chunks = (meta.len + 3) / 4;
+	const uint chunk_index = allocateDebugStringContent(needed_chunks);
+	meta.content_index = chunk_index;
 
-	_debug.strings[index].meta = meta;
-	for(int i = 0; i < (meta.len + 3) / 4; ++i)
+	_debug_strings_meta.meta[index] = meta;
+	for(int i = 0; i < needed_chunks; ++i)
 	{
-		_debug.strings[index].data[i] = str.data[i];
+		_debug_strings_content.chunks[i + chunk_index] = str.data[i];
 	}
 	
 	Caret res = c;

@@ -31,7 +31,9 @@ namespace vkl
 		std::shared_ptr<ImageView> _depth = nullptr;
 		
 		std::shared_ptr<Buffer> _debug_buffer = nullptr;
-		BufferSegment _debug_buffer_header_and_strings;
+		BufferSegment _debug_buffer_header;
+		BufferSegment _debug_buffer_strings_meta;
+		BufferSegment _debug_buffer_strings_content;
 		BufferSegment _debug_buffer_lines;
 
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
@@ -50,12 +52,12 @@ namespace vkl
 		bool _enable_debug = true;
 		int _shader_string_chunks = 8;
 		uint32_t _shader_string_capacity = 32;
-		int _buffer_string_chunks = 8;
-		uint32_t _buffer_string_capacity = 32;
 		bool _define_capacity = false;
 
 		uint32_t _log2_number_of_debug_strings = 10;
 		uint32_t _number_of_debug_strings;
+		uint32_t _log2_debug_chunks = 16; // in Bytes
+		uint32_t _debug_chunks_capacity; // in Bytes
 		uint32_t _log2_number_of_debug_lines = 14;
 		uint32_t _number_of_debug_lines;
 

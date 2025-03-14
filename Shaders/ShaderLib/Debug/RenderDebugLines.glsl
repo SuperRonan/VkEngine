@@ -54,7 +54,7 @@ void main()
 #if GLOBAL_ENABLE_GLSL_DEBUG
 	const uint index = vid[0];
 	const BufferDebugLine line = _debug_lines.lines[index];
-	if(line.flags != 0)
+	if(index < _debug.header.lines_counter)
 	{
 		const uint coord_space_flags = line.flags & DEBUG_SPACE_MASK;
 

@@ -54,9 +54,8 @@ namespace vkl
 		if (_common_definitions)
 		{
 			auto& common_defs = *_common_definitions;
-			common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
+			common_defs.setDefinition("GLOBAL_ENABLE_SHADER_DEBUG", std::to_string(int(_enable_debug)));
 			common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
-			common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
 			common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
 			common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
 			common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
@@ -64,6 +63,7 @@ namespace vkl
 			if (_define_capacity)
 			{
 				common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
+				common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CONTENT_CAPACITY", std::to_string(_debug_chunks_capacity));
 				common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
 			}
 		}
@@ -208,11 +208,18 @@ namespace vkl
 		const VkDeviceSize alignement = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
 		const bool can_fp16 = application()->availableFeatures().features_12.shaderFloat16 && application()->availableFeatures().features_11.storageBuffer16BitAccess;
 		const uint32_t string_meta_size = can_fp16 ? 12 : 20;
-		Dyn<VkDeviceSize> buffer_header_strings_size = [this, alignement, string_meta_size]() {
+		const uint32_t header_size = std::alignUp<uint32_t>(16 * 4, alignement);
+		
+		Dyn<VkDeviceSize> buffer_string_meta_size = [this, alignement, string_meta_size]() {
 			// Sizes in number of u32/f32
-			const uint32_t header_size = 16;
-			const uint32_t string_content_size = _buffer_string_capacity;
-			VkDeviceSize full_size = (header_size + _number_of_debug_strings * (string_meta_size + string_content_size)) * 4;
+			VkDeviceSize full_size = (_number_of_debug_strings * (string_meta_size)) * 4;
+			full_size = std::alignUp(full_size, alignement);
+			return full_size;
+		};
+
+		Dyn<VkDeviceSize> buffer_string_content_size = [this, alignement]()
+		{
+			VkDeviceSize full_size = (_debug_chunks_capacity);
 			full_size = std::alignUp(full_size, alignement);
 			return full_size;
 		};
@@ -224,7 +231,7 @@ namespace vkl
 			return full_size;
 		};
 
-		Dyn<VkDeviceSize> buffer_size = buffer_header_strings_size + buffer_lines_size;
+		Dyn<VkDeviceSize> buffer_size = [=](){return VkDeviceSize(header_size) + *buffer_string_meta_size + *buffer_string_content_size + *buffer_lines_size; };
 
 		_debug_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -235,14 +242,30 @@ namespace vkl
 			.hold_instance = &_enable_debug,
 		});
 
-		_debug_buffer_header_and_strings = BufferSegment{
+		_debug_buffer_header = BufferSegment{
 			.buffer = _debug_buffer,
-			.range = [=](){return Buffer::Range{.begin = 0, .len = buffer_header_strings_size.value()}; },
+			.range = [=](){return Buffer::Range{.begin = 0, .len = header_size}; },
 		};	
+
+		_debug_buffer_strings_meta = BufferSegment{
+			.buffer = _debug_buffer,
+			.range = [=](){return Buffer::Range{.begin = header_size, .len = buffer_string_meta_size.value()};}
+		};
+
+		_debug_buffer_strings_content = BufferSegment{
+			.buffer = _debug_buffer,
+			.range = [=](){
+				Buffer::Range prev_range = _debug_buffer_strings_meta.range.value();
+				return Buffer::Range{.begin = prev_range.end(), .len = buffer_string_content_size.value()};
+			},
+		};
 
 		_debug_buffer_lines = BufferSegment{
 			.buffer = _debug_buffer,
-			.range = [=]() {return Buffer::Range{.begin = buffer_header_strings_size.value(), .len = buffer_lines_size.value()}; },
+			.range = [=]() {
+				Buffer::Range prev_range = _debug_buffer_strings_content.range.value();
+				return Buffer::Range{.begin = prev_range.end(), .len = buffer_lines_size.value()};  
+			},
 		};
 
 		_debug_buffer->setInvalidationCallback(Callback{
@@ -327,6 +350,7 @@ namespace vkl
 	{
 		_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
 		_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
+		_debug_chunks_capacity = (1 << _log2_debug_chunks);
 		_debug_buffer->updateResource(ctx); // this one holds instance based on _enable_debug
 		if (_enable_debug)
 		{
@@ -338,12 +362,13 @@ namespace vkl
 			{
 				struct Header {
 					uint32_t num_debug_strings;
+					uint32_t debug_chunk_capacity;
 					uint32_t num_debug_lines;
-					uint32_t pad1;
-					uint32_t pad2;
+					uint32_t pad;
 				};
 				Header header{
 					.num_debug_strings = _number_of_debug_strings,
+					.debug_chunk_capacity = _debug_chunks_capacity,
 					.num_debug_lines = _number_of_debug_lines,
 				};	
 				ResourcesToUpload::BufferSource src{
@@ -426,10 +451,8 @@ namespace vkl
 			exec.endRenderPass();
 
 
-			Buffer::Range clear_range = _debug_buffer->instance()->fullRange();
-			const size_t excluded = 4 * sizeof(uint32_t); // Don't fill the first part of the header
-			clear_range.begin += excluded;
-			clear_range.len -= excluded;
+			// Clear only the atomic counters
+			Buffer::Range clear_range = {.begin = 4 * sizeof(u32), .len = 3 * 4 * sizeof(u32)};
 			exec(application()->getPrebuiltTransferCommands().fill_buffer.with(FillBuffer::FillInfo{
 				.buffer = _debug_buffer,
 				.range = clear_range,
@@ -440,7 +463,7 @@ namespace vkl
 
 	void DebugRenderer::declareGui(GuiContext & ctx)
 	{
-		if (ImGui::CollapsingHeader("GLSL Debug"))
+		if (ImGui::CollapsingHeader("Shader Debugging"))
 		{
 			if (_common_definitions)
 			{
@@ -450,21 +473,14 @@ namespace vkl
 				changed = ImGui::Checkbox("Enable", &_enable_debug);
 				if (changed)
 				{
-					common_defs.setDefinition("GLOBAL_ENABLE_GLSL_DEBUG", std::to_string(int(_enable_debug)));
+					common_defs.setDefinition("GLOBAL_ENABLE_SHADER_DEBUG", std::to_string(int(_enable_debug)));
 				}
 			
-				changed = ImGui::SliderInt("Shader String Chunks", & _shader_string_chunks, 1, _buffer_string_capacity / 4);
+				changed = ImGui::SliderInt("Shader String Chunks", & _shader_string_chunks, 1, 16);
 				if (changed)
 				{
 					_shader_string_capacity = 4 * _shader_string_chunks;
 					common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
-				}
-
-				changed = ImGui::SliderInt("Buffer String Chunks", &_buffer_string_chunks, 1, 32);
-				if (changed)
-				{
-					_buffer_string_capacity = 4 * _buffer_string_chunks;
-					common_defs.setDefinition("BUFFER_STRING_CAPACITY", std::to_string(_buffer_string_capacity));
 				}
 
 				
@@ -510,6 +526,16 @@ namespace vkl
 					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
 				}
 				ImGui::Text("Total Strings Capacity: %d", _number_of_debug_strings);
+
+				changed = ImGui::InputInt("log2(Total Strings Content Capcity)", (int*)&_log2_debug_chunks);
+				if (changed)
+				{
+					_should_write_header = true;
+					_log2_debug_chunks = std::max<int>(_log2_debug_chunks, 0);
+					_debug_chunks_capacity = (1 << _log2_debug_chunks);
+					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CONTENT_CAPACITY", std::to_string(_debug_chunks_capacity));
+				}
+				ImGui::Text("Total Strings Content Capacity %dB", _debug_chunks_capacity);
 				
 				changed = ImGui::InputInt("log2(Total Lines Capacity)", (int*)&_log2_number_of_debug_lines);
 				if (changed)
@@ -551,12 +577,20 @@ namespace vkl
 	{
 		ShaderBindings res = {
 			Binding{
-				.buffer = _debug_buffer_header_and_strings,
+				.buffer = _debug_buffer_header,
 				.binding = 0,
 			},
 			Binding{
-				.buffer = _debug_buffer_lines,
+				.buffer = _debug_buffer_strings_meta,
 				.binding = 1,
+			},
+			Binding{
+				.buffer = _debug_buffer_strings_content,
+				.binding = 2,
+			},
+			Binding{
+				.buffer = _debug_buffer_lines,
+				.binding = 3,
 			},
 		};
 		return res;
@@ -566,7 +600,7 @@ namespace vkl
 	{
 		MyVector<DescriptorSetLayout::Binding> res;
 		res += DescriptorSetLayout::Binding{
-			.name = "DebugBufferStrings",
+			.name = "DebugBufferHeader",
 			.binding = offset + 0,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.count = 1,
@@ -575,8 +609,26 @@ namespace vkl
 			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 		};
 		res += DescriptorSetLayout::Binding{
-			.name = "DebugBufferLines",
+			.name = "DebugBufferStringsMeta",
 			.binding = offset + 1,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		};
+		res += DescriptorSetLayout::Binding{
+			.name = "DebugBufferStringsContent",
+			.binding = offset + 2,
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.count = 1,
+			.stages = VK_SHADER_STAGE_ALL,
+			.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		};
+		res += DescriptorSetLayout::Binding{
+			.name = "DebugBufferLines",
+			.binding = offset + 3,
 			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			.count = 1,
 			.stages = VK_SHADER_STAGE_ALL,
