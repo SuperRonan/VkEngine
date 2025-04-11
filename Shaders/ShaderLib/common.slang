@@ -988,9 +988,9 @@ Matrix3<T> Inverse3(const in Matrix3<T> m)
 #if 1
 		// Cayley Hamilton
 		const T tr = Trace(m);
-		const Matrix3<T> m2 = m * m;
+		const Matrix3<T> m2 = mul(m, m);
 		const Matrix3<T> trm = tr * m;
-		res = rcp(d) * (DiagonalMatrix<3, 3>(T(0.5) * (sqr(tr) - Trace(m2))) + (trm + m2));
+		res = rcp(d) * (DiagonalMatrix<3, 3>(T(0.5) * (sqr(tr) - Trace(m2))) - trm + m2);
 #else
 		// cross produc / triple product
 		for(uint i = 0; i < 3; ++i)
