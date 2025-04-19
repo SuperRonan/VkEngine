@@ -20,7 +20,7 @@ constexpr AffineXForm3D<Scalar> LookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) 
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> LookAtDir(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down)
 {
-	const Vector3<Scalar> s_ = (Cross(front, down));
+	const Vector3<Scalar> s_ = Cross(down, front);
 	const Scalar sinus = Length(s_);
 	const Vector3<Scalar> s = s_ / sinus;
 	const Vector3<Scalar> d = (down - front * Dot(front, down)) / sinus;
