@@ -123,6 +123,10 @@ typealias Matrix2f = Matrix2<float>;
 typealias Matrix3f = Matrix3<float>;
 typealias Matrix4f = Matrix4<float>;
 
+typealias Matrix2x2f = Matrix2<float>;
+typealias Matrix3x3f = Matrix3<float>;
+typealias Matrix4x4f = Matrix4<float>;
+
 typealias Matrix2x3f = Matrix2x3<float>;
 typealias Matrix2x4f = Matrix2x4<float>;
 
@@ -131,6 +135,29 @@ typealias Matrix3x4f = Matrix3x4<float>;
 
 typealias Matrix4x2f = Matrix4x2<float>;
 typealias Matrix4x3f = Matrix4x3<float>;
+
+__generic <typename T : __BuiltinFloatingPointType, int R, int C>
+extension matrix<T, R, C>
+{
+	static matrix<T, R, C> Uniform(const in T t)
+	{
+		matrix<T, R, C> res;
+		for(uint i = 0; i < R; ++i)
+		{
+			for(uint j = 0; j < C; ++j)
+			{
+				res[i][j] = t;
+			}
+		}
+		return res;
+	}
+
+	static matrix<T, R, C> Zero()
+	{
+		T z = T(0);
+		return Uniform(z);
+	}
+};
 
 template <typename T, int R, int C>
 Vector<T, R> GetColumn(const in Matrix<T, R, C> m, uint i)
