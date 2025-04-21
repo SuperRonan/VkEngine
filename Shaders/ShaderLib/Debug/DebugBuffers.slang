@@ -144,6 +144,7 @@ uint AllocateDebugStringContent(uint len)
 	uint res = 0;
 #if BIND_DEBUG_BUFFERS && DEBUG_BUFFER_ACCESS == RWM
 	InterlockedAdd(b_debug_buffers_header[0].chunks_counter, len, res);
+	//res = __atomic_add(b_debug_buffers_header[0].chunks_counter, len);
 #endif
 	return res;
 }
@@ -179,14 +180,14 @@ struct DebugBufferBasicStringSpan : IRWArray<Chunk>
 	{
 		get {
 			#if BIND_DEBUG_BUFFERS
-				return b_debug_buffers_strings_content.LoadAligned<Chunk>(i * sizeof(Chunk) + offset);
+				return b_debug_buffers_strings_content.LoadAligned<Chunk>((i + offset) * sizeof(Chunk));
 			#else
 				return Chunk();
 			#endif
 		}
 		set {
 			#if BIND_DEBUG_BUFFERS && (DEBUG_BUFFER_ACCESS == RWM)
-				b_debug_buffers_strings_content.StoreAligned(i * sizeof(Chunk) + offset, newValue);
+				b_debug_buffers_strings_content.StoreAligned((i + offset) * sizeof(Chunk), newValue);
 			#endif
 		}
 	}
@@ -224,7 +225,7 @@ DebugBufferBasicString<char_t, DefaultChunk<char_t>> MakeEmptyDebugBufferBasicSt
 {
 	DebugBufferBasicString<char_t, DefaultChunk<char_t>> res;
 	res._chunks.size = capacity;
-	res._chunks.offset = chunk_index * (sizeof(DefaultChunk<char_t>));
+	res._chunks.offset = chunk_index;// * (sizeof(DefaultChunk<char_t>));
 	res._size = 0;
 	return res;
 }
@@ -265,14 +266,14 @@ struct DebugPrinter
 		DebugLowPvec2 glyph_size; 
 		uint flags = 0;
 
-		static float GetFontSize(int font_size)
+		static float GetFontSize(float font_size)
 		{
 			float res = exp2(float(font_size - FONT_SIZE_NORMAL));
 			return res;
 		}
 
 		[mutating]
-		void setDefaultGlyphSize(int font_size = DEFAULT_FONT_SIZE)
+		void setDefaultGlyphSize(float font_size = DEFAULT_FONT_SIZE)
 		{
 			const vec2 oo_screen_size = rcp(vec2(1600, 900));
 			const float scale = GetFontSize(font_size);
@@ -283,7 +284,7 @@ struct DebugPrinter
 			if((this.flags & DEBUG_CLIP_SPACE_BIT) != 0)	this.glyph_size *= DebugLowPvec2(oo_screen_size * 2.0f);
 		}
 
-		__init(int flags = 0, int font_size = DEFAULT_FONT_SIZE)
+		__init(uint flags = 0, float font_size = DEFAULT_FONT_SIZE)
 		{
 			this.flags = flags;
 			setDefaultGlyphSize(font_size);
@@ -296,10 +297,10 @@ struct DebugPrinter
 	uint layer = 0;
 	float offset = 0;
 
-	__init()
+	__init(vec3 position, uint flags, float font_size = DEFAULT_FONT_SIZE)
 	{
-		state = State();
-		position = vec3(0);
+		state = State(flags, font_size);
+		this.position = position;
 	}
 
 	[mutating]
@@ -345,15 +346,14 @@ struct DebugPrinter
 	}
 
 	[mutating]
-	__generic<each P>
-	void print(Print print_flags, expand each P args)
-		where P : IPrintable
+	__generic<each P : IPrintable>
+	void print(Print print_flags, const in expand each P args)
 	{
 #if !SHALLOW_DEBUGGING
 		const uint str_index = AllocateDebugStringMeta();
 		uint required_length = 0;
 		expand HelperAccumulator(required_length, each args);
-		const uint capacity = DivUpAssumePo2(required_length, DefaultChunk<char>::Capacity());
+		const uint capacity = DivUpSafe(required_length, DefaultChunk<char>::Capacity());
 		const uint content_index = AllocateDebugStringContent(capacity);
 		var str = MakeEmptyDebugBufferString(content_index, capacity);
 		expand str.append(each args);
@@ -378,6 +378,10 @@ struct DebugPrinter
 		{
 			res.xyz = DebugLowPFloat(0);
 			res[d] = DebugLowPFloat(1);
+			if(d == 2)
+			{
+				res.xy = DebugLowPvec2(0.25);
+			}
 		}
 		else if(d == 4)
 		{
@@ -406,6 +410,13 @@ struct DebugPrinter
 	}
 
 	[mutating]
+	__generic<P : IPrintable, int N>
+	void printMat(const in Vector<P, N> v, Print print_flags = DefaultPrintFlags)
+	{
+		return printVec(v, print_flags);
+	}
+
+	[mutating]
 	__generic<P : IPrintable, int R, int C>
 	void printMat(const in Matrix<P, R, C> m, Print print_flags = DefaultPrintFlags)
 	{
@@ -414,7 +425,28 @@ struct DebugPrinter
 		{
 			state.color = GetDimColor(i);
 			Vector<P, C> row = GetRow(m, i);
-			print(print_flags, row);
+			Vector2<char> brackets;
+			if(R == 1 || true)
+			{
+				brackets = GetBracketPair(2);
+			}
+			else
+			{
+				// if(i == 0)
+				// {
+				// 	brackets = GetBracketPair(2);
+				// }
+				// else if(i == (R - 1))
+				// {
+				// 	brackets = Vector2<char>(char(0), char(0));
+				// }
+				// else
+				// {
+				// 	brackets = Vector2<char>(char(0), char(0));
+				// }
+			}
+			let fa = FormattedArray<P, Vector<P, C>>(row, brackets);
+			print(print_flags, fa);
 		}
 		state.color = push_color;
 	}

@@ -206,6 +206,8 @@ namespace vkl
 		features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
 		features.present_id_khr.presentId = t;
 
+		features.features2.features.shaderInt64 = t; // Necessary for ptr arithmetic, Necessary for debug strings
+
 		features.features2.features.geometryShader = t;
 
 		features.features2.features.samplerAnisotropy = t;

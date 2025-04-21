@@ -56,7 +56,7 @@ namespace vkl
 			auto& common_defs = *_common_definitions;
 			common_defs.setDefinition("GLOBAL_ENABLE_SHADER_DEBUG", std::to_string(int(_enable_debug)));
 			common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
-			common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
+			common_defs.setDefinition("GLYPH_SIZE", std::to_string(int(_default_glyph_size.index()) - 2));
 			common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
 			common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
 
@@ -452,7 +452,19 @@ namespace vkl
 
 
 			// Clear only the atomic counters
-			Buffer::Range clear_range = {.begin = 4 * sizeof(u32), .len = 3 * 4 * sizeof(u32)};
+			Buffer::Range clear_range;
+			const size_t header_size = 4 * sizeof(u32);
+			if (true) // only clear counters
+			{
+				clear_range = { .begin = header_size, .len = 3 * header_size };
+			}
+			else
+			{
+				clear_range = _debug_buffer->fullRange().value();
+				clear_range.begin += header_size;
+				clear_range.len -= header_size;
+
+			}
 			exec(application()->getPrebuiltTransferCommands().fill_buffer.with(FillBuffer::FillInfo{
 				.buffer = _debug_buffer,
 				.range = clear_range,
@@ -487,7 +499,7 @@ namespace vkl
 				changed = _default_glyph_size.declare();
 				if (changed)
 				{
-					common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size.index()));
+					common_defs.setDefinition("GLYPH_SIZE", std::to_string(int(_default_glyph_size.index()) - 2));
 				}
 
 				changed = ImGui::SliderInt("Float precision", &_default_float_precision, 1, 12);

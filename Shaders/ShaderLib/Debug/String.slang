@@ -464,7 +464,10 @@ struct BasicStringBase : IBasicString<char_t>
 		}
 		else
 		{
-			_chunks[chunk_id] = writer.chunk;
+			if(id_in_chunk != (CharsPerChunk() - 1))
+			{
+				_chunks[chunk_id] = writer.chunk;
+			}
 		}
 	}
 
@@ -825,6 +828,30 @@ extension Float : IPrintable
 };
 
 
+Vector2<char> GetBracketPair(uint bracket_type)
+{
+	Vector2<char> res;
+	switch(bracket_type)
+	{
+		case 1:
+			res = Vector2<char>(char(CHARCODE_lpar), char(CHARCODE_rpar));
+		break;
+		case 2:
+			res = Vector2<char>(char(CHARCODE_lbracket), char(CHARCODE_rbracket));
+		break;
+		case 3:
+			res = Vector2<char>(char(CHARCODE_lbrace), char(CHARCODE_rbrace));
+		break;
+		case 4:
+			res = Vector2<char>(char(CHARCODE_lchevron), char(CHARCODE_rchevron));
+		break;
+		default:
+			res = Vector2<char>(char(0), char(0)); // Means no brackets
+		break;
+	}
+	return res;
+}
+
 // TODO Add a common element format
 __generic <typename P : IPrintable, typename A : IArray<P>>
 struct FormattedArray : IPrintableImpl
@@ -832,34 +859,16 @@ struct FormattedArray : IPrintableImpl
 	A value;
 	Vector2<char> brackets;
 
-	static Vector2<char> GetBracket(uint bracket_type)
-	{
-		Vector2<char> res;
-		switch(bracket_type)
-		{
-			case 1:
-				res = Vector2<char>(char(CHARCODE_lpar), char(CHARCODE_rpar));
-			break;
-			case 2:
-				res = Vector2<char>(char(CHARCODE_lbracket), char(CHARCODE_rbracket));
-			break;
-			case 3:
-				res = Vector2<char>(char(CHARCODE_lbrace), char(CHARCODE_rbrace));
-			break;
-			case 4:
-				res = Vector2<char>(char(CHARCODE_lchevron), char(CHARCODE_rchevron));
-			break;
-			default:
-				res = Vector2<char>(char(0), char(0)); // Means no brackets
-			break;
-		}
-		return res;
-	}
-
 	__init(const in A value, uint bracket_type = 2)
 	{
 		this.value = value;
-		brackets = GetBracket(bracket_type);
+		brackets = GetBracketPair(bracket_type);
+	}
+
+	__init(const in A value, Vector2<char> brackets)
+	{
+		this.value = value;
+		this.brackets = brackets;
 	}
 
 	uint estimateStringSize()
