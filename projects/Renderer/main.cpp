@@ -67,6 +67,7 @@ namespace vkl
 		virtual void requestFeatures(VulkanFeatures& features) override
 		{
 			AppWithImGui::requestFeatures(features);
+			features.features2.features.fragmentStoresAndAtomics = VK_TRUE;
 			features.features_12.separateDepthStencilLayouts = VK_TRUE;
 			features.features2.features.fillModeNonSolid = VK_TRUE;
 			features.features_11.multiview = VK_TRUE;
@@ -77,12 +78,21 @@ namespace vkl
 
 			features.features2.features.shaderInt16 = VK_TRUE;
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
+
+			features.features2.features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+
+			features.shader_atomic_float_ext.shaderSharedFloat32AtomicAdd = VK_TRUE;
+
+			//features.compute_shader_derivative_khr.computeDerivativeGroupQuads = VK_TRUE;
 		}
 
 		virtual std::set<std::string_view> getDeviceExtensions() override
 		{
 			std::set<std::string_view> res = AppWithImGui::getDeviceExtensions();
 			res.insert(VK_NV_FILL_RECTANGLE_EXTENSION_NAME);
+			res.insert(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME);
+			//res.insert(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
 			return res;
 		}
 
