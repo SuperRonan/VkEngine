@@ -56,28 +56,19 @@ struct QuadDiffTextureSampling : ITextureSamplingInfo
 
 struct RayDiffTextureSampling : ITextureSamplingInfo
 {
-	vec2 grad_x = vec2(0);
-	vec2 grad_y = vec2(0);
+	Matrix2f uv_jacobian = Matrix2f::Zero();
 
 	// All expressed in TBN space
 	[mutating]
-	void init(const in Matrix3f TBN, const in vec3 view_dir, const in Matrix3x2f ray_diff)
+	void init(const in Matrix2f uv_jacobian)
 	{
-		const Matrix3f TBN_ = Transpose(TBN);
-		const Matrix3x2f prod = TBN_ * ray_diff;
-		grad_x = GetRow(prod, 0).xy;
-		grad_y = GetRow(prod, 1).xy;
-	}
-
-	__init(const in Matrix3f TBN, vec3 view_dir, vec3 dx, vec3 dy)
-	{
-		init(TBN, view_dir, MakeFromCols(dx, dy));
+		this.uv_jacobian = uv_jacobian;
 	}
 
 	template <typename T : ITexelElement>
 	T sample(const in Sampler2D<T> txt, vec2 uv)
 	{
-		return txt.SampleGrad(uv, grad_x, grad_y);
+		return txt.SampleGrad(uv, GetColumn(uv_jacobian, 0), GetColumn(uv_jacobian, 1));
 	}
 };
 
