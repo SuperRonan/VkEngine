@@ -9,7 +9,15 @@ struct Ray
 	Vector<T, N> origin;
 	Vector<T, N> direction;
 
-	Vector<T, N> sample(T t)
+	__init() {}
+
+	__init(Vector<T, N> origin, Vector<T, N> direction)
+	{
+		this.origin = origin;
+		this.direction = direction;
+	}
+
+	Vector<T, N> at(T t)
 	{
 		return origin + t * direction;
 	}
@@ -18,22 +26,11 @@ struct Ray
 template <typename T : __BuiltinFloatingPointType>
 extension Ray<T, 3>
 {
-	RayDesc getRayDesc()
-	{
-		RayDesc res;
-		res.Origin = vec3(origin);
-		res.Direction = vec3(direction);
-		res.TMin = 0;
-		res.TMax = NumericLimits<float>::max();
-		return res;
-	}
-
 	__init(const in RayDesc rd)
 	{
 		origin = Vector3<T>(rd.Origin);
 		direction = Vector3<T>(rd.Direction);
 	}
-
 };
 
 
@@ -49,8 +46,7 @@ typealias Rayf = Ray<float, N>;
 typealias Ray2f = Ray2<float>;
 typealias Ray3f = Ray3<float>;
 
-template <typename T : __BuiltinArithmeticType, int N>
-struct RayAndRange : Ray<T, N>
+struct RayRange<typename T : __BuiltinArithmeticType>
 {
 	Vector2<T> range;
 
@@ -58,14 +54,30 @@ struct RayAndRange : Ray<T, N>
 	void resetRange()
 	{
 		range.x = T(0);
-		range.y = NumericLimits<T>::max();
+		range.y = NumericLimits<T>::InfinityOrMax();
 	}
 
-	__init(const in Ray<T, N> r)
+	__init()
 	{
-		origin = r.origin;
-		direction = r.direction;
 		resetRange();
+	}
+
+	__init(Vector2<T> v)
+	{
+		range = v;
+	}
+
+	__init(T min, T max)
+	{
+		range = {min, max};
+	}
+
+	__init(const in RayDesc rd)
+	{
+		range = {
+			ConvertBuiltInTo<T>(rd.TMin),
+			ConvertBuiltInTo<T>(rd.TMax)
+		};
 	}
 
 	Vector2<T> getRange()
@@ -73,47 +85,64 @@ struct RayAndRange : Ray<T, N>
 		return range;
 	}
 
-	T getMin()
+	property T min
 	{
-		return range.x;
+		get {return range.x;}
+		set {range.x = newValue;}
 	}
 
-	T getMax()
+	property T max
 	{
-		return range.y;
+		get {return range.y;}
+		set {range.y = newValue;}
 	}
 };
 
-template <typename T : __BuiltinFloatingPointType>
-extension RayAndRange<T, 3>
+typealias RayRangef = RayRange<float>;
+struct RayDifferentials<typename T : __BuiltinFloatingPointType, int N>
 {
-	[OverloadRank(15)]
-	RayDesc getRayDesc()
+	typealias Jacobian = Matrix<T, N, 2>;
+	Jacobian origin_jacobian = Jacobian::Zero();
+	Jacobian direction_jacobian = Jacobian::Zero();
+
+	RayDifferentials<T, N> transmit(T t, Vector2<T> t_diff, Vector<T, N> direction)
 	{
-		RayDesc res;
-		res.Origin = vec3(origin);
-		res.Direction = vec3(direction);
-		res.TMin = getMin().toFloat();
-		res.TMax = getMax().toFloat();
+		RayDifferentials<T, N> res;
+		res.direction_jacobian = direction_jacobian;
+		res.origin_jacobian = origin_jacobian + t * direction_jacobian + OuterProduct(direction, t_diff);
+		return res;
+	}
+};
+
+typealias RayDiff3<Float:__BuiltinFloatingPointType> = RayDifferentials<Float, 3>;
+typealias RayDiff3f = RayDiff3<float>;
+
+extension RayDesc
+{
+	[mutating]
+	void init<T:__BuiltinFloatingPointType>(const in Ray3<T> ray, const in RayRange<T> range)
+	{
+		Origin = vec3(ray.origin);
+		Direction = vec3(ray.direction);
+		TMin = range.min.toFloat();
+		TMax = range.max.toFloat();
+	}
+
+	__init<T:__BuiltinFloatingPointType>(const in Ray3<T> ray, const in RayRange<T> range = {})
+	{
+		init(ray, range);
+	}
+
+	Ray3f getRay()
+	{
+		Ray3f res;
+		res.origin = Origin;
+		res.direction = Direction;
 		return res;
 	}
 
-	__init(const in RayDesc rd)
+	RayRangef getRange()
 	{
-		origin = Vector3<T>(rd.Origin);
-		direction = Vector3<T>(rd.Direction);
-		range = {T(rd.TMin), T(rd.TMax)};
+		return RayRangef(TMin, TMax);
 	}
-}
-
-template <T : __BuiltinArithmeticType>
-typealias Ray2AndRange = RayAndRange<T, 2>;
-
-template <T : __BuiltinArithmeticType>
-typealias Ray3AndRange = RayAndRange<T, 3>;
-
-template <int N>
-typealias RayfAndRange = RayAndRange<float, N>;
-
-typealias Ray2fAndRange = Ray2AndRange<float>;
-typealias Ray3fAndRange = Ray3AndRange<float>;
+};
