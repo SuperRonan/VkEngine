@@ -70,6 +70,7 @@ namespace microfacets
 			if(roughness == 0)
 			{
 				//res.x = 1.0f / 0.0f;
+				shininess = 1;
 			}
 			else
 			{
@@ -98,7 +99,7 @@ namespace microfacets
 		}
 
 		// Generzte a direction centered on the Z direction
-		vec3 generateRandomDirection(inout IRandomNumberGenerator rng)
+		vec3 generateRandomDirection<RNG : IRNG>(inout RNG rng)
 		{
 			const float2 xy = rng.generate<float, 2>();
 			const float p = pow(xy.x, rcp(shininess + 1));
