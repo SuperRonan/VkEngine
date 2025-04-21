@@ -179,6 +179,21 @@ namespace std
 			return res;
 		}
 
+		// Returns infinity if available, max otherwise
+		static constexpr T InfinityOrMax()
+		{
+			T res;
+			if(T is __BuiltinFloatingPointType)
+			{
+				res = infinity();
+			}
+			else
+			{
+				res = max();
+			}
+			return res;
+		}
+
 		// Float: Returns a qNaN
 		// Integral: 0
 		static constexpr T quiet_NaN()
