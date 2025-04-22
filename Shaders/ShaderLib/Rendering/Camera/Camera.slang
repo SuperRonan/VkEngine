@@ -9,6 +9,8 @@
 #include <ShaderLib/Rendering/Ray.slang>
 #include <ShaderLib/Maths/AABB.slang>
 
+#include <ShaderLib/Random.slang>
+
 enum CameraType
 {
 	Perspective = CAMERA_TYPE_PERSPECTIVE,
@@ -45,6 +47,29 @@ struct StorageCamera
 	}
 };
 
+struct CameraRay
+{
+	Ray3f ray = {};
+	RayRangef range = {};
+	RayDiff3f differentials = {};
+
+	__init()
+	{
+
+	}
+};
+struct CameraSample
+{
+	CameraRay ray = {};
+	float pdf;
+	float importance;
+
+	__init()
+	{
+
+	}
+};
+
 interface ICamera
 {
 	__init(const in StorageCamera cam);
@@ -64,7 +89,9 @@ interface ICamera
 
 	bool hasInfiniteDepth();
 
-	Ray3f getRay(vec2 cp, uint layer = 0);
+	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
+
+	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
 }
 
 interface IMatrixCamera : ICamera
@@ -128,21 +155,11 @@ struct CameraBase
 	{
 		return InverseLookAtDirAssumeOrtho(position, direction, getUp(), right);
 	}
+
+	
 }
 
-struct CameraRay
-{
-	Ray3fAndRange ray;
-	vec3 rdx;
-	vec3 rdy;
 
-	[mutating]
-	void scaleDifferentials(vec2 scale)
-	{
-		rdx *= scale.x;
-		rdy *= scale.y;
-	}
-}
 
 struct PerspectiveCamera : CameraBase, IMatrixCamera
 {
@@ -150,6 +167,11 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 	float z_far;
 	float inv_tan_half_fov;
 	float inv_aspect;
+
+	float getAspect()
+	{
+		return rcp(inv_aspect);
+	}
 
 	[mutating]
 	void initPerspectiveCamera(const in StorageCamera cam, vec2 oo_dims = vec2(0))
@@ -216,81 +238,88 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return ResizeMatrix<4, 4>(getViewToWorld(layer)) * getProjToView(layer);
 	}
 
-	Ray3f getRay(vec2 cp, uint layer = 0)
+	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0)
 	{
-		Ray3f res;
-		res.origin = position;
-		mat3 B = (getBasis());
-		const vec3 cam_dir = vec3(cp * vec2(rcp(inv_aspect), 1), inv_tan_half_fov);
-		res.direction = (B * Normalize(cam_dir));
-		return res;
-	}
-
-	CameraRay getFullRay(vec2 cp)
-	{
-		CameraRay res;
+		CameraRay res = {};
 		res.ray.origin = position;
 		mat3 B = (getBasis());
-		const vec3 cam_dir = vec3(cp * vec2(rcp(inv_aspect), 1), inv_tan_half_fov);
+		const vec2 aspect = vec2(getAspect(), 1);
+		const vec3 cam_dir = vec3(cp * aspect, inv_tan_half_fov);
+		
 		const vec3 cam_dir_n = Normalize(cam_dir);
 		const vec3 d = B * cam_dir;
-		res.rdx = (Length2(d) * right + Dot(d, right) * d) / pow(Length2(d), 1.5);
-		res.rdy = (Length2(d) * getUp() + Dot(d, getUp()) * d) / pow(Length2(d), 1.5);
+		const vec3 R = right;
+		const vec3 U = getUp();
+		const float d2 = Length2(cam_dir);
+		vec3 rdx = (d2 * R + cam_dir.x * d) / pow(d2, 1.5);
+		vec3 rdy = (d2 * U + cam_dir.y * d) / pow(d2, 1.5);
+		res.differentials.direction_jacobian = MakeFromCols(rdx, rdy);
+		res.differentials.direction_jacobian = res.differentials.direction_jacobian * (DiagonalMatrixV(aspect) * cp_jacobian);
 		res.ray.direction = (B * cam_dir_n);
-		res.ray.range = vec2(z_near, z_far) / cam_dir_n.z;
+		res.range = RayRangef(vec2(z_near, z_far) / cam_dir_n.z);
 		return res;
 	}
+
+	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
+	{
+		CameraSample res;
+		res.ray = getRay(cp, cp_jacobian);
+		res.pdf = 1.0f;
+		res.importance = 1.0f;
+		return res;
+	}
+
 };
 
-struct ReversePerspectiveCamera : CameraBase, ICamera
-{
-	float z_near;
-	float z_far;
-	float inv_tan_half_fov;
-	float inv_aspect;
+// struct ReversePerspectiveCamera : CameraBase, ICamera
+// {
+// 	float z_near;
+// 	float z_far;
+// 	float inv_tan_half_fov;
+// 	float inv_aspect;
 
-	CameraType getType()
-	{
-		return CameraType::ReversePerspective;
-	}
+// 	CameraType getType()
+// 	{
+// 		return CameraType::ReversePerspective;
+// 	}
 
-	bool hasInfiniteDepth()
-	{
-#if FORCE_CAMERA_ZFAR
-		return (FORCE_CAMERA_ZFAR == FORCE_CAMERA_ZFAR_INFINITE);
-#else
-		return isinf(z_far);
-#endif
-	}
+// 	bool hasInfiniteDepth()
+// 	{
+// #if FORCE_CAMERA_ZFAR
+// 		return (FORCE_CAMERA_ZFAR == FORCE_CAMERA_ZFAR_INFINITE);
+// #else
+// 		return isinf(z_far);
+// #endif
+// 	}
 
-	[mutating]
-	void initReversePerspectiveCamera(const in StorageCamera cam)
-	{
-		initCameraBase(cam);
+// 	[mutating]
+// 	void initReversePerspectiveCamera(const in StorageCamera cam)
+// 	{
+// 		initCameraBase(cam);
 
-		z_near = cam.z_near;
-		z_far = cam.z_far;
-		inv_tan_half_fov = cam.inv_tan_half_fov_or_ortho_size;
-		inv_aspect = cam.aspect_maybe_inv;
-	}
+// 		z_near = cam.z_near;
+// 		z_far = cam.z_far;
+// 		inv_tan_half_fov = cam.inv_tan_half_fov_or_ortho_size;
+// 		inv_aspect = cam.aspect_maybe_inv;
+// 	}
 
-	__init(const in StorageCamera cam)
-	{
-		initReversePerspectiveCamera(cam);
-	}
+// 	__init(const in StorageCamera cam)
+// 	{
+// 		initReversePerspectiveCamera(cam);
+// 	}
 
-	Ray3f getRay(vec2 cp, uint layer = 0)
-	{
-		Ray3f res;
-		mat3 B = (getBasis());
+// 	Ray3f getRay(vec2 cp, uint layer = 0)
+// 	{
+// 		Ray3f res;
+// 		mat3 B = (getBasis());
 		
-		const vec3 cam_dir_1 = vec3(cp * vec2(rcp(inv_aspect), 1) * 2, 0);
-		const vec3 cam_dir_2 = vec3(cp * vec2(rcp(inv_aspect), 1) * 1, inv_tan_half_fov);
-		res.origin = position + B * cam_dir_1;
-		res.direction = (B * Normalize(cam_dir_2 - cam_dir_1));
-		return res;
-	}
-};
+// 		const vec3 cam_dir_1 = vec3(cp * vec2(rcp(inv_aspect), 1) * 2, 0);
+// 		const vec3 cam_dir_2 = vec3(cp * vec2(rcp(inv_aspect), 1) * 1, inv_tan_half_fov);
+// 		res.origin = position + B * cam_dir_1;
+// 		res.direction = (B * Normalize(cam_dir_2 - cam_dir_1));
+// 		return res;
+// 	}
+// };
 
 struct ThinLensCamera : PerspectiveCamera
 {
@@ -384,11 +413,25 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		return false;
 	}
 
-	Ray3f getRay(vec2 cp, uint layer = 0)
+	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian, uint layer = 0)
 	{
-		Ray3f res;
-		res.direction = direction;
-		res.origin = position + cp.x * right + cp.y * getUp();
+		CameraRay res = {};
+		res.ray.direction = direction;
+		res.ray.origin = position + cp.x * right + cp.y * getUp();
+		res.range = RayRangef(depth_range);
+		res.differentials.origin_jacobian = MakeFromCols(
+			right,
+			getUp()
+		) * cp_jacobian;
+		return res;
+	}
+
+	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
+	{
+		CameraSample res;
+		res.ray = getRay(cp, cp_jacobian, layer);
+		res.pdf = 1.0f;
+		res.importance = 1.0f;
 		return res;
 	}
 }

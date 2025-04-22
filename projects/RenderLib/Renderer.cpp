@@ -721,7 +721,7 @@ namespace vkl
 			_path_tracer._path_trace = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 				.app = application(),
 				.name = name() + ".PathTracer",
-				.shader_path = shaders / "RT/PathTracing.comp",
+				.shader_path = shaders / "RT/PathTracing.slang",
 				.extent = _render_target->image()->extent(),
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,

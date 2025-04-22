@@ -8,6 +8,26 @@
 
 #include <ShaderLib/Rendering/Shading/microfacets.slang>
 
+#include <ShaderLib/Maths/3DMatrices.slang>
+#include <ShaderLib/Maths/Calculus.slang>
+
+vec2 GenerateRandomPointOnDisk<RNG : IRNG>(inout RNG rng)
+{
+	vec2 xi = rng.generate<float, 2>();
+	float theta = TWO_PI * xi.x;
+	float rho = sqrt(xi.y);
+	vec2 res = rho * vec2(cos(theta), sin(theta));
+	return res;
+}
+
+vec3 GenerateHemisphereCosineDirection<RNG : IRNG>(inout RNG rng)
+{
+	vec2 point_on_disk = GenerateRandomPointOnDisk(rng);
+	float z = sqrt(1 - Length2(point_on_disk));
+	vec3 point_on_hemisphere = vec3(point_on_disk, z);
+	return point_on_hemisphere;
+}
+
 struct PhysicalyBasedMaterialProperties
 {
 	vec3 albedo;
@@ -130,6 +150,79 @@ struct PhysicalyBasedMaterial : IMaterial
 			}
 		}
 
+		return res;
+	}
+
+	BSDFSample<N> sampleBSDF<RNG:IRNG, int N>(
+		const in vec3 geometry_normal, 
+		const in vec3 shading_normal, 
+		const in Matrixf<3, N> Jnormal,
+		const in vec3 wo, 
+		const in Matrixf<3, N> Jwo,
+		inout RNG rng, 
+		uint flags = 0)
+	{
+		BSDFSample<N> res = {};
+		res.pdf = 1;
+
+		const vec3 oriented_normal = (shading_normal);
+		const vec3 normal = dot(oriented_normal, wo) < 0 ? -oriented_normal : oriented_normal;
+		const mat3 local_to_world_basis = BasisFromDir(normal);
+		const vec3 reflected = Reflect(wo, normal);
+
+		const float alpha = sqr(this.roughness);
+		const float alpha2 = sqr(alpha);
+		const float specular_k = sqr(this.roughness + 1) / 8;
+
+		const float cos_theta_o = dot(normal, wo);
+
+		const vec3 F0 = lerp(vec3(0.04), this.albedo, this.metallic);
+
+		microfacets::Approximation approx = microfacets::Approximation(cos_theta_o, this.roughness, this.metallic);
+
+		const bool has_dielectric = this.roughness == 0.0f;
+
+		const bool force_cosine_sampling = bool(false);
+		if(force_cosine_sampling)
+		{
+			approx.specular_weight = 0.0f;
+		}
+		approx.specular_weight = 1.0f;
+		const float specular_selection = rng.generate<float>(0, 1);
+		const bool sample_specular = specular_selection < approx.specular_weight;
+
+		if(sample_specular && has_dielectric)
+		{
+			res.direction = reflected;
+			res.pdf = approx.specular_weight;
+			res.bsdf = F0 / cos_theta_o;
+			res.direction_jacobian = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
+		}
+		else
+		{
+			float cosine_pdf = 0.0f;
+			float specular_pdf = 0.0f;
+			
+			const mat3 reflected_basis = BasisFromDir(reflected);
+
+			
+			if(sample_specular && !force_cosine_sampling)
+			{
+				const vec3 local_direction = approx.generateRandomDirection(rng);
+				res.direction = reflected_basis * local_direction;
+				specular_pdf = approx.evaluate(reflected, res.direction);
+				cosine_pdf = dot(res.direction, normal) * oo_PI;
+			}
+			else
+			{
+				const vec3 local_direction = GenerateHemisphereCosineDirection(rng);
+				res.direction = local_to_world_basis * local_direction;
+				specular_pdf = approx.evaluate(reflected, res.direction);
+				cosine_pdf = local_direction.z * oo_PI;
+			}
+			res.bsdf = bsdf(geometry_normal, shading_normal, wo, res.direction);
+			res.pdf = lerp(cosine_pdf, specular_pdf, approx.specular_weight);
+		}
 		return res;
 	}
 }

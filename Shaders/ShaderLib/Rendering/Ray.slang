@@ -105,7 +105,7 @@ struct RayDifferentials<typename T : __BuiltinFloatingPointType, int N>
 	Jacobian origin_jacobian = Jacobian::Zero();
 	Jacobian direction_jacobian = Jacobian::Zero();
 
-	RayDifferentials<T, N> transmit(T t, Vector2<T> t_diff, Vector<T, N> direction)
+	RayDifferentials<T, N> transfer(T t, Vector2<T> t_diff, Vector<T, N> direction)
 	{
 		RayDifferentials<T, N> res;
 		res.direction_jacobian = direction_jacobian;

@@ -3,6 +3,9 @@
 #include "Geometry.slang"
 #include "MeshDefinitions.h"
 #include <ShaderLib/Maths/AffineXForm.slang>
+#include <ShaderLib/Maths/Calculus.slang>
+
+#include <ShaderLib/Debug/DebugBuffers.slang>
 
 interface IMesh : IGeometry<float, 3>
 {
@@ -75,7 +78,7 @@ struct Mesh : MeshBase
 		{
 			position = xform * Homogeneous(position);
 			normal = dir_xform * normal;
-			tangent = dir_xform * tangent;
+			tangent = xform * vec4(tangent, 0);
 		}
 
 		[mutating]
@@ -201,14 +204,20 @@ struct Mesh : MeshBase
 		return ReadTriangleNormal(vertices, indices, DiagonalMatrix<3, 3>(1.0f));
 	}
 
-	static Matrix2f GetTriangleUVDifferentials(const in IArray<Vertex> vertices_buffer, const in uvec3 indices, vec3 dx, vec3 dy)
+	// jacobian must be in object orientation
+	__generic<int N>
+	static SurfaceGeometryDifferentials<N> GetTriangleDifferentials(
+		const in Matrix3f object_to_world,
+		const in IArray<Vertex> vertices_buffer, 
+		const in uvec3 indices, 
+		const in vec3 interpolated_normal,
+		const in Matrix<float, 3, N> jacobian)
 	{
-		Matrix2f res;
-		Matrix3x2f dp = MakeFromCols(dx, dy);
+		SurfaceGeometryDifferentials<N> res = {};
 		const Array<Vertex, 3> vertices = MultiRead(vertices_buffer, indices);
-		const vec3 tri_normal = ReadTriangleNormal(vertices, indices);
 		Matrix3f planes;
 		Matrix2x3f textures;
+		Matrix3f normals;
 		for(uint i = 0; i < 3; ++i)
 		{
 			vec3 vertex = vertices[i].position;
@@ -216,15 +225,16 @@ struct Mesh : MeshBase
 			vec3 v2 = vertices[(i + 2) % 3].position;
 			vec3 edge = v2 - v1;
 			vec3 altitude_base = Proj(edge, vertex - v1) * edge + v1;
-			vec3 normal = Normalize(vertex - altitude_base);
-			SetRow(planes, i, normal);
+			vec3 normal_dir = (vertex - altitude_base);
+			vec3 plane = normal_dir / Length2(normal_dir);
+			SetRow(planes, i, plane);
 			SetColumn(textures, i, vertices[i].uv);
+			SetColumn(normals, i, object_to_world * vertices[i].normal);
 		}
-		res = textures * planes * dp;
-
-		//SetColumn(res, 0, dx.xy);
-		//SetColumn(res, 1, dy.xy);
-
+		Matrix<float, 3, N> barycentrics_jacobians = planes * jacobian;
+		res.uv_jacobians = textures * barycentrics_jacobians;
+		Matrix<float, 3, N> normal_jacobian_raw = normals * barycentrics_jacobians;
+		res.normal_jacobian = NormalizeDifferentials(interpolated_normal) * normal_jacobian_raw;
 		return res;
 	}
 };
