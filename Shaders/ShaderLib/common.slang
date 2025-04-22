@@ -704,7 +704,7 @@ vector<Float, N> SafeNormalize(vector<Float, N> v)
 
 
 // min/max/abs are only implemented for built-in int and float
-
+// TODO the cwise version is not linked (with vec3 for example)
 
 template <typename T : IComparable>
 T Min(const in T a, const in T b)
@@ -718,6 +718,7 @@ T Max(const in T a, const in T b)
 	return (a > b) ? a : b;
 }
 
+[OverloadRank(15)]
 template <typename T : IComparable, typename Array : IRWArray<T>>
 Array Min(const in Array a, const in Array b)
 {
@@ -729,6 +730,7 @@ Array Min(const in Array a, const in Array b)
 	return res;
 }
 
+[OverloadRank(15)]
 template <typename T : IComparable, typename Array : IRWArray<T>>
 Array Max(const in Array a, const in Array b)
 {
