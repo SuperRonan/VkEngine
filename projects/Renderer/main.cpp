@@ -175,6 +175,35 @@ namespace vkl
 			}
 
 			{
+				std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+					.app = this,
+					.name = "mirror",
+					.albedo = Vector3f::Constant(0.7).eval(),
+					.metallic = 1.0f,
+					.roughness = 0.0f,
+					.cavity = 0,
+				});
+
+				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+					.app = this,
+				});
+
+				std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+					.app = this,
+					.name = "Cube",
+					.mesh = mesh,
+					.material = material,
+				});
+
+				std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "Cube",
+					.matrix = TranslationMatrix(Vector3f(0, 4, 0)),
+					.model = model,
+				});
+				root->addChild(model_node);
+			}
+
+			{
 				//std::shared_ptr<NodeFromFile> viking_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 				//	.app = this,
 				//	.name = "Vicking",

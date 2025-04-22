@@ -443,7 +443,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			Vector3 center = Vector3(0);
+			Vector3 center = Vector3::Zero();
 
 			bool wireframe = false;
 			bool face_normal = true;
