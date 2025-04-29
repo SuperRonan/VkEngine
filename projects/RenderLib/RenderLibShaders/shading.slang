@@ -58,11 +58,8 @@ struct DirectLightShadingBase
 			ray.Direction = sample.direction;
 			ray.TMin = RayTMin(ray.getRay(), sgi.geometry_normal);
 			ray.TMax = sample.distance;
-			const bool v = scene.testVisibility(ray);
-			if(!v)
-			{
-				res = vec3(0);
-			}
+			float v = scene.testVisibility(ray);
+			res *= v;
 		}
 		return res;
 	}
