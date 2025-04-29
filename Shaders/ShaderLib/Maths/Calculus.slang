@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ShaderLib/common.slang>
+#include <ShaderLib/Rendering/Ray.slang>
 
 __generic <T : __BuiltinFloatingPointType, int N>
 Matrix<T, N, N> NormalizeDifferentials(const in Vector<T, N> vec)
@@ -78,3 +79,25 @@ Matrix<T, N, V> RefractionDifferentials(
 
 	return res;
 }
+
+
+
+vec2 DifferentiateSurfaceIntersectionT(const in vec3 ray_dir, const in vec3 normal, float t, const in RayDiff3f ray_diffs)
+{
+	const float abs_cos_theta = Abs(Dot(normal, ray_dir));
+	const vec2 res = (Transpose(ray_diffs.origin_jacobian + t * ray_diffs.direction_jacobian) * normal) / abs_cos_theta;
+	return res;
+}
+
+__generic <T : __BuiltinFloatingPointType>
+Vector2<T> ddxy(const in T t)
+{
+	return Vector2<T>(ddx(t), ddy(t));
+}
+
+__generic <T : __BuiltinFloatingPointType, int N>
+Matrix<T, N , 2> ddxy(const in Vector<T, N> v)
+{
+	return MakeFromCols(ddx(v), ddy(v));
+}
+
