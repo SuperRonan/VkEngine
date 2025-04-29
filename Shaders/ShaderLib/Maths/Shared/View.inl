@@ -237,7 +237,7 @@ constexpr Vector3<Scalar> GetInverseInfinitePerspectiveProjCoefsFromTanInvZnear(
 {
 	Vector3<Scalar> coefs;
 	coefs[0] = tan_half_fov * aspect;
-	coefs[1] = aspect;
+	coefs[1] = tan_half_fov;
 	coefs[2] = - inv_z_near / Scalar(2);
 	return coefs;
 }
