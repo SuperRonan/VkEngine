@@ -56,7 +56,7 @@ constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector3<Scalar>) theta_
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> ClipSpaceToUV(CONST_REF(Vector<Scalar, N>) cp)
 {
-	return cp / Scalar(2) + MakeUniformVector<N>(Scalar(2));
+	return cp / Scalar(2) + MakeUniformVector<N>(Scalar(0.5));
 }
 
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
