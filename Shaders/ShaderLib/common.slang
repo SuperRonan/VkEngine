@@ -651,6 +651,14 @@ T sqr(T x)
 	return x * x;
 }
 
+__generic<T : __BuiltinArithmeticType>
+T SignedSqr(T x)
+{
+	T res = sqr(x);
+	if(x < T(0))	res = -res;
+	return res;
+}
+
 
 template <typename T : __BuiltinFloatingPointType, int N>
 T Length2(vector<T, N> v)
