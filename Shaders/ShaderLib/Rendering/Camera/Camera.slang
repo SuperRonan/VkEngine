@@ -61,13 +61,25 @@ struct CameraRay
 struct CameraSample
 {
 	CameraRay ray = {};
-	float pdf;
-	float importance;
+	float pdf = 0;
+	float importance = 0;
 
 	__init()
 	{
 
 	}
+};
+
+struct CameraConnection
+{
+	Ray3f ray = {};
+	RayRangef range = {};
+	float importance = 0;
+	float pdf = 0;
+	vec2 uv = {};
+	uint layer = 0;
+
+	__init() {}
 };
 
 interface ICamera
@@ -92,6 +104,8 @@ interface ICamera
 	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
 
 	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
+
+	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position);
 }
 
 interface IMatrixCamera : ICamera
@@ -269,6 +283,33 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return res;
 	}
 
+	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
+	{
+		let w2p = getWorldToProj();
+		const vec4 proj_h = w2p * Homogeneous(position);
+		const vec3 proj = HomogeneousNormalize(proj_h);
+		const bool in_frustum = proj_h.z > 0 && all(proj.xy <= 1..xx) && all(proj.xy >= -1..xx);
+		CameraConnection res = {};
+		if(in_frustum)
+		{
+			const vec3 d = this.position - position;
+			const float d2 = Length2(d);
+			res.ray.origin = position;
+			res.ray.direction = Normalize(d);
+			res.range.max = Length(d);
+			res.range.min = 0;
+			const float cost = -dot(res.ray.direction, this.direction);
+			res.importance = rcp(d2 * pow(cost, 3)) * sqr(inv_tan_half_fov);
+			res.pdf = 1;
+			res.uv = ClipSpaceToUV(proj.xy);
+		}
+		else
+		{
+			res.importance = 0;
+			res.pdf = 0;
+		}
+		return res;
+	}
 };
 
 // struct ReversePerspectiveCamera : CameraBase, ICamera
@@ -433,6 +474,11 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		res.pdf = 1.0f;
 		res.importance = 1.0f;
 		return res;
+	}
+
+	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
+	{
+
 	}
 }
 

@@ -10,23 +10,7 @@
 
 #include <ShaderLib/Maths/3DMatrices.slang>
 #include <ShaderLib/Maths/Calculus.slang>
-
-vec2 GenerateRandomPointOnDisk<RNG : IRNG>(inout RNG rng)
-{
-	vec2 xi = rng.generate<float, 2>();
-	float theta = TWO_PI * xi.x;
-	float rho = sqrt(xi.y);
-	vec2 res = rho * vec2(cos(theta), sin(theta));
-	return res;
-}
-
-vec3 GenerateHemisphereCosineDirection<RNG : IRNG>(inout RNG rng)
-{
-	vec2 point_on_disk = GenerateRandomPointOnDisk(rng);
-	float z = sqrt(1 - Length2(point_on_disk));
-	vec3 point_on_hemisphere = vec3(point_on_disk, z);
-	return point_on_hemisphere;
-}
+#include <ShaderLib/Maths/Sampling.slang>
 
 struct PhysicalyBasedMaterialProperties
 {
@@ -215,10 +199,10 @@ struct PhysicalyBasedMaterial : IMaterial
 			}
 			else
 			{
-				const vec3 local_direction = GenerateHemisphereCosineDirection(rng);
-				res.direction = local_to_world_basis * local_direction;
+				const Sample<vec3> local_direction = SampleCosineDirection(rng.generate<float, 2>());
+				res.direction = local_to_world_basis * local_direction.value;
 				specular_pdf = approx.evaluate(reflected, res.direction);
-				cosine_pdf = local_direction.z * oo_PI;
+				cosine_pdf = local_direction.pdf;
 			}
 			res.bsdf = bsdf(geometry_normal, shading_normal, wo, res.direction);
 			res.pdf = lerp(cosine_pdf, specular_pdf, approx.specular_weight);

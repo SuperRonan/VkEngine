@@ -83,6 +83,7 @@ namespace vkl
 			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
 
 			features.shader_atomic_float_ext.shaderSharedFloat32AtomicAdd = VK_TRUE;
+			features.shader_atomic_float_ext.shaderBufferFloat32AtomicAdd = VK_TRUE;
 
 			//features.compute_shader_derivative_khr.computeDerivativeGroupQuads = VK_TRUE;
 		}

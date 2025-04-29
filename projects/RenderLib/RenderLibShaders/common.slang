@@ -14,8 +14,6 @@
 #define BIND_RENDERER_SET 0
 #endif
 
-#if BIND_RENDERER_SET
-
 struct RendererUBO
 {
 	float time;
@@ -24,6 +22,9 @@ struct RendererUBO
 	
 	StorageCamera camera;
 };
+
+#if BIND_RENDERER_SET
+
 
 layout(RENDERER_BINDING + 0) uniform ConstantBuffer<RendererUBO> renderer_ubo;
 

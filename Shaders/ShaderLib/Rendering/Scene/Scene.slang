@@ -28,12 +28,12 @@ interface IRayTracingScene : IScene
 
 struct SurfaceGeometryInfo
 {
-	vec3 position;
-	vec3 geometry_normal;
-	vec3 vertex_shading_normal;
-	vec3 shading_normal;
-	vec3 vertex_shading_tangent;
-	vec3 out_direction;
+	vec3 position = {};
+	vec3 geometry_normal = {};
+	vec3 vertex_shading_normal = {};
+	vec3 shading_normal = {};
+	vec3 vertex_shading_tangent = {};
+	vec3 out_direction = {};
 
 	// Not re-normalized
 	vec3 getShadingBiTangent()
@@ -46,13 +46,17 @@ struct SurfaceGeometryInfo
 	{
 		return MakeFromCols(vertex_shading_tangent, getShadingBiTangent(), shading_normal);
 	}
+
+	__init() {};
 };
 
 struct SurfaceShadingInfo : SurfaceGeometryInfo
 {
 	// In world space, not normalized
-	vec3 interpolated_normal;
-	vec2 uv;
+	vec3 interpolated_normal = {};
+	vec2 uv = {};
+
+	__init() {}
 };
 
 struct Scene
@@ -345,27 +349,46 @@ __init()
 		}
 	}
 
-
-	bool testVisibility(const in RayDesc ray)
+	float traceVisibility(const in RayDesc ray)
 	{
-		bool res = true;
+		float res = 1.0f;
+		const uint ray_flags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
+		//TraceRay(SceneTLAS, ray_flags, 0xff, 0, 1, )
+		return res;
+	}
+
+	float queryVisibility(const in RayDesc ray)
+	{
+		float res = 1.0f;
 		RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rq;
 		rq.TraceRayInline(SceneTLAS, 0, ~0, ray);
 		proceedRayQuery(rq);
 		if(rq.CommittedStatus() == COMMITTED_NOTHING)
 		{
-			res = true;
+			res = 1.0f;
 		}
 		else
 		{
-			res = rq.CommittedRayT() >= ray.TMax;
-			res = false;
+			if(rq.CommittedRayT() <= ray.TMax)
+			{
+				res = 0.0f;
+			}
 		}
 		return res;
 	}
 
+	
 #endif
-
+	float lookupVisibility(const in RayDesc ray)
+	{
+		return 1.0f;
+	}
+	
+	float testVisibility(const in RayDesc ray)
+	{
+		return queryVisibility(ray);
+	}
+	
 #endif
 };
 

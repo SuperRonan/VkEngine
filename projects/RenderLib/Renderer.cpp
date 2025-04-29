@@ -14,7 +14,7 @@ namespace vkl
 		_pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
 			.same_line = true,
-			.labels = {"Forward V1"s, "Deferred V1"s, "Path Tacing"s},
+			.labels = {"Forward V1"s, "Deferred V1"s, "Light Transport"s},
 			.default_index = 0,
 		};
 
@@ -36,7 +36,7 @@ namespace vkl
 		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
 		
 		_pipeline_selection.enableOptions(2, can_as && (can_rq || can_rt));
-		if (!can_as && (can_rq || can_rt) && RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
+		if (!can_as && (can_rq || can_rt) && RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
 		{
 			_pipeline_selection.setIndex(1);
 		}
@@ -59,7 +59,7 @@ namespace vkl
 		
 		bool need_rq = false;
 		bool need_rt = false;
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
 		{
 			need_rq |= true;
 		}
@@ -155,11 +155,12 @@ namespace vkl
 		});
 
 		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
-
+		size_t ubo_size = std::alignUp(sizeof(UBO), ubo_align);
+		ubo_size += std::alignUp(sizeof(LightTransport::UBO), ubo_align);
 		_ubo_buffer = std::make_shared<HostManagedBuffer>(HostManagedBuffer::CI{
 			.app = application(),
 			.name = name() + ".ubo",
-			.size = std::alignUp(sizeof(UBO), ubo_align) + std::alignUp(sizeof(PathTracer::UBO), ubo_align),
+			.size = ubo_size,
 			.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -713,28 +714,18 @@ namespace vkl
 				.name = name() + ".BuildAS",
 			});
 
-			_path_tracer._ubo = BufferSegment{
+			BufferSegment light_transport_ubo = BufferSegment{
 				.buffer = _ubo_buffer->buffer(),
-				.range = Buffer::Range{.begin = std::alignUp(sizeof(UBO), ubo_align), .len = std::alignUp(sizeof(PathTracer::UBO), ubo_align)},
+				.range = Buffer::Range{.begin = std::alignUp(sizeof(UBO), ubo_align), .len = std::alignUp(sizeof(LightTransport::UBO), ubo_align)},
 			};
 
-			_path_tracer._path_trace = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+			_light_transport = std::make_shared<LightTransport>(LightTransport::CI{
 				.app = application(),
-				.name = name() + ".PathTracer",
-				.shader_path = shaders / "RT/PathTracing.slang",
-				.extent = _render_target->image()->extent(),
-				.dispatch_threads = true,
-				.sets_layouts = _sets_layouts,
-				.bindings = {
-					Binding{
-						.buffer = _path_tracer._ubo,
-						.binding = 1,
-					},
-					Binding{
-						.image = _render_target,
-						.binding = 2,
-					},
-				},
+				.name = name() + ".LightTransport",
+				.scene = _scene,
+				.target = _render_target,
+				.ubo = light_transport_ubo,
+				.sets_layout = _sets_layouts,
 			});
 		}
 	}
@@ -897,9 +888,9 @@ namespace vkl
 
 			_ambient_occlusion->updateResources(ctx);
 		}
-		if ((RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		if ((RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
 		{
-			_path_tracer._path_trace->updateResources(ctx);
+			_light_transport->updateResources(ctx);
 		}
 		
 		if (_use_indirect_rendering)
@@ -1232,9 +1223,9 @@ namespace vkl
 			_depth_of_field->record(exec);
 		}
 		
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::PathTaced)
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
 		{
-			exec(_path_tracer._path_trace);
+			_light_transport->render(exec);
 		}
 
 		_taau->execute(exec, *_camera);
@@ -1271,13 +1262,19 @@ namespace vkl
 
 			_pipeline_selection.declare();
 
-			if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Deferred)
+			RenderPipeline render_pipeline = RenderPipeline(_pipeline_selection.index());
+
+			if (render_pipeline == RenderPipeline::Deferred)
 			{
 				if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
 				{
 					_ambient_occlusion->declareGui(ctx);
 					ImGui::Separator();
 				}
+			}
+			else if (render_pipeline == RenderPipeline::LightTransport)
+			{
+				_light_transport->declareGUI(ctx);
 			}
 			
 			ImGui::BeginDisabled(true);

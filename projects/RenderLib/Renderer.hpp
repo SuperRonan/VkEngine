@@ -18,6 +18,7 @@
 #include "AmbientOcclusion.hpp"
 #include "TemporalAntiAliasingAndUpscaler.hpp"
 #include "DepthOfField.hpp"
+#include "LightTransport.hpp"
 
 #include <vkl/Commands/AccelerationStructureCommands.hpp>
 
@@ -34,7 +35,7 @@ namespace vkl
 		{
 			Forward = 0,
 			Deferred = 1,
-			PathTaced = 2,
+			LightTransport = 2,
 		};
 
 		enum class ShadowMethod
@@ -144,17 +145,7 @@ namespace vkl
 		FatDeferredPipeline _fat_deferred_pipeline = {};
 		MinimalDeferredPipeline _minimal_deferred_pipeline = {};
 
-		struct PathTracer
-		{
-			std::shared_ptr<ComputeCommand> _path_trace;
-
-			struct UBO
-			{
-				
-			};
-			BufferAndRange _ubo;
-		};
-		PathTracer _path_tracer;
+		std::shared_ptr<LightTransport> _light_transport;
 
 		std::shared_ptr<TemporalAntiAliasingAndUpscaler> _taau;
 
