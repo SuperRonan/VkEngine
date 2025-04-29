@@ -64,7 +64,7 @@ namespace impl
 			}
 		}
 
-		Scalar operator()(Scalar s)
+		Scalar operator()(const Scalar s)
 		{
 			Scalar res;
 			if(IS_BUILTIN_INTEGER(Scalar))
@@ -78,26 +78,38 @@ namespace impl
 				Scalar maks;
 				if(Scalar is f16)
 				{
-					const u16 mask = BitMask<u16>(12) - 1;
-					maks = ConvertBuiltInTo<Scalar>(mask);
+					const u16 mask = BitMask<u16>(12);
+					maks = ConvertBuiltInTo<Scalar>(mask + 1);
 					u16 u = bit_cast<u16>(s) & mask;
-					s = ConvertBuiltInTo<Scalar>(u);
+					res = ConvertBuiltInTo<Scalar>(u);
 				}
 				else if(Scalar is f32)
 				{
-					const u32 mask = BitMask<u32>(24) - 1;
-					maks = ConvertBuiltInTo<Scalar>(mask);
+					const u32 mask = BitMask<u32>(24);
+					maks = ConvertBuiltInTo<Scalar>(mask + 1);
 					u32 u = bit_cast<u32>(s) & mask;
-					s = ConvertBuiltInTo<Scalar>(u);
+					res = ConvertBuiltInTo<Scalar>(u);
 				}
 				else if(Scalar is f64)
 				{
-					const u64 mask = BitMask<u64>(48) - 1;
-					maks = ConvertBuiltInTo<Scalar>(mask);
+					const u64 mask = BitMask<u64>(48);
+					maks = ConvertBuiltInTo<Scalar>(mask + 1);
 					u64 u = bit_cast<u64>(s) & mask;
-					s = ConvertBuiltInTo<Scalar>(u);
+					res = ConvertBuiltInTo<Scalar>(u);
 				}
-				res = s * (length / maks) + min;
+				res = res * length / maks + min;
+
+				// TODO explore this alternative of uniform float generation
+				// if(Scalar is float)
+				// {
+				// 	uint u = bit_cast<uint>(s);
+				// 	u = u & BitMask<uint>(23);
+				// 	uint n = 0;
+				// 	u = (u & ~BitMask<uint>(n));
+				// 	float uf = bit_cast<float>(bit_cast<uint>(float(0.5f)) | u) - 0.5f;
+				// 	res = bit_cast<Scalar>(uf * 2.0f);
+				// 	res = res * length + min;
+				// }
 			}
 			return res;
 		}
