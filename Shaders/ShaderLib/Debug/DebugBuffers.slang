@@ -262,7 +262,7 @@ struct DebugPrinter
 	struct State
 	{
 		DebugLowPvec4 color = DebugLowPvec4(1, 1, 1, 1);
-		DebugLowPvec4 back_color = DebugLowPvec4(0, 0, 0, 0.5);
+		DebugLowPvec4 back_color = DebugLowPvec4(0, 0, 0, 0.75);
 		DebugLowPvec2 glyph_size; 
 		uint flags = 0;
 
@@ -504,12 +504,12 @@ void PushDebugLine(vec4 p1, vec4 p2, uint layer, DebugLowPvec4 c1, DebugLowPvec4
 }
 
 
-void PushDebugLine(Matrix4f xform, vec3 p1, vec3 p2, uint layer, DebugLowPvec4 c1, DebugLowPvec4 c2, DebugLine flags)
+void PushDebugLine(Matrix4f xform, vec3 p1, vec3 p2, uint layer, DebugLowPvec4 c1, DebugLowPvec4 c2, DebugLine flags = DebugLine::ClipSpace)
 {
 	PushDebugLine(xform * vec4(p1, 1), xform * vec4(p2, 1), layer, c1, c2, flags | DebugLine::ClipSpace);
 }
 
-void PushDebugLine(Matrix4f xform, vec3 p1, vec3 p2, uint layer, DebugLowPvec4 color, DebugLine flags)
+void PushDebugLine(Matrix4f xform, vec3 p1, vec3 p2, uint layer, DebugLowPvec4 color, DebugLine flags = DebugLine::ClipSpace)
 {
 	PushDebugLine(xform, p1, p2, layer, color, color, flags);
 }

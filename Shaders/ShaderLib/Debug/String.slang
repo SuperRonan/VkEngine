@@ -737,6 +737,12 @@ struct FormattedInteger : IPrintableImpl
 		format.digits = i8(0);
 	}
 
+	__init(Int value, IntegerFormat format)
+	{
+		this.value = value;
+		this.format = format;
+	}
+
 	uint estimateStringSize()
 	{
 		uint smaller_basis_po2 = BitFloor(uint(format.basis));
