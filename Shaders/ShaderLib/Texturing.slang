@@ -33,6 +33,11 @@ interface ITextureSamplingInfo
 struct DefaultTextureSampling : ITextureSamplingInfo
 {
 	float offset = 0;
+
+	__init(float offset = 0)
+	{
+		this.offset = offset;
+	}
 	
 	template <typename T : ITexelElement>
 	T sample(const in Sampler2D<T> txt, vec2 uv)
@@ -58,9 +63,7 @@ struct RayDiffTextureSampling : ITextureSamplingInfo
 {
 	Matrix2f uv_jacobian = Matrix2f::Zero();
 
-	// All expressed in TBN space
-	[mutating]
-	void init(const in Matrix2f uv_jacobian)
+	__init(const in Matrix2f uv_jacobian)
 	{
 		this.uv_jacobian = uv_jacobian;
 	}
