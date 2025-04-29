@@ -26,11 +26,16 @@ enum HashPolicy
 };
 
 
+// TODO IHasher and Hash through a member function of an object
+
 fast_hash_t FastHash32(uint32_t x)
 {
-	x = ((x >> 16) ^ x) * 0x45d9f3b;
-	x = ((x >> 16) ^ x) * 0x45d9f3b;
-	x = (x >> 16) ^ x;
+	const uint32_t m = 0x9908b0df;
+	const uint32_t a = 0x78d546ac;
+	const uint32_t s = 16;
+	x = ((x >> s) ^ x) * m + a;
+	x = ((x >> s) ^ x) * m + a;
+	x = (x >> s) ^ x;
 	return x;
 }
 
