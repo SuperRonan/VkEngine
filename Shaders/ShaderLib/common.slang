@@ -937,15 +937,21 @@ bool NonZero(Vector<T, N> v)
 	return any(v != z);
 }
 
-#define DOT_DISPATCH_IMPL(TYPE)	else if(T is TYPE)	{res = bit_cast<T>(dot(bit_cast<Vector<TYPE, N>>(l), bit_cast<Vector<TYPE, N>>(r)));}
+#define DOT_DISPATCH_IMPL(TYPE)	else if(T is TYPE)	{res = bit_cast<T>(dot(bit_cast<Vector<TYPE, N>>(bra), bit_cast<Vector<TYPE, N>>(ket)));}
 
 template <typename T : __BuiltinArithmeticType, int N>
-T Dot(const in Vector<T, N> l, const in Vector<T, N> r)
+T Dot(const in Vector<T, N> bra, const in Vector<T, N> ket)
 {
 	T res;
 	if(false) {}
 	FOR_EACH_BUILTIN_TYPE(DOT_DISPATCH_IMPL)
 	return res;
+}
+
+template <typename T : __BuiltinArithmeticType, int N>
+T AbsDot(const in Vector<T, N> bra, const in Vector<T, N> ket)
+{
+	return Abs(Dot(bra, ket));
 }
 
 template <typename T : __BuiltinArithmeticType, int N>
