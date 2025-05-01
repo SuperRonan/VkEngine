@@ -16,7 +16,7 @@ Sample<vec2> SampleUniformOnDisk(vec2 xi)
 	const float rho = sqrt(xi.x);
 	const float theta = TWO_PI * xi.y;
 	res.value = rho * vec2(cos(theta), sin(theta));
-	res.pdf = rcp(PI);
+	res.pdf = oo_PI;
 	return res;
 }
 
@@ -40,7 +40,7 @@ Sample<vec3> SampleUniformDirection(vec2 xi)
 	const float phi = TWO_PI * xi.y;
 	const vec2 point_on_circle = vec2(cos(phi), sin(phi));
 	res.value = vec3(point_on_circle * radius, z);
-	res.pdf = rcp(4.0f * PI);
+	res.pdf = 0.25 * oo_PI;
 	return res;
 }
 
