@@ -27,7 +27,12 @@ interface IMaterial
 
 	MaterialType getType();
 
-	float3 bsdf(const in vec3 geometry_normal, const in vec3 shading_normal, const in vec3 wo, const in vec3 wi);
+	float3 bsdf(
+		const in vec3 geometry_normal, 
+		const in vec3 shading_normal, 
+		const in vec3 wo, 
+		const in vec3 wi
+	);
 
 	BSDFSample<N> sampleBSDF<RNG:IRNG, int N>(
 		const in vec3 geometry_normal, 
@@ -36,6 +41,7 @@ interface IMaterial
 		const in vec3 wo, 
 		const in Matrixf<3, N> wo_jacobian,
 		inout RNG rng, 
-		uint flags = 0);
+		uint flags = 0
+	);
 }
 
