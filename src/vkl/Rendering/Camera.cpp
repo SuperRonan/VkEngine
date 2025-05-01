@@ -198,6 +198,10 @@ namespace vkl
 			.aperture = aperatureRadiusUnit(),
 			.focal_distance = _focal_distance,
 		};
+		if (_type == Type::Orthographic)
+		{
+			res.inv_tan_half_fov = _ortho_size;
+		}
 		res.flags |= static_cast<uint32_t>(_type);
 		return res;
 	}
