@@ -49,17 +49,20 @@ struct DirectLightShadingBase
 	) {
 		vec3 res = 0;
 		Light::Sample sample = light.sampleLi(rng, sgi.position, sgi.shading_normal, sgi.out_direction);
-		const vec3 bsdf = material.bsdf(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
-		res = max(sample.intensity, vec3(0)) * bsdf * abs(dot(sgi.shading_normal, sample.direction));
-		if(NonZero(res))
+		if(sample.pdf > 0)
 		{
-			RayDesc ray;
-			ray.Origin = sgi.position;
-			ray.Direction = sample.direction;
-			ray.TMin = RayTMin(ray.getRay(), sgi.geometry_normal);
-			ray.TMax = sample.distance;
-			float v = scene.testVisibility(ray);
-			res *= v;
+			const vec3 bsdf = material.bsdf(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+			res = max(sample.intensity, vec3(0)) * bsdf * abs(dot(sgi.shading_normal, sample.direction)) / sample.pdf;
+			if(NonZero(res))
+			{
+				RayDesc ray;
+				ray.Origin = sgi.position;
+				ray.Direction = sample.direction;
+				ray.TMin = RayTMin(ray.getRay(), sgi.geometry_normal);
+				ray.TMax = sample.distance;
+				float v = scene.testVisibility(ray);
+				res *= v;
+			}
 		}
 		return res;
 	}

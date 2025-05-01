@@ -100,7 +100,6 @@ struct PhysicalyBasedMaterial : IMaterial
 
 		if((same_hemisphere && can_reflect) || (!same_hemisphere && can_transmit))
 		{
-
 			const vec3 reflected = reflect(-wo, normal);
 			const vec3 halfway = normalize(wo + wi);
 
@@ -120,7 +119,6 @@ struct PhysicalyBasedMaterial : IMaterial
 
 			if(NonZero(F0) && (roughness < 1.0f || metallic != 0.0f))
 			{
-			
 				const float specular_D = microfacets::NormalDistribution(alpha2, normal, halfway);
 				const float specular_G = microfacets::GeometryShadowMasking(normal, wo, wi, specular_k);
 

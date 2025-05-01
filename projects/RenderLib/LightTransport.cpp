@@ -137,6 +137,7 @@ namespace vkl
 				vec2 oo_dims;
 				vec2 dims;
 				Vector2u udims_minus_1;
+				float dispatched_threads;
 			};
 			VkExtent3D extent = _target->image()->extent().value();
 			vec2 dims = vec2(extent.width, extent.height);
@@ -144,6 +145,7 @@ namespace vkl
 				.oo_dims = rcp(dims),
 				.dims = dims,
 				.udims_minus_1 = Vector2u(extent.width - 1, extent.height - 1),
+				.dispatched_threads = float(_light_tracer_samples),
 			};
 
 			exec(_light_tracer_rq->with(ComputeCommand::SingleDispatchInfo{

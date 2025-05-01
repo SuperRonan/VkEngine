@@ -38,7 +38,7 @@ T RayTMin(const in Vector<T, N> origin)
 	{
 		T div = T((1u << (sizeof(T) * 5u)));
 		res = res / div;
-		res = Max(res, NumericLimits<T>::min() * T(64));
+		res = Max(res, NumericLimits<T>::min() * T(0x1p8f));
 	}
 	return res;
 }
@@ -49,14 +49,14 @@ T RayTMin(const in Vector<T, N> origin, T cos_theta)
 	// Not perfect, but good enough
 	T res = RayTMin(origin);
 	res *= (T(16) * (T(2) - cos_theta));
-	//res = Max(res, NumericLimits<T>::min() * T(64));
+	res = Max(res, NumericLimits<T>::min() * T(0x1p8f));
 	return res;
 }
 
 template <typename T : __BuiltinArithmeticType, int N>
 T RayTMin(const in Ray<T, N> ray, const in Vector<T, N> normal)
 {
-	const T cos_theta = Abs(Dot(ray.direction, normal));
+	const T cos_theta = AbsDot(ray.direction, normal);
 	return RayTMin(ray.origin, cos_theta);
 }
 

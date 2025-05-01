@@ -146,9 +146,10 @@ struct PointLight : Light, ILight
 	{
 		Light::Sample res;
 		const vec3 d = position - shading_position;
+		const float d2 = Length2(d);
 		res.direction = Normalize(d);
-		res.intensity = emission / Length2(d);
-		res.pdf = 1;
+		res.intensity = emission;
+		res.pdf = d2;
 		res.flags = Light::Sample::Flags::DeltaPosition;
 		res.distance = Length(d);
 		return res;
@@ -321,27 +322,33 @@ struct SpotLight : Light, ILight
 		return res;
 	}
 
+	float getInvArea()
+	{
+		return rcp(aspect);
+	}
+
 	Light::Sample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position, vec3 shading_normal, vec3 wo)
 	{
 		Light::Sample res;
 		const vec4 proj_shading_position_h = getWorldToProj() * Homogeneous(shading_position);
 		const vec3 proj_shading_position = proj_shading_position_h.xyz / proj_shading_position_h.w;
 		const bool in_frustum = proj_shading_position_h.z > 0 && all(proj_shading_position.xy <= 1..xx) && all(proj_shading_position.xy >= -1..xx);
+		const vec3 d = position - shading_position;
+		const float dist2 = Length2(d);
+		res.direction = Normalize(d);
+		res.distance = Length(d);
+		res.pdf = dist2;
 		if(in_frustum)
 		{
-			const vec3 d = position - shading_position;
-			res.direction = Normalize(d);
-			const float dist2 = Length2(d);
-			res.intensity = emission / dist2;
 			res.extra.xy = proj_shading_position.xy;
-			res.pdf = 1;
-			res.distance = Length(d);
+			const float ct = -Dot(res.direction, this.direction);
+			const float ct3 = ct * ct * ct;
+			res.intensity = emission * (rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea());
 			res.intensity *= evaluateAttenuation(res.extra.xy);
 		}
 		else
 		{
 			res.intensity = 0;
-			res.pdf = 1;	
 		}
 		res.flags = Light::Sample::Flags::DeltaPosition;
 		return res;
@@ -352,15 +359,32 @@ struct SpotLight : Light, ILight
 		Light::EmissionSample res;
 		res.ray.origin = position;
 		// sample the cp that considers the attenuation
-		vec2 cp = UVToClipSpace(rng.generate<float, 2>());
+		vec2 xi = rng.generate<float, 2>();
+		vec2 cp;
+		float pdf = 1.0;
+		const uint attenuation_flags = flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
+		if((attenuation_flags) != 0)
+		{
+			let sample = SampleUniformOnDisk(xi);
+			cp = sample.value;
+			pdf = sample.pdf;
+		}
+		else
+		{
+			cp = UVToClipSpace(xi);
+			pdf = 0.25;
+		}
 		// Explicit z_near at 1
 		// Here the z_near does not mathematically matter, 
 		// but with a "usual" value like 1e-3, it makes a loss of precision in the matrix product
 		// which induces some aliasing artifacts in the sampling
 		res.ray.direction = Normalize(getProjToWorld(1) * vec4(cp, 1, 1));
 		res.range = {};
-		res.pdf = 1.0f;// / pow(dot(res.ray.direction, direction), 3);
-		res.intensity = emission * evaluateAttenuation(cp);
+		const float ct = Dot(res.ray.direction, this.direction);
+		const float ct3 = ct * ct * ct;
+		res.pdf = pdf * rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea();
+		res.intensity = emission * (rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea());
+		res.intensity *= evaluateAttenuation(cp);
 		res.flags = Flags::DeltaPosition;
 		return res;
 	}

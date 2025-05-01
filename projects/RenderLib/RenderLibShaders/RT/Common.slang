@@ -4,6 +4,10 @@
 
 #include <ShaderLib/Rendering/Scene/Scene.slang>
 
+#ifndef MAX_DEPTH
+#define MAX_DEPTH 5
+#endif
+
 struct UBO : RendererUBO
 {
 

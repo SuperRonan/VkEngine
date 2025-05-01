@@ -34,7 +34,6 @@ struct PushConstant
 [vk::push_constant]
 uniform PushConstant _pc;
 
-#define MAX_DEPTH 5
 #define LIGHT_SAMPLES 16
 
 #define LOCAL_SIZE_X 16
@@ -103,11 +102,23 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 
 		RNG_t rng = RNG_t(Hash(pixel) ^ Hash(renderer_ubo.frame_idx));
 
-		PerspectiveCamera cam = PerspectiveCamera(renderer_ubo.camera, oo_dims);
+		ICamera cam = MakeCamera(renderer_ubo.camera);
 		RayQuerier ray_querier = RayQuerier(scene);
 		
-		const vec2 uv = (vec2(pixel) + 0.5f) * oo_dims;
+		// [0, 1]
+		vec2 jitter = vec2(0);
+		if(true)
+		{
+			jitter = rng.generate<float, 2>();
+		}
+		else
+		{
+			RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
+			jitter = _rng.generate<float, 2>();
+		}
+		const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
 		const vec2 cp = UVToClipSpace(uv);
+
 		
 		Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
 		CameraSample cam_sample = cam.sampleWe(rng, cp, cp_jacobian);

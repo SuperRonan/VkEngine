@@ -40,7 +40,7 @@ struct StorageCamera
 	CameraType getType()
 	{
 #ifdef FORCE_CAMERA_TYPE
-		return FORCE_CAMERA_TYPE;
+		return CameraType(FORCE_CAMERA_TYPE);
 #else
 		return CameraType((flags >> CAMERA_FLAGS_TYPE_BIT_OFFSET) & BIT_MASK(CAMERA_TYPE_BIT_COUNT));
 #endif
@@ -188,7 +188,7 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 	}
 
 	[mutating]
-	void initPerspectiveCamera(const in StorageCamera cam, vec2 oo_dims = vec2(0))
+	void initPerspectiveCamera(const in StorageCamera cam)
 	{
 		initCameraBase(cam);
 
@@ -198,9 +198,9 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		inv_aspect = cam.aspect_maybe_inv;
 	}
 
-	__init(const in StorageCamera cam, vec2 oo_dims = vec2(0))
+	__init(const in StorageCamera cam)
 	{
-		initPerspectiveCamera(cam, oo_dims);
+		initPerspectiveCamera(cam);
 	}
 
 
@@ -274,17 +274,27 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return res;
 	}
 
+	float getInvArea()
+	{
+		return 0.25 * inv_aspect;
+	}
+
 	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
 	{
 		CameraSample res;
 		res.ray = getRay(cp, cp_jacobian);
-		res.pdf = 1.0f;
-		res.importance = 1.0f;
+		res.ray.range = {};
+		const float ct = Dot(direction, res.ray.ray.direction);
+		const float ct3 = ct * ct * ct;
+		res.pdf = rcp(ct3) * getInvArea() * sqr(inv_tan_half_fov);
+		res.importance = res.pdf;
+
 		return res;
 	}
 
 	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
 	{
+		// the length of the cp coordinate is linked to the cos theta, maybe we could exploit it for some optimization
 		let w2p = getWorldToProj();
 		const vec4 proj_h = w2p * Homogeneous(position);
 		const vec3 proj = HomogeneousNormalize(proj_h);
@@ -298,15 +308,22 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 			res.ray.direction = Normalize(d);
 			res.range.max = Length(d);
 			res.range.min = 0;
-			const float cost = -dot(res.ray.direction, this.direction);
-			res.importance = rcp(d2 * pow(cost, 3)) * sqr(inv_tan_half_fov);
-			res.pdf = 1;
+			const float ct = -dot(res.ray.direction, this.direction);
+			const float ct2 = sqr(ct);
+			const float ct3 = ct2 * ct;
+			// pdf_A(d) = delta_A
+			// pdf_sa(d) = pdf_A(d) * d2 (Geometric density conversion)
+			res.pdf = d2;
+			// cost because their is an imaginary image plane, to compensate the natural optical vignetting
+			// cost2 because rcp(cost) is distance to the image plane
+			// sqr(inv_tan) to boost the signal to keep the same brightness with FOV changes (because the solid angle is the invert of the fov)
+			res.importance = rcp(ct3) * getInvArea() * sqr(inv_tan_half_fov);
 			res.uv = ClipSpaceToUV(proj.xy);
 		}
 		else
 		{
 			res.importance = 0;
-			res.pdf = 0;
+			res.pdf = 1;
 		}
 		return res;
 	}
@@ -458,7 +475,7 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 	{
 		CameraRay res = {};
 		res.ray.direction = direction;
-		res.ray.origin = position + cp.x * right + cp.y * getUp();
+		res.ray.origin = position + frame_size * (cp.x * right + cp.y * getUp() * aspect);
 		res.range = RayRangef(depth_range);
 		res.differentials.origin_jacobian = MakeFromCols(
 			right,
@@ -478,9 +495,41 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 
 	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
 	{
-
+		CameraConnection res = {};
+		res.pdf = 1.0f;
+		vec3 pos_c = getWorldToView() * Homogeneous(position);
+		vec2 cp = rcp(this.frame_size) * vec2(1, rcp(aspect)) * pos_c.xy;
+		const bool in_frustum = pos_c.z > 0 && all(cp <= 1..xx) && all(cp >= -1..xx);
+		if(in_frustum)
+		{
+			res.importance = 1;
+			res.ray.origin = position;
+			res.ray.direction = -this.direction;
+			res.range = {};
+			res.range.max = pos_c.z;
+			res.importance = rcp(sqr(this.frame_size));
+			res.uv = ClipSpaceToUV(cp);
+		}
+		else
+		{
+			res.importance = 0;
+		}
+		res.pdf = 1;
+		return res;
 	}
 }
+
+// Dynamic dispatch compile time resolve does not seem to complitely work yet
+// So we need to do this
+#ifdef FORCE_CAMERA_TYPE
+#if FORCE_CAMERA_TYPE == CAMERA_TYPE_PERSPECTIVE
+typealias ForcedCameraType = PerspectiveCamera;
+#elif FORCE_CAMERA_TYPE == CAMERA_TYPE_ORTHO
+typealias ForcedCameraType = OrthographicCamera;
+#else // if FORCE_CAMERA_TYPE == CAMERA_TYPE_SPHERICAL
+typealias ForcedCameraType = PerspectiveCamera;
+#endif
+#endif
 
 
 IMatrixCamera MakeMatrixCamera(const in StorageCamera cam)
@@ -490,8 +539,29 @@ IMatrixCamera MakeMatrixCamera(const in StorageCamera cam)
 	{
 		return PerspectiveCamera(cam);
 	}
+	else //if(type == CameraType::Orthographic)
+	{
+		return OrthographicCamera(cam);
+	}
+}
+
+ICamera MakeCamera(const in StorageCamera cam)
+{
+#ifdef FORCE_CAMERA_TYPE
+	return ForcedCameraType(cam);
+#else
+	const CameraType type = cam.getType();
+	if(type == CameraType::Perspective)
+	{
+		return PerspectiveCamera(cam);
+	}
 	else if(type == CameraType::Orthographic)
 	{
 		return OrthographicCamera(cam);
 	}
+	else// if(type == CameraType::Spherical)
+	{
+		return PerspectiveCamera(cam);
+	}
+#endif
 }
