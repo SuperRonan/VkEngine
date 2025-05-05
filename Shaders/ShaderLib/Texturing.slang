@@ -2,8 +2,8 @@
 
 #include "common.slang"
 
-template <T : ITexelElement>
-uvec2 TextureSize(const in RWTexture2D<T> texture)
+template <T : ITexelElement, int SampleCount, int Access, int IsShadow, int IsCombined, int Format>
+uvec2 TextureSize(const in _Texture<T, __Shape2D, 0, 0, SampleCount, Access, IsShadow, IsCombined, Format> texture)
 {
 	uvec2 res;
 	texture.GetDimensions(res.x, res.y);
