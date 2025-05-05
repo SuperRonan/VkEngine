@@ -63,37 +63,49 @@ struct StorageLight
 
 struct Light
 {
-	[Flags]
-	enum Flags
-	{
-		None 			= 0x0,
-		DeltaPosition 	= 0x1,
-		DeltaDirection 	= 0x2,
-		AtInfinity 		= 0x4,
-	};
 	struct Sample
 	{
-		typealias Flags = Light::Flags;
+		[Flags]
+		enum Flags
+		{
+			None 			= 0x0,
+			DeltaPosition 	= 0x1,
+			DeltaDirection 	= 0x2,
+			AtInfinity 		= 0x4,
+		};
+
 		vec3 intensity;
+		PackedEnumIndex<Flags, 8, u32> flags_index;
 		float pdf;
 
+		property Flags flags
+		{
+			get {return flags_index.enum;}
+			set {flags_index.enum = newValue;}
+		}
+
+		property u32 index
+		{
+			get {return flags_index.index;}
+			set {flags_index.index = newValue;}
+		}
+	};
+
+	struct ConnectionSample : Sample
+	{
 		vec3 direction;
-		Flags flags;
 
 		float distance;
 		// Optional additional fields
-		vec3 extra;
+		vec2 extra;
 	};
 
-	struct EmissionSample
+	struct EmissionSample : Sample
 	{
-		typealias Flags = Light::Flags;
 		Ray3f ray;
 		RayRangef range;
-		vec3 intensity;
-		float pdf = 0;
-		Flags flags = Flags::None;
-	}
+		float position_pdf;
+	};
 };
 
 interface ILight
@@ -105,9 +117,15 @@ interface ILight
 	LightType getType();
 
 	// Directions can be zero (means no direction)
-	Light::Sample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position, vec3 shading_normal, vec3 wo);
-
+	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position);
+	
+	// Direction not normalized
+	// Assume reference_position + direction is on the light
+	float pdfLi(vec3 reference_position, vec3 direction);
+	
 	Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng);
+
+	RayPdf pdfLe(Ray3f ray);
 }; 
 
 
@@ -142,17 +160,22 @@ struct PointLight : Light, ILight
 		return LightType::Point;
 	}
 
-	Light::Sample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position, vec3 shading_normal, vec3 wo)
+	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)
 	{
-		Light::Sample res;
+		Light::ConnectionSample res;
 		const vec3 d = position - shading_position;
 		const float d2 = Length2(d);
 		res.direction = Normalize(d);
 		res.intensity = emission;
 		res.pdf = d2;
-		res.flags = Light::Sample::Flags::DeltaPosition;
+		res.flags = Sample::Flags::DeltaPosition;
 		res.distance = Length(d);
 		return res;
+	}
+
+	float pdfLi(vec3 reference_position, vec3 direction)
+	{
+		return Length2(direction);
 	}
 
 	Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
@@ -163,11 +186,22 @@ struct PointLight : Light, ILight
 		res.ray.direction = dir_sample.value;
 		res.range = {};
 		res.pdf = dir_sample.pdf;
+		res.position_pdf = 1;
 		res.intensity = emission;
-		res.flags = Flags::DeltaPosition;
+		res.flags = Sample::Flags::DeltaPosition;
 		return res;
 	}
 
+	RayPdf pdfLe(Ray3f ray)
+	{
+		RayPdf res = {};
+		if(true || all(ray.origin == position))
+		{
+			res.position_pdf = 1;
+			res.direction_pdf = 0.25 * oo_PI;
+		}
+		return res;
+	}
 }
 
 struct DirectionalLight :  Light, ILight
@@ -205,9 +239,9 @@ struct DirectionalLight :  Light, ILight
 		return LightType::Directional;
 	}
 
-	Light::Sample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position, vec3 shading_normal, vec3 wo)
+	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)
 	{
-		Light::Sample res;
+		Light::ConnectionSample res;
 		res.direction = direction;
 		res.intensity = emission;
 		res.pdf = 1;
@@ -216,13 +250,25 @@ struct DirectionalLight :  Light, ILight
 		return res;
 	}
 
+	float pdfLi(vec3 reference_position, vec3 direction)
+	{
+		return 1;
+	}
+
 	Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 	{
+		// TODO
 		Light::EmissionSample res;
-
+		res.pdf = 0;
 		return res;
 	}
 
+	RayPdf pdfLe(Ray3f ray)
+	{
+		// TODO
+		RayPdf res = {};
+		return res;
+	}
 }
 
 struct SpotLight : Light, ILight
@@ -327,9 +373,28 @@ struct SpotLight : Light, ILight
 		return rcp(aspect);
 	}
 
-	Light::Sample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position, vec3 shading_normal, vec3 wo)
+	// direction going out from the camera, and is normalized
+	Optional<vec2> getDirectionCP(vec3 direction)
 	{
-		Light::Sample res;
+		Optional<vec2> res = none;
+		vec3 dir_c = Transpose(getBasis()) * direction;
+		const float z = dir_c.z;
+		if(z > 0)
+		{
+			vec2 cp = dir_c.xy / z;
+			cp.x *= rcp(this.aspect);
+			cp = cp * rcp(tan_half_fov);
+			if(all(cp <= 1..xx) && all(cp >= -1..xx))
+			{
+				res = cp;
+			}
+		}
+		return res;
+	}
+
+	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)
+	{
+		Light::ConnectionSample res;
 		const vec4 proj_shading_position_h = getWorldToProj() * Homogeneous(shading_position);
 		const vec3 proj_shading_position = proj_shading_position_h.xyz / proj_shading_position_h.w;
 		const bool in_frustum = proj_shading_position_h.z > 0 && all(proj_shading_position.xy <= 1..xx) && all(proj_shading_position.xy >= -1..xx);
@@ -352,6 +417,11 @@ struct SpotLight : Light, ILight
 		}
 		res.flags = Light::Sample::Flags::DeltaPosition;
 		return res;
+	}
+
+	float pdfLi(vec3 reference_position, vec3 direction)
+	{
+		return Length2(direction);
 	}
 
 	Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
@@ -383,9 +453,42 @@ struct SpotLight : Light, ILight
 		const float ct = Dot(res.ray.direction, this.direction);
 		const float ct3 = ct * ct * ct;
 		res.pdf = pdf * rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea();
+		res.position_pdf = 1;
 		res.intensity = emission * (rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea());
 		res.intensity *= evaluateAttenuation(cp);
-		res.flags = Flags::DeltaPosition;
+		res.flags = Sample::Flags::DeltaPosition;
+		return res;
+	}
+
+	RayPdf pdfLe(Ray3f ray)
+	{
+		RayPdf res = {};
+		if(true || all(ray.origin == position))
+		{
+			let cp = getDirectionCP(ray.direction);
+			if(cp.hasValue)
+			{
+				vec3 dir_c = Transpose(getBasis()) * ray.direction;
+				const float ct = dir_c.z;
+				const float ct3 = ct * ct * ct;
+				float area_pdf = 0;
+				const uint attenuation_flags = flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
+				if(attenuation_flags != 0)
+				{
+					const float l2 = Length2(cp.value);
+					if(l2 <= 1)
+					{
+						area_pdf = oo_PI;
+					}
+				}
+				else
+				{
+					area_pdf = 0.25;
+				}
+				res.direction_pdf = area_pdf * rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea();
+			}
+			res.position_pdf = 1;
+		}
 		return res;
 	}
 
@@ -393,25 +496,20 @@ struct SpotLight : Light, ILight
 
 
 
-bool MakeLight(const in StorageLight l, out ILight res)
+ILight MakeLight(const in StorageLight l)
 {
-	bool ret_code = false;
 	const LightType type = l.getType();
 	if(type == LightType::Point)
 	{
-		res = PointLight(l);
-		ret_code = true;
+		return PointLight(l);
 	}
 	else if(type == LightType::Directional)
 	{
-		res = DirectionalLight(l);
-		ret_code = true;
+		return DirectionalLight(l);
 	}
-	else if(type == LightType::Spot)
+	else// if(type == LightType::Spot)
 	{
-		res = SpotLight(l);
-		ret_code = true;
+		return SpotLight(l);
 	}
-	return ret_code;
 }
 

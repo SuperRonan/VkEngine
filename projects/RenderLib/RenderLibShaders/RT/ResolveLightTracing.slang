@@ -1,10 +1,25 @@
 
-
 #include "Common.slang"
 
+typealias TargetFormat = float4;
 
-layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict RWTexture2D<float4> Target;
-layout(SHADER_DESCRIPTOR_BINDING + 3) uniform restrict StructuredBuffer<float4> AccumulationBuffer;
+#define RESOLVE_MODE_OVERWRITE 0
+#define RESOLVE_MODE_ADD 1
+
+#ifndef RESOLVE_MODE
+#define RESOLVE_MODE 0
+#endif
+
+
+
+#if RESOLVE_MODE == RESOLVE_MODE_OVERWRITE
+typealias TargetTexture = WTexture2D<TargetFormat>;
+#else
+typealias TargetTexture = RWTexture2D<TargetFormat>;
+#endif
+
+layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict TargetTexture Target;
+layout(SHADER_DESCRIPTOR_BINDING + 3) uniform restrict StructuredBuffer<Vector3<LightBufferAccumFloat>> AccumulationBuffer;
 
 struct PushConstant
 {
@@ -27,7 +42,11 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 	{
 		uint address = pixel.x + pixel.y * dims.x;
 		vec3 value = AccumulationBuffer[address].xyz;
-		Target.Store(pixel, vec4(value, 1));
+#if RESOLVE_MODE == RESOLVE_MODE_OVERWRITE
+		Target.Store(pixel, vec4(value, 0));
+#elif RESOLVE_MODE == RESOLVE_MODE_ADD
+		Target[pixel] += vec4(value, 0);
+#endif
 	}
 }
 

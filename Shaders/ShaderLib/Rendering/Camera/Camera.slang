@@ -58,30 +58,56 @@ struct CameraRay
 
 	}
 };
-struct CameraSample
-{
-	CameraRay ray = {};
-	float pdf = 0;
-	float importance = 0;
 
-	__init()
+struct Camera
+{
+	[Flags]
+	enum Flags
 	{
+		None = 0x0,
+		DeltaPosition 	= 0x1,
+		DeltaDirection 	= 0x2,
+	};
 
-	}
+	struct Sample
+	{
+		typealias Flags = Camera::Flags;
+		float intensity = 0;
+		PackedEnumIndex<Flags, 8, u32> flags_index = {};
+		float pdf = 0;
+
+		property Flags flags
+		{
+			get {return flags_index.enum;}
+			set {flags_index.enum = newValue;}
+		}
+
+		property u32 index
+		{
+			get {return flags_index.index;}
+			set {flags_index.index = newValue;}
+		}
+
+		__init() {}
+	};
+
+	struct ConnectionSample : Sample
+	{
+		vec3 direction = {};
+		float distance = 0;
+		vec2 uv = {};
+
+		__init() {}
+	};
+
+	struct EmissionSample : Sample
+	{
+		CameraRay ray = {};
+		float position_pdf = {};
+
+		__init() {}
+	};
 };
-
-struct CameraConnection
-{
-	Ray3f ray = {};
-	RayRangef range = {};
-	float importance = 0;
-	float pdf = 0;
-	vec2 uv = {};
-	uint layer = 0;
-
-	__init() {}
-};
-
 interface ICamera
 {
 	__init(const in StorageCamera cam);
@@ -103,9 +129,16 @@ interface ICamera
 
 	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
 
-	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
+	Camera::EmissionSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0);
 
-	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position);
+	Camera::ConnectionSample sampleWi<RNG : IRNG>(inout RNG rng, vec3 position);
+
+	RayPdf pdfWe(Ray3f ray);
+
+	// Direction not normalized
+	// Assume reference_position + direction is on the camera
+	// Assumes reference point is in the view
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0);
 }
 
 interface IMatrixCamera : ICamera
@@ -120,6 +153,8 @@ interface IMatrixCamera : ICamera
 
 	mat4 getProjToWorld(uint layer = 0);
 }
+
+
 
 struct CameraBase
 {
@@ -252,6 +287,25 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return ResizeMatrix<4, 4>(getViewToWorld(layer)) * getProjToView(layer);
 	}
 
+	// direction going out from the camera, and is normalized
+	Optional<vec2> getDirectionCP(vec3 direction)
+	{
+		Optional<vec2> res = none;
+		vec3 dir_c = Transpose(getBasis()) * direction;
+		const float z = dir_c.z;
+		if(z > 0)
+		{
+			vec2 cp = dir_c.xy / z;
+			cp.x *= inv_aspect;
+			cp = cp * inv_tan_half_fov;
+			if(all(cp <= 1..xx) && all(cp >= -1..xx))
+			{
+				res = cp;
+			}
+		}
+		return res;
+	}
+
 	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0)
 	{
 		CameraRay res = {};
@@ -279,36 +333,54 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return 0.25 * inv_aspect;
 	}
 
-	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
+	Camera::EmissionSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
 	{
-		CameraSample res;
+		Camera::EmissionSample res;
 		res.ray = getRay(cp, cp_jacobian);
 		res.ray.range = {};
 		const float ct = Dot(direction, res.ray.ray.direction);
 		const float ct3 = ct * ct * ct;
 		res.pdf = rcp(ct3) * getInvArea() * sqr(inv_tan_half_fov);
-		res.importance = res.pdf;
-
+		res.intensity = res.pdf;
+		res.position_pdf = 1;
+		res.flags = Camera::Flags::DeltaPosition;
 		return res;
 	}
 
-	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
+	RayPdf pdfWe(Ray3f ray)
+	{
+		RayPdf res = {};
+		// Assume to be true
+		if(true || all(ray.origin == position))
+		{
+			let cp = getDirectionCP(ray.direction);
+			if(cp.hasValue)
+			{
+				vec3 dir_c = Transpose(getBasis()) * ray.direction;
+				const float ct = dir_c.z;
+				const float ct3 = ct * ct * ct;
+				res.direction_pdf = rcp(ct3) * getInvArea() * sqr(inv_tan_half_fov);
+			}
+			res.position_pdf = 1;
+		}
+		return res;
+	}
+
+	Camera::ConnectionSample sampleWi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
 	{
 		// the length of the cp coordinate is linked to the cos theta, maybe we could exploit it for some optimization
 		let w2p = getWorldToProj();
-		const vec4 proj_h = w2p * Homogeneous(position);
+		const vec4 proj_h = w2p * Homogeneous(reference_position);
 		const vec3 proj = HomogeneousNormalize(proj_h);
 		const bool in_frustum = proj_h.z > 0 && all(proj.xy <= 1..xx) && all(proj.xy >= -1..xx);
-		CameraConnection res = {};
+		Camera::ConnectionSample res = {};
 		if(in_frustum)
 		{
-			const vec3 d = this.position - position;
+			const vec3 d = this.position - reference_position;
 			const float d2 = Length2(d);
-			res.ray.origin = position;
-			res.ray.direction = Normalize(d);
-			res.range.max = Length(d);
-			res.range.min = 0;
-			const float ct = -dot(res.ray.direction, this.direction);
+			res.direction = Normalize(d);
+			res.distance = Length(d);
+			const float ct = -dot(res.direction, this.direction);
 			const float ct2 = sqr(ct);
 			const float ct3 = ct2 * ct;
 			// pdf_A(d) = delta_A
@@ -317,15 +389,21 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 			// cost because their is an imaginary image plane, to compensate the natural optical vignetting
 			// cost2 because rcp(cost) is distance to the image plane
 			// sqr(inv_tan) to boost the signal to keep the same brightness with FOV changes (because the solid angle is the invert of the fov)
-			res.importance = rcp(ct3) * getInvArea() * sqr(inv_tan_half_fov);
+			res.intensity = rcp(ct3) * getInvArea() * sqr(inv_tan_half_fov);
 			res.uv = ClipSpaceToUV(proj.xy);
 		}
 		else
 		{
-			res.importance = 0;
+			res.intensity = 0;
 			res.pdf = 1;
 		}
 		return res;
+	}
+
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0)
+	{
+		// Assume in frustum
+		return Length2(direction);
 	}
 };
 
@@ -484,38 +562,50 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		return res;
 	}
 
-	CameraSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
+	Camera::EmissionSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
 	{
-		CameraSample res;
+		// TODO
+		Camera::EmissionSample res;
 		res.ray = getRay(cp, cp_jacobian, layer);
 		res.pdf = 1.0f;
-		res.importance = 1.0f;
+		res.intensity = 1.0f;
 		return res;
 	}
 
-	CameraConnection sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
+	RayPdf pdfWe(const in Ray3f ray)
 	{
-		CameraConnection res = {};
+		// TODO
+		RayPdf res = {};
+		return res;
+	}
+
+	Camera::ConnectionSample sampleWi<RNG : IRNG>(inout RNG rng, vec3 position)
+	{
+		Camera::ConnectionSample res = {};
 		res.pdf = 1.0f;
 		vec3 pos_c = getWorldToView() * Homogeneous(position);
 		vec2 cp = rcp(this.frame_size) * vec2(1, rcp(aspect)) * pos_c.xy;
 		const bool in_frustum = pos_c.z > 0 && all(cp <= 1..xx) && all(cp >= -1..xx);
 		if(in_frustum)
 		{
-			res.importance = 1;
-			res.ray.origin = position;
-			res.ray.direction = -this.direction;
-			res.range = {};
-			res.range.max = pos_c.z;
-			res.importance = rcp(sqr(this.frame_size));
+			res.direction = -this.direction;
+			res.distance = pos_c.z;
+			res.intensity = rcp(sqr(this.frame_size));
 			res.uv = ClipSpaceToUV(cp);
 		}
 		else
 		{
-			res.importance = 0;
+			res.intensity = 0;
 		}
 		res.pdf = 1;
+		res.flags = Camera::Sample::Flags::DeltaDirection;
 		return res;
+	}
+
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0)
+	{
+		// Assume in frustum
+		return 1;
 	}
 }
 

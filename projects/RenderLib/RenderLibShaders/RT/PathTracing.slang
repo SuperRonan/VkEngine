@@ -65,7 +65,7 @@ vec3 TracePath<RNG : IRNG>(const in BoundScene scene, const in IRayTracer ray_tr
 		shader.sample_per_light = 1;
 		res += tray.throughput * shader.shade(hit.surface_shading_info, material, rng);
 
-		let bsdf_sample = material.sampleBSDF(
+		let bsdf_sample = material.sampleBSDF<BSDF_FORWARD_BIT>(
 			hit.surface_shading_info.geometry_normal,
 			hit.surface_shading_info.shading_normal,
 			hit.surface_diffs.normal_jacobian,
@@ -121,7 +121,7 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 
 		
 		Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
-		CameraSample cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
+		let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
 		TraversingRay tray = TraversingRay(cam_sample);
 		
 		vec3 res = TracePath(scene, ray_querier, tray, rng);

@@ -48,10 +48,10 @@ struct DirectLightShadingBase
 		inout RNG rng
 	) {
 		vec3 res = 0;
-		Light::Sample sample = light.sampleLi(rng, sgi.position, sgi.shading_normal, sgi.out_direction);
+		Light::ConnectionSample sample = light.sampleLi(rng, sgi.position);
 		if(sample.pdf > 0)
 		{
-			const vec3 bsdf = material.bsdf(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+			const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
 			res = max(sample.intensity, vec3(0)) * bsdf * abs(dot(sgi.shading_normal, sample.direction)) / sample.pdf;
 			if(NonZero(res))
 			{
@@ -84,16 +84,13 @@ struct DirectLightSurfaceShadingEachLight : DirectLightShadingBase, IDirectLight
 		const uint num_lights = scene.getUBO().num_lights;
 		for(uint i = 0; i < num_lights; ++i)
 		{
-			ILight l;
-			if(MakeLight(SceneLights[i], l))
+			ILight l = MakeLight(SceneLights[i]);
+			vec3 light_contrib = vec3(0);
+			for(uint s = 0; s < sample_per_light; ++s)
 			{
-				vec3 light_contrib = vec3(0);
-				for(uint s = 0; s < sample_per_light; ++s)
-				{
-					light_contrib += FitWrongToZero(shadeLight(sgi, material, l, rng));
-				}
-				res += (light_contrib / float(sample_per_light));
+				light_contrib += FitWrongToZero(shadeLight(sgi, material, l, rng));
 			}
+			res += (light_contrib / float(sample_per_light));
 		}
 		return res;
 	}

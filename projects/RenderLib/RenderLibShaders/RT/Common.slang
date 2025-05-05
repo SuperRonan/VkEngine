@@ -25,15 +25,15 @@ struct TraversingRay
 		ray = sample.ray;
 		ray_diffs = {};
 		range = sample.range;
-		throughput = sample.intensity / sample.pdf;
+		throughput = sample.intensity / (sample.pdf * sample.position_pdf);
 	}
 
-	__init(const in CameraSample sample)
+	__init(const in Camera::EmissionSample sample)
 	{
 		ray = sample.ray.ray;
 		ray_diffs = sample.ray.differentials;
 		range = sample.ray.range;
-		throughput = sample.importance / sample.pdf;
+		throughput = sample.intensity / (sample.pdf * sample.position_pdf);
 	}
 };
 
@@ -119,6 +119,27 @@ interface IRayTracer
 
 // 	}
 // };
+
+
+typealias LightBufferAccumFloat = float;
+
+__generic<Float : __BuiltinFloatingPointType, int N, Layout : IBufferDataLayout>
+bool AddLightTracerSample(RWStructuredBuffer<Vector<LightBufferAccumFloat, N>, Layout> accum_buffer, vec2 uv, vec2 fdims, uvec2 udims, Vector<Float, N> value)
+{
+	vec2 fpixel = uv * fdims;
+	uint2 pixel = uint2(fpixel);
+	bool res = false;
+	if(all(pixel < udims))
+	{
+		const uint address = pixel.x + pixel.y * udims.x;
+		for(uint i = 0; i < N; ++i)
+		{
+			InterlockedAdd(accum_buffer[address][i], ConvertBuiltInTo<LightBufferAccumFloat>(value[i]));
+		}
+		res = true;
+	}
+	return res;
+}
 
 #if BIND_SCENE && defined(SCENE_MESH_ACCESS) && defined(SCENE_MATERIAL_ACCESS) && BIND_SCENE_TLAS && defined(SCENE_OBJECTS_ACCESS) && defined(SCENE_XFORM_ACCESS)
 

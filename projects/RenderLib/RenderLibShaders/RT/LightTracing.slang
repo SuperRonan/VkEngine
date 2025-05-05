@@ -29,23 +29,19 @@
 
 #include <ShaderLib/Debug/DebugBuffers.slang>
 
-layout(SHADER_DESCRIPTOR_BINDING + 2) restrict RWStructuredBuffer<float3, Std430DataLayout> Target;
+layout(SHADER_DESCRIPTOR_BINDING + 2) restrict RWStructuredBuffer<Vector3<LightBufferAccumFloat>, Std430DataLayout> Target;
+
+#define LOCAL_SIZE_X 256
+#define LOCAL_SIZE_Y 1
+#define LOCAL_SIZE_Z 1
 
 struct PushConstant
 {
 	vec2 oo_dims;
 	vec2 dims;
-	uint2 udims_minus_1;
+	uint2 udims;
 	float dispatched_threads;
 };
-
-void InterlockedAddVec<T : IArithmeticAtomicable, int N>(Ptr<Vector<T, N>> dest, const in Vector<T, N> value)
-{
-	for(uint i = 0; i < N; ++i)
-	{
-		InterlockedAdd((*dest)[i], value[i]);
-	}
-}
 
 [vk::push_constant]
 uniform PushConstant _pc;
@@ -59,21 +55,23 @@ void ConnectToCameraIFP<RNG : IRNG>(
 	vec3 incoming_throughput,
 	inout RNG rng)
 {
-	CameraConnection connection = camera.sampleWi(rng, hit.surface_shading_info.position);
-	if(connection.pdf > 0 && NonZero(connection.importance))
+	Camera::ConnectionSample connection = camera.sampleWi(rng, hit.surface_shading_info.position);
+	if(connection.pdf > 0 && NonZero(connection.intensity))
 	{
-		const vec3 wi = connection.ray.direction;
+		const vec3 wi = connection.direction;
 		const vec3 wo = hit.surface_shading_info.out_direction;
-		// swap wi and wo to evaluate the adjoint bsdf
-		vec3 bsdf = material.bsdf(
+		vec3 bsdf = material.bsdf<BSDF_ADJOINT_BIT>(
 			hit.surface_shading_info.geometry_normal, 
 			hit.surface_shading_info.shading_normal, 
-			wi, wo
+			wo, wi
 		);
 		if(NonZero(bsdf))
 		{
-			connection.range.min = RayTMin(connection.ray, hit.surface_shading_info.geometry_normal);
-			let ray = RayDesc(connection.ray, connection.range);
+			RayRangef range = {};
+			let _ray = Ray3f(hit.surface_shading_info.position, connection.direction);
+			range.min = RayTMin(_ray, hit.surface_shading_info.geometry_normal);
+			range.max = connection.distance;
+			let ray = RayDesc(_ray, range);
 			float v = scene.testVisibility(ray);
 			const vec3 ns = hit.surface_shading_info.shading_normal;
 			const vec3 ng = hit.surface_shading_info.geometry_normal;
@@ -83,19 +81,10 @@ void ConnectToCameraIFP<RNG : IRNG>(
 			const float cos_theta_o_s = Dot(ns, wo);
 			// correction of shading normals 
 			const float correction = Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s));
-			vec3 contrib = incoming_throughput * bsdf * connection.importance * (v * Abs(cos_theta_i_s) * correction / connection.pdf);
+			vec3 contrib = incoming_throughput * bsdf * connection.intensity * (v * Abs(cos_theta_i_s) * correction / connection.pdf);
 			if(NonZero(contrib))
 			{
-				vec2 fpixel = connection.uv * _pc.dims;
-				uint2 pixel = uint2(fpixel);
-				if(all(min(pixel, _pc.udims_minus_1) == pixel))
-				{
-					const uint address = pixel.x + pixel.y * (_pc.udims_minus_1.x + 1);
-					for(uint i = 0; i < 3; ++i)
-					{
-						InterlockedAdd(Target[address][i], contrib[i]);
-					}
-				}
+				AddLightTracerSample(Target, connection.uv, _pc.dims, _pc.udims, contrib);
 			}
 		}
 	}
@@ -104,11 +93,7 @@ void ConnectToCameraIFP<RNG : IRNG>(
 
 
 
-#define LIGHT_SAMPLES 16
 
-#define LOCAL_SIZE_X 256
-#define LOCAL_SIZE_Y 1
-#define LOCAL_SIZE_Z 1
 
 void TracePath<RNG : IRNG>(inout RNG rng, const in ICamera camera, const in IRayTracer ray_tracer, const in BoundScene scene, TraversingRay tray)
 {
@@ -131,7 +116,7 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in ICamera camera, const in IRay
 
 		ConnectToCameraIFP(scene, camera, hit, material, tray.throughput, rng);
 		
-		let bsdf_sample = material.sampleBSDF(
+		let bsdf_sample = material.sampleBSDF<BSDF_ADJOINT_BIT>(
 			hit.surface_shading_info.geometry_normal,
 			hit.surface_shading_info.shading_normal,
 			hit.surface_diffs.normal_jacobian,
@@ -192,39 +177,13 @@ void main(
 
 	RNG_t rng = RNG_t(Hash(thread_index) ^ Hash(renderer_ubo.frame_idx));
 
-	
-	const uint light_index = rng.generate<uint>(0, scene.getUBO().num_lights);
-	const float pmf_ligh = rcp(scene.getUBO().num_lights);
-
-	_g_debug_signal = thread_index == 0;
-	if(_g_debug_signal)
-	{
-		_g_debug_printer = DebugPrinter(vec3(0), DEBUG_PIXEL_SPACE_BIT, FONT_SIZE_NORMAL + 0.5f);
-	}
-	
-	TraversingRay tray;
-	ILight light;
-	if(MakeLight(SceneLights[light_index], light))
-	{
-		Light::EmissionSample sample = light.sampleLe(rng);
-		sample.pdf *= pmf_ligh;
-		sample.intensity *= sample_weight;
-		if(!NonZero(sample.intensity) || sample.pdf <= 0)
-		{
-			return;
-		}
-		tray = TraversingRay(sample);
-	}
-	else
+	Light::EmissionSample sample = scene.sampleLe(rng);
+	sample.intensity *= sample_weight;
+	if(!NonZero(sample.intensity) || sample.pdf <= 0)
 	{
 		return;
 	}
-
-	if(_g_debug_signal)
-	{
-		//_g_debug_printer.print(tray.throughput);
-	}
-
+	TraversingRay tray = TraversingRay(sample);
 	TracePath(rng, cam, ray_querier, scene, tray);
 
 }

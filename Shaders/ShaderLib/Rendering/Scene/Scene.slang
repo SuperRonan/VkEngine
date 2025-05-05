@@ -296,6 +296,50 @@ __init()
 
 #if defined(SCENE_MESH_ACCESS) && defined(SCENE_MATERIAL_ACCESS) && BIND_SCENE_TLAS && defined(SCENE_OBJECTS_ACCESS) && defined(SCENE_XFORM_ACCESS)
 
+#if defined(SCENE_LIGHTS_ACCESS)
+
+static constexpr const uint LightIndexBits = 24;
+
+Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
+{
+	// [Assume] would be better
+	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
+	uint index = rng.generate<uint>(0, n);
+	var sample = MakeLight(SceneLights[index]).sampleLe(rng);
+	sample.index = index;
+	sample.position_pdf *= rcp(float(n));
+	return sample;
+}
+
+RayPdf pdfLe(Ray3f ray, uint light_index)
+{
+	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
+	float pmf_light = rcp(float(n));
+	var res = MakeLight(SceneLights[light_index]).pdfLe(ray);
+	res.position_pdf *= pmf_light;
+	return res;
+}
+
+Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
+{
+	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
+	uint index = rng.generate<uint>(0, n);
+	var sample = MakeLight(SceneLights[index]).sampleLi(rng, reference_position);
+	sample.index = index;
+	sample.pdf *= rcp(float(n));
+	return sample;
+}
+
+float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
+{
+	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
+	float res = rcp(float(n));
+	res *= MakeLight(SceneLights[light_index]).pdfLi(reference_position, direction);
+	return res;
+}
+
+#endif
+
 #if SHADER_RAY_QUERY_AVAILABLE
 	template <bool Committed = true, uint Flags>
 	SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(inout RayQuery<Flags> rq)

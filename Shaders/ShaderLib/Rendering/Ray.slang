@@ -146,3 +146,11 @@ extension RayDesc
 		return RayRangef(TMin, TMax);
 	}
 };
+
+
+struct RayPdf
+{
+	float position_pdf = 0;
+	float direction_pdf = 0;
+	__init() {}
+};

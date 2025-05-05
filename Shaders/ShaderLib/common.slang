@@ -1119,6 +1119,44 @@ Matrix<T, N, N> Inverse(const in Matrix<T, N, N> m)
 #include "constants"
 
 
+__generic <Enum : __EnumType, int EnumBits, UInt : __BuiltinIntegerType = u32>
+struct PackedEnumIndex
+{
+	UInt payload;
+
+	__init()
+	{
+		payload = UInt(0);
+	}
+
+	__init(Enum e, UInt i = UInt(0))
+	{
+		static_assert((sizeof(UInt) * 8) > (EnumBits), "PackedEnumIndex does not have enough capacity!");
+		payload = (i << EnumBits);
+		payload = payload | (reinterpret<UInt>(e) & BitMask<UInt>(UInt(EnumBits)));
+	}
+
+	property Enum enum
+	{
+		get {
+			return reinterpret<Enum>(payload & BitMask<UInt>(UInt(EnumBits)));
+		}
+		set {
+			payload = bitfieldInsert(payload, reinterpret<UInt>(newValue), 0, EnumBits);
+		}
+	}
+
+	property UInt index
+	{
+		get {
+			return (payload >> EnumBits);
+		}
+		set {
+			payload = bitfieldInsert(payload, newValue, EnumBits, 8 * sizeof(UInt) - EnumBits);
+		}
+	}
+};
+
 
 template <typename Scalar : __BuiltinFloatingPointType>
 Scalar Radians(Scalar deg)

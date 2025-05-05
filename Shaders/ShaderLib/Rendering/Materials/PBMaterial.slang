@@ -79,7 +79,7 @@ struct PhysicalyBasedMaterial : IMaterial
 		return MaterialType::PhysicalyBased;
 	}
 
-	float3 bsdf(const in vec3 geometry_normal, const in vec3 shading_normal, const in vec3 wo, const in vec3 wi)
+	float3 bsdf<int Flags>(const in vec3 geometry_normal, const in vec3 shading_normal, const in vec3 wo, const in vec3 wi)
 	{
 		vec3 res = 0..xxx;
 
@@ -135,7 +135,41 @@ struct PhysicalyBasedMaterial : IMaterial
 		return res;
 	}
 
-	BSDFSample<N> sampleBSDF<RNG:IRNG, int N>(
+	float pdf<int Flags>(
+		const in vec3 geometry_normal, 
+		const in vec3 shading_normal, 
+		const in vec3 wo, 
+		const in vec3 wi
+	) {
+		const vec3 oriented_normal = (shading_normal);
+		const vec3 normal = dot(oriented_normal, wo) < 0 ? -oriented_normal : oriented_normal;
+		const mat3 local_to_world_basis = BasisFromDir(normal);
+		const vec3 reflected = Reflect(wo, normal);
+
+		const float cos_theta_o = dot(normal, wo);
+
+		microfacets::Approximation approx = microfacets::Approximation(cos_theta_o, this.roughness, this.metallic);
+
+		const bool has_dielectric = this.roughness == 0.0f;
+
+		const bool force_cosine_sampling = bool(false);
+		if(force_cosine_sampling)
+		{
+			approx.specular_weight = 0.0f;
+		}
+
+		float cosine_pdf = Dot(wi, normal) * oo_PI;
+		float specular_pdf = 0.0f;
+		if(this.roughness > 0.0f)
+		{
+			specular_pdf = approx.evaluate(reflected, wi);
+		}
+		float res = lerp(cosine_pdf, specular_pdf, approx.specular_weight);
+
+		return max(res, 0);
+	}
+
+	BSDFSample<N> sampleBSDF<int Flags, typename RNG : IRNG, int N>(
 		const in vec3 geometry_normal, 
 		const in vec3 shading_normal, 
 		const in Matrixf<3, N> Jnormal,
@@ -152,10 +186,6 @@ struct PhysicalyBasedMaterial : IMaterial
 		const mat3 local_to_world_basis = BasisFromDir(normal);
 		const vec3 reflected = Reflect(wo, normal);
 
-		const float alpha = sqr(this.roughness);
-		const float alpha2 = sqr(alpha);
-		const float specular_k = sqr(this.roughness + 1) / 8;
-
 		const float cos_theta_o = dot(normal, wo);
 
 		const vec3 F0 = lerp(vec3(0.04), this.albedo, this.metallic);
@@ -169,7 +199,6 @@ struct PhysicalyBasedMaterial : IMaterial
 		{
 			approx.specular_weight = 0.0f;
 		}
-		approx.specular_weight = 1.0f;
 		const float specular_selection = rng.generate<float>(0, 1);
 		const bool sample_specular = specular_selection < approx.specular_weight;
 
@@ -179,6 +208,7 @@ struct PhysicalyBasedMaterial : IMaterial
 			res.pdf = approx.specular_weight;
 			res.bsdf = F0 / cos_theta_o;
 			res.direction_jacobian = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
+			res.flags = res.flags | BSDFSample<N>::Flags::Delta;
 		}
 		else
 		{
@@ -202,9 +232,10 @@ struct PhysicalyBasedMaterial : IMaterial
 				specular_pdf = approx.evaluate(reflected, res.direction);
 				cosine_pdf = local_direction.pdf;
 			}
-			res.bsdf = bsdf(geometry_normal, shading_normal, wo, res.direction);
+			res.bsdf = bsdf<Flags>(geometry_normal, shading_normal, wo, res.direction);
 			res.pdf = lerp(cosine_pdf, specular_pdf, approx.specular_weight);
 		}
+		res.flags = res.flags | BSDFSample<N>::Flags::Symmetric;
 		return res;
 	}
 }

@@ -34,21 +34,28 @@ namespace vkl
 		std::shared_ptr<ImageView> _target;
 		BufferAndRange _ubo;
 
+		uint _max_depth = 5;
+
 		MultiDescriptorSetsLayouts _sets_layouts;
 
+		float _light_tracer_sample_mult = 1.0f;
 		uint32_t _light_tracer_samples;
 		std::shared_ptr<Buffer> _light_tracer_buffer = {};
 
+		std::shared_ptr<Buffer> _bdpt_scratch_buffer = {};
 
 		Method _method = Method::PathTracer;
 
 		std::shared_ptr<ComputeCommand> _path_tracer_rq;
 		std::shared_ptr<ComputeCommand> _light_tracer_rq;
-		std::shared_ptr<ComputeCommand> _resolve_light_tracer;
+		std::shared_ptr<ComputeCommand> _bdpt_rq;
 
+		std::shared_ptr<ComputeCommand> _resolve_light_tracer;
 		ImGuiListSelection _method_selection;
 
 		void createInternals();
+
+		bool useLightTracer() const;
 		
 	public:
 
