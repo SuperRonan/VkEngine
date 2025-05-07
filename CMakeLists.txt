@@ -86,18 +86,18 @@ if(AUTO_LOCATE_VULKAN)
 			return()
 		endif()
 	endif()
-
-	message(STATUS "Attempting to locate Vulkan SDK using manual path......")
-	set(VULKAN_SDK "C:/VulkanSDK")
-	set(VULKAN_VERSION "1.4.309.0")
-	set(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
-	message(STATUS "Using manual specified path: ${VULKAN_PATH}")
-
+	if(NOT Vulkan_FOUND)
+		message(STATUS "Attempting to locate Vulkan SDK using manual path......")
+		set(VULKAN_SDK "C:/VulkanSDK")
+		set(VULKAN_VERSION "1.4.309.0")
+		set(VULKAN_PATH "${VULKAN_SDK}/${VULKAN_VERSION}")
+		message(STATUS "Using manual specified path: ${VULKAN_PATH}")
+	endif()
 	if(NOT EXISTS "${VULKAN_PATH}")
 		message("Error: Unable to locate this Vulkan SDK path VULKAN_PATH: ${VULKAN_PATH}, please specify correct path.
 		For more information on correct installation process, please refer to subsection 'Getting started with Lunar-G SDK'
 		and 'Setting up first project with CMake' in Chapter 3, 'Shaking hands with the device' in this book 'Learning Vulkan', ISBN - 9781786469809.")
-	    return()
+		return()
 	endif()
 
 endif()
