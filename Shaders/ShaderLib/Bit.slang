@@ -370,4 +370,29 @@ constexpr bool ExtractSignBit(Int n)
 	}
 }
 
+// Find the bit index (from LSB to MSB) of the `n`-th high bit
+// TODO implement it with a dichotomic search
+__generic<UInt : __BuiltinIntegerType>
+uint FindHighBitIndex(UInt bits, uint n, uint max_bit)
+{
+	for(uint i = 0; i < max_bit; ++i)
+	{
+		if((bits & (UInt(1) << UInt(i))) != UInt(0))
+		{
+			if(n == 0)
+			{
+				return i;
+			}
+			--n;
+		}
+	}
+	return uint(-1);
+}
+
+// Find the bit index (from LSB to MSB) of the `n`-th high bit
+__generic<UInt : __BuiltinIntegerType>
+uint FindHighBitIndex(UInt bits, uint n)
+{
+	return FindHighBitIndex(bits, n, 8 * sizeof(UInt));
+}
 

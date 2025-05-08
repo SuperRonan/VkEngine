@@ -85,9 +85,11 @@ namespace vkl
 			.name = name() + ".BDPTScratchBuffer",
 			.size = [this]() -> size_t {
 				VkExtent3D extent = _target->image()->extent().value();
+				extent.width = std::alignUpAssumePo2<u32>(extent.width, 32);
+				extent.height = std::alignUpAssumePo2<u32>(extent.height, 32);
 				size_t pixels = extent.width * extent.height * extent.depth;
-				const size_t vertex_size = sizeof(vec4) * 16; // Conservativly high size TODO use the correct size
-				size_t res = vertex_size * 2 * _max_depth * pixels;
+				const size_t vertex_size = sizeof(vec4) * 8; // Conservativly high size TODO use the correct size
+				size_t res = vertex_size * 2 * (_max_depth + 2) * pixels;
 				return res;
 			},
 			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
