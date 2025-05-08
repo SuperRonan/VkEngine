@@ -1,5 +1,7 @@
 #version 460
 
+#define BIND_RENDERER_SET 1
+
 #include "IndirectCommon.glsl"
 
 // layout(location = 0) in vec3 a_position;

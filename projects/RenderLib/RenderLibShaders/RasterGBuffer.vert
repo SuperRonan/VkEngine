@@ -1,5 +1,7 @@
 #version 460
 
+#define BIND_RENDERER_SET 1
+
 #include "common.glsl"
 
 layout(location = 0) in vec3 a_position;
@@ -19,7 +21,7 @@ layout(push_constant) uniform PushConstant
 
 void main()
 {	
-	const mat4 w2p = ubo.world_to_proj;
+	const mat4 w2p = GetCameraWorldToProj(ubo.camera);
 	const mat4 o2w = _pc.object_to_world;
 	const mat4 o2p = w2p * o2w;
 	

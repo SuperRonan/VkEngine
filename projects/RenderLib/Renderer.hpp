@@ -70,7 +70,7 @@ namespace vkl
 
 		ImGuiListSelection _pipeline_selection;
 		bool _use_indirect_rendering = false;
-		bool _use_fat_gbuffer = false;
+		bool _use_fat_gbuffer = true;
 
 		std::vector<uint32_t> _model_types;
 

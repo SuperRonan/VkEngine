@@ -37,7 +37,7 @@ void main()
 	const uint model_id = model_indices.index[draw_id];
 	const uint material_id = scene_objects_table.table[model_id].material_id;
 	PBMaterialProperties material_props;
-	ScenePBMaterialTextures textures;
+	MaterialTextureIds textures;
 	if(material_id != uint(-1))
 	{
 		textures = scene_pb_materials_textures.ids[material_id];
@@ -46,23 +46,24 @@ void main()
 	else
 	{
 		material_props = NoMaterialProps();
-		textures = NoPBMaterialTextures();
+		textures = NoMaterialTextureIds();
 	}
 	
 	const vec2 uv = v_uv;
 	const vec3 position = v_w_position; 
-	const vec3 albedo = readAlbedo(material_props, textures.albedo_texture_id, uv);
+	const vec3 albedo = readAlbedo(material_props, GetMaterialTextureId(textures, ALBEDO_ALPHA_TEXTURE_SLOT), uv);
 	const vec3 a_normal = normalize(v_w_normal);
 	vec3 normal = a_normal;
 	vec3 tangent = safeNormalize(v_w_tangent);
 	tangent = safeNormalize(tangent - dot(tangent, normal) * normal);
 	const vec3 bi_tangent = cross(tangent, normal);
 
-	if((material_props.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0 && textures.normal_texture_id != -1)
+	const uint normal_texture_id = GetMaterialTextureId(textures, NORMAL_TEXTURE_SLOT);
+	if((material_props.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0 && normal_texture_id != -1)
 	{
 		const mat3 TBN = mat3(tangent, bi_tangent, normal);
 		vec3 tex_normal = vec3(0.5, 0.5, 1);
-		tex_normal = texture(SceneTextures2D[textures.normal_texture_id], uv).xyz;
+		tex_normal = texture(SceneTextures2D[normal_texture_id], uv).xyz;
 		tex_normal = (tex_normal * 2.0 - 1);
 		normal = safeNormalize(TBN * tex_normal);
 	}

@@ -1,5 +1,7 @@
 #version 460
 
+#define BIND_RENDERER_SET 1
+
 #define I_WANT_TO_DEBUG 0
 // #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
 #include <ShaderLib:/Debug/DebugBuffers.glsl>
@@ -10,14 +12,17 @@
 
 #define BINDING SHADER_DESCRIPTOR_BINDING + 0
 
-layout(BINDING + 0, rgba32f) uniform restrict readonly image2D AlbedoTexture;
-layout(BINDING + 1, rgba32f) uniform restrict readonly image2D PositionTexture;
-layout(BINDING + 2, rgba32f) uniform restrict readonly image2D NormalTexture;
-layout(BINDING + 3, rgba32f) uniform restrict readonly image2D TangentTexture;
+layout(BINDING + 0, rgba16f) uniform restrict writeonly image2D ColorOutput;
+layout(BINDING + 1) uniform sampler2D AOTexture;
 
-layout(BINDING + 4) uniform sampler2D AOTexture;
 
-layout(BINDING + 5, rgba16f) uniform restrict writeonly image2D ColorOutput;
+#define BASE_GBUFFER_BINDING BINDING + 2
+
+layout(BASE_GBUFFER_BINDING + 0, rgba32f) uniform restrict readonly image2D AlbedoTexture;
+layout(BASE_GBUFFER_BINDING + 1, rgba32f) uniform restrict readonly image2D PositionTexture;
+layout(BASE_GBUFFER_BINDING + 2, rgba32f) uniform restrict readonly image2D NormalTexture;
+layout(BASE_GBUFFER_BINDING + 3, rgba32f) uniform restrict readonly image2D TangentTexture;
+
 
 layout(local_size_x = 16, local_size_y = 16) in;
 

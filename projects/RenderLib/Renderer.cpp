@@ -14,7 +14,19 @@ namespace vkl
 		_pipeline_selection = ImGuiListSelection::CI{
 			.mode = ImGuiListSelection::Mode::RadioButtons,
 			.same_line = true,
-			.labels = {"Forward V1"s, "Deferred V1"s, "Light Transport"s},
+			.options = {
+				ImGuiListSelection::Option{
+					.name = "Forward V1",
+				},
+				ImGuiListSelection::Option{
+					.name = "Deferred V1",
+					.desc = "Deferred Rendering is currently on maintenance",
+					.disable = true,
+				},
+				ImGuiListSelection::Option{
+					.name = "Light Transport",
+				},
+			},
 			.default_index = 0,
 		};
 
@@ -316,8 +328,8 @@ namespace vkl
 		});
 
 		{
-			Dyn<bool> hold_fat_deferred;
-			Dyn<bool> hold_minimal_deferred;
+			Dyn<bool> hold_fat_deferred = true;
+			Dyn<bool> hold_minimal_deferred = false;
 			_fat_deferred_pipeline.albedo = std::make_shared<ImageView>(Image::CI{
 				.app = application(),
 				.name = name() + ".GBuffer.albedo",
