@@ -53,6 +53,7 @@ uniform PushConstant _pc;
 #define COMPRESS_VERTEX 1
 #define COMPRESS_UV_WITH_HALF 1
 #define UV_SCALE 8
+#define USE_SEPARATE_PDF_STORAGE 1
 
 // Some optimization ideas:
 
@@ -64,6 +65,19 @@ uniform PushConstant _pc;
 // Store vertices pdf in shared memory for faster weight evaluation?
 
 // Re-organize the connection loop for maximal reconvergeance
+
+struct PDFPair
+{
+	float forward;
+	float reverse;
+
+	__init(float f, float r=0)
+	{
+		forward = f;
+		reverse = r;
+	}
+};
+
 
 struct DualNormalColorPack
 {
@@ -119,7 +133,6 @@ struct DualNormalColorPack
 	}
 };
 
-
 namespace bdpt
 {
 	struct Vertex
@@ -130,7 +143,6 @@ namespace bdpt
 			None = 0x0,
 			NonHitable = (0x1 << 0),
 			AtInfinity = (0x1 << 1),
-			DeltaScattering = (0x1 << 2),
 			MaterialReflect = (0x1 << 3),
 			MaterialTransmit = (0x1 << 4),
 		};
@@ -218,6 +230,10 @@ namespace bdpt
 		vec3 shading_normal;
 		float reverse_pdf;
 
+		property PDFPair pdfPair
+		{
+			get { return PDFPair(forward_pdf, reverse_pdf); }
+		}
 
 		property uint generic_index
 		{
@@ -295,8 +311,6 @@ namespace bdpt
 			set{ uv_pack = packSnorm2x16(newValue * rcp(UV_SCALE)); }
 		}
 #endif
-
-		
 	};
 
 uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG>(
@@ -380,7 +394,7 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 					// Assume delta reflections have symmetric pdf
 					// Else, the samplerBSDF function should return the reverse pdf?
 					reverse_pdf = bsdf_sample.pdf;
-					storage[storage_offset + res - 1].addFlags(Vertex::Flags::DeltaScattering);
+					storage[storage_offset + res - 1].forward_pdf = -storage[storage_offset + res - 1].forward_pdf;
 				}
 				else
 				{
@@ -432,10 +446,11 @@ uint TraceCameraSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 	storage[storage_offset].generic_index = layer;
 	storage[storage_offset].flags = Vertex::GetFlags(sample.flags);
 	storage[storage_offset].forward_pdf = sample.position_pdf;
-	storage[storage_offset].beta = vec3(1) / sample.position_pdf;
 	storage[storage_offset].reverse_pdf = 0;
+	storage[storage_offset].beta = vec3(1) / sample.position_pdf;
 
-	uint n = RandomWalk<BSDF_FORWARD_BIT>(storage, storage_offset + 1, max_len - 1, 
+	uint n = RandomWalk<BSDF_FORWARD_BIT>(
+		storage, storage_offset + 1, max_len - 1,
 		scene, ray_tracer,
 		tray,
 		sample.pdf,
@@ -461,12 +476,13 @@ uint TraceLightSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 	vertex.generic_index = sample.index;
 	vertex.flags = flags;
 	vertex.forward_pdf = (sample.position_pdf);
-	vertex.beta = vec3(1) / vertex.forward_pdf;
 	vertex.reverse_pdf = 0;
+	vertex.beta = vec3(1) / sample.position_pdf;
 
 	storage[storage_offset] = vertex;
 	
-	uint n = RandomWalk<BSDF_ADJOINT_BIT>(storage, storage_offset + 1, max_len - 1,
+	uint n = RandomWalk<BSDF_ADJOINT_BIT>(
+		storage, storage_offset + 1, max_len - 1,
 		scene, ray_tracer,
 		tray,
 		sample.pdf,
@@ -479,11 +495,11 @@ layout(SHADER_DESCRIPTOR_BINDING + 3) restrict RWStructuredBuffer<Vector<LightBu
 
 float VertexConnectionWeight<VertexArray : IArray<Vertex>>(
 	const uint thread_index, const uint local_index,
-	const in VertexArray vertices, 
+	const in VertexArray vertices,
 	const uint camera_offset,
 	const uint light_offset,
 	const uint connection_t, const uint connection_s,
-	const in Vertex connecting_camera, const in Vertex connecting_light,
+	const in PDFPair resampled_camera, const in PDFPair resampled_light,
 	float pdfWi, float pdfLi,
 	float xt_pdf_rev, float ys_pdf_rev,
 	float xtm1_pdf_rev, float ysm1_pdf_rev,
@@ -508,27 +524,31 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>>(
 			const uint s = st - 1;
 			const bool full_cam_path = st == 1;
 			const bool light_connection = st == 2;
-			let camera_end = (connection_s == 1 && light_connection) ? connecting_light : vertices[light_offset + st - 1];
-			float reverse_pdf;
-			if(st == connection_s)	reverse_pdf = ys_pdf_rev;
-			else if(st == connection_s - 1)	reverse_pdf = ysm1_pdf_rev;
-			else reverse_pdf = camera_end.reverse_pdf;
+			const bool x_is_ys = st == connection_s;
+			const bool x_is_ysm1 = st == connection_s - 1;
+			
+			PDFPair pdfs;
+			
+			PDFPair camera_end_pdfs = (connection_s == 1 && light_connection) ? resampled_light : vertices[light_offset + st - 1].pdfPair;
+			if(st == connection_s)	camera_end_pdfs.reverse = ys_pdf_rev;
+			else if(st == connection_s - 1)	camera_end_pdfs.reverse = ysm1_pdf_rev;
+			
+			bool can_connect = ExtractSignBit(camera_end_pdfs.forward) == false;
 
-			ri *= reverse_pdf / camera_end.forward_pdf;
+			ri *= abs(camera_end_pdfs.reverse / camera_end_pdfs.forward);
 			float actual_ri = ri;
-			Vertex::Flags connection_flags = camera_end.flags;
 			if(light_connection)
 			{
 				// Correct the pdf with pdfLi;
-				float fwd_pdf = (connection_s == 1) ? connecting_light.forward_pdf : vertices[light_offset].forward_pdf;
+				float fwd_pdf = (connection_s == 1) ? resampled_light.forward : vertices[light_offset].forward_pdf;
 				actual_ri *= pdfLi / fwd_pdf;
 			}
-			else if(s > 1)
+			else if(s > 1 && can_connect)
 			{
-				connection_flags = connection_flags | vertices[light_offset + s - 1].flags;
+				can_connect = ExtractSignBit(vertices[light_offset + s - 1].forward_pdf) == false;
 			}
-			// If connectible
-			if((connection_flags & Vertex::Flags::DeltaScattering) == 0)
+			
+			if(can_connect)
 			{
 				sum += actual_ri;
 			}
@@ -546,26 +566,26 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>>(
 			const uint t = ts - 1;
 			const bool light_connection = (connection_s == 0 && ts == connection_t);
 			const bool light_tracer = (ts == 2);
-			let light_end = (connection_t == 1 && light_tracer) ? connecting_camera : vertices[camera_offset + ts - 1];
-			float reverse_pdf;
-			if(ts == connection_t)	reverse_pdf = xt_pdf_rev;
-			else if(ts == connection_t - 1)	reverse_pdf = xtm1_pdf_rev;
-			else	reverse_pdf = light_end.reverse_pdf;
-			ri *= reverse_pdf / light_end.forward_pdf;
+			const bool y_is_xt = (ts == connection_t);
+			const bool y_is_xtm1 = (ts == connection_t - 1);
+			PDFPair light_end_pdfs = (connection_t == 1 && light_tracer) ? resampled_camera : vertices[camera_offset + ts - 1].pdfPair;
+			if(ts == connection_t)	light_end_pdfs.reverse = xt_pdf_rev;
+			else if(ts == connection_t - 1)	light_end_pdfs.reverse = xtm1_pdf_rev;
+			bool can_connect = ExtractSignBit(light_end_pdfs.forward) == false;
+
+			ri *= abs(light_end_pdfs.reverse / light_end_pdfs.forward);
 			float actual_ri = ri;
+			
 			if(light_connection)
 			{
-				actual_ri *= pdfLi / reverse_pdf;
+				actual_ri *= pdfLi / light_end_pdfs.reverse;
 			}
-			Vertex::Flags connection_flags = light_end.flags;
-			if( t > 1)
+			if( t > 1 && can_connect)
 			{
-				connection_flags = connection_flags | vertices[camera_offset + t - 1].flags;
+				can_connect = ExtractSignBit(vertices[camera_offset + t - 1].forward_pdf) == false;
 			}
 
-			// If connectible
-			bool can_be_sampled = ((connection_flags & Vertex::Flags::DeltaScattering) == 0);
-			if(can_be_sampled)
+			if(can_connect)
 			{
 				const float ni = light_tracer ? num_lt_samples : 1;
 				sum += actual_ri * ni;
@@ -582,99 +602,6 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>>(
 	res = connection_pdf * rcp(sum + connection_pdf);
 
 	return res;
-}
-
-vec3 ConnectSubPathsAt<VertexArray : IArray<Vertex>>(
-	const uint thread_index, const uint local_index,
-	const in BoundScene scene,
-	const in VertexArray vertices, 
-	const uint camera_offset,
-	const uint light_offset,
-	const uint t, const uint s,
-	const in Vertex camera_vertex, const in Vertex light_vertex,
-	RayDesc visibility_ray,
-	float pdfWi, float pdfLi,
-	float xt_pdf_rev, float ys_pdf_rev,
-	float xtm1_pdf_rev, float ysm1_pdf_rev,
-	float num_lt_samples,
-	float G,
-	vec3 camera_connection, vec3 light_connection
-) {
-	if(t > 1 || s > 1)
-	{
-		if(t > 1 && s > 1)
-		{
-			vec3 tp = camera_vertex.position;
-			vec3 sp = light_vertex.position;
-			vec3 connection_vector = sp - tp;
-			vec3 connection_dir = Normalize(connection_vector);
-			float connection_d2 = Length2(connection_vector);
-			visibility_ray.Origin = tp;
-			visibility_ray.Direction = connection_dir;
-			visibility_ray.TMin = RayTMin(Ray3f(tp, connection_dir), camera_vertex.geometry_normal);
-			visibility_ray.TMax = Length(connection_vector);
-			G *= rcp(connection_d2);
-		}
-		// Goes from camera to light
-		vec3 connection_dir = (t == 1) ? -visibility_ray.Direction : visibility_ray.Direction;
-
-		if(t > 1)
-		{
-			let material = scene.readMaterial(camera_vertex.generic_index, camera_vertex.uv, true);
-			vec3 prev_pos = vertices[camera_offset + t - 2].position;
-			const vec3 wo = Normalize(prev_pos - camera_vertex.position);
-			camera_connection = material.bsdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
-			ys_pdf_rev = material.pdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
-			xtm1_pdf_rev = material.pdf<BSDF_ADJOINT_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, connection_dir, wo);
-			G *= AbsDot(camera_vertex.shading_normal, connection_dir);
-		}
-		if(s > 1)
-		{
-			let material = scene.readMaterial(light_vertex.generic_index, light_vertex.uv, true);
-			vec3 prev_pos = vertices[light_offset + s - 2].position;
-			const vec3 wo = Normalize(prev_pos - light_vertex.position);
-			const vec3 ns = light_vertex.shading_normal;
-			const vec3 ng = light_vertex.geometry_normal;
-			const vec3 wi = -connection_dir;
-			const float cos_theta_i_s = Dot(ns, wi);
-			const float cos_theta_i_g = Dot(ng, wi);
-			const float cos_theta_o_g = Dot(ng, wo);
-			const float cos_theta_o_s = Dot(ns, wo);
-			// When connecting vertices on the same suface, cos_theta will be zero, but the correction term explodes to NaN
-			const float correction = FitWrongToZero(Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s)));
-			light_connection = material.bsdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir);
-			xt_pdf_rev = material.pdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir);
-			ysm1_pdf_rev = material.pdf<BSDF_FORWARD_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal,-connection_dir, wo);
-			G *= Abs(Dot(light_vertex.shading_normal, connection_dir) * correction);
-		}
-	}
-	
-	vec3 L = camera_vertex.beta * camera_connection * light_connection * light_vertex.beta * G;
-	//L = FitWrongToZero(L);
-
-	if(NonZero(L))
-	{
-		float v = scene.testVisibility(visibility_ray);
-		L *= v;
-		if(v > 0)
-		{
-			float w = VertexConnectionWeight(
-				thread_index, local_index,
-				vertices, 
-				camera_offset,
-				light_offset,
-				t, s,
-				camera_vertex, light_vertex,
-				pdfWi, pdfLi,
-				xt_pdf_rev, ys_pdf_rev,
-				xtm1_pdf_rev, ysm1_pdf_rev,
-				num_lt_samples
-			);
-
-			L *= w;
-		}
-	}
-	return L;
 }
 
 vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
@@ -875,7 +802,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 							camera_offset,
 							light_offset,
 							t, s,
-							camera_vertex, light_vertex,
+							camera_vertex.pdfPair, light_vertex.pdfPair,
 							t1_pdf_Wi, s1_pdf_Li,
 							xt_pdf_rev, ys_pdf_rev,
 							xtm1_pdf_rev, ysm1_pdf_rev,
