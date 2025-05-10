@@ -198,7 +198,7 @@ namespace vkl
 
 				std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
 					.name = "Cube",
-					.matrix = TranslationMatrix(Vector3f(0, 4, 0)),
+					.matrix = TranslationMatrix(Vector3f(4, 0.5, -2.5)) * ScalingMatrix(Vector3f(2, 1, 0.1)),
 					.model = model,
 				});
 				root->addChild(model_node);
