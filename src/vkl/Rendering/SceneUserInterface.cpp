@@ -435,12 +435,17 @@ namespace vkl
 
 
 			Scene::DAG::FastNodePath path;
-			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, const auto& recurse) -> void
+			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
 			{
 				ImGui::PushID(node.get());
+				u32 node_flags = parent_flags;
+				if (!node->visible())
+				{
+					node_flags &= u32(~0x1);
+				}
 				Mat3x4 node_matrix = matrix * node->matrix3x4();
 				const std::string & node_gui_name = node->name();
-				const bool node_visible = node->visible();
+				const bool node_visible = (node_flags & 0x1) != 0;
 
 				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
 				if (!path.path.empty())
@@ -516,7 +521,7 @@ namespace vkl
 					for (size_t i = 0; i < node->children().size(); ++i)
 					{
 						path.path.back() = i;
-						recurse(node->children()[i], node_matrix, is_selected_path_so_far, recurse);
+						recurse(node->children()[i], node_matrix, is_selected_path_so_far, node_flags, recurse);
 					}
 					path.path.pop_back();
 
@@ -526,7 +531,7 @@ namespace vkl
 			};
 
 			Mat3x4 root_matrix = Mat3x4::Identity();
-			declare_node(_scene->getRootNode(), root_matrix, true, declare_node);
+			declare_node(_scene->getRootNode(), root_matrix, true, 1, declare_node);
 		} // Tree
 
 		bool inspect_node = ImGui::Begin("Node Inspector");

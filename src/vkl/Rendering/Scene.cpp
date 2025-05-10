@@ -803,7 +803,7 @@ namespace vkl
 					const uint32_t tlas_geometry_id = 0;
 					if (mesh)
 					{
-						const bool should_be_registered_to_tlas = node->visible() && mesh->isReadyToDraw();
+						const bool should_be_registered_to_tlas = ((flags & 0x1) != 0) && mesh->isReadyToDraw();
 						const bool is_already_registered_to_tlas = (unique_model_id < _tlas->geometries()[tlas_geometry_id].blases.size()) && (_tlas->geometries()[tlas_geometry_id].blases[unique_model_id].blas == mesh->blas());
 						if (should_be_registered_to_tlas)
 						{
