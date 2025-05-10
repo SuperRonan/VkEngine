@@ -9,6 +9,11 @@ struct Sample<T>
 	float pdf ;
 }
 
+vec3 DiskToHemisphere(vec2 on_disk)
+{
+	return vec3(on_disk, sqrt(1 - Length2(on_disk)));
+}
+
 // Sample a point on a unit disk
 Sample<vec2> SampleUniformOnDisk(vec2 xi)
 {
@@ -25,7 +30,7 @@ Sample<vec3> SampleCosineDirection(vec2 xi)
 {
 	const vec2 disk = SampleUniformOnDisk(xi).value;
 	Sample<vec3> res;
-	res.value = vec3(disk, sqrt(1 - Length2(disk)));
+	res.value = DiskToHemisphere(disk);
 	res.pdf = res.value.z * oo_PI;
 	return res;
 }
