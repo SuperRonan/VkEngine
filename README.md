@@ -1,3 +1,10 @@
+# VkEngine
+
+
+
+
+
+
 # TODO List:
 - [x] Fill UBO transfer command
 - [x] SDL backend?
@@ -16,10 +23,10 @@
 - [x] UpdateContext
 - [ ] VkShaderObjectEXT? 
 - [ ] Complete Graphics command
-    - [x] Bresenham line rasterization
+	- [x] Bresenham line rasterization
 	- [x] Mesh Shaders command
-    - [ ] MSAA
-    - [ ] FragmentCommand
+	- [ ] MSAA
+	- [ ] FragmentCommand
 - [ ] RenderPass-less rendering? 
 - [ ] Mesh
 	- [x] Mesh interface
@@ -52,7 +59,7 @@
 	- [x] Separate list for .exe
 	- [x] Option to build .exe
 	- [x] FastDebug build (Same as Debug, with IDL=0)
-	- [ ] Correctly import Vulkan
+	- [x] Correctly import Vulkan
 - [x] Better ResourceStateTracker
 	- [x] Remake the interface
 	- [x] Actually store the resource state in the resource rather than in a separate map?
@@ -86,7 +93,7 @@
 - [x] Remove ext features from the device requested feature chain when the extension is not used (it now generates a validation error)
 - [ ] Separate DescriptorSet and DescriptorPool
 	- [ ] Use one pool for many descriptor sets (for model resources)
-- [ ] Add helper types StringVector, AnyVector, ...
+- [x] Add helper types StringVector, AnyVector, ...
 - [ ] Refactor UploadQueue, AsynchUpload, ... to avoid using individual small allocations
 - [ ] Make a common interface render pass
 
@@ -94,13 +101,13 @@
 - [ ] Rework on thatlib
 
 # Projects Ideas:
-- [ ] Basic Renderer
+- [x] Basic Renderer
 - [ ] Seam Carving
 - [ ] Mutiple rigid body simulation
 - [ ] Fluid simulation? 
-- [ ] Reversed perspective redering
+- [x] Reversed perspective redering
 - [ ] Wave Function Collapse
-- [ ] PT, LT, BDPT, VCM?
+- [x] PT, LT, BDPT, VCM?
 - [ ] SIBR
 - [ ] HashCache based field storage + neural recontstruction?
 - [ ] ReStiR
