@@ -39,7 +39,7 @@ uniform PushConstant _pc;
 // Smaller workgroups appear the be faster, this is because of the high memory bandwith
 // 32 is fast
 // 16 appears to be the fastest (although it is smaller than tha subgroup???)
-#define LOCAL_SIZE_X 8
+#define LOCAL_SIZE_X 4
 #define LOCAL_SIZE_Y 4
 #define LOCAL_SIZE_Z 1
 
@@ -639,107 +639,87 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 					t1_pdf_Wi = camera.pdfWi(refp, dir, vertices[camera_offset].material_id) * rcp(Length2(dir));
 				}
 
-				vec3 L = 0;
-				// Shuffling of the sub paths does not produce a better result :(
-				bool shuffle_light_paths = false;//thread_index > (1600 * 512);
-				if(shuffle_light_paths && t > 1 && s > 1)
+				if(t > 1 || s > 1)
 				{
-					let active_mask = WaveGetActiveMask();
-					const uint subgroup_size = WaveActiveSum(1);
-					const uint subgroup_index = WaveGetLaneIndex();
-					uint potential_connections_mask = 0;
-
-					const vec3 xtm_pos = vertices[camera_offset + t - 2].position;
-					const vec3 xt_wo = (xtm_pos - camera_vertex.position);
-					const vec3 xt_ng = camera_vertex.geometry_normal;
-					let xt_theta_o_sign = ExtractSignBit(Dot(xt_ng, xt_wo));
-					
-					const vec3 ysm_pos = vertices[light_offset + s - 2].position;
-					const vec3 ys_wo = (ysm_pos - light_vertex.position);
-					const vec3 ys_ng = light_vertex.geometry_normal;
-					let ys_theta_o_sign = ExtractSignBit(Dot(ys_wo, ys_ng));
-
-					// potential_connections_mask = BitMask<uint>(subgroup_size);
-
-					for(uint lane = 0; lane < LOCAL_SIZE; ++lane)
+					if(t > 1 && s > 1)
 					{
-						if((active_mask & (1 << lane)) != 0)
-						{
-							vec3 lane_ys_pos = WaveReadLaneAt(light_vertex.position, lane);
-							Vertex::Flags lane_ys_flags = Vertex::Flags(WaveReadLaneAt(uint(light_vertex.flags), lane));
-							bool lane_ys_theta_o_sign = WaveReadLaneAt(ys_theta_o_sign, lane);
-							vec3 lane_ys_ng = WaveReadLaneAt(ys_ng, lane);
-							vec3 connection_dir = (lane_ys_pos - camera_vertex.position);
-							let xt_theta_i_sign = ExtractSignBit(Dot(xt_ng, connection_dir));
-							let ys_theta_i_sign = ExtractSignBit(Dot(lane_ys_ng, -connection_dir));
-							bool xt_refl = xt_theta_o_sign == xt_theta_i_sign;
-							bool ys_refl = lane_ys_theta_o_sign == ys_theta_i_sign;
-							let xt_flag = xt_refl ? Vertex::Flags::MaterialReflect : Vertex::Flags::MaterialTransmit;
-							let ys_flag = ys_refl ? Vertex::Flags::MaterialReflect : Vertex::Flags::MaterialTransmit;
-							if(bool(xt_flag & camera_vertex.flags) && bool(ys_flag & lane_ys_flags))
-							{
-								potential_connections_mask |= (1 << lane);
-							}
-						}
+						vec3 tp = camera_vertex.position;
+						vec3 sp = light_vertex.position;
+						vec3 connection_vector = sp - tp;
+						vec3 connection_dir = Normalize(connection_vector);
+						float connection_d2 = Length2(connection_vector);
+						visibility_ray.Origin = tp;
+						visibility_ray.Direction = connection_dir;
+						visibility_ray.TMin = RayTMin(Ray3f(tp, connection_dir), camera_vertex.geometry_normal);
+						visibility_ray.TMax = Length(connection_vector);
+						G *= rcp(connection_d2);
 					}
-
-					const uint potential_connections_count = CountBits(potential_connections_mask);
-					if(potential_connections_count > 0)
+					// Goes from camera to light
+					vec3 connection_dir = (t == 1) ? -visibility_ray.Direction : visibility_ray.Direction;
+			
+					if(t > 1)
 					{
-						uint selected_index = rng.generate<uint>(0, potential_connections_count);
-						uint selected_lane = FindHighBitIndex(potential_connections_mask, selected_index, LOCAL_SIZE);
-
-						uint _light_offset = WaveReadLaneAt(light_offset, selected_lane);
-						float _pdfLi = WaveReadLaneAt(s1_pdf_Li, selected_lane);
-						Vertex _light_vertex = vertices[_light_offset + s - 1];
-
-						float weight = float(potential_connections_count) / float(min(LOCAL_SIZE, subgroup_size));
-						L = ConnectSubPathsAt(
+						let material = scene.readMaterial(camera_vertex.material_id, camera_vertex.uv, true);
+						vec3 prev_pos = vertices[camera_offset + t - 2].position;
+						const vec3 wo = Normalize(prev_pos - camera_vertex.position);
+						camera_connection = material.bsdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
+						ys_pdf_rev = material.pdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
+						xtm1_pdf_rev = material.pdf<BSDF_ADJOINT_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, connection_dir, wo);
+						G *= AbsDot(camera_vertex.shading_normal, connection_dir);
+					}
+					if(s > 1)
+					{
+						let material = scene.readMaterial(light_vertex.material_id, light_vertex.uv, true);
+						vec3 prev_pos = vertices[light_offset + s - 2].position;
+						const vec3 wo = Normalize(prev_pos - light_vertex.position);
+						const vec3 ns = light_vertex.shading_normal;
+						const vec3 ng = light_vertex.geometry_normal;
+						const vec3 wi = -connection_dir;
+						const float cos_theta_i_s = Dot(ns, wi);
+						const float cos_theta_i_g = Dot(ng, wi);
+						const float cos_theta_o_g = Dot(ng, wo);
+						const float cos_theta_o_s = Dot(ns, wo);
+						// When connecting vertices on the same suface, cos_theta will be zero, but the correction term explodes to NaN
+						const float correction = FitWrongToZero(Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s)));
+						light_connection = material.bsdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir);
+						xt_pdf_rev = material.pdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir);
+						ysm1_pdf_rev = material.pdf<BSDF_FORWARD_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal,-connection_dir, wo);
+						G *= Abs(Dot(light_vertex.shading_normal, connection_dir) * correction);
+					}
+				}
+				
+				vec3 L = camera_vertex.beta * camera_connection * light_connection * light_vertex.beta * G;
+				//L = FitWrongToZero(L);
+			
+				if(NonZero(L))
+				{
+					float v = scene.testVisibility(visibility_ray);
+					L *= v;
+					if(v > 0)
+					{
+						float w = VertexConnectionWeight(
 							thread_index, local_index,
-							scene,
-							vertices,
+							vertices, 
 							camera_offset,
-							_light_offset,
+							light_offset,
 							t, s,
-							camera_vertex, _light_vertex,
-							visibility_ray,
-							t1_pdf_Wi, _pdfLi,
+							camera_vertex, light_vertex,
+							t1_pdf_Wi, s1_pdf_Li,
 							xt_pdf_rev, ys_pdf_rev,
 							xtm1_pdf_rev, ysm1_pdf_rev,
-							num_lt_samples, 
-							G, camera_connection, light_connection
-						) * weight;
-					}
-				}
-				else
-				{
-					L = ConnectSubPathsAt(
-						thread_index, local_index,
-						scene,
-						vertices,
-						camera_offset,
-						light_offset,
-						t, s,
-						camera_vertex, light_vertex,
-						visibility_ray,
-						t1_pdf_Wi, s1_pdf_Li,
-						xt_pdf_rev, ys_pdf_rev,
-						xtm1_pdf_rev, ysm1_pdf_rev,
-						num_lt_samples, 
-						G, camera_connection, light_connection
-					);
-				}
-
-				bool filter_contributions = true;//(s > 1 && t > 1)
-				if(NonZero(L) && filter_contributions)
-				{
-					if(t == 1)
-					{
-						AddLightTracerSample(LightTracerAccumBuffer, camera_vertex.uv, fdims, udims, L);
-					}
-					else
-					{
-						res += L;
+							num_lt_samples
+						);
+			
+						L *= w;
+						
+						if(t == 1)
+						{
+							AddLightTracerSample(LightTracerAccumBuffer, camera_vertex.uv, fdims, udims, L);
+						}
+						else
+						{
+							res += L;
+						}
 					}
 				}
 			} // if Connection
