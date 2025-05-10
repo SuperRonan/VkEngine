@@ -90,7 +90,10 @@ namespace vkl
 				extent.width = std::alignUpAssumePo2<u32>(extent.width, 32);
 				extent.height = std::alignUpAssumePo2<u32>(extent.height, 32);
 				size_t pixels = extent.width * extent.height * extent.depth;
-				const size_t vertex_size = sizeof(vec4) * 8; // Conservativly high size TODO use the correct size
+				// 5 vec4 at most for now (with uncompressed)
+				// 4 vec4 with minimum compression (fastest)
+				// 3 vec4 with aggressive compression, (but slower)
+				const size_t vertex_size = sizeof(vec4) * 5; 
 				size_t res = vertex_size * 2 * (_max_depth + 2) * pixels;
 				return res;
 			},

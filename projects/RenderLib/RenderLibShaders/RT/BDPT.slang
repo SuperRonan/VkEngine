@@ -38,7 +38,7 @@ uniform PushConstant _pc;
 
 // Smaller workgroups appear the be faster, this is because of the high memory bandwith
 // 32 is fast
-// 16 appears to be the fastest (although it is smaller than tha subgroup???)
+// 16 appears to be the fastest (although it is smaller than a subgroup???)
 #define LOCAL_SIZE_X 4
 #define LOCAL_SIZE_Y 4
 #define LOCAL_SIZE_Z 1
@@ -46,6 +46,13 @@ uniform PushConstant _pc;
 #define MAX_VERTICES (MAX_DEPTH + 2)
 
 #define LOCAL_SIZE (LOCAL_SIZE_X * LOCAL_SIZE_Y * LOCAL_SIZE_Z)
+
+// 0 -> No compression
+// 1 -> A little bit of compression: fastest
+// 2 -> Aggressive compression: slower than 1
+#define COMPRESS_VERTEX 1
+#define COMPRESS_UV_WITH_HALF 1
+#define UV_SCALE 8
 
 // Some optimization ideas:
 
@@ -57,6 +64,62 @@ uniform PushConstant _pc;
 // Store vertices pdf in shared memory for faster weight evaluation?
 
 // Re-organize the connection loop for maximal reconvergeance
+
+struct DualNormalColorPack
+{
+	uvec4 data;
+
+	property reference_dir : vec3
+	{
+		get {
+			vec3 res;
+			res.xy = unpackSnorm2x16ToFloat(data.x);
+			res.z = unpackSnorm2x16ToFloat(data.y).x;
+			return res;
+		}
+		set {
+			data.x = packSnorm2x16(newValue.xy);
+			data.y &= ~BitMask<u32>(16);
+			data.y |= (packSnorm2x16(newValue.zz) & BitMask<u32>(16));
+		}
+	}
+
+	property deviated_dir : vec3
+	{
+		get {
+			vec3 n1 = this.reference_dir;
+			mat3 B = BasisFromDir(n1, 1);
+			vec2 diff = unpackSnorm2x16ToFloat(data.w);
+			vec3 res = DiskToHemisphere(diff);
+			return n1;
+			return B * res;
+		}
+		set {
+			vec3 n1 = this.reference_dir;
+			mat3 B = BasisFromDir(n1, 1);
+			vec3 in_basis = B.t * newValue;
+			vec2 diff = in_basis.xy;
+			data.w = packSnorm2x16(diff);
+		}
+	}
+
+	property color : vec3
+	{
+		get {
+			vec3 res;
+			res.x = unpackSnorm2x16ToFloat(data.y).y;
+			res.yz = unpackSnorm2x16ToFloat(data.z);
+			return res;
+		}
+		set {
+			data.y &= BitMask<u32>(16);
+			data.y |= (packSnorm2x16(newValue.xx) & ~BitMask<u32>(16));
+			data.z = packSnorm2x16(newValue.yz);
+		}
+	}
+};
+
+
 namespace bdpt
 {
 	struct Vertex
@@ -102,28 +165,138 @@ namespace bdpt
 			return res;
 		}
 
-		// world position
-		// If the vertex is a infinity, holds the direction instead
+#if COMPRESS_VERTEX == 0
 		vec3 position;
-		uint material_id;
+		PackedEnumIndex<Flags, 8, u32> packed_id_flags;
 
-		vec3 shading_normal;
-		Flags flags;
-		
+		vec3 beta;
+
 		vec3 geometry_normal;
 		float forward_pdf;
 
-		vec3 beta;
+		vec3 shading_normal;
 		float reverse_pdf;
 
 		vec2 uv;
-		float connection_pdf;
+		
+		property uint generic_index
+		{
+			get { return packed_id_flags.index; }
+			set { packed_id_flags.index = newValue; }
+		}
 
-		// Some optimization thoughts:
-		// Maybe we could do some bit packing (store the index in 24 bits, and the flags on 8)
-		// Maybe we could store only the ratio of pdfs, rather than the two separate ones
-		// Maybe we could pack to the geometry normal and shading normal on a single vec4 size
-		// We could lower the precision of the UVs
+		property Flags flags
+		{
+			get { return packed_id_flags.enum; }
+			set { packed_id_flags.enum = newValue; }
+		}
+
+		[mutating]
+		void addFlags(Flags f)
+		{
+			packed_id_flags.payload |= (uint(f) << 24);
+		}
+#elif COMPRESS_VERTEX == 1
+		vec3 position;
+		PackedEnumIndex<Flags, 8, u32> packed_id_flags;
+
+		vec3 beta;
+#if COMPRESS_UV_WITH_HALF
+		half2 uv;
+#else
+		u32 uv_pack;
+		property uv : vec2
+		{
+			get{ return unpackSnorm2x16ToFloat(uv_pack) * UV_SCALE; }
+			set{ uv_pack = packSnorm2x16(newValue * rcp(UV_SCALE)); }
+		}
+#endif
+
+		vec3 geometry_normal;
+		float forward_pdf;
+		
+		vec3 shading_normal;
+		float reverse_pdf;
+
+
+		property uint generic_index
+		{
+			get { return packed_id_flags.index; }
+			set { packed_id_flags.index = newValue; }
+		}
+
+		property Flags flags
+		{
+			get { return packed_id_flags.enum; }
+			set { packed_id_flags.enum = newValue; }
+		}
+
+		[mutating]
+		void addFlags(Flags f)
+		{
+			packed_id_flags.payload |= (uint(f) << 24);
+		}
+
+		
+#else
+		// world position
+		// If the vertex is a infinity, holds the direction instead
+		// Keep full f32 precision
+		vec3 position;
+		PackedEnumIndex<Flags, 8, u32> packed_id_flags;
+
+		DualNormalColorPack normals_beta;
+		
+		// I prefer to keep full f32 precision for the pdfs
+		float forward_pdf;
+		float reverse_pdf;
+		u32 uv_pack;
+
+		property vec3 beta
+		{
+			//get { return normals_beta.color; }
+			get { return normals_beta.color; }
+			set { normals_beta.color = newValue; }
+		}
+
+		property vec3 geometry_normal
+		{
+			get { return normals_beta.reference_dir; }
+			set { normals_beta.reference_dir = newValue; }
+		}
+
+		property vec3 shading_normal
+		{
+			get { return normals_beta.deviated_dir; }
+			set { normals_beta.deviated_dir = newValue; }
+		}
+
+		property uint generic_index
+		{
+			get { return packed_id_flags.index; }
+			set { packed_id_flags.index = newValue; }
+		}
+
+		property Flags flags
+		{
+			get { return packed_id_flags.enum; }
+			set { packed_id_flags.enum = newValue; }
+		}
+
+		[mutating]
+		void addFlags(Flags f)
+		{
+			packed_id_flags.payload |= (uint(f) << 24);
+		}
+
+		property uv : vec2
+		{
+			get{ return unpackSnorm2x16ToFloat(uv_pack) * UV_SCALE; }
+			set{ uv_pack = packSnorm2x16(newValue * rcp(UV_SCALE)); }
+		}
+#endif
+
+		
 	};
 
 uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG>(
@@ -149,13 +322,14 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 		
 		if(store_vertex)
 		{
+			const uint material_id = hit.material_id & BitMask<uint>(24);
 			v.forward_pdf = pdf_solid_angle;
 			v.reverse_pdf = 0;
 			v.beta = tray.throughput;
 			v.position = hit.surface_shading_info.position;
-			v.material_id = hit.material_id;
-			v.shading_normal = hit.surface_shading_info.shading_normal;
+			v.generic_index = material_id;
 			v.geometry_normal = hit.surface_shading_info.geometry_normal;
+			v.shading_normal = hit.surface_shading_info.shading_normal;
 			v.uv = hit.surface_shading_info.uv;
 			v.flags = Vertex::Flags::None;
 			// TODO check why the materials don't provide this info correctly
@@ -163,15 +337,15 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 			
 			if(hit.hasValue())
 			{
-				if(v.material_id < scene.getUBO().num_materials)
+				if(material_id < scene.getUBO().num_materials)
 				{
-					uint material_bsdf_flags = (ScenePBMaterialsProps[v.material_id][0].flags >> MATERIAL_FLAG_HEMISPHERE_BIT_OFFSET) & BitMask<uint>(2);
-					v.flags = v.flags | reinterpret<Vertex::Flags>(material_bsdf_flags << 3);
+					uint material_bsdf_flags = (ScenePBMaterialsProps[material_id][0].flags >> MATERIAL_FLAG_HEMISPHERE_BIT_OFFSET) & BitMask<uint>(2);
+					v.addFlags(reinterpret<Vertex::Flags>(material_bsdf_flags << 3));
 				}
 			}
 			else
 			{
-				v.flags = v.flags | Vertex::Flags::AtInfinity;
+				v.addFlags(Vertex::Flags::AtInfinity);
 			}
 			storage[storage_offset + res] = v;
 			++res;
@@ -206,7 +380,7 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 					// Assume delta reflections have symmetric pdf
 					// Else, the samplerBSDF function should return the reverse pdf?
 					reverse_pdf = bsdf_sample.pdf;
-					storage[storage_offset + res - 1].flags = (storage[storage_offset + res - 1].flags | Vertex::Flags::DeltaScattering);
+					storage[storage_offset + res - 1].addFlags(Vertex::Flags::DeltaScattering);
 				}
 				else
 				{
@@ -255,10 +429,8 @@ uint TraceCameraSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 	let sample = camera.sampleWe(rng, cp, Jcp, layer);
 	TraversingRay tray = TraversingRay(sample);
 	storage[storage_offset].position = sample.ray.ray.origin;
-	storage[storage_offset].material_id = layer;
-	storage[storage_offset].shading_normal = vec3(0);
+	storage[storage_offset].generic_index = layer;
 	storage[storage_offset].flags = Vertex::GetFlags(sample.flags);
-	storage[storage_offset].geometry_normal = vec3(0);
 	storage[storage_offset].forward_pdf = sample.position_pdf;
 	storage[storage_offset].beta = vec3(1) / sample.position_pdf;
 	storage[storage_offset].reverse_pdf = 0;
@@ -286,10 +458,8 @@ uint TraceLightSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG>(
 	Vertex vertex;
 
 	vertex.position = sample.ray.origin;
-	vertex.material_id = sample.index;
-	vertex.shading_normal = vec3(0);
+	vertex.generic_index = sample.index;
 	vertex.flags = flags;
-	vertex.geometry_normal = vec3(0);
 	vertex.forward_pdf = (sample.position_pdf);
 	vertex.beta = vec3(1) / vertex.forward_pdf;
 	vertex.reverse_pdf = 0;
@@ -450,7 +620,7 @@ vec3 ConnectSubPathsAt<VertexArray : IArray<Vertex>>(
 
 		if(t > 1)
 		{
-			let material = scene.readMaterial(camera_vertex.material_id, camera_vertex.uv, true);
+			let material = scene.readMaterial(camera_vertex.generic_index, camera_vertex.uv, true);
 			vec3 prev_pos = vertices[camera_offset + t - 2].position;
 			const vec3 wo = Normalize(prev_pos - camera_vertex.position);
 			camera_connection = material.bsdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
@@ -460,7 +630,7 @@ vec3 ConnectSubPathsAt<VertexArray : IArray<Vertex>>(
 		}
 		if(s > 1)
 		{
-			let material = scene.readMaterial(light_vertex.material_id, light_vertex.uv, true);
+			let material = scene.readMaterial(light_vertex.generic_index, light_vertex.uv, true);
 			vec3 prev_pos = vertices[light_offset + s - 2].position;
 			const vec3 wo = Normalize(prev_pos - light_vertex.position);
 			const vec3 ns = light_vertex.shading_normal;
@@ -580,7 +750,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 					light_vertex.flags = flags;
 					// TODO Light Connection Sample could provide the exact position, rather than computing it (with a possible loss of precision)
 					light_vertex.position = Ray3f(camera_vertex.position, light_sample.direction).at(light_sample.distance);
-					light_vertex.material_id = light_sample.index;
+					light_vertex.generic_index = light_sample.index;
 					RayPdf pdfLe = scene.pdfLe(Ray3f(light_vertex.position, -light_sample.direction), light_sample.index);
 					light_vertex.forward_pdf = pdfLe.position_pdf;
 					light_vertex.reverse_pdf = light_sample.pdf;
@@ -606,8 +776,10 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 					// This could be done when generating the sub paths?
 					vec3 refp = light_vertex.position;
 					vec3 dir = vertices[light_offset].position - refp;
-					s1_pdf_Li = scene.pdfLi(refp, dir, vertices[light_offset].material_id) * rcp(Length2(dir));
+					s1_pdf_Li = scene.pdfLi(refp, dir, vertices[light_offset].generic_index) * rcp(Length2(dir));
 				}
+
+				vec2 light_tracer_uv;
 
 				if(resample_camera)
 				{
@@ -619,9 +791,9 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 					RayPdf pdfWe = camera.pdfWe(Ray3f(camera_vertex.position, -cam_sample.direction));
 					camera_vertex.forward_pdf = pdfWe.position_pdf;
 					camera_vertex.reverse_pdf = cam_sample.pdf;
-					camera_vertex.material_id = cam_sample.index;
+					camera_vertex.generic_index = cam_sample.index;
 					camera_vertex.beta = vec3(1) * rcp(cam_sample.pdf);
-					camera_vertex.uv = cam_sample.uv;
+					light_tracer_uv = cam_sample.uv;
 					t1_pdf_Wi = cam_sample.pdf * rcp(sqr(cam_sample.distance));
 					camera_connection = cam_sample.intensity;
 					ys_pdf_rev = pdfWe.direction_pdf;
@@ -636,7 +808,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 					// This could be done when generating the sub paths?
 					vec3 refp = camera_vertex.position;
 					vec3 dir = vertices[camera_offset].position - refp;
-					t1_pdf_Wi = camera.pdfWi(refp, dir, vertices[camera_offset].material_id) * rcp(Length2(dir));
+					t1_pdf_Wi = camera.pdfWi(refp, dir, vertices[camera_offset].generic_index) * rcp(Length2(dir));
 				}
 
 				if(t > 1 || s > 1)
@@ -659,7 +831,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 			
 					if(t > 1)
 					{
-						let material = scene.readMaterial(camera_vertex.material_id, camera_vertex.uv, true);
+						let material = scene.readMaterial(camera_vertex.generic_index, camera_vertex.uv, true);
 						vec3 prev_pos = vertices[camera_offset + t - 2].position;
 						const vec3 wo = Normalize(prev_pos - camera_vertex.position);
 						camera_connection = material.bsdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
@@ -669,7 +841,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 					}
 					if(s > 1)
 					{
-						let material = scene.readMaterial(light_vertex.material_id, light_vertex.uv, true);
+						let material = scene.readMaterial(light_vertex.generic_index, light_vertex.uv, true);
 						vec3 prev_pos = vertices[light_offset + s - 2].position;
 						const vec3 wo = Normalize(prev_pos - light_vertex.position);
 						const vec3 ns = light_vertex.shading_normal;
@@ -714,7 +886,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>>(
 						
 						if(t == 1)
 						{
-							AddLightTracerSample(LightTracerAccumBuffer, camera_vertex.uv, fdims, udims, L);
+							AddLightTracerSample(LightTracerAccumBuffer, light_tracer_uv, fdims, udims, L);
 						}
 						else
 						{
@@ -741,15 +913,18 @@ vec3 PathTrace<RNG : IRNG>(
 	uint layer,
 	inout RNG rng
 ) {
-	uint storage_offset = thread_index * 2 * MAX_VERTICES;
-	const uint cam_offset = storage_offset;
-	const uint light_offset = storage_offset + MAX_VERTICES;
-
 	// Assume these for now
 	const bool lights_are_hitable = true;
 	const bool camera_is_hitable = false;
 	const uint max_camera = lights_are_hitable ? MAX_VERTICES : (MAX_VERTICES - 1);
 	const uint max_light = camera_is_hitable ? MAX_VERTICES : (MAX_VERTICES - 1);
+
+	const uint needed_vertices = max_camera + max_light;
+
+	uint storage_offset = thread_index * needed_vertices;
+	const uint cam_offset = storage_offset;
+	const uint light_offset = storage_offset + MAX_VERTICES;
+
 
 	uint n_camera = TraceCameraSubPath(
 		SubPathsScratchBuffer, cam_offset, max_camera,
@@ -794,6 +969,7 @@ void main(
 	const vec2 oo_dims = rcp(fdims);
 	const uint local_thread_index = LocalInvocationID.x + LocalInvocationID.y * LOCAL_SIZE_X;
 	const uint workgroup_index = WorkGroupID.x + WorkGroupID.y * DivUpSafe(dims.x, LOCAL_SIZE_X);
+	// row major thread index appears to be the fastest.
 #if 0
 	const uint global_thread_index = workgroup_index * LOCAL_SIZE + local_thread_index;
 #else
