@@ -98,3 +98,35 @@ struct DirectLightSurfaceShadingEachLight : DirectLightShadingBase, IDirectLight
 
 };
 
+struct DirectLightSurfaceShading
+{
+	BoundScene scene;
+	uint samples = 1;
+
+	vec3 shade <RNG : IRNG>(
+		const in SurfaceGeometryInfo sgi,
+		const in IMaterial material,
+		inout RNG rng
+	)
+	{
+		vec3 res = vec3(0);
+		
+		for(uint i = 0; i < samples; ++i)
+		{
+			let sample = scene.sampleLi(rng, sgi.position);
+			if(sample.pdf > 0)
+			{
+				const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+				vec3 sample_contribution = max(sample.intensity, vec3(0)) * bsdf * AbsDot(sgi.shading_normal, sample.direction) / sample.pdf;
+				if(NonZero(sample_contribution))
+				{
+					Ray3f _ray = Ray3f(sgi.position, sample.direction);
+					RayDesc ray = RayDesc(_ray, RayRangef(RayTMin(_ray, sgi.geometry_normal), sample.distance));
+					float v = scene.testVisibility(ray);
+					res += (sample_contribution * v);
+				}
+			}
+		}
+		return res * rcp(float(samples));
+	}
+}

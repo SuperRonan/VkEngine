@@ -34,8 +34,10 @@ struct PushConstant
 [vk::push_constant]
 uniform PushConstant _pc;
 
-#define LIGHT_SAMPLES 16
+#define LIGHT_SAMPLES 1
+#define PATH_PER_PIXEL 1
 
+// 16x16 appears to be the optimum
 #define LOCAL_SIZE_X 16
 #define LOCAL_SIZE_Y 16
 #define LOCAL_SIZE_Z 1
@@ -60,9 +62,9 @@ vec3 TracePath<RNG : IRNG>(const in BoundScene scene, const in IRayTracer ray_tr
 		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.uv_jacobians);
 		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 
-		DirectLightSurfaceShadingEachLight shader;
+		DirectLightSurfaceShading shader;
 		shader.scene = scene;
-		shader.sample_per_light = 1;
+		shader.samples = LIGHT_SAMPLES;
 		res += tray.throughput * shader.shade(hit.surface_shading_info, material, rng);
 
 		let bsdf_sample = material.sampleBSDF<BSDF_FORWARD_BIT>(
@@ -105,26 +107,32 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 		ICamera cam = MakeCamera(renderer_ubo.camera);
 		RayQuerier ray_querier = RayQuerier(scene);
 		
-		// [0, 1]
-		vec2 jitter = vec2(0);
-		if(true)
-		{
-			jitter = rng.generate<float, 2>();
-		}
-		else
-		{
-			RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
-			jitter = _rng.generate<float, 2>();
-		}
-		const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
-		const vec2 cp = UVToClipSpace(uv);
+		vec3 res = vec3(0);
 
-		
-		Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
-		let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
-		TraversingRay tray = TraversingRay(cam_sample);
-		
-		vec3 res = TracePath(scene, ray_querier, tray, rng);
+		for(uint i = 0; i < PATH_PER_PIXEL; ++i)
+		{
+			// [0, 1]
+			vec2 jitter = vec2(0);
+			if(true)
+			{
+				jitter = rng.generate<float, 2>();
+			}
+			else
+			{
+				RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
+				jitter = _rng.generate<float, 2>();
+			}
+			const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
+			const vec2 cp = UVToClipSpace(uv);
+
+			Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
+			let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
+			TraversingRay tray = TraversingRay(cam_sample);
+			
+			res += TracePath(scene, ray_querier, tray, rng);
+		}
+
+		res *= rcp(float(PATH_PER_PIXEL));
 
 		Target.Store(pixel, vec4(res, 1));
 	}
