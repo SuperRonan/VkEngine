@@ -20,6 +20,7 @@ namespace vkl
 	void LightTransport::createInternals()
 	{
 		const std::filesystem::path shaders = "RenderLibShaders:/RT";
+
 		_path_tracer_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
 			.name = name() + ".PathTracer",
@@ -39,6 +40,7 @@ namespace vkl
 			},
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
+				res.pushBack(_target_format_str);
 				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
@@ -124,6 +126,7 @@ namespace vkl
 			},
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
+				res.pushBack(_target_format_str);
 				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
@@ -151,6 +154,7 @@ namespace vkl
 			},
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
+				res.pushBack(_target_format_str);
 				std::string_view resolve_mode;
 				if (_method == Method::LightTracer)
 				{
@@ -196,6 +200,12 @@ namespace vkl
 	{
 		_light_tracer_buffer->updateResource(ctx);
 		_bdpt_scratch_buffer->updateResource(ctx);
+		VkFormat target_format = _target->format().value();
+		if (target_format != _target_format)
+		{
+			_target_format = target_format;
+			_target_format_str = std::format("TARGET_IMAGE_FORMAT {}", DetailedVkFormat::Find(_target_format).getGLSLName());
+		}
 		if (_method == Method::PathTracer)
 		{
 			ctx.resourcesToUpdateLater() += _path_tracer_rq;

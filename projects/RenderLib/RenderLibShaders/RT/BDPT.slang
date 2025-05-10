@@ -26,7 +26,7 @@
 
 #include <ShaderLib/Debug/DebugBuffers.slang>
 
-layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict RWTexture2D<float4> Target;
+layout(SHADER_DESCRIPTOR_BINDING + 2, TARGET_IMAGE_FORMAT) uniform restrict RWTexture2D<float4> Target;
 
 struct PushConstant
 {

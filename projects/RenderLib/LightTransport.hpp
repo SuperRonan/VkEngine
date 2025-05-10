@@ -34,6 +34,8 @@ namespace vkl
 		std::shared_ptr<ImageView> _target;
 		BufferAndRange _ubo;
 
+		VkFormat _target_format = VK_FORMAT_UNDEFINED;
+		std::string _target_format_str = {};
 		uint _max_depth = 5;
 
 		MultiDescriptorSetsLayouts _sets_layouts;

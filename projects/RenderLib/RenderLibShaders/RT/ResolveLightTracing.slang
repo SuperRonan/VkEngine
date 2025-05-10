@@ -18,7 +18,7 @@ typealias TargetTexture = WTexture2D<TargetFormat>;
 typealias TargetTexture = RWTexture2D<TargetFormat>;
 #endif
 
-layout(SHADER_DESCRIPTOR_BINDING + 2, rgba32f) uniform restrict TargetTexture Target;
+layout(SHADER_DESCRIPTOR_BINDING + 2, TARGET_IMAGE_FORMAT) uniform restrict TargetTexture Target;
 layout(SHADER_DESCRIPTOR_BINDING + 3) uniform restrict StructuredBuffer<Vector3<LightBufferAccumFloat>> AccumulationBuffer;
 
 struct PushConstant
