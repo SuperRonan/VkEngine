@@ -157,6 +157,13 @@ extension matrix<T, R, C>
 		T z = T(0);
 		return Uniform(z);
 	}
+
+	property t : matrix<T, C, R>
+	{
+		get{
+			return transpose(this);
+		}
+	}
 };
 
 template <typename T, int R, int C>
