@@ -45,6 +45,7 @@ namespace vkl
 		std::shared_ptr<Buffer> _light_tracer_buffer = {};
 
 		std::shared_ptr<Buffer> _bdpt_scratch_buffer = {};
+		size_t _bdpt_scratch_buffer_segment_2 = 0;
 
 		Method _method = Method::PathTracer;
 

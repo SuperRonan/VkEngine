@@ -93,8 +93,10 @@ namespace vkl
 				// 5 vec4 at most for now (with uncompressed)
 				// 4 vec4 with minimum compression (fastest)
 				// 3 vec4 with aggressive compression, (but slower)
-				const size_t vertex_size = sizeof(vec4) * 5; 
-				size_t res = vertex_size * 2 * (_max_depth + 2) * pixels;
+				const uint max_vertices = _max_depth + 2;
+				const size_t vertex_size = sizeof(vec4) * 3;
+				const size_t pdf_pair_size = sizeof(vec2);
+				size_t res = pixels * 2 * max_vertices * (vertex_size + pdf_pair_size);
 				return res;
 			},
 			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
@@ -123,8 +125,18 @@ namespace vkl
 					.binding = 3,
 				},
 				Binding{
-					.buffer = _bdpt_scratch_buffer,
+					.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
+						.begin = 0,
+						.len = _bdpt_scratch_buffer_segment_2,
+					}; }},
 					.binding = 4,
+				},
+				Binding{
+					.buffer = {_bdpt_scratch_buffer, [this](){return Buffer::Range{
+						.begin = _bdpt_scratch_buffer_segment_2,
+						.len = VK_WHOLE_SIZE,
+					}; }},
+					.binding = 5,
 				},
 			},
 			.definitions = [this](DefinitionsList& res) {
@@ -203,6 +215,19 @@ namespace vkl
 	{
 		_light_tracer_buffer->updateResource(ctx);
 		_bdpt_scratch_buffer->updateResource(ctx);
+		{
+			VkExtent3D extent = _target->image()->extent().value();
+			extent.width = std::alignUpAssumePo2<u32>(extent.width, 32);
+			extent.height = std::alignUpAssumePo2<u32>(extent.height, 32);
+			size_t pixels = extent.width * extent.height * extent.depth;
+			// 5 vec4 at most for now (with uncompressed)
+			// 4 vec4 with minimum compression (fastest)
+			// 3 vec4 with aggressive compression, (but slower)
+			const uint max_vertices = _max_depth + 2;
+			const size_t vertex_size = sizeof(vec4) * 3;
+			const size_t pdf_pair_size = sizeof(vec2);
+			_bdpt_scratch_buffer_segment_2 = pixels * max_vertices * 2 * vertex_size;
+		}
 		VkFormat target_format = _target->format().value();
 		if (target_format != _target_format)
 		{
