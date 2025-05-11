@@ -340,32 +340,44 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 
 #endif
 
+SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
+	uint object_index, uint primitive_index, vec2 barycentrics,
+	AffineXForm3Df object_to_world
+) {
+	SurfaceShadingInfo res;
+
+	const ObjectReference object_refs = SceneObjectsTable[object_index];
+	const MeshReference mesh = MeshReference(object_refs.mesh_id);
+	const uvec3 triangle_indices = mesh.getPrimitiveIndices<3>(primitive_index);
+	const AffineXForm3Df xform = object_to_world;
+	Mesh::Vertex interpolated_vertex = mesh.interpolateVertex(triangle_indices, barycentrics).transformedBy(xform);
+	res.interpolated_normal = interpolated_vertex.normal;
+	interpolated_vertex = interpolated_vertex.normalized();
+
+	res.position = interpolated_vertex.position;
+	res.geometry_normal = Normalize(DirectionMatrix(xform) * mesh.readTriangleNormal(triangle_indices));
+	res.vertex_shading_normal = interpolated_vertex.normal;
+	res.shading_normal = res.vertex_shading_normal;
+	res.vertex_shading_tangent = interpolated_vertex.tangent;
+	res.uv = interpolated_vertex.uv;
+	
+	return res;
+}
+
 #if SHADER_RAY_QUERY_AVAILABLE
 	template <bool Committed = true, uint Flags>
 	SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(inout RayQuery<Flags> rq)
 	{
-		SurfaceShadingInfo res;
 		constexpr const bool C = Committed;
 		const uint object_index = rq.getRayInstanceCustomIndex<C>();
 		const uint primitive_index = rq.getPrimitiveIndex<C>();
 		const vec2 barycentrics = rq.getTriangleBarycentrics<C>();
-
-		const ObjectReference object_refs = SceneObjectsTable[object_index];
-		const MeshReference mesh = MeshReference(object_refs.mesh_id);
-		const uvec3 triangle_indices = mesh.getPrimitiveIndices<3>(primitive_index);
 		const AffineXForm3Df xform = rq.getObjectToWorld3x4<C>();
-		Mesh::Vertex interpolated_vertex = mesh.interpolateVertex(triangle_indices, barycentrics).transformedBy(xform);
-		res.interpolated_normal = interpolated_vertex.normal;
-		interpolated_vertex = interpolated_vertex.normalized();
-		
-		res.position = interpolated_vertex.position;
-		res.geometry_normal = Normalize(DirectionMatrix(xform) * mesh.readTriangleNormal(triangle_indices));
-		res.vertex_shading_normal = interpolated_vertex.normal;
-		res.shading_normal = res.vertex_shading_normal;
-		res.vertex_shading_tangent = interpolated_vertex.tangent;
-		res.uv = interpolated_vertex.uv;
-		
-		return res;
+
+		return reconstructTriangleSurfaceShadingInfo(
+			object_index, primitive_index, barycentrics,
+			xform
+		);
 	}
 	
 	

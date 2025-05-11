@@ -21,6 +21,8 @@ namespace vkl
 	{
 		const std::filesystem::path shaders = "RenderLibShaders:/RT";
 
+		using RTShader = RayTracingCommand::RTShader;
+
 		_path_tracer_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
 			.name = name() + ".PathTracer",
@@ -44,6 +46,73 @@ namespace vkl
 				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
+
+		MyVector<RTShader> miss_shaders = {
+			RTShader{.path = shaders / "TraceRT.slang"},
+			RTShader{.path = shaders / "VisibilityRT.slang"},
+		};
+
+		MyVector<RTShader> chit_shaders = {
+			RTShader{.path = shaders / "TraceRT.slang"},
+			RTShader{.path = shaders / "VisibilityRT.slang"},
+		};
+
+		MyVector<RTShader> ahit_shaders = {
+			RTShader{.path = shaders / "TraceRT.slang"},
+			RTShader{.path = shaders / "VisibilityRT.slang"},
+		};
+
+		MyVector<RayTracingCommand::HitGroup> hit_groups = {
+			RayTracingCommand::HitGroup{
+				.closest_hit = 0,
+				.any_hit = 0,
+			},
+			RayTracingCommand::HitGroup{
+				.closest_hit = 1,
+				.any_hit = 1,
+			},
+		};
+
+		auto fill_sbt = [&](RayTracingCommand& command)
+		{
+			ShaderBindingTable* sbt = command.getSBT().get();
+			sbt->setRecord(ShaderRecordType::RayGen, 0, 0);
+			sbt->setRecord(ShaderRecordType::Miss, 0, 0);
+			sbt->setRecord(ShaderRecordType::Miss, 1, 1);
+			sbt->setRecord(ShaderRecordType::HitGroup, 0, 0);
+			sbt->setRecord(ShaderRecordType::HitGroup, 1, 1);
+		};
+
+		_path_tracer_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+			.app = application(),
+			.name = name() + ".PathTracer",
+			.sets_layouts = _sets_layouts,
+			.raygen = RTShader{.path = shaders / "PathTracing.slang"},
+			.misses = miss_shaders,
+			.closest_hits = chit_shaders,
+			.any_hits = ahit_shaders,
+			.hit_groups = hit_groups,
+			.definitions = [this](DefinitionsList& res) {
+				res.clear();
+				res.pushBack(_target_format_str);
+				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+			},
+			.bindings = {
+				Binding{
+					.buffer = _ubo,
+					.binding = 1,
+				},
+				Binding{
+					.image = _target,
+					.binding = 2,
+				},
+			},
+			.extent = _target->image()->extent(),
+			.max_recursion_depth = 0,
+			.create_sbt = true,
+		});
+
+		fill_sbt(*_path_tracer_rt);
 
 		_light_tracer_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -236,18 +305,40 @@ namespace vkl
 		}
 		if (_method == Method::PathTracer)
 		{
-			ctx.resourcesToUpdateLater() += _path_tracer_rq;
+			if (_use_rt_pipelines)
+			{
+				ctx.resourcesToUpdateLater() += _path_tracer_rt;
+			}
+			else
+			{
+				ctx.resourcesToUpdateLater() += _path_tracer_rq;
+			}
 		}
 		else if (useLightTracer())
 		{
 			ctx.resourcesToUpdateLater() += _resolve_light_tracer;
 			if (_method == Method::LightTracer)
 			{
-				ctx.resourcesToUpdateLater() += _light_tracer_rq;
+				if (_use_rt_pipelines)
+				{
+					
+				}
+				else
+				{
+					ctx.resourcesToUpdateLater() += _light_tracer_rq;
+				}
+				
 			}
 			else if (_method == Method::BidirectionalPathTracer)
 			{
-				ctx.resourcesToUpdateLater() += _bdpt_rq;
+				if (_use_rt_pipelines)
+				{
+
+				}
+				else
+				{
+					ctx.resourcesToUpdateLater() += _bdpt_rq;
+				}
 			}
 		}
 		VkExtent3D extent = _target->image()->extent().value();
@@ -258,7 +349,14 @@ namespace vkl
 	{
 		if (_method == Method::PathTracer)
 		{
-			exec(_path_tracer_rq);
+			if (_use_rt_pipelines)
+			{
+				exec(_path_tracer_rt);
+			}
+			else
+			{
+				exec(_path_tracer_rq);
+			}
 		}
 		else if (useLightTracer())
 		{
@@ -284,16 +382,29 @@ namespace vkl
 					.dispatched_threads = float(_light_tracer_samples),
 				};
 
-				exec(_light_tracer_rq->with(ComputeCommand::SingleDispatchInfo{
-					.pc_data = &pc,
-					.pc_size = sizeof(pc),
-				}));
+				if (_use_rt_pipelines)
+				{
+
+				}
+				else
+				{
+					exec(_light_tracer_rq->with(ComputeCommand::SingleDispatchInfo{
+						.pc_data = &pc,
+						.pc_size = sizeof(pc),
+					}));
+				}
 			}
 			else if (_method == Method::BidirectionalPathTracer)
 			{
-				exec(_bdpt_rq);
-			}
+				if (_use_rt_pipelines)
+				{
 
+				}
+				else
+				{
+					exec(_bdpt_rq);
+				}
+			}
 			exec(_resolve_light_tracer);
 		}
 	}
@@ -306,6 +417,10 @@ namespace vkl
 			{
 				_method = static_cast<Method>(_method_selection.index());
 			}
+
+			
+			ImGui::Checkbox("Use RT Pipelines", &_use_rt_pipelines);
+			ImGui::SetItemTooltip("Check to use Ray Tracing Pipelines, Uncheck to use Ray Queries and compute shaders.");
 
 			ImGui::InputInt("Max Depth", (int*)&_max_depth);
 			_max_depth = std::clamp<uint>(_max_depth, 1, 16);

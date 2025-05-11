@@ -37,12 +37,41 @@ uniform PushConstant _pc;
 #define LIGHT_SAMPLES 1
 #define PATH_PER_PIXEL 1
 
-// 16x16 appears to be the optimum
-#define LOCAL_SIZE_X 16
-#define LOCAL_SIZE_Y 16
-#define LOCAL_SIZE_Z 1
+struct DirectLightSurfaceShading<RayTracer : IRayTracer>
+{
+	BoundScene scene;
+	RayTracer ray_tracer;
+	uint samples = 1;
 
-vec3 TracePath<RNG : IRNG>(const in BoundScene scene, const in IRayTracer ray_tracer, TraversingRay tray, inout RNG rng)
+	vec3 shade <RNG : IRNG>(
+		const in SurfaceGeometryInfo sgi,
+		const in IMaterial material,
+		inout RNG rng
+	)
+	{
+		vec3 res = vec3(0);
+		
+		for(uint i = 0; i < samples; ++i)
+		{
+			let sample = scene.sampleLi(rng, sgi.position);
+			if(sample.pdf > 0)
+			{
+				const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+				vec3 sample_contribution = max(sample.intensity, vec3(0)) * bsdf * AbsDot(sgi.shading_normal, sample.direction) / sample.pdf;
+				if(NonZero(sample_contribution))
+				{
+					Ray3f _ray = Ray3f(sgi.position, sample.direction);
+					RayDesc ray = RayDesc(_ray, RayRangef(RayTMin(_ray, sgi.geometry_normal), sample.distance));
+					float v = ray_tracer.testVisibility(ray);
+					res += (sample_contribution * v);
+				}
+			}
+		}
+		return res * rcp(float(samples));
+	}
+}
+
+vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, const in RayTracer ray_tracer, TraversingRay tray, inout RNG rng)
 {
 	uint num_vertices = 1;
 	const uint max_vertices = MAX_DEPTH + 1;
@@ -62,8 +91,9 @@ vec3 TracePath<RNG : IRNG>(const in BoundScene scene, const in IRayTracer ray_tr
 		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.uv_jacobians);
 		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 
-		DirectLightSurfaceShading shader;
+		DirectLightSurfaceShading<RayTracer> shader;
 		shader.scene = scene;
+		shader.ray_tracer = ray_tracer;
 		shader.samples = LIGHT_SAMPLES;
 		res += tray.throughput * shader.shade(hit.surface_shading_info, material, rng);
 
@@ -90,24 +120,11 @@ vec3 TracePath<RNG : IRNG>(const in BoundScene scene, const in IRayTracer ray_tr
 	return res;
 }
 
-
-[shader("compute")]
-[numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]
-void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
+void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in IRayTracer ray_tracer)
 {
-	const uvec2 pixel = GlobalInvocationID.xy;
-	const uvec2 dims = TextureSize(Target);
-	const vec2 oo_dims = rcp(vec2(dims));
-	if(all(pixel < dims))
-	{
-		BoundScene scene;
-
-		RNG_t rng = RNG_t(Hash(pixel) ^ Hash(renderer_ubo.frame_idx));
-
-		ICamera cam = MakeCamera(renderer_ubo.camera);
-		RayQuerier ray_querier = RayQuerier(scene);
-		
-		vec3 res = vec3(0);
+	RNG_t rng = RNG_t(Hash(pixel) ^ Hash(renderer_ubo.frame_idx));
+	ICamera cam = MakeCamera(renderer_ubo.camera);
+	vec3 res = vec3(0);
 
 		for(uint i = 0; i < PATH_PER_PIXEL; ++i)
 		{
@@ -129,12 +146,55 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 			let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
 			TraversingRay tray = TraversingRay(cam_sample);
 			
-			res += TracePath(scene, ray_querier, tray, rng);
+			res += TracePath(scene, ray_tracer, tray, rng);
 		}
 
 		res *= rcp(float(PATH_PER_PIXEL));
 
 		Target.Store(pixel, vec4(res, 1));
+}
+
+
+#if SHADER_SEMANTIC_COMPUTE
+
+// 16x16 appears to be the optimum
+#define LOCAL_SIZE_X 16
+#define LOCAL_SIZE_Y 16
+#define LOCAL_SIZE_Z 1
+
+[shader("compute")]
+[numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]
+void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
+{
+	const uvec2 pixel = GlobalInvocationID.xy;
+	const uvec2 dims = TextureSize(Target);
+	const vec2 oo_dims = rcp(vec2(dims));
+	if(all(pixel < dims))
+	{
+		BoundScene scene;
+		RayQuerier ray_querier = RayQuerier(scene);
+
+		CommonMain(pixel, oo_dims, scene, ray_querier);
 	}
 }
 
+#endif
+
+#if SHADER_SEMANTIC_RAYGEN
+
+[shader("raygen")]
+void main()
+{
+	const uvec2 pixel = DispatchRaysIndex().xy;
+	const uvec2 dims = TextureSize(Target);
+	const vec2 oo_dims = rcp(vec2(dims));
+	if(all(pixel < dims))
+	{
+		BoundScene scene;
+		RayTracer ray_tracer = RayTracer(scene);
+
+		CommonMain(pixel, oo_dims, scene, ray_tracer);
+	}
+}
+
+#endif

@@ -75,6 +75,14 @@ struct Hit
 	}
 };
 
+struct TracePayload
+{
+	uint flags;
+	uint custom_index;
+	uint primitive_index;
+	u32 uv_pack;
+};
+
 struct RayTraceInfo
 {
 	Ray3f ray;
@@ -110,15 +118,82 @@ void computeHitMeshDifferentials(const in RayTraceInfo info, inout Hit res)
 interface IRayTracer
 {
 	Hit traceRay<int flags>(const in RayTraceInfo info);
+
+	float testVisibility(const in RayDesc ray);
 };
 
-// struct RayTracer : IRayTracer
-// {
-// 	Hit traceRay(const in Ray3f ray, const in RayRangef range = {}, const in RayDiff3f diffs = {})
-// 	{
+struct RayTracer : IRayTracer
+{
+	BoundScene scene;
 
-// 	}
-// };
+	__init(BoundScene scene)
+	{
+		this.scene = scene;
+	}
+
+	Hit traceRay<int flags>(const in RayTraceInfo info)
+	{
+		Hit res;
+		res.surface_shading_info.out_direction = -info.ray.direction;
+		res.surface_diffs.position_jacobian = info.diffs.origin_jacobian;
+		res.surface_diffs.normal_jacobian = info.diffs.direction_jacobian;
+
+		TracePayload payload;
+		payload.flags = 0;
+
+		uint ray_offset = 0;
+		uint ray_multiplier = 0;
+		uint miss_index = 0;
+
+		TraceRay(
+			SceneTLAS,
+			uint(flags) | info.ray_flags,
+			info.mask,
+			ray_offset, ray_multiplier, miss_index,
+			RayDesc(info.ray, info.range),
+			payload
+		);
+		res.flags = Hit::Flags(payload.flags);
+		if(res.hasValue())
+		{
+			res.custom_index = payload.custom_index;
+			res.primitive_index = payload.primitive_index;
+			vec2 bary = unpackUnorm2x16ToFloat(payload.uv_pack);
+			const Scene::ObjectReference object_ref = SceneObjectsTable[payload.custom_index];
+			res.material_id = object_ref.material_id;
+
+			res.object_to_world = SceneXForms[object_ref.xform_id];
+			res.world_to_object = InverseAffineTransform(res.object_to_world);
+			res.surface_shading_info = scene.reconstructTriangleSurfaceShadingInfo(
+				res.custom_index, res.primitive_index, bary,
+				res.object_to_world
+			);
+			res.surface_shading_info.out_direction = -info.ray.direction;
+			res.t = distance(info.ray.origin, res.surface_shading_info.position);
+			computeHitMeshDifferentials(info, res);
+		}
+		return res;
+	}
+
+	float testVisibility(const in RayDesc ray)
+	{
+		float res;
+		
+		uint ray_offset = 1;
+		uint ray_multiplier = 0;
+		uint miss_index = 1;
+
+		TraceRay(
+			SceneTLAS,
+			RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+			~0,
+			ray_offset, ray_multiplier, miss_index,
+			ray,
+			res
+		);
+		return res;
+	}
+};
 
 
 typealias LightBufferAccumFloat = float;
@@ -181,6 +256,11 @@ struct RayQuerier : IRayTracer
 			computeHitMeshDifferentials(info, res);
 		}
 		return res;
+	}
+
+	float testVisibility(const in RayDesc ray)
+	{
+		return scene.testVisibility(ray);
 	}
 
 	__init(BoundScene scene)

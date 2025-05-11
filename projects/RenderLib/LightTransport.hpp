@@ -49,9 +49,15 @@ namespace vkl
 
 		Method _method = Method::PathTracer;
 
+		bool _use_rt_pipelines = true;
+
 		std::shared_ptr<ComputeCommand> _path_tracer_rq;
 		std::shared_ptr<ComputeCommand> _light_tracer_rq;
 		std::shared_ptr<ComputeCommand> _bdpt_rq;
+
+		std::shared_ptr<RayTracingCommand> _path_tracer_rt;
+		std::shared_ptr<RayTracingCommand> _light_tracer_rt;
+		std::shared_ptr<RayTracingCommand> _bdpt_rt;
 
 		std::shared_ptr<ComputeCommand> _resolve_light_tracer;
 		ImGuiListSelection _method_selection;
