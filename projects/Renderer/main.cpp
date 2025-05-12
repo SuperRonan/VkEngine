@@ -85,6 +85,7 @@ namespace vkl
 			features.shader_atomic_float_ext.shaderSharedFloat32AtomicAdd = VK_TRUE;
 			features.shader_atomic_float_ext.shaderBufferFloat32AtomicAdd = VK_TRUE;
 
+			features.ray_tracing_validation_nv.rayTracingValidation = VK_TRUE;
 			//features.compute_shader_derivative_khr.computeDerivativeGroupQuads = VK_TRUE;
 		}
 
@@ -93,6 +94,7 @@ namespace vkl
 			std::set<std::string_view> res = AppWithImGui::getDeviceExtensions();
 			res.insert(VK_NV_FILL_RECTANGLE_EXTENSION_NAME);
 			res.insert(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME);
+			res.insert(VK_NV_RAY_TRACING_VALIDATION_EXTENSION_NAME);
 			//res.insert(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
 			return res;
 		}

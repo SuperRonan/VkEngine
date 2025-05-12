@@ -126,32 +126,32 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 	ICamera cam = MakeCamera(renderer_ubo.camera);
 	vec3 res = vec3(0);
 
-		for(uint i = 0; i < PATH_PER_PIXEL; ++i)
+	for(uint i = 0; i < PATH_PER_PIXEL; ++i)
+	{
+		// [0, 1]
+		vec2 jitter = vec2(0);
+		if(true)
 		{
-			// [0, 1]
-			vec2 jitter = vec2(0);
-			if(true)
-			{
-				jitter = rng.generate<float, 2>();
-			}
-			else
-			{
-				RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
-				jitter = _rng.generate<float, 2>();
-			}
-			const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
-			const vec2 cp = UVToClipSpace(uv);
-
-			Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
-			let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
-			TraversingRay tray = TraversingRay(cam_sample);
-			
-			res += TracePath(scene, ray_tracer, tray, rng);
+			jitter = rng.generate<float, 2>();
 		}
+		else
+		{
+			RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
+			jitter = _rng.generate<float, 2>();
+		}
+		const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
+		const vec2 cp = UVToClipSpace(uv);
 
-		res *= rcp(float(PATH_PER_PIXEL));
+		Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
+		let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
+		TraversingRay tray = TraversingRay(cam_sample);
+		
+		res += TracePath(scene, ray_tracer, tray, rng);
+	}
 
-		Target.Store(pixel, vec4(res, 1));
+	res *= rcp(float(PATH_PER_PIXEL));
+
+	Target.Store(pixel, vec4(res, 1));
 }
 
 
