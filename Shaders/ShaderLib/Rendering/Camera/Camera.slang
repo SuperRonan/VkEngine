@@ -564,18 +564,19 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 
 	Camera::EmissionSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f cp_jacobian, uint layer)
 	{
-		// TODO
 		Camera::EmissionSample res;
 		res.ray = getRay(cp, cp_jacobian, layer);
+		res.position_pdf = rcp(sqr(frame_size) * aspect);
 		res.pdf = 1.0f;
-		res.intensity = 1.0f;
+		res.intensity = res.position_pdf;
 		return res;
 	}
 
 	RayPdf pdfWe(const in Ray3f ray)
 	{
-		// TODO
-		RayPdf res = {};
+		RayPdf res;
+		res.position_pdf = rcp(sqr(frame_size) * frame_size);
+		res.direction_pdf = 1;
 		return res;
 	}
 
@@ -590,7 +591,7 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		{
 			res.direction = -this.direction;
 			res.distance = pos_c.z;
-			res.intensity = rcp(sqr(this.frame_size));
+			res.intensity = rcp(sqr(this.frame_size) * frame_size);
 			res.uv = ClipSpaceToUV(cp);
 		}
 		else
