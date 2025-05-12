@@ -150,6 +150,35 @@ namespace vkl
 				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
+		
+		_light_tracer_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+			.app = application(),
+			.name = name() + ".LightTracer",
+			.sets_layouts = _sets_layouts,
+			.raygen = RTShader{.path = shaders / "LightTracing.slang"},
+			.misses = miss_shaders,
+			.closest_hits = chit_shaders,
+			.any_hits = ahit_shaders,
+			.hit_groups = hit_groups,
+			.definitions = [this](DefinitionsList& res) {
+				res.clear();
+				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+			},
+			.bindings = {
+				Binding{
+					.buffer = _ubo,
+					.binding = 1,
+				},
+				Binding{
+					.buffer = _light_tracer_buffer,
+					.binding = 2,
+				},
+			},
+			.extent = [this]() {return VkExtent3D{.width = _light_tracer_samples, .height = 1, .depth = 1}; },
+			.max_recursion_depth = 0,
+			.create_sbt = true,
+		});
+		fill_sbt(*_light_tracer_rt);
 
 		_bdpt_scratch_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -214,6 +243,55 @@ namespace vkl
 				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
+
+		_bdpt_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+			.app = application(),
+			.name = name() + ".BDPT",
+			.sets_layouts = _sets_layouts,
+			.raygen = RTShader{.path = shaders / "BDPT.slang"},
+			.misses = miss_shaders,
+			.closest_hits = chit_shaders,
+			.any_hits = ahit_shaders,
+			.hit_groups = hit_groups,
+			.definitions = [this](DefinitionsList& res) {
+				res.clear();
+				res.pushBack(_target_format_str);
+				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+			},
+			.bindings = {
+				Binding{
+					.buffer = _ubo,
+					.binding = 1,
+				},
+				Binding{
+					.image = _target,
+					.binding = 2,
+				},
+				Binding{
+					.buffer = _light_tracer_buffer,
+					.binding = 3,
+				},
+				Binding{
+					.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
+						.begin = 0,
+						.len = _bdpt_scratch_buffer_segment_2,
+					}; }},
+					.binding = 4,
+				},
+				Binding{
+					.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
+						.begin = _bdpt_scratch_buffer_segment_2,
+						.len = VK_WHOLE_SIZE,
+					}; }},
+					.binding = 5,
+				},
+			},
+			.extent = _target->image()->extent(),
+			.max_recursion_depth = 0,
+			.create_sbt = true,
+		});
+		fill_sbt(*_light_tracer_rt);
+
 
 		_resolve_light_tracer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
@@ -321,7 +399,7 @@ namespace vkl
 			{
 				if (_use_rt_pipelines)
 				{
-					
+					ctx.resourcesToUpdateLater() += _light_tracer_rt;
 				}
 				else
 				{
@@ -333,7 +411,7 @@ namespace vkl
 			{
 				if (_use_rt_pipelines)
 				{
-
+					ctx.resourcesToUpdateLater() += _bdpt_rt;
 				}
 				else
 				{
@@ -384,7 +462,10 @@ namespace vkl
 
 				if (_use_rt_pipelines)
 				{
-
+					exec(_light_tracer_rt->with(RayTracingCommand::SingleTraceInfo{
+						.pc_data = &pc,
+						.pc_size = sizeof(pc),
+					}));
 				}
 				else
 				{
@@ -398,7 +479,7 @@ namespace vkl
 			{
 				if (_use_rt_pipelines)
 				{
-
+					exec(_bdpt_rt);
 				}
 				else
 				{

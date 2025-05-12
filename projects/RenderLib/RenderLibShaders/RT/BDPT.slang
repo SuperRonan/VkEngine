@@ -36,12 +36,6 @@ struct PushConstant
 [vk::push_constant]
 uniform PushConstant _pc;
 
-// Smaller workgroups appear the be faster, this is because of the high memory bandwith
-// 32 is fast
-// 16 appears to be the fastest (although it is smaller than a subgroup???)
-#define LOCAL_SIZE_X 4
-#define LOCAL_SIZE_Y 4
-#define LOCAL_SIZE_Z 1
 
 #define MAX_VERTICES (MAX_DEPTH + 2)
 
@@ -353,6 +347,7 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorag
 			else
 			{
 				v.addFlags(Vertex::Flags::AtInfinity);
+				v.position = tray.ray.direction;
 			}
 			storage[storage_offset + res] = v;
 			++res;
@@ -428,12 +423,12 @@ uint TraceCameraSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage :
 	in PDFStorage storage_pdf, uint storage_pdf_offset,
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
-	const in ICamera camera,
 	const in vec2 cp,
 	const in Matrix2f Jcp,
 	uint layer,
 	inout RNG rng
 ) {
+	let camera = MakeCamera(rt_ubo.camera);
 	let sample = camera.sampleWe(rng, cp, Jcp, layer);
 	TraversingRay tray = TraversingRay(sample);
 	storage[storage_offset].position = sample.ray.ray.origin;
@@ -489,7 +484,7 @@ uint TraceLightSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage : 
 layout(SHADER_DESCRIPTOR_BINDING + 3) restrict RWStructuredBuffer<Vector<LightBufferAccumFloat, 3>, Std430DataLayout> LightTracerAccumBuffer;
 
 float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IRWArray<PDFPair>>(
-	const uint thread_index, const uint local_index,
+	const uint thread_index,
 	const in VertexArray vertices,
 	const uint camera_offset,
 	const uint light_offset,
@@ -607,13 +602,13 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IRWArray
 }
 
 vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWArray<PDFPair>>(
-	const uint thread_index, const uint local_index,
+	const uint thread_index,
 	const in VertexArray vertices, 
 	const uint camera_offset, const uint n_camera,
 	const uint light_offset, const uint n_light,
 	const in PDFStorage pdf_storage, uint camera_pdf_offset, uint light_pdf_offset,
-	const in BoundScene scene,
-	const in ICamera camera, vec2 fdims, uvec2 udims,
+	const in BoundScene scene, const in IRayTracer ray_tracer,
+	const vec2 fdims, const uvec2 udims,
 	inout RNG rng
 ) {
 	vec3 res = vec3(0);
@@ -714,6 +709,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 
 				if(resample_camera)
 				{
+					let camera = MakeCamera(rt_ubo.camera);
 					const vec3 light_pos = light_vertex.position;
 					const vec3 ng = light_vertex.geometry_normal;
 					let cam_sample = camera.sampleWi(rng, light_pos);
@@ -735,6 +731,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 				}
 				else if(t == 1)
 				{
+					let camera = MakeCamera(rt_ubo.camera);
 					// This could be done when generating the sub paths?
 					vec3 refp = camera_vertex.position;
 					vec3 dir = vertices[camera_offset].position - refp;
@@ -795,12 +792,17 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 			
 				if(NonZero(L))
 				{
-					float v = scene.testVisibility(visibility_ray);
+#if SHADER_SEMANTIC_COMPUTE
+					float v = ray_tracer.testVisibility(visibility_ray);
+#else
+					// The visibility ray is broken with a RT Pipeline
+					float v = 1.0f;
+#endif
 					L *= v;
 					if(v > 0)
 					{
 						float w = VertexConnectionWeight(
-							thread_index, local_index,
+							thread_index, 
 							vertices, 
 							camera_offset,
 							light_offset,
@@ -837,10 +839,10 @@ layout(SHADER_DESCRIPTOR_BINDING + 4) restrict RWStructuredBuffer<Vertex, Std430
 layout(SHADER_DESCRIPTOR_BINDING + 5) restrict RWStructuredBuffer<PDFPair, Std430DataLayout> SubPathsPDFScratchBuffer;
 
 vec3 PathTrace<RNG : IRNG>(
-	const uint thread_index, const uint local_index,
+	const uint thread_index,
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
-	const in ICamera camera, vec2 fdims, uvec2 udims,
+	const vec2 fdims, const uvec2 udims,
 	const in vec2 cp,
 	const in Matrix2f Jcp,
 	uint layer,
@@ -866,7 +868,7 @@ vec3 PathTrace<RNG : IRNG>(
 		SubPathsScratchBuffer, cam_offset, max_camera,
 		SubPathsPDFScratchBuffer, camera_pdf_offset,
 		scene, ray_tracer,
-		camera, cp, Jcp, layer,
+		cp, Jcp, layer,
 		rng
 	);
 
@@ -878,13 +880,13 @@ vec3 PathTrace<RNG : IRNG>(
 	);
 
 	vec3 res = ConnectSubPaths(
-		thread_index, local_index,
+		thread_index,
 		SubPathsScratchBuffer,
 		cam_offset, n_camera,
 		light_offset, n_light,
 		SubPathsPDFScratchBuffer, camera_pdf_offset, light_pdf_offset,
-		scene,
-		camera, fdims, udims,
+		scene, ray_tracer,
+		fdims, udims,
 		rng
 	);
 
@@ -894,7 +896,59 @@ vec3 PathTrace<RNG : IRNG>(
 } // namespace bdpt
 
 
+void CommonMain(
+	uvec2 pixel,
+	const in IRayTracer ray_tracer,
+	const in BoundScene scene,
 
+) {
+	const uvec2 dims = TextureSize(Target);
+	const vec2 fdims = vec2(dims);
+	const vec2 oo_dims = rcp(fdims);
+
+// row major thread index appears to be the fastest.
+#if 0
+	const uint global_thread_index = workgroup_index * LOCAL_SIZE + local_thread_index;
+#else
+	const uint global_thread_index = pixel.x + pixel.y * dims.x;
+#endif
+
+	RNG_t rng = RNG_t(Hash(pixel) ^ Hash(renderer_ubo.frame_idx));
+
+	ICamera camera = MakeCamera(renderer_ubo.camera);
+	// [0, 1]
+	vec2 jitter = vec2(0);
+	if(true)
+	{
+		jitter = rng.generate<float, 2>();
+	}
+	else
+	{
+		RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
+		jitter = _rng.generate<float, 2>();
+	}
+	const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
+	const vec2 cp = UVToClipSpace(uv);
+	Matrix2f Jcp = DiagonalMatrixV(oo_dims * 2);
+
+	vec3 res = bdpt::PathTrace(
+		global_thread_index,
+		scene, ray_tracer, 
+		fdims, dims,
+		cp, Jcp, 0, 
+		rng
+	);
+	
+	Target.Store(pixel, vec4(res, 1));
+}
+
+#if SHADER_SEMANTIC_COMPUTE
+// Smaller workgroups appear the be faster, this is because of the high memory bandwith
+// 32 is fast
+// 16 appears to be the fastest (although it is smaller than a subgroup???)
+#define LOCAL_SIZE_X 4
+#define LOCAL_SIZE_Y 4
+#define LOCAL_SIZE_Z 1
 [shader("compute")]
 [numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]
 void main(
@@ -908,52 +962,32 @@ void main(
 	const vec2 oo_dims = rcp(fdims);
 	const uint local_thread_index = LocalInvocationID.x + LocalInvocationID.y * LOCAL_SIZE_X;
 	const uint workgroup_index = WorkGroupID.x + WorkGroupID.y * DivUpSafe(dims.x, LOCAL_SIZE_X);
-	// row major thread index appears to be the fastest.
-#if 0
-	const uint global_thread_index = workgroup_index * LOCAL_SIZE + local_thread_index;
-#else
-	const uint global_thread_index = pixel.x + pixel.y * dims.x;
-#endif
+
 	if(all(pixel < dims))
 	{
 		BoundScene scene;
-
-		RNG_t rng = RNG_t(Hash(pixel) ^ Hash(renderer_ubo.frame_idx));
-
-		ICamera camera = MakeCamera(renderer_ubo.camera);
 		RayQuerier ray_querier = RayQuerier(scene);
 		
-		// [0, 1]
-		vec2 jitter = vec2(0);
-		if(true)
-		{
-			jitter = rng.generate<float, 2>();
-		}
-		else
-		{
-			RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
-			jitter = _rng.generate<float, 2>();
-		}
-		const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
-		const vec2 cp = UVToClipSpace(uv);
-		Matrix2f Jcp = DiagonalMatrixV(oo_dims * 2);
-
-		//_g_debug_signal = all(pixel == uvec2(1024, 34));
-		if(_g_debug_signal)
-		{
-			_g_debug_printer = DebugPrinter(vec3(0), DEBUG_UV_SPACE_BIT);
-			
-		}
-
-		vec3 res = bdpt::PathTrace(
-			global_thread_index, local_thread_index, 
-			scene, ray_querier, 
-			camera, fdims, dims,
-			cp, Jcp, 0, 
-			rng
-		);
-
-		Target.Store(pixel, vec4(res, 1));
+		CommonMain(pixel, ray_querier, scene);
 	}
 }
+#endif
 
+
+#if SHADER_SEMANTIC_RAYGEN
+[shader("raygen")]
+void main() {
+	const uvec2 pixel = DispatchRaysIndex().xy;
+	const uvec2 dims = TextureSize(Target);
+	const vec2 fdims = vec2(dims);
+	const vec2 oo_dims = rcp(fdims);
+
+	if(all(pixel < dims))
+	{
+		BoundScene scene;
+		RayTracer ray_tracer = RayTracer(scene);
+		
+		CommonMain(pixel, ray_tracer, scene);
+	}
+}
+#endif

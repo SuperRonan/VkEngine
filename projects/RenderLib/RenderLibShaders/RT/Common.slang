@@ -13,6 +13,26 @@ struct UBO : RendererUBO
 
 };
 
+typealias LightBufferAccumFloat = float;
+
+__generic<Float : __BuiltinFloatingPointType, int N, Layout : IBufferDataLayout>
+bool AddLightTracerSample(RWStructuredBuffer<Vector<LightBufferAccumFloat, N>, Layout> accum_buffer, vec2 uv, vec2 fdims, uvec2 udims, Vector<Float, N> value)
+{
+	vec2 fpixel = uv * fdims;
+	uint2 pixel = uint2(fpixel);
+	bool res = false;
+	if(all(pixel < udims))
+	{
+		const uint address = pixel.x + pixel.y * udims.x;
+		for(uint i = 0; i < N; ++i)
+		{
+			InterlockedAdd(accum_buffer[address][i], ConvertBuiltInTo<LightBufferAccumFloat>(value[i]));
+		}
+		res = true;
+	}
+	return res;
+}
+
 struct TraversingRay
 {
 	Ray3f ray;
@@ -113,8 +133,6 @@ void computeHitMeshDifferentials(const in RayTraceInfo info, inout Hit res)
 	res.surface_diffs.position_jacobian = Jposition;
 }
 
-#endif
-
 interface IRayTracer
 {
 	Hit traceRay<int flags>(const in RayTraceInfo info);
@@ -195,27 +213,6 @@ struct RayTracer : IRayTracer
 	}
 };
 
-
-typealias LightBufferAccumFloat = float;
-
-__generic<Float : __BuiltinFloatingPointType, int N, Layout : IBufferDataLayout>
-bool AddLightTracerSample(RWStructuredBuffer<Vector<LightBufferAccumFloat, N>, Layout> accum_buffer, vec2 uv, vec2 fdims, uvec2 udims, Vector<Float, N> value)
-{
-	vec2 fpixel = uv * fdims;
-	uint2 pixel = uint2(fpixel);
-	bool res = false;
-	if(all(pixel < udims))
-	{
-		const uint address = pixel.x + pixel.y * udims.x;
-		for(uint i = 0; i < N; ++i)
-		{
-			InterlockedAdd(accum_buffer[address][i], ConvertBuiltInTo<LightBufferAccumFloat>(value[i]));
-		}
-		res = true;
-	}
-	return res;
-}
-
 #if BIND_SCENE && defined(SCENE_MESH_ACCESS) && defined(SCENE_MATERIAL_ACCESS) && BIND_SCENE_TLAS && defined(SCENE_OBJECTS_ACCESS) && defined(SCENE_XFORM_ACCESS)
 
 struct RayQuerier : IRayTracer
@@ -268,6 +265,8 @@ struct RayQuerier : IRayTracer
 		this.scene = scene;
 	}
 }
+
+#endif
 
 #endif
 

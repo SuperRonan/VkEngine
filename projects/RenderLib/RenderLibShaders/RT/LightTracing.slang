@@ -12,9 +12,6 @@
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL I_WANT_TO_DEBUG
 #define DEBUG_ENABLE_GLOBAL_PRINTER I_WANT_TO_DEBUG
 
-//#define FORCE_CAMERA_TYPE CAMERA_TYPE_ORTHO
-#define FORCE_CAMERA_TYPE CAMERA_TYPE_PERSPECTIVE
-
 //#define DEFAULT_HASH_POLICY HASH_POLICY_SLOW
 
 #include "Common.slang"
@@ -31,10 +28,6 @@
 
 layout(SHADER_DESCRIPTOR_BINDING + 2) restrict RWStructuredBuffer<Vector3<LightBufferAccumFloat>, Std430DataLayout> Target;
 
-#define LOCAL_SIZE_X 256
-#define LOCAL_SIZE_Y 1
-#define LOCAL_SIZE_Z 1
-
 struct PushConstant
 {
 	vec2 oo_dims;
@@ -49,12 +42,12 @@ uniform PushConstant _pc;
 //[require(GL_EXT_shader_atomic_float)]
 void ConnectToCameraIFP<RNG : IRNG>(
 	const in BoundScene scene,
-	const in ICamera camera,
 	const in Hit hit,
 	const in IMaterial material,
 	vec3 incoming_throughput,
 	inout RNG rng)
 {
+	ICamera camera = MakeCamera(rt_ubo.camera);
 	Camera::ConnectionSample connection = camera.sampleWi(rng, hit.surface_shading_info.position);
 	if(connection.pdf > 0 && NonZero(connection.intensity))
 	{
@@ -95,7 +88,7 @@ void ConnectToCameraIFP<RNG : IRNG>(
 
 
 
-void TracePath<RNG : IRNG>(inout RNG rng, const in ICamera camera, const in IRayTracer ray_tracer, const in BoundScene scene, TraversingRay tray)
+void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const in BoundScene scene, TraversingRay tray)
 {
 	uint num_vertices = 1;
 	const uint max_vertices = MAX_DEPTH + 1;
@@ -114,7 +107,7 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in ICamera camera, const in IRay
 		DefaultTextureSampling sampling = {};
 		let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 
-		ConnectToCameraIFP(scene, camera, hit, material, tray.throughput, rng);
+		ConnectToCameraIFP(scene, hit, material, tray.throughput, rng);
 		
 		let bsdf_sample = material.sampleBSDF<BSDF_ADJOINT_BIT>(
 			hit.surface_shading_info.geometry_normal,
@@ -156,13 +149,34 @@ public property uint3 gl_NumWorkGroups {
 	}
 }
 
+void CommonMain(
+	uint index, float weight,
+	const in IRayTracer ray_tracer,
+	BoundScene scene,
 
+) {
+	RNG_t rng = RNG_t(Hash(index) ^ Hash(renderer_ubo.frame_idx));
+
+	Light::EmissionSample sample = scene.sampleLe(rng);
+	sample.intensity *= weight;
+	if(!NonZero(sample.intensity) || sample.pdf <= 0)
+	{
+		return;
+	}
+	TraversingRay tray = TraversingRay(sample);
+	TracePath(rng, ray_tracer, scene, tray);
+}
+
+#if SHADER_SEMANTIC_COMPUTE
+#define LOCAL_SIZE_X 256
+#define LOCAL_SIZE_Y 1
+#define LOCAL_SIZE_Z 1
 [shader("compute")]
 [numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]
 void main(
 	const uvec3 GlobalInvocationID : SV_DispatchThreadID,
-	const uvec3 WorkGroupID : SV_GroupID)
-{
+	const uvec3 WorkGroupID : SV_GroupID
+){
 	const uint group_index = WorkGroupID.x;
 	const uint thread_index = GlobalInvocationID.x;
 	const float num_samples = float(gl_NumWorkGroups.x * LOCAL_SIZE_X);
@@ -172,19 +186,31 @@ void main(
 
 	BoundScene scene;
 	RayQuerier ray_querier = RayQuerier(scene);
-	const vec2 oo_dims = _pc.oo_dims;
-	ICamera cam = MakeCamera(renderer_ubo.camera);
-
-	RNG_t rng = RNG_t(Hash(thread_index) ^ Hash(renderer_ubo.frame_idx));
-
-	Light::EmissionSample sample = scene.sampleLe(rng);
-	sample.intensity *= sample_weight;
-	if(!NonZero(sample.intensity) || sample.pdf <= 0)
-	{
-		return;
-	}
-	TraversingRay tray = TraversingRay(sample);
-	TracePath(rng, cam, ray_querier, scene, tray);
-
+	
+	CommonMain(
+		thread_index, sample_weight,
+		ray_querier,
+		scene
+	);
 }
+#endif
 
+#if SHADER_SEMANTIC_RAYGEN
+[shader("raygen")]
+void main(){
+	const uint thread_index = DispatchRaysIndex().x;
+	const float num_samples = DispatchRaysDimensions().x;
+	const vec2 dims = _pc.dims;
+
+	const float sample_weight = Prod(dims) / num_samples;
+
+	BoundScene scene;
+	RayTracer ray_querier = RayTracer(scene);
+	
+	CommonMain(
+		thread_index, sample_weight,
+		ray_querier,
+		scene
+	);
+}
+#endif
