@@ -107,6 +107,14 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 		DefaultTextureSampling sampling = {};
 		let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 
+		{
+			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
+			if(kappa.hasValue)
+			{
+				tray.throughput *= exp2(-hit.t * kappa.value);
+			}
+		}
+
 		ConnectToCameraIFP(scene, hit, material, tray.throughput, rng);
 		
 		let bsdf_sample = material.sampleBSDF<BSDF_ADJOINT_BIT>(

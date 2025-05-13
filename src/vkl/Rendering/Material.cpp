@@ -1,6 +1,9 @@
 #include <vkl/Rendering/Material.hpp>
 #include <vkl/IO/ImGuiDynamic.hpp>
 
+#include <ShaderLib/Rendering/Materials/MaterialDefinitions.h>
+#include <ShaderLib/Rendering/Materials/PBMaterialDefinitions.h>
+
 namespace vkl
 {
 	Material::Material(CreateInfo const& ci):
@@ -113,6 +116,7 @@ namespace vkl
 		_metallic(ci.metallic),
 		_roughness(ci.roughness),
 		_cavity(ci.cavity),
+		_is_dielectric(ci.is_dielectric),
 		_cached_props({})
 	{
 		if (ci.albedo_texture)
@@ -182,24 +186,33 @@ namespace vkl
 		uint32_t flags_u32 = 0;
 		Flags & flags = reinterpret_cast<Flags&>(flags_u32);
 
-		flags.type = 1;
+		flags.type = MATERIAL_TYPE_PB;
 
 		if (useAlbedoTexture())
 		{
-			flags.textures |= (1 << 0);
+			flags_u32 |= MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT;
 		}
 
 		if (useAlphaTexture())
 		{
-			flags.textures |= (1 << 1);
+			flags_u32 |= MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT;
 		}
 
 		if (useNormalTexture())
 		{
-			flags.textures |= (1 << 2);
+			flags_u32 |= MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT;
 		}
 
-		flags.bsdf_hemispheres |= 1;
+		if (_is_dielectric)
+		{
+			flags_u32 |= PB_MATERIAL_DIELECTRIC_BIT;
+			flags_u32 |= MATERIAL_FLAG_REFLECTION_BIT | MATERIAL_FLAG_TRANSMISSION_BIT;
+		}
+		else
+		{
+			flags_u32 |= MATERIAL_FLAG_REFLECTION_BIT;
+		}
+
 		
 		return Properties{
 			.albedo = _albedo.valueOr(vec3::Zero()),
@@ -216,6 +229,8 @@ namespace vkl
 		ImGui::PushID(name().c_str());
 		ImGui::Text("Name: %s", name().c_str());
 
+		ImGui::Checkbox("Dielectric", &_is_dielectric);
+
 		const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float;
 
 		auto declare_color = [&](const char* label, vec3& dv)
@@ -223,21 +238,27 @@ namespace vkl
 			return ImGui::ColorEdit3(label, reinterpret_cast<float*>(dv.data()), color_flags);	
 		};
 
-		auto declare_float = [&](ImGuiSliderFlags flags = 0)
+		auto declare_float = [&](ImGuiSliderFlags flags = 0, float max = 1)
 		{
-			return [flags](const char* label, float& value)
+			return [flags, max](const char* label, float& value)
 			{
-				return ImGui::SliderFloat(label, &value, 0, 1, "%.3f", flags);
+				return ImGui::SliderFloat(label, &value, 0, max, "%.3f", flags);
 			};
 		};
 
 		_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_force_albedo_prop);
 		
-		_should_update_props_buffer |= GUIDeclareDynamic("albedo", _albedo, declare_color);
+		const char* albedo_name = _is_dielectric ? "kappa" : "albedo";
+		const char* metalic_name = _is_dielectric ? "IOR" : "metallic";
 
-		_should_update_props_buffer |= GUIDeclareDynamic("metallic", _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat));
-		_should_update_props_buffer |= GUIDeclareDynamic("roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
-		_should_update_props_buffer |= GUIDeclareDynamic("cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+		_should_update_props_buffer |= GUIDeclareDynamic(albedo_name, _albedo, declare_color);
+
+		_should_update_props_buffer |= GUIDeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2 : 1));
+		if (!_is_dielectric)
+		{
+			_should_update_props_buffer |= GUIDeclareDynamic("roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
+			_should_update_props_buffer |= GUIDeclareDynamic("cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+		}
 
 		ImGui::PopID();
 	}

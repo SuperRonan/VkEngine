@@ -8,9 +8,9 @@
 #define FORCE_COSINE_SAMPLING 0
 #endif
 
+#define I_WANT_TO_DEBUG 0
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
 #define DEBUG_ENABLE_GLOBAL_PRINTER 1
-#define I_WANT_TO_DEBUG 0
 
 #include "Common.slang"
 
@@ -91,6 +91,14 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.uv_jacobians);
 		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 
+		{
+			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
+			if(kappa.hasValue)
+			{
+				tray.throughput *= exp2(-hit.t * kappa.value);
+			}
+		}
+
 		DirectLightSurfaceShading<RayTracer> shader;
 		shader.scene = scene;
 		shader.ray_tracer = ray_tracer;
@@ -104,6 +112,11 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			hit.surface_shading_info.out_direction,
 			-tray.ray_diffs.direction_jacobian,
 			rng);
+		if(_g_debug_signal)
+		{
+			//_g_debug_printer.print(bsdf_sample.pdf);
+			//_g_debug_printer.print(dot(hit.surface_shading_info.geometry_normal, bsdf_sample.direction));
+		}
 		if(bsdf_sample.pdf <= 0.0f)
 		{
 			break;
@@ -122,9 +135,17 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 
 void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in IRayTracer ray_tracer)
 {
-	RNG_t rng = RNG_t(Hash(pixel) ^ Hash(renderer_ubo.frame_idx));
+	uint seed = Hash(pixel);
+	seed = seed ^ Hash(renderer_ubo.frame_idx);
+	RNG_t rng = RNG_t(seed);
 	ICamera cam = MakeCamera(renderer_ubo.camera);
 	vec3 res = vec3(0);
+
+	_g_debug_signal = all(pixel == uvec2(512, 512));
+	if(_g_debug_signal)
+	{
+		_g_debug_printer = DebugPrinter(vec3(pixel, 0), DEBUG_PIXEL_SPACE_BIT);
+	}
 
 	for(uint i = 0; i < PATH_PER_PIXEL; ++i)
 	{

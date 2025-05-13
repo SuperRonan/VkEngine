@@ -336,6 +336,15 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorag
 			
 			if(hit.hasValue())
 			{
+				{
+					let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true);
+					let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
+					if(kappa.hasValue)
+					{
+						tray.throughput *= exp2(-hit.t * kappa.value);
+						v.beta = tray.throughput;
+					}
+				}
 				if(material_id < scene.getUBO().num_materials)
 				{
 					uint material_bsdf_flags = (ScenePBMaterialsProps[material_id][0].flags >> MATERIAL_FLAG_HEMISPHERE_BIT_OFFSET) & BitMask<uint>(2);

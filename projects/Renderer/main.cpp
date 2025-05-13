@@ -116,7 +116,7 @@ namespace vkl
 
 		}
 
-		void createScene(std::shared_ptr<Scene> & scene)
+		void loadTestScene(std::shared_ptr<Scene> & scene)
 		{
 			scene->setAmbient(Vector3f::Constant(0.02));
 			std::shared_ptr<Scene::Node> root = scene->getRootNode();
@@ -373,7 +373,7 @@ namespace vkl
 				.name = "scene",
 			});
 
-			createScene(scene);
+			loadTestScene(scene);
 
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
 			std::shared_ptr<DescriptorSetLayout> scene_layout = scene->setLayout();

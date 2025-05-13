@@ -171,6 +171,8 @@ namespace vkl
 		Dyn<float> _roughness = {};
 		Dyn<float> _cavity = {};
 		
+		bool _is_dielectric = false;
+
 		Properties _cached_props;
 
 		bool _should_update_props_buffer = false;
@@ -205,6 +207,7 @@ namespace vkl
 			std::shared_ptr<Sampler> sampler = nullptr;
 			std::shared_ptr<Texture> albedo_texture = nullptr;
 			std::shared_ptr<Texture> normal_texture = nullptr;
+			bool is_dielectric = false;
 			bool synch = true;
 		};
 		using CI = CreateInfo;
