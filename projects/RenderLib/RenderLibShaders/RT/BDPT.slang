@@ -34,9 +34,6 @@ struct PushConstant
 [vk::push_constant]
 uniform PushConstant _pc;
 
-
-#define MAX_VERTICES (MAX_DEPTH + 2)
-
 #define LOCAL_SIZE (LOCAL_SIZE_X * LOCAL_SIZE_Y * LOCAL_SIZE_Z)
 
 // 0 -> No compression
@@ -57,6 +54,11 @@ uniform PushConstant _pc;
 // Store vertices pdf in shared memory for faster weight evaluation?
 
 // Re-organize the connection loop for maximal reconvergeance
+
+uint GetMaxVertices()
+{
+	return GetMaxDepth() + 2;
+}
 
 struct PDFPair
 {
@@ -636,7 +638,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 	for(uint t = t_min; t <= n_camera; ++t)
 	{
 		bool xt_at_infinity = (t == n_camera && (vertices[camera_offset + t - 1].flags & Vertex::Flags::AtInfinity) != 0);
-		const uint max_s = xt_at_infinity ? 0 : min(n_light, MAX_VERTICES - t);
+		const uint max_s = xt_at_infinity ? 0 : min(n_light, GetMaxVertices() - t);
 		const uint min_s = (t == 1 ? 1 : 0);
 		for(uint s = min_s; s <= max_s; ++s)
 		{
@@ -855,11 +857,12 @@ vec3 PathTrace<RNG : IRNG>(
 	uint layer,
 	inout RNG rng
 ) {
+	const uint max_vertices = GetMaxVertices();
 	// Assume these for now
 	const bool lights_are_hitable = true;
 	const bool camera_is_hitable = false;
-	const uint max_camera = lights_are_hitable ? MAX_VERTICES : (MAX_VERTICES - 1);
-	const uint max_light = camera_is_hitable ? MAX_VERTICES : (MAX_VERTICES - 1);
+	const uint max_camera = lights_are_hitable ? max_vertices : (max_vertices - 1);
+	const uint max_light = camera_is_hitable ? max_vertices : (max_vertices - 1);
 
 	const uint needed_vertices = max_camera + max_light;
 

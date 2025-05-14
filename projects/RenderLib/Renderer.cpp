@@ -728,7 +728,7 @@ namespace vkl
 
 			BufferSegment light_transport_ubo = BufferSegment{
 				.buffer = _ubo_buffer->buffer(),
-				.range = Buffer::Range{.begin = std::alignUp(sizeof(UBO), ubo_align), .len = std::alignUp(sizeof(LightTransport::UBO), ubo_align)},
+				.range = Buffer::Range{.begin = std::alignUp(sizeof(UBO), size_t(1)), .len = std::alignUp(sizeof(LightTransport::UBO), size_t(1))},
 			};
 
 			_light_transport = std::make_shared<LightTransport>(LightTransport::CI{
@@ -994,6 +994,12 @@ namespace vkl
 			.camera = _camera->getAsGLSL(),
 		};
 		_ubo_buffer->set(0, &ubo, sizeof(ubo));
+		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
+		{
+			LightTransport::UBO rt_ubo;
+			_light_transport->writeUBO(rt_ubo);
+			_ubo_buffer->set(sizeof(UBO), &rt_ubo, sizeof(rt_ubo));
+		}
 
 		_ubo_buffer->recordTransferIFN(exec);
 

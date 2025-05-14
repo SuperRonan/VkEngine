@@ -4,13 +4,10 @@
 
 #include <ShaderLib/Rendering/Scene/Scene.slang>
 
-#ifndef MAX_DEPTH
-#define MAX_DEPTH 5
-#endif
-
-struct UBO : RendererUBO
+struct RT_UBO : RendererUBO
 {
-
+	uint max_depth;
+	uint flags;
 };
 
 typealias LightBufferAccumFloat = float;
@@ -272,6 +269,19 @@ struct RayQuerier : IRayTracer
 
 #if BIND_RENDERER_SET
 
-layout(RENDERER_BINDING + 0) uniform ConstantBuffer<RendererUBO> rt_ubo;
+layout(RENDERER_BINDING + 0) uniform ConstantBuffer<RT_UBO> rt_ubo;
 
+#endif
+
+#if BIND_RENDERER_SET
+uint GetMaxDepth()
+{
+#ifdef MAX_DEPTH
+	return MAX_DEPTH;
+#elif BIND_RENDERER_SET
+	return rt_ubo.max_depth;
+#else
+	return 1;
+#endif
+}
 #endif

@@ -24,7 +24,8 @@ namespace vkl
 
 		struct UBO
 		{
-
+			uint max_depth;
+			uint flags;
 		};
 
 	protected:
@@ -36,6 +37,7 @@ namespace vkl
 
 		VkFormat _target_format = VK_FORMAT_UNDEFINED;
 		std::string _target_format_str = {};
+		bool _compile_time_max_depth = false;
 		uint _max_depth = 5;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
@@ -89,5 +91,11 @@ namespace vkl
 		void render(ExecutionRecorder& exec);
 
 		void declareGUI(GuiContext& ctx);
+
+		void writeUBO(UBO& dst)
+		{
+			dst.max_depth = _max_depth;
+			dst.flags = 0;
+		}
 	};
 }

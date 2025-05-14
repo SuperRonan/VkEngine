@@ -91,7 +91,7 @@ void ConnectToCameraIFP<RNG : IRNG>(
 void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const in BoundScene scene, TraversingRay tray)
 {
 	uint num_vertices = 1;
-	const uint max_vertices = MAX_DEPTH + 1;
+	const uint max_vertices = GetMaxDepth() + 1;
 	while(num_vertices < max_vertices)
 	{
 		RayTraceInfo trace_info = {};

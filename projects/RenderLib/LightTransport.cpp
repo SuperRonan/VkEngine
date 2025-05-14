@@ -43,7 +43,8 @@ namespace vkl
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
 				res.pushBack(_target_format_str);
-				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				if (_compile_time_max_depth)
+					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
 
@@ -95,7 +96,8 @@ namespace vkl
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
 				res.pushBack(_target_format_str);
-				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				if(_compile_time_max_depth)
+					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 			.bindings = {
 				Binding{
@@ -147,7 +149,8 @@ namespace vkl
 			},
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
-				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				if (_compile_time_max_depth)
+					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
 		
@@ -162,7 +165,8 @@ namespace vkl
 			.hit_groups = hit_groups,
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
-				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				if (_compile_time_max_depth)
+					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 			.bindings = {
 				Binding{
@@ -240,7 +244,8 @@ namespace vkl
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
 				res.pushBack(_target_format_str);
-				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				if (_compile_time_max_depth)
+					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 		});
 
@@ -256,7 +261,8 @@ namespace vkl
 			.definitions = [this](DefinitionsList& res) {
 				res.clear();
 				res.pushBack(_target_format_str);
-				res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				if (_compile_time_max_depth)
+					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 			},
 			.bindings = {
 				Binding{
@@ -345,7 +351,11 @@ namespace vkl
 				},
 				ImGuiListSelection::Option{
 					.name = "BDPT",
-					.desc = "BiDirectional Path Tracer",
+					.desc = 
+						"BiDirectional Path Tracer\n"
+						"Requires a large scratch buffer!\n"
+						"Visibility rays are currently disabled with RT pipelines."
+					,
 				},
 			},
 			.default_index = 0,
@@ -505,6 +515,7 @@ namespace vkl
 
 			ImGui::InputInt("Max Depth", (int*)&_max_depth);
 			_max_depth = std::clamp<uint>(_max_depth, 1, 16);
+			ImGui::Checkbox("Compile time Max Depth", &_compile_time_max_depth);
 			
 			if (_method == Method::LightTracer)
 			{

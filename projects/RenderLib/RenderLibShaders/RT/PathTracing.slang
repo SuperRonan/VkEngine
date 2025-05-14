@@ -74,7 +74,7 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, const in RayTracer ray_tracer, TraversingRay tray, inout RNG rng)
 {
 	uint num_vertices = 1;
-	const uint max_vertices = MAX_DEPTH + 1;
+	const uint max_vertices = GetMaxDepth() + 1;
 	vec3 res = vec3(0);
 	while(num_vertices < max_vertices)
 	{
