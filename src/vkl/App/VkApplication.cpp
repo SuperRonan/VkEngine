@@ -51,7 +51,7 @@ namespace vkl
 #if VKL_BUILD_RELEASE_WITH_DEBUG_INFO
 		default_validation = 0;
 		default_cmd_labels = 1;
-		default_verbosity = 1;
+		default_verbosity = 2;
 #elif VKL_BUILD_RELEASE
 		default_validation = 0;
 		default_cmd_labels = 0;
