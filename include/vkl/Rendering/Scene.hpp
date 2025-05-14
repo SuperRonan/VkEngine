@@ -239,12 +239,12 @@ namespace vkl
 			struct PerNodeInstance
 			{
 				Mat3x4 matrix;
-				bool visible;
+				uint32_t flags;
 			};
 
-			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat3x4 const& matrix)>;
-			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node>, FastNodePath const&, Mat3x4 const&)>;
-			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node>, RobustNodePath const&, Mat3x4 const&, uint32_t)>;
+			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat3x4 const& matrix, uint32_t)>;
+			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node> const&, FastNodePath const&, Mat3x4 const&, uint32_t)>;
+			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node> const&, RobustNodePath const&, Mat3x4 const&, uint32_t)>;
 			using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<PerNodeInstance> const&)>;
 			using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
 
@@ -253,9 +253,9 @@ namespace vkl
 			
 			std::shared_ptr<Node> _root = nullptr;
 
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, const PerNodeInstanceFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFunction& f);
 
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, const PerNodeInstanceFastPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFastPathFunction& f);
 			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f);
 
 
@@ -277,8 +277,8 @@ namespace vkl
 
 
 			void iterateOnDag(const PerNodeInstanceFunction & f);
-			void iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat3x4 const& matrix)> const& f);
-			void iterateOnDag(PerNodeInstanceRobustPathFunction const& f);
+			void iterateOnDag(const PerNodeInstanceFastPathFunction & f);
+			void iterateOnDag(const PerNodeInstanceRobustPathFunction & f);
 
 			void iterateOnFlattenDag(const PerNodeAllInstancesFunction& f);
 			void iterateOnFlattenDag(const PerNodeInstanceFunction& f);
@@ -377,19 +377,30 @@ namespace vkl
 		BufferAndRange _xforms_segment;
 		BufferAndRange _prev_xforms_segment;
 
-		struct UBO {
+		struct UBO
+		{	
 			uint32_t num_lights;
 			uint32_t num_objects;
 			uint32_t num_mesh;
 			uint32_t num_materials;
+
 			uint32_t num_textures;
+			
 			ubo_vec3 ambient;
+			
 			ubo_vec3 sky;
+			
+			ubo_vec3 center;
+			float radius;
 		};
+
+		AABB3f _aabb = {};
 
 		vec3 _ambient = vec3::Constant(0.1f);
 		vec3 _uniform_sky = vec3::Constant(0);
 		float _uniform_sky_brightness = 1;
+		vec3 center;
+		float _radius = 1;
 
 
 		std::shared_ptr<Buffer> _ubo_buffer;

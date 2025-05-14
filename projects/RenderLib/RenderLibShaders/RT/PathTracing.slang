@@ -76,7 +76,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	uint num_vertices = 1;
 	const uint max_vertices = GetMaxDepth() + 1;
 	vec3 res = vec3(0);
-	while(num_vertices < max_vertices)
+	while(num_vertices <= max_vertices)
 	{
 		RayTraceInfo trace_info = {};
 		trace_info.ray = tray.ray;
@@ -85,6 +85,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		Hit hit = ray_tracer.traceRay<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES>(trace_info);
 		if(!hit.hasValue())
 		{
+			res += tray.throughput * scene.getEnvLe(tray.ray.direction);
 			break;
 		}
 		++num_vertices;
@@ -99,11 +100,14 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			}
 		}
 
-		DirectLightSurfaceShading<RayTracer> shader;
-		shader.scene = scene;
-		shader.ray_tracer = ray_tracer;
-		shader.samples = LIGHT_SAMPLES;
-		res += tray.throughput * shader.shade(hit.surface_shading_info, material, rng);
+		if(num_vertices <= max_vertices)
+		{
+			DirectLightSurfaceShading<RayTracer> shader;
+			shader.scene = scene;
+			shader.ray_tracer = ray_tracer;
+			shader.samples = LIGHT_SAMPLES;
+			res += tray.throughput * shader.shade(hit.surface_shading_info, material, rng);
+		}
 
 		let bsdf_sample = material.sampleBSDF<BSDF_FORWARD_BIT>(
 			hit.surface_shading_info.geometry_normal,

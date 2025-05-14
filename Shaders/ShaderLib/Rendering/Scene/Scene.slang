@@ -73,6 +73,9 @@ struct Scene
 		vec3 ambient;
 
 		vec3 sky;
+
+		vec3 center;
+		float radius;
 	};
 
 	struct ObjectReference
@@ -300,14 +303,49 @@ __init()
 
 static constexpr const uint LightIndexBits = 24;
 
+Light::EmissionSample sampleSkyLe<RNG : IRNG>(inout RNG rng)
+{
+	Light::EmissionSample res;
+	let dir = SampleUniformDirection(rng.generate<float, 2>());
+	res.ray.direction = dir.value;
+	res.pdf = dir.pdf;
+	res.intensity = getUBO().sky;
+	res.flags = Light::EmissionSample::Flags::AtInfinity;
+	res.range.resetRange();
+	res.position_pdf = 1;
+	return res;
+}
+
 Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 {
+	const uint num_lights = getUBO().num_lights;
 	// [Assume] would be better
-	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
+	uint n = num_lights & BitMask<uint>(LightIndexBits);
+	if(NonZero(getUBO().sky))
+	{
+		++n;
+	}
 	uint index = rng.generate<uint>(0, n);
-	var sample = MakeLight(SceneLights[index]).sampleLe(rng);
+	Light::EmissionSample sample;
+	if(index < num_lights)
+	{
+		sample = MakeLight(SceneLights[index]).sampleLe(rng);
+	}
+	else
+	{
+		sample = sampleSkyLe(rng);
+	}
 	sample.index = index;
 	sample.position_pdf *= rcp(float(n));
+
+	if(sample.flags & Light::Sample::Flags::AtInfinity)
+	{
+		const float radius = getUBO().radius;
+		let on_disk = SampleUniformOnDisk(rng.generate<float, 2>());
+		mat3 basis = BasisFromDir(sample.ray.direction);
+		sample.ray.origin = getUBO().center - radius * sample.ray.direction + basis * vec3(on_disk.value * radius, 0);
+		sample.position_pdf *= rcp(on_disk.pdf * sqr(radius) * 4 * PI);
+	}
 	return sample;
 }
 
@@ -336,6 +374,11 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 	float res = rcp(float(n));
 	res *= MakeLight(SceneLights[light_index]).pdfLi(reference_position, direction);
 	return res;
+}
+
+vec3 getEnvLe(vec3 direction)
+{
+	return getUBO().sky;
 }
 
 #endif

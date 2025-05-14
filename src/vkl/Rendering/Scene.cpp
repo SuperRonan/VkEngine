@@ -30,25 +30,33 @@ namespace vkl
 		return true;
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, const PerNodeInstanceFunction& f)
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFunction& f)
 	{
 		Mat3x4 node_matrix = node->matrix3x4();
 		Mat3x4 new_matrix = matrix * node_matrix;
-		if (f(node, new_matrix))
+		bool visible = node->visible();
+		std::bitset<32> flags_bits(flags);
+		flags_bits.set(0, visible && flags_bits[0]);
+		uint32_t new_flags = flags_bits.to_ulong();
+		if (f(node, new_matrix, new_flags))
 		{
 			for (std::shared_ptr<Node> const& n : node->children())
 			{
 				assert(!!n);
-				iterateOnNodeThenSons(n, new_matrix, f);
+				iterateOnNodeThenSons(n, new_matrix, new_flags, f);
 			}
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, const PerNodeInstanceFastPathFunction& f)
+	void Scene::DirectedAcyclicGraph::iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFastPathFunction& f)
 	{
 		Mat3x4 node_matrix = node->matrix3x4();
 		Mat3x4 new_matrix = matrix * node_matrix;
-		if (f(node, path, new_matrix))
+		bool visible = node->visible();
+		std::bitset<32> flags_bits(flags);
+		flags_bits.set(0, visible && flags_bits[0]);
+		uint32_t new_flags = flags_bits.to_ulong();
+		if (f(node, path, new_matrix, new_flags))
 		{
 			path.path.push_back(0);
 			for (size_t i=0; i < node->children().size(); ++i)
@@ -56,7 +64,7 @@ namespace vkl
 				path.path.back() = static_cast<uint32_t>(i);
 				std::shared_ptr<Node> const& n = node->children()[i];
 				assert(!!n);
-				iterateOnNodeThenSons(n, path, new_matrix, f);
+				iterateOnNodeThenSons(n, path, new_matrix, new_flags, f);
 			}
 			path.path.pop_back();
 		}
@@ -90,21 +98,21 @@ namespace vkl
 		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
-			iterateOnNodeThenSons(root(), matrix, f);
+			iterateOnNodeThenSons(root(), matrix, 1, f);
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnDag(std::function<bool(std::shared_ptr<Node> const&, FastNodePath const& path, Mat3x4 const& matrix)> const& f)
+	void Scene::DirectedAcyclicGraph::iterateOnDag(const PerNodeInstanceFastPathFunction & f)
 	{
 		FastNodePath path;
 		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
-			iterateOnNodeThenSons(root(), path, matrix, f);
+			iterateOnNodeThenSons(root(), path, matrix, 1, f);
 		}
 	}
 
-	void Scene::DirectedAcyclicGraph::iterateOnDag(PerNodeInstanceRobustPathFunction const& f)
+	void Scene::DirectedAcyclicGraph::iterateOnDag(const PerNodeInstanceRobustPathFunction & f)
 	{
 		RobustNodePath path;
 		Mat3x4 matrix = Mat3x4::Identity();
@@ -116,26 +124,26 @@ namespace vkl
 
 	void Scene::DirectedAcyclicGraph::iterateOnFlattenDag(const PerNodeInstanceFunction& f)
 	{
-		for (auto& [node, matrices]  : _flat_dag)
+		for (auto& [node, instances] : _flat_dag)
 		{
-			for (const auto& matrix : matrices)
+			for (const auto& instance : instances)
 			{
-				f(node, matrix.matrix);
+				f(node, instance.matrix, instance.flags);
 			}
 		}
 	}
 
 	void Scene::DirectedAcyclicGraph::iterateOnFlattenDag(const PerNodeAllInstancesFunction& f)
 	{
-		for (auto& [node, matrices] : _flat_dag)
+		for (auto& [node, instances] : _flat_dag)
 		{
-			f(node, matrices);
+			f(node, instances);
 		}
 	}
 
 	void Scene::DirectedAcyclicGraph::iterateOnNodes(const PerNodeFunction& f)
 	{
-		for (auto& [node, matrices] : _flat_dag)
+		for (auto& [node, instances] : _flat_dag)
 		{
 			f(node);
 		}
@@ -145,12 +153,12 @@ namespace vkl
 	{
 		_flat_dag.clear();
 
-		const auto process_node = [&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix)
+		const auto process_node = [&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix, uint32_t flags)
 		{
 			std::vector<PerNodeInstance> & matrices = _flat_dag[node];
 			matrices.push_back(PerNodeInstance{
 				.matrix = matrix, 
-				.visible = true, // TODO
+				.flags = flags,
 			});
 			return true;
 		};
@@ -277,6 +285,8 @@ namespace vkl
 			.num_lights = _num_lights,
 			.ambient = _ambient,
 			.sky = _uniform_sky * _uniform_sky_brightness,
+			.center = _aabb.center(),
+			.radius = _radius,
 		};
 		return res;
 	}
@@ -627,7 +637,7 @@ namespace vkl
 	{
 		_num_lights = 0;	
 		
-		_tree->iterateOnFlattenDag([&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix)
+		_tree->iterateOnFlattenDag([&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix, uint32_t flags)
 		{
 			if (node->light())
 			{
@@ -648,6 +658,8 @@ namespace vkl
 		m[DirectedAcyclicGraph::RobustNodePath()] = 21;
 		std::hash<DirectedAcyclicGraph::RobustNodePath> h;
 		static_assert(std::concepts::HashableFromMethod<DirectedAcyclicGraph::RobustNodePath>);
+		
+		_aabb.reset();
 
 		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat3x4 const& matrix4, uint32_t flags)
 		{
@@ -656,7 +668,7 @@ namespace vkl
 			
 			_tree->_flat_dag[node].push_back(DirectedAcyclicGraph::PerNodeInstance{
 				.matrix = matrix,
-				.visible = visible,
+				.flags = flags,
 			});
 
 			
@@ -688,6 +700,10 @@ namespace vkl
 							mesh_unique_id = md.unique_index;
 						}
 					}
+
+					const auto & aabb = mesh->getAABB();
+
+					aabb.getContainingAABB(matrix, _aabb);
 				}
 
 				if(material)
@@ -926,6 +942,8 @@ namespace vkl
 			
 			return true;
 		});
+
+		_radius = _aabb.getContainingSphere().radius();
 	}
 
 	void Scene::setMaintainRT(bool value)

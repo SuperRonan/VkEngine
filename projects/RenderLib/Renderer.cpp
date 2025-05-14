@@ -746,7 +746,8 @@ namespace vkl
 	{
 		_blas_build_list.clear();
 		
-		auto process_mesh = [&](std::shared_ptr<Scene::Node> const& node, Matrix3x4f const& matrix)
+		// TODO handle the inheritted visibility
+		auto process_mesh = [&](std::shared_ptr<Scene::Node> const& node, Matrix3x4f const& matrix, uint32_t flags)
 		{
 			if (node->visible() && node->model() && node->model()->isReadyToDraw())
 			{
@@ -766,8 +767,8 @@ namespace vkl
 		static thread_local VertexDrawCallInfo _vr;
 		VertexDrawCallInfo & vr = _vr;
 		vr.clear();
-		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
-		auto add_model = [&res, &vr](std::shared_ptr<Scene::Node> const& node, Matrix3x4f const& matrix)
+		// TODO handle the inheritted visibility
+		auto add_model = [&res, &vr](std::shared_ptr<Scene::Node> const& node, Matrix3x4f const& matrix, uint32_t flags)
 		{
 			if (node->visible() && node->model() && node->model()->isReadyToDraw())
 			{

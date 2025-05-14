@@ -1,11 +1,41 @@
 #pragma once
 
 #include "Types.hpp"
+#include "Transforms.hpp"
 #include <numeric>
 #include <limits>
 
 namespace vkl
 {
+	template <uint N, class Float>
+	class BoundingSphere
+	{
+	public:
+		using vecN = Vector<Float, N>;
+
+	protected:
+
+		vecN _center;
+		Float _radius;
+
+	public:
+
+		BoundingSphere(vecN center, Float radius):
+			_center(center),
+			_radius(radius)
+		{}
+
+		constexpr auto center() const
+		{
+			return _center;
+		}
+
+		constexpr auto radius() const
+		{
+			return _radius;
+		}
+	};
+
 	template <uint N, class Float>
 	class AlignedAxisBoundingBox
 	{
@@ -60,6 +90,12 @@ namespace vkl
 		constexpr vecN diagonal()const
 		{
 			return _top - _bottom;
+		}
+
+		constexpr vecN center()const
+		{
+			return Float(0.5) * _bottom + Float(0.5) * _top;
+			//return (_bottom + _top) * Float(0.5);
 		}
 
 		// TODO simd version
@@ -181,6 +217,36 @@ namespace vkl
 		constexpr bool empty() const
 		{
 			return (_bottom == defaultBottom() && _top == defaultTop());
+		}
+
+		constexpr void getContainingAABB(AffineXForm<Float, N> const& xform, AlignedAxisBoundingBox & res) const
+		{
+			const constexpr uint M = uint(1) << N;
+			for (uint i = 0; i < M; ++i)
+			{
+				vecN p;
+				for (uint j = 0; j < N; ++j)
+				{
+					bool b = (i & (1 << j)) != 0;
+					p[j] = b ? _top[j] : _bottom[j];
+				}
+				res += (xform * p.homogeneous());
+			}
+		}
+
+		constexpr AlignedAxisBoundingBox getContainingAABB(AffineXForm<Float, N> const& xform) const
+		{
+			AlignedAxisBoundingBox res = {};
+			getContainingAABB(xform, res);
+			return res;
+		}
+
+		constexpr BoundingSphere<N, Float> getContainingSphere() const
+		{
+			return BoundingSphere<N, Float>(
+				center(),
+				Length(diagonal()) * Float(0.5)
+			);
 		}
 
 		//template <uint M>

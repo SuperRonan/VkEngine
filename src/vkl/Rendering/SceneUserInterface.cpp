@@ -395,6 +395,9 @@ namespace vkl
 		{
 			ImGui::ColorEdit3("Ambient", _scene->_ambient.data(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
 			ImGui::ColorEdit3("Sky", _scene->_uniform_sky.data(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			vec3 center = _scene->_aabb.center();
+			ImGui::Text("Center: (%f, %f, %f)", center.x(), center.y(), center.z());
+			ImGui::Text("Radius: %f", _scene->_radius);
 			ImGui::SliderFloat("Sky brightness", &_scene->_uniform_sky_brightness, 0, 12, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 
 			ImGui::Checkbox("show world 3D basis", &_show_world_basis);

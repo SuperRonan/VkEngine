@@ -103,6 +103,11 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 			break;
 		}
 		++num_vertices;
+		
+		//if(num_vertices == 2)
+		{
+			//tray.throughput *= rcp(AbsDot(tray.ray.direction, hit.surface_shading_info.geometry_normal));
+		}
 
 		DefaultTextureSampling sampling = {};
 		let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
