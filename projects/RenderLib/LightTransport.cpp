@@ -439,6 +439,7 @@ namespace vkl
 		{
 			if (_use_rt_pipelines)
 			{
+				_path_tracer_rt->getSBT()->recordUpdateIFN(exec);
 				exec(_path_tracer_rt);
 			}
 			else
@@ -472,6 +473,7 @@ namespace vkl
 
 				if (_use_rt_pipelines)
 				{
+					_light_tracer_rt->getSBT()->recordUpdateIFN(exec);
 					exec(_light_tracer_rt->with(RayTracingCommand::SingleTraceInfo{
 						.pc_data = &pc,
 						.pc_size = sizeof(pc),
@@ -489,6 +491,7 @@ namespace vkl
 			{
 				if (_use_rt_pipelines)
 				{
+					_bdpt_rt->getSBT()->recordUpdateIFN(exec);
 					exec(_bdpt_rt);
 				}
 				else
