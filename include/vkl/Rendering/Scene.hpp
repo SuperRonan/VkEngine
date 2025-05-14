@@ -146,6 +146,13 @@ namespace vkl
 				return res;
 			}
 
+			void resetAuxiliaryTransform()
+			{
+				_rotation = Vector3f::Zero();
+				_scale = Vector3f::Ones();
+				_translation = Vector3f::Zero();
+			}
+
 			Mat3x4 matrix3x4() const
 			{
 				Mat3x4 aux = getAuxiliaryTransform();
@@ -163,12 +170,10 @@ namespace vkl
 				return matrix3x4();
 			}
 			
-			void collapseAuxiliaryTransforms()
+			void collapseAuxiliaryTransform()
 			{
-				_matrix = Mat3x4::Identity();
-				_rotation = Vec3(0);
-				_translation = Vec3(0);
-				_scale = Vec3(1);
+				_matrix *= getAuxiliaryTransform();
+				resetAuxiliaryTransform();
 			}
 
 			virtual void updateResources(UpdateContext & ctx);

@@ -231,7 +231,7 @@ namespace vkl
 
 		ImGui::Checkbox("Dielectric", &_is_dielectric);
 
-		const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float;
+		const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR;
 
 		auto declare_color = [&](const char* label, vec3& dv)
 		{
@@ -248,16 +248,16 @@ namespace vkl
 
 		_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_force_albedo_prop);
 		
-		const char* albedo_name = _is_dielectric ? "kappa" : "albedo";
-		const char* metalic_name = _is_dielectric ? "IOR" : "metallic";
+		const char* albedo_name = _is_dielectric ? "Absorption" : "Albedo";
+		const char* metalic_name = _is_dielectric ? "Index of Refraction" : "Metallic";
 
 		_should_update_props_buffer |= GUIDeclareDynamic(albedo_name, _albedo, declare_color);
 
 		_should_update_props_buffer |= GUIDeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2 : 1));
 		if (!_is_dielectric)
 		{
-			_should_update_props_buffer |= GUIDeclareDynamic("roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
-			_should_update_props_buffer |= GUIDeclareDynamic("cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+			_should_update_props_buffer |= GUIDeclareDynamic("Roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
+			_should_update_props_buffer |= GUIDeclareDynamic("Cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
 		}
 
 		ImGui::PopID();

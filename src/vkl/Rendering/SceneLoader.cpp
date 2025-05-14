@@ -101,4 +101,80 @@ namespace vkl
 
 		Scene::Node::updateResources(ctx);
 	}
+
+
+
+
+	std::shared_ptr<Scene::Node> MakeLightNode(LightNodeCreateInfo const& ci)
+	{
+		std::shared_ptr<Scene::Node> res;
+		res = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.name = ci.name,
+			.matrix = ci.xform,
+		});
+
+		if (ci.type == LightType::POINT)
+		{
+			res->light() = std::make_shared<PointLight>(PointLight::CI{
+				.app = ci.app,
+				.name = ci.name,
+				.emission = ci.emission,
+				.enable_shadow_map = ci.enable_shadow_map,
+			});
+		}
+		else if (ci.type == LightType::DIRECTIONAL)
+		{
+			res->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
+				.app = ci.app,
+				.name = ci.name,
+				.direction = Vector3f(0, 1, 0),
+				.emission = ci.emission,
+			});
+		}
+		else if (ci.type == LightType::SPOT)
+		{
+			res->light() = std::make_shared<SpotLight>(SpotLight::CI{
+				.app = ci.app,
+				.name = ci.name,
+				.emission = ci.emission,
+				.enable_shadow_map = ci.enable_shadow_map,
+			});
+		}
+		return res;
+	}
+
+	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci)
+	{
+		std::shared_ptr<Mesh> mesh = RigidMesh::MakeRigidMesh(RigidMesh::RigidMeshMakeInfo{
+			.app = ci.app,
+			.name = std::format("{}.Mesh", ci.name),
+			.type = ci.mesh_type,
+			.subdivisions = ci.subdivisions,
+			.face_normal = true,
+		});
+
+		std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+			.app = ci.app,
+			.name = std::format("{}.Material", ci.name),
+			.albedo = ci.albedo,
+			.metallic = ci.metallic_or_eta,
+			.roughness = ci.roughness,
+			.cavity = 0,
+			.is_dielectric = ci.is_dielectric,
+		});
+
+		std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+			.app = ci.app,
+			.name = std::format("{}.Model", ci.name),
+			.mesh = mesh,
+			.material = material,
+		});
+
+		std::shared_ptr<Scene::Node> res = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.name = ci.name,
+			.matrix = ci.xform,
+			.model = model,
+		});
+		return res;
+	}
 }

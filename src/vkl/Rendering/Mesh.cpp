@@ -905,6 +905,42 @@ namespace vkl
 		return res;
 	}
 
+	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square3DMakeInfo const& smi)
+	{
+		using Float = float;
+		const Float h = Float(0.5);
+
+		const Vector3 c = smi.center;
+
+		std::shared_ptr<RigidMesh> res;
+
+		std::vector<float> positions = {
+			c.x() - h,	 c.y() - h, 0,
+			c.x() - h,	 c.y() + h, 0,
+			c.x() + h,	 c.y() + h, 0,
+			c.x() + h,	 c.y() - h, 0,
+		};
+		
+		if (!smi.wireframe)
+		{
+			std::vector<uint> indices = {
+				0, 1, 2,
+				1, 2, 3,
+			};
+
+			res = std::make_shared<RigidMesh>(RigidMesh::CI{
+				.app = smi.app,
+				.name = smi.name,
+				.dims = 3,
+				.positions = std::move(positions),
+				.indices = std::move(indices),
+				.create_device_buffer = true,
+			});
+		}
+
+		return res;
+	}
+
 	std::shared_ptr<RigidMesh> RigidMesh::MakeCube(CubeMakeInfo const& cmi)
 	{
 		using Float = float;
@@ -1109,6 +1145,9 @@ namespace vkl
 		const float r = pmi.radius;
 		const vec3 c = pmi.center;
 
+		int compute_normals = 1;
+		bool compute_tangents = true;
+
 		if (pmi.face_normal)
 		{
 			vertices.reserve(3 * 4);
@@ -1120,9 +1159,12 @@ namespace vkl
 
 			const auto addFace = [&](vec3 v0, vec3 v1, vec3 v2)
 			{
-				vertices.push_back(Vertex{.position = vec4(c + v0)});
-				vertices.push_back(Vertex{.position = vec4(c + v1)});
-				vertices.push_back(Vertex{.position = vec4(c + v2)});
+				vec3 e1 = v1 - v0;
+				vec3 e2 = v2 - v0;
+				vec3 n = Normalize(Cross(e1, e2));
+				vertices.push_back(Vertex{.position = vec4(c + v0), .normal = vec4(n), });
+				vertices.push_back(Vertex{.position = vec4(c + v1), .normal = vec4(n), });
+				vertices.push_back(Vertex{.position = vec4(c + v2), .normal = vec4(n), });
 			};
 			
 			addFace(v0, v1, v2);
@@ -1132,6 +1174,7 @@ namespace vkl
 			
 			indices.resize(3 * 4);
 			std::iota(indices.begin(), indices.end(), 0);
+			compute_normals = false;
 		}
 		else
 		{
@@ -1162,8 +1205,8 @@ namespace vkl
 			.name = pmi.name,
 			.vertices = std::move(vertices),
 			.indices = std::move(indices),
-			.compute_normals = 1,
-			.auto_compute_tangents = false,
+			.compute_normals = compute_normals,
+			.auto_compute_tangents = compute_tangents,
 		});
 		return res;
 	}
@@ -1300,6 +1343,51 @@ namespace vkl
 	}
 
 
-
+	std::shared_ptr<RigidMesh> RigidMesh::MakeRigidMesh(RigidMeshMakeInfo const& info)
+	{
+		std::shared_ptr<RigidMesh> res = {};
+		if (info.type == RigidMeshMakeInfo::Type::Square)
+		{
+			res = MakeSquare(Square3DMakeInfo{
+				.app = info.app,
+				.name = info.name,
+				.center = info.center,
+				.wireframe = false,
+			});
+		}
+		else if (info.type == RigidMeshMakeInfo::Type::Cube)
+		{
+			res = MakeCube(CubeMakeInfo{
+				.app = info.app,
+				.name = info.name,
+				.center = info.center,
+				.wireframe = false,
+				.face_normal = info.face_normal,
+				.same_face = true,
+			});
+		}
+		else if (info.type == RigidMeshMakeInfo::Type::Sphere)
+		{
+			res = MakeSphere(SphereMakeInfo{
+				.app = info.app,
+				.name = info.name,
+				.center = info.center,
+				.radius = info.sizes.x(),
+				.theta_divisions = info.subdivisions.x(),
+				.phi_divisions = info.subdivisions.y(),
+			});
+		}
+		else if (info.type == RigidMeshMakeInfo::Type::Tetrahedron)
+		{
+			res = MakeTetrahedron(PlatonMakeInfo{
+				.app = info.app,
+				.name = info.name,
+				.center = info.center,
+				.radius = info.sizes.x(),
+				.face_normal = info.face_normal,
+			});
+		}
+		return res;
+	}
 	
 }

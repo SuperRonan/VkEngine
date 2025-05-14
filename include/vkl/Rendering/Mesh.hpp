@@ -439,6 +439,15 @@ namespace vkl
 		};
 		static std::shared_ptr<RigidMesh> MakeSquare(Square2DMakeInfo const& smi);
 
+		struct Square3DMakeInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Vector3 center = Vector3::Zero();
+			bool wireframe = false;
+		};
+		static std::shared_ptr<RigidMesh> MakeSquare(Square3DMakeInfo const& smi);
+
 		struct CubeMakeInfo
 		{
 			VkApplication * app = nullptr;
@@ -480,5 +489,25 @@ namespace vkl
 		static std::shared_ptr<RigidMesh> MakeOctahedron(PlatonMakeInfo const& pmi);
 		static std::shared_ptr<RigidMesh> MakeIcosahedron(PlatonMakeInfo const& pmi);
 		static std::shared_ptr<RigidMesh> MakeDodecahedron(PlatonMakeInfo const& pmi);
+
+		struct RigidMeshMakeInfo
+		{
+			enum class Type
+			{
+				Square = 0,
+				Cube = 1,
+				Sphere = 2,
+				Tetrahedron = 3,
+			};
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Type type = Type::Cube;
+			Vector3 center = Vector3::Zero();
+			Vector3 sizes = Vector3::Ones();
+			Vector<uint, 4> subdivisions = {};
+			bool face_normal = true;
+		};
+
+		static std::shared_ptr<RigidMesh> MakeRigidMesh(RigidMeshMakeInfo const& info);
 	};
 }

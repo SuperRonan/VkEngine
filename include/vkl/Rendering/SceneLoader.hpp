@@ -47,4 +47,33 @@ namespace vkl
 			return _synch;
 		}
 	};
+
+	struct LightNodeCreateInfo
+	{
+		VkApplication * app = nullptr;
+		std::string name = {};
+		AffineXForm3Df xform = AffineXForm3Df::Identity();
+		LightType type = LightType::None;
+		Vector3f emission = Vector3f::Ones().eval();
+		bool enable_shadow_map;
+	};
+	std::shared_ptr<Scene::Node> MakeLightNode(LightNodeCreateInfo const& ci);
+
+	struct BasicModelNodeCreateInfo
+	{
+		VkApplication* app = nullptr;
+		std::string name = {};
+
+		AffineXForm3Df xform = AffineXForm3Df::Identity();
+
+		RigidMesh::RigidMeshMakeInfo::Type mesh_type = {};
+		uvec4 subdivisions {};
+
+		vec3 albedo = {};
+		float roughness = {};
+		float metallic_or_eta = {};
+		bool is_dielectric = {};
+	};
+
+	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci);
 }

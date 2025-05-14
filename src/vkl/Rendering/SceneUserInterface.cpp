@@ -4,6 +4,8 @@
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
+#include <vkl/IO/ImGuiUtils.hpp>
+
 namespace vkl
 {
 	void SceneUserInterface::checkSelectedNode(SelectedNode& selected_node)
@@ -265,8 +267,9 @@ namespace vkl
 		return std::filesystem::exists(_path) && std::filesystem::is_regular_file(_path);
 	}
 
-	void SceneUserInterface::CreateNodePopUp::open()
+	void SceneUserInterface::CreateNodePopUp::open(std::shared_ptr<Scene::Node> const& parent)
 	{
+		_parent = parent;
 		ImGui::OpenPopup(name().data(), flags());
 	}
 
@@ -299,9 +302,44 @@ namespace vkl
 		};
 
 		SDL_Window* parent_sdl_window = static_cast<SDL_Window*>(ImGui::GetWindowViewport()->PlatformHandle);
-		;
+		
 		SDL_ShowOpenFileDialog(cb, this, parent_sdl_window, Wavefront_file_filter.data(), static_cast<int>(Wavefront_file_filter.size()), nullptr, false);
 	}
+
+	static ImGuiListSelection mesh_type_selection = ImGuiListSelection::CI{
+		.name = "Mesh Type",
+		.mode = ImGuiListSelection::Mode::Dropdown,
+		.options = {
+			ImGuiListSelection::Option{
+				.name = "Square",
+			},
+			ImGuiListSelection::Option{
+				.name = "Cube",
+			},
+			ImGuiListSelection::Option{
+				.name = "Sphere",
+			},
+			ImGuiListSelection::Option{
+				.name = "Tetrahedron",
+			},
+		},
+	};
+
+	static ImGuiListSelection light_type_selection = ImGuiListSelection::CI{
+		.name = "Light Type",
+		.mode = ImGuiListSelection::Mode::Dropdown,
+		.options = {
+			ImGuiListSelection::Option{
+				.name = "Point",
+			},
+			ImGuiListSelection::Option{
+				.name = "Directional",
+			},
+			ImGuiListSelection::Option{
+				.name = "Spot",
+			},
+		},
+	};
 
 	int SceneUserInterface::CreateNodePopUp::declareGUI(GuiContext& ctx)
 	{
@@ -314,33 +352,109 @@ namespace vkl
 				lock.lock();
 			}
 
-			if (ImGui::InputText("Path", &_path_str))
+			bool can_create = false;
+			const char* create_label = "Create";
+
+			if (ImGui::BeginTabBar("Node type", ImGuiTabBarFlags_None))
 			{
-				_path = _path_str;
-			}
-			ImGui::SameLine();
-			ImGui::BeginDisabled(_file_dialog_open);
-			if (ImGui::Button("..."))
-			{
-				openFileDialog();
-			}
-			ImGui::EndDisabled();
-			ImGui::Checkbox("Synchronous load", &_synch);
-			
-			const char * create_label;
-			bool can_create = true;
-			if (_path.empty())
-			{
-				create_label = "Create Empty Node";
-			}
-			else
-			{
-				create_label = "Create Node from file";
-				if (!canCreateNodeFromFile())
+				
+				if (ImGui::BeginTabItem("Empty Node"))
 				{
-					can_create = false;
+					_type = 0;
+					if (ImGui::InputText("Name", &_path_str))
+					{
+						
+					}
+					can_create = true;
+					ImGui::EndTabItem();
 				}
+				if (ImGui::BeginTabItem("Load model file"))
+				{
+					_type = 1;
+					if (ImGui::InputText("Path", &_path_str))
+					{
+						_path = _path_str;
+					}
+					ImGui::SameLine();
+					ImGui::BeginDisabled(_file_dialog_open);
+					if (ImGui::Button("..."))
+					{
+						openFileDialog();
+					}
+					ImGui::EndDisabled();
+					ImGui::Checkbox("Synchronous load", &_synch);
+
+					if (_path.empty())
+					{
+						create_label = "Create Empty Node";
+					}
+					else
+					{
+						create_label = "Create Node from file";
+						if (!canCreateNodeFromFile())
+						{
+							can_create = false;
+						}
+						else
+						{
+							can_create = true;
+						}
+					}
+					ImGui::EndTabItem();
+				}
+				if (ImGui::BeginTabItem("Prebuilt model"))
+				{
+					_type = 2;
+
+					ImGui::InputText("Name", &_path_str);
+					size_t index = std::min<size_t>(_sub_type, mesh_type_selection.options().size() - 1);
+					if (mesh_type_selection.declare(index))
+					{
+						_sub_type = static_cast<uint>(index);
+					}
+					if (static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type) == RigidMesh::RigidMeshMakeInfo::Type::Sphere)
+					{
+						ImGui::InputInt2("Subdivisions", (int*)_subdivisions.data());
+					}
+					bool & _material_dielectric = _bool;
+					ImGui::Checkbox("Dielectric material", &_material_dielectric);
+					ImGui::ColorEdit3(_material_dielectric ? "Absorption" : "Albedo", _color.data(), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+					float max_f1 = _material_dielectric ? 2 : 1;
+					ImGui::SliderFloat(_material_dielectric ? "Index of Refraction" : "Metallic", &_float_1, 0, max_f1, "%.3f");
+					if(!_material_dielectric)
+					{
+						ImGui::SliderFloat("Roughness", &_float_2, 0, 1, "%.3f", ImGuiSliderFlags_Logarithmic);
+					}
+
+
+					can_create = true;
+					create_label = "Create Model";
+					ImGui::EndTabItem();
+				}
+				if (ImGui::BeginTabItem("Light"))
+				{
+					_type = 3;
+
+					ImGui::InputText("Name", &_path_str);
+
+					size_t index = std::min<size_t>(_sub_type - 1, light_type_selection.options().size() - 1);
+					if (light_type_selection.declare(index))
+					{
+						_sub_type = static_cast<uint>(index + 1);
+					}
+
+					ImGui::ColorEdit3("Emission", _color.data(), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+					ImGui::Checkbox("Use Shadow Map", &_bool);
+
+					can_create = true;
+					create_label = "Create Light",
+
+					ImGui::EndTabItem();
+				}
+				ImGui::EndTabBar();
 			}
+			
+			ImGui::Separator();
 			ImGui::BeginDisabled(!can_create);
 			if (ImGui::Button(create_label))
 			{
@@ -354,11 +468,12 @@ namespace vkl
 				close();
 				res = -1;
 			}
+
 			ImGui::EndPopup();
 		}
 		else
 		{
-			close();
+			//close();
 			res = -1;
 		}
 
@@ -368,21 +483,47 @@ namespace vkl
 	std::shared_ptr<Scene::Node> SceneUserInterface::CreateNodePopUp::createNode(VkApplication * app)
 	{
 		std::shared_ptr<Scene::Node> res;
-		if (_path.empty())
+		if (_type == 0)
 		{
 			res = std::make_shared<Scene::Node>(Scene::Node::CI{
-				.name = "Empty Node",
+				.name = _path_str.empty() ? "Empty Node" : _path_str,
 				.matrix = Matrix3x4f::Identity(),
 			});
 		}
-		else if (canCreateNodeFromFile())
+		else if(_type == 1)
 		{
-			res = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+			if (canCreateNodeFromFile())
+			{
+				res = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+					.app = app,
+					.name = _path.filename().string(),
+					.matrix = Matrix3x4f::Identity(),
+					.path = _path,
+					.synch = _synch,
+				});
+			}
+		}
+		else if (_type == 2)
+		{
+			res = MakeModelNode(BasicModelNodeCreateInfo{
 				.app = app,
-				.name = _path.filename().string(),
-				.matrix = Matrix3x4f::Identity(),
-				.path = _path,
-				.synch = _synch,
+				.name = _path_str.empty() ? "Model" : _path_str,
+				.mesh_type = static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type),
+				.subdivisions = uvec4(_subdivisions.x(), _subdivisions.y(), 1, 1),
+				.albedo = _color,
+				.roughness = _float_2,
+				.metallic_or_eta = _float_1,
+				.is_dielectric = _bool,
+			});
+		}
+		else if (_type == 3)
+		{
+			res = MakeLightNode(LightNodeCreateInfo{
+				.app = app,
+				.name = _path_str.empty() ? "Light" : _path_str,
+				.type = static_cast<LightType>(_sub_type),
+				.emission = _color,
+				.enable_shadow_map = _bool,
 			});
 		}
 		return res;
@@ -406,36 +547,40 @@ namespace vkl
 			ImGui::InputInt("Base ShadowMap resolution", (int*)&_scene->_light_resolution);
 		}
 
+		auto declare_create_node_popup = [&]()
+		{
+			int popup_res = _create_node_popup.declareGUI(ctx);
+			if (popup_res > 0)
+			{
+				std::shared_ptr<Scene::Node> new_node = _create_node_popup.createNode(application());
+				if (new_node)
+				{
+					std::shared_ptr<Scene::Node> parent = _create_node_popup.getParent();
+					parent->addChild(std::move(new_node));
+				}
+				_create_node_popup.resetParent();
+			}
+		};
+
 		if (ImGui::CollapsingHeader("Tree"))
 		{
-			
 			if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
 			{
-				bool show_create_window = false;
+				bool open_create_window = false;
 				if (ImGui::MenuItem("New"))
 				{
-					show_create_window = true;
+					open_create_window = true;
 				}
 				ImGui::EndMenu();
 
-				if (show_create_window)
+
+				if (open_create_window)
 				{
-					_create_node_popup.open();
-				}
-			}
-			
-			{
-				int popup_res = _create_node_popup.declareGUI(ctx);
-				if (popup_res > 0)
-				{
-					std::shared_ptr<Scene::Node> new_node = _create_node_popup.createNode(application());
-					if (new_node)
-					{
-						_scene->getRootNode()->addChild(std::move(new_node));
-					}
+					_create_node_popup.open(_scene->getRootNode());
 				}
 			}
 
+			declare_create_node_popup();
 
 			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
@@ -509,14 +654,32 @@ namespace vkl
 					};
 					_gui_selected_node.path = path;
 				}
+				ImGui::PushID("On Node");
 				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
 				{
+					bool open_create_window = false;
+					if (ImGui::MenuItem("New"))
+					{
+						open_create_window = true;
+					}
+
+					ImGui::BeginDisabled();
 					if (ImGui::MenuItem("Remove"))
 					{
-
+						// TODO
 					}
-					ImGui::EndPopup();
+					ImGui::EndDisabled();
+					
+					ImGui::EndMenu();
+					//ImGui::EndPopup();
+
+					if (open_create_window)
+					{
+						_create_node_popup.open(_gui_selected_node.node.node);
+					}
 				}
+				declare_create_node_popup();
+				ImGui::PopID();
 
 				if (node_open)
 				{
@@ -585,37 +748,27 @@ namespace vkl
 						ImGui::Separator();
 						float range = 10;
 						ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
-						ImGui::SliderFloat3("Scale", node->scale().data(), -range, range, "%.3f", flags);
+						if (ImGui::Button("Reset"))
+						{
+							node->resetAuxiliaryTransform();
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Collapse Matrix"))
+						{
+							 node->collapseAuxiliaryTransform();
+						}
+						ImGui::DragFloat3("Scale", node->scale().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
 						ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
-						ImGui::SliderFloat3("Translation", node->translation().data(), -range, range, "%.3f", flags);
-
+						ImGui::DragFloat3("Translation", node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
 					}
 
-					if (ImGui::CollapsingHeader("Model"))
+					if (!!node->model() && ImGui::CollapsingHeader("Model"))
 					{
-						if (node->model())
-						{
-							node->model()->declareGui(ctx);
-						}
-						else
-						{
-							ImGui::Text("None");
-							//ImGui::BeginDragDropTarget();
-
-							//ImGui::EndDragDropTarget();
-						}
+						node->model()->declareGui(ctx);
 					}
-
-					if (ImGui::CollapsingHeader("Light"))
+					else if (!!node->light() && ImGui::CollapsingHeader("Light"))
 					{
-						if (node->light())
-						{
-							node->light()->declareGui(ctx);
-						}
-						else
-						{
-							ImGui::Text("None");
-						}
+						node->light()->declareGui(ctx);
 					}
 				}
 

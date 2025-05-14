@@ -68,9 +68,13 @@ namespace vkl
 		{
 		protected:
 
-			ImVec2 _center;
+			// 0 : Empty node
+			// 1 : Node from file
+			// 2 : Mesh + Material node
+			// 3 : Light
+			uint _type = 0;
 			ImGuiPopupFlags _flags = ImGuiWindowFlags_AlwaysAutoResize * 0;
-
+			
 			std::string _path_str = {};
 			std::filesystem::path _path = {};
 			bool _synch = false;
@@ -79,11 +83,20 @@ namespace vkl
 
 			std::mutex _file_dialog_mutex;
 
+			Vector3f _color = {};
+			uint _sub_type = 0;
+			Vector2u _subdivisions = {16, 32};
+
+			float _float_1 = 0, _float_2 = 0;
+			bool _bool = false;
+
+
+			std::shared_ptr<Scene::Node> _parent = {};
 			//friend void FileDialogCallback(void* p_user_data, const char* const* file_list, int filter);
 
 		public:
 
-			void open();
+			void open(std::shared_ptr<Scene::Node> const& parent);
 
 			void openFileDialog();
 
@@ -107,6 +120,16 @@ namespace vkl
 			ImGuiPopupFlags flags()const
 			{
 				return _flags;
+			}
+
+			auto getParent()const
+			{
+				return _parent;
+			}
+
+			void resetParent()
+			{
+				_parent.reset();
 			}
 		};
 
