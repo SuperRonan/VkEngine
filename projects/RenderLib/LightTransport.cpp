@@ -19,34 +19,21 @@ namespace vkl
 
 	void LightTransport::createInternals()
 	{
+		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+
+		if (_use_rt_pipelines && !can_rt)
+		{
+			_use_rt_pipelines = false;
+		}
+		else if (!_use_rt_pipelines && !can_rq)
+		{
+			_use_rt_pipelines = true;
+		}
+
 		const std::filesystem::path shaders = "RenderLibShaders:/RT";
 
 		using RTShader = RayTracingCommand::RTShader;
-
-		_path_tracer_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
-			.app = application(),
-			.name = name() + ".PathTracer",
-			.shader_path = shaders / "PathTracing.slang",
-			.extent = _target->image()->extent(),
-			.dispatch_threads = true,
-			.sets_layouts = _sets_layouts,
-			.bindings = {
-				Binding{
-					.buffer = _ubo,
-					.binding = 1,
-				},
-				Binding{
-					.image = _target,
-					.binding = 2,
-				},
-			},
-			.definitions = [this](DefinitionsList& res) {
-				res.clear();
-				res.pushBack(_target_format_str);
-				if (_compile_time_max_depth)
-					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
-			},
-		});
 
 		MyVector<RTShader> miss_shaders = {
 			RTShader{.path = shaders / "TraceRT.slang"},
@@ -83,38 +70,71 @@ namespace vkl
 			sbt->setRecord(ShaderRecordType::HitGroup, 0, 0);
 			sbt->setRecord(ShaderRecordType::HitGroup, 1, 1);
 		};
-
-		_path_tracer_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
-			.app = application(),
-			.name = name() + ".PathTracer",
-			.sets_layouts = _sets_layouts,
-			.raygen = RTShader{.path = shaders / "PathTracing.slang"},
-			.misses = miss_shaders,
-			.closest_hits = chit_shaders,
-			.any_hits = ahit_shaders,
-			.hit_groups = hit_groups,
-			.definitions = [this](DefinitionsList& res) {
-				res.clear();
-				res.pushBack(_target_format_str);
-				if(_compile_time_max_depth)
-					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
-			},
-			.bindings = {
-				Binding{
-					.buffer = _ubo,
-					.binding = 1,
+		 
+		if (can_rq)
+		{
+			_path_tracer_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = application(),
+				.name = name() + ".PathTracer",
+				.shader_path = shaders / "PathTracing.slang",
+				.extent = _target->image()->extent(),
+				.dispatch_threads = true,
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 1,
+					},
+					Binding{
+						.image = _target,
+						.binding = 2,
+					},
 				},
-				Binding{
-					.image = _target,
-					.binding = 2,
+				.definitions = [this](DefinitionsList& res) {
+					res.clear();
+					res.pushBack(_target_format_str);
+					if (_compile_time_max_depth)
+						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
-			},
-			.extent = _target->image()->extent(),
-			.max_recursion_depth = 0,
-			.create_sbt = true,
-		});
+			});
+		}
+		
 
-		fill_sbt(*_path_tracer_rt);
+		
+		if (can_rt)
+		{
+			_path_tracer_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+				.app = application(),
+				.name = name() + ".PathTracer",
+				.sets_layouts = _sets_layouts,
+				.raygen = RTShader{.path = shaders / "PathTracing.slang"},
+				.misses = miss_shaders,
+				.closest_hits = chit_shaders,
+				.any_hits = ahit_shaders,
+				.hit_groups = hit_groups,
+				.definitions = [this](DefinitionsList& res) {
+					res.clear();
+					res.pushBack(_target_format_str);
+					if(_compile_time_max_depth)
+						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+				},
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 1,
+					},
+					Binding{
+						.image = _target,
+						.binding = 2,
+					},
+				},
+				.extent = _target->image()->extent(),
+				.max_recursion_depth = 0,
+				.create_sbt = true,
+			});
+
+			fill_sbt(*_path_tracer_rt);
+		}
 
 		_light_tracer_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -130,59 +150,65 @@ namespace vkl
 			.hold_instance = [this](){return useLightTracer();},
 		});
 
-		_light_tracer_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
-			.app = application(),
-			.name = name() + ".LightTracer",
-			.shader_path = shaders / "LightTracing.slang",
-			.extent = [this](){return VkExtent3D{.width = _light_tracer_samples, .height = 1, .depth = 1}; },
-			.dispatch_threads = true,
-			.sets_layouts = _sets_layouts,
-			.bindings = {
-				Binding{
-					.buffer = _ubo,
-					.binding = 1,
+		if (can_rq)
+		{
+			_light_tracer_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = application(),
+				.name = name() + ".LightTracer",
+				.shader_path = shaders / "LightTracing.slang",
+				.extent = [this](){return VkExtent3D{.width = _light_tracer_samples, .height = 1, .depth = 1}; },
+				.dispatch_threads = true,
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 1,
+					},
+					Binding{
+						.buffer = _light_tracer_buffer,
+						.binding = 2,
+					},
 				},
-				Binding{
-					.buffer = _light_tracer_buffer,
-					.binding = 2,
+				.definitions = [this](DefinitionsList& res) {
+					res.clear();
+					if (_compile_time_max_depth)
+						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
-			},
-			.definitions = [this](DefinitionsList& res) {
-				res.clear();
-				if (_compile_time_max_depth)
-					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
-			},
-		});
+			});
+		}
 		
-		_light_tracer_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
-			.app = application(),
-			.name = name() + ".LightTracer",
-			.sets_layouts = _sets_layouts,
-			.raygen = RTShader{.path = shaders / "LightTracing.slang"},
-			.misses = miss_shaders,
-			.closest_hits = chit_shaders,
-			.any_hits = ahit_shaders,
-			.hit_groups = hit_groups,
-			.definitions = [this](DefinitionsList& res) {
-				res.clear();
-				if (_compile_time_max_depth)
-					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
-			},
-			.bindings = {
-				Binding{
-					.buffer = _ubo,
-					.binding = 1,
+		if (can_rt)
+		{
+			_light_tracer_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+				.app = application(),
+				.name = name() + ".LightTracer",
+				.sets_layouts = _sets_layouts,
+				.raygen = RTShader{.path = shaders / "LightTracing.slang"},
+				.misses = miss_shaders,
+				.closest_hits = chit_shaders,
+				.any_hits = ahit_shaders,
+				.hit_groups = hit_groups,
+				.definitions = [this](DefinitionsList& res) {
+					res.clear();
+					if (_compile_time_max_depth)
+						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
-				Binding{
-					.buffer = _light_tracer_buffer,
-					.binding = 2,
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 1,
+					},
+					Binding{
+						.buffer = _light_tracer_buffer,
+						.binding = 2,
+					},
 				},
-			},
-			.extent = [this]() {return VkExtent3D{.width = _light_tracer_samples, .height = 1, .depth = 1}; },
-			.max_recursion_depth = 0,
-			.create_sbt = true,
-		});
-		fill_sbt(*_light_tracer_rt);
+				.extent = [this]() {return VkExtent3D{.width = _light_tracer_samples, .height = 1, .depth = 1}; },
+				.max_recursion_depth = 0,
+				.create_sbt = true,
+			});
+			fill_sbt(*_light_tracer_rt);
+		}
 
 		_bdpt_scratch_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
@@ -206,97 +232,103 @@ namespace vkl
 			.hold_instance = [this]() { return _method == Method::BidirectionalPathTracer; },
 		});
 
-		_bdpt_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
-			.app = application(),
-			.name = name() + ".BDPT",
-			.shader_path = shaders / "BDPT.slang",
-			.extent = _target->image()->extent(),
-			.dispatch_threads = true,
-			.sets_layouts = _sets_layouts,
-			.bindings = {
-				Binding{
-					.buffer = _ubo,
-					.binding = 1,
+		if (can_rq)
+		{
+			_bdpt_rq = std::make_shared<ComputeCommand>(ComputeCommand::CI{
+				.app = application(),
+				.name = name() + ".BDPT",
+				.shader_path = shaders / "BDPT.slang",
+				.extent = _target->image()->extent(),
+				.dispatch_threads = true,
+				.sets_layouts = _sets_layouts,
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 1,
+					},
+					Binding{
+						.image = _target,
+						.binding = 2,
+					},
+					Binding{
+						.buffer = _light_tracer_buffer,
+						.binding = 3,
+					},
+					Binding{
+						.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
+							.begin = 0,
+							.len = _bdpt_scratch_buffer_segment_2,
+						}; }},
+						.binding = 4,
+					},
+					Binding{
+						.buffer = {_bdpt_scratch_buffer, [this](){return Buffer::Range{
+							.begin = _bdpt_scratch_buffer_segment_2,
+							.len = VK_WHOLE_SIZE,
+						}; }},
+						.binding = 5,
+					},
 				},
-				Binding{
-					.image = _target,
-					.binding = 2,
+				.definitions = [this](DefinitionsList& res) {
+					res.clear();
+					res.pushBack(_target_format_str);
+					if (_compile_time_max_depth)
+						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
-				Binding{
-					.buffer = _light_tracer_buffer,
-					.binding = 3,
-				},
-				Binding{
-					.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
-						.begin = 0,
-						.len = _bdpt_scratch_buffer_segment_2,
-					}; }},
-					.binding = 4,
-				},
-				Binding{
-					.buffer = {_bdpt_scratch_buffer, [this](){return Buffer::Range{
-						.begin = _bdpt_scratch_buffer_segment_2,
-						.len = VK_WHOLE_SIZE,
-					}; }},
-					.binding = 5,
-				},
-			},
-			.definitions = [this](DefinitionsList& res) {
-				res.clear();
-				res.pushBack(_target_format_str);
-				if (_compile_time_max_depth)
-					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
-			},
-		});
+			});
+		}
 
-		_bdpt_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
-			.app = application(),
-			.name = name() + ".BDPT",
-			.sets_layouts = _sets_layouts,
-			.raygen = RTShader{.path = shaders / "BDPT.slang"},
-			.misses = miss_shaders,
-			.closest_hits = chit_shaders,
-			.any_hits = ahit_shaders,
-			.hit_groups = hit_groups,
-			.definitions = [this](DefinitionsList& res) {
-				res.clear();
-				res.pushBack(_target_format_str);
-				if (_compile_time_max_depth)
-					res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
-			},
-			.bindings = {
-				Binding{
-					.buffer = _ubo,
-					.binding = 1,
+		if (can_rt)
+		{
+			_bdpt_rt = std::make_shared<RayTracingCommand>(RayTracingCommand::CI{
+				.app = application(),
+				.name = name() + ".BDPT",
+				.sets_layouts = _sets_layouts,
+				.raygen = RTShader{.path = shaders / "BDPT.slang"},
+				.misses = miss_shaders,
+				.closest_hits = chit_shaders,
+				.any_hits = ahit_shaders,
+				.hit_groups = hit_groups,
+				.definitions = [this](DefinitionsList& res) {
+					res.clear();
+					res.pushBack(_target_format_str);
+					if (_compile_time_max_depth)
+						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
-				Binding{
-					.image = _target,
-					.binding = 2,
+				.bindings = {
+					Binding{
+						.buffer = _ubo,
+						.binding = 1,
+					},
+					Binding{
+						.image = _target,
+						.binding = 2,
+					},
+					Binding{
+						.buffer = _light_tracer_buffer,
+						.binding = 3,
+					},
+					Binding{
+						.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
+							.begin = 0,
+							.len = _bdpt_scratch_buffer_segment_2,
+						}; }},
+						.binding = 4,
+					},
+					Binding{
+						.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
+							.begin = _bdpt_scratch_buffer_segment_2,
+							.len = VK_WHOLE_SIZE,
+						}; }},
+						.binding = 5,
+					},
 				},
-				Binding{
-					.buffer = _light_tracer_buffer,
-					.binding = 3,
-				},
-				Binding{
-					.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
-						.begin = 0,
-						.len = _bdpt_scratch_buffer_segment_2,
-					}; }},
-					.binding = 4,
-				},
-				Binding{
-					.buffer = {_bdpt_scratch_buffer, [this]() {return Buffer::Range{
-						.begin = _bdpt_scratch_buffer_segment_2,
-						.len = VK_WHOLE_SIZE,
-					}; }},
-					.binding = 5,
-				},
-			},
-			.extent = _target->image()->extent(),
-			.max_recursion_depth = 0,
-			.create_sbt = true,
-		});
-		fill_sbt(*_light_tracer_rt);
+				.extent = _target->image()->extent(),
+				.max_recursion_depth = 0,
+				.create_sbt = true,
+			});
+			fill_sbt(*_light_tracer_rt);
+		}
 
 
 		_resolve_light_tracer = std::make_shared<ComputeCommand>(ComputeCommand::CI{
@@ -513,8 +545,13 @@ namespace vkl
 			}
 
 			
+			const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+			const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+			const bool can_change_rt_backend = can_rt && can_rq;
+			ImGui::BeginDisabled(!can_change_rt_backend);
 			ImGui::Checkbox("Use RT Pipelines", &_use_rt_pipelines);
 			ImGui::SetItemTooltip("Check to use Ray Tracing Pipelines, Uncheck to use Ray Queries and compute shaders.");
+			ImGui::EndDisabled();
 
 			ImGui::InputInt("Max Depth", (int*)&_max_depth);
 			_max_depth = std::clamp<uint>(_max_depth, 1, 16);

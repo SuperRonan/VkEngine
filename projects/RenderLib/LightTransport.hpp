@@ -51,7 +51,7 @@ namespace vkl
 
 		Method _method = Method::PathTracer;
 
-		bool _use_rt_pipelines = true;
+		bool _use_rt_pipelines = false;
 
 		std::shared_ptr<ComputeCommand> _path_tracer_rq;
 		std::shared_ptr<ComputeCommand> _light_tracer_rq;

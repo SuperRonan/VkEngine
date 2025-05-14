@@ -413,6 +413,7 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 		return res;
 	}
 
+#if SHADER_RAY_QUERY_AVAILABLE
 	float queryVisibility(const in RayDesc ray)
 	{
 		float res = 1.0f;
@@ -432,6 +433,7 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 		}
 		return res;
 	}
+#endif
 
 	
 #endif
@@ -442,7 +444,11 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 	
 	float testVisibility(const in RayDesc ray)
 	{
+#if SHADER_RAY_QUERY_AVAILABLE
 		return queryVisibility(ray);
+#else
+		return 1;
+#endif
 	}
 	
 #endif

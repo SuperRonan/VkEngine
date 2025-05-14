@@ -212,6 +212,7 @@ struct RayTracer : IRayTracer
 
 #if BIND_SCENE && defined(SCENE_MESH_ACCESS) && defined(SCENE_MATERIAL_ACCESS) && BIND_SCENE_TLAS && defined(SCENE_OBJECTS_ACCESS) && defined(SCENE_XFORM_ACCESS)
 
+#if SHADER_RAY_QUERY_AVAILABLE
 struct RayQuerier : IRayTracer
 {
 	BoundScene scene;
@@ -262,6 +263,7 @@ struct RayQuerier : IRayTracer
 		this.scene = scene;
 	}
 }
+#endif
 
 #endif
 
