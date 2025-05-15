@@ -172,6 +172,7 @@ namespace vkl
 		Dyn<float> _cavity = {};
 		
 		bool _is_dielectric = false;
+		bool _sample_spectral = false;
 
 		Properties _cached_props;
 
@@ -208,6 +209,7 @@ namespace vkl
 			std::shared_ptr<Texture> albedo_texture = nullptr;
 			std::shared_ptr<Texture> normal_texture = nullptr;
 			bool is_dielectric = false;
+			bool sample_spectral = false;
 			bool synch = true;
 		};
 		using CI = CreateInfo;

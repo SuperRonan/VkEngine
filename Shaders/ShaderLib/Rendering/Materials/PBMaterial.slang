@@ -14,6 +14,8 @@
 #include <ShaderLib/Maths/Calculus.slang>
 #include <ShaderLib/Maths/Sampling.slang>
 
+
+
 struct PhysicalyBasedMaterialProperties
 {
 	vec3 albedo;
@@ -321,8 +323,21 @@ struct PhysicalyBasedMaterial : IMaterial
 		res.flags = BSDFSampleFlags::Delta;
 
 		bool outside = dot(geometry_normal, wo) > 0;
+
+		float base_ior = metallic;
+		const bool sample_spectral = (this.flags & PB_MATERIAL_DIELECTRIC_SPECRAL_APPROX_BIT) != 0;
+		// Very basic approximation of spectral rendering effects
+		if(sample_spectral)
+		{
+			uint channel = rng.generate<uint>(0, 3);
+			res.bsdf = vec3(0);
+			res.bsdf[channel] = 1;
+			float deviation = float(channel) - 1.0;
+			base_ior *= (1.0 + deviation * 0.01);
+			res.pdf *= rcp(3);
+		}
 		
-		float ior = outside ? rcp(metallic) : (metallic);
+		float ior = outside ? rcp(base_ior) : (base_ior);
 		
 		// normal in the same hemisphere as wo
 		const vec3 normal = outside ? shading_normal : -shading_normal;
@@ -336,7 +351,7 @@ struct PhysicalyBasedMaterial : IMaterial
 
 		if(sin_theta_o == 0)
 		{
-			res.pdf = 1;
+			res.pdf *= 1;
 			res.direction = -wo;
 			res.direction_jacobian = -Jwo;
 		}
@@ -379,7 +394,7 @@ struct PhysicalyBasedMaterial : IMaterial
 			{
 				res.direction = refracted;
 				res.bsdf *= (1 - refl_fresnel);
-				res.pdf = (1 - refl_fresnel);
+				res.pdf *= (1 - refl_fresnel);
 				res.direction_jacobian = RefractionDifferentials(wo, normal, Jwo, Jnormal, refracted, ior);
 
 				// https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation#x3-Non-symmetryDuetoRefraction

@@ -73,6 +73,7 @@ namespace vkl
 		float roughness = {};
 		float metallic_or_eta = {};
 		bool is_dielectric = {};
+		bool sample_spectral = {};
 	};
 
 	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci);

@@ -161,6 +161,7 @@ namespace vkl
 			.roughness = ci.roughness,
 			.cavity = 0,
 			.is_dielectric = ci.is_dielectric,
+			.sample_spectral = ci.sample_spectral,
 		});
 
 		std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{

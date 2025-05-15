@@ -416,7 +416,7 @@ namespace vkl
 					{
 						ImGui::InputInt2("Subdivisions", (int*)_subdivisions.data());
 					}
-					bool & _material_dielectric = _bool;
+					bool & _material_dielectric = _bool_1;
 					ImGui::Checkbox("Dielectric material", &_material_dielectric);
 					ImGui::ColorEdit3(_material_dielectric ? "Absorption" : "Albedo", _color.data(), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
 					float max_f1 = _material_dielectric ? 2 : 1;
@@ -424,6 +424,10 @@ namespace vkl
 					if(!_material_dielectric)
 					{
 						ImGui::SliderFloat("Roughness", &_float_2, 0, 1, "%.3f", ImGuiSliderFlags_Logarithmic);
+					}
+					else
+					{
+						ImGui::Checkbox("Sample Spectral", &_bool_2);
 					}
 
 
@@ -444,7 +448,7 @@ namespace vkl
 					}
 
 					ImGui::ColorEdit3("Emission", _color.data(), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
-					ImGui::Checkbox("Use Shadow Map", &_bool);
+					ImGui::Checkbox("Use Shadow Map", &_bool_1);
 
 					can_create = true;
 					create_label = "Create Light",
@@ -513,7 +517,8 @@ namespace vkl
 				.albedo = _color,
 				.roughness = _float_2,
 				.metallic_or_eta = _float_1,
-				.is_dielectric = _bool,
+				.is_dielectric = _bool_1,
+				.sample_spectral = _bool_2,
 			});
 		}
 		else if (_type == 3)
@@ -523,7 +528,7 @@ namespace vkl
 				.name = _path_str.empty() ? "Light" : _path_str,
 				.type = static_cast<LightType>(_sub_type),
 				.emission = _color,
-				.enable_shadow_map = _bool,
+				.enable_shadow_map = _bool_1,
 			});
 		}
 		return res;

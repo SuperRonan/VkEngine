@@ -117,6 +117,7 @@ namespace vkl
 		_roughness(ci.roughness),
 		_cavity(ci.cavity),
 		_is_dielectric(ci.is_dielectric),
+		_sample_spectral(ci.sample_spectral),
 		_cached_props({})
 	{
 		if (ci.albedo_texture)
@@ -207,6 +208,10 @@ namespace vkl
 		{
 			flags_u32 |= PB_MATERIAL_DIELECTRIC_BIT;
 			flags_u32 |= MATERIAL_FLAG_REFLECTION_BIT | MATERIAL_FLAG_TRANSMISSION_BIT;
+			if (_sample_spectral)
+			{
+				flags_u32 |= PB_MATERIAL_DIELECTRIC_SPECRAL_APPROX_BIT;
+			}
 		}
 		else
 		{
@@ -258,6 +263,10 @@ namespace vkl
 		{
 			_should_update_props_buffer |= GUIDeclareDynamic("Roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
 			_should_update_props_buffer |= GUIDeclareDynamic("Cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+		}
+		else
+		{
+			_should_update_props_buffer |= ImGui::Checkbox("Sample spectral", &_sample_spectral);
 		}
 
 		ImGui::PopID();

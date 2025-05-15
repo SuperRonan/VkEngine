@@ -88,7 +88,7 @@ namespace vkl
 			Vector2u _subdivisions = {16, 32};
 
 			float _float_1 = 0, _float_2 = 0;
-			bool _bool = false;
+			bool _bool_1 = false, _bool_2 = false;
 
 
 			std::shared_ptr<Scene::Node> _parent = {};
