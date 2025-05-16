@@ -14,6 +14,13 @@
 // These two special cases can be inverted more easily 
 
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
+constexpr AffineXForm<Scalar, N> MakeAffineTransform(CONST_REF(Matrix<Scalar, N, N>) Q)
+{
+	AffineXForm<Scalar, N> res = ResizeMatrix<N, N + 1>(Q);
+	return res;
+}
+
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr AffineXForm<Scalar, N> MakeAffineTransform(CONST_REF(Matrix<Scalar, N, N>) Q, CONST_REF(Vector<Scalar, N>) t)
 {
 	AffineXForm<Scalar, N> res = ResizeMatrix<N, N+1>(Q);
