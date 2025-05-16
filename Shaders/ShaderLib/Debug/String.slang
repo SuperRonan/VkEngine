@@ -651,37 +651,40 @@ struct BasicStringBase : IBasicString<char_t>
 			appendOneChar(char_t(0x61));
 			appendOneChar(char_t(0x4e));
 		}
-		if(neg)
-		{
-			appendOneChar(char_t(CHARCODE_minus));
-		}
-		else if(format.show_plus)
-		{
-			appendOneChar(char_t(CHARCODE_plus));
-		}
-		if(isinf(f))
-		{
-			// TODO
-			//append("inf");
-			appendOneChar(char_t(0x69));
-			appendOneChar(char_t(0x6e));
-			appendOneChar(char_t(0x66));
-		}
 		else
 		{
-			uint integral_part = uint(abs(f).toFloat()); //ConvertBuiltInTo<uint>(abs(f));
-			const Float dec = abs(f - trunc(f));
-			const float pow_mult = pow(basis, format.precision);
-			const Float dec_f = dec * Float(pow_mult);
-			uint dec_part = uint(dec_f.toFloat());
-			IntegerFormat intf = {};
-			intf.basis = basis;
-			intf.digits = 0;
-			intf.add_basis_prefix = false;
-			intf.show_plus = false;
-			appendUnsignedInteger(integral_part, intf);
-			appendOneChar(char_t(CHARCODE_dot));
-			appendUInt(dec_part, basis, format.precision);
+			if(neg)
+			{
+				appendOneChar(char_t(CHARCODE_minus));
+			}
+			else if(format.show_plus)
+			{
+				appendOneChar(char_t(CHARCODE_plus));
+			}
+			if(isinf(f))
+			{
+				// TODO
+				//append("inf");
+				appendOneChar(char_t(0x69));
+				appendOneChar(char_t(0x6e));
+				appendOneChar(char_t(0x66));
+			}
+			else
+			{
+				uint integral_part = uint(abs(f).toFloat()); //ConvertBuiltInTo<uint>(abs(f));
+				const Float dec = abs(f - trunc(f));
+				const float pow_mult = pow(basis, format.precision);
+				const Float dec_f = dec * Float(pow_mult);
+				uint dec_part = uint(dec_f.toFloat());
+				IntegerFormat intf = {};
+				intf.basis = basis;
+				intf.digits = 0;
+				intf.add_basis_prefix = false;
+				intf.show_plus = false;
+				appendUnsignedInteger(integral_part, intf);
+				appendOneChar(char_t(CHARCODE_dot));
+				appendUInt(dec_part, basis, format.precision);
+			}
 		}
 	}
 
