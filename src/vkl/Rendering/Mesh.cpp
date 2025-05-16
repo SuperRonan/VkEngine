@@ -914,26 +914,32 @@ namespace vkl
 
 		std::shared_ptr<RigidMesh> res;
 
-		std::vector<float> positions = {
-			c.x() - h,	 c.y() - h, 0,
-			c.x() - h,	 c.y() + h, 0,
-			c.x() + h,	 c.y() + h, 0,
-			c.x() + h,	 c.y() - h, 0,
+		Vector4 n = Vector4(0, 0, 1, 0);
+		Vector4 t = Vector4(1, 0, 0, 0);
+
+
+		std::vector<Vertex> vertices = {
+			Vertex{.position = Vector4(c.x() - h, c.y() - h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(0, 0, 0, 0), },
+			Vertex{.position = Vector4(c.x() - h, c.y() + h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(0, 1, 0, 0), },
+			Vertex{.position = Vector4(c.x() + h, c.y() + h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(1, 1, 0, 0), },
+			Vertex{.position = Vector4(c.x() + h, c.y() - h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(1, 0, 0, 0), },
 		};
 		
 		if (!smi.wireframe)
 		{
 			std::vector<uint> indices = {
-				0, 1, 2,
-				1, 2, 3,
+				2, 1, 0,
+				3, 2, 0,
 			};
 
 			res = std::make_shared<RigidMesh>(RigidMesh::CI{
 				.app = smi.app,
 				.name = smi.name,
 				.dims = 3,
-				.positions = std::move(positions),
+				.vertices = std::move(vertices),
 				.indices = std::move(indices),
+				.compute_normals = 0,
+				.auto_compute_tangents = false,
 				.create_device_buffer = true,
 			});
 		}
