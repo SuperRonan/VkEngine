@@ -77,4 +77,11 @@ namespace vkl
 	};
 
 	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci);
+
+	std::shared_ptr<Scene::Node> MakeModelNode(
+		std::string_view name, 
+		std::shared_ptr<Mesh> const& mesh,
+		std::shared_ptr<Material> const& material,
+		AffineXForm3Df const& xform = AffineXForm3Df::Identity()
+	);
 }

@@ -143,6 +143,26 @@ namespace vkl
 		return res;
 	}
 
+	std::shared_ptr<Scene::Node> MakeModelNode(
+		std::string_view name,
+		std::shared_ptr<Mesh> const& mesh,
+		std::shared_ptr<Material> const& material,
+		AffineXForm3Df const& xform
+	) {
+		std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+			.app = mesh->application(),
+			.name = std::format("{}.Model", name),
+			.mesh = mesh,
+			.material = material,
+		});
+		std::shared_ptr<Scene::Node> res = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.name = std::string(name),
+			.matrix = xform,
+			.model = model,
+		});
+		return res;
+	}
+
 	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci)
 	{
 		std::shared_ptr<Mesh> mesh = RigidMesh::MakeRigidMesh(RigidMesh::RigidMeshMakeInfo{
@@ -164,18 +184,8 @@ namespace vkl
 			.sample_spectral = ci.sample_spectral,
 		});
 
-		std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-			.app = ci.app,
-			.name = std::format("{}.Model", ci.name),
-			.mesh = mesh,
-			.material = material,
-		});
-
-		std::shared_ptr<Scene::Node> res = std::make_shared<Scene::Node>(Scene::Node::CI{
-			.name = ci.name,
-			.matrix = ci.xform,
-			.model = model,
-		});
-		return res;
+		return MakeModelNode(ci.name, mesh, material, ci.xform);
 	}
+
+	
 }
