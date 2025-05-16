@@ -141,6 +141,8 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 {
 	uint seed = Hash(pixel);
 	seed = seed ^ Hash(renderer_ubo.frame_idx);
+	// Use the same seed for all pixel:
+	//seed = Hash(renderer_ubo.frame_idx);
 	RNG_t rng = RNG_t(seed);
 	ICamera cam = MakeCamera(renderer_ubo.camera);
 	vec3 res = vec3(0);

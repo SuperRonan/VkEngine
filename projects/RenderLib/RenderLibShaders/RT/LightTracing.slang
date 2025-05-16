@@ -168,7 +168,10 @@ void CommonMain(
 	BoundScene scene,
 
 ) {
-	RNG_t rng = RNG_t(Hash(index) ^ Hash(renderer_ubo.frame_idx));
+	uint seed = Hash(index);
+	seed = seed ^ Hash(renderer_ubo.frame_idx);
+	//seed = Hash(renderer_ubo.frame_idx);
+	RNG_t rng = RNG_t(seed);
 
 	Light::EmissionSample sample = scene.sampleLe(rng);
 	sample.intensity *= weight;
