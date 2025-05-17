@@ -723,20 +723,32 @@ namespace vkl
 			}
 
 			const bool can_resize = _window_mode == Mode::Windowed && !_extern_resolution.hasValue();
-			if (can_resize)
+			ImGui::BeginDisabled(!can_resize);
+			changed = ImGui::SliderInt2("Resolution: ", &_desired_resolution[0], 1, 3840);
+			if (changed)
 			{
-				changed = ImGui::SliderInt2("Resolution: ", &_desired_resolution[0], 1, 3840);
-				if (changed)
+				_gui_resized = true;
+			}
+			std::array<uint, 5> resolutions = {720, 900, 1080, 1440, 2160};
+			std::array<char, 16> button_label_buffer;
+			for (uint i = 0; i < resolutions.size(); ++i)
+			{
+				if (i > 0)
 				{
+					ImGui::SameLine();
+				}
+				uint res = resolutions[i];
+				auto end = std::format_to_n(button_label_buffer.data(), button_label_buffer.size(), "{}p", res);
+				*end.out = char(0);
+				if (ImGui::Button(button_label_buffer.data()))
+				{
+					_desired_resolution[1] = res;
+					_desired_resolution[0] = (res * 16) / 9;
 					_gui_resized = true;
 				}
 			}
-			else
-			{
-				ImGui::BeginDisabled(true);
-				ImGui::DragInt2("Resolution", &_desired_resolution[0], 1, 3840);
-				ImGui::EndDisabled();
-			}
+			ImGui::EndDisabled();
+			
 
 			const Surface::SwapchainSupportDetails& sd = _surface->getDetails();
 			
