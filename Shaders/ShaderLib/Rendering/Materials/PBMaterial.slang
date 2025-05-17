@@ -349,66 +349,58 @@ struct PhysicalyBasedMaterial : IMaterial
 		const float cos_theta_o = dot(normal, wo);
 		const float sin_theta_o = sqrt(1 - sqr(cos_theta_o));
 
-		if(sin_theta_o == 0)
+		float sin_theta_i = ior * sin_theta_o;
+		bool reflect = sin_theta_i > 1;
+		float refl_fresnel = 1;
+
+		// if(_g_debug_signal)
+		// {
+		// 	_g_debug_printer.print(sin_theta_o);
+		// 	_g_debug_printer.print(sin_theta_i);
+		// }
+
+		if(!reflect)
 		{
-			res.pdf *= 1;
-			res.direction = -wo;
-			res.direction_jacobian = -Jwo;
+			float cos_theta_i = sqrt(1 - sqr(sin_theta_i));
+			float rs = ((ior * cos_theta_o - cos_theta_i) / (ior * cos_theta_o + cos_theta_i));
+			float rp = ((cos_theta_o - ior * cos_theta_i) / (cos_theta_o + ior * cos_theta_i));
+			refl_fresnel = 0.5 * (sqr(rs) + sqr(rp));
+
+			float xi = rng.generate<float>();
+			reflect = xi < refl_fresnel;
+		}
+
+		if(reflect)
+		{
+			res.direction = reflected;
+			res.bsdf *= refl_fresnel;
+			res.pdf = refl_fresnel;
+			res.direction_jacobian = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
+
+			if(dot(res.direction, g_normal) < 0)
+			{
+				res.bsdf = 0;
+			}
 		}
 		else
 		{
-			float sin_theta_i = ior * sin_theta_o;
-			bool reflect = sin_theta_i > 1;
-			float refl_fresnel = 1;
+			res.direction = refracted;
+			res.bsdf *= (1 - refl_fresnel);
+			res.pdf *= (1 - refl_fresnel);
+			res.direction_jacobian = RefractionDifferentials(wo, normal, Jwo, Jnormal, refracted, ior);
 
-			// if(_g_debug_signal)
-			// {
-			// 	_g_debug_printer.print(sin_theta_o);
-			// 	_g_debug_printer.print(sin_theta_i);
-			// }
-
-			if(!reflect)
+			// https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation#x3-Non-symmetryDuetoRefraction
+			if((Flags & BSDF_ADJOINT_BIT) != 0)
 			{
-				float cos_theta_i = sqrt(1 - sqr(sin_theta_i));
-				float rs = (((ior) * cos_theta_o - rcp(ior) * cos_theta_i) / ((ior) * cos_theta_o + rcp(ior) * cos_theta_i));
-				float rp = ((rcp(ior) * cos_theta_o - (ior) * cos_theta_i) / (rcp(ior) * cos_theta_o + (ior) * cos_theta_i));
-				refl_fresnel = 0.5 * (sqr(rs) + sqr(rp));
-
-				float xi = rng.generate<float>();
-				reflect = xi < refl_fresnel;
+				res.bsdf *= sqr(ior);
 			}
-
-			if(reflect)
+			
+			if(dot(res.direction, g_normal) > 0)
 			{
-				res.direction = reflected;
-				res.bsdf *= refl_fresnel;
-				res.pdf = refl_fresnel;
-				res.direction_jacobian = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
-
-				if(dot(res.direction, g_normal) < 0)
-				{
-					res.bsdf = 0;
-				}
-			}
-			else
-			{
-				res.direction = refracted;
-				res.bsdf *= (1 - refl_fresnel);
-				res.pdf *= (1 - refl_fresnel);
-				res.direction_jacobian = RefractionDifferentials(wo, normal, Jwo, Jnormal, refracted, ior);
-
-				// https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation#x3-Non-symmetryDuetoRefraction
-				if((Flags & BSDF_ADJOINT_BIT) != 0)
-				{
-					res.bsdf *= sqr(ior);
-				}
-				
-				if(dot(res.direction, g_normal) > 0)
-				{
-					res.bsdf = 0;
-				}
+				res.bsdf = 0;
 			}
 		}
+		
 
 		res.bsdf *= rcp(AbsDot(shading_normal, res.direction));
 
