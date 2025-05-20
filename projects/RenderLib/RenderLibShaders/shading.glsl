@@ -75,8 +75,8 @@ PBMaterialSampleData readMaterial(uint material_id, vec2 uv)
 	const uint normal_texture_id = GetMaterialTextureId(textures, NORMAL_TEXTURE_SLOT);
 	if(((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0) && normal_texture_id != uint(-1))
 	{
-		res.normal = texture(SceneTextures2D[NonUniformEXT(normal_texture_id)], uv).xyz;
-		res.normal = normalize(res.normal * 2 - 1);
+		vec3 normal_xyz = texture(SceneTextures2D[NonUniformEXT(normal_texture_id)], uv).xyz;
+		res.normal = normalize(normal_xyz * 2 - 1);
 	}
 #endif
 

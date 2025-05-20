@@ -309,7 +309,7 @@ namespace vkl
 			}
 
 			std::shared_ptr<Texture> albedo_texture = texture_file_cache.getTexture(albedo_path);
-			std::shared_ptr<Texture> normal_texture = texture_file_cache.getTexture(normal_path);
+			std::shared_ptr<Texture> normal_texture = texture_file_cache.getTexture(normal_path, VK_FORMAT_R8G8B8_UNORM);
 
 			bool is_dielectric = tm.illum == 7;
 			float metallic_or_ior;

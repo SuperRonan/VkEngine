@@ -267,9 +267,9 @@ __init()
 			}
 			if((res.flags & (MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT)) != 0 && normal_texture_id != uint(-1))
 			{
-				float2 n2 = sampling_info.sample(SceneTextures2D[(normal_texture_id)], uv).xy;
-				n2 = 2.0f * n2 - 1.0f;
-				res.normal = vec3(n2, 1 - sqrt(sqr(n2.x) + sqr(n2.y)));
+				res.flags |= PB_MATERIAL_SAMPLED_NORMAL_TEXTURE;
+				float3 n3 = sampling_info.sample(SceneTextures2D[(normal_texture_id)], uv).xyz;
+				res.normal = Normalize(n3 * 2 - 1);
 			}
 		}
 		return res;

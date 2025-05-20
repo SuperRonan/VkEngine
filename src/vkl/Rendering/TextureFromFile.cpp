@@ -66,18 +66,34 @@ namespace vkl
 			}
 			else
 			{
-				if (_host_image.format().type == that::ElementType::UNORM)
+				that::FormatInfo retarget_format = _host_image.format();
+				
+				if (_desired_format.vk_format != VK_FORMAT_UNDEFINED)
+				{
+					retarget_format.type = _desired_format.getImgFormatInfo().type;
+				}
+				else if (_host_image.format().type == that::ElementType::UNORM)
+				{
+					retarget_format.type = that::ElementType::sRGB;
+				}
+				if (retarget_format != _host_image.format())
 				{
 					that::FormatInfo new_format = _host_image.format();
-					new_format.type = that::ElementType::sRGB;
+					new_format.type = retarget_format.type;
 					_host_image.setFormat(new_format, _host_image.rowMajor());
+					
+					if (retarget_format.channels != new_format.channels)
+					{
+						new_format.channels = retarget_format.channels;
+						_host_image.reFormat(new_format);
+					}
 				}
 				_original_format = _host_image.format();
 			}
 
 			if (!_host_image.empty())
 			{
-				if (_desired_format.vk_format == VK_FORMAT_MAX_ENUM)
+				if (_desired_format.vk_format == VK_FORMAT_UNDEFINED || _desired_format.vk_format == VK_FORMAT_MAX_ENUM)
 				{
 					_desired_format = _host_image.format();
 					_desired_format.determineVkFormatFromInfo();
@@ -190,11 +206,7 @@ namespace vkl
 		_desired_mips(ci.mips),
 		_desired_layers(ci.layers)
 	{
-		if (ci.desired_format.has_value())
-		{
-			_desired_format = ci.desired_format.value();
-		}
-
+		_desired_format = DetailedVkFormat::Find(ci.desired_format);
 
 		if (_is_synch)
 		{
@@ -334,7 +346,7 @@ namespace vkl
 	{}
 
 
-	std::shared_ptr<TextureFromFile> TextureFileCache::getTexture(std::filesystem::path const& path)
+	std::shared_ptr<TextureFromFile> TextureFileCache::getTexture(std::filesystem::path const& path, VkFormat desired_format)
 	{
 		std::unique_lock lock(_mutex);
 		std::shared_ptr<TextureFromFile> res;
@@ -344,6 +356,7 @@ namespace vkl
 				.app = application(),
 				.name = path.string(),
 				.path = path,
+				.desired_format = desired_format,
 			});
 			_cache[path] = res;
 		}

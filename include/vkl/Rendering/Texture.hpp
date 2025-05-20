@@ -71,7 +71,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::optional<VkFormat> desired_format = {};
+			VkFormat desired_format = VK_FORMAT_UNDEFINED;
 			std::filesystem::path path = {};
 			bool synch = true;
 		};

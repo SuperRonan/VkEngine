@@ -287,3 +287,15 @@ uint GetMaxDepth()
 #endif
 }
 #endif
+
+bool ApplyTextureNormalIFN(inout SurfaceGeometryInfo geom, const in PBMaterial material)
+{
+	bool res = false;
+	if((material.flags & PB_MATERIAL_SAMPLED_NORMAL_TEXTURE) != 0)
+	{
+		mat3 tbn = geom.getShadingTBN();
+		geom.shading_normal = tbn * material.normal;
+		res = true;
+	}
+	return res;
+}

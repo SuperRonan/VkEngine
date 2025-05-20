@@ -54,7 +54,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			std::filesystem::path path = {};
-			std::optional<VkFormat> desired_format = {};
+			VkFormat desired_format = VK_FORMAT_UNDEFINED;
 			bool synch = false;
 			MipsOptions mips = MipsOptions::Auto;
 			uint32_t layers = 1;
@@ -88,7 +88,7 @@ namespace vkl
 		TextureFileCache(CreateInfo const& ci);
 
 
-		std::shared_ptr<TextureFromFile> getTexture(std::filesystem::path const& path);
+		std::shared_ptr<TextureFromFile> getTexture(std::filesystem::path const& path, VkFormat desired_format = VK_FORMAT_UNDEFINED);
 
 		void updateResources(UpdateContext & ctx);
 	};

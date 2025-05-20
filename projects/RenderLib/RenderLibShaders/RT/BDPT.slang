@@ -345,6 +345,10 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorag
 			{
 				{
 					let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true);
+					if(ApplyTextureNormalIFN(hit.surface_shading_info, material))
+					{
+						v.shading_normal = hit.surface_shading_info.shading_normal;
+					}
 					let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
 					if(kappa.hasValue)
 					{
@@ -418,6 +422,7 @@ uint RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorag
 			const float correction = light_tracer ? (cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s) : 1.0f;
 			prev_cos_theta = Abs(cos_theta_i_g);
 			tray.throughput *= (bsdf_sample.bsdf * Abs(cos_theta_i_s * correction) / bsdf_sample.pdf);
+			tray.throughput = FitWrongToZero(tray.throughput);
 			
 			storage_pdf[storage_pdf_offset + res - 2].reverse = reverse_pdf * reverse_geometric_conversion;
 			

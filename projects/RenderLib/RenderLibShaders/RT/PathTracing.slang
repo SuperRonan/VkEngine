@@ -108,6 +108,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		++num_vertices;
 		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.uv_jacobians);
 		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
+		ApplyTextureNormalIFN(hit.surface_shading_info, material);
 
 		{
 			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
@@ -123,7 +124,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			shader.scene = scene;
 			shader.ray_tracer = ray_tracer;
 			shader.samples = LIGHT_SAMPLES;
-			res += tray.throughput * shader.shade(hit.surface_shading_info, material, rng);
+			res += FitWrongToZero(tray.throughput * shader.shade(hit.surface_shading_info, material, rng));
 		}
 
 		let bsdf_sample = material.sampleBSDF<BSDF_FORWARD_BIT>(
@@ -146,6 +147,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		tray.range.min = RayTMin(tray.ray, hit.surface_shading_info.geometry_normal);
 		const float cos_theta = Abs(Dot(hit.surface_shading_info.shading_normal, bsdf_sample.direction));
 		tray.throughput *= bsdf_sample.bsdf * cos_theta / bsdf_sample.pdf;
+		tray.throughput = FitWrongToZero(tray.throughput);
 	}
 	return res;
 }

@@ -86,6 +86,7 @@ void ConnectToCameraIFP<RNG : IRNG>(
 			// correction of shading normals 
 			const float correction = Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s));
 			vec3 contrib = incoming_throughput * bsdf * connection.intensity * (Abs(cos_theta_i_s) * correction / connection.pdf);
+			contrib = FitWrongToZero(contrib);
 			if(NonZero(contrib))
 			{
 				let ray = Ray3f(hit.surface_shading_info.position, connection.direction);
@@ -122,6 +123,7 @@ void ConnectLightToCameraIFP<RNG : IRNG>(
 		vec3 Le = sample.intensity / sample.position_pdf;
 		
 		vec3 contrib = beta * Le * connection.intensity / connection.pdf;
+		contrib = FitWrongToZero(contrib);
 		if(NonZero(contrib))
 		{
 			Ray3f ray;
@@ -167,7 +169,7 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 
 		DefaultTextureSampling sampling = {};
 		let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
-
+		ApplyTextureNormalIFN(hit.surface_shading_info, material);
 		{
 			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
 			if(kappa.hasValue)
@@ -199,6 +201,7 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 		const float cos_theta_o_g = AbsDot(hit.surface_shading_info.geometry_normal, hit.surface_shading_info.out_direction);
 		const float correction = (cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s);
 		tray.throughput *= bsdf_sample.bsdf * (cos_theta_i_s / bsdf_sample.pdf * correction);
+		tray.throughput = FitWrongToZero(tray.throughput);
 	}
 }
 
