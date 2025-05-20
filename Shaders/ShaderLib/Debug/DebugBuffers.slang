@@ -280,8 +280,8 @@ struct DebugPrinter
 			vec2 pix_size = GLYPH_SIZE_PIX * scale;
 			this.glyph_size = DebugLowPvec2(pix_size);
 			if((this.flags & DEBUG_PIXEL_SPACE_BIT) != 0)	this.glyph_size;
-			if((this.flags & DEBUG_UV_SPACE_BIT) != 0)		this.glyph_size *= DebugLowPvec2(oo_screen_size);
-			if((this.flags & DEBUG_CLIP_SPACE_BIT) != 0)	this.glyph_size *= DebugLowPvec2(oo_screen_size * 2.0f);
+			else if((this.flags & DEBUG_UV_SPACE_BIT) != 0)		this.glyph_size *= DebugLowPvec2(oo_screen_size);
+			else	this.glyph_size *= DebugLowPvec2(oo_screen_size * 2.0f);
 		}
 
 		__init(uint flags = 0, float font_size = DEFAULT_FONT_SIZE)
@@ -481,6 +481,7 @@ enum DebugLine
 	ClipSpace = DEBUG_CLIP_SPACE_BIT,
 	UVSpace = DEBUG_UV_SPACE_BIT,
 	PixelSpace = DEBUG_PIXEL_SPACE_BIT,
+	ProjectToZnear = (0x1 << 4),
 };
 
 void PushDebugLine(const in DebugBufferLine line)
@@ -495,6 +496,11 @@ void PushDebugLine(vec4 p1, vec4 p2, uint layer, DebugLowPvec4 c1, DebugLowPvec4
 
 	line.p1 = p1;
 	line.p2 = p2;
+	if(flags & DebugLine::ProjectToZnear)
+	{
+		line.p1.z = 0;
+		line.p2.z = 0;
+	}
 	line.color1 = c1;
 	line.color2 = c2;
 	line.layer = layer;

@@ -122,7 +122,7 @@ void main()
 	const uint wid = gl_WorkGroupID.x;
 	const uint gid = gl_GlobalInvocationID.x;
 
-	bool emit_line = gid < debugLinesCapacity();
+	bool emit_line = gid < _debug.header.lines_counter;
 
 	const uint index = gid;
 	BufferDebugLine line; 

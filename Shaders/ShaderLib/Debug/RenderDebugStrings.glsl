@@ -68,7 +68,7 @@ void main()
 		const uint flags = meta.flags;
 		const uint coord_space_flags = meta.flags & DEBUG_SPACE_MASK;
 
-		vec4 position = meta.position;
+		vec4 position = vec4(meta.position, 1);
 		vec2 gs = meta.glyph_size;
 		if(coord_space_flags == DEBUG_UV_SPACE_BIT || coord_space_flags == DEBUG_PIXEL_SPACE_BIT)
 		{
