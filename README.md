@@ -1,8 +1,41 @@
 # VkEngine
 
 
+Main features:
+- Automatic GPU synchronization
+- Automatic Hot Shader Reloading
+- HDR windows
+- Multi-threaded background tasks
 
 
+
+Projects:
+- Renderer:
+	- Test rendering engine
+	- Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer)
+- BSDF viewer
+- More to come...
+
+Optional arguments:
+-h, --help                    shows help message and exits
+-v, --version                 prints version information and exits
+--name                        Name of the Application
+--validation                  Enable Vulkan Validation Layers [nargs=0..1] [default: 0]
+--name_vk_objects             Name Vulkan Objects [nargs=0..1] [default: 1]
+--cmd_labels                  Set Labels in the CommandBuffer [nargs=0..1] [default: 1]
+--helper_threads              Set the number of helper threads, 'all' to use all available threads, 'none' to run single thread, -n to use all threads minus n [nargs=0..1] [default: "all"]
+--gpu                         Select the index of the gpu to use [nargs=0..1] [default: -1]
+--image_layout                Select which image layout to use, possible values are: 'specific', 'general', 'auto' or a bit mask per usage (0 for specfic, 1 for general) [nargs=0..1] [default: "specific"]
+--verbosity                   Set the console verbosity level (int) [nargs=0..1] [default: 2]
+--dump_shader_source          Enable shaders source dump in the gen folder [nargs=0..1] [default: 0]
+--dump_preprocessed_shader    Enable preprocessed shaders source dump in the gen folder [nargs=0..1] [default: 0]
+--dump_spv                    Enable shaders SPIR-V binary dump in the gen folder [nargs=0..1] [default: 0]
+--dump_slang_to_glsl          Compile Slang Shaders to GLSL and dump in the gen folder [nargs=0..1] [default: 0]
+--shaderc_optimization_level  Set ShaderC optimization level [nargs=0..1] [default: 2]
+--slang_optimization_level    Set Slang optimization level [nargs=0..1] [default: 3]
+--resolution                  Set the resolution of the main window [nargs: 2]
+--imgui_docking               Force the ImGui Docking feature (0 or 1)
+--imgui_multi_viewport        Force the ImGui Multi Viewport feature (0 or 1)
 
 
 # TODO List:
