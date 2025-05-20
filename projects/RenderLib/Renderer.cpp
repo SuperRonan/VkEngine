@@ -46,6 +46,11 @@ namespace vkl
 		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
 		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
 		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+
+		if (can_as && (can_rq || can_rt))
+		{
+			_pipeline_selection.setIndex(2);
+		}
 		
 		_pipeline_selection.enableOptions(2, can_as && (can_rq || can_rt));
 		if (!can_as && (can_rq || can_rt) && RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
