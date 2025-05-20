@@ -9,7 +9,7 @@
 layout(BSDF_BINDING_BASE + 0) uniform UBO
 {
 	mat4 camera_world_to_proj;
-	mat3x4 camera_world_to_camera;
+	mat4 camera_world_to_camera;
 
 	vec3 direction;
 	float common_alpha;
@@ -40,7 +40,7 @@ vec4 GetColor(uint layer)
 
 mat4x3 GetWorldToCamera()
 {
-	return transpose(ubo.camera_world_to_camera);
+	return mat4x3(ubo.camera_world_to_camera);
 }
 
 #ifndef BSDF_IMAGE_ACCESS

@@ -11,7 +11,7 @@ namespace vkl
 	struct UBOBase
 	{
 		Matrix4f world_to_proj;
-		AffineXForm3Df world_to_camera;
+		Matrix4f world_to_camera;
 		ubo_vec3 direction;
 		float common_alpha;
 
@@ -305,7 +305,7 @@ namespace vkl
 
 		UBOBase ubo{
 			.world_to_proj = _camera->getWorldToProj(),
-			.world_to_camera = _camera->getWorldToCam(),
+			.world_to_camera = Matrix4f(_camera->getWorldToCam()),
 			.direction = Vector3f(std::sin(_inclination), std::cos(_inclination), 0),
 			.common_alpha = _common_alpha,
 			.reference_function = _reference_function_index,
