@@ -47,6 +47,438 @@
 
 namespace vkl
 {
+	static void LoadSponza(std::shared_ptr<Scene>& scene, int preset)
+	{
+		VkApplication* app = scene->application();
+		std::shared_ptr<Scene::Node> root = scene->getRootNode();
+		std::filesystem::path mtl = {};
+		const bool sunlight = preset == 3;
+		if (sunlight)
+		{
+			scene->setEnvironment(
+				vec3(0.5, 0.8, 1) * 2,
+				vec2(Radians(15.0f), Radians(60.0f)),
+				Radians(0.5f),
+				vec3(1.2, 1.1, 1) * 20
+			);
+		}
+		if (preset == 1)
+		{
+			mtl = "assets:/models/sponza/caustics.mtl";
+		}
+		else if (preset == 2)
+		{
+			mtl = "assets:/models/sponza/metallic.mtl";
+		}
+		std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
+			.app = app,
+			.name = "Sponza",
+			.matrix = DiagonalMatrix<3, 4>(0.01f),
+			.path = "assets:/models/sponza/sponza.obj",
+			.mtl_path = std::move(mtl),
+			.synch = false,
+		});
+		root->addChild(sponza_node);
+
+		if (!sunlight)
+		{
+			std::shared_ptr<Scene::Node> spotlights = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "SpotLights",
+				.matrix = TranslationMatrix(Vector3f(2, 1, 0)),
+			});
+			for (int i = 0; i < 3; ++i)
+			{
+				Vector3f color = Vector3f::Zero();
+				color[i] = 10 * 5 * 2;
+				std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
+					.app = app,
+					.name = std::format("SpotLight_{}", i),
+					.direction = Vector3f(0, 0, -1),
+					.up = Vector3f(0, 1, 0),
+					.emission = color,
+					.attenuation = 1,
+				});
+				vec3 position = Vector3f::Zero();
+				if (i == 1)
+				{
+					position += Vector3f(0.5, 0, 0);
+				}
+				else if (i == 2)
+				{
+					position += Vector3f(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
+				}
+				std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = std::format("SpotLight_{}", i),
+					.matrix = TranslationMatrix(position),
+				});
+				spot_light_node->light() = spot_light;
+				spotlights->addChild(spot_light_node);
+			}
+			root->addChild(spotlights);
+		}
+
+		{
+			std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+				.app = app,
+				.name = "mirror",
+				.albedo = Vector3f::Constant(0.7).eval(),
+				.metallic = 1.0f,
+				.roughness = 0.0f,
+				.cavity = 0,
+			});
+
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+				.app = app,
+			});
+
+			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+				.app = app,
+				.name = "Cube",
+				.mesh = mesh,
+				.material = material,
+			});
+
+			std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "Mirror",
+				.matrix = TranslationMatrix(Vector3f(4, 0.5, -2.5)) * ScalingMatrix(Vector3f(2, 1, 0.1)),
+				.model = model,
+			});
+			root->addChild(model_node);
+		}
+
+		if(!sunlight)
+		{
+			std::shared_ptr<PointLight> pl = std::make_shared<PointLight>(PointLight::CI{
+				.app = app,
+				.name = "PointLight",
+				.position = Vector3f(0, 0, 0),
+				.emission = Vector3f(1, 0.8, 0.6) * 15.0f,
+				.enable_shadow_map = true,
+			});
+			int n_lights = 3;
+			for (int i = 0; i < n_lights; ++i)
+			{
+				std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.name = "PointLight" + std::to_string(i),
+					.matrix = TranslationMatrix(Vector3f((i - (n_lights / 2)) * 6, 6, 0)),
+				});
+				light_node->light() = pl;
+				root->addChild(light_node);
+			}
+		}
+
+		if (true)
+		{
+			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
+				.app = app,
+				.radius = 0.4,
+			});
+
+			const size_t n_m = 5;
+			const size_t n_r = 5;
+
+			const vec3 base(0, 0.27, 0);
+			const vec3 dir_m(1, 0, 0);
+			const vec3 dir_r(0, 0, 1);
+
+			Matrix3x4f node_matrix = TranslationMatrix(vec3(-1, 0, -2)) * (DiagonalMatrix<3, 4>(0.2f));
+
+			std::shared_ptr<Scene::Node> test_material_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "TestMaterials",
+				.matrix = node_matrix,
+				});
+
+			for (size_t i_m = 0; i_m < n_m; ++i_m)
+			{
+				const float metallic = float(i_m) / float(n_m - 1);
+				for (size_t i_r = 0; i_r < n_r; ++i_r)
+				{
+					const float roughness = std::pow(float(i_r) / float(n_r - 1), 2);
+
+					const vec3 position = base + float(i_m) * dir_m + float(i_r) * dir_r;
+
+					std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
+						.app = app,
+						.name = std::format("TestMaterial_{0:d}_{1:d}", i_m, i_r),
+						.albedo = Vector3f::Constant(0.7).eval(),
+						.metallic = metallic,
+						.roughness = roughness,
+						.cavity = 0,
+					});
+
+					std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
+						.app = app,
+						.name = std::format("TestModel_{0:d}_{1:d}", i_m, i_r),
+						.mesh = mesh,
+						.material = material,
+					});
+
+					std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+						.name = std::format("TestModelNode_{0:d}_{1:d}", i_m, i_r),
+						.matrix = Matrix3x4f(TranslationMatrix(position)),
+						.model = model,
+					});
+					test_material_node->addChild(model_node);
+				}
+			}
+			root->addChild(test_material_node);
+		}
+
+		if (true)
+		{
+			std::shared_ptr<Scene::Node> in_spotlight = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "In Spotlight",
+				.matrix = TranslationMatrix(vec3(1.7, 0.25, -1.8)) * ScalingMatrix(vec3::Constant(0.25).eval()),
+			});
+			root->addChild(in_spotlight);
+
+			in_spotlight->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Sphere",
+				.xform = TranslationMatrix(vec3(0, 0, 0)),
+
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Sphere,
+				.subdivisions = uvec4(128, 256, 0, 0),
+				
+				.albedo = vec3(0, 0, 0),
+				.roughness = 0,
+				.metallic_or_eta = 1.33333,
+				.is_dielectric = true,
+				.sample_spectral = false,
+			}));
+
+			in_spotlight->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Cube",
+				.xform = TranslationMatrix(vec3(2, -0.5, 2)) * ScalingMatrix(vec3::Constant(1.5).eval()),
+
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Cube,
+
+				.albedo = vec3(0, 0, 0),
+				.roughness = 0,
+				.metallic_or_eta = 1.33333,
+				.is_dielectric = true,
+				.sample_spectral = false,
+			}));
+
+			in_spotlight->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Tetrahedron",
+				.xform = TranslationMatrix(vec3(3, -0.5, -1.5)) * 
+						ScalingMatrix(vec3::Constant(1).eval()) * 
+						MakeAffineTransform(Rotation3D(vec3(Radians(16.88f), Radians(52.5f), Radians(67.46f)))),
+
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Tetrahedron,
+
+				.albedo = vec3(0, 0, 0),
+				.roughness = 0,
+				.metallic_or_eta = 1.33333,
+				.is_dielectric = true,
+				.sample_spectral = false,
+			}));
+		}
+	}
+
+	static void LoadCornellBox(std::shared_ptr<Scene>& scene, int preset_id)
+	{
+		struct Preset
+		{
+			bool metallic_walls;
+			bool caustics;
+			bool alternate_boxes;
+		};
+		std::array<Preset, 6> presets = {
+			Preset{.metallic_walls = false, .caustics = false, .alternate_boxes = false},
+			Preset{.metallic_walls = true, .caustics = false, .alternate_boxes = false},
+			Preset{.metallic_walls = false, .caustics = true, .alternate_boxes = false},
+			Preset{.metallic_walls = true, .caustics = true, .alternate_boxes = false},
+			Preset{.metallic_walls = false, .caustics = false, .alternate_boxes = true},
+			Preset{.metallic_walls = true, .caustics = false, .alternate_boxes = true},
+		};
+		Preset preset = presets[preset_id];
+		VkApplication* app = scene->application();
+		std::shared_ptr<Scene::Node> root = scene->getRootNode();
+		
+		std::shared_ptr<Scene::Node> box = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.name = "Cornell Box",
+			.matrix = ScalingMatrix(Vector3f::Constant(2).eval()),
+		});
+
+		constexpr const float half_pi = std::numbers::pi_v<float> * 0.5f;
+
+		root->addChild(box);
+
+		vec3 gray	= vec3(0.7, 0.7, 0.7);
+		vec3 green	= vec3(0.5, 1.0, 0.5);
+		vec3 red	= vec3(1.0, 0.5, 0.5);
+		vec3 orange = vec3(0.9, 0.6, 0.1);
+		vec3 blue	= vec3(0.5, 0.5, 1.0);
+		float red_metallic = preset.metallic_walls ? 0.9 : 0;
+		float green_metallic = red_metallic;
+		float red_roughness = preset.metallic_walls ? 0.1 : 1;
+		float green_roughness = preset.metallic_walls ? 0.05 : 1;
+
+		std::shared_ptr<RigidMesh> wall_mesh = RigidMesh::MakeSquare(RigidMesh::Square3DMakeInfo{
+			.app = app,
+			.name = "Square",
+			.wireframe = false,
+		});
+
+		std::shared_ptr<RigidMesh> box_mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+			.app = app,
+			.name = "Cube",
+			.wireframe = false,
+			.face_normal = true,
+		});
+
+		auto MakeMaterial = [&](std::string_view name, vec3 const& color, float roughness = 1, float metallic = 0)
+		{
+			return std::make_shared<PBMaterial>(PBMaterial::CI{
+				.app = app,
+				.name = std::string(name),
+				.albedo = color,
+				.metallic = metallic,
+				.roughness = roughness,
+				.is_dielectric = false,
+				.sample_spectral = false,
+			});
+		};
+
+		auto MakeWallModel = [&](std::string_view name, AffineXForm3Df const& xform, vec3 const& color, float roughness = 1, float metallic = 0)
+		{
+			auto material = MakeMaterial(std::format("{}.Material", name), color, roughness, metallic);
+			return MakeModelNode(name, wall_mesh, material, xform);
+		};
+
+		auto MakeBoxModel = [&](std::string_view name, AffineXForm3Df const& xform, vec3 const& color, float roughness = 1, float metallic = 0)
+		{
+			auto material = MakeMaterial(std::format("{}.Material", name), color, roughness, metallic);
+			return MakeModelNode(name, box_mesh, material, xform);
+		};
+
+		box->addChild(MakeWallModel(
+			"Ceiling",
+			MakeAffineTransform(Rotation3XYZ(Vector3f(half_pi, 0, 0))) * TranslationMatrix(Vector3f(0, 0, -0.5)),
+			gray
+		));
+
+		box->addChild(MakeWallModel(
+			"Ground",
+			MakeAffineTransform(Rotation3XYZ(Vector3f(-half_pi, 0, 0))) * TranslationMatrix(Vector3f(0, 0, -0.5)),
+			gray
+		));
+
+
+		box->addChild(MakeWallModel(
+			"Back Wall",
+			MakeAffineTransform(Rotation3XYZ(Vector3f(0, 0, 0))) * TranslationMatrix(Vector3f(0, 0, -0.5)),
+			gray
+		));
+
+		box->addChild(MakeWallModel(
+			"Red Wall",
+			MakeAffineTransform(Rotation3XYZ(Vector3f(0, half_pi, 0))) * TranslationMatrix(Vector3f(0, 0, -0.5)),
+			red, red_roughness, red_metallic
+		));
+
+		box->addChild(MakeWallModel(
+			"Green Wall",
+			MakeAffineTransform(Rotation3XYZ(Vector3f(0, -half_pi, 0))) * TranslationMatrix(Vector3f(0, 0, -0.5)),
+			green, green_roughness, green_metallic
+		));
+
+		if (preset.caustics)
+		{
+			float scale = 0.15;
+			bool spectral = false;
+			box->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Sphere",
+				.xform = TranslationMatrix(vec3(0.3, -0.2, 0)) * ScalingMatrix(vec3::Constant(scale).eval()),
+
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Sphere,
+				.subdivisions = uvec4(128, 256, 0, 0),
+
+				.albedo = vec3(0, 0, 0),
+				.roughness = 0,
+				.metallic_or_eta = 1.33333,
+				.is_dielectric = true,
+				.sample_spectral = spectral,
+			}));
+
+			box->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Cube",
+				.xform = TranslationMatrix(vec3(0, -0.2, -0.3)) * ScalingMatrix(vec3::Constant(scale * 1.5).eval()),
+
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Cube,
+
+				.albedo = vec3(0, 0, 0),
+				.roughness = 0,
+				.metallic_or_eta = 1.33333,
+				.is_dielectric = true,
+				.sample_spectral = spectral,
+			}));
+
+			box->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Tetrahedron",
+				.xform = TranslationMatrix(vec3(-0.3, -0.2, 0)) *
+						ScalingMatrix(vec3::Constant(scale).eval()) *
+						MakeAffineTransform(Rotation3D(vec3(Radians(0.0f), Radians(40.0f), Radians(0.0f)))) *
+						MakeAffineTransform(Rotation3D(vec3(Radians(16.88f), Radians(52.5f), Radians(67.46f)))),
+
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Tetrahedron,
+
+				.albedo = vec3(0, 0, 0),
+				.roughness = 0,
+				.metallic_or_eta = 1.33333,
+				.is_dielectric = true,
+				.sample_spectral = spectral,
+			}));
+		}
+		else
+		{
+			box->addChild(MakeBoxModel(
+				"Big Box",
+				TranslationMatrix(Vector3f(-0.15, -0.2, -0.2)) * MakeAffineTransform(Rotation3Y(Radians(20.0f))) * ScalingMatrix(Vector3f(0.3, 0.6, 0.3)),
+				blue, preset.alternate_boxes ? 0 : 1, preset.alternate_boxes ? 1 : 0
+			));
+
+			box->addChild(MakeBoxModel(
+				"Small Box",
+				TranslationMatrix(Vector3f(0.2, -0.35, 0.15)) * MakeAffineTransform(Rotation3Y(Radians(-20.0f))) * ScalingMatrix(Vector3f(0.3, 0.3, 0.3)),
+				orange, preset.alternate_boxes ? 0.01 : 1, preset.alternate_boxes ? 0.1 : 0
+			));
+		}
+
+		box->addChild(MakeLightNode(LightNodeCreateInfo{
+			.app = app,
+			.name = "Point Light",
+			.xform = TranslationMatrix(Vector3f(0, 0.45, 0)),
+			.type = LightType::POINT,
+			.emission = vec3(1.5, 1.2, 0.8),
+			.enable_shadow_map = true,
+		}));
+	}
+
+	static void LoadTestScene(std::shared_ptr<Scene>& scene, int preset)
+	{
+		VkApplication * app = scene->application();
+		scene->setAmbient(vec3::Zero());
+		std::shared_ptr<Scene::Node> root = scene->getRootNode();
+
+
+		if (Range32i(1, 4).contains(preset))
+		{
+			LoadSponza(scene, preset - 1);
+		}
+		else if (Range32i(5, 6).contains(preset))
+		{
+			LoadCornellBox(scene, preset - 5);
+		}
+	}
+
 
 	class RendererApp : public AppWithImGui
 	{
@@ -116,207 +548,6 @@ namespace vkl
 
 		}
 
-		void loadTestScene(std::shared_ptr<Scene> & scene)
-		{
-			scene->setAmbient(Vector3f::Constant(0.02));
-			std::shared_ptr<Scene::Node> root = scene->getRootNode();
-			if(true)
-			{
-				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
-					.app = this,
-					.radius = 0.4,
-				});
-
-				const size_t n_m = 11;
-				const size_t n_r = 11;
-
-				const vec3 base(0, 0, 0);
-				const vec3 dir_m(1, 0, 0);
-				const vec3 dir_r(0, 0, 1);
-
-				Matrix3x4f node_matrix = TranslationMatrix(vec3(-1, 1, -2)) * (DiagonalMatrix<3, 4>(0.2f));
-
-				std::shared_ptr<Scene::Node> test_material_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-					.name = "TestMaterials",
-					.matrix = node_matrix,
-				});
-
-				for (size_t i_m = 0; i_m < n_m; ++i_m)
-				{
-					const float metallic = float(i_m) / float(n_m - 1);
-					for (size_t i_r = 0; i_r < n_r; ++i_r)
-					{
-						const float roughness = std::pow(float(i_r) / float(n_r - 1), 2);
-
-						const vec3 position = base + float(i_m) * dir_m + float(i_r) * dir_r;
-
-						std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
-							.app = this,
-							.name = std::format("TestMaterial_{0:d}_{1:d}", i_m, i_r),
-							.albedo = Vector3f::Constant(0.7).eval(),
-							.metallic = metallic,
-							.roughness = roughness,
-							.cavity = 0,
-						});
-
-						std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-							.app = this,
-							.name = "TestModel",
-							.mesh = mesh,
-							.material = material,
-						});
-						
-						std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-							.name = "ModelNode",
-							.matrix = Matrix3x4f(TranslationMatrix(position)),
-							.model = model,
-						});
-						test_material_node->addChild(model_node);
-					}
-				}
-				root->addChild(test_material_node);
-			}
-
-			{
-				std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
-					.app = this,
-					.name = "mirror",
-					.albedo = Vector3f::Constant(0.7).eval(),
-					.metallic = 1.0f,
-					.roughness = 0.0f,
-					.cavity = 0,
-				});
-
-				std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
-					.app = this,
-				});
-
-				std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-					.app = this,
-					.name = "Cube",
-					.mesh = mesh,
-					.material = material,
-				});
-
-				std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-					.name = "Cube",
-					.matrix = TranslationMatrix(Vector3f(4, 0.5, -2.5)) * ScalingMatrix(Vector3f(2, 1, 0.1)),
-					.model = model,
-				});
-				root->addChild(model_node);
-			}
-
-			{
-				//std::shared_ptr<NodeFromFile> viking_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
-				//	.app = this,
-				//	.name = "Vicking",
-				//	.matrix = glm::mat4x3(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), Vector3f(1, 0, 0))),
-				//	.path = ENGINE_SRC_PATH "/../gen/models/viking_room/viking_room.obj",
-				//	.synch = false,
-				//});
-
-				const int N = 1;
-
-				//for(int i=-N; i<= N; ++i)
-				//{
-				//	for (int j = -N; j <= N; ++j)
-				//	{
-				//		std::shared_ptr<Scene::Node> node = std::make_shared<Scene::Node>(Scene::Node::CI{
-				//			.name = "translate(" + std::to_string(i) + ", " + std::to_string(j) + ")",
-				//			.matrix = glm::mat4x3(TranslationMatrix<4, float>(Vector3f(i * 2, 0, j * 2))),
-				//		});
-				//		node->addChild(viking_node);
-				//		root->addChild(node);
-				//	}
-				//}
-
-				if (true)
-				{
-					std::shared_ptr<NodeFromFile> sponza_node = std::make_shared<NodeFromFile>(NodeFromFile::CI{
-						.app = this,
-						.name = "Sponza",
-						.matrix = DiagonalMatrix<3, 4>(0.01f),
-						.path = "gen:/models/Sponza_2/sponza.obj",
-						.synch = false,
-					});
-
-					root->addChild(sponza_node);
-				}
-				
-			}
-
-			{
-				if (false)
-				{
-					std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-						.name = "Light",
-						.matrix = Matrix3x4f(TranslationMatrix(Vector3f(1, 6, -1))),
-					});
-					light_node->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
-						.app = this,
-						.name = "Light",
-						.direction = Vector3f(1, 1, -1),
-						.emission = Vector3f(1, 0.8, 0.6),
-					});
-					root->addChild(light_node);
-				}
-				else
-				{
-					std::shared_ptr<PointLight> pl = std::make_shared<PointLight>(PointLight::CI{
-						.app = this,
-						.name = "PointLight",
-						.position = Vector3f(0, 0, 0),
-						.emission = Vector3f(1, 0.8, 0.6) * 15.0f,
-						.enable_shadow_map = true,
-						
-					});
-					int n_lights = 3;
-					for (int i = 0; i < n_lights; ++i)
-					{
-						std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-							.name = "PointLight" + std::to_string(i),
-							.matrix = TranslationMatrix(Vector3f((i - (n_lights / 2)) * 6, 6, 0)),
-						});
-						light_node->light() = pl;
-						root->addChild(light_node);
-					}
-				}
-
-				//light_node->light() = std::make_shared<Light>(Light::MakePoint(Vector3f(0), Vector3f(1, 1, 1)));
-
-
-				for (int i = 0; i < 3; ++i)
-				{
-					Vector3f color = Vector3f::Zero();
-					color[i] = 10 * 5 * 2;
-					std::shared_ptr<SpotLight> spot_light = std::make_shared<SpotLight>(SpotLight::CI{
-						.app = this,
-						.name = "SpotLight" + std::to_string(i),
-						.direction = Vector3f(0, 0, -1),
-						.up = Vector3f(0, 1, 0),
-						.emission = color,
-						.attenuation = 1,
-					});
-					vec3 position = Vector3f(2, 1, -4 + 4);
-					if (i == 1)
-					{
-						position += Vector3f(0.5, 0, 0);
-					}
-					else if (i == 2)
-					{
-						position += Vector3f(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
-					}
-					std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
-						.name = "SpotLight" + std::to_string(i),
-						.matrix = TranslationMatrix(position),
-					});
-					spot_light_node->light() = spot_light;
-					root->addChild(spot_light_node);
-				}
-
-			}
-		}
-
 		virtual void run() final override
 		{
 			VkApplication::init();
@@ -372,8 +603,6 @@ namespace vkl
 				.app = this,
 				.name = "scene",
 			});
-
-			loadTestScene(scene);
 
 			std::shared_ptr<DescriptorSetLayout> common_layout = exec.getCommonSetLayout();
 			std::shared_ptr<DescriptorSetLayout> scene_layout = scene->setLayout();
@@ -467,6 +696,45 @@ namespace vkl
 
 			exec.init();
 
+			ImGuiListSelection default_scene_selection = ImGuiListSelection::CI{
+				.name = "Scene selection",
+				.options = {
+					ImGuiListSelection::Option{
+						.name = "None",
+					},
+					ImGuiListSelection::Option{
+						.name = "Sponza",
+					},
+					ImGuiListSelection::Option{
+						.name = "Sponza with caustics",
+					},
+					ImGuiListSelection::Option{
+						.name = "Sponza metallic",
+					},
+					ImGuiListSelection::Option{
+						.name = "Sponza sunlight",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box metallic walls",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box caustics",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box caustics metallic walls",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box alternate cubes",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box alternate cubes metallic walls",
+					},
+				},
+			};
+			std::optional<uint> load_scene_index = {};
 			
 			std::shared_ptr<PerformanceReport> perf_reporter = std::make_shared<PerformanceReport>(PerformanceReport::CI{
 				.app = this,
@@ -565,6 +833,21 @@ namespace vkl
 				if (ImGuiIsEnabled())
 				{
 					GuiContext * gui_ctx = beginImGuiFrame();
+
+					if (!load_scene_index)
+					{
+						if (ImGui::Begin("LoadScene"))
+						{
+							default_scene_selection.declare();
+
+							if (ImGui::Button("Load"))
+							{
+								load_scene_index = uint(default_scene_selection.index());
+								LoadTestScene(scene, *load_scene_index);
+							}
+						}
+						ImGui::End();
+					}
 					
 					//ImGui::ShowDemoWindow();
 					if(ImGui::Begin("Rendering"))

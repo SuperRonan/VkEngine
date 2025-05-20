@@ -118,6 +118,7 @@ namespace vkl
 		_cavity(ci.cavity),
 		_is_dielectric(ci.is_dielectric),
 		_sample_spectral(ci.sample_spectral),
+		_force_albedo_prop(ci.force_albedo_property),
 		_cached_props({})
 	{
 		if (ci.albedo_texture)

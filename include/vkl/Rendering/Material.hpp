@@ -206,6 +206,7 @@ namespace vkl
 			Dyn<float> roughness = {};
 			Dyn<float> cavity = {};
 			std::shared_ptr<Sampler> sampler = nullptr;
+			bool force_albedo_property = false;
 			std::shared_ptr<Texture> albedo_texture = nullptr;
 			std::shared_ptr<Texture> normal_texture = nullptr;
 			bool is_dielectric = false;

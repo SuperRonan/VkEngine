@@ -12,6 +12,7 @@ namespace vkl
 		VkApplication * _app = nullptr;
 		
 		std::filesystem::path _path = {};
+		std::filesystem::path _mtl_path = {};
 
 		std::shared_ptr<AsynchTask> _load_task = nullptr;
 
@@ -32,6 +33,7 @@ namespace vkl
 			std::string name = {};
 			XForm matrix = XForm::Identity();
 			std::filesystem::path path = {};
+			std::filesystem::path mtl_path = {};
 			bool synch = true;
 		};
 		using CI = CreateInfo;

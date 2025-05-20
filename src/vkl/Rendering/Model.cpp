@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <functional>
 
+#include <fstream>
+
 namespace vkl
 {
 
@@ -238,6 +240,8 @@ namespace vkl
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
+		std::vector<tinyobj::material_t> extra_materials;
+		std::map<std::string, int> extra_material_map;
 
 		std::string warn, err;
 
@@ -247,10 +251,22 @@ namespace vkl
 			return {};
 		}
 
-		const std::filesystem::path mtl_path = [&]() {
-			return path.parent_path();
-		}();
+		const std::filesystem::path mtl_path = path.parent_path();
+		const std::filesystem::path extra_mtl_path = info.mtl_path.parent_path();
 		const bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str(), mtl_path.string().c_str());
+
+		if (!info.mtl_path.empty())
+		{
+			auto [mtl_result, mtl_path] = info.app->fileSystem()->resolve(info.mtl_path);
+			if (mtl_result == that::Result::Success)
+			{
+				std::ifstream mtl_file(mtl_path);
+				if (mtl_file.is_open())
+				{
+					tinyobj::LoadMtl(&extra_material_map, &extra_materials, &mtl_file, &warn, &err);
+				}
+			}
+		}
 
 		if (!warn.empty())
 		{
@@ -263,46 +279,74 @@ namespace vkl
 
 		TextureFileCache & texture_file_cache = info.app->textureFileCache();
 
+		auto make_material = [&](tinyobj::material_t const& _tm)
+		{
+			const tinyobj::material_t * _tm_ptr = &_tm;
+			const std::filesystem::path* _mtl_path = &mtl_path;
+			if (auto it = extra_material_map.find(_tm.name); it != extra_material_map.end())
+			{
+				_tm_ptr = &extra_materials[it->second];
+			}
+			const tinyobj::material_t tm = *_tm_ptr;
+
+			std::shared_ptr<Sampler> sampler = info.app->getSamplerLibrary().getSampler({
+				.filter = VK_FILTER_LINEAR,
+				.address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+				.max_anisotropy = info.app->deviceProperties().props2.properties.limits.maxSamplerAnisotropy,
+			});
+
+			std::filesystem::path albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname;
+			std::filesystem::path normal_path = tm.normal_texname.empty() ? std::filesystem::path() : mtl_path / tm.normal_texname;
+
+			if (!tm.alpha_texname.empty())
+			{
+				VKL_BREAKPOINT_HANDLE;
+			}	
+
+			if (normal_path.empty() && !tm.displacement_texname.empty())
+			{
+				normal_path = mtl_path / tm.displacement_texname;
+			}
+
+			std::shared_ptr<Texture> albedo_texture = texture_file_cache.getTexture(albedo_path);
+			std::shared_ptr<Texture> normal_texture = texture_file_cache.getTexture(normal_path);
+
+			bool is_dielectric = tm.illum == 7;
+			float metallic_or_ior;
+			if (is_dielectric)
+			{
+				metallic_or_ior = tm.ior;
+
+			}
+			else // if (tm.illum == 2)
+			{
+				metallic_or_ior = tm.metallic;
+			}
+
+			// The transmittance is not exactly the volumetric absobtion, but it makes more sense that using the albedo
+			Vector3f albedo = is_dielectric ? Vector3f(tm.transmittance[0], tm.transmittance[1], tm.transmittance[2]) : Vector3f(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]);
+
+			return std::make_shared<PBMaterial>(PBMaterial::CI{
+				.app = info.app,
+				.name = tm.name,
+				.albedo = albedo,
+				.metallic = metallic_or_ior,
+				.roughness = tm.roughness,
+				.sampler = sampler,
+				.force_albedo_property = is_dielectric,
+				.albedo_texture = albedo_texture,
+				.normal_texture = normal_texture,
+				.is_dielectric = is_dielectric,
+				.synch = info.synch,
+			});
+		};
+
 		if (ret)
 		{
 			std::vector<std::shared_ptr<Material>> my_materials(materials.size());
 			for (size_t m = 0; m < materials.size(); ++m)
 			{
-				const tinyobj::material_t & tm = materials[m];
-
-				std::shared_ptr<Sampler> sampler = info.app->getSamplerLibrary().getSampler({
-					.filter = VK_FILTER_LINEAR,
-					.address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-					.max_anisotropy = info.app->deviceProperties().props2.properties.limits.maxSamplerAnisotropy,
-				});
-
-				std::filesystem::path albedo_path = tm.diffuse_texname.empty() ? std::filesystem::path() : mtl_path / tm.diffuse_texname;
-				std::filesystem::path normal_path = tm.normal_texname.empty() ? std::filesystem::path() : mtl_path / tm.normal_texname;
-
-				if (!tm.alpha_texname.empty())
-				{
-					VKL_BREAKPOINT_HANDLE;
-				}
-				
-				if (normal_path.empty() && !tm.displacement_texname.empty())
-				{
-					normal_path = mtl_path / tm.displacement_texname;
-				}
-
-				std::shared_ptr<Texture> albedo_texture = texture_file_cache.getTexture(albedo_path); 
-				std::shared_ptr<Texture> normal_texture = texture_file_cache.getTexture(normal_path);
-				
-				my_materials[m] = std::make_shared<PBMaterial>(PBMaterial::CI{
-					.app = info.app,
-					.name = tm.name,
-					.albedo = Vector3f(tm.diffuse[0], tm.diffuse[1], tm.diffuse[2]),
-					.metallic = tm.metallic,
-					.roughness = tm.roughness,
-					.sampler = sampler,
-					.albedo_texture = albedo_texture,
-					.normal_texture = normal_texture,
-					.synch = info.synch,
-				});
+				my_materials[m] = make_material(materials[m]);
 			}
 
 			for (size_t s = 0; s < shapes.size(); ++s)

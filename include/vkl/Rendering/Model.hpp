@@ -139,6 +139,7 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::filesystem::path path = {};
+			std::filesystem::path mtl_path = {};
 			bool synch = true;
 		};
 

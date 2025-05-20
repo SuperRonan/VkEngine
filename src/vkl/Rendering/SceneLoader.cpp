@@ -30,6 +30,7 @@ namespace vkl
 		}),
 		_app(ci.app),
 		_path(ci.path),
+		_mtl_path(ci.mtl_path),
 		_synch(ci.synch)
 	{
 		_visible = false;
@@ -58,6 +59,7 @@ namespace vkl
 						_loaded_models = Model::loadModelsFromObj(Model::LoadInfo{
 							.app = _app,
 							.path = _path,
+							.mtl_path = _mtl_path,
 							.synch = _synch,
 						});
 
