@@ -100,9 +100,12 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		if(!hit.hasValue())
 		{
 			vec3 contrib = tray.throughput * scene.getEnvLe(tray.ray.direction);
-			float pdfLi = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction);
-			float mis_weight = ray_pdf * rcp(LIGHT_SAMPLES * pdfLi + ray_pdf);
-			res += contrib * mis_weight;
+			if(NonZero(contrib))
+			{
+				float pdfLi = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction);
+				float mis_weight = ray_pdf * rcp(LIGHT_SAMPLES * pdfLi + ray_pdf);
+				res += contrib * mis_weight;
+			}
 			break;
 		}
 		++num_vertices;
