@@ -1,9 +1,11 @@
 ## VkEngine: Vulkan based rendering engine
-- Automatic GPU synchronization
-- Automatic shader reloading
-- HDR windows management
-- Multi-threaded background tasks
-- Shader debbugging utilities
+- Slang and GLSL shader development platform.
+- Shader debbugging utilities.
+- Automatic shader reloading.
+- Automatic GPU synchronization.
+- HDR windows management.
+- Multi-threaded background tasks.
+- ImGui integration to easily tune parameters.
 
 
 # Renderer:
@@ -12,10 +14,16 @@
 ![sponza-sunlight-2](https://github.com/user-attachments/assets/be6c6dd7-22ac-46cc-81ee-96e1852cb759)
 ![sponza-sunlight](https://github.com/user-attachments/assets/fa7f7bcb-c3b2-4355-9ef3-f613fd3bb788)
 ![metallic](https://github.com/user-attachments/assets/a8fb1576-d939-4c77-b608-0da715b1e70b)
+![caustics](https://github.com/user-attachments/assets/1e55a2a0-807a-4fff-b992-662459f4a8e1)
+![caustics-rgb](https://github.com/user-attachments/assets/45a17ba9-13ef-495c-bf51-e6a3cdcd402c)
+![caustics-dof](https://github.com/user-attachments/assets/aa956783-ff06-4bbf-96bd-5ea61b165496)
+![caustics-dof-2](https://github.com/user-attachments/assets/1e161f62-853e-426b-937e-e8c8be36e462)
 
 
 # BSDF viewer
-Interactive 3D BSDF visualizer. Customize the viewed BSDFs by directly changing the shader source code.
+Interactive 3D BSDF visualizer. 
+Compute statistics (correlation, variance, integral, ...) of different spherical functions.
+Customize the viewed BSDFs by directly changing the shader source code.
 ![bsdf](https://github.com/user-attachments/assets/ea6ec614-c991-4487-9518-33012722baab)
 
 # Command line arguments:
