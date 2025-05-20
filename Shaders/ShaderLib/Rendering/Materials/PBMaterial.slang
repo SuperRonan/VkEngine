@@ -250,8 +250,7 @@ struct PhysicalyBasedMaterial : IMaterial
 		BSDFSample<N> res = {};
 		res.pdf = 1;
 
-		const vec3 oriented_normal = (shading_normal);
-		const vec3 normal = dot(oriented_normal, wo) < 0 ? -oriented_normal : oriented_normal;
+		const vec3 normal = dot(geometry_normal, wo) < 0 ? -shading_normal : shading_normal;
 		const mat3 local_to_world_basis = BasisFromDir(normal);
 		const vec3 reflected = Reflect(wo, normal);
 
@@ -286,20 +285,20 @@ struct PhysicalyBasedMaterial : IMaterial
 			
 			const mat3 reflected_basis = BasisFromDir(reflected);
 
-			
 			if(sample_specular && !force_cosine_sampling)
 			{
 				const vec3 local_direction = approx.generateRandomDirection(rng);
 				res.direction = reflected_basis * local_direction;
-				specular_pdf = approx.evaluate(reflected, res.direction);
-				cosine_pdf = dot(res.direction, normal) * oo_PI;
+				specular_pdf = max(0.0f, approx.evaluate(reflected, res.direction));
+				cosine_pdf = max(0.0f, dot(res.direction, normal)) * oo_PI;
 			}
 			else
 			{
 				const Sample<vec3> local_direction = SampleCosineDirection(rng.generate<float, 2>());
 				res.direction = local_to_world_basis * local_direction.value;
-				specular_pdf = approx.evaluate(reflected, res.direction);
+				specular_pdf = max(0.0f, approx.evaluate(reflected, res.direction));
 				cosine_pdf = local_direction.pdf;
+				
 			}
 			res.bsdf = bsdf_Microfacets<Flags>(geometry_normal, shading_normal, wo, res.direction);
 			res.pdf = lerp(cosine_pdf, specular_pdf, approx.specular_weight);

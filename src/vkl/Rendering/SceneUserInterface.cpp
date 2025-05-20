@@ -541,13 +541,22 @@ namespace vkl
 		{
 			ImGui::ColorEdit3("Ambient", _scene->_ambient.data(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
 			ImGui::ColorEdit3("Sky", _scene->_uniform_sky.data(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			
+			ImGui::SliderFloat("Sky brightness", &_scene->_uniform_sky_brightness, 0, 12, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+
+			ImGui::SliderAngle("Sun Inclination", &_scene->_solar_disk_direction[0], 0, 180);
+			ImGui::SliderAngle("Sun Azimuth", &_scene->_solar_disk_direction[1], -180, 180);
+			ImGui::SliderAngle("Sun Disk angle", &_scene->_solar_disk_angle, 0, 90, "%.1f deg");
+			ImGui::ColorEdit3("Sun", &_scene->_solar_disk_intensity[0], ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+			ImGui::SliderFloat("Sun brightness", &_scene->_solar_disk_intensity_mult, 0, 24, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+
 			vec3 center = _scene->_aabb.center();
 			ImGui::Text("Center: (%f, %f, %f)", center.x(), center.y(), center.z());
 			ImGui::Text("Radius: %f", _scene->_radius);
-			ImGui::SliderFloat("Sky brightness", &_scene->_uniform_sky_brightness, 0, 12, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-
+			
 			ImGui::Checkbox("show world 3D basis", &_show_world_basis);
 			ImGui::Checkbox("show view 3D basis", &_show_view_basis);
+
 
 			ImGui::InputInt("Base ShadowMap resolution", (int*)&_scene->_light_resolution);
 		}

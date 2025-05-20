@@ -57,11 +57,24 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 			if(sample.pdf > 0)
 			{
 				const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
-				vec3 sample_contribution = max(sample.intensity, vec3(0)) * bsdf * AbsDot(sgi.shading_normal, sample.direction) / sample.pdf;
+				vec3 sample_contribution = max(sample.intensity, vec3(0)) * bsdf * AbsDot(sgi.shading_normal, sample.direction);
+				float bsdf_pdf = 0;
+				const bool at_infinity = sample.flags & Light::ConnectionSample::Flags::AtInfinity;
+				const bool sample_is_hitable = at_infinity;
+				if(sample_is_hitable)
+				{
+					bsdf_pdf = material.pdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+				}
+				float mis_weight = rcp(bsdf_pdf + LIGHT_SAMPLES * sample.pdf);
+				sample_contribution *= mis_weight;
 				if(NonZero(sample_contribution))
 				{
 					Ray3f _ray = Ray3f(sgi.position, sample.direction);
 					RayDesc ray = RayDesc(_ray, RayRangef(RayTMin(_ray, sgi.geometry_normal), sample.distance));
+					if(at_infinity)
+					{
+						ray.TMax = std::numeric_limits<float>::infinity();
+					}
 					float v = ray_tracer.testVisibility(ray);
 					res += (sample_contribution * v);
 				}
@@ -76,6 +89,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	uint num_vertices = 1;
 	const uint max_vertices = GetMaxDepth() + 1;
 	vec3 res = vec3(0);
+	float ray_pdf = 1;
 	while(num_vertices <= max_vertices)
 	{
 		RayTraceInfo trace_info = {};
@@ -85,7 +99,10 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		Hit hit = ray_tracer.traceRay<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES>(trace_info);
 		if(!hit.hasValue())
 		{
-			res += tray.throughput * scene.getEnvLe(tray.ray.direction);
+			vec3 contrib = tray.throughput * scene.getEnvLe(tray.ray.direction);
+			float pdfLi = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction);
+			float mis_weight = ray_pdf * rcp(LIGHT_SAMPLES * pdfLi + ray_pdf);
+			res += contrib * mis_weight;
 			break;
 		}
 		++num_vertices;
@@ -116,16 +133,12 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			hit.surface_shading_info.out_direction,
 			-tray.ray_diffs.direction_jacobian,
 			rng);
-		if(_g_debug_signal)
-		{
-			//_g_debug_printer.print(bsdf_sample.pdf);
-			//_g_debug_printer.print(dot(hit.surface_shading_info.geometry_normal, bsdf_sample.direction));
-		}
 		if(bsdf_sample.pdf <= 0.0f)
 		{
 			break;
 		}
 
+		ray_pdf = bsdf_sample.pdf;
 		tray.ray = Ray3f(hit.surface_shading_info.position, bsdf_sample.direction);
 		tray.ray_diffs.origin_jacobian = hit.surface_diffs.position_jacobian;
 		tray.ray_diffs.direction_jacobian = bsdf_sample.direction_jacobian;

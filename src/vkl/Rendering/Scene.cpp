@@ -285,6 +285,12 @@ namespace vkl
 			.num_lights = _num_lights,
 			.ambient = _ambient,
 			.sky = _uniform_sky * _uniform_sky_brightness,
+			
+			.solar_direction = SphericalToCartesian(_solar_disk_direction),
+			.solar_disk_cosine = std::cos(_solar_disk_angle),
+			.solar_disk_intensity = _solar_disk_intensity * _solar_disk_intensity_mult / (_solar_disk_angle == 0 ? 1 : sqr(_solar_disk_angle)),
+			.solar_disk_angle = _solar_disk_angle,
+			
 			.center = _aabb.center(),
 			.radius = _radius,
 		};

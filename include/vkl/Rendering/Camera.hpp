@@ -26,8 +26,8 @@ namespace vkl
 		{
 			Perspective = 0,
 			Orthographic = 1,
-			ReversedPerspective = 2,
-			Spherical = 3,
+			//ReversedPerspective = 2,
+			Spherical = 2,
 		};
 
 		struct AsGLSL

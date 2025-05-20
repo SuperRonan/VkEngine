@@ -42,6 +42,23 @@ uniform PushConstant _pc;
 //[require(GL_EXT_shader_atomic_float)]
 void ConnectToCameraIFP<RNG : IRNG>(
 	const in BoundScene scene,
+	const in IRayTracer ray_tracer,
+	RayDesc ray,
+	vec2 uv,
+	vec3 contrib,
+	inout RNG rng
+) {
+	let v = ray_tracer.testVisibility(ray);
+	if(NonZero(v))
+	{
+		AddLightTracerSample(Target, uv, _pc.dims, _pc.udims, contrib * v);
+	}
+}
+
+
+void ConnectToCameraIFP<RNG : IRNG>(
+	const in BoundScene scene,
+	const in IRayTracer ray_tracer,
 	const in Hit hit,
 	const in IMaterial material,
 	vec3 incoming_throughput,
@@ -60,12 +77,6 @@ void ConnectToCameraIFP<RNG : IRNG>(
 		);
 		if(NonZero(bsdf))
 		{
-			RayRangef range = {};
-			let _ray = Ray3f(hit.surface_shading_info.position, connection.direction);
-			range.min = RayTMin(_ray, hit.surface_shading_info.geometry_normal);
-			range.max = connection.distance;
-			let ray = RayDesc(_ray, range);
-			float v = scene.testVisibility(ray);
 			const vec3 ns = hit.surface_shading_info.shading_normal;
 			const vec3 ng = hit.surface_shading_info.geometry_normal;
 			const float cos_theta_i_s = Dot(ns, wi);
@@ -74,16 +85,61 @@ void ConnectToCameraIFP<RNG : IRNG>(
 			const float cos_theta_o_s = Dot(ns, wo);
 			// correction of shading normals 
 			const float correction = Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s));
-			vec3 contrib = incoming_throughput * bsdf * connection.intensity * (v * Abs(cos_theta_i_s) * correction / connection.pdf);
+			vec3 contrib = incoming_throughput * bsdf * connection.intensity * (Abs(cos_theta_i_s) * correction / connection.pdf);
 			if(NonZero(contrib))
 			{
-				AddLightTracerSample(Target, connection.uv, _pc.dims, _pc.udims, contrib);
+				let ray = Ray3f(hit.surface_shading_info.position, connection.direction);
+				RayRangef range = {};
+				range.min = RayTMin(ray, hit.surface_shading_info.geometry_normal);
+				range.max = connection.distance;
+				ConnectToCameraIFP(scene, ray_tracer, RayDesc(ray, range), connection.uv, contrib, rng);
 			}
 		}
 	}
 }
 
-
+void ConnectLightToCameraIFP<RNG : IRNG>(
+	const in BoundScene scene,
+	const in IRayTracer ray_tracer,
+	const in Light::EmissionSample sample,
+	const in vec3 beta,
+	inout RNG rng
+) {
+	ICamera camera = MakeCamera(rt_ubo.camera);
+	vec3 ref_pos = sample.ray.origin;
+	uint flags = 0;
+	const bool at_infinity = sample.flags & Light::EmissionSample::Flags::AtInfinity;
+	if(at_infinity)
+	{
+		ref_pos = sample.ray.direction;
+		flags |= CAMERA_SAMPLE_POSITION_AT_INFINITY;
+	}
+	Camera::ConnectionSample connection = camera.sampleWi(rng, ref_pos, flags);
+	if(connection.pdf > 0 && NonZero(connection.intensity))
+	{
+		// TODO implement Light::Le
+		// For now the sample intensity will do fine
+		vec3 Le = sample.intensity / sample.position_pdf;
+		
+		vec3 contrib = beta * Le * connection.intensity / connection.pdf;
+		if(NonZero(contrib))
+		{
+			Ray3f ray;
+			RayRangef range = {};
+			if(at_infinity)
+			{
+				ray = Ray3f(connection.position, -connection.direction);
+			}
+			else
+			{
+				// TODO tmin for surface lighs
+				ray = Ray3f(sample.ray.origin, connection.direction);
+				range.max = connection.distance;
+			}
+			ConnectToCameraIFP(scene, ray_tracer, RayDesc(ray, range), connection.uv, contrib, rng);
+		}
+	}
+}
 
 
 
@@ -120,7 +176,7 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 			}
 		}
 
-		ConnectToCameraIFP(scene, hit, material, tray.throughput, rng);
+		ConnectToCameraIFP(scene, ray_tracer, hit, material, tray.throughput, rng);
 		
 		let bsdf_sample = material.sampleBSDF<BSDF_ADJOINT_BIT>(
 			hit.surface_shading_info.geometry_normal,
@@ -179,6 +235,9 @@ void CommonMain(
 	{
 		return;
 	}
+
+	ConnectLightToCameraIFP(scene, ray_tracer, sample, 1, rng);
+
 	TraversingRay tray = TraversingRay(sample);
 	TracePath(rng, ray_tracer, scene, tray);
 }

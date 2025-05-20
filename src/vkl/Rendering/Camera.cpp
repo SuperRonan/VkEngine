@@ -1,6 +1,8 @@
 #include <vkl/Rendering/Camera.hpp>
 #include <vkl/Maths/Transforms.hpp>
 
+#include <ShaderLib/Rendering/Camera/CameraDefinitions.h>
+
 namespace vkl
 {
 	Camera::Camera(CreateInfo const& ci) :
@@ -47,14 +49,6 @@ namespace vkl
 		{
 			const AABB3f aabb = getOrthoAABB();
 			res = OrthoProj(aabb.bottom(), aabb.top());
-		}
-		else if (_type == Type::ReversedPerspective)
-		{
-			NOT_YET_IMPLEMENTED;
-			//mat4 p = Perspective(_fov, _aspect, _near, _far);
-			//mat4 r = glm::rotate(mat4(1), glm::radians(180.0f), _up);
-			//mat4 t = p;
-			//res = p * r * t;
 		}
 		return res;
 	}
@@ -198,11 +192,25 @@ namespace vkl
 			.aperture = aperatureRadiusUnit(),
 			.focal_distance = _focal_distance,
 		};
-		if (_type == Type::Orthographic)
+		uint32_t type = 0;
+		if (_type == Type::Perspective)
+		{
+			type = CAMERA_TYPE_PERSPECTIVE;
+			if (_aperture > 0)
+			{
+				type = CAMERA_TYPE_THIN_LENS;
+			}
+		}
+		else if (_type == Type::Orthographic)
 		{
 			res.inv_tan_half_fov = _ortho_size;
+			type = CAMERA_TYPE_ORTHO;
 		}
-		res.flags |= static_cast<uint32_t>(_type);
+		else if (_type == Type::Spherical)
+		{
+			type = CAMERA_TYPE_SPHERICAL;
+		}
+		res.flags |= type;
 		return res;
 	}
 

@@ -74,6 +74,12 @@ struct Scene
 
 		vec3 sky;
 
+		vec3 solar_direction;
+		float solar_disk_cosine;
+
+		vec3 solar_disk_intensity;
+		float solar_disk_radius;
+
 		vec3 center;
 		float radius;
 	};
@@ -303,7 +309,7 @@ __init()
 
 static constexpr const uint LightIndexBits = 24;
 
-Light::EmissionSample sampleSkyLe<RNG : IRNG>(inout RNG rng)
+Light::EmissionSample sampleEnvLe<RNG : IRNG>(inout RNG rng)
 {
 	Light::EmissionSample res;
 	let dir = SampleUniformDirection(rng.generate<float, 2>());
@@ -333,7 +339,7 @@ Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 	}
 	else
 	{
-		sample = sampleSkyLe(rng);
+		sample = sampleEnvLe(rng);
 	}
 	sample.index = index;
 	sample.position_pdf *= rcp(float(n));
@@ -358,27 +364,98 @@ RayPdf pdfLe(Ray3f ray, uint light_index)
 	return res;
 }
 
+Light::ConnectionSample sampleEnvLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
+{
+	let ubo = getUBO();
+	Light::ConnectionSample res;
+	// Only sample the solar disk
+	// certainly not correct, will do for now
+	var sample = SampleCosineDirection(rng.generate<float, 2>());
+	sample.value.xy *= ubo.solar_disk_radius;
+	let basis = BasisFromDir(ubo.solar_direction);
+	res.direction = basis * Normalize(sample.value);
+	res.distance = 1;
+	res.flags = Light::ConnectionSample::Flags::AtInfinity;
+	res.intensity = ubo.solar_disk_intensity;
+	res.pdf = sample.pdf * rcp(sqr(ubo.solar_disk_radius));
+	return res;
+}
+
+float _getEnvPdfLi(vec3 reference_position, vec3 direction)
+{
+	let ubo = getUBO();
+	const float ct = dot(direction, ubo.solar_direction);
+	float res = 0;
+	if(ct > ubo.solar_disk_cosine)
+	{
+		// certainly not correct, will do for now
+		res = ct * rcp(sqr(ubo.solar_disk_radius));
+	}
+	return res;
+}
+
 Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
 {
-	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
-	uint index = rng.generate<uint>(0, n);
-	var sample = MakeLight(SceneLights[index]).sampleLi(rng, reference_position);
+	let ubo = getUBO();
+	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
+	uint m = n;
+	if(NonZero(ubo.solar_disk_intensity))
+	{
+		++m;
+	}
+	uint index = rng.generate<uint>(0, m);
+	Light::ConnectionSample sample;
+	if(index < n)
+	{
+		sample = MakeLight(SceneLights[index]).sampleLi(rng, reference_position);
+	}
+	else
+	{
+		sample = sampleEnvLi(rng, reference_position);
+	}
+	
 	sample.index = index;
-	sample.pdf *= rcp(float(n));
+	sample.pdf *= rcp(float(m));
 	return sample;
 }
 
 float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 {
-	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
-	float res = rcp(float(n));
-	res *= MakeLight(SceneLights[light_index]).pdfLi(reference_position, direction);
+	let ubo = getUBO();
+	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
+	uint m = n;
+	if(NonZero(ubo.solar_disk_intensity))
+	{
+		++m;
+	}
+	float res = rcp(float(m));
+	if(light_index < ubo.num_lights)
+	{
+		res *= _getEnvPdfLi(reference_position, direction);
+	}
+	else
+	{
+		res *= MakeLight(SceneLights[light_index]).pdfLi(reference_position, direction);
+	}
 	return res;
+}
+
+float getEnvPdfLi(vec3 reference_position, vec3 direction)
+{
+	return pdfLi(reference_position, direction, getUBO().num_lights);
 }
 
 vec3 getEnvLe(vec3 direction)
 {
-	return getUBO().sky;
+	let ubo = getUBO();
+	vec3 res = ubo.sky;
+	float ct = dot(direction, ubo.solar_direction);
+	if(ct > ubo.solar_disk_cosine)
+	{
+		res += ubo.solar_disk_intensity;
+	}
+	
+	return res;
 }
 
 #endif

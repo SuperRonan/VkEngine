@@ -394,6 +394,12 @@ namespace vkl
 			ubo_vec3 ambient;
 			
 			ubo_vec3 sky;
+
+			ubo_vec3 solar_direction;
+			float solar_disk_cosine;
+
+			ubo_vec3 solar_disk_intensity;
+			float solar_disk_angle;
 			
 			ubo_vec3 center;
 			float radius;
@@ -404,7 +410,12 @@ namespace vkl
 		vec3 _ambient = vec3::Constant(0.1f);
 		vec3 _uniform_sky = vec3::Constant(0);
 		float _uniform_sky_brightness = 1;
-		vec3 center;
+
+		vec2 _solar_disk_direction = vec2(0, 0);
+		float _solar_disk_angle = Radians(0.5f); // Same as the sun viewed from earth
+		vec3 _solar_disk_intensity = vec3::Zero();
+		float _solar_disk_intensity_mult = 1;
+
 		float _radius = 1;
 
 
@@ -518,6 +529,16 @@ namespace vkl
 		vec3 getAmbient() const
 		{
 			return _ambient;
+		}
+
+		void setEnvironment(vec3 intensity, vec2 solar_direction, float solar_angle, vec3 solar_intensity)
+		{
+			_uniform_sky = intensity;
+			_uniform_sky_brightness = 1;
+			_solar_disk_direction = solar_direction;
+			_solar_disk_angle = solar_angle;
+			_solar_disk_intensity = solar_intensity;
+			_solar_disk_intensity_mult = 1;
 		}
 
 		friend class SceneUserInterface;

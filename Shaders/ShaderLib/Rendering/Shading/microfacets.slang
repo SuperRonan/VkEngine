@@ -65,7 +65,7 @@ namespace microfacets
 			// }
 			// else
 			{
-				specular_weight = max(metallic, 0.04);
+				specular_weight = max(metallic, 0.0f);
 			}
 			if(roughness == 0)
 			{
