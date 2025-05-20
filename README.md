@@ -1,24 +1,17 @@
-## VkEngine
-
-# Gallery
-![sponza-sunlight-2](https://github.com/user-attachments/assets/be6c6dd7-22ac-46cc-81ee-96e1852cb759)
-
-
-# Main features:
+## VkEngine: Vulkan based rendering engine
 - Automatic GPU synchronization
-- Automatic Shader Reloading
+- Automatic shader reloading
 - HDR windows management
 - Multi-threaded background tasks
-
+- Shader debbugging utilities
 
 
 # Renderer:
 - Interactive rendering engine
 - Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer)
+![sponza-sunlight-2](https://github.com/user-attachments/assets/be6c6dd7-22ac-46cc-81ee-96e1852cb759)
 ![sponza-sunlight](https://github.com/user-attachments/assets/fa7f7bcb-c3b2-4355-9ef3-f613fd3bb788)
 ![metallic](https://github.com/user-attachments/assets/a8fb1576-d939-4c77-b608-0da715b1e70b)
-
-
 
 
 # BSDF viewer
