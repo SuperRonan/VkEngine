@@ -1,22 +1,32 @@
-# VkEngine
+## VkEngine
+
+# Gallery
+![sponza-sunlight-2](https://github.com/user-attachments/assets/be6c6dd7-22ac-46cc-81ee-96e1852cb759)
 
 
-Main features:
+# Main features:
 - Automatic GPU synchronization
-- Automatic Hot Shader Reloading
-- HDR windows
+- Automatic Shader Reloading
+- HDR windows management
 - Multi-threaded background tasks
 
 
 
-Projects:
-- Renderer:
-	- Test rendering engine
-	- Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer)
-- BSDF viewer
-- More to come...
+# Renderer:
+- Interactive rendering engine
+- Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer)
+![sponza-sunlight](https://github.com/user-attachments/assets/fa7f7bcb-c3b2-4355-9ef3-f613fd3bb788)
+![metallic](https://github.com/user-attachments/assets/a8fb1576-d939-4c77-b608-0da715b1e70b)
 
-Optional arguments:
+
+
+
+# BSDF viewer
+Interactive 3D BSDF visualizer. Customize the viewed BSDFs by directly changing the shader source code.
+![bsdf](https://github.com/user-attachments/assets/ea6ec614-c991-4487-9518-33012722baab)
+
+# Command line arguments:
+```
 -h, --help                    shows help message and exits
 -v, --version                 prints version information and exits
 --name                        Name of the Application
@@ -36,7 +46,7 @@ Optional arguments:
 --resolution                  Set the resolution of the main window [nargs: 2]
 --imgui_docking               Force the ImGui Docking feature (0 or 1)
 --imgui_multi_viewport        Force the ImGui Multi Viewport feature (0 or 1)
-
+```
 
 # TODO List:
 - [x] Fill UBO transfer command
