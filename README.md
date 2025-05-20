@@ -1,4 +1,4 @@
-## VkEngine: Vulkan based rendering engine
+# VkEngine
 - Slang and GLSL shader development platform.
 - Shader debbugging utilities.
 - Automatic shader reloading.
@@ -6,11 +6,30 @@
 - HDR windows management.
 - Multi-threaded background tasks.
 - ImGui integration to easily tune parameters.
+- Rendering utilities support (Scene, Cameras, Light, Mesh, Materials, ...).
 
+## Installation
+To download the engine: 
+```bash
+git clone https://github.com/SuperRonan/VkEngine.git --recurse-submodules
+```
+Use this command to pull the submodules if you forgot to do so with the first command: 
+```bash
+$ git submodule update --init --recursive
+```
+VkEngine also requires the [VulkanSDK](https://vulkan.lunarg.com/) to be installed. **A recent version containing the Slang libraries is required**.
+You can then use CMake to build the engine.
 
-# Renderer:
-- Interactive rendering engine
-- Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer)
+Supported platforms:
+- Windows: Supported
+- Linux: Not Supported (coming soon)
+- MacOs: Not Supported
+
+## Renderer
+- Interactive rendering engine.
+- Basic scene edition with ImGui (place objects, change some properties, ...)
+- Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer).
+- More rendering experimentations to come...
 ![sponza-sunlight-2](https://github.com/user-attachments/assets/be6c6dd7-22ac-46cc-81ee-96e1852cb759)
 ![sponza-sunlight](https://github.com/user-attachments/assets/fa7f7bcb-c3b2-4355-9ef3-f613fd3bb788)
 ![metallic](https://github.com/user-attachments/assets/a8fb1576-d939-4c77-b608-0da715b1e70b)
@@ -20,13 +39,23 @@
 ![caustics-dof-2](https://github.com/user-attachments/assets/1e161f62-853e-426b-937e-e8c8be36e462)
 
 
-# BSDF viewer
+## BSDF viewer
 Interactive 3D BSDF visualizer. 
-Compute statistics (correlation, variance, integral, ...) of different spherical functions.
-Customize the viewed BSDFs by directly changing the shader source code.
+- Compute statistics (correlation, variance, integral, ...) of different spherical functions.
+- Customize the viewed BSDFs by directly changing the shader source code.
 ![bsdf](https://github.com/user-attachments/assets/ea6ec614-c991-4487-9518-33012722baab)
 
-# Command line arguments:
+## Shader debugging
+It is often tidious to debug shaders.
+The engine implements shader debugging utilities to ease this process, without using external tools.
+
+https://github.com/user-attachments/assets/4c34aabf-2dd6-481f-a384-4ba254ef5b6e
+
+It is possible to print values (builtin types, vectors, matrices, arrays of builtin, string litterals (in GLSL, wip for Slang) or any type conforming to `IPrintable`) for quick inspection.
+We can place the printing cursor in screen space, or in 3D space to show when the thread emitting the information is.
+It is also possible to print lines between two points (to show a traced path for example).
+
+## Command line arguments
 ```
 -h, --help                    shows help message and exits
 -v, --version                 prints version information and exits
@@ -49,7 +78,7 @@ Customize the viewed BSDFs by directly changing the shader source code.
 --imgui_multi_viewport        Force the ImGui Multi Viewport feature (0 or 1)
 ```
 
-# TODO List:
+## TODO List:
 - [x] Fill UBO transfer command
 - [x] SDL backend?
 	- [x] SDL Window
@@ -144,7 +173,7 @@ Customize the viewed BSDFs by directly changing the shader source code.
 - [ ] Find a better project name
 - [ ] Rework on thatlib
 
-# Projects Ideas:
+## Projects Ideas:
 - [x] Basic Renderer
 - [ ] Seam Carving
 - [ ] Mutiple rigid body simulation
@@ -158,7 +187,7 @@ Customize the viewed BSDFs by directly changing the shader source code.
 - [ ] Radiance guiding
 
 
-# Loose Ideas:
+## Loose Ideas:
 October 2023:
 There should be two types of resources, synch ones and asynch ones.
 - Synch resources (curent implementation) are intended to be "script resources", in a limited number, updated by the main thread, always loaded and ready to use
@@ -168,7 +197,7 @@ The distinction has kind of been implemented now.
 Problem: automatic synchronization of all the scene resources is expesive. But all these resources are synched the "same" way, the synchronization work can be done once and shared to all these resources.
 Maybe create a distinction between two synch regimes: Auto and Manual. 
 
-# Resources management / Execution refactor
+## Resources management / Execution refactor
 Objectives:
 - [ ] Synchronize multiple times the same resources for the same or different usages (refactor of SynchHelper)
 	- [x] Simple Resource usage list with one usage per resources (works for now)
@@ -188,7 +217,7 @@ Objectives:
 - [x] ExecutionNodes are Command's instances, as such, they should only reference resources instances. 
 - [ ] Have a separate render thread
 
-# Big problem with DynamicValue
+## Big problem with DynamicValue
 In its current implementation, DynamicValue is not thread safe and may lead to crashes!
 DynValueInstance::value() is marked as const, which would be thread safe, but is it not because of the mutable cached value.
 The problem is currently 99% under control (it has probably never occured while using the engine, but only as a thought experiment and in a stress test designed for it)
