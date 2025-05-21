@@ -8,7 +8,7 @@
 #define FORCE_COSINE_SAMPLING 0
 #endif
 
-#define I_WANT_TO_DEBUG 1
+#define I_WANT_TO_DEBUG 0
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL I_WANT_TO_DEBUG
 #define DEBUG_ENABLE_GLOBAL_PRINTER I_WANT_TO_DEBUG
 
@@ -555,8 +555,8 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IRWArray
 			if(light_connection)
 			{
 				// Correct the pdf with pdfLi;
-				float fwd_pdf = (connection_s == 1) ? resampled_light.forward : storage_pdf[light_pdf_offset].forward;
-				actual_ri *= pdfLi / fwd_pdf;
+				float forward_pdf = (connection_s == 1) ? resampled_light.forward : storage_pdf[light_pdf_offset].forward;
+				actual_ri *= pdfLi / abs(forward_pdf);
 			}
 			else if(s > 1 && can_connect)
 			{
@@ -596,7 +596,8 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IRWArray
 			
 			if(light_connection)
 			{
-				actual_ri *= pdfLi / light_end_pdfs.reverse;
+				float forward_pdf = (connection_t == 1) ? resampled_camera.forward : storage_pdf[camera_pdf_offset].forward;
+				actual_ri *= pdfWi / abs(forward_pdf);
 			}
 			if( t > 1 && can_connect)
 			{
@@ -612,10 +613,13 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IRWArray
 	}
 
 	float connection_pdf = 1.0f;
-
 	if(connection_t == 1)
 	{
-		connection_pdf *= num_lt_samples;
+		connection_pdf *= pdfWi / abs(resampled_camera.forward);
+	}
+	if(connection_s == 1)
+	{
+		connection_pdf *= pdfLi / abs(resampled_light.forward);
 	}
 	res = connection_pdf * rcp(sum + connection_pdf);
 
@@ -756,7 +760,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 					visibility_ray.TMin = RayTMin(Ray3f(visibility_ray.Origin, visibility_ray.Direction), ng);
 					visibility_ray.TMax = cam_sample.distance;
 				}
-				else if(t == 1)
+				else if(t == 2)
 				{
 					let camera = MakeCamera(rt_ubo.camera);
 					// This could be done when generating the sub paths?

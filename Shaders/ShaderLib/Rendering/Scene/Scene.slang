@@ -429,7 +429,7 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 		++m;
 	}
 	float res = rcp(float(m));
-	if(light_index < ubo.num_lights)
+	if(light_index == ubo.num_lights)
 	{
 		res *= _getEnvPdfLi(reference_position, direction);
 	}
