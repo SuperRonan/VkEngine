@@ -309,17 +309,188 @@ __init()
 
 static constexpr const uint LightIndexBits = 24;
 
-Light::EmissionSample sampleEnvLe<RNG : IRNG>(inout RNG rng)
+struct EnvMap : ILight
 {
-	Light::EmissionSample res;
-	let dir = SampleUniformDirection(rng.generate<float, 2>());
-	res.ray.direction = dir.value;
-	res.pdf = dir.pdf;
-	res.intensity = getUBO().sky;
-	res.flags = Light::EmissionSample::Flags::AtInfinity;
-	res.range.resetRange();
-	res.position_pdf = 1;
-	return res;
+	vec3 uniform_emission;
+	uint flags = 0;
+	vec3 solar_disk_emission;
+	float solar_disk_angle;
+	vec3 solar_disk_direction;
+	float solar_disk_cosine;
+
+	__init(const in StorageLight l) {}
+
+	__init(const in Scene::UBO ubo)
+	{
+		uniform_emission = ubo.sky;
+
+		solar_disk_emission = ubo.solar_disk_intensity;
+		solar_disk_angle = ubo.solar_disk_radius;
+		
+		solar_disk_direction = ubo.solar_direction;
+		solar_disk_cosine = ubo.solar_disk_cosine;
+	}
+
+	uint getFlags()
+	{
+		return flags;
+	}
+
+	LightType getType()
+	{
+		return LightType::EnvMap;
+	}
+	
+	vec3 Le(vec3 direction)
+	{
+		vec3 res = uniform_emission;
+		float ct = dot(direction, solar_disk_direction);
+		if(ct > solar_disk_cosine)
+		{
+			res += solar_disk_emission;
+		}
+		return res;
+	}
+
+	float getPMFUniform(vec3 color_filter)
+	{
+		float uni_weight = ConeSolidAngle(-1) * Luminance(uniform_emission * color_filter);
+		float solar_weight = ConeSolidAngle(solar_disk_cosine) * Luminance(solar_disk_emission * color_filter);
+		float pmf_uni = uni_weight / (uni_weight + solar_weight);
+		return pmf_uni;
+	}
+
+	struct DirectionSample
+	{
+		vec3 emission;
+		vec3 direction; // to env map
+		float pdf;
+	}
+
+	// Common for sampleLe and sampleLi
+	DirectionSample sampleDirection<RNG : IRNG>(inout RNG rng, vec3 color_filter)
+	{
+		DirectionSample res;
+		// This does not take into account the bsdf shape
+		float sampling_cosine_angle = -1;
+		float choice_xi = rng.generate<float>();
+		float pmf_uniform = getPMFUniform(color_filter);
+		bool sample_uniform = choice_xi <= pmf_uniform;
+		if(sample_uniform)
+		{
+			sampling_cosine_angle = -1;
+		}
+		else
+		{
+			sampling_cosine_angle = solar_disk_cosine;
+		}
+		Sample<vec3> dir_sample = SampleUniformDirection(rng.generate<float, 2>(), sampling_cosine_angle);
+		float uni_pdf = rcp(ConeSolidAngle(-1));
+		float solar_pdf = 0;
+		res.emission = uniform_emission;
+		if(sample_uniform)
+		{
+			if(dot(dir_sample.value, solar_disk_direction) > solar_disk_cosine)
+			{
+				solar_pdf = rcp(ConeSolidAngle(solar_disk_cosine));
+				res.emission += solar_disk_emission;
+			}
+		}
+		else
+		{
+			let B = BasisFromDir(solar_disk_direction);
+			dir_sample.value = B * dir_sample.value;
+			solar_pdf = dir_sample.pdf;
+			res.emission += solar_disk_emission;
+		}
+		res.direction = dir_sample.value;
+		res.pdf = lerp(solar_pdf, uni_pdf, pmf_uniform);
+		return res;
+	}
+
+	float getDirectionPDF(vec3 direction, vec3 color_filter)
+	{
+		float res = 0;
+		float pmf_uniform = getPMFUniform(color_filter);
+		float pdf_uni = rcp(ConeSolidAngle(-1));
+		float pdf_solar = 0;
+		if(dot(direction, solar_disk_direction) > solar_disk_cosine)
+		{
+			pdf_solar = rcp(ConeSolidAngle(solar_disk_cosine));
+		}
+		res = lerp(pdf_solar, pdf_uni, pmf_uniform);
+		return res;
+	}
+
+	// Directions can be zero (means no direction)
+	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position, vec3 color_filter)
+	{
+		Light::ConnectionSample res;
+		let dir_sample = sampleDirection(rng, color_filter);
+		res.direction = dir_sample.direction;
+		res.intensity = dir_sample.emission;
+		res.pdf = dir_sample.pdf;
+		res.distance = std::numeric_limits<float>::infinity();
+		res.flags = Light::ConnectionSample::Flags::AtInfinity;
+		return res;
+	}
+
+	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
+	{
+		return sampleLi(rng, reference_position, vec3(1));
+	}
+	
+	float pdfLi(vec3 reference_position, vec3 direction, vec3 filter_color)
+	{
+		return getDirectionPDF(direction, filter_color);
+	}
+
+	float pdfLi(vec3 reference_position, vec3 direction)
+	{
+		return pdfLi(reference_position, direction, vec3(1));
+	}
+	
+	Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
+	{
+		Light::EmissionSample res;
+		let dir_sample = sampleDirection(rng, vec3(1));
+		res.ray.direction = -dir_sample.direction;
+		res.intensity = dir_sample.emission;
+		res.pdf = dir_sample.pdf;
+		res.position_pdf = 1;
+		res.flags = Light::EmissionSample::Flags::AtInfinity;
+		res.range.resetRange();
+		return res;
+	}
+
+	RayPdf pdfLe(Ray3f ray)
+	{
+		RayPdf res = {};
+		res.direction_pdf = getDirectionPDF(-ray.direction, vec3(1));
+		res.position_pdf = 1;
+		return res;
+	}
+
+};
+
+bool sampleEnv()
+{
+	let ubo = getUBO();
+	return NonZero(ubo.sky + ubo.solar_disk_intensity);
+}
+
+void spawnRayAtInfinity<RNG : IRNG>(inout RNG rng, inout Ray3f ray, inout float pdf)
+{
+	const float radius = getUBO().radius;
+	let on_disk = SampleUniformOnDisk(rng.generate<float, 2>());
+	mat3 basis = BasisFromDir(ray.direction);
+	ray.origin = getUBO().center + radius * (basis * vec3(on_disk.value, 0) - ray.direction);
+	pdf *= rcp(sqr(radius)) * on_disk.pdf;
+}
+
+float pdfSpawnAtInfinity(vec3 direction)
+{
+	return rcp(PI * sqr(getUBO().radius));
 }
 
 Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
@@ -327,7 +498,7 @@ Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 	const uint num_lights = getUBO().num_lights;
 	// [Assume] would be better
 	uint n = num_lights & BitMask<uint>(LightIndexBits);
-	if(NonZero(getUBO().sky))
+	if(sampleEnv())
 	{
 		++n;
 	}
@@ -339,57 +510,43 @@ Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 	}
 	else
 	{
-		sample = sampleEnvLe(rng);
+		sample = EnvMap(getUBO()).sampleLe(rng);
 	}
 	sample.index = index;
 	sample.position_pdf *= rcp(float(n));
 
+	// Spawn ray comming from infinity
 	if(sample.flags & Light::Sample::Flags::AtInfinity)
 	{
-		const float radius = getUBO().radius;
-		let on_disk = SampleUniformOnDisk(rng.generate<float, 2>());
-		mat3 basis = BasisFromDir(sample.ray.direction);
-		sample.ray.origin = getUBO().center - radius * sample.ray.direction + basis * vec3(on_disk.value * radius, 0);
-		sample.position_pdf *= rcp(on_disk.pdf * sqr(radius) * 4 * PI);
+		spawnRayAtInfinity(rng, sample.ray, sample.position_pdf);
 	}
 	return sample;
 }
 
 RayPdf pdfLe(Ray3f ray, uint light_index)
 {
-	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
-	float pmf_light = rcp(float(n));
-	var res = MakeLight(SceneLights[light_index]).pdfLe(ray);
-	res.position_pdf *= pmf_light;
-	return res;
-}
-
-Light::ConnectionSample sampleEnvLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
-{
 	let ubo = getUBO();
-	Light::ConnectionSample res;
-	// Only sample the solar disk
-	// certainly not correct, will do for now
-	var sample = SampleCosineDirection(rng.generate<float, 2>());
-	sample.value.xy *= ubo.solar_disk_radius;
-	let basis = BasisFromDir(ubo.solar_direction);
-	res.direction = basis * Normalize(sample.value);
-	res.distance = 1;
-	res.flags = Light::ConnectionSample::Flags::AtInfinity;
-	res.intensity = ubo.solar_disk_intensity;
-	res.pdf = sample.pdf * rcp(sqr(ubo.solar_disk_radius));
-	return res;
-}
-
-float _getEnvPdfLi(vec3 reference_position, vec3 direction)
-{
-	let ubo = getUBO();
-	const float ct = dot(direction, ubo.solar_direction);
-	float res = 0;
-	if(ct > ubo.solar_disk_cosine)
+	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
+	uint m = n;
+	if(sampleEnv())
 	{
-		// certainly not correct, will do for now
-		res = ct * rcp(sqr(ubo.solar_disk_radius));
+		++m;
+	}
+	float pmf_light = rcp(float(m));
+	RayPdf res = {};
+	if(light_index == n)
+	{
+		res = EnvMap(getUBO()).pdfLe(ray);
+	}
+	else
+	{
+		res = MakeLight(SceneLights[light_index]).pdfLe(ray);
+	}
+	res.position_pdf *= pmf_light;
+	bool at_infinity = light_index == n;
+	if(at_infinity)
+	{
+		res.position_pdf *= pdfSpawnAtInfinity(ray.direction);
 	}
 	return res;
 }
@@ -399,7 +556,7 @@ Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_posit
 	let ubo = getUBO();
 	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
 	uint m = n;
-	if(NonZero(ubo.solar_disk_intensity))
+	if(sampleEnv())
 	{
 		++m;
 	}
@@ -411,7 +568,7 @@ Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_posit
 	}
 	else
 	{
-		sample = sampleEnvLi(rng, reference_position);
+		sample = EnvMap(ubo).sampleLi(rng, reference_position);
 	}
 	
 	sample.index = index;
@@ -424,14 +581,14 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 	let ubo = getUBO();
 	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
 	uint m = n;
-	if(NonZero(ubo.solar_disk_intensity))
+	if(sampleEnv())
 	{
 		++m;
 	}
 	float res = rcp(float(m));
 	if(light_index == ubo.num_lights)
 	{
-		res *= _getEnvPdfLi(reference_position, direction);
+		res *= EnvMap(ubo).pdfLi(reference_position, direction);
 	}
 	else
 	{
@@ -442,20 +599,17 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 
 float getEnvPdfLi(vec3 reference_position, vec3 direction)
 {
-	return pdfLi(reference_position, direction, getUBO().num_lights);
+	return pdfLi(reference_position, direction, getUBO().num_lights & BitMask<uint>(LightIndexBits));
+}
+
+RayPdf getEnvPdfLe(const in Ray3f ray)
+{
+	return pdfLe(ray, getUBO().num_lights & BitMask<uint>(LightIndexBits));
 }
 
 vec3 getEnvLe(vec3 direction)
 {
-	let ubo = getUBO();
-	vec3 res = ubo.sky;
-	float ct = dot(direction, ubo.solar_direction);
-	if(ct > ubo.solar_disk_cosine)
-	{
-		res += ubo.solar_disk_intensity;
-	}
-	
-	return res;
+	return EnvMap(getUBO()).Le(direction);
 }
 
 #endif

@@ -26,6 +26,16 @@ Sample<vec2> SampleUniformOnDisk(vec2 xi)
 	return res;
 }
 
+Sample<vec2> SampleFocusedOnDisk(vec2 xi)
+{
+	Sample<vec2> res;
+	const float rho = (xi.x);
+	const float theta = TWO_PI * xi.y;
+	res.value = rho * vec2(cos(theta), sin(theta));
+	res.pdf = rcp(xi.x * TWO_PI);
+	return res;
+}
+
 // Sample a direction on a +z unit hemisphere ~ a cosine distribution 
 Sample<vec3> SampleCosineDirection(vec2 xi)
 {
@@ -36,17 +46,21 @@ Sample<vec3> SampleCosineDirection(vec2 xi)
 	return res;
 }
 
-// Sample a uniform distribution on a sphere
-Sample<vec3> SampleUniformDirection(vec2 xi)
+float ConeSolidAngle(float cosine_angle = -1)
 {
-	// Seems correct
+	return TWO_PI * (1 - cosine_angle);
+}
+
+// `cosine_angle` is the angle of the cone oppening
+Sample<vec3> SampleUniformDirection(vec2 xi, float cosine_angle = -1)
+{
 	Sample<vec3> res;
-	const float z = (2 * xi.x - 1);
-	const float radius = sqrt(1 - sqr(z));
+	float z = lerp(1, cosine_angle, xi.x);
+	const float radius = sqrt(1 - sqr(z)); // sin theta
 	const float phi = TWO_PI * xi.y;
 	const vec2 point_on_circle = vec2(cos(phi), sin(phi));
 	res.value = vec3(point_on_circle * radius, z);
-	res.pdf = 0.25 * oo_PI;
+	res.pdf = rcp(ConeSolidAngle(cosine_angle));
 	return res;
 }
 

@@ -102,25 +102,29 @@ void ConnectToCameraIFP<RNG : IRNG>(
 void ConnectLightToCameraIFP<RNG : IRNG>(
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
-	const in Light::EmissionSample sample,
 	const in vec3 beta,
 	inout RNG rng
 ) {
 	ICamera camera = MakeCamera(rt_ubo.camera);
-	vec3 ref_pos = sample.ray.origin;
+	let sample = scene.sampleLi(rng, camera.getPosition());
+	vec3 camera_ref_pos;
 	uint flags = 0;
-	const bool at_infinity = sample.flags & Light::EmissionSample::Flags::AtInfinity;
+	const bool at_infinity = sample.flags & Light::ConnectionSample::Flags::AtInfinity;
 	if(at_infinity)
 	{
-		ref_pos = sample.ray.direction;
+		camera_ref_pos = sample.direction;
 		flags |= CAMERA_SAMPLE_POSITION_AT_INFINITY;
 	}
-	Camera::ConnectionSample connection = camera.sampleWi(rng, ref_pos, flags);
+	else
+	{
+		camera_ref_pos = camera.getPosition() + sample.direction * sample.distance;
+	}
+	Camera::ConnectionSample connection = camera.sampleWi(rng, camera_ref_pos, flags);
 	if(connection.pdf > 0 && NonZero(connection.intensity))
 	{
 		// TODO implement Light::Le
 		// For now the sample intensity will do fine
-		vec3 Le = sample.intensity / sample.position_pdf;
+		vec3 Le = sample.intensity / sample.pdf;
 		
 		vec3 contrib = beta * Le * connection.intensity / connection.pdf;
 		contrib = FitWrongToZero(contrib);
@@ -135,7 +139,7 @@ void ConnectLightToCameraIFP<RNG : IRNG>(
 			else
 			{
 				// TODO tmin for surface lighs
-				ray = Ray3f(sample.ray.origin, connection.direction);
+				ray = Ray3f(camera_ref_pos, connection.direction);
 				range.max = connection.distance;
 			}
 			ConnectToCameraIFP(scene, ray_tracer, RayDesc(ray, range), connection.uv, contrib, rng);
@@ -232,14 +236,30 @@ void CommonMain(
 	//seed = Hash(renderer_ubo.frame_idx);
 	RNG_t rng = RNG_t(seed);
 
+	if(index == 0 && false)
+	{
+		_g_debug_signal = true;
+		_g_debug_printer = DebugPrinter(vec3(0), DEBUG_UV_SPACE_BIT);
+		_g_debug_printer.state.back_color = hvec4(0..xxx, 1);
+		RNG_t _rng = RNG_t(894145);
+		let env_map = BoundScene::EnvMap(scene.getUBO());
+		_g_debug_printer.print(env_map.getPMFUniform(vec3(1)));
+		for(uint i = 0; i < 20; ++i)
+		{
+			_g_debug_printer.print(i);
+			let sample = env_map.sampleDirection(_rng, vec3(1));
+			_g_debug_printer.print(vec4(sample.emission, sample.pdf));
+		}
+	}
+	
+	ConnectLightToCameraIFP(scene, ray_tracer, 1, rng);
+
 	Light::EmissionSample sample = scene.sampleLe(rng);
 	sample.intensity *= weight;
 	if(!NonZero(sample.intensity) || sample.pdf <= 0)
 	{
 		return;
 	}
-
-	ConnectLightToCameraIFP(scene, ray_tracer, sample, 1, rng);
 
 	TraversingRay tray = TraversingRay(sample);
 	TracePath(rng, ray_tracer, scene, tray);

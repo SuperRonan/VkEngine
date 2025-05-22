@@ -8,7 +8,7 @@
 #define FORCE_COSINE_SAMPLING 0
 #endif
 
-#define I_WANT_TO_DEBUG 0
+#define I_WANT_TO_DEBUG 1
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 1
 #define DEBUG_ENABLE_GLOBAL_PRINTER 1
 
@@ -65,16 +65,13 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 				{
 					bsdf_pdf = material.pdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
 				}
+				// weight / pdf -> rcp(sum(pdf))
 				float mis_weight = rcp(bsdf_pdf + LIGHT_SAMPLES * sample.pdf);
 				sample_contribution *= mis_weight;
 				if(NonZero(sample_contribution))
 				{
 					Ray3f _ray = Ray3f(sgi.position, sample.direction);
 					RayDesc ray = RayDesc(_ray, RayRangef(RayTMin(_ray, sgi.geometry_normal), sample.distance));
-					if(at_infinity)
-					{
-						ray.TMax = std::numeric_limits<float>::infinity();
-					}
 					float v = ray_tracer.testVisibility(ray);
 					res += (sample_contribution * v);
 				}

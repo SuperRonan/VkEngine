@@ -16,6 +16,7 @@ enum LightType
 	Point = LIGHT_TYPE_POINT,
 	Directional = LIGHT_TYPE_DIRECTIONAL,
 	Spot = LIGHT_TYPE_SPOT,
+	EnvMap,
 };
 
 struct StorageLight
