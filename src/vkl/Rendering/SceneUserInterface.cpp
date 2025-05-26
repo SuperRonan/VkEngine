@@ -689,7 +689,7 @@ namespace vkl
 
 					if (open_create_window)
 					{
-						_create_node_popup.open(_gui_selected_node.node.node);
+						_create_node_popup.open(node);
 					}
 				}
 				declare_create_node_popup();
