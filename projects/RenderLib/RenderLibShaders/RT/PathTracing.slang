@@ -86,6 +86,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	uint num_vertices = 1;
 	const uint max_vertices = GetMaxDepth() + 1;
 	vec3 res = vec3(0);
+	// negative for delta sampling
 	float ray_pdf = 1;
 	while(num_vertices <= max_vertices)
 	{
@@ -99,8 +100,12 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			vec3 contrib = tray.throughput * scene.getEnvLe(tray.ray.direction);
 			if(NonZero(contrib))
 			{
-				float pdfLi = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction);
-				float mis_weight = ray_pdf * rcp(LIGHT_SAMPLES * pdfLi + ray_pdf);
+				float mis_weight = 1;
+				if(num_vertices > 1 && ray_pdf > 0)
+				{
+					float pdfLi = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction);
+					mis_weight = ray_pdf * rcp(LIGHT_SAMPLES * pdfLi + ray_pdf);
+				}
 				res += contrib * mis_weight;
 			}
 			break;
@@ -140,6 +145,10 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		}
 
 		ray_pdf = bsdf_sample.pdf;
+		if(bsdf_sample.flags & BSDFSampleFlags::Delta)
+		{
+			ray_pdf = -ray_pdf;
+		}
 		tray.ray = Ray3f(hit.surface_shading_info.position, bsdf_sample.direction);
 		tray.ray_diffs.origin_jacobian = hit.surface_diffs.position_jacobian;
 		tray.ray_diffs.direction_jacobian = bsdf_sample.direction_jacobian;
