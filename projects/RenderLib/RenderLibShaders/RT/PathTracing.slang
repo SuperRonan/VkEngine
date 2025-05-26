@@ -90,7 +90,11 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	float ray_pdf = 1;
 
 	LiSampler sampler_Li = LiSampler();
-	sampler_Li.resampling = 7;
+#ifdef USE_Li_RESAMPLING
+	sampler_Li.resampling = rt_ubo.Li_resampling;
+#else
+	sampler_Li.resampling = 0;
+#endif
 	sampler_Li.scene = scene;
 
 	DirectLightSurfaceShading<RayTracer> shader;

@@ -95,6 +95,8 @@ namespace vkl
 					res.pushBack(_target_format_str);
 					if (_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+					if(_Li_resampling != 0)
+						res.pushBack("USE_Li_RESAMPLING");
 				},
 			});
 		}
@@ -117,6 +119,8 @@ namespace vkl
 					res.pushBack(_target_format_str);
 					if(_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
+					if (_Li_resampling != 0)
+						res.pushBack("USE_Li_RESAMPLING");
 				},
 				.bindings = {
 					Binding{
@@ -556,7 +560,15 @@ namespace vkl
 			ImGui::InputInt("Max Depth", (int*)&_max_depth);
 			_max_depth = std::clamp<uint>(_max_depth, 1, 16);
 			ImGui::Checkbox("Compile time Max Depth", &_compile_time_max_depth);
-			
+			if (_method == Method::PathTracer)
+			{
+				int li_resamling = static_cast<int>(_Li_resampling);
+				if (ImGui::InputInt("Li Resampling", &li_resamling))
+				{
+					li_resamling = std::max(li_resamling, 0);
+					_Li_resampling = static_cast<uint>(li_resamling);
+				}
+			}
 			if (_method == Method::LightTracer)
 			{
 				ImGui::SliderFloat("Samples multiplicator", &_light_tracer_sample_mult, 1, 16, "%.3f", ImGuiSliderFlags_Logarithmic);

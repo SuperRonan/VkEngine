@@ -24,7 +24,8 @@ namespace vkl
 
 		struct UBO
 		{
-			uint max_depth;
+			u16 max_depth;
+			u16 Li_resampling;
 			uint flags;
 		};
 
@@ -39,6 +40,7 @@ namespace vkl
 		std::string _target_format_str = {};
 		bool _compile_time_max_depth = false;
 		uint _max_depth = 5;
+		uint _Li_resampling = 0;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
 
@@ -94,7 +96,8 @@ namespace vkl
 
 		void writeUBO(UBO& dst)
 		{
-			dst.max_depth = _max_depth;
+			dst.max_depth = static_cast<u16>(_max_depth);
+			dst.Li_resampling = static_cast<u16>(_Li_resampling);
 			dst.flags = 0;
 		}
 	};

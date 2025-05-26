@@ -6,7 +6,8 @@
 
 struct RT_UBO : RendererUBO
 {
-	uint max_depth;
+	u16 max_depth;
+	u16 Li_resampling;
 	uint flags;
 };
 
