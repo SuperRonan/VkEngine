@@ -661,7 +661,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 					visibility_ray.Direction = cam_sample.direction;
 					visibility_ray.TMin = RayTMin(Ray3f(visibility_ray.Origin, visibility_ray.Direction), ng);
 					visibility_ray.TMax = cam_sample.distance;
-				}				
+				}
 			}
 			else if(t == 2)
 			{
@@ -960,22 +960,27 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 				rng
 			);
 			const vec3 wi = bsdf_sample.direction;
+			const bool delta_scattering = bsdf_sample.flags & BSDFSampleFlags::Delta;
+			if(delta_scattering)
+			{
+				// Mark delta pdf with a negative sign
+				storage_pdf[storage_pdf_offset + res.n - 1].forward = -storage_pdf[storage_pdf_offset + res.n - 1].forward;
+			}
 			const bool prev_non_hitable = (storage[storage_offset + res.n - 2].flags & Vertex::Flags::NonHitable);
 			if(!prev_non_hitable)
 			{
-				if(bsdf_sample.flags & BSDFSampleFlags::Delta)
+				if(delta_scattering)
 				{
-					// Assume delta reflections have symmetric pdf
+					// Assume delta scatterings have symmetric pdf
 					// Else, the samplerBSDF function should return the reverse pdf?
 					reverse_pdf = bsdf_sample.pdf;
-					// Mark delta pdf with a negative sign
-					storage_pdf[storage_pdf_offset + res.n - 1].forward = -storage_pdf[storage_pdf_offset + res.n - 1].forward;
 				}
 				else
 				{
 					reverse_pdf = material.pdf<Flags & BSDF_ADJOINT_BIT>(ng, ns, wo, wi);
 				}
 			}
+			storage_pdf[storage_pdf_offset + res.n - 2].reverse = reverse_pdf * reverse_geometric_conversion;
 
 			pdf_solid_angle = bsdf_sample.pdf;
 			tray.ray = Ray3f(hit.surface_shading_info.position, wi);
@@ -991,8 +996,6 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 			prev_cos_theta = Abs(cos_theta_i_g);
 			tray.throughput *= (bsdf_sample.bsdf * Abs(cos_theta_i_s * correction) / bsdf_sample.pdf);
 			tray.throughput = FitWrongToZero(tray.throughput);
-			
-			storage_pdf[storage_pdf_offset + res.n - 2].reverse = reverse_pdf * reverse_geometric_conversion;
 			
 			if(!NonZero(tray.throughput) || pdf_solid_angle <= 0)
 			{
