@@ -36,7 +36,6 @@ uniform PushConstant _pc;
 
 #define LIGHT_SAMPLES 1
 #define PATH_PER_PIXEL 1
-
 struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 {
 	BoundScene scene;
@@ -44,16 +43,17 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 	uint samples = 1;
 
 	vec3 shade <RNG : IRNG>(
+		const in LiSampler sampler,
 		const in SurfaceGeometryInfo sgi,
 		const in IMaterial material,
+		const in vec3 beta,
 		inout RNG rng
 	)
 	{
 		vec3 res = vec3(0);
-		
 		for(uint i = 0; i < samples; ++i)
 		{
-			let sample = scene.sampleLi(rng, sgi.position);
+			let sample = sampler.sampleLi(rng, sgi, material, beta);
 			if(sample.pdf > 0)
 			{
 				const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
@@ -88,6 +88,20 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	vec3 res = vec3(0);
 	// negative for delta sampling
 	float ray_pdf = 1;
+
+	LiSampler sampler_Li = LiSampler();
+	sampler_Li.resampling = 7;
+	sampler_Li.scene = scene;
+
+	DirectLightSurfaceShading<RayTracer> shader;
+	shader.scene = scene;
+	shader.ray_tracer = ray_tracer;
+	shader.samples = LIGHT_SAMPLES;
+
+	SurfaceGeometryInfo prev_sgi;
+	PBMaterial prev_material;
+	vec3 prev_beta;
+
 	while(num_vertices <= max_vertices)
 	{
 		RayTraceInfo trace_info = {};
@@ -97,13 +111,14 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		Hit hit = ray_tracer.traceRay<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES>(trace_info);
 		if(!hit.hasValue())
 		{
-			vec3 contrib = tray.throughput * scene.getEnvLe(tray.ray.direction);
+			vec3 Le = scene.getEnvLe(tray.ray.direction);
+			vec3 contrib = tray.throughput * Le;
 			if(NonZero(contrib))
 			{
 				float mis_weight = 1;
 				if(num_vertices > 1 && ray_pdf > 0)
 				{
-					float pdfLi = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction);
+					float pdfLi = sampler_Li.estimateEnvPdfLi(rng, prev_sgi, prev_material, tray.ray.direction, prev_beta, Le);
 					mis_weight = ray_pdf * rcp(LIGHT_SAMPLES * pdfLi + ray_pdf);
 				}
 				res += contrib * mis_weight;
@@ -125,11 +140,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 
 		if(num_vertices <= max_vertices)
 		{
-			DirectLightSurfaceShading<RayTracer> shader;
-			shader.scene = scene;
-			shader.ray_tracer = ray_tracer;
-			shader.samples = LIGHT_SAMPLES;
-			res += FitWrongToZero(tray.throughput * shader.shade(hit.surface_shading_info, material, rng));
+			res += FitWrongToZero(tray.throughput * shader.shade(sampler_Li, hit.surface_shading_info, material, tray.throughput, rng));
 		}
 
 		let bsdf_sample = material.sampleBSDF<BSDF_FORWARD_BIT>(
@@ -155,8 +166,12 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		tray.range.resetRange();
 		tray.range.min = RayTMin(tray.ray, hit.surface_shading_info.geometry_normal);
 		const float cos_theta = Abs(Dot(hit.surface_shading_info.shading_normal, bsdf_sample.direction));
+		prev_beta = tray.throughput;
 		tray.throughput *= bsdf_sample.bsdf * cos_theta / bsdf_sample.pdf;
 		tray.throughput = FitWrongToZero(tray.throughput);
+
+		prev_sgi = hit.surface_shading_info;
+		prev_material = material;
 	}
 	return res;
 }

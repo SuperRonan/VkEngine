@@ -878,6 +878,13 @@ Float Luminance(vector<Float, 3> rgb)
 	return dot(rgb, p);
 }
 
+__generic <typename Float : __BuiltinFloatingPointType>
+Float FastLuminance(vector<Float, 3> rgb)
+{
+	vector<Float, 3> p = {Float(1), Float(1.9632), Float(0.38127)};
+	return dot(rgb, p);
+}
+
 template <typename Scalar : __BuiltinArithmeticType, int N>
 Scalar Average(vector<Scalar, N> v)
 {
