@@ -456,8 +456,8 @@ struct EnvMap : ILight
 		let dir_sample = sampleDirection(rng, vec3(1));
 		res.ray.direction = -dir_sample.direction;
 		res.intensity = dir_sample.emission;
-		res.pdf = dir_sample.pdf;
 		res.position_pdf = 1;
+		res.pdf = dir_sample.pdf;
 		res.flags = Light::EmissionSample::Flags::AtInfinity;
 		res.range.resetRange();
 		return res;
@@ -495,26 +495,25 @@ float pdfSpawnAtInfinity(vec3 direction)
 
 Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 {
-	const uint num_lights = getUBO().num_lights;
 	// [Assume] would be better
-	uint n = num_lights & BitMask<uint>(LightIndexBits);
+	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
+	uint m = n;
 	if(sampleEnv())
 	{
-		++n;
+		++m;
 	}
-	uint index = rng.generate<uint>(0, n);
+	uint index = rng.generate<uint>(0, m);
 	Light::EmissionSample sample;
-	if(index < num_lights)
-	{
-		sample = MakeLight(SceneLights[index]).sampleLe(rng);
-	}
-	else
+	if(index == n)
 	{
 		sample = EnvMap(getUBO()).sampleLe(rng);
 	}
+	else
+	{
+		sample = MakeLight(SceneLights[index]).sampleLe(rng);
+	}
 	sample.index = index;
-	sample.position_pdf *= rcp(float(n));
-
+	sample.position_pdf *= rcp(float(m));
 	// Spawn ray comming from infinity
 	if(sample.flags & Light::Sample::Flags::AtInfinity)
 	{
@@ -562,13 +561,13 @@ Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_posit
 	}
 	uint index = rng.generate<uint>(0, m);
 	Light::ConnectionSample sample;
-	if(index < n)
+	if(index == n)
 	{
-		sample = MakeLight(SceneLights[index]).sampleLi(rng, reference_position);
+		sample = EnvMap(ubo).sampleLi(rng, reference_position);
 	}
 	else
 	{
-		sample = EnvMap(ubo).sampleLi(rng, reference_position);
+		sample = MakeLight(SceneLights[index]).sampleLi(rng, reference_position);
 	}
 	
 	sample.index = index;
@@ -586,7 +585,7 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 		++m;
 	}
 	float res = rcp(float(m));
-	if(light_index == ubo.num_lights)
+	if(light_index == n)
 	{
 		res *= EnvMap(ubo).pdfLi(reference_position, direction);
 	}

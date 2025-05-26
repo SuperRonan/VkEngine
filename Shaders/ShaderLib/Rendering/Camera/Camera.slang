@@ -142,7 +142,7 @@ interface ICamera
 	// Direction not normalized
 	// Assume reference_position + direction is on the camera
 	// Assumes reference point is in the view
-	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0);
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0, uint flags = 0);
 }
 
 interface IMatrixCamera : ICamera
@@ -407,10 +407,11 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return res;
 	}
 
-	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0)
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0, uint flags = 0)
 	{
 		// Assume in frustum
-		return Length2(direction);
+		const bool at_infinity = ((flags & CAMERA_SAMPLE_POSITION_AT_INFINITY) != 0);
+		return at_infinity ? 1 : Length2(direction);
 	}
 };
 
@@ -647,9 +648,9 @@ struct ThinLensCamera : IMatrixCamera
 		return res;
 	}
 
-	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0)
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0, uint flags = 0)
 	{
-		var res =_super.pdfWi(reference_position, direction, layer);
+		var res =_super.pdfWi(reference_position, direction, layer, flags);
 		// Assume the point is on the lens
 		res *= lensPdf();
 		return res;
@@ -781,9 +782,14 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		return res;
 	}
 
-	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0)
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0, uint flags = 0)
 	{
 		// Assume in frustum
+		float res = 1;
+		if((flags & CAMERA_SAMPLE_POSITION_AT_INFINITY) != 0)
+		{
+			res = 0;
+		}
 		return 1;
 	}
 }

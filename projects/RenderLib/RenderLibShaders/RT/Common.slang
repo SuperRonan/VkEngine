@@ -112,6 +112,20 @@ struct RayTraceInfo
 
 #if BIND_SCENE
 
+vec3 Le(const in BoundScene scene, const in Hit hit)
+{
+	vec3 res = 0;
+	if(hit.hasValue())
+	{
+
+	}
+	else
+	{
+		res = scene.getEnvLe(hit.surface_shading_info.out_direction);
+	}
+	return res;
+}
+
 void computeHitMeshDifferentials(const in RayTraceInfo info, inout Hit res)
 {
 	const Scene::ObjectReference object_ref = SceneObjectsTable[res.custom_index];
