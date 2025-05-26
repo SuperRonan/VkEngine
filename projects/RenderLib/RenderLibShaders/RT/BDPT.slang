@@ -820,7 +820,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 		if(hit.hasValue())
 		{
 			let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true);
-			if(ApplyTextureNormalIFN(hit.surface_shading_info, material))
+			if(ApplyMaterialNormalIFN(hit.surface_shading_info, material))
 			{}
 			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
 			if(kappa.hasValue)

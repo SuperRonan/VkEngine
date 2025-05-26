@@ -132,7 +132,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		++num_vertices;
 		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.uv_jacobians);
 		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
-		ApplyTextureNormalIFN(hit.surface_shading_info, material);
+		ApplyMaterialNormalIFN(hit.surface_shading_info, material);
 
 		{
 			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);

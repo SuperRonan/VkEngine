@@ -180,6 +180,7 @@ namespace vkl
 		std::shared_ptr<Buffer> _props_buffer = nullptr;
 
 		bool _force_albedo_prop = false;
+		bool _force_geometry_normal = false;
 
 		Properties getProperties() const;
 
@@ -192,7 +193,7 @@ namespace vkl
 
 		bool useNormalTexture()const
 		{
-			return textureIsReady(TextureSlot::Normal);
+			return !_force_geometry_normal && textureIsReady(TextureSlot::Normal);
 		}
 
 	public:
@@ -207,6 +208,7 @@ namespace vkl
 			Dyn<float> cavity = {};
 			std::shared_ptr<Sampler> sampler = nullptr;
 			bool force_albedo_property = false;
+			bool force_geometry_normal = false;
 			std::shared_ptr<Texture> albedo_texture = nullptr;
 			std::shared_ptr<Texture> normal_texture = nullptr;
 			bool is_dielectric = false;

@@ -204,6 +204,10 @@ namespace vkl
 		{
 			flags_u32 |= MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT;
 		}
+		else if (_force_geometry_normal)
+		{
+			flags_u32 |= MATERIAL_FLAG_USE_GEOMETRY_NORMAL;
+		}
 
 		if (_is_dielectric)
 		{
@@ -253,6 +257,8 @@ namespace vkl
 		};
 
 		_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_force_albedo_prop);
+		ImGui::SameLine();
+		_should_update_props_buffer |= ImGui::Checkbox("Force Geometry normal", &_force_geometry_normal);
 		
 		const char* albedo_name = _is_dielectric ? "Absorption" : "Albedo";
 		const char* metalic_name = _is_dielectric ? "Index of Refraction" : "Metallic";
