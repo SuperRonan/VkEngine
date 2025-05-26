@@ -1205,3 +1205,9 @@ Scalar Radians(Scalar deg)
 
 
 
+void Swap<T>(inout T a, inout T b)
+{
+	T tmp = a;
+	a = b;
+	b = tmp;
+}
