@@ -111,7 +111,8 @@ struct PhysicalyBasedMaterial : IMaterial
 		const float cos_theta_o = dot(normal, wo);
 		const float abs_cos_theta_o = abs(cos_theta_o);
 
-		const bool same_hemisphere = sign(cos_theta_geom_i) == sign(cos_theta_geom_o);
+		// TODO really check this
+		const bool same_hemisphere = sign(cos_theta_i) == sign(cos_theta_o);
 
 		const bool can_reflect = (getFlags() & MATERIAL_FLAG_REFLECTION_BIT) != 0;
 		const bool can_transmit = (getFlags() & MATERIAL_FLAG_TRANSMISSION_BIT) != 0;
