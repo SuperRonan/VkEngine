@@ -2,6 +2,8 @@
 #include <map>
 #include <cassert>
 
+#include <vulkan/vk_enum_string_helper.h>
+
 namespace vkl
 {
 	ProgramInstance::ProgramInstance(CreateInfo const &ci) : 
@@ -376,7 +378,7 @@ namespace vkl
 						if (!same_type && !!stream)
 						{
 							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
-								"): Descriptor type does not match, provided " << pb.descriptorType << " but expected " << rb.descriptorType << "!\n";
+								"): Descriptor type does not match, provided " << string_VkDescriptorType(pb.descriptorType) << " but expected " << string_VkDescriptorType(rb.descriptorType) << "!\n";
 						}
 						if (!same_count && !!stream)
 						{
@@ -386,7 +388,7 @@ namespace vkl
 						if (!has_stages && !!stream)
 						{
 							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
-								"): Provided stages " << pb.stageFlags << " doest not contain expected stages " << rb.stageFlags << "!\n";
+								"): Provided stages " << string_VkShaderStageFlags(pb.stageFlags) << " doest not contain expected stages " << string_VkShaderStageFlags(rb.stageFlags) << "!\n";
 						}
 
 						if (!res)
