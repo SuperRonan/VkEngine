@@ -46,7 +46,8 @@ struct DefaultTextureSampling : ITextureSamplingInfo
 	}
 };
 
-[require(SPV_NV_compute_shader_derivatives)]
+[require(fragment)]
+[require(compute, SPV_KHR_compute_shader_derivatives)]
 struct QuadDiffTextureSampling : ITextureSamplingInfo
 {
 	__init()

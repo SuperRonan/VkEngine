@@ -102,3 +102,22 @@ struct DirectLightSurfaceShadingEachLight : DirectLightShadingBase, IDirectLight
 
 
 };
+
+
+struct DirectShadingResult
+{
+	vec3 L;
+}
+
+DirectShadingResult Shade(
+	const in BoundScene scene,
+	const in SurfaceGeometryInfo sgi,
+	const in PBMaterial material
+) {
+	DirectShadingResult res;
+	
+	// TODO
+	res.L = material.albedo;
+
+	return res;
+}

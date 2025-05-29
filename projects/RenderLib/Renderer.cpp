@@ -244,7 +244,7 @@ namespace vkl
 		_prepare_draw_list = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
 			.name = name() + ".PrepareDrawList",
-			.shader_path = shaders / "PrepareIndirectDrawList.comp",
+			.shader_path = shaders / "PrepareIndirectDrawList.slang",
 			.sets_layouts = _sets_layouts,
 			.bindings = {
 				Binding{
@@ -306,8 +306,8 @@ namespace vkl
 				.extern_render_pass = _forward_pipeline.render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
-				.vertex_shader_path = shaders / "render.vert",
-				.fragment_shader_path = shaders / "render.frag",
+				.vertex_shader_path = shaders / "render.vert.slang",
+				.fragment_shader_path = shaders / "render.frag.slang",
 				.definitions = [this](DefinitionsList & res){res = {_shadow_method_glsl_def};},
 			});
 		}
@@ -327,8 +327,8 @@ namespace vkl
 			.extern_render_pass = _forward_pipeline.render_pass,
 			.write_depth = true,
 			.depth_compare_op = VK_COMPARE_OP_LESS,
-			.vertex_shader_path = shaders / "RenderIndirect.vert",
-			.fragment_shader_path = shaders / "RenderIndirect.frag",
+			.vertex_shader_path = shaders / "RenderIndirect.vert.slang",
+			.fragment_shader_path = shaders / "RenderIndirect.frag.slang",
 			.definitions = [this](DefinitionsList & res) {res = {_shadow_method_glsl_def};},
 		});
 
@@ -688,8 +688,8 @@ namespace vkl
 				.extern_render_pass = _spot_light_render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
-				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
-				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
+				.vertex_shader_path = shaders / "RasterSceneDepth.vert.slang",
+				.fragment_shader_path = shaders / "RasterSceneDepth.frag.slang",
 			});
 
 			_point_light_render_pass = std::make_shared<RenderPass>(RenderPass::SPCI{
@@ -718,8 +718,8 @@ namespace vkl
 				.extern_render_pass = _point_light_render_pass,
 				.write_depth = true,
 				.depth_compare_op = VK_COMPARE_OP_LESS,
-				.vertex_shader_path = shaders / "RasterSceneDepth.vert",
-				.fragment_shader_path = shaders / "RasterSceneDepth.frag",
+				.vertex_shader_path = shaders / "RasterSceneDepth.vert.slang",
+				.fragment_shader_path = shaders / "RasterSceneDepth.frag.slang",
 				.definitions = Dyn<DefinitionsList>({"TARGET_CUBE 1"}),
 			});
 		}

@@ -220,6 +220,25 @@ struct BoundScene : Scene, IRayTracingScene
 		{
 			return Mesh::GetTriangleDifferentials(object_to_world, SceneMeshVertices[index], indices, interpolated_normal, jacobian);
 		}
+
+		uint getVertexIndex(uint vertex_index, uint flags)
+		{
+			uint res = vertex_index;
+			flags = flags & MESH_FLAG_INDEX_TYPE_MASK;
+			if(flags == MESH_FLAG_INDEX_TYPE_UINT16)
+			{
+				res = SceneMeshIndices[index].Load<u16>(vertex_index * sizeof(u16));
+			}
+			else if(flags == MESH_FLAG_INDEX_TYPE_UINT32)
+			{
+				res = SceneMeshIndices[index].Load<u32>(vertex_index * sizeof(u32));
+			}
+			else if(flags == MESH_FLAG_INDEX_TYPE_UINT8)
+			{
+				res = SceneMeshIndices[index].Load<u8>(vertex_index * sizeof(u8));
+			}
+			return res;
+		}
 	};
 #endif
 

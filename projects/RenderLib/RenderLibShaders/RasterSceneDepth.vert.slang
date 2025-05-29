@@ -1,20 +1,18 @@
-#version 460
 
-#include <ShaderLib:/Rendering/CubeMap.glsl>
-#include <ShaderLib:/Rendering/Lights/Light.glsl>
+#define SCENE_LIGHTS_ACCESS ROM 
+
+#include <ShaderLib/Rendering/CubeMap.slang>
+#include <ShaderLib/Rendering/Lights/Light.slang>
 
 #ifndef TARGET_CUBE
 #define TARGET_CUBE 0
 #endif
 
 #if TARGET_CUBE
-#extension GL_EXT_multiview : require
+//#extension GL_EXT_multiview : require
 #endif
 
-#define I_WANT_TO_DEBUG 0
-#include <ShaderLib:/Debug/DebugBuffers.glsl>
-
-#include "IndirectCommon.glsl"
+#include "IndirectCommon.slang"
 
 // layout(location = 0) in vec3 a_position;
 // layout(location = 1) in vec3 a_normal;
@@ -27,34 +25,45 @@
 // layout(location = 3) out vec3 v_w_normal;
 // layout(location = 4) out vec3 v_w_tangent;
 
-layout(push_constant) uniform pushConstant
+struct PushConstant
 {
 	uint light_id;
-} _pc;
+};
 
-void main()
-{	
-	const VertexData vd = fetchVertex();
-	const Vertex vertex = vd.vertex;
+[vk::push_constant]
+uniform PushConstant _pc;
+
+[shader("vertex")]
+vec4 main(
+#if TARGET_CUBE
+	const in uint view_id : SV_ViewID,
+#endif
+	const in uint draw_id : SV_DrawIndex,
+	const in uint vertex_index : SV_VertexID
+	) : SV_Position
+{
+	let scene = BoundScene();
+	const VertexData vd = FetchIndirectVertex(scene, draw_id, vertex_index);
+	let vertex = vd.vertex;
 
 	const vec3 a_position = vertex.position;
 	// const vec3 a_normal = vertex.normal;
 	// const vec3 a_tangent = vertex.tangent;
 	// const vec2 a_uv = vertex.uv;
 
-	const Light light = lights_buffer.lights[_pc.light_id];
+	let light = MakeLight(SceneLights[_pc.light_id]);
 
 #if TARGET_CUBE
-	const mat4 w2p = GetCubeMapFaceWorldToProj(gl_ViewIndex, light.position, POINT_LIGHT_DEFAULT_Z_NEAR);
+const mat4 w2p = (light as PointLight).value.getWorldToProj(view_id);
 #else
-	const mat4 w2p = getSpotLightMatrixWorldToProj(light);
+	const mat4 w2p = (light as SpotLight).value.getWorldToProj();
 #endif
-	const mat4 o2w = mat4(vd.matrix);
+	const mat4 o2w = ResizeMatrix<4, 4>(vd.matrix);
 	const mat4 o2p = w2p * o2w;
 	
 	vec3 m_position = a_position;
 	
-	gl_Position = o2p * vec4(m_position, 1);
+	vec4 gl_Position = o2p * vec4(m_position, 1);
 
 	// const mat3 normal_matrix = mat3(o2w);
 
@@ -65,4 +74,6 @@ void main()
 	// v_w_position = (o2w * vec4(m_position, 1)).xyz;
 
 	// v_flat.x = uint(gl_DrawID);
+
+	return gl_Position;
 }

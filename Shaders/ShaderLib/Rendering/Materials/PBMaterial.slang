@@ -450,7 +450,7 @@ typealias PBMaterial = PhysicalyBasedMaterial;
 #if BIND_SINGLE_MATERIAL
 
 layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 0)
-uniform PBMaterialProperties BoundMaterial_Properties;
+ConstantBuffer<PBMaterialProperties> BoundMaterial_Properties;
 
 layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 1) uniform Sampler2D BoundMaterial_AlbedoTexture;
 layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 2) uniform Sampler2D BoundMaterial_NormalTexture;
@@ -483,6 +483,7 @@ PhysicalyBasedMaterial ReadBoundMaterial(vec2 uv, bool read_textures = true)
 	{
 		res.normal = BoundMaterial_NormalTexture.Sample(uv).xyz;
 		res.normal = normalize(res.normal * 2 - 1);
+		res.flags |= PB_MATERIAL_SAMPLED_NORMAL_TEXTURE;
 	}
 
 	res.metallic = props.metallic;

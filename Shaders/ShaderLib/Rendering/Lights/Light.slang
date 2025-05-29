@@ -3,6 +3,7 @@
 #include <ShaderLib/common.slang>
 #include <ShaderLib/Maths/View.slang>
 #include <ShaderLib/Maths/Sampling.slang>
+#include <ShaderLib/Rendering/CubeMap.slang>
 #include <ShaderLib/Random.slang>
 
 #include <ShaderLib/Maths/NumericLimits.slang>
@@ -202,6 +203,11 @@ struct PointLight : Light, ILight
 			res.direction_pdf = 0.25 * oo_PI;
 		}
 		return res;
+	}
+
+	mat4 getWorldToProj(uint face)
+	{
+		return GetCubeMapFaceWorldToProj(face, position, z_near);
 	}
 }
 
