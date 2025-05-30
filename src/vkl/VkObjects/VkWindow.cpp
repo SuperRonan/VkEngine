@@ -730,12 +730,12 @@ namespace vkl
 
 			const bool can_resize = _window_mode == Mode::Windowed && !_extern_resolution.hasValue();
 			ImGui::BeginDisabled(!can_resize);
-			changed = ImGui::SliderInt2("Resolution: ", &_desired_resolution[0], 1, 3840);
+			changed = ImGui::InputInt2("Resolution: ", &_desired_resolution[0], ImGuiInputTextFlags_EnterReturnsTrue);
 			if (changed)
 			{
 				_gui_resized = true;
 			}
-			std::array<uint, 5> resolutions = {720, 900, 1080, 1440, 2160};
+			std::array resolutions = {720u, 900u, 1080u, 1440u, 1800u, 2160u};
 			std::array<char, 16> button_label_buffer;
 			for (uint i = 0; i < resolutions.size(); ++i)
 			{
