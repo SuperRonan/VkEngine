@@ -190,11 +190,11 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 	ICamera cam = MakeCamera(renderer_ubo.camera);
 	vec3 res = vec3(0);
 
-	_g_debug_signal = all(pixel == uvec2(512, 512));
-	if(_g_debug_signal)
-	{
-		_g_debug_printer = DebugPrinter(vec3(pixel, 0), DEBUG_PIXEL_SPACE_BIT);
-	}
+	// _g_debug_signal = (pixel.x % 512 == 0 && pixel.y % 512 == 0);
+	// if(_g_debug_signal)
+	// {
+	// 	_g_debug_printer = DebugPrinter(vec3(pixel, 0), DEBUG_PIXEL_SPACE_BIT);
+	// }
 
 	for(uint i = 0; i < PATH_PER_PIXEL; ++i)
 	{
@@ -220,7 +220,6 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 	}
 
 	res *= rcp(float(PATH_PER_PIXEL));
-
 	Target.Store(pixel, vec4(res, 1));
 }
 
