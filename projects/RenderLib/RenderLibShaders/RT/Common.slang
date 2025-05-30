@@ -326,7 +326,7 @@ struct RayQuerier : IRayTracer
 			
 			res.t = rq.CommittedRayT();
 
-			res.custom_index = rq.CommittedRayInstanceCustomIndex();
+			res.custom_index = rq.CommittedInstanceID();
 			res.instance_index = rq.CommittedInstanceIndex();
 			res.primitive_index = rq.CommittedPrimitiveIndex();
 			res.geometry_index = rq.CommittedGeometryIndex();

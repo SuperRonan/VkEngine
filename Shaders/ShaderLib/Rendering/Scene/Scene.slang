@@ -661,7 +661,7 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 	SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(inout RayQuery<Flags> rq)
 	{
 		constexpr const bool C = Committed;
-		const uint object_index = rq.getRayInstanceCustomIndex<C>();
+		const uint object_index = rq.getInstanceID<C>();
 		const uint primitive_index = rq.getPrimitiveIndex<C>();
 		const vec2 barycentrics = rq.getTriangleBarycentrics<C>();
 		const AffineXForm3Df xform = rq.getObjectToWorld3x4<C>();
