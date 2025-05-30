@@ -53,6 +53,27 @@ constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector3<Scalar>) theta_
 	return SphericalToCartesian(Vector2<Scalar>(theta_phi_rho[0], theta_phi_rho[1])) * theta_phi_rho[2];
 }
 
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+constexpr Vector2<Scalar> CartesianNormalDirToSpherical(CONST_REF(Vector3<Scalar>) dir)
+{
+	Vector2<Scalar> res;
+	res[0] = acos(dir[1]);
+	res[1] = atan2(dir[2], dir[0]);
+	return res;
+}
+
+template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+constexpr Vector3<Scalar> CartesianDirToSpherical(CONST_REF(Vector3<Scalar>) dir)
+{
+	const Scalar rho = Length(dir);
+	const Vector2<Scalar> theta_phi = CartesianNormalDirToSpherical(Normalize(dir));
+	Vector3<Scalar> res;
+	res[0] = theta_phi[0];
+	res[1] = theta_phi[1];
+	res[2] = rho;
+	return res;
+}
+
 template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> ClipSpaceToUV(CONST_REF(Vector<Scalar, N>) cp)
 {

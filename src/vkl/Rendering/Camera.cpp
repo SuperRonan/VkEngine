@@ -16,7 +16,7 @@ namespace vkl
 			.labels = {
 				"Perspective",
 				"Orthographic",
-				//"ReversedPerspective"
+				"Spherical"
 			},
 			.default_index = 0,
 		};
@@ -110,10 +110,12 @@ namespace vkl
 		_direction = Rotate(_direction, _right, -y_angle);
 		//computeInternal();
 
-		if (_type == Type::Perspective)
+		if (_type == Type::Perspective || _type == Type::Spherical)
 		{
 			_fov *= delta.fov;
-			_fov = std::clamp(_fov, Radians(1e-1f), Radians(179.0f));
+			float max_fov = 180;
+			if(_type == Type::Spherical) max_fov = 360;
+			_fov = std::clamp(_fov, Radians(1e-1f), Radians(max_fov));
 		}
 		else if (_type == Type::Orthographic)
 		{
@@ -140,10 +142,13 @@ namespace vkl
 				_near = f;
 			}
 			
-			f = _far;
-			if (ImGui::SliderFloat("far plane", &f, _near, 1e4 * _near))
+			if (_type != Type::Spherical)
 			{
-				_far = f;
+				f = _far;
+				if (ImGui::SliderFloat("far plane", &f, _near, 1e4 * _near))
+				{
+					_far = f;
+				}
 			}
 
 			if (_gui_type.declare())
@@ -151,14 +156,19 @@ namespace vkl
 				_type = Type(_gui_type.index());
 			}
 
-			if (_type == Type::Perspective)
+			if (_type == Type::Perspective || _type == Type::Spherical)
 			{
 				f = _fov;
-				if (ImGui::SliderAngle("FOV", &f, 0, 180))
+				float max_fov = 180;
+				if(_type == Camera::Type::Spherical)	max_fov *= 2;
+				if (ImGui::SliderAngle("FOV", &f, 0, max_fov))
 				{
 					_fov = f;
 				}
+			}
 
+			if (_type == Type::Perspective)
+			{
 				ImGui::SliderFloat("Aperture", &_aperture, 0, 100, "%.1f mm", ImGuiSliderFlags_NoRoundToFormat);
 				ImGui::SliderFloat("Focal distance", &_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 				
@@ -209,6 +219,8 @@ namespace vkl
 		else if (_type == Type::Spherical)
 		{
 			type = CAMERA_TYPE_SPHERICAL;
+			res.inv_tan_half_fov = std::min(2 * std::numbers::pi_v<float>, _fov);
+			res.inv_aspect = std::min(std::numbers::pi_v<float>, _fov / _aspect);
 		}
 		res.flags |= type;
 		return res;

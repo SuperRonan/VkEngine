@@ -794,6 +794,146 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 	}
 }
 
+struct SphericalCamera : CameraBase, ICamera
+{
+	vec2 fov;
+	float z_near;
+
+	__init(const in StorageCamera cam)
+	{
+		initCameraBase(cam);
+		fov = vec2(cam.inv_tan_half_fov_or_ortho_size, cam.aspect_maybe_inv);
+		z_near = cam.z_near;
+	}
+
+	CameraType getType()
+	{
+		return CameraType::Spherical;
+	}
+
+	bool hasInfiniteDepth()
+	{
+		return true;
+	}
+
+	Optional<vec2> getRasterCPFromDir(vec3 dir, uint layer = 0)
+	{
+		vec2 angles = CartesianNormalDirToSpherical((getBasis().t * dir).zyx);
+		angles.x = -angles.x + HALF_PI;
+		vec2 cp = angles.yx / fov * 2;
+		Optional<vec2> res = none;
+		if(all(cp >= -1) && all(cp < 1))
+		{
+			res = cp;
+		}
+		return res;
+	}
+
+	CameraRay getRay(vec2 cp, Matrix2f Jcp = Matrix2f::Zero(), uint layer = 0)
+	{
+		CameraRay res;
+		float azimuth = cp.x * 0.5 * fov.x;
+		float inclination = -((cp.y * 0.5) * fov.y) + HALF_PI;
+		vec3 dir = SphericalToCartesian(vec2(inclination, azimuth));
+		dir = dir.zyx;
+		dir = getBasis() * dir;
+		res.ray = Ray3f(position, dir);
+		res.range.resetRange();
+		res.differentials.origin_jacobian = Matrix3x2f::Zero();
+		// TODO
+		res.differentials.direction_jacobian = Matrix3x2f::Zero();
+		{
+			float ct = cos(inclination);
+			float st = sin(inclination);
+			float cp = cos(azimuth);
+			float sp = sin(azimuth);
+			vec3 d_dir_over_d_theta = vec3(
+				cp * ct,
+				-st,
+				sp * ct
+			);
+			vec3 d_dir_o_d_phi = vec3(
+				-sp * st,
+				0,
+				cp * st
+			);
+			res.differentials.direction_jacobian =
+				getBasis() *
+				MakeFromCols(d_dir_o_d_phi.zyx, d_dir_over_d_theta.zyx) *
+				DiagonalMatrixV(fov * vec2(0.5, -0.5)) * Jcp;
+		}
+		return res;
+	}
+
+	float getArea()
+	{
+		return Prod(fov);
+	}
+
+	Camera::EmissionSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f Jcp = Matrix2f::Zero(), uint layer = 0)
+	{
+		let ray = getRay(cp, Jcp, layer);
+		Camera::EmissionSample res;
+		const float cos_inclination = dot(ray.ray.direction, getUp());
+		const float sin_inclination = sqrt(1 - sqr(cos_inclination));
+		res.ray = ray;
+		res.pdf = rcp(sin_inclination * getArea());
+		res.intensity = res.pdf;
+		res.position_pdf = 1;
+		res.index = layer;
+		res.flags = Camera::EmissionSample::Flags::DeltaPosition;
+		return res;
+	}
+
+	Camera::ConnectionSample sampleWi<RNG : IRNG>(inout RNG rng, vec3 position, uint flags = 0)
+	{
+		Camera::ConnectionSample res;
+		const bool at_infinity = (flags & CAMERA_SAMPLE_POSITION_AT_INFINITY) != 0;
+		const vec3 dir = at_infinity ? -position : this.position - position;
+		const float d2 = at_infinity ? 1 : Length2(dir);
+		const vec3 ndir = at_infinity ? dir : Normalize(dir);
+		let cp = getRasterCPFromDir(-ndir, 0);
+		if(cp.hasValue)
+		{
+			float cos_inclination = dot(getUp(), ndir);
+			const float sin_inclination = sqrt(1 - sqr(cos_inclination));
+			res.intensity = rcp(sin_inclination * getArea());
+			res.uv = ClipSpaceToUV(cp.value);
+			res.pdf = d2;
+			res.index = 0;
+			res.flags = Camera::ConnectionSample::Flags::DeltaPosition;
+			res.position = this.position;
+			res.direction = ndir;
+			res.distance = sqrt(d2);
+		}
+		else
+		{
+			res.intensity = 0;
+			res.pdf = 1;
+		}
+		return res;
+	}
+
+	RayPdf pdfWe(Ray3f ray)
+	{
+		RayPdf res;
+		res.position_pdf = 1;
+		const float cos_inclination = dot(ray.direction, getUp());
+		const float sin_inclination = sqrt(1 - sqr(cos_inclination));
+		res.direction_pdf = rcp(sin_inclination * getArea());
+		return res;
+	}
+
+	// Direction not normalized
+	// Assume reference_position + direction is on the camera
+	// Assumes reference point is in the view
+	float pdfWi(vec3 reference_position, vec3 direction, uint layer = 0, uint flags = 0)
+	{
+		float res = Length2(direction);
+		return res;
+	}
+};
+
 // Dynamic dispatch compile time resolve does not seem to complitely work yet
 // So we need to do this
 #ifdef FORCE_CAMERA_TYPE
@@ -842,7 +982,7 @@ ICamera MakeCamera(const in StorageCamera cam)
 	}
 	else// if(type == CameraType::Spherical)
 	{
-		return PerspectiveCamera(cam);
+		return SphericalCamera(cam);
 	}
 #endif
 }
