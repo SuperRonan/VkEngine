@@ -796,6 +796,7 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 
 struct SphericalCamera : CameraBase, ICamera
 {
+	// half angle
 	vec2 fov;
 	float z_near;
 
@@ -820,7 +821,7 @@ struct SphericalCamera : CameraBase, ICamera
 	{
 		vec2 angles = CartesianNormalDirToSpherical((getBasis().t * dir).zyx);
 		angles.x = -angles.x + HALF_PI;
-		vec2 cp = angles.yx / fov * 2;
+		vec2 cp = angles.yx / fov;
 		Optional<vec2> res = none;
 		if(all(cp >= -1) && all(cp < 1))
 		{
@@ -832,8 +833,8 @@ struct SphericalCamera : CameraBase, ICamera
 	CameraRay getRay(vec2 cp, Matrix2f Jcp = Matrix2f::Zero(), uint layer = 0)
 	{
 		CameraRay res;
-		float azimuth = cp.x * 0.5 * fov.x;
-		float inclination = -((cp.y * 0.5) * fov.y) + HALF_PI;
+		float azimuth = cp.x * fov.x;
+		float inclination = -(cp.y * fov.y) + HALF_PI;
 		vec3 dir = SphericalToCartesian(vec2(inclination, azimuth));
 		dir = dir.zyx;
 		dir = getBasis() * dir;
@@ -867,7 +868,7 @@ struct SphericalCamera : CameraBase, ICamera
 
 	float getArea()
 	{
-		return Prod(fov);
+		return Prod(fov) * 4;
 	}
 
 	Camera::EmissionSample sampleWe<RNG : IRNG>(inout RNG rng, vec2 cp, Matrix2f Jcp = Matrix2f::Zero(), uint layer = 0)

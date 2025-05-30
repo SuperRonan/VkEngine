@@ -219,8 +219,8 @@ namespace vkl
 		else if (_type == Type::Spherical)
 		{
 			type = CAMERA_TYPE_SPHERICAL;
-			res.inv_tan_half_fov = std::min(2 * std::numbers::pi_v<float>, _fov);
-			res.inv_aspect = std::min(std::numbers::pi_v<float>, _fov / _aspect);
+			res.inv_tan_half_fov = std::min(2 * std::numbers::pi_v<float>, _fov) * 0.5;
+			res.inv_aspect = std::min(std::numbers::pi_v<float>, _fov / _aspect) * 0.5;
 		}
 		res.flags |= type;
 		return res;
