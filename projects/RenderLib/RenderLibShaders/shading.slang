@@ -106,7 +106,125 @@ struct DirectLightSurfaceShadingEachLight : DirectLightShadingBase, IDirectLight
 
 struct DirectShadingResult
 {
-	vec3 L;
+	vec3 L = 0;
+	
+	__init() {}
+
+	[mutating]
+	void add(const in DirectShadingResult other)
+	{
+		L += other.L;
+	}
+}
+
+DirectShadingResult ShadeLight(
+	const in BoundScene scene,
+	const in SurfaceGeometryInfo sgi,
+	const in PBMaterial material,
+	const in StorageLight light
+) {
+	DirectShadingResult res = {};
+	uint shadow_index = 0;
+	vec3 shadow_coordinates = {};
+	uint shadow_type = 0;
+	const bool shadow_map = (SHADING_SHADOW_METHOD == SHADING_SHADOW_MAP);
+	const bool ray_tracing = (SHADING_SHADOW_METHOD == SHADING_SHADOW_RAY_TRACE);
+	if(light.getType() == LightType::Point)
+	{
+		let pl = PointLight(light);
+		vec3 dir = pl.position - sgi.position;
+		vec3 wi = Normalize(dir);
+		vec3 Le = pl.emission / Length2(dir);
+
+		res.L = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le * AbsDot(sgi.shading_normal, wi);
+
+		
+		if(NonZero(res.L))
+		{
+			if(ray_tracing)
+			{
+				RayDesc ray;
+				ray.Origin = sgi.position;
+				ray.Direction = wi;
+				ray.TMin = RayTMin(Ray3f(sgi.position, wi), sgi.geometry_normal);
+				ray.TMax = length(dir);
+				res.L *= scene.testVisibility(ray);
+			}
+			else if(shadow_map)
+			{
+				float d = CubeMapDepth(sgi.position, pl.position, pl.z_near);
+				//d = 0;
+				//d = FloatOffset(d, 1024);
+				float v = SceneLightsDepthCube[pl.shadow_texture_index].SampleCmp(LightDepthSampler, -wi, d);
+				res.L *= v;
+			}
+
+		}
+	}
+	else if(light.getType() == LightType::Spot)
+	{
+		let sl = SpotLight(light);
+		vec3 dir = sl.position - sgi.position;
+		vec3 wi = Normalize(dir);
+		vec3 Le = sl.emission / Length2(dir);
+	
+		const vec4 proj_h = sl.getWorldToProj() * Homogeneous(sgi.position);
+		const vec3 proj = HomogeneousNormalize(proj_h);
+
+		const bool in_frustm = proj_h.z > 0 && all(proj.xy >= -1) && all(proj.xy <= 1);
+		if(in_frustm)
+		{
+			Le *= sl.evaluateAttenuation(proj.xy);
+			if(NonZero(Le))
+			{
+				res.L = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le * AbsDot(sgi.shading_normal, wi);
+			
+				if(NonZero(res.L))
+				{
+					if(ray_tracing)
+					{
+						RayDesc ray;
+						ray.Origin = sgi.position;
+						ray.Direction = wi;
+						ray.TMin = RayTMin(Ray3f(sgi.position, wi), sgi.geometry_normal);
+						ray.TMax = length(dir);
+						res.L *= scene.testVisibility(ray);
+					}
+					else if(shadow_map)
+					{
+						float d = proj.z;
+						float v = SceneLightsDepth2D[sl.shadow_texture_index].SampleCmp(LightDepthSampler, ClipSpaceToUV(proj.xy), d);
+						res.L *= v;
+					}
+				}
+			}
+		}
+	}
+	else if(light.getType() == LightType::Directional)
+	{
+		let dl = DirectionalLight(light);
+		vec3 wi = light.direction;
+		vec3 Le = light.emission;
+		res.L = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le * AbsDot(sgi.shading_normal, wi);
+		if(NonZero(res.L))
+		{
+			if(ray_tracing)
+			{
+				RayDesc ray;
+				ray.Origin = sgi.position;
+				ray.Direction = wi;
+				ray.TMin = RayTMin(Ray3f(sgi.position, wi), sgi.geometry_normal);
+				ray.TMax = std::numeric_limits<float>::infinity();
+				res.L *= scene.testVisibility(ray);
+			}
+			else if(shadow_map)
+			{
+				// TODO
+			}
+		}
+	}
+
+	return res;
 }
 
 DirectShadingResult Shade(
@@ -114,10 +232,27 @@ DirectShadingResult Shade(
 	const in SurfaceGeometryInfo sgi,
 	const in PBMaterial material
 ) {
-	DirectShadingResult res;
-	
-	// TODO
-	res.L = material.albedo;
+	DirectShadingResult res = {};
+
+	const uint n = scene.getUBO().num_lights;
+	for(uint i = 0; i < n; ++i)
+	{
+		res.add(ShadeLight(scene, sgi, material, SceneLights[i]));
+	}
+
+	let env_map = BoundScene::EnvMap(scene.getUBO());
+	if(NonZero(env_map.solar_disk_emission))
+	{
+		StorageLight l;
+		l.flags = uint(LightType::Directional);
+		l.direction = l.position = env_map.solar_disk_direction;
+		l.emission = env_map.solar_disk_emission;
+		if(env_map.solar_disk_angle > 0)
+		{
+			l.emission *= sqr(env_map.solar_disk_angle);
+		}
+		res.add(ShadeLight(scene, sgi, material, l));
+	}
 
 	return res;
 }

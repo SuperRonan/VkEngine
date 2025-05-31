@@ -55,6 +55,7 @@ vec4 main() : SV_Target0
 	let camera = MakeCamera(renderer_ubo.camera);
 	const vec3 camera_position = camera.getPosition();
 	const vec3 wo = normalize(camera_position - geom.position);
+	geom.out_direction = wo;
 
 	var res = Shade(scene, geom, material);
 	res.L += material.albedo * scene.getUBO().ambient;

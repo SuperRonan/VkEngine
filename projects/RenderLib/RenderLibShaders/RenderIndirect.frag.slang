@@ -20,6 +20,8 @@ layout(location = 4) in vec3 v_w_tangent;
 
 layout(location = 0) out vec4 o_color;
 
+layout(RENDERER_BINDING + 1) uniform SamplerState LightDepthSampler_;
+
 [shader("pixel")]
 void main()
 {
@@ -66,6 +68,7 @@ void main()
 	let camera = MakeMatrixCamera(renderer_ubo.camera);
 	const vec3 camera_position = camera.getPosition();
 	const vec3 wo = normalize(camera_position - position);
+	geom.out_direction = wo;
 
 	var res = Shade(scene, geom, material);
 	

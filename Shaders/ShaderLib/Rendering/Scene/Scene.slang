@@ -114,7 +114,7 @@ typealias SceneLightsBufferType = BINDING_HANDLE(StructuredBuffer, SCENE_LIGHTS_
 layout(SCENE_LIGHTS_BINDING + 0) restrict SceneLightsBufferType SceneLights;
 
 layout(SCENE_LIGHTS_BINDING + 1) uniform Texture2D<float> SceneLightsDepth2D[];
-layout(SCENE_LIGHTS_BINDING + 1) uniform TextureCube<float> SceneLightsDepthCube[];
+layout(SCENE_LIGHTS_BINDING + 2) uniform TextureCube<float> SceneLightsDepthCube[];
 
 #endif
 

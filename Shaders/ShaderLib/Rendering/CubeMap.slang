@@ -35,14 +35,14 @@ AffineXForm3Df GetCubeMapFaceWorldToView(uint id, vec3 position)
 {
 	const vec3 front = CubeMapFaceDirection(id);
 	const vec3 up = CubeMapFaceUpDirection(id);
-	return LookAtDirAssumeOrtho(position, front, up);
+	return LookAtDirAssumeOrtho(position, front, -up);
 }
 
 AffineXForm3Df GetCubeMapFaceViewToWorld(uint id, vec3 position)
 {
 	const vec3 front = CubeMapFaceDirection(id);
 	const vec3 up = CubeMapFaceUpDirection(id);
-	return InverseLookAtDirAssumeOrtho(position, front, up);
+	return InverseLookAtDirAssumeOrtho(position, front, -up);
 }
 
 mat4 GetCubeMapViewToProj(float z_near)

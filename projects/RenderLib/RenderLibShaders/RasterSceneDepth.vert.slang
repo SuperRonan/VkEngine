@@ -1,8 +1,12 @@
 
 #define SCENE_LIGHTS_ACCESS ROM 
 
+#define I_WANT_TO_DEBUG 1
+#include <ShaderLib/Debug/DebugBuffers.slang>
+
 #include <ShaderLib/Rendering/CubeMap.slang>
 #include <ShaderLib/Rendering/Lights/Light.slang>
+
 
 #ifndef TARGET_CUBE
 #define TARGET_CUBE 0
@@ -51,12 +55,12 @@ vec4 main(
 	// const vec3 a_tangent = vertex.tangent;
 	// const vec2 a_uv = vertex.uv;
 
-	let light = MakeLight(SceneLights[_pc.light_id]);
-
+	let light = SceneLights[_pc.light_id];
+	
 #if TARGET_CUBE
-const mat4 w2p = (light as PointLight).value.getWorldToProj(view_id);
+	const mat4 w2p = PointLight(light).getWorldToProj(view_id);
 #else
-	const mat4 w2p = (light as SpotLight).value.getWorldToProj();
+	const mat4 w2p = SpotLight(light).getWorldToProj();
 #endif
 	const mat4 o2w = ResizeMatrix<4, 4>(vd.matrix);
 	const mat4 o2p = w2p * o2w;
