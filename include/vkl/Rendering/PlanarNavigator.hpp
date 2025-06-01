@@ -20,7 +20,7 @@ namespace vkl
 
 	public:
 
-		PlanarNavigator(vec2 const t = vec2(0), Float zoom = 1);
+		PlanarNavigator(vec2 const t = vec2::Zero(), Float zoom = 1);
 
 		void update(Float screen_scale, MouseEventListener * mouse, KeyboardStateListener * keyboard, GamepadListener * gamepad);
 

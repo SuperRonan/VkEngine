@@ -14,7 +14,7 @@ namespace vkl
 
 	void PlanarNavigator::update(Float screen_scale, MouseEventListener* mouse, KeyboardStateListener* keyboard, GamepadListener* gamepad)
 	{
-		vec2 delta = vec2(0);
+		vec2 delta = vec2::Zero();
 		vec2 zoom_center; // TODO
 		Float zoom_mult = 1.0f;
 

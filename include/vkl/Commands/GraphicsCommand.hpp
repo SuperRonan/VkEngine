@@ -323,6 +323,8 @@ namespace vkl
 		
 		struct DrawInfo : public GraphicsCommand::GfxDrawInfo
 		{
+			using CallInfo = MyDrawCallInfo;
+
 			DrawType draw_type = DrawType::MAX_ENUM;
 
 			MyVector<MyDrawCallInfo> calls;
