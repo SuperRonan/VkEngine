@@ -429,6 +429,12 @@ namespace vkl
 		_desired_resolution = {w, h};
 	}
 
+	void VkWindow::requestResize(uint32_t w, uint32_t h)
+	{
+		_desired_resolution = { w, h };
+		_gui_resized = true;
+	}
+
 	void VkWindow::initSwapchain()
 	{
 		createSwapchain();

@@ -211,6 +211,8 @@ namespace vkl
 
 		void setSize(uint32_t w, uint32_t h);
 
+		void requestResize(uint32_t w, uint32_t h);
+
 		std::shared_ptr<Image> image(uint32_t index);
 
 		std::shared_ptr<ImageView> view(uint32_t index);
@@ -281,7 +283,6 @@ namespace vkl
 			res.params.exposure *= _brightness;
 			return res;
 		}
-
 	};
 
 }
