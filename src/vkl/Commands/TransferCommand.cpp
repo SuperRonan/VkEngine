@@ -86,7 +86,7 @@ namespace vkl
 		}
 	};
 
-	std::shared_ptr<ExecutionNode> CopyImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
+	std::shared_ptr<ExecutionNode> CopyImage::getExecutionNode(RecordContext& ctx, CopyInfoInstance const& ci)
 	{
 		std::shared_ptr<CopyImageNode> node = _exec_node_cache.getCleanNode<CopyImageNode>([&]()
 		{
@@ -98,7 +98,7 @@ namespace vkl
 
 		node->setName(name());
 
-		node->_src = ci.src->instance();
+		node->_src = ci.src;
 		node->_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 		node->resources() += ImageViewUsage{
 			.ivi = node->_src,
@@ -110,7 +110,7 @@ namespace vkl
 			.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
 		};
 
-		node->_dst = ci.dst->instance();
+		node->_dst = ci.dst;
 		node->_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 		node->resources() += ImageViewUsage{
 			.ivi = node->_dst,
@@ -122,6 +122,15 @@ namespace vkl
 			.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 		};
 		return node;
+	}
+
+	std::shared_ptr<ExecutionNode> CopyImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
+	{
+		return getExecutionNode(ctx, CopyInfoInstance{
+			.src = ci.src->instance(),
+			.dst = ci.dst->instance(),
+			.regions = ci.regions,
+		});
 	}
 
 	std::shared_ptr<ExecutionNode> CopyImage::getExecutionNode(RecordContext& ctx)
@@ -142,7 +151,18 @@ namespace vkl
 		};
 	}
 
-
+	Executable CopyImage::with(CopyInfoInstance const& ci)
+	{
+		return [this, ci](RecordContext& ctx)
+		{
+			CopyInfoInstance cinfo{
+				.src = ci.src ? ci.src : _src->instance(),
+				.dst = ci.dst ? ci.dst : _dst->instance(),
+				.regions = ci.regions.empty() ? _regions : ci.regions,
+			};
+			return getExecutionNode(ctx, cinfo);
+		};
+	}
 
 
 

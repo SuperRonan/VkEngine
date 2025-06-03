@@ -49,13 +49,22 @@ namespace vkl
 			MyVector<VkImageCopy2> regions = {};
 		};
 
+		struct CopyInfoInstance
+		{
+			std::shared_ptr<ImageViewInstance> src = nullptr;
+			std::shared_ptr<ImageViewInstance> dst = nullptr;
+			MyVector<VkImageCopy2> regions = {};
+		};
+
 		CopyImage(CreateInfo const& ci);
 
+		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, CopyInfoInstance const& ci);
 		std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx, CopyInfo const& ci);
 
 		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext & ctx) override;
 
 		Executable with(CopyInfo const& cinfo);
+		Executable with(CopyInfoInstance const& cinfo);
 
 		Executable operator()(CopyInfo const& cinfo)
 		{
