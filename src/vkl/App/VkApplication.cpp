@@ -243,7 +243,6 @@ namespace vkl
 
 		features.mesh_shader_ext.meshShader = t;
 		features.mesh_shader_ext.taskShader = t;
-		features.mesh_shader_ext.multiviewMeshShader = t;
 		//features.mesh_shader_ext.primitiveFragmentShadingRateMeshShader = t;
 
 		features.robustness2_ext.nullDescriptor = t;
