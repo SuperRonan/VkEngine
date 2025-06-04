@@ -276,6 +276,20 @@ namespace vkl
 			_should_update_props_buffer |= ImGui::Checkbox("Sample spectral", &_sample_spectral);
 		}
 
+		std::string txt;
+		for (uint i = 0; i < _textures.size(); ++i)
+		{
+			std::shared_ptr<Texture>& texture = _textures[i];
+			if (texture)
+			{
+				txt = std::format("Texture {}", i);
+				if (ImGui::CollapsingHeader(txt.data()))
+				{
+					texture->declareGUI(ctx);
+				}
+			}
+		}
+
 		ImGui::PopID();
 	}
 

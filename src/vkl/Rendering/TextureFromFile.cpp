@@ -362,6 +362,7 @@ namespace vkl
 
 	void TextureFromFile::declareGUI(GuiContext& ctx)
 	{
+		ImGui::PushID(this);
 		static thread_local std::string txt_buffer;
 		txt_buffer = _path.string();
 		ImGui::InputText("Path", &txt_buffer, ImGuiInputTextFlags_ReadOnly);
@@ -374,10 +375,14 @@ namespace vkl
 			FileDialog::OpenInfo info{};
 			if (!_path.empty())
 			{
-				auto cannon = application()->fileSystem()->resolve(_path);
-				if (cannon.result == that::Result::Success)
+				auto resolved = application()->fileSystem()->resolve(_path);
+				if (resolved.result == that::Result::Success)
 				{
-					info.default_location = cannon.value; 
+					resolved = application()->fileSystem()->cannonize(resolved.value);
+				}
+				if (resolved.result == that::Result::Success)
+				{
+					info.default_location = resolved.value;
 				}
 			}
 			std::array filters = {
@@ -431,7 +436,7 @@ namespace vkl
 			const char* status = "Unknown!";
 			if (isReady())
 			{
-				if ((_desired_mips == MipsOptions::None) || _mips_done)
+				if ((_desired_mips == MipsOptions::None) || (_view == _all_mips_view))
 				{
 					status = "Ready!";
 				}
@@ -484,6 +489,7 @@ namespace vkl
 			ImGui::InputInt("Mips", (int*) &mips, 0, 0, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputInt("Layers", (int*)&layers, 0, 0, ImGuiInputTextFlags_ReadOnly);
 		}
+		ImGui::PopID();
 	}
 
 
