@@ -72,6 +72,11 @@ namespace vkl
 		}
 	}
 
+	void Texture::declareGUI(GuiContext& ctx)
+	{
+		
+	}
+
 
 
 	std::shared_ptr<Texture> Texture::MakeShared(MakeInfo const& mi)

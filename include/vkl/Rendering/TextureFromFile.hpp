@@ -47,6 +47,8 @@ namespace vkl
 
 		void launchLoadTask();
 
+		void reload();
+
 	public:
 
 		struct CreateInfo
@@ -66,6 +68,8 @@ namespace vkl
 		virtual ~TextureFromFile() override;
 
 		virtual void updateResources(UpdateContext& ctx) override;
+
+		virtual void declareGUI(GuiContext & ctx) override;
 	};
 
 	class TextureFileCache : public VkObject

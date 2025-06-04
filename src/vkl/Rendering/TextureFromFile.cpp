@@ -1,7 +1,12 @@
 #include <vkl/Rendering/TextureFromFile.hpp>
+#include <vkl/IO/GuiContext.hpp>
 #include <that/img/ImRead.hpp>
 
 #include <chrono>
+
+#include <imgui/misc/cpp/imgui_stdlib.h>
+
+#include <vulkan/vk_enum_string_helper.h>
 
 namespace vkl
 {
@@ -196,6 +201,34 @@ namespace vkl
 		application()->threadPool().pushTask(_load_image_task);
 	}
 
+	void TextureFromFile::reload()
+	{
+		if (!_is_synch)
+		{
+			if (_load_image_task)
+			{
+				_load_image_task->cancel();
+				_load_image_task->waitIFN();
+			}
+		}
+		_image.reset();
+		_all_mips_view.reset();
+		_top_mip_view.reset();
+		_view.reset();
+		callResourceUpdateCallbacks();
+
+		if (_is_synch)
+		{
+			loadHostImage();
+			createDeviceImage();
+			_view = _all_mips_view;
+		}
+		else
+		{
+			launchLoadTask();
+		}
+	}
+
 	TextureFromFile::TextureFromFile(CreateInfo const& ci):
 		Texture(Texture::CI{
 			.app = ci.app,
@@ -208,16 +241,7 @@ namespace vkl
 	{
 		_desired_format = DetailedVkFormat::Find(ci.desired_format);
 
-		if (_is_synch)
-		{
-			loadHostImage();
-			createDeviceImage();
-			_view = _all_mips_view;
-		}
-		else
-		{
-			launchLoadTask();
-		}
+		reload();
 	}
 
 	TextureFromFile::~TextureFromFile()
@@ -336,6 +360,131 @@ namespace vkl
 		}
 	}
 
+	void TextureFromFile::declareGUI(GuiContext& ctx)
+	{
+		static thread_local std::string txt_buffer;
+		txt_buffer = _path.string();
+		ImGui::InputText("Path", &txt_buffer, ImGuiInputTextFlags_ReadOnly);
+		ImGui::SameLine();
+		auto file_dialog = ctx.getCommonFileDialog();
+		bool can_open = file_dialog->canOpen();
+		ImGui::BeginDisabled(!can_open);
+		if (ImGui::Button("..."))
+		{
+			FileDialog::OpenInfo info{};
+			if (!_path.empty())
+			{
+				auto cannon = application()->fileSystem()->resolve(_path);
+				if (cannon.result == that::Result::Success)
+				{
+					info.default_location = cannon.value; 
+				}
+			}
+			std::array filters = {
+				SDL_DialogFileFilter{
+					.name = "Any image file",
+					.pattern = "*",
+				},
+				SDL_DialogFileFilter{
+					.name = "PNG image",
+					.pattern = "png",
+				},
+				SDL_DialogFileFilter{
+					.name = "JPEG image",
+					.pattern = "jpg;jpeg",
+				},
+				SDL_DialogFileFilter{
+					.name = "TGA image",
+					.pattern = "tga",
+				},
+				SDL_DialogFileFilter{
+					.name = "HDR image",
+					.pattern = "hdr",
+				},
+			};
+			info.filters = filters;
+			info.allow_multiple = false;
+			info.parent_window = ctx.getCurrentWindow();
+			file_dialog->open(this, info);
+		}
+		ImGui::EndDisabled();
+
+		bool _should_reload = false;
+		if (file_dialog->owner() == this && file_dialog->completed())
+		{
+			if (!file_dialog->getResults().empty())
+			{
+				that::FileSystem::Path new_path = file_dialog->getResults().front();
+				_path = new_path;
+				_should_reload = true;
+				_is_ready = false;
+			}
+			file_dialog->close();
+		}
+		if (_should_reload)
+		{
+			reload();
+		}
+
+		{
+			ImVec4 color = ImVec4(1, 1, 1, 1);
+			const char* status = "Unknown!";
+			if (isReady())
+			{
+				if ((_desired_mips == MipsOptions::None) || _mips_done)
+				{
+					status = "Ready!";
+				}
+				else
+				{
+					status = "Ready (waiting on MIPs)!";
+				}
+			}
+			else
+			{
+				if (_host_image.empty())
+				{
+					if (_path.empty())
+					{
+						status = "Empty!";
+						color = ctx.style().warning_yellow;
+					}
+					else
+					{
+						status = "Failed to load image!";
+						color = ctx.style().invalid_red;
+
+					}
+				}
+				else
+				{
+					status = "Loading...";
+					color = ctx.style().warning_yellow;
+				}
+			}
+			ImGui::TextColored(color, "Status: %s", status);
+		}
+
+		{
+			VkFormat format = VK_FORMAT_UNDEFINED;
+			VkExtent3D extent = makeUniformExtent3D(0);
+			uint layers = 0;
+			uint mips = 0;
+			if (isReady())
+			{
+				auto& instance = _view->instance();
+				format = instance->createInfo().format;
+				extent = instance->image()->createInfo().extent;
+				layers = instance->createInfo().subresourceRange.layerCount;
+				mips = instance->createInfo().subresourceRange.levelCount;
+			}
+			const char * format_str = string_VkFormat(format);
+			ImGui::Text("Format: %s", format_str);
+			ImGui::InputInt3("Resolution", (int*)&extent.width, ImGuiInputTextFlags_ReadOnly);
+			ImGui::InputInt("Mips", (int*) &mips, 0, 0, ImGuiInputTextFlags_ReadOnly);
+			ImGui::InputInt("Layers", (int*)&layers, 0, 0, ImGuiInputTextFlags_ReadOnly);
+		}
+	}
 
 
 
