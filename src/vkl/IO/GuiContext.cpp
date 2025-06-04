@@ -16,8 +16,14 @@ namespace vkl
 
 	GuiContext::GuiContext(CreateInfo const& ci) :
 		_imgui_context(ci.imgui_context),
-		_style(ci.style ? ci.style : g_default_style)
+		_style(ci.style ? ci.style : g_default_style),
+		_common_file_dialog(ci.common_file_dialog)
 	{
+		if (!_common_file_dialog)
+		{
+			_common_file_dialog = std::make_shared<FileDialog>(FileDialog::CI{
 
+			});
+		}
 	}
 }

@@ -3,6 +3,7 @@
 #include <imgui/imgui.h>
 
 #include <memory>
+#include "FileDialog.hpp"
 
 namespace vkl
 {
@@ -23,12 +24,15 @@ namespace vkl
 
 		std::shared_ptr<GUIStyle> _style;
 
+		std::shared_ptr<FileDialog> _common_file_dialog;
+
 	public:
 
 		struct CreateInfo
 		{
 			ImGuiContext * imgui_context = nullptr;
 			std::shared_ptr<GUIStyle> style = nullptr;
+			std::shared_ptr<FileDialog> common_file_dialog = nullptr;
 		};
 		using CI = CreateInfo;
 
@@ -43,6 +47,16 @@ namespace vkl
 		{
 			assert(_style);
 			return *_style;
+		}
+		
+		SDL_Window* getCurrentWindow()
+		{
+			return static_cast<SDL_Window*>(ImGui::GetWindowViewport()->PlatformHandleRaw);
+		}
+
+		const std::shared_ptr<FileDialog>& getCommonFileDialog()
+		{
+			return _common_file_dialog;
 		}
 	};
 }
