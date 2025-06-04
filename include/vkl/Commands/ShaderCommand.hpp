@@ -62,7 +62,7 @@ namespace vkl
 
 		void recordPushConstantIFN(CommandBuffer& cmd, Index begin, uint32_t size, uint32_t offset = 0)
 		{
-			if (size != 0)
+			if (size != 0 && _pc_stages != 0)
 			{
 				recordPushConstant(cmd, begin, size, offset);
 			}
