@@ -168,7 +168,7 @@ namespace vkl
 			.name = name() + "LightDepthSampler",
 			.filter = VK_FILTER_LINEAR,
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			.compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,	
+			.compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,
 		});
 
 		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
@@ -292,6 +292,10 @@ namespace vkl
 			.attachments = {_render_target, _depth},
 		});
 
+		Dyn<VkCompareOp> compare_op = [this]() {
+			return _use_reverse_depth ? VK_COMPARE_OP_GREATER : VK_COMPARE_OP_LESS;
+		};
+
 		for (uint32_t model_type : _model_types)
 		{
 			_forward_pipeline.render_scene_direct[model_type] = std::make_shared<VertexCommand>(VertexCommand::CI{
@@ -305,7 +309,7 @@ namespace vkl
 				},
 				.extern_render_pass = _forward_pipeline.render_pass,
 				.write_depth = true,
-				.depth_compare_op = VK_COMPARE_OP_LESS,
+				.depth_compare_op = compare_op,
 				.vertex_shader_path = shaders / "render.vert.slang",
 				.fragment_shader_path = shaders / "render.frag.slang",
 				.definitions = [this](DefinitionsList & res){res = {_shadow_method_glsl_def};},
@@ -326,7 +330,7 @@ namespace vkl
 			},
 			.extern_render_pass = _forward_pipeline.render_pass,
 			.write_depth = true,
-			.depth_compare_op = VK_COMPARE_OP_LESS,
+			.depth_compare_op = compare_op,
 			.vertex_shader_path = shaders / "RenderIndirect.vert.slang",
 			.fragment_shader_path = shaders / "RenderIndirect.frag.slang",
 			.definitions = [this](DefinitionsList & res) {res = {_shadow_method_glsl_def};},
@@ -526,7 +530,7 @@ namespace vkl
 					.cull_mode = VK_CULL_MODE_BACK_BIT,
 					.sets_layouts = (_sets_layouts + std::pair{model_set, model_layout[model_type]}),
 					.write_depth = true,
-					.depth_compare_op = VK_COMPARE_OP_LESS,
+					.depth_compare_op = compare_op,
 					.vertex_shader_path = shaders / "RasterGBuffer.vert",
 					.fragment_shader_path = shaders / "RasterGBuffer.frag",
 				};
@@ -554,7 +558,7 @@ namespace vkl
 						},
 					},
 					.write_depth = true,
-					.depth_compare_op = VK_COMPARE_OP_LESS,
+					.depth_compare_op = compare_op,
 					.vertex_shader_path = shaders / "RasterSceneGBuffer.vert",
 					.fragment_shader_path = shaders / "RasterSceneGBuffer.frag",
 				};
@@ -868,6 +872,8 @@ namespace vkl
 	{
 		bool update_all_anyway = ctx.updateAnyway();
 
+		_use_reverse_depth = _camera->hasReverseDepth();
+
 		_use_ao_glsl_def.back() = '0' + (_ambient_occlusion->enable() ? 1 : 0);
 		_shadow_method_glsl_def.back() = '0' + _shadow_method.index();
 
@@ -1130,6 +1136,8 @@ namespace vkl
 			}
 		}
 
+		VkClearValue clear_depth = VkClearValue{ .depthStencil = VkClearDepthStencilValue{.depth = _use_reverse_depth ? 0.0f : 1.0f} };
+
 		if (!draw_list.empty() && _pipeline_selection.index() < 2)
 		{
 			const RenderPipeline selected_pipeline = static_cast<RenderPipeline>(_pipeline_selection.index());
@@ -1139,7 +1147,7 @@ namespace vkl
 				exec.pushDebugLabel("DirectPipeline", true);
 				std::array<VkClearValue, 2> clear_values = {
 					VkClearColorValue{.uint32 = {0, 0, 0, 0}},
-					VkClearValue{.depthStencil = VkClearDepthStencilValue{.depth = 1.0f}},
+					clear_depth,
 				};
 				RenderPassBeginInfo render_pass{
 					.framebuffer = _forward_pipeline.framebuffer->instance(),
@@ -1181,7 +1189,6 @@ namespace vkl
 				if(_use_fat_gbuffer) gbuffer = &_fat_deferred_pipeline;
 				else gbuffer = &_minimal_deferred_pipeline;
 
-				VkClearValue clear_depth = VkClearValue{ .depthStencil = VkClearDepthStencilValue{.depth = 1.0f} };
 				std::array<VkClearValue, 5> clear_values; 
 				uint32_t clear_count;
 				if (_use_fat_gbuffer)

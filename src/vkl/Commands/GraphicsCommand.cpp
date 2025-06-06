@@ -165,7 +165,7 @@ namespace vkl
 			render_pass_ci.subpasses.push_back(SubPassDescription2{
 				.view_mask = _view_mask,
 				.read_only_depth = !_write_depth,
-				.read_only_stencil = !(_stencil_front_op.has_value() || _stencil_back_op.has_value()),
+				.read_only_stencil = !(_stencil_front_op.hasValue() || _stencil_back_op.hasValue()),
 				.disallow_merging = application()->options().render_pass_disallow_merging,
 				.auto_preserve_all_other_attachments = false, // No need
 				.shading_rate_texel_size = _fragment_shading_rate_texel_size,
@@ -286,7 +286,7 @@ namespace vkl
 					}
 					if (stencil)
 					{
-						const bool read_only = !(_stencil_front_op.has_value() || _stencil_back_op.has_value());
+						const bool read_only = !(_stencil_front_op.hasValue() || _stencil_back_op.hasValue());
 						if (_depth_stencil.clear_stencil)
 						{
 							flags |= AttachmentDescription2::Flags::StencilLoadOpClear;
@@ -373,45 +373,48 @@ namespace vkl
 		const uint32_t depth_stencil_index = _render_pass->subpasses().front().depth_stencil.index;
 		if (depth_stencil_index != VK_ATTACHMENT_UNUSED)
 		{
-			const VkImageAspectFlags aspect = [&](){
-				VkImageAspectFlags res = 0;
-				if (_use_external_renderpass)
-				{
-					res = getImageAspectFromFormat(_render_pass->attachments()[depth_stencil_index].format.value()) & _render_pass->subpasses().front().depth_stencil.aspect;
-				}
-				else
-				{
-					res = _depth_stencil.view->range().value().aspectMask;
-				}
-				return res;
-			}();
-			const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.has_value();
-			const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.has_value() || _stencil_back_op.has_value());
-			gci.depth_stencil = VkPipelineDepthStencilStateCreateInfo{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.depthTestEnable = depth ? VK_TRUE : VK_FALSE,
-				.depthWriteEnable = _write_depth ? VK_TRUE : VK_FALSE,
-				.depthCompareOp = _depth_compare_op.value_or(VK_COMPARE_OP_LESS),
-				.depthBoundsTestEnable = VK_FALSE,
-				.stencilTestEnable = stencil ? VK_TRUE : VK_FALSE,
-				.minDepthBounds = 0.0,
-				.maxDepthBounds = 1.0,
+			gci.depth_stencil = GraphicsPipeline::DepthStencilState{
+				.flags = [this, depth_stencil_index]() {
+					const VkImageAspectFlags aspect = [&]() {
+						VkImageAspectFlags res = 0;
+						if (_use_external_renderpass)
+						{
+							res = getImageAspectFromFormat(_render_pass->attachments()[depth_stencil_index].format.value()) & _render_pass->subpasses().front().depth_stencil.aspect;
+						}
+						else
+						{
+							res = _depth_stencil.view->range().value().aspectMask;
+						}
+						return res;
+					}();
+					const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.hasValue();
+					const bool stencil = (aspect & VK_IMAGE_ASPECT_STENCIL_BIT) && (_stencil_front_op.hasValue() || _stencil_back_op.hasValue());
+					DepthStencilState::Flags res = DepthStencilState::Flags(0);
+					// TODO consider the aspect of the depth / stencil image
+					// const bool depth = (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) && _depth_compare_op.hasValue();
+					if (depth)
+					{
+						auto c = _depth_compare_op.value();
+						res |= DepthStencilState::Flags::DepthTestBit | static_cast<DepthStencilState::Flags>(static_cast<uint32_t>(c) << static_cast<uint32_t>(DepthStencilState::Flags::_CompareOpBitOffset));
+					}
+					if (_write_depth)
+					{
+						res |= DepthStencilState::Flags::DepthWriteBit;
+					}
+					if (stencil)
+					{
+						res |= DepthStencilState::Flags::StencilTestBit;
+					}
+					return res;
+				},
 			};
-			if (stencil)
+			if (_stencil_front_op.hasValue())
 			{
-				const VkStencilOpState default_op{
-					.failOp = VK_STENCIL_OP_KEEP,
-					.passOp = VK_STENCIL_OP_KEEP,
-					.depthFailOp = VK_STENCIL_OP_KEEP,
-					.compareOp = VK_COMPARE_OP_ALWAYS,
-					.compareMask = 0x00,
-					.writeMask = 0x00,
-					.reference = 0x00,
-				};
-				gci.depth_stencil.value().front = _stencil_front_op.value_or(default_op);
-				gci.depth_stencil.value().back = _stencil_back_op.value_or(default_op);
+				gci.depth_stencil.value().front_stencil = _stencil_front_op;
+			}
+			if (_stencil_back_op.hasValue())
+			{
+				gci.depth_stencil.value().back_stencil = _stencil_back_op;
 			}
 		}
 

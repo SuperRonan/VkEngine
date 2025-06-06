@@ -76,9 +76,9 @@ namespace vkl
 		uint32_t _view_mask = 0;
 		bool _use_external_renderpass = false;
 		bool _write_depth = false;
-		std::optional<VkCompareOp> _depth_compare_op = VK_COMPARE_OP_LESS;
-		std::optional<VkStencilOpState> _stencil_front_op = {};
-		std::optional<VkStencilOpState> _stencil_back_op = {};
+		Dyn<VkCompareOp> _depth_compare_op = {};
+		StencilOpState _stencil_front_op = {};
+		StencilOpState _stencil_back_op = {};
 
 		std::optional<GraphicsPipeline::LineRasterizationState> _line_raster_state = {};
 
@@ -115,9 +115,9 @@ namespace vkl
 			Dyn<PipelineBlending> common_blending = {};
 			uint32_t view_mask = 0;
 			bool write_depth = false;
-			std::optional<VkCompareOp> depth_compare_op = {};
-			std::optional<VkStencilOpState> stencil_front_op = {};
-			std::optional<VkStencilOpState> stencil_back_op = {};
+			Dyn<VkCompareOp> depth_compare_op = {};
+			StencilOpState stencil_front_op = {};
+			StencilOpState stencil_back_op = {};
 			Dyn<DefinitionsList> definitions = {};
 			DrawType draw_type = {};
 		};
@@ -281,9 +281,9 @@ namespace vkl
 			Dyn<PipelineBlending> common_blending = {};
 			uint32_t view_mask = 0;
 			bool write_depth = false;
-			std::optional<VkCompareOp> depth_compare_op = {};
-			std::optional<VkStencilOpState> stencil_front_op = {};
-			std::optional<VkStencilOpState> stencil_back_op = {};
+			Dyn<VkCompareOp> depth_compare_op = {};
+			StencilOpState stencil_front_op = {};
+			StencilOpState stencil_back_op = {};
 			std::filesystem::path vertex_shader_path = {};
 			std::filesystem::path tess_control_shader_path = {};
 			std::filesystem::path tess_eval_shader_path = {};
@@ -485,9 +485,9 @@ namespace vkl
 			Dyn<PipelineBlending> common_blending = {};
 			uint32_t view_mask = 0;
 			bool write_depth = false;
-			std::optional<VkCompareOp> depth_compare_op = {};
-			std::optional<VkStencilOpState> stencil_front_op = {};
-			std::optional<VkStencilOpState> stencil_back_op = {};
+			Dyn<VkCompareOp> depth_compare_op = {};
+			StencilOpState stencil_front_op = {};
+			StencilOpState stencil_back_op = {};
 			std::filesystem::path task_shader_path = {};
 			std::filesystem::path mesh_shader_path = {};
 			std::filesystem::path fragment_shader_path = {};

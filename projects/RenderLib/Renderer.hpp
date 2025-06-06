@@ -57,6 +57,11 @@ namespace vkl
 		std::shared_ptr<ImageView> _depth = nullptr;
 
 		uint32_t _model_capacity = 256;
+		bool _use_indirect_rendering = false;
+		bool _use_fat_gbuffer = true;
+		bool _use_reverse_depth = false;
+		bool _maintain_rt = false;
+
 		std::shared_ptr<Buffer> _draw_indexed_indirect_buffer = nullptr;
 		BufferAndRange _vk_draw_params_segment;
 		BufferAndRange _model_indices_segment;
@@ -69,8 +74,7 @@ namespace vkl
 		
 
 		ImGuiListSelection _pipeline_selection;
-		bool _use_indirect_rendering = false;
-		bool _use_fat_gbuffer = true;
+		
 
 		std::vector<uint32_t> _model_types;
 
@@ -185,7 +189,7 @@ namespace vkl
 
 		void updateMaintainRT();
 		
-		bool _maintain_rt = false;
+		
 
 		std::shared_ptr<BuildAccelerationStructureCommand> _build_as = nullptr;
 		BuildAccelerationStructureCommand::BuildInfo _blas_build_list;

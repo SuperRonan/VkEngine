@@ -131,7 +131,11 @@ namespace vkl
 			_rasterization.pNext = nullptr;
 		}
 
-
+		VkPipelineDepthStencilStateCreateInfo depth_stencil;
+		if (_depth_stencil.hasValue())
+		{
+			depth_stencil = _depth_stencil.link();
+		}
 
 		VkGraphicsPipelineCreateInfo vk_ci{
 			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -144,7 +148,7 @@ namespace vkl
 			.pViewportState = &viewport_ci,
 			.pRasterizationState = &_rasterization,
 			.pMultisampleState = &_multisampling,
-			.pDepthStencilState = _depth_stencil.has_value() ? &_depth_stencil.value() : nullptr,
+			.pDepthStencilState = _depth_stencil.hasValue() ? &depth_stencil : nullptr,
 			.pColorBlendState = &blending_ci.ci,
 			.pDynamicState = &dynamic_state_ci,
 			.layout = layout()->handle(),
@@ -251,13 +255,16 @@ namespace vkl
 			.rasterization = _rasterization.value(),
 			.line_raster = {},
 			.multisampling = _multisampling.link(),
-			.depth_stencil = _depth_stencil,
 			.common_blending = _common_blending.valueOr(PipelineBlending{}),
 			.dynamic = _dynamic,
 			.render_pass = rpi,
 			.subpass_index = _subpass_index,
 			.program = std::static_pointer_cast<GraphicsProgramInstance>(_program->instance()),
 		};
+		if (_depth_stencil.has_value())
+		{
+			gci.depth_stencil = _depth_stencil.value().eval();
+		}
 		if (_line_raster.has_value())
 		{
 			gci.line_raster = _line_raster.value().value();
@@ -417,6 +424,24 @@ namespace vkl
 				}
 
 				if (lrs.lineStipplePattern.hasValue() && ilr.lineStipplePattern != lrs.lineStipplePattern.value())
+				{
+					res = true;
+					break;
+				}
+			}
+
+			if (_depth_stencil.has_value())
+			{
+				auto state = _depth_stencil.value().eval();
+				if (state != inst._depth_stencil)
+				{
+					res = true;
+					break;
+				}
+			}
+			else
+			{
+				if (inst._depth_stencil.hasValue())
 				{
 					res = true;
 					break;
