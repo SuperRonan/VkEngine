@@ -673,7 +673,13 @@ namespace vkl
 	{
 		return r * t + (typename MatL::Scalar(1) - t) * l;
 	}
+	
 
+	template <class T>
+	static void Swap(T& a, T& b)
+	{
+		std::swap(a, b);
+	}
 }
 
 #define USING_MATHS_TYPES(FLOAT) \

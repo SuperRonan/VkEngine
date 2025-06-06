@@ -197,6 +197,15 @@ struct CameraBase
 		return MakeFromCols(right, getUp(), direction);
 	}
 
+	bool hasReversedDepth()
+	{
+#if FORCE_CAMERA_DEPTH_ORIENTTION
+		return (FORCE_CAMERA_DEPTH_ORIENTTION == FORCE_CAMERA_DEPTH_REVERSE);
+#else
+		return (flags & CAMERA_FLAG_REVERSE_DEPTH) != 0;
+#endif
+	}
+
 	AffineXForm3Df getWorldToView(uint layer = 0)
 	{
 		// TODO re-evaluate wether it makes sense to invert the Y-Axis here? It could be done in the projection matrix
@@ -261,11 +270,11 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 	{
 		if(hasInfiniteDepth())
 		{
-			return InfinitePerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_near);
+			return InfinitePerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_near, hasReversedDepth());
 		}
 		else
 		{
-			return PerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, vec2(z_near, z_far));
+			return PerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, vec2(z_near, z_far), hasReversedDepth());
 		}
 	}
 
@@ -273,11 +282,11 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 	{
 		if(hasInfiniteDepth())
 		{
-			return InverseInfinitePerspectiveProjFromTanInvZnear(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(z_near));
+			return InverseInfinitePerspectiveProjFromTanInvZnear(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(z_near), hasReversedDepth());
 		}
 		else
 		{
-			return InversePerspectiveProjFromTan(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(vec2(z_near, z_far)));
+			return InversePerspectiveProjFromTan(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(vec2(z_near, z_far)), hasReversedDepth());
 		}
 	}
 
@@ -697,13 +706,13 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 	mat4 getViewToProj(uint layer = 0)
 	{
 		AABB3f volume = getAABB();
-		return OrthoProj(volume.bottom(), volume.top());
+		return OrthoProj(volume.bottom(), volume.top(), hasReversedDepth());
 	}
 
 	mat4 getProjToView(uint layer = 0)
 	{
 		AABB3f volume = getAABB();
-		return InverseOrthoProj(volume.bottom(), volume.top());
+		return InverseOrthoProj(volume.bottom(), volume.top(), hasReversedDepth());
 	}
 
 	mat4 getWorldToProj(uint layer = 0)

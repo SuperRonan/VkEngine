@@ -70,7 +70,8 @@ namespace vkl
 
 		float _ortho_size = 1;
 
-		bool _infinite_perspective = false;
+		bool _infinite_far = false;
+		bool _reverse_depth = false;
 
 		Type _type = Type::Perspective;
 
@@ -195,7 +196,7 @@ namespace vkl
 
 		constexpr float zFar() const
 		{
-			return _infinite_perspective ? std::numeric_limits<float>::infinity() : _far;
+			return _infinite_far ? std::numeric_limits<float>::infinity() : _far;
 		}
 
 		constexpr float aperture() const
@@ -232,6 +233,16 @@ namespace vkl
 		constexpr Type type() const
 		{
 			return _type;
+		}
+
+		bool hasReverseDepth() const
+		{
+			return _reverse_depth;
+		}
+
+		void setReverseDepth(bool reverse)
+		{
+			_reverse_depth = reverse;
 		}
 
 		// uv in clip space

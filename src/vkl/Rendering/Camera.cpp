@@ -36,19 +36,19 @@ namespace vkl
 		mat4 res;
 		if (_type == Type::Perspective)
 		{
-			if (_infinite_perspective || std::isinf(_far))
+			if (_infinite_far || std::isinf(_far))
 			{
-				res = InfinitePerspectiveProjFromFOV(_fov, _aspect, _near);
+				res = InfinitePerspectiveProjFromFOV(_fov, _aspect, _near, _reverse_depth);
 			}
 			else
 			{
-				res = PerspectiveProjFromFOV(_fov, _aspect, vec2(_near, _far));
+				res = PerspectiveProjFromFOV(_fov, _aspect, vec2(_near, _far), _reverse_depth);
 			}
 		}
 		else if (_type == Type::Orthographic)
 		{
 			const AABB3f aabb = getOrthoAABB();
-			res = OrthoProj(aabb.bottom(), aabb.top());
+			res = OrthoProj(aabb.bottom(), aabb.top(), _reverse_depth);
 		}
 		return res;
 	}
@@ -58,19 +58,19 @@ namespace vkl
 		mat4 res;
 		if (_type == Type::Perspective)
 		{
-			if (_infinite_perspective || std::isinf(_far))
+			if (_infinite_far || std::isinf(_far))
 			{
-				res = InverseInfinitePerspectiveProjFromFOV(_fov, _aspect, _near);
+				res = InverseInfinitePerspectiveProjFromFOV(_fov, _aspect, _near, _reverse_depth);
 			}
 			else
 			{
-				res = InversePerspectiveProjFromFOV(_fov, _aspect, vec2(_near, _far));
+				res = InversePerspectiveProjFromFOV(_fov, _aspect, vec2(_near, _far), _reverse_depth);
 			}
 		}
 		else if (_type == Type::Orthographic)
 		{
 			const AABB3f aabb = getOrthoAABB();
-			res = InverseOrthoProj(aabb.bottom(), aabb.top());
+			res = InverseOrthoProj(aabb.bottom(), aabb.top(), _reverse_depth);
 		}
 		return res;
 	}
@@ -134,7 +134,9 @@ namespace vkl
 	{
 		if (ImGui::CollapsingHeader("Camera"))
 		{
-			ImGui::Checkbox("Infinite perspective", &_infinite_perspective);
+			ImGui::Checkbox("Infinite far", &_infinite_far);
+			ImGui::SameLine();
+			ImGui::Checkbox("Reversed depth", &_reverse_depth);
 			float f;
 			f = _near;
 			if (ImGui::SliderFloat("near plane", &f, 0, _far))
@@ -223,6 +225,14 @@ namespace vkl
 			res.inv_aspect = std::min(std::numbers::pi_v<float>, _fov / _aspect) * 0.5;
 		}
 		res.flags |= type;
+		if (_infinite_far)
+		{
+			res.flags |= CAMERA_FLAG_INFINITE_FAR;
+		}
+		if (_reverse_depth)
+		{
+			res.flags |= CAMERA_FLAG_REVERSE_DEPTH;
+		}
 		return res;
 	}
 
