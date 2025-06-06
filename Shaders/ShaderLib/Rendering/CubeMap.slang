@@ -47,12 +47,12 @@ AffineXForm3Df GetCubeMapFaceViewToWorld(uint id, vec3 position)
 
 mat4 GetCubeMapViewToProj(float z_near)
 {
-	return InfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
+	return InfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near, true);
 }
 
 mat4 GetCubeMapProjToView(float z_near)
 {
-	return InverseInfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near);
+	return InverseInfinitePerspectiveProjFromFOV(HALF_PI, 1, z_near, true);
 }
 
 mat4 GetCubeMapFaceWorldToProj(uint id, vec3 position, float z_near)

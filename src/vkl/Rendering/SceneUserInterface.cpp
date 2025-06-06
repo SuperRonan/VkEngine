@@ -558,7 +558,11 @@ namespace vkl
 			ImGui::Checkbox("show view 3D basis", &_show_view_basis);
 
 
-			ImGui::InputInt("Base ShadowMap resolution", (int*)&_scene->_light_resolution);
+			int shadow_resolution = static_cast<int>(_scene->_light_resolution);
+			if (ImGui::InputInt("Base ShadowMap resolution", &shadow_resolution, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				_scene->_light_resolution = static_cast<uint32_t>(shadow_resolution);
+			}
 		}
 
 		auto declare_create_node_popup = [&]()

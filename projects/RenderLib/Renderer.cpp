@@ -168,7 +168,7 @@ namespace vkl
 			.name = name() + "LightDepthSampler",
 			.filter = VK_FILTER_LINEAR,
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-			.compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,
+			.compare_op = VK_COMPARE_OP_GREATER_OR_EQUAL,
 		});
 
 		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
@@ -691,7 +691,7 @@ namespace vkl
 				},
 				.extern_render_pass = _spot_light_render_pass,
 				.write_depth = true,
-				.depth_compare_op = VK_COMPARE_OP_LESS,
+				.depth_compare_op = VK_COMPARE_OP_GREATER_OR_EQUAL,
 				.vertex_shader_path = shaders / "RasterSceneDepth.vert.slang",
 				.fragment_shader_path = shaders / "RasterSceneDepth.frag.slang",
 			});
@@ -721,7 +721,7 @@ namespace vkl
 				},
 				.extern_render_pass = _point_light_render_pass,
 				.write_depth = true,
-				.depth_compare_op = VK_COMPARE_OP_LESS,
+				.depth_compare_op = VK_COMPARE_OP_GREATER_OR_EQUAL,
 				.vertex_shader_path = shaders / "RasterSceneDepth.vert.slang",
 				.fragment_shader_path = shaders / "RasterSceneDepth.frag.slang",
 				.definitions = Dyn<DefinitionsList>({"TARGET_CUBE 1"}),
@@ -1098,7 +1098,7 @@ namespace vkl
 
 				RenderPassBeginInfo render_pass;
 				VkClearValue clear{
-					.depthStencil = {.depth = 1.0f},
+					.depthStencil = {.depth = 0.0f},
 				};
 				
 				for (auto& [path, lid] : _scene->_unique_light_instances)

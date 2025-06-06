@@ -325,10 +325,10 @@ struct SpotLight : Light, ILight
 
 	Matrix4f getWorldToProj()
 	{
-		return InfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near) * ResizeMatrix<4, 4>(LookAtDirAssumeOrtho(position, direction, up));
+		return InfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near, true) * ResizeMatrix<4, 4>(LookAtDirAssumeOrtho(position, direction, up));
 	}
 
-	Matrix3x4f getViewToProj()
+	Matrix3x4f getViewToWorld()
 	{
 		return InverseLookAtDirAssumeOrtho(position, direction, up);
 	}
@@ -341,7 +341,7 @@ struct SpotLight : Light, ILight
 
 	Matrix3x4f getProjToWorld(float z_near)
 	{
-		return getViewToProj() * InverseInfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near);
+		return getViewToWorld() * InverseInfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near, true);
 	}
 
 	Matrix3x4f getProjToWorld()
