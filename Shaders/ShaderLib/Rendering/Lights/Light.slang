@@ -402,18 +402,19 @@ struct SpotLight : Light, ILight
 	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)
 	{
 		Light::ConnectionSample res;
-		const vec4 proj_shading_position_h = getWorldToProj() * Homogeneous(shading_position);
-		const vec3 proj_shading_position = proj_shading_position_h.xyz / proj_shading_position_h.w;
-		const bool in_frustum = proj_shading_position_h.z > 0 && all(proj_shading_position.xy <= 1..xx) && all(proj_shading_position.xy >= -1..xx);
 		const vec3 d = position - shading_position;
 		const float dist2 = Length2(d);
 		res.direction = Normalize(d);
 		res.distance = Length(d);
 		res.pdf = dist2;
+		const vec4 proj_shading_position_h = getWorldToProj() * Homogeneous(shading_position);
+		const vec3 proj_shading_position = proj_shading_position_h.xyz / proj_shading_position_h.w;
+		const float ct = -Dot(res.direction, this.direction);
+		const bool in_frustum = ct > 0 && all(proj_shading_position.xy <= 1..xx) && all(proj_shading_position.xy >= -1..xx);
 		if(in_frustum)
 		{
 			res.extra.xy = proj_shading_position.xy;
-			const float ct = -Dot(res.direction, this.direction);
+			
 			const float ct3 = ct * ct * ct;
 			res.intensity = emission * (rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea());
 			res.intensity *= evaluateAttenuation(res.extra.xy);
