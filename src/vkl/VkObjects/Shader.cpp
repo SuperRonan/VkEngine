@@ -974,37 +974,57 @@ namespace vkl
 		{
 			Slang::ComPtr<slang::IGlobalSession> global_session = application()->getSlangGlobalSession();
 			Slang::ComPtr<slang::ISession> session;
-			slang::TargetDesc target{
-				.format = SLANG_SPIRV,
-				.profile = global_session->findProfile("glsl_460"),
-				.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY,
+			std::array<slang::TargetDesc, 2> targets = {
+				slang::TargetDesc{
+					.format = SLANG_SPIRV,
+					.profile = global_session->findProfile("glsl_460"),
+					.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY,
+				},
+				slang::TargetDesc{
+					.format = SLANG_GLSL,
+					.profile = global_session->findProfile("glsl_460"),
+				},
 			};
-			slang::SessionDesc session_desc{
-				.targets = &target,
-				.targetCount = 1,
-			};
-			global_session->createSession(session_desc, session.writeRef());
-
-			Slang::ComPtr<slang::ICompileRequest> compiler;
-			session->createCompileRequest(compiler.writeRef());
-			const SlangOptimizationLevel opt_level = std::clamp(static_cast<SlangOptimizationLevel>(application()->options().slang_optiomization_level), SLANG_OPTIMIZATION_LEVEL_NONE, SLANG_OPTIMIZATION_LEVEL_MAXIMAL);
-			compiler->setOptimizationLevel(opt_level);
-			//const SlangInt32 spirv_target = compiler->addCodeGenTarget(SLANG_SPIRV);
-			std::optional<SlangInt32> glsl_target;
+			uint num_targets = 1;
 			if (dump_slang_to_glsl)
 			{
-				glsl_target = compiler->addCodeGenTarget(SLANG_GLSL);
+				num_targets++;
 			}
+			const SlangOptimizationLevel opt_level = std::clamp(static_cast<SlangOptimizationLevel>(application()->options().slang_optiomization_level), SLANG_OPTIMIZATION_LEVEL_NONE, SLANG_OPTIMIZATION_LEVEL_MAXIMAL);
 
-			compiler->setCompileFlags(SLANG_COMPILE_FLAG_NO_MANGLING);
-			compiler->setDebugInfoLevel(SLANG_DEBUG_INFO_LEVEL_MAXIMAL);
-			compiler->setDebugInfoFormat(SLANG_DEBUG_INFO_FORMAT_C7);
-			//compiler->setTargetEmbedDownstreamIR(0, true);
-			compiler->addPreprocessorDefine("_slang", "1");
-			SlangInt translation_unit_index = compiler->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, "0");
-			compiler->addTranslationUnitSourceStringSpan(translation_unit_index, main_path_str.c_str(), code->c_str(), code->c_str() + code->size());
-			SlangInt entry_point_index = compiler->addEntryPoint(translation_unit_index, "main", ConvertToSlang(_stage));
-			
+			MyVector<slang::CompilerOptionEntry> compiler_options{
+				slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::Optimization,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = static_cast<int>(opt_level)},
+				},
+				slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::NoMangle,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = 1},
+				},
+				slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::DebugInformation,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = SLANG_DEBUG_INFO_LEVEL_MAXIMAL},
+				},
+				slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::DebugInformationFormat,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = SLANG_DEBUG_INFO_FORMAT_C7},
+				},
+				slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::MacroDefine,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::String, .stringValue0 = "_slang", .stringValue1 = "1"},
+				},
+			};
+
+			SlangResult sr;
+			Slang::ComPtr<slang::IBlob> diagnostic;
+
+			slang::SessionDesc session_desc{
+				.targets = targets.data(),
+				.targetCount = num_targets,
+				.flags = SLANG_COMPILE_FLAG_NO_MANGLING,
+				.compilerOptionEntries = compiler_options.data(),
+				.compilerOptionEntryCount = compiler_options.size32(),
+			};
 
 			if (_stage != 0)
 			{
@@ -1014,26 +1034,23 @@ namespace vkl
 
 			try
 			{
-				SlangResult compilation_result = compiler->compile();
-				Slang::ComPtr<slang::IBlob> diagnostic;
-				if (SLANG_SUCCEEDED(compilation_result))
+				sr = global_session->createSession(session_desc, session.writeRef());
+				if (SLANG_SUCCEEDED(sr))
 				{
-					SlangResult sr = {};
-					Slang::ComPtr<slang::IComponentType> slang_program;
-					sr = compiler->getProgramWithEntryPoints(slang_program.writeRef());
+					auto module = session->loadModuleFromSourceString("MyShader", main_path_str.c_str(), code->c_str(), diagnostic.writeRef());
+					Slang::ComPtr<slang::IEntryPoint> ep;
+					sr = module->findAndCheckEntryPoint("main", ConvertToSlang(_stage), ep.writeRef(), diagnostic.writeRef());
 					if (SLANG_SUCCEEDED(sr))
 					{
 						Slang::ComPtr<slang::IComponentType> linked;
-						sr = slang_program->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
+						sr = ep->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
 						if (SLANG_SUCCEEDED(sr))
 						{
 							auto get_target_code = [&](SlangInt32 target, auto & result_buffer)
 							{
 								SlangResult sr = {};
 								Slang::ComPtr<slang::IBlob> blob;
-								sr = linked->getEntryPointCode(entry_point_index, target, blob.writeRef(), diagnostic.writeRef());
-								//sr = linked->getTargetCode(0, blob.writeRef(), diagnostic.writeRef());
-								//sr = linked->getEntryPointCode(0, 0, blob.writeRef(), diagnostic.writeRef());
+								sr = linked->getTargetCode(target, blob.writeRef(), diagnostic.writeRef());
 								if (SLANG_SUCCEEDED(sr))
 								{
 									using Result_t = typename std::remove_cvref<decltype(result_buffer)>::type;
@@ -1046,9 +1063,9 @@ namespace vkl
 							};
 
 							get_target_code(0, _spv_code);
-							if (glsl_target)
+							if (dump_slang_to_glsl)
 							{
-								get_target_code(*glsl_target, slang_to_glsl);
+								get_target_code(1, slang_to_glsl);
 							}
 						}
 					}
@@ -1072,7 +1089,7 @@ namespace vkl
 			}
 			if (_spv_code.empty())
 			{
-				std::string_view error = compiler->getDiagnosticOutput();
+				std::string_view error(static_cast<const char*>(diagnostic->getBufferPointer()), diagnostic->getBufferSize());
 				_creation_result = AsynchTask::ReturnType{
 					.success = false,
 					.can_retry = true,
