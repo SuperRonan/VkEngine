@@ -183,7 +183,7 @@ namespace std
 		static constexpr T InfinityOrMax()
 		{
 			T res;
-			if(T is __BuiltinFloatingPointType)
+			if(IS_BUILTIN_FLOAT(T))
 			{
 				res = infinity();
 			}
