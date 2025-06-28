@@ -6,7 +6,6 @@
 
 #include "String.slang"
 #include "DebugBuffersDefinitions.h"
-#include <ShaderLib/span.slang>
 
 #ifndef DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
