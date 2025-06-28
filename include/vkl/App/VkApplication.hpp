@@ -78,6 +78,7 @@ namespace vkl
 			
 			bool dump_shader_spv : 1 = false;
 			bool dump_slang_to_glsl : 1 = false;
+			bool generate_shader_debug_info : 1 = false;
 
 			int shaderc_optimization_level = 0;
 			int slang_optiomization_level = 0;

@@ -30,14 +30,17 @@ namespace vkl
 	protected:
 
 		that::FileSystem::Path _main_path;
+
 		ShadingLanguage _source_language = ShadingLanguage::Unknown;
-		
 		VkShaderStageFlagBits _stage;
+		
 		VkShaderModule _module = VK_NULL_HANDLE;
 		MyVector<uint32_t> _spv_code;
 		SpvReflectShaderModule _reflection;
 		MyVector<that::FileSystem::Path> _dependencies;
 		size_t _shader_string_packed_capacity = 32;
+		bool _generate_debug_info = false;
+		bool _has_debug_info = false;
 
 		std::string _preprocessed_source;
 
@@ -89,6 +92,7 @@ namespace vkl
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DefinitionsList const& definitions = {};
 			size_t shader_string_packed_capacity = 32;
+			bool generate_debug_info = false;
 		};
 		using CI = CreateInfo;
 
@@ -146,6 +150,16 @@ namespace vkl
 		{
 			return _creation_result;
 		}
+
+		bool generatesDebugInfo() const
+		{
+			return _generate_debug_info;
+		}
+
+		bool hasDebugInfo() const
+		{
+			return _has_debug_info;
+		}
 	};
 
 	class Shader : public InstanceHolder<ShaderInstance>
@@ -199,7 +213,7 @@ namespace vkl
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity);
+		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info);
 
 		virtual void destroyInstanceIFN() override;
 

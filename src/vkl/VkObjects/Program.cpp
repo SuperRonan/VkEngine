@@ -104,12 +104,15 @@ namespace vkl
 					if (keep_unused_bindings || binding.accessed)
 					{
 						BindingInfo binding_info{
-							.name = binding.name,
 							.binding = binding.binding,
 							.type = (VkDescriptorType)binding.descriptor_type,
 							.count = binding.count,
 							.stages = (VkShaderStageFlags)shader.stage(),
 						};
+						if (binding.name)
+						{
+							binding_info.name = binding.name;
+						}
 						binding_info.access = [&]()
 						{
 							const VkDescriptorType type = binding_info.type;

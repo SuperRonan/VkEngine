@@ -137,6 +137,12 @@ namespace vkl
 			.scan<'d', int>()
 			.default_value(default_slang_optimization_level)
 		;
+
+		args.add_argument("--shader_debug_info")
+			.help("Generate shader debug information (Useful for NSight or RenderDoc)")
+			.scan<'d', int>()
+			.default_value(0)
+		;
 	}
 
 
@@ -1175,6 +1181,7 @@ namespace vkl
 			.dump_shader_preprocessed = intToBool(ci.args.get<int>("--dump_preprocessed_shader")),
 			.dump_shader_spv = intToBool(ci.args.get<int>("--dump_spv")),
 			.dump_slang_to_glsl = intToBool(ci.args.get<int>("--dump_slang_to_glsl")),
+			.generate_shader_debug_info = intToBool(ci.args.get<int>("--shader_debug_info")),
 			.shaderc_optimization_level = ci.args.get<int>("--shaderc_optimization_level"),
 			.slang_optiomization_level = ci.args.get<int>("--slang_optimization_level"),
 		};

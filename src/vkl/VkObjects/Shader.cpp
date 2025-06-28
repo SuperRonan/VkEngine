@@ -977,7 +977,6 @@ namespace vkl
 			std::array<slang::TargetDesc, 2> targets = {
 				slang::TargetDesc{
 					.format = SLANG_SPIRV,
-					.profile = global_session->findProfile("glsl_460"),
 					.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY,
 				},
 				slang::TargetDesc{
@@ -1002,18 +1001,28 @@ namespace vkl
 					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = 1},
 				},
 				slang::CompilerOptionEntry{
-					.name = slang::CompilerOptionName::DebugInformation,
-					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = SLANG_DEBUG_INFO_LEVEL_MAXIMAL},
-				},
-				slang::CompilerOptionEntry{
-					.name = slang::CompilerOptionName::DebugInformationFormat,
-					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = SLANG_DEBUG_INFO_FORMAT_C7},
-				},
-				slang::CompilerOptionEntry{
 					.name = slang::CompilerOptionName::MacroDefine,
 					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::String, .stringValue0 = "_slang", .stringValue1 = "1"},
 				},
+				//slang::CompilerOptionEntry{
+				//	.name = slang::CompilerOptionName::DumpIr,
+				//	.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = 1},
+				//},
 			};
+
+			if (_generate_debug_info)
+			{
+				compiler_options.push_back(slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::DebugInformation,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = SLANG_DEBUG_INFO_LEVEL_MAXIMAL},
+				});
+				compiler_options.push_back(slang::CompilerOptionEntry{
+					.name = slang::CompilerOptionName::DebugInformationFormat,
+					.value = slang::CompilerOptionValue{.kind = slang::CompilerOptionValueKind::Int, .intValue0 = SLANG_DEBUG_INFO_FORMAT_C7},
+				});
+				_has_debug_info = true;
+			}
+			
 
 			SlangResult sr;
 			Slang::ComPtr<slang::IBlob> diagnostic;
@@ -1038,34 +1047,37 @@ namespace vkl
 				if (SLANG_SUCCEEDED(sr))
 				{
 					auto module = session->loadModuleFromSourceString("MyShader", main_path_str.c_str(), code->c_str(), diagnostic.writeRef());
-					Slang::ComPtr<slang::IEntryPoint> ep;
-					sr = module->findAndCheckEntryPoint("main", ConvertToSlang(_stage), ep.writeRef(), diagnostic.writeRef());
-					if (SLANG_SUCCEEDED(sr))
+					if (!!module)
 					{
-						Slang::ComPtr<slang::IComponentType> linked;
-						sr = ep->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
+						Slang::ComPtr<slang::IEntryPoint> ep;
+						sr = module->findAndCheckEntryPoint("main", ConvertToSlang(_stage), ep.writeRef(), diagnostic.writeRef());
 						if (SLANG_SUCCEEDED(sr))
 						{
-							auto get_target_code = [&](SlangInt32 target, auto & result_buffer)
+							Slang::ComPtr<slang::IComponentType> linked;
+							sr = ep->linkWithOptions(linked.writeRef(), 0, nullptr, diagnostic.writeRef());
+							if (SLANG_SUCCEEDED(sr))
 							{
-								SlangResult sr = {};
-								Slang::ComPtr<slang::IBlob> blob;
-								sr = linked->getTargetCode(target, blob.writeRef(), diagnostic.writeRef());
-								if (SLANG_SUCCEEDED(sr))
+								auto get_target_code = [&](SlangInt32 target, auto & result_buffer)
 								{
-									using Result_t = typename std::remove_cvref<decltype(result_buffer)>::type;
-									constexpr const size_t ElemSize = sizeof(typename Result_t::value_type);
-									const size_t size = blob->getBufferSize();
-									result_buffer.resize((size + ElemSize - 1) / ElemSize);
-									std::memcpy(result_buffer.data(), blob->getBufferPointer(), size);
-								}
-								return sr;
-							};
+									SlangResult sr = {};
+									Slang::ComPtr<slang::IBlob> blob;
+									sr = linked->getTargetCode(target, blob.writeRef(), diagnostic.writeRef());
+									if (SLANG_SUCCEEDED(sr))
+									{
+										using Result_t = typename std::remove_cvref<decltype(result_buffer)>::type;
+										constexpr const size_t ElemSize = sizeof(typename Result_t::value_type);
+										const size_t size = blob->getBufferSize();
+										result_buffer.resize((size + ElemSize - 1) / ElemSize);
+										std::memcpy(result_buffer.data(), blob->getBufferPointer(), size);
+									}
+									return sr;
+								};
 
-							get_target_code(0, _spv_code);
-							if (dump_slang_to_glsl)
-							{
-								get_target_code(1, slang_to_glsl);
+								get_target_code(0, _spv_code);
+								if (dump_slang_to_glsl)
+								{
+									get_target_code(1, slang_to_glsl);
+								}
 							}
 						}
 					}
@@ -1077,12 +1089,26 @@ namespace vkl
 				_creation_result = AsynchTask::ReturnType{
 					.success = false,
 					.can_retry = true,
-					.error_title = "Shader Compilation Exception Catched: ",
+					.error_title = "Shader Compilation Exception Caught: ",
 					.error_message = std::format(
 						"Exception while compiling shader: \n"
 						"Main Shader: {}:\n"
 						"{}",
 						main_path_str, error
+					),
+				};
+				return false;
+			}
+			catch (...)
+			{
+				_creation_result = AsynchTask::ReturnType{
+					.success = false,
+					.can_retry = true,
+					.error_title = "Shader Compilation Exception Caught: ",
+					.error_message = std::format(
+						"Unknown Exception while compiling shader: \n"
+						"Main Shader: {}:\n",
+						main_path_str
 					),
 				};
 				return false;
@@ -1110,7 +1136,12 @@ namespace vkl
 			//options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_spirv_version_1_4);
 			options.SetTargetSpirv(shaderc_spirv_version_1_6);
 			options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-			options.SetGenerateDebugInfo(); // To link the glsl source for nsight
+			if (_generate_debug_info || true)
+			{
+				// We need the debug info for the reflection of the bindings names
+				options.SetGenerateDebugInfo(); // To link the glsl source for nsight
+				_has_debug_info = true;
+			}
 			options.SetWarningsAsErrors();
 			options.AddMacroDefinition("_glsl", "460");
 			shaderc_optimization_level opt_level = std::clamp(static_cast<shaderc_optimization_level>(application()->options().shaderc_optimization_level), shaderc_optimization_level_zero, shaderc_optimization_level_performance);
@@ -1304,7 +1335,8 @@ namespace vkl
 		_source_language(ci.source_language),
 		_stage(ci.stage),
 		_reflection(std::zeroInit(_reflection)),
-		_shader_string_packed_capacity(ci.shader_string_packed_capacity)
+		_shader_string_packed_capacity(ci.shader_string_packed_capacity),
+		_generate_debug_info(ci.generate_debug_info)
 	{
 		_creation_result.success = true;
 		using namespace std::containers_append_operators;
@@ -1392,7 +1424,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity)
+	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info)
 	{
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
@@ -1413,7 +1445,7 @@ namespace vkl
 				.name = "Compiling shader " + _path.string(),
 				.verbosity = AsynchTask::Verbosity::Medium,
 				.priority = TaskPriority::ASAP(),
-				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey]() {
+				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey, generate_shader_debug_info]() {
 
 					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 						.app = application(),
@@ -1422,6 +1454,7 @@ namespace vkl
 						.stage = _stage,
 						.definitions = definitions,
 						.shader_string_packed_capacity = string_packed_capacity,
+						.generate_debug_info = generate_shader_debug_info,
 					});
 
 					const AsynchTask::ReturnType & res = _inst->getCreationResult();
@@ -1512,7 +1545,7 @@ namespace vkl
 					// TODO use a better function that checks the result and can parse hex
 					packed_capcity = std::atoi(capacity.c_str());
 				}
-				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity));
+				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info);
 				res = true;
 			}
 		}
