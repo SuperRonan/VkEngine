@@ -241,6 +241,10 @@ interface IGenericString1
 	[mutating]
 	__generic <Float : __BuiltinFloatingPointType>
 	void appendFloat(Float f, const in FloatFormat format);
+
+	[mutating]
+	__generic <int N>
+	void appendShortString(const in ShortString<N> str);
 };
 
 interface IPrintableImpl
@@ -705,6 +709,20 @@ struct BasicStringBase : IBasicString<char_t>
 	{
 		str.appendString(this);
 	}
+
+	[mutating]
+	__generic <int N>
+	void appendShortString(const in ShortString<N> str)
+	{
+		PendingChunk writer = getWriter();
+		for(uint i = 0; i < N; ++i)
+		{
+			const char_t c = char_t(str[i]);
+			write(writer, c);
+		}
+		flushIFN(writer);
+		_size += N;
+	}
 };
 
 __generic <typename char_t : IChar>
@@ -836,6 +854,20 @@ extension Float : IPrintable
 	} 
 };
 
+__generic <int N>
+extension ShortString<N> : IPrintableImpl
+{
+	uint estimateStringSize()
+	{
+		return N;
+	}
+
+	__generic <String : IGenericString1>
+	void appendToString(inout String str)
+	{
+		str.appendShortString(this);
+	}
+}
 
 Vector2<char> GetBracketPair(uint bracket_type)
 {
@@ -937,7 +969,4 @@ extension vector<P, N> : IPrintable
 		return PrintableImpl(this);
 	}
 };
-
-
-
 
