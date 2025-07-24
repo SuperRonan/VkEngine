@@ -110,7 +110,7 @@ struct Scene
 layout(SCENE_BINDING + 0) ConstantBuffer<Scene::UBO> SceneUBO;
 
 #ifdef SCENE_LIGHTS_ACCESS
-typealias SceneLightsBufferType = BINDING_HANDLE(StructuredBuffer, SCENE_LIGHTS_ACCESS)<StorageLight>;
+typealias SceneLightsBufferType = BINDING_HANDLE(StructuredBuffer, SCENE_LIGHTS_ACCESS)<StorageLight, Std430DataLayout>;
 layout(SCENE_LIGHTS_BINDING + 0) restrict SceneLightsBufferType SceneLights;
 
 layout(SCENE_LIGHTS_BINDING + 1) uniform Texture2D<float> SceneLightsDepth2D[];

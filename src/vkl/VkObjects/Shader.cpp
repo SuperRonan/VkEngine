@@ -977,6 +977,8 @@ namespace vkl
 			std::array<slang::TargetDesc, 2> targets = {
 				slang::TargetDesc{
 					.format = SLANG_SPIRV,
+					//.profile = global_session->findProfile("spirv_1_6"), // may generate spv-val errors :(
+					.profile = global_session->findProfile("glsl_460"), // doesn't generate spv-val errors :)
 					.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY,
 				},
 				slang::TargetDesc{
