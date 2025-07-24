@@ -150,6 +150,14 @@ namespace vkl
 					case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
 						present_modes[i].desc = "VSync, No Tearing, Possible Frame Skip"s;
 					break;
+					case VK_PRESENT_MODE_FIFO_LATEST_READY_EXT:
+						present_modes[i].desc = "No Tearing";
+						// This extension appears to be also KHR now, but the SDK provides only the EXT version
+						if (!application()->deviceExtensions().contains(VK_EXT_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME))
+						{
+							present_modes[i].disable = true;
+						}
+					break;
 				}
 			}
 			const size_t present_mode_index = std::find(sd.present_modes.begin(), sd.present_modes.end(), _target_present_mode) - sd.present_modes.begin();

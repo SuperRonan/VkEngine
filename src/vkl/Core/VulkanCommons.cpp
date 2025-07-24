@@ -1,6 +1,7 @@
 #include <vkl/Core/VulkanCommons.hpp>
 #include <unordered_map>
 #include <sstream>
+#include <vulkan/vk_enum_string_helper.h>
 
 
 namespace vkl
@@ -363,6 +364,7 @@ namespace vkl
 			case VK_PRESENT_MODE_FIFO_RELAXED_KHR :						res = "FIFO Relaxed"; break;
 			case VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR :			res = "Shared Demand Refresh"; break;
 			case VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR :		res = "Shader Continuous Refresh"; break;
+			default:													res = string_VkPresentModeKHR(p); break;
 		}
 		return res;
 	}

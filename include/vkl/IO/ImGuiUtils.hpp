@@ -42,6 +42,10 @@ namespace vkl
 		size_t _index = 0;
 		MyVector<Option> _options = {};
 		
+		// 0 : OK no changes
+		// 1 : changes, but OK
+		// 2 : error
+		int validate();
 
 	public:
 

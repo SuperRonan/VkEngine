@@ -31,6 +31,25 @@ namespace vkl
 			_options = ci.options;
 		}
 		if (_index > _options.size())	_index = 0;
+		validate();
+	}
+
+	int ImGuiListSelection::validate()
+	{
+		int res = 0;
+		for (size_t i = 0; i < _options.size(); ++i)
+		{
+			if (_options[i].name.empty())
+			{
+				_options[i].name = "##";
+				res = std::max(res, 1);
+			}
+		}
+		if (res != 0)
+		{
+			VKL_BREAKPOINT_HANDLE;
+		}
+		return res;
 	}
 
 	void ImGuiListSelection::setOptionsCount(uint32_t count)
