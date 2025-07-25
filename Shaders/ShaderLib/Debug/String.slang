@@ -10,25 +10,34 @@
 #define GLOBAL_ENABLE_SLANG_DEBUG GLOBAL_ENABLE_SHADER_DEBUG
 #endif
 
+typealias IChar = __BuiltinIntegerType;
 typealias char = uint8_t;
 
-// template <typename Chunk, bool Reverse = false>
-// struct PendingChunk
-// {
-// 	Chunk chunk;
-// 	uint index;
-// };
+char GetASCII(uint digit, uint above_10_base = CHARCODE_hex_base)
+{
+	if(digit < 10)	return char(CHARCODE_0 + digit);
+	else			return char(digit - 10 + above_10_base);
+}
+
+__generic<typename UInt : __BuiltinIntegerType>
+struct DigitCount
+{
+	uint digits;
+	UInt max_power_basis;
+}
 
 __generic <typename UInt : __BuiltinIntegerType>
-uint HowManyDigitsAnyBasis(UInt n, UInt base)
+DigitCount<UInt> HowManyDigitsAnyBasis(UInt n, UInt base)
 {
-	uint res = 0;
+	DigitCount<UInt> res = {1, UInt(1)};
+	n /= base;
 	while(n != UInt(0))
 	{
 		n /= base;
-		++res;
+		++res.digits;
+		res.max_power_basis *= base;
 	}
-	return max(res, 1);
+	return res;
 }
 
 __generic<typename UInt : __BuiltinIntegerType>
@@ -39,95 +48,37 @@ uint HowManyDigitsAssumePo2Basis(UInt n, uint basis)
 	return max(DivUpSafe(w, d), 1);
 }
 
-__generic <typename UInt : __BuiltinIntegerType>
-uint HowManyDigits(UInt n, uint basis)
+__generic<typename UInt : __BuiltinIntegerType>
+UInt GetMaxDigitPowerPo2Basis(UInt digits, UInt basis)
 {
-	uint res;
+	return (UInt(1) << ((digits - UInt(1)) * UInt(FirstBitHigh(basis)))); // Not 100% sure of it, TODO check
+}
+
+
+
+__generic <typename UInt : __BuiltinIntegerType>
+DigitCount<UInt> HowManyDigits(UInt n, uint basis)
+{
+	DigitCount<UInt> res;
 	if(IsPo2(basis))
-		res = HowManyDigitsAssumePo2Basis(n, basis);
+	{
+		res.digits = HowManyDigitsAssumePo2Basis(n, basis);
+		res.max_power_basis = GetMaxDigitPowerPo2Basis(UInt(res.digits), UInt(basis));
+	}
 	else
 		res = HowManyDigitsAnyBasis(n, UInt(basis));
 	return res;
 }
 
-struct IntegerFormat
+
+__generic <typename char_t : IChar>
+extension char_t
 {
-	u8 basis;
-	i8 digits; // `0`: as many digits as necessary, `-1`: as many digits as needed to represent the max value in basis 
-	bool show_plus;
-	bool add_basis_prefix;
-
-	__init()
+	__init(uint c)
 	{
-		basis = u8(DEFAULT_NUMBER_BASIS);
-		digits = i8(0); 
-		show_plus = DEFAULT_SHOW_PLUS;
-		add_basis_prefix = this.basis != u8(10);
+		this = char_t(int(c));
 	}
-
-	__generic<UInt : __BuiltinIntegerType>
-	uint MaxDigitsForBasis()
-	{
-		const uint bits_per_digit = FirstBitHigh((uint(basis))); // Same as FirstBitHigh(BitFloor(basis))
-		const uint bits = 8 * sizeof(UInt);
-		uint res = DivUpSafe(bits, bits_per_digit);
-		return res;
-	}
-
-	__generic<UInt : __BuiltinIntegerType>
-	uint HowManyDigits(UInt value)
-	{
-		uint res;
-		if(digits == 0)
-		{
-			res = ::HowManyDigits(value, uint(basis));
-		}
-		else if(digits < 0)
-		{
-			res = MaxDigitsForBasis<UInt>();
-		}
-		else
-		{
-			res = digits;
-		}
-		return res;
-	}
-
-	__generic<UInt : __BuiltinIntegerType>
-	uint HowManyDigitsFastConservative(UInt value)
-	{
-		uint res;
-		if(digits == 0)
-		{
-			res = HowManyDigitsAssumePo2Basis(value, BitFloor(uint(basis)));
-		}
-		else if(digits < 0)
-		{
-			res = MaxDigitsForBasis<UInt>();
-		}
-		else
-		{
-			res = digits;
-		}
-		return res;
-	}
-};
-
-struct FloatFormat
-{
-	u16 precision;
-	bool show_plus;
-
-	__init()
-	{
-		precision = u16(DEFAULT_FLOAT_PRECISION);
-		show_plus = DEFAULT_SHOW_PLUS;
-	}
-};
-
-
-
-#define IChar __BuiltinIntegerType
+}
 
 __generic <char_t : IChar>
 interface IChunk
@@ -142,10 +93,11 @@ interface IChunk
 	[mutating]
 	void clear();
 
-	char_t get(uint index);
-
-	[mutating]
-	void set(uint index, char_t char);
+	__subscript(uint index) -> char_t
+	{
+		get;
+		set;
+	}
 
 	[mutating]
 	void setAssumeClear(uint index, char_t char);
@@ -181,12 +133,6 @@ struct UIntChunk : IChunk<char_t>
 		u = UInt(0);
 	}
 
-	char_t get(uint index)
-	{
-		const UInt masked = (u >> (sizeof(char_t) * 8 * index)) & CharMask();
-		return reinterpret<char_t>(masked);
-	}
-
 	[mutating]
 	void setAssumeClear(uint index, char_t char)
 	{
@@ -194,75 +140,225 @@ struct UIntChunk : IChunk<char_t>
 		u = u | v;
 	}
 
-	[mutating]
-	void set(uint index, char_t char)
+	__subscript(uint index) -> char_t
 	{
-		u = u & ~CharMask(index);
-		setAssumeClear(index, char);
+		get {
+			const UInt masked = (u >> (sizeof(char_t) * 8 * index)) & CharMask();
+			return reinterpret<char_t>(masked);
+		}
+		set {
+			u = u & ~CharMask(index);
+			setAssumeClear(index, newValue);
+		}
 	}
-	
 }
 
-__generic <typename char_t, bool Reverse = false>
-interface IBasicStringCaret
+__generic<typename char_t : IChar>
+interface IBasicStringBase : IRWArray<char_t>
 {
-	uint getIndex();
+	property uint length
+	{
+		get;
+		set;
+	}
 
-	char_t getChar(uint index_in_chunk = 0);
+	associatedtype Caret;
+
+	Caret getReader(uint base = 0);
+
+	Caret getWriter(uint base);
+
+	Caret getWriter();
+
+	char_t read(inout Caret caret);
+
+	[mutating]
+	void write(inout Caret caret, char_t value);
+
+	[mutating]
+	__generic<int N>
+	void write(inout Caret caret, const in ShortString<N> str);
+
+	[mutating]
+	void flushIFN(inout Caret caret);
 };
 
-interface IGenericString1
+__generic <
+	typename char_t : IChar,
+	typename Chunk : IChunk<char_t>,
+	typename Storage : IRWArray<Chunk>
+>
+struct BasicStringBase : IBasicStringBase<char_t>
 {
-	associatedtype CharType : IChar;
+	typealias CharType = char_t;
 
-	uint capacity();
+	// chars are manually packed as uint because the optimizer tends to store each individual char in a uint
+	Storage _chunks;
+	uint _len = 0;
+
+	property uint length
+	{
+		get { return _len; }
+		set { _len = newValue; }
+	}
+
+	static constexpr uint CharsPerChunk()
+	{
+		return Chunk::Capacity();
+	}
 	
-	uint size();
-	uint getCount();
+	constexpr uint capacity()
+	{
+		return _chunks.getCount() * CharsPerChunk();
+	}
+
+	constexpr uint getCount()
+	{
+		return _len;
+	}
+
+	constexpr uint remainingCapacity()
+	{
+		return capacity() - _len;
+	}
+
+	constexpr uint activeChunks()
+	{
+		return (_len + CharsPerChunk() - 1) / CharsPerChunk();
+	}
+
+	constexpr __subscript(uint i) -> char_t
+	{
+		get {
+			const uint chunk_index = i / CharsPerChunk(); 
+			const uint index_in_chunk = i % CharsPerChunk(); 
+			return _chunks[chunk_index][index_in_chunk];
+		}
+		set {
+			const uint chunk_index = i / CharsPerChunk(); 
+			const uint index_in_chunk = i % CharsPerChunk(); 
+			_chunks[chunk_index][index_in_chunk] = newValue;
+		}
+	}
+
+	struct PendingChunkImpl
+	{
+		uint index = 0;
+		Chunk chunk = {};
+
+		uint getIndex()
+		{
+			return index;
+		}
+
+		__subscript(uint index_in_chunk) -> char_t
+		{
+			get {
+				return chunk[index_in_chunk];
+			}
+			set {
+				chunk[index_in_chunk] = newValue;
+			}
+		}
+	};
+
+	typealias PendingChunk = PendingChunkImpl;
+	typealias Caret = PendingChunk;
+
+	Caret getReader(uint base = 0)
+	{
+		PendingChunk res = {};
+		res.index = base;
+		if(base % CharsPerChunk() != 0)
+		{
+			res.chunk = _chunks[base / CharsPerChunk()];
+		}
+		return res;
+	}
+
+	Caret getWriter(uint base)
+	{
+		PendingChunk res;
+		res.index = base;
+		if(base > 0)
+		{
+			res.chunk = _chunks[res.index / CharsPerChunk()];
+		}
+		return res;
+	}
+
+	Caret getWriter()
+	{
+		return getWriter(_len);
+	}
+
+	char_t read(inout PendingChunk reader)
+	{
+		const uint id_in_chunk = reader.index % CharsPerChunk();
+		if(id_in_chunk == 0)
+		{
+			const uint chunk_id = reader.index / CharsPerChunk();
+			reader.chunk = _chunks[chunk_id];
+		}
+		const char_t res = reader.chunk[id_in_chunk];
+		++reader.index;
+		return res;
+	}
 
 	[mutating]
-	__generic <OtherString : IGenericString1>
-	void appendString(const in OtherString other);
+	void write(inout PendingChunk writer, char_t c)
+	{
+		const uint id_in_chunk = writer.index % CharsPerChunk();
+		const uint chunk_id = writer.index / CharsPerChunk();
+		writer.chunk[id_in_chunk] = c;
+		if(id_in_chunk == (CharsPerChunk() - 1))
+		{
+			_chunks[chunk_id] = writer.chunk;
+			writer.chunk.clear();
+		}
+		++writer.index;
+	}
 
 	[mutating]
-	void appendArray(const in IArray<CharType> array);
+	__generic<int N>
+	void write(inout PendingChunk writer, const in ShortString<N> str)
+	{
+		for(uint i = 0; i < N; ++i)
+		{
+			write(writer, char_t(str[i]));
+		}
+	}
 
 	[mutating]
-	void appendChar(CharType c);
-
-	[mutating]
-	__generic <UInt : __BuiltinUnsignedIntegerType>
-	void appendUnsignedInteger(UInt n, const in IntegerFormat format);
-
-	[mutating]
-	__generic <Int : __BuiltinIntegerType>
-	void appendInteger(Int n, const in IntegerFormat format);
-	
-	[mutating]
-	__generic <Float : __BuiltinFloatingPointType>
-	void appendFloat(Float f, const in FloatFormat format);
-
-	[mutating]
-	__generic <int N>
-	void appendShortString(const in ShortString<N> str);
+	void flushIFN(inout PendingChunk writer)
+	{
+		const uint id_in_chunk = writer.index % CharsPerChunk();
+		const uint chunk_id = writer.index / CharsPerChunk();
+		if(id_in_chunk != 0)
+		{
+			_chunks[chunk_id] = writer.chunk;
+		}
+		_len = writer.index;
+	}
 };
-
 interface IPrintableImpl
 {
 	uint estimateStringSize();
 
-	__generic <String : IGenericString1>
-	void appendToString(inout String str);
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendToString(inout String str, inout String::Caret writer);
 };
 
-
-
-__generic <typename T>
-interface IPrintableImplValue : IPrintableImpl
+__generic <PrintableImpl : IPrintableImpl>
+extension PrintableImpl
 {
-	associatedtype PrintFormatType;
-
-	
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendToString(inout String str)
+	{
+		var writer = str.getWriter();
+		appendToString(str, writer);
+		str.flushIFN(writer);
+	}
 };
 
 interface IPrintable
@@ -282,467 +378,114 @@ extension P : IPrintable
 	}
 };
 
-interface IGenericString2 : IGenericString1
-{
-	[mutating]
-	void append(const in IPrintable printable);
-};
-
-__generic <typename char_t : IChar>
-interface IBasicString : IGenericString2, IRWArray<char_t>, IPrintableImpl
-{
-	__subscript(uint i) -> char_t;
-
-	IBasicStringCaret<char_t> getReader();
-};
-
 __generic <
-	typename char_t : IChar, 
-	typename Chunk : IChunk<char_t>, 
+	typename char_t : IChar,
+	typename Chunk : IChunk<char_t>,
 	typename Storage : IRWArray<Chunk>
 >
-struct BasicStringBase : IBasicString<char_t>
+extension BasicStringBase<char_t, Chunk, Storage>
 {
-	typealias CharType = char_t;
-
-	// chars are manually packed as uint because the optimizer tends to store each individual char in a uint
-	Storage _chunks;
-	uint _size = 0;
-
-	constexpr uint size()
-	{
-		return _size;
-	}
-
 	[mutating]
-	void setSize(uint s)
+	__generic<P : IPrintable>
+	void append(inout Caret writer, const in P p)
 	{
-		_size = s;
+		p.getPrintableImpl().appendToString(this, writer);
 	}
-
-	static constexpr uint CharsPerChunk()
-	{
-		return Chunk::Capacity();
-	}
-	
-	constexpr uint capacity()
-	{
-		return _chunks.getCount() * CharsPerChunk();
-	}
-
-	constexpr uint getCount()
-	{
-		return size();
-	}
-
-	constexpr uint remainingCapacity()
-	{
-		return capacity() - size();
-	}
-
-	constexpr uint activeChunks()
-	{
-		return (size() + CharsPerChunk() - 1) / CharsPerChunk();
-	}
-
-	constexpr char_t getChar(uint i)
-	{
-		const uint chunk_index = i / CharsPerChunk(); 
-		const uint index_in_chunk = i % CharsPerChunk(); 
-		const Chunk chunk = _chunks[chunk_index];
-		return chunk.get(index_in_chunk);
-	}
-	
-	constexpr __subscript(uint i) -> char_t
-	{
-		get {return getChar(i);}
-		set {
-			// Can't call a mutating member from here :(
-			const uint chunk_index = i / CharsPerChunk(); 
-			const uint index_in_chunk = i % CharsPerChunk(); 
-			_chunks[chunk_index].set(index_in_chunk, newValue);
-		}
-	}
-	
-	[mutating]
-	void setChar(uint i, char_t v)
-	{
-		this[i] = v;
-	}
-
-
-	struct PendingChunkImpl<let Reverse : bool> : IBasicStringCaret<char_t, Reverse>
-	{
-		uint index = 0;
-		Chunk chunk = {};
-
-		uint getIndex()
-		{
-			return index;
-		}
-
-		char_t getChar(uint index_in_chunk)
-		{
-			return chunk.get(index_in_chunk);
-		}
-	};
-
-	typealias PendingChunk = PendingChunkImpl<false>;
-	typealias ReversePendingChunk = PendingChunkImpl<true>;
-
-	PendingChunk getReader()
-	{
-		PendingChunk res = {};
-		return res;
-	}
-
-	PendingChunk getWriter(uint size)
-	{
-		PendingChunk res;
-		res.index = size;
-		if(_size > 0)
-		{
-			res.chunk = _chunks[res.index / CharsPerChunk()];
-		}
-		return res;
-	}
-
-	ReversePendingChunk getReverseWriter(uint size)
-	{
-		return bit_cast<ReversePendingChunk>(getWriter(size - 1));
-	}
-
-	char_t read(inout PendingChunk reader)
-	{
-		const uint id_in_chunk = reader.index % CharsPerChunk();
-		if(id_in_chunk == 0)
-		{
-			const uint chunk_id = reader.index / CharsPerChunk();
-			reader.chunk = _chunks[chunk_id];
-		}
-		const char_t res = reader.chunk.get(id_in_chunk);
-		++reader.index;
-		return res;
-	}
-
-	[mutating]
-	void write<let Reverse : bool>(inout PendingChunkImpl<Reverse> writer, char_t c)
-	{
-		const uint id_in_chunk = writer.index % CharsPerChunk();
-		const uint chunk_id = writer.index / CharsPerChunk();
-		writer.chunk.set(id_in_chunk, c);
-		if(!Reverse)
-		{
-			if(id_in_chunk == (CharsPerChunk() - 1))
-			{
-				_chunks[chunk_id] = writer.chunk;
-				writer.chunk.clear();
-			}
-			++writer.index;
-		}
-		else
-		{
-			if(id_in_chunk == (0))
-			{
-				_chunks[chunk_id] = writer.chunk;
-				if(chunk_id > 0)
-				{
-					writer.chunk = _chunks[chunk_id-1];
-				}
-			}
-			--writer.index;
-		}
-	}
-
-	[mutating]
-	void flushIFN<let Reverse : bool>(inout PendingChunkImpl<Reverse> writer)
-	{
-		const uint id_in_chunk = writer.index % CharsPerChunk();
-		const uint chunk_id = writer.index / CharsPerChunk();
-		if(!Reverse)
-		{
-			if(id_in_chunk != 0)
-			{
-				_chunks[chunk_id] = writer.chunk;
-			}
-		}
-		else
-		{
-			if(id_in_chunk != (CharsPerChunk() - 1))
-			{
-				_chunks[chunk_id] = writer.chunk;
-			}
-		}
-	}
-
-	PendingChunk getWriter()
-	{
-		return getWriter(size());
-	}
-
-	ReversePendingChunk getReverseWriter()
-	{
-		return getReverseWriter(size());
-	}
-
-	[mutating]
-	void appendOneChar(char_t c)
-	{
-		this[size()] = c;
-		++_size;
-	}
-
-	[mutating]
-	void appendChar(char_t c)
-	{
-		appendOneChar(c);
-	}
-
-	[mutating]
-	void appendArray(const in IArray<char_t> array)
-	{
-		var writer = getWriter();
-		const uint count = min(remainingCapacity(), array.getCount());
-		for(uint i = 0; i < count; ++i)
-		{
-			write(writer, array[i]);
-		}
-		flushIFN(writer);
-		_size += count;
-	}
-
-	[mutating]
-	__generic <typename OtherStorage : IRWArray<Chunk>>
-	void appendSameString(const in BasicStringBase<char_t, Chunk, OtherStorage> other)
-	{
-		const uint chunk_offset = size() % CharsPerChunk();
-		if(chunk_offset == 0) // Aligned copy
-		{
-			const uint chunks_to_copy = other.activeChunks();
-			const uint offset = size() / CharsPerChunk();
-			const uint remaining_chunks = remainingCapacity() / CharsPerChunk();
-			for(uint i = 0; i < min(remaining_chunks, chunks_to_copy); ++i)
-			{
-				_chunks[offset + i] = other._chunks[i];
-			}
-			_size += min(remainingCapacity(), other.size());
-		}
-		else
-		{
-			var reader = other.getReader();
-			PendingChunk writer = getWriter();
-			const uint chars_to_copy = min(remainingCapacity(), other.size());
-			for(uint i = 0; i < chars_to_copy; ++i)
-			{
-				const char_t c = other.read(reader);
-				write(writer, c);
-			}
-			flushIFN(writer);
-			_size += chars_to_copy;
-		}
-	}
-
-	[mutating]
-	__generic <OtherString : IGenericString1>
-	void appendString(const in OtherString str)
-	{
-		if(OtherString is BasicStringBase<char_t, Chunk, Storage>)
-		{
-			appendSameString((str as This).value);
-		}
-		else
-		{
-			// Can't do anything, show throw some kind of error
-		}
-	}
-
-	[OverloadRank(15)]
-	[mutating]
-	__generic <typename OtherStorage : IRWArray<Chunk>>
-	void appendString(const in BasicStringBase<char_t, Chunk, OtherStorage> other)
-	{
-		appendSameString(other);
-	}
-
-	static char_t GetASCII(uint digit, uint above_10_base = CHARCODE_hex_base)
-	{
-		if(digit < 10)	return char_t(CHARCODE_0 + digit);
-		else			return char_t(digit - 10 + above_10_base);
-	}
-
-	[mutating]
-	__generic <typename UInt : __BuiltinIntegerType>
-	void appendUInt(inout ReversePendingChunk writer, UInt n, UInt basis, uint len)
-	{
-		for(uint i = 0; i < len; ++i)
-		{
-			const uint digit = reinterpret<uint>(n % basis);
-			n = n / basis;
-			const char_t ascii = GetASCII(digit);
-			write(writer, ascii);
-		}
-	}
-
-	// Can't express it, but requires UInt to be unsigned
-	[mutating]
-	__generic <typename UInt : __BuiltinIntegerType>
-	void appendUInt(UInt n, uint basis, uint len)
-	{
-		_size += len;	
-		var writer = getReverseWriter();
-		appendUInt(writer, n, UInt(basis), len);
-		flushIFN(writer);
-	}
-
-	[mutating]
-	__generic <typename UInt : __BuiltinIntegerType>
-	void appendUnsignedInteger(UInt n, const in IntegerFormat format)
-	{	
-		if(format.add_basis_prefix)
-		{
-			if(format.basis == 2 || format.basis == 8 || format.basis == 16)
-			{
-				var writer = getWriter();
-				write(writer, char_t(CHARCODE_0));
-				if(format.basis == 2 || format.basis == 16)
-				{
-					const char_t c = (format.basis == 2) ? char_t(CHARCODE_a + 1) : char_t(CHARCODE_x);
-					write(writer, c);
-				}
-				flushIFN(writer);
-			}
-		}
-		uint len = format.HowManyDigits(n);
-		len = min(len, remainingCapacity());
-		appendUInt(n, format.basis, len);
-	}
-
-	[mutating]
-	__generic <typename Int : __BuiltinIntegerType>
-	void appendInteger(Int n, const in IntegerFormat format)
-	{
-		if(IS_BUILTIN_UNSIGNED_INT(Int))
-		{
-			appendUnsignedInteger(n, format);
-		}
-		else
-		{
-			const bool neg = (n < Int(0));
-			n = abs(n);
-			if(neg)
-			{
-				appendOneChar(char_t(CHARCODE_minus));
-			}
-			else if(format.show_plus)
-			{
-				appendOneChar(char_t(CHARCODE_plus));
-			}
-			appendUnsignedInteger(n, format);
-		}
-	}
-
-	[mutating]
-	__generic <Float : __BuiltinFloatingPointType>
-	void appendFloat(Float f, const in FloatFormat format)
-	{
-		const uint basis = 10;
-		const bool neg = ExtractSignBit(f);
-		if(isnan(f))
-		{
-			// TODO
-			//append("NaN");
-			appendOneChar(char_t(0x4e));
-			appendOneChar(char_t(0x61));
-			appendOneChar(char_t(0x4e));
-		}
-		else
-		{
-			if(neg)
-			{
-				appendOneChar(char_t(CHARCODE_minus));
-			}
-			else if(format.show_plus)
-			{
-				appendOneChar(char_t(CHARCODE_plus));
-			}
-			if(isinf(f))
-			{
-				// TODO
-				//append("inf");
-				appendOneChar(char_t(0x69));
-				appendOneChar(char_t(0x6e));
-				appendOneChar(char_t(0x66));
-			}
-			else
-			{
-				uint integral_part = uint(abs(f).toFloat()); //ConvertBuiltInTo<uint>(abs(f));
-				const Float dec = abs(f - trunc(f));
-				const float pow_mult = pow(basis, format.precision);
-				const Float dec_f = dec * Float(pow_mult);
-				uint dec_part = uint(dec_f.toFloat());
-				IntegerFormat intf = {};
-				intf.basis = basis;
-				intf.digits = 0;
-				intf.add_basis_prefix = false;
-				intf.show_plus = false;
-				appendUnsignedInteger(integral_part, intf);
-				appendOneChar(char_t(CHARCODE_dot));
-				appendUInt(dec_part, basis, format.precision);
-			}
-		}
-	}
-
-
-	[mutating]
-	void append(const in IPrintable printable)
-	{
-		printable.getPrintableImpl().appendToString(this);
-	}
-
-	uint estimateStringSize()
-	{
-		return size();
-	}
-
-	__generic <String : IGenericString1>
-	void appendToString(inout String str)
-	{
-		str.appendString(this);
-	}
-
-	[mutating]
-	__generic <int N>
-	void appendShortString(const in ShortString<N> str)
-	{
-		PendingChunk writer = getWriter();
-		for(uint i = 0; i < N; ++i)
-		{
-			const char_t c = char_t(str[i]);
-			write(writer, c);
-		}
-		flushIFN(writer);
-		_size += N;
-	}
-};
+}
 
 __generic <typename char_t : IChar>
 typealias DefaultChunk = UIntChunk<char_t, uint32_t>;
 
-__generic <typename char_t : IChar, int Chunks, typename Chunk : IChunk<char_t> = DefaultChunk<char_t>>
-struct LocalBasicString : BasicStringBase<char_t, Chunk, Array<Chunk, Chunks>>
+
+__generic<int N>
+extension ShortString<N> : IPrintableImpl
 {
+	uint estimateStringSize()
+	{
+		return N;
+	}
+
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendToString(inout String str, inout String::Caret writer)
+	{
+		str.write(writer, this);
+	}
+}
+
+struct IntegerFormat
+{
+	u8 basis;
+	i8 digits; // `0`: as many digits as necessary, `-1`: as many digits as needed to represent the max value in basis
+	bool show_plus;
+	bool add_basis_prefix;
+
 	__init()
 	{
-		_size = 0;
+		basis = u8(DEFAULT_NUMBER_BASIS);
+		digits = i8(0); 
+		show_plus = DEFAULT_SHOW_PLUS;
+		add_basis_prefix = this.basis != u8(10);
+	}
+
+	__generic<UInt : __BuiltinIntegerType>
+	uint MaxDigitsForBasis()
+	{
+		const uint bits_per_digit = FirstBitHigh((uint(basis))); // Same as FirstBitHigh(BitFloor(basis))
+		const uint bits = 8 * sizeof(UInt);
+		uint res = DivUpSafe(bits, bits_per_digit);
+		return res;
+	}
+
+	// Returns `(n, pow(basis, n-1))`
+	__generic<UInt : __BuiltinIntegerType>
+	DigitCount<UInt> HowManyDigits(UInt value)
+	{
+		DigitCount<UInt> res;
+		if(digits == 0)
+		{
+			res = ::HowManyDigits(value, uint(basis));
+		}
+		else
+		{
+			if(digits < 0)
+			{
+				res.digits = MaxDigitsForBasis<UInt>();
+			}
+			else
+			{
+				res.digits = digits;
+			}
+			if(IsPo2(uint(basis)))
+			{
+				res.max_power_basis = GetMaxDigitPowerPo2Basis(UInt(res.digits), UInt(basis));
+			}
+			else
+			{
+				res.max_power_basis = powu(UInt(basis), UInt(res.digits - 1));
+			}
+		}
+		return res;
+	}
+
+	__generic<UInt : __BuiltinIntegerType>
+	uint HowManyDigitsFastConservative(UInt value)
+	{
+		uint res;
+		if(digits == 0)
+		{
+			res = HowManyDigitsAssumePo2Basis(value, BitFloor(uint(basis)));
+		}
+		else if(digits < 0)
+		{
+			res = MaxDigitsForBasis<UInt>();
+		}
+		else
+		{
+			res = digits;
+		}
+		return res;
 	}
 };
-
-
-__generic <int Chunks = SHADER_STRING_PACKED_CAPACITY>
-typealias LocalString = LocalBasicString<char, Chunks, DefaultChunk<char>>;
-
-
-
 
 __generic <Int : __BuiltinIntegerType>
 struct FormattedInteger : IPrintableImpl
@@ -780,10 +523,70 @@ struct FormattedInteger : IPrintableImpl
 		return res;
 	}
 
-	__generic <String : IGenericString1>
-	void appendToString(inout String str)
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendUnsignedToString(Int n, inout String str, inout String::Caret writer)
 	{
-		str.appendInteger(value, format);
+		if(format.add_basis_prefix)
+		{
+			if(format.basis == 2 || format.basis == 8 || format.basis == 16)
+			{
+				str.write(writer, char_t('0'));
+				char_t p;
+				switch(format.basis)
+				{
+					case 0x02: p = char_t('b'); break;
+					case 0x08: p = char_t('o'); break;
+					case 0x10: p = char_t('x'); break;
+				}
+				str.write(writer, p);
+			}
+		}
+		DigitCount<Int> dc = format.HowManyDigits(n);
+		// Assume the remaining capacity is enough
+		for(uint i = 0; i < dc.digits; ++i)
+		{
+			const uint digit = (n / dc.max_power_basis).toUInt();
+			n = n % dc.max_power_basis;
+			dc.max_power_basis /= Int(format.basis);
+
+			const char_t ascii = char_t(GetASCII(digit));
+			str.write(writer, ascii);
+		}
+	}
+
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendToString(inout String str, inout String::Caret writer)
+	{
+		Int n = value;
+		if(IS_BUILTIN_UNSIGNED_INT(Int))
+		{
+			appendUnsignedToString(n, str, writer);
+		}
+		else
+		{
+			const bool neg = n < Int(0);
+			if(neg)
+			{
+				str.write(writer, char_t('-'));
+			}
+			else if(format.show_plus)
+			{
+				str.write(writer, char_t('+'));
+			}
+			appendUnsignedToString(abs(n), str, writer);
+		}
+	}
+};
+
+struct FloatFormat
+{
+	u16 precision;
+	bool show_plus;
+
+	__init()
+	{
+		precision = u16(DEFAULT_FLOAT_PRECISION);
+		show_plus = DEFAULT_SHOW_PLUS;
 	}
 };
 
@@ -827,10 +630,47 @@ struct FormattedFloat : IPrintableImpl
 		}
 	}
 
-	__generic <String : IGenericString1>
-	void appendToString(inout String str)
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendToString(inout String str, inout String::Caret writer)
 	{
-		str.appendFloat(value, format);
+		const uint basis = 10;
+		const bool neg = ExtractSignBit(value);
+		if(isnan(value))
+		{
+			str.write(writer, "NaN");
+		}
+		else
+		{
+			if(neg)
+			{
+				str.write(writer, char_t('-'));
+			}
+			else if(format.show_plus)
+			{
+				str.write(writer, char_t('+'));
+			}
+			if(isinf(value))
+			{
+				str.write(writer, "inf");
+			}
+			else
+			{
+				uint integral_part = uint(abs(value).toFloat()); //ConvertBuiltInTo<uint>(abs(f));
+				const Float dec = abs(trunc(value) - value);
+				const float pow_mult = floor(pow(basis, format.precision) + 0.5);
+				const Float dec_f = dec * Float(pow_mult);
+				uint dec_part = uint(dec_f.toFloat());
+				IntegerFormat intf = {};
+				intf.basis = basis;
+				intf.digits = 0;
+				intf.add_basis_prefix = false;
+				intf.show_plus = false;
+				FormattedInteger<uint>(integral_part, intf).appendUnsignedToString(integral_part, str, writer);
+				str.write(writer, char_t('.'));
+				intf.digits = i8(format.precision);
+				FormattedInteger<uint>(dec_part, intf).appendUnsignedToString(dec_part, str, writer);
+			}
+		}
 	}
 };
 
@@ -854,37 +694,22 @@ extension Float : IPrintable
 	} 
 };
 
-__generic <int N>
-extension ShortString<N> : IPrintableImpl
-{
-	uint estimateStringSize()
-	{
-		return N;
-	}
-
-	__generic <String : IGenericString1>
-	void appendToString(inout String str)
-	{
-		str.appendShortString(this);
-	}
-}
-
 Vector2<char> GetBracketPair(uint bracket_type)
 {
 	Vector2<char> res;
 	switch(bracket_type)
 	{
 		case 1:
-			res = Vector2<char>(char(CHARCODE_lpar), char(CHARCODE_rpar));
+			res = Vector2<char>(char('('), char(')'));
 		break;
 		case 2:
-			res = Vector2<char>(char(CHARCODE_lbracket), char(CHARCODE_rbracket));
+			res = Vector2<char>(char('['), char(']'));
 		break;
 		case 3:
-			res = Vector2<char>(char(CHARCODE_lbrace), char(CHARCODE_rbrace));
+			res = Vector2<char>(char('{'), char('}'));
 		break;
 		case 4:
-			res = Vector2<char>(char(CHARCODE_lchevron), char(CHARCODE_rchevron));
+			res = Vector2<char>(char('<'), char('>'));
 		break;
 		default:
 			res = Vector2<char>(char(0), char(0)); // Means no brackets
@@ -929,26 +754,25 @@ struct FormattedArray : IPrintableImpl
 		return res;
 	}
 
-	__generic <String : IGenericString1>
-	void appendToString(inout String str)
+	__generic <typename char_t : IChar, String : IBasicStringBase<char_t>>
+	void appendToString(inout String str, inout String::Caret writer)
 	{
 		if(brackets.x != char(0))
-			str.appendChar(reinterpret<String::CharType>(brackets.x));
+			str.write(writer, char_t(brackets.x));
 		const uint n = value.getCount();
 		if(n != 0)
 		{
 			for(uint i = 0; i < n; ++i)
 			{
-				value[i].getPrintableImpl().appendToString(str);
+				value[i].getPrintableImpl().appendToString(str, writer);
 				if(i != (n - 1))
 				{
-					Array<String::CharType, 2> sep = {String::CharType(CHARCODE_comma), String::CharType(CHARCODE_space)};
-					str.appendArray(sep);
+					str.write(writer, ", ");
 				}
 			}
 		}
 		if(brackets.y != char(0))
-			str.appendChar(reinterpret<String::CharType>(brackets.y));
+			str.write(writer, char_t(brackets.y));
 	}
 
 	typealias PrintableImpl = This;

@@ -396,3 +396,19 @@ uint FindHighBitIndex(UInt bits, uint n)
 	return FindHighBitIndex(bits, n, 8 * sizeof(UInt));
 }
 
+// Returns n ^ p
+// https://stackoverflow.com/a/101613
+__generic<UInt : __BuiltinIntegerType>
+UInt powu(UInt n, UInt p)
+{
+	UInt res = UInt(1);
+	do
+	{
+		if((p & UInt(1)) != UInt(0))
+			res *= n;
+		p >>= UInt(1);
+		n *= n;
+	} while(p != UInt(0));
+	return res;
+}
+

@@ -225,7 +225,7 @@ DebugBufferBasicString<char_t, DefaultChunk<char_t>> MakeEmptyDebugBufferBasicSt
 	DebugBufferBasicString<char_t, DefaultChunk<char_t>> res;
 	res._chunks.size = capacity;
 	res._chunks.offset = chunk_index;// * (sizeof(DefaultChunk<char_t>));
-	res._size = 0;
+	res._len = 0;
 	return res;
 }
 
@@ -355,10 +355,11 @@ struct DebugPrinter
 		const uint capacity = DivUpSafe(required_length, DefaultChunk<char>::Capacity());
 		const uint content_index = AllocateDebugStringContent(capacity);
 		var str = MakeEmptyDebugBufferString(content_index, capacity);
-		expand str.append(each args);
-
-		commitMeta(str_index, str.size(), content_index);
-		updateCaret(state.glyph_size, str.size(), state.flags, print_flags);
+		var it = str.getWriter();
+		expand str.append(it, each args);
+		str.flushIFN(it);
+		commitMeta(str_index, str.length, content_index);
+		updateCaret(state.glyph_size, str.length, state.flags, print_flags);
 #endif
 	}
 
