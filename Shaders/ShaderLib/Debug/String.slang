@@ -794,3 +794,58 @@ extension vector<P, N> : IPrintable
 	}
 };
 
+
+namespace fmt
+{
+	IntegerFormat ExplicitIntFormat(uint basis, int digits = -1)
+	{
+		IntegerFormat res;
+		res.basis = u8(basis);
+		res.digits = i8(digits);
+		res.show_plus = false;
+		res.add_basis_prefix = true;
+		return res;
+	}
+
+	IntegerFormat BinFormat(int digits = -1)
+	{
+		return ExplicitIntFormat(0x02, digits);
+	}
+
+	IntegerFormat OctFormat(int digits = -1)
+	{
+		return ExplicitIntFormat(0x08, digits);
+	}
+
+	IntegerFormat HexFormat(int digits = -1)
+	{
+		return ExplicitIntFormat(0x10, digits);
+	}
+
+	__generic<Int : __BuiltinIntegerType>
+	FormattedInteger<Int> Bin(Int value, int digits = -1)
+	{
+		FormattedInteger<Int> res;
+		res.value = value;
+		res.format = BinFormat(digits);
+		return res;
+	}
+
+	__generic<Int : __BuiltinIntegerType>
+	FormattedInteger<Int> Oct(Int value, int digits = -1)
+	{
+		FormattedInteger<Int> res;
+		res.value = value;
+		res.format = OctFormat(digits);
+		return res;
+	}
+
+	__generic<Int : __BuiltinIntegerType>
+	FormattedInteger<Int> Hex(Int value, int digits = -1)
+	{
+		FormattedInteger<Int> res;
+		res.value = value;
+		res.format = HexFormat(digits);
+		return res;
+	}
+}
