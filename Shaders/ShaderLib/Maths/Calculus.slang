@@ -85,7 +85,7 @@ Matrix<T, N, V> RefractionDifferentials(
 vec2 DifferentiateSurfaceIntersectionT(const in vec3 ray_dir, const in vec3 normal, float t, const in RayDiff3f ray_diffs)
 {
 	const float abs_cos_theta = Abs(Dot(normal, ray_dir));
-	const vec2 res = (Transpose(ray_diffs.origin_jacobian + t * ray_diffs.direction_jacobian) * normal) / abs_cos_theta;
+	const vec2 res = (Transpose(ray_diffs.Jorigin + t * ray_diffs.Jdirection) * normal) / abs_cos_theta;
 	return res;
 }
 

@@ -954,9 +954,9 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 			const vec3 ns = hit.surface_shading_info.shading_normal;
 			const vec3 ng = hit.surface_shading_info.geometry_normal;
 			let bsdf_sample = material.sampleBSDF<Flags & BSDF_ADJOINT_BIT>(
-				ng, ns, hit.surface_diffs.normal_jacobian,
+				ng, ns, hit.surface_diffs.Jnormal,
 				hit.surface_shading_info.out_direction,
-				-tray.ray_diffs.direction_jacobian,
+				-tray.ray_diffs.Jdirection,
 				rng
 			);
 			const vec3 wi = bsdf_sample.direction;
@@ -984,8 +984,8 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 
 			pdf_solid_angle = bsdf_sample.pdf;
 			tray.ray = Ray3f(hit.surface_shading_info.position, wi);
-			tray.ray_diffs.origin_jacobian = hit.surface_diffs.position_jacobian;
-			tray.ray_diffs.direction_jacobian = bsdf_sample.direction_jacobian;
+			tray.ray_diffs.Jorigin = hit.surface_diffs.Jposition;
+			tray.ray_diffs.Jdirection = bsdf_sample.Jdirection;
 			tray.range.resetRange();
 			tray.range.min = RayTMin(tray.ray, ng);
 			const float cos_theta_i_s = Dot(ns, wi);

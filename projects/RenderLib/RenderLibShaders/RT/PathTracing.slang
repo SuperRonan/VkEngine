@@ -130,7 +130,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			break;
 		}
 		++num_vertices;
-		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.uv_jacobians);
+		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.Juv);
 		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 		ApplyMaterialNormalIFN(hit.surface_shading_info, material);
 
@@ -150,9 +150,9 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		let bsdf_sample = material.sampleBSDF<BSDF_FORWARD_BIT>(
 			hit.surface_shading_info.geometry_normal,
 			hit.surface_shading_info.shading_normal,
-			hit.surface_diffs.normal_jacobian,
+			hit.surface_diffs.Jnormal,
 			hit.surface_shading_info.out_direction,
-			-tray.ray_diffs.direction_jacobian,
+			-tray.ray_diffs.Jdirection,
 			rng);
 		if(bsdf_sample.pdf <= 0.0f)
 		{
@@ -165,8 +165,8 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 			ray_pdf = -ray_pdf;
 		}
 		tray.ray = Ray3f(hit.surface_shading_info.position, bsdf_sample.direction);
-		tray.ray_diffs.origin_jacobian = hit.surface_diffs.position_jacobian;
-		tray.ray_diffs.direction_jacobian = bsdf_sample.direction_jacobian;
+		tray.ray_diffs.Jorigin = hit.surface_diffs.Jposition;
+		tray.ray_diffs.Jdirection = bsdf_sample.Jdirection;
 		tray.range.resetRange();
 		tray.range.min = RayTMin(tray.ray, hit.surface_shading_info.geometry_normal);
 		const float cos_theta = Abs(Dot(hit.surface_shading_info.shading_normal, bsdf_sample.direction));

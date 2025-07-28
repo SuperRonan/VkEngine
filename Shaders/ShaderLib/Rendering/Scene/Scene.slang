@@ -212,13 +212,11 @@ struct BoundScene : Scene, IRayTracingScene
 			return Mesh::ReadTriangleNormal(SceneMeshVertices[index], indices);
 		}
 
-		SurfaceGeometryDifferentials<N> getTriangleDifferentials<int N>(
+		SurfaceGeometryDifferentials<3> getTriangleDifferentials(
 			const in Matrix3f object_to_world, 
-			const in uvec3 indices, 
-			const in vec3 interpolated_normal, 
-			Matrixf<3, N> jacobian)
-		{
-			return Mesh::GetTriangleDifferentials(object_to_world, SceneMeshVertices[index], indices, interpolated_normal, jacobian);
+			const in uvec3 indices
+		) {
+			return Mesh::GetTriangleDifferentials(object_to_world, SceneMeshVertices[index], indices);
 		}
 
 		uint getVertexIndex(uint vertex_index, uint flags)

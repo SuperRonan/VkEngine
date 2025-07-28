@@ -204,16 +204,12 @@ struct Mesh : MeshBase
 		return ReadTriangleNormal(vertices, indices, DiagonalMatrix<3, 3>(1.0f));
 	}
 
-	// jacobian must be in object orientation
-	__generic<int N>
-	static SurfaceGeometryDifferentials<N> GetTriangleDifferentials(
+	static SurfaceGeometryDifferentials<3> GetTriangleDifferentials(
 		const in Matrix3f object_to_world,
 		const in IArray<Vertex> vertices_buffer, 
-		const in uvec3 indices, 
-		const in vec3 interpolated_normal,
-		const in Matrix<float, 3, N> jacobian)
+		const in uvec3 indices)
 	{
-		SurfaceGeometryDifferentials<N> res = {};
+		SurfaceGeometryDifferentials<3> res = {};
 		const Array<Vertex, 3> vertices = MultiRead(vertices_buffer, indices);
 		Matrix3f planes;
 		Matrix2x3f textures;
@@ -231,10 +227,9 @@ struct Mesh : MeshBase
 			SetColumn(textures, i, vertices[i].uv);
 			SetColumn(normals, i, object_to_world * vertices[i].normal);
 		}
-		Matrix<float, 3, N> barycentrics_jacobians = planes * jacobian;
-		res.uv_jacobians = textures * barycentrics_jacobians;
-		Matrix<float, 3, N> normal_jacobian_raw = normals * barycentrics_jacobians;
-		res.normal_jacobian = NormalizeDifferentials(interpolated_normal) * normal_jacobian_raw;
+		let barycentrics_jacobians = planes;
+		res.Juv = textures * barycentrics_jacobians;
+		res.Jnormal = normals * barycentrics_jacobians;
 		return res;
 	}
 };

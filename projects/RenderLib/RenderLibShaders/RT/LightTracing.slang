@@ -187,9 +187,9 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 		let bsdf_sample = material.sampleBSDF<BSDF_ADJOINT_BIT>(
 			hit.surface_shading_info.geometry_normal,
 			hit.surface_shading_info.shading_normal,
-			hit.surface_diffs.normal_jacobian,
+			hit.surface_diffs.Jnormal,
 			hit.surface_shading_info.out_direction,
-			-tray.ray_diffs.direction_jacobian,
+			-tray.ray_diffs.Jdirection,
 			rng);
 		if(bsdf_sample.pdf <= 0.0f)
 		{

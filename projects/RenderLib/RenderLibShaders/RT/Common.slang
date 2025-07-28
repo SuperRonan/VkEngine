@@ -212,15 +212,17 @@ void computeHitMeshDifferentials(const in RayTraceInfo info, inout Hit res)
 	const uvec3 triangle_indices = mesh.getPrimitiveIndices<3>(res.primitive_index);
 	const vec2 t_diffs = DifferentiateSurfaceIntersectionT(info.ray.direction, res.surface_shading_info.geometry_normal, res.t, info.diffs);
 
-	let Jposition = info.diffs.transfer(res.t, t_diffs, info.ray.direction).origin_jacobian;
+	let Jposition = info.diffs.transfer(res.t, t_diffs, info.ray.direction).Jorigin;
+	let Jposition_object = ExtractQBlock(res.world_to_object) * Jposition;
+	let Jnormal_Normalize = NormalizeDifferentials(res.surface_shading_info.interpolated_normal);
 
-	res.surface_diffs = mesh.getTriangleDifferentials(
-		DirectionMatrix(res.object_to_world), 
-		triangle_indices, 
-		res.surface_shading_info.interpolated_normal, 
-		ExtractQBlock(res.world_to_object) * Jposition
+	
+	let Jtriangle = mesh.getTriangleDifferentials(
+		DirectionMatrix(res.object_to_world), triangle_indices
 	);
-	res.surface_diffs.position_jacobian = Jposition;
+	res.surface_diffs = Jtriangle * Jposition_object;
+	res.surface_diffs.Jnormal = Jnormal_Normalize * res.surface_diffs.Jnormal;
+	res.surface_diffs.Jposition = Jposition;
 }
 
 interface IRayTracer
@@ -243,8 +245,8 @@ struct RayTracer : IRayTracer
 	{
 		Hit res;
 		res.surface_shading_info.out_direction = -info.ray.direction;
-		res.surface_diffs.position_jacobian = info.diffs.origin_jacobian;
-		res.surface_diffs.normal_jacobian = info.diffs.direction_jacobian;
+		res.surface_diffs.Jposition = info.diffs.Jorigin;
+		res.surface_diffs.Jnormal = info.diffs.Jdirection;
 
 		TracePayload payload;
 		payload.flags = 0;

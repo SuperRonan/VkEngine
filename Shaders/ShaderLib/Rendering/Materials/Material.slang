@@ -25,7 +25,7 @@ struct BSDFSample<int N>
 	float pdf = {};
 	vec3 direction = {};
 	Flags flags = Flags::None;
-	Matrixf<3, N> direction_jacobian = Matrixf<3, N>::Zero();
+	Matrixf<3, N> Jdirection = Matrixf<3, N>::Zero();
 
 	__init() {}
 }

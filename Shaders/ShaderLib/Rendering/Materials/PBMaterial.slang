@@ -276,7 +276,7 @@ struct PhysicalyBasedMaterial : IMaterial
 			res.direction = reflected;
 			res.pdf = approx.specular_weight;
 			res.bsdf = F0 / cos_theta_o;
-			res.direction_jacobian = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
+			res.Jdirection = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
 			res.flags = res.flags | BSDFSample<N>::Flags::Delta;
 		}
 		else
@@ -375,7 +375,7 @@ struct PhysicalyBasedMaterial : IMaterial
 			res.direction = reflected;
 			res.bsdf *= refl_fresnel;
 			res.pdf = refl_fresnel;
-			res.direction_jacobian = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
+			res.Jdirection = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
 
 			if(dot(res.direction, g_normal) < 0)
 			{
@@ -387,7 +387,7 @@ struct PhysicalyBasedMaterial : IMaterial
 			res.direction = refracted;
 			res.bsdf *= (1 - refl_fresnel);
 			res.pdf *= (1 - refl_fresnel);
-			res.direction_jacobian = RefractionDifferentials(wo, normal, Jwo, Jnormal, refracted, ior);
+			res.Jdirection = RefractionDifferentials(wo, normal, Jwo, Jnormal, refracted, ior);
 
 			// https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/The_Path-Space_Measurement_Equation#x3-Non-symmetryDuetoRefraction
 			if((Flags & BSDF_ADJOINT_BIT) != 0)

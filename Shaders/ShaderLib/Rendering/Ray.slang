@@ -102,14 +102,14 @@ typealias RayRangef = RayRange<float>;
 struct RayDifferentials<typename T : __BuiltinFloatingPointType, int N>
 {
 	typealias Jacobian = Matrix<T, N, 2>;
-	Jacobian origin_jacobian = Jacobian::Zero();
-	Jacobian direction_jacobian = Jacobian::Zero();
+	Jacobian Jorigin = Jacobian::Zero();
+	Jacobian Jdirection = Jacobian::Zero();
 
 	RayDifferentials<T, N> transfer(T t, Vector2<T> t_diff, Vector<T, N> direction)
 	{
 		RayDifferentials<T, N> res;
-		res.direction_jacobian = direction_jacobian;
-		res.origin_jacobian = origin_jacobian + t * direction_jacobian + OuterProduct(direction, t_diff);
+		res.Jdirection = Jdirection;
+		res.Jorigin = Jorigin + t * Jdirection + OuterProduct(direction, t_diff);
 		return res;
 	}
 };

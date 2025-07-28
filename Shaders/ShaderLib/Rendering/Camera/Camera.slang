@@ -334,8 +334,7 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		const float d2 = Length2(cam_dir);
 		vec3 rdx = (d2 * R + cam_dir.x * d) / pow(d2, 1.5);
 		vec3 rdy = (d2 * U + cam_dir.y * d) / pow(d2, 1.5);
-		res.differentials.direction_jacobian = MakeFromCols(rdx, rdy);
-		res.differentials.direction_jacobian = res.differentials.direction_jacobian * (DiagonalMatrixV(aspect) * cp_jacobian);
+		res.differentials.Jdirection = MakeFromCols(rdx, rdy) * (DiagonalMatrixV(aspect) * cp_jacobian);
 		res.ray.direction = (B * cam_dir_n);
 		res.range = RayRangef(vec2(z_near, z_far) / cam_dir_n.z);
 		return res;
@@ -736,7 +735,7 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		res.ray.direction = direction;
 		res.ray.origin = position + frame_size * (cp.x * right + cp.y * getUp() * aspect);
 		res.range = RayRangef(depth_range);
-		res.differentials.origin_jacobian = MakeFromCols(
+		res.differentials.Jorigin = MakeFromCols(
 			right,
 			getUp()
 		) * cp_jacobian;
@@ -849,9 +848,9 @@ struct SphericalCamera : CameraBase, ICamera
 		dir = getBasis() * dir;
 		res.ray = Ray3f(position, dir);
 		res.range.resetRange();
-		res.differentials.origin_jacobian = Matrix3x2f::Zero();
+		res.differentials.Jorigin = Matrix3x2f::Zero();
 		// TODO
-		res.differentials.direction_jacobian = Matrix3x2f::Zero();
+		res.differentials.Jdirection = Matrix3x2f::Zero();
 		{
 			float ct = cos(inclination);
 			float st = sin(inclination);
@@ -867,7 +866,7 @@ struct SphericalCamera : CameraBase, ICamera
 				0,
 				cp * st
 			);
-			res.differentials.direction_jacobian =
+			res.differentials.Jdirection =
 				getBasis() *
 				MakeFromCols(d_dir_o_d_phi.zyx, d_dir_over_d_theta.zyx) *
 				DiagonalMatrixV(fov * vec2(0.5, -0.5)) * Jcp;
