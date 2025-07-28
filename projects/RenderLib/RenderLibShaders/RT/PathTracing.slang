@@ -22,7 +22,7 @@
 #include <ShaderLib/Color.slang>
 
 
-#include <ShaderLib/Debug/DebugBuffers.slang>
+//include <ShaderLib/Debug/DebugBuffers.slang>
 
 layout(SHADER_DESCRIPTOR_BINDING + 2, TARGET_IMAGE_FORMAT) uniform restrict RWTexture2D<float4> Target;
 

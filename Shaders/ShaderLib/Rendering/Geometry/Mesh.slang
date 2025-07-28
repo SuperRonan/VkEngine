@@ -5,7 +5,6 @@
 #include <ShaderLib/Maths/AffineXForm.slang>
 #include <ShaderLib/Maths/Calculus.slang>
 
-#include <ShaderLib/Debug/DebugBuffers.slang>
 
 interface IMesh : IGeometry<float, 3>
 {

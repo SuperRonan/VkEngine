@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ShaderLib/Debug/DebugBuffers.slang>
-
 #include "Material.slang"
 
 #include <ShaderLib/random.slang>

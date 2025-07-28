@@ -1,9 +1,6 @@
 
 #define SCENE_LIGHTS_ACCESS ROM 
 
-#define I_WANT_TO_DEBUG 1
-#include <ShaderLib/Debug/DebugBuffers.slang>
-
 #include <ShaderLib/Rendering/CubeMap.slang>
 #include <ShaderLib/Rendering/Lights/Light.slang>
 
