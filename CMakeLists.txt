@@ -1,5 +1,5 @@
 
-cmake_minimum_required(VERSION 3.18.0)
+cmake_minimum_required(VERSION 3.28.0)
 
 set(CMAKE_CONFIGURATION_TYPES Debug FastDebug RelWithDebInfo Release MinSizeRel)
 
@@ -106,20 +106,55 @@ add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 
 set(VULKAN_LIBS "vulkan-1")
 
-set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OSDependent;slang;slang-rt")
-set(VULKAN_SHADER_LIBS_DEBUG "shadercd;shaderc_utild;glslangd;SPIRVd;SPIRV-Toolsd;GenericCodeGend;MachineIndependentd;SPIRV-Tools-optd;OSDependentd;slangd;slang-rtd")
+set(VULKAN_SHADER_LIBS_RELEASE "shaderc;shaderc_util;glslang;SPIRV;SPIRV-Tools;GenericCodeGen;MachineIndependent;SPIRV-Tools-opt;OSDependent")
+set(VULKAN_SHADER_LIBS_DEBUG ${VULKAN_SHADER_LIBS_RELEASE})
+list(TRANSFORM VULKAN_SHADER_LIBS_DEBUG APPEND "d")
 
 set(VULKAN_INCLUDES "${VULKAN_PATH}/Include")
-set(VULKAN_LIBS_DIR "${VULKAN_PATH}/Bin;${VULKAN_PATH}/Lib")
+set(VULKAN_BIN_DIR "${VULKAN_PATH}/Bin")
+set(VULKAN_LIB_DIR "${VULKAN_PATH}/Lib")
 
-set(VK_ENGINE_LINK_DIRS "${VK_ENGINE_LINK_DIRS}" ${VULKAN_LIBS_DIR})
+set(VK_ENGINE_LINK_DIRS "${VK_ENGINE_LINK_DIRS}" ${VULKAN_LIB_DIR})
 set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${VULKAN_LIBS})
 set(VK_ENGINE_LINK_DEBUG_LIBS "${VK_ENGINE_LINK_DEBUG_LIBS}" ${VULKAN_SHADER_LIBS_DEBUG})
 set(VK_ENGINE_LINK_RELEASE_LIBS "${VK_ENGINE_LINK_RELEASE_LIBS}" ${VULKAN_SHADER_LIBS_RELEASE})
 set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${VULKAN_INCLUDES})
 
+# Slang
+function(create_slang_imported_lib lib_name)
+	add_library(Slang::${lib_name} SHARED IMPORTED)
+	set_target_properties(Slang::${lib_name} PROPERTIES
+		LINKER_LANGUAGE CXX
+		IMPORTED_LOCATION "${VULKAN_BIN_DIR}/${lib_name}.dll"
+		IMPORTED_IMPLIB "${VULKAN_LIB_DIR}/${lib_name}.lib"
+		IMPORTED_LOCATION_DEBUG "${VULKAN_BIN_DIR}/${lib_name}d.dll"
+		IMPORTED_IMPLIB_DEBUG "${VULKAN_LIB_DIR}/${lib_name}d.lib"
+		INTERFACE_INCLUDE_DIRECTORIES ${VULKAN_INCLUDES}
+	)
+endfunction()
 
+function(create_slang_imported_shared_lib lib_name)
+	add_library(Slang::${lib_name} MODULE IMPORTED)
+	set_target_properties(Slang::${lib_name} PROPERTIES
+		LINKER_LANGUAGE CXX
+		IMPORTED_LOCATION "${VULKAN_BIN_DIR}/${lib_name}.dll"
+		IMPORTED_IMPLIB "${VULKAN_LIB_DIR}/slang.lib"
+		IMPORTED_LOCATION_DEBUG "${VULKAN_BIN_DIR}/${lib_name}d.dll"
+		IMPORTED_IMPLIB "${VULKAN_LIB_DIR}/slangd.lib"
+	)
+endfunction()
 
+create_slang_imported_lib(slang)
+create_slang_imported_lib(slang-rt)
+# Slang also needs slang-glslang.dll to work properly, but it does not have a .lib loader
+# Either I didn't find how to do this correcly in cmake, or it is not supported yet
+# https://gitlab.kitware.com/cmake/cmake/-/issues/23475
+# The workaround is to build a list of DLLs to copy to the exec directory
+set(VKL_DLL_COPY_LIST "${VULKAN_BIN_DIR}/slang-glslang$<$<CONFIG:Debug>:d>.dll")
+
+add_library(SlangLib INTERFACE IMPORTED)
+set_property(TARGET SlangLib PROPERTY INTERFACE_LINK_LIBRARIES Slang::slang Slang::slang-rt)
+#add_dependencies(SlangLib Slang::slang-glslang)
 
 # VMA
 add_subdirectory(ext/VMA)
@@ -162,7 +197,7 @@ set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${IMGUI_DIR})
 # tinyobj
 add_subdirectory(ext/tinyobj)
 set(TINYOBJ_INCLUDE_DIRS ext)
-SET(TINYOBJ_LIBS tinyobjloader)
+set(TINYOBJ_LIBS tinyobjloader)
 
 set(VK_ENGINE_LINK_LIBS "${VK_ENGINE_LINK_LIBS}" ${TINYOBJ_LIBS})
 set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${TINYOBJ_INCLUDE_DIRS})
@@ -254,20 +289,26 @@ target_include_directories(VkEngine PUBLIC ${VK_ENGINE_INCLUDE_DIRS})
 
 target_link_libraries(VkEngine PUBLIC ${VK_ENGINE_LINK_LIBS})
 target_link_libraries(VkEngine PUBLIC $<IF:$<CONFIG:Debug>, ${VK_ENGINE_LINK_DEBUG_LIBS}, ${VK_ENGINE_LINK_RELEASE_LIBS}>)
+target_link_libraries(VkEngine PUBLIC SlangLib)
 
 target_link_directories(VkEngine PUBLIC ${VK_ENGINE_LINK_DIRS})
-
-
 
 option(VKL_BUILD_PROJECTS "Build example projects" ON)
 
 if(${VKL_BUILD_PROJECTS})
 
-add_subdirectory(projects)
+	add_subdirectory(projects)
 
 endif()
 
-install(TARGETS VkEngine DESTINATION lib)
+
+
+install(
+	TARGETS VkEngine
+	DESTINATION lib
+)
+
+
 
 # message(${STATIC_LIBRARY_FLAGS_DEBUG})
 # message(${LINK_FLAGS_FASTDEBUG})

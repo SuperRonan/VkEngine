@@ -53,6 +53,13 @@ function(AddExec target)
 	
 	set_target_properties(${target} PROPERTIES LINK_FLAGS "/ignore:4099") # PDB of provided libraries not found, TODO don't have the warning in the first place
 	set(EXECUTABLES ${EXECUTABLES} ${target})
+
+	if(WIN32)
+		set(TMP_COPY_SRC "$<TARGET_RUNTIME_DLLS:${target}>;${VKL_DLL_COPY_LIST}")
+		add_custom_command(TARGET ${target} POST_BUILD
+			COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${TMP_COPY_SRC} "$<TARGET_FILE_DIR:${target}>" COMMAND_EXPAND_LISTS
+		)
+	endif()
 	
 endfunction()
 
