@@ -31,7 +31,7 @@ namespace vkl
 			_use_rt_pipelines = true;
 		}
 
-		const std::filesystem::path shaders = "RenderLibShaders:/RT";
+		const std::filesystem::path shaders = "RenderLibShaders:/RenderLib/RT";
 
 		using RTShader = RayTracingCommand::RTShader;
 

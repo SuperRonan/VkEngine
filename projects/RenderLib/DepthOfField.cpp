@@ -58,7 +58,7 @@ namespace vkl
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		});
 
-		std::filesystem::path shaders = "RenderLibShaders:/";
+		std::filesystem::path shaders = "RenderLibShaders:/RenderLib/";
 
 		_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
