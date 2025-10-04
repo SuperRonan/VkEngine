@@ -5,6 +5,8 @@
 #include <vkl/IO/ImGuiUtils.hpp>
 #include <vkl/IO/GuiContext.hpp>
 
+#include <vkl/Utils/ColorCorrectionDef.hpp>
+
 #include <set>
 #include <string>
 #include <vector>
@@ -17,44 +19,6 @@
 
 namespace vkl
 {
-
-	enum class ColorCorrectionMode
-	{
-		PassThrough = 0,
-		None = PassThrough,
-		Id = None,
-		ITU,
-		sRGB,
-		scRGB,
-		BT1886,
-		HybridLogGamma,
-		HLG = HybridLogGamma,
-		PerceptualQuantization,
-		PQ = PerceptualQuantization,
-		DisplayP3,
-		DCI_P3,
-		LegacyNTSC,
-		LegacyPAL,
-		ST240,
-		AdobeRGB,
-		SonySLog,
-		SonySLog2,
-		ACEScc,
-		ACEScct,
-		Gamma,
-	};
-
-	struct ColorCorrectionParams
-	{
-		float exposure = 1.0f;
-		float gamma = 1.0f;
-	};
-
-	struct ColorCorrectionInfo
-	{
-		ColorCorrectionMode mode = ColorCorrectionMode::None;
-		ColorCorrectionParams params = {};
-	};
 
 	class VkWindow : public VkObject
 	{
@@ -282,6 +246,11 @@ namespace vkl
 			ColorCorrectionInfo res = _color_correction;
 			res.params.exposure *= _brightness;
 			return res;
+		}
+
+		float brightness() const
+		{
+			return _brightness;
 		}
 	};
 

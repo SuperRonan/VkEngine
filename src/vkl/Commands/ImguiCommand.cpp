@@ -13,25 +13,10 @@
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
-#define IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION 1
 #define IMGUI_IMPL_VULKAN_HAS_SECONDARY_VIEWPORTS_CONTROL 1
 
 namespace vkl
 {
-#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
-	static inline ImGui_ImplVulkan_ColorCorrectionMethod Convert(ColorCorrectionMode mode)
-	{
-		ImGui_ImplVulkan_ColorCorrectionMethod res = ImGui_ImplVulkan_ColorCorrectionMethod::ImGui_ImplVulkan_ColorCorrection_None;
-		switch(mode)
-		{
-		case ColorCorrectionMode::Gamma:
-			res = ImGui_ImplVulkan_ColorCorrectionMethod::ImGui_ImplVulkan_ColorCorrection_Gamma;
-		break;
-		};
-		return res;
-	};
-#endif
-
 	struct ImGuiCommandNode : public ExecutionNode
 	{
 		struct CreateInfo
@@ -53,6 +38,9 @@ namespace vkl
 		VkImageLayout _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		std::shared_ptr<Fence> _fence_to_wait;
+
+		ColorCorrectionInfo _color_correction;
+		ColorCorrectionInfo _viewports_color_correction;
 
 		virtual void clear() override
 		{
@@ -79,6 +67,8 @@ namespace vkl
 				_render_pass_info.recordBegin(ctx);
 			}
 
+			vkCmdPushConstants(*cmd, ImGui_ImplVulkan_GetMainPipelineLayout(), VK_SHADER_STAGE_FRAGMENT_BIT, 4 * sizeof(float), sizeof(ColorCorrectionParams), &_color_correction.params);
+
 			{
 				ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *cmd);
 			}
@@ -96,7 +86,7 @@ namespace vkl
 #ifdef IMGUI_HAS_VIEWPORT
 				if (app->imguiConfigFlags() & ImGuiConfigFlags_ViewportsEnable)
 				{
-					ImGui::RenderPlatformWindowsDefault();
+					ImGui::RenderPlatformWindowsDefault(nullptr, &_viewports_color_correction.params);
 				}
 #endif
 			}
@@ -124,6 +114,11 @@ namespace vkl
 
 	ImguiCommand::~ImguiCommand()
 	{
+		if (_custom_frag_shader)
+		{
+			_custom_frag_shader->removeInvalidationCallback(this);
+		}
+
 		_target_window->swapchain()->removeInvalidationCallback(this);
 		
 		if (_render_pass)
@@ -132,6 +127,7 @@ namespace vkl
 		}
 
 		shutdownImGui();
+		_custom_frag_shader = nullptr;
 		_desc_pool = nullptr;
 		_render_pass = nullptr;
 		
@@ -200,6 +196,20 @@ namespace vkl
 			.sizes = sizes,
 		});
 
+		_custom_frag_shader = std::make_shared<Shader>(Shader::CI{
+			.app = application(),
+			.name = name() + ".CustomFragShader",
+			.source_path = "ShaderLib:/ImGui/frag.slang",
+			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+		});
+
+		_custom_frag_shader->setInvalidationCallback(Callback{
+			.callback = [this]() {
+				this->_re_create_imgui_pipeline = true;
+			},
+			.id = this,
+		});
+
 		auto check_vk_result = [](VkResult res)
 		{
 			if (res == VK_ERROR_DEVICE_LOST)
@@ -209,30 +219,34 @@ namespace vkl
 			VK_CHECK(res, "ImGui Failed!");
 		};
 
+		_spec_entry = VkSpecializationMapEntry{
+			.constantID = 0,
+			.offset = 0,
+			.size = sizeof(uint32_t),
+		};
+		_specialization = VkSpecializationInfo{
+			.mapEntryCount = 1,
+			.pMapEntries = &_spec_entry,
+			.dataSize = sizeof(uint32_t),
+			.pData = &_color_correction_info.mode,
+		};
+
+		_viewports_specialization = VkSpecializationInfo{
+			.mapEntryCount = 1,
+			.pMapEntries = &_spec_entry,
+			.dataSize = sizeof(uint32_t),
+			.pData = &_viewports_color_correction_info.mode,
+		};
+
 		const float gamma = 2.4f;
 #if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
 		const ImGui_ImplVulkan_ColorCorrectionParameters gamma_params = ImGui_ImplVulkan_ColorCorrectionParameters::MakeGamma(gamma, 1);
 #endif
 
-		ImGui_ImplVulkan_InitInfo ii{
-			.Instance = _app->instance(),
-			.PhysicalDevice = _app->physicalDevice(),
-			.Device = device(),
-			.QueueFamily = _queue->familyIndex(),
-			.Queue = _queue->handle(),
-			.DescriptorPool = *_desc_pool,
+		ImGui_ImplVulkan_PipelineInfo main_pipeline_info{
 			.RenderPass = _render_pass->instance()->handle(),
-			.MinImageCount = static_cast<uint32_t>(2),
-			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
-			.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
-			.ColorCorrectionParams = gamma_params,
-#endif
 			.Subpass = 0,
-#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
-			.UseStaticColorCorrectionsParams = false,
-#endif
-			.UseDynamicRendering = _render_pass ? false : true,
+			.MSAASamples = _render_pass->instance()->getAttachmentDescriptors2().front().samples,
 			.PipelineRenderingCreateInfo = VkPipelineRenderingCreateInfo{
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
 				.pNext = nullptr,
@@ -242,6 +256,19 @@ namespace vkl
 				.depthAttachmentFormat = VK_FORMAT_UNDEFINED,
 				.stencilAttachmentFormat = VK_FORMAT_UNDEFINED,
 			},
+		};
+
+		ImGui_ImplVulkan_InitInfo ii{
+			.Instance = _app->instance(),
+			.PhysicalDevice = _app->physicalDevice(),
+			.Device = device(),
+			.QueueFamily = _queue->familyIndex(),
+			.Queue = _queue->handle(),
+			.DescriptorPool = *_desc_pool,
+			.MinImageCount = static_cast<uint32_t>(2),
+			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
+			.PipelineInfoMain = main_pipeline_info,
+			.UseDynamicRendering = _render_pass ? false : true,
 			.CheckVkResultFn = check_vk_result,
 		};
 
@@ -250,16 +277,16 @@ namespace vkl
 #endif
 
 		ImGui_ImplVulkan_Init(&ii);
-		ImGui_ImplVulkan_CreateFontsTexture();
 
 		_fences_to_wait.resize(ii.ImageCount);
+
+		_re_create_imgui_pipeline = true;
 	}
 
 	void ImguiCommand::shutdownImGui()
 	{
 		application()->logger()("Shutdown ImGui Vulkan", Logger::Options::TagInfo);
 		application()->deviceWaitIdle();
-		ImGui_ImplVulkan_DestroyFontsTexture();
 		ImGui_ImplVulkan_Shutdown();
 		_desc_pool = nullptr;
 	}
@@ -288,6 +315,11 @@ namespace vkl
 		node->_index = ei.index;
 		
 		node->_render_pass_info.exportResources(node->resources(), true);
+
+		node->_color_correction = _color_correction_info;
+		node->_viewports_color_correction = _viewports_color_correction_info;
+		node->_viewports_color_correction.params.exposure *= _target_window->brightness();
+
 		return node;
 	}
 
@@ -322,6 +354,11 @@ namespace vkl
 			res = true;
 		}
 
+		if (_custom_frag_shader)
+		{
+			_custom_frag_shader->updateResources(ctx);
+		}
+
 		for (auto& fb : _framebuffers)
 		{
 			res |= fb->updateResources(ctx);
@@ -336,7 +373,7 @@ namespace vkl
 		const VkSurfaceFormatKHR surface_format = swapchain.format();
 		_imgui_init_format = surface_format.format;
 		ColorCorrectionInfo cci = _target_window->getColorCorrectionInfo();
-		_color_correction_info.params = cci.params;
+		_color_correction_info = cci;
 
 
 
@@ -397,42 +434,53 @@ namespace vkl
 #endif
 		if(_re_create_imgui_pipeline)
 		{
+			
+			_custom_frag_shader->waitForInstanceCreationIFN();
 			VkRenderPass vk_render_pass = _render_pass ? _render_pass->instance()->handle() : VK_NULL_HANDLE;
 			application()->deviceWaitIdle();
-			ImGui_ImplVulkan_MainPipelineCreateInfo info{
+			ImGui_ImplVulkan_PipelineInfo info{
 				.RenderPass = vk_render_pass,
 				.Subpass = 0,
-				.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
-				.ColorCorrectionMethod = imgui_method, //ImGui_ImplVulkan_ColorCorrection_None
-#endif
+				.MSAASamples = _render_pass->instance()->getAttachmentDescriptors2().front().samples,
+				.CustomShadersInfo = ImGui_ImplVulkan_CustomShadersInfo{
+					.CustomShaderFrag = _custom_frag_shader->instance()->handle(),
+					.SpecializationInfoFrag = &_specialization,
+					.PushConstantSize = sizeof(ColorCorrectionParams),
+					.PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT,
+				},
 			};
-			ImGui_ImplVulkan_ReCreateMainPipeline(info);
-			_re_create_imgui_pipeline = false;
+			ImGui_ImplVulkan_CreateMainPipeline(&info);
+			
 #ifdef IMGUI_HAS_VIEWPORT
 #if IMGUI_IMPL_VULKAN_HAS_SECONDARY_VIEWPORTS_CONTROL
-			VkPresentModeKHR present_mode = swapchain.createInfo().presentMode;
-			ImGui_ImplVulkan_SecondaryViewportInfo vp_info{
-				.SurfaceFormat = surface_format,
-				//.PresentMode = &present_mode,
+			VkPresentModeKHR present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;// swapchain.createInfo().presentMode;
+			ImGui_ImplVulkan_SecondaryViewportsInfo vp_info{
+				.DesiredFormat = surface_format,
+				.DesiredPresentMode = present_mode,
+				.GetCustomShadersInfo = [](const void* user_data, VkSurfaceFormatKHR format)
+				{
+					ImguiCommand& that = *reinterpret_cast<ImguiCommand*>(const_cast<void*>(user_data));
+					that._viewports_format = format;
+					that._viewports_color_correction_info = DeduceColorCorrection(format);
+					ImGui_ImplVulkan_CustomShadersInfo res{
+						.CustomShaderFrag = that._custom_frag_shader->instance()->handle(),
+						.SpecializationInfoFrag = &that._viewports_specialization,
+						.PushConstantSize = sizeof(ColorCorrectionParams),
+						.PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT,
+					};
+					return res;
+				},
+				.UserData = this,
 			};
-#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION	
-			vp_info.ColorCorrectionMethod = imgui_method,
-			vp_info.ColorCorrectionParams = &imgui_params,
-#endif
-			ImGui_ImplVulkan_RequestSecondaryViewportsChanges(vp_info);
+			ImGui_ImplVulkan_SetSecondaryViewportsOptions(&vp_info);
 #endif
 #endif
+			_re_create_imgui_pipeline = false;
 		}
 		else
 		{
 #ifdef IMGUI_HAS_VIEWPORT
-#if IMGUI_IMPL_VULKAN_HAS_COLOR_CORRECTION
-			ImGui_ImplVulkan_SecondaryViewportInfo vp_info = {};
-			vp_info.ColorCorrectionMethod = imgui_method;
-			vp_info.ColorCorrectionParams = &imgui_params;
-			ImGui_ImplVulkan_RequestSecondaryViewportsChanges(vp_info);
-#endif
+
 #endif
 		}
 

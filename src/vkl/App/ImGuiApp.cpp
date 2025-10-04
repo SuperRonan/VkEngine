@@ -38,7 +38,20 @@ namespace vkl
 		_enable_imgui = true;
 
 		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
-		
+
+		// The default color palette is in sRGB
+		// Convert it to linear (the shader will do the proper color correction)
+		auto& style = ImGui::GetStyle();
+		for (uint i = 0; i < ImGuiCol_COUNT; ++i)
+		{
+			for (uint c = 0; c < 3; ++c)
+			{
+				float& x = *(&(style.Colors[i].x) + c);
+				// TODO properly
+				x = std::pow(x, 2.4f);
+				//x = ColorCorrectionCommon::sRGB_OETF(x);
+			}
+		}
 
 		//pio.Renderer_CreateWindow = [](ImGuiViewport* _vp)
 		//{

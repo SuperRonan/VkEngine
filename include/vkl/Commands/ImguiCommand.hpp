@@ -24,13 +24,21 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<DescriptorPool> _desc_pool = nullptr;
 
+		std::shared_ptr<Shader> _custom_frag_shader = nullptr;
+		VkSpecializationMapEntry _spec_entry;
+		VkSpecializationInfo _specialization;
+		VkSpecializationInfo _viewports_specialization;
+
 		VkFormat _imgui_init_format = VK_FORMAT_B8G8R8A8_UNORM;
+		VkSurfaceFormatKHR _viewports_format = {};
 
 		Dyn<size_t> _index;
 
 		MyVector<std::shared_ptr<Fence>> _fences_to_wait = {};
 
 		ColorCorrectionInfo _color_correction_info = {};
+		ColorCorrectionInfo _viewports_color_correction_info = {};
+
 
 		bool _re_create_imgui_pipeline = true;
 
