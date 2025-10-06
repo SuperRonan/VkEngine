@@ -241,10 +241,13 @@ namespace vkl
 
 		void declareGui(GuiContext & ctx);
 
-		ColorCorrectionInfo getColorCorrectionInfo() const
+		ColorCorrectionInfo getColorCorrectionInfo(bool brightness=false) const
 		{
 			ColorCorrectionInfo res = _color_correction;
-			res.params.exposure *= _brightness;
+			if (brightness)
+			{
+				res.params.exposure *= _brightness;
+			}
 			return res;
 		}
 

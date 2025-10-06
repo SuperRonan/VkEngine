@@ -317,6 +317,7 @@ namespace vkl
 		node->_render_pass_info.exportResources(node->resources(), true);
 
 		node->_color_correction = _color_correction_info;
+		node->_color_correction.params.exposure *= _target_window->brightness();
 		node->_viewports_color_correction = _viewports_color_correction_info;
 		node->_viewports_color_correction.params.exposure *= _target_window->brightness();
 
