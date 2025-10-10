@@ -508,6 +508,7 @@ namespace vkl
 			features.features_12.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
 			features.features_12.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
 
+			features.features_12.uniformAndStorageBuffer8BitAccess = VK_TRUE;
 			features.features2.features.shaderInt16 = VK_TRUE;
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
 
@@ -671,12 +672,12 @@ namespace vkl
 			};
 
 			std::shared_ptr<ComputeCommand> slang_test;
-			if (false)
+			if (true)
 			{
 				slang_test = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 					.app = this,
 					.name = "SlangTest",
-					.shader_path = "ProjectShaders:/test.slang",
+					.shader_path = "ShaderLib:/Spectrum/Test.slang",
 					.extent = final_image->image()->extent(),
 					.dispatch_threads = true,
 					.sets_layouts = sets_layouts,
@@ -967,14 +968,15 @@ namespace vkl
 
 					sui->execute(exec_thread, camera);
 
-					color_correction.execute(exec_thread);
-					
-					pip.execute(exec_thread);
-
 					if (slang_test)
 					{
 						exec_thread(slang_test);
 					}
+
+					color_correction.execute(exec_thread);
+					
+					pip.execute(exec_thread);
+
 
 					exec_thread.bindSet(BindSetInfo{
 						.index = 1,
