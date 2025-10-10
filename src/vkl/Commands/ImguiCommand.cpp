@@ -86,7 +86,9 @@ namespace vkl
 #ifdef IMGUI_HAS_VIEWPORT
 				if (app->imguiConfigFlags() & ImGuiConfigFlags_ViewportsEnable)
 				{
-					ImGui::RenderPlatformWindowsDefault(nullptr, &_viewports_color_correction.params);
+					ImGui_ImplVulkan_ViewportsRendererArgs params;
+					params.CustomPushConstantData = &_viewports_color_correction.params;
+					ImGui::RenderPlatformWindowsDefault(nullptr, &params);
 				}
 #endif
 			}
@@ -269,6 +271,22 @@ namespace vkl
 			.ImageCount = static_cast<uint32_t>(8), // Why 8? because max swapchain image possible? 
 			.PipelineInfoMain = main_pipeline_info,
 			.UseDynamicRendering = _render_pass ? false : true,
+			.SecondaryViewportsInfo = ImGui_ImplVulkan_SecondaryViewportsInfo{
+				.GetCustomShadersInfo = [](const void* user_data, VkSurfaceFormatKHR format)
+				{
+					ImguiCommand& that = *reinterpret_cast<ImguiCommand*>(const_cast<void*>(user_data));
+					that._viewports_format = format;
+					that._viewports_color_correction_info = DeduceColorCorrection(format);
+					ImGui_ImplVulkan_CustomShadersInfo res{
+						.CustomShaderFrag = that._custom_frag_shader->instance()->handle(),
+						.SpecializationInfoFrag = &that._viewports_specialization,
+						.PushConstantSize = sizeof(ColorCorrectionParams),
+						.PushConstantStages = VK_SHADER_STAGE_FRAGMENT_BIT,
+					};
+					return res;
+				},
+				.GetCustomShadersInfoUserData = this,
+			},
 			.CheckVkResultFn = check_vk_result,
 		};
 
@@ -471,7 +489,7 @@ namespace vkl
 					};
 					return res;
 				},
-				.UserData = this,
+				.GetCustomShadersInfoUserData = this,
 			};
 			ImGui_ImplVulkan_SetSecondaryViewportsOptions(&vp_info);
 #endif

@@ -841,4 +841,20 @@ namespace vkl
 		
 		return res;
 	}
+
+	void Collapse(std::string& dst, DefinitionsList const& defs)
+	{
+		for (uint32_t i = 0; i < defs.size(); ++i)
+		{
+			dst += defs[i];
+			dst.push_back('\n');
+		}
+	}
+
+	std::string Collapse(DefinitionsList const& defs)
+	{
+		std::string res;
+		Collapse(res, defs);
+		return res;
+	}
 }

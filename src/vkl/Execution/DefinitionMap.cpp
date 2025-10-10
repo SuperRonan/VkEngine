@@ -42,10 +42,9 @@ namespace vkl
 			if (_collapsed.empty())
 			{
 				callInvalidationCallbacks();
-				std::stringstream ss;
 				for (const auto& [k, v] : _definitions)
 				{
-					_collapsed.pushBackFormatted("{:s} {:s}", k, v);
+					_collapsed.pushBackFormatted("{:s} {:s}"sv, k, v);
 				}
 			}
 		}

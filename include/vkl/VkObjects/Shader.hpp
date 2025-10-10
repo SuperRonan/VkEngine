@@ -215,6 +215,8 @@ namespace vkl
 
 		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info);
 
+		void createInstance();
+
 		virtual void destroyInstanceIFN() override;
 
 		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
@@ -228,6 +230,7 @@ namespace vkl
 			that::FileSystem::Path const& source_path = {};
 			VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			DynamicValue<DefinitionsList> definitions;
+			bool create_on_construct = false;
 			Dyn<bool> hold_instance = true;
 		};
 		using CI = CreateInfo;

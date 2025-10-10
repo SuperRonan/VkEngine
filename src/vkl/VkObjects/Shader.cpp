@@ -1474,6 +1474,19 @@ namespace vkl
 		}
 	}
 
+	void Shader::createInstance()
+	{
+		SpecializationKey key;
+		DefinitionsList defs;
+		if (_definitions)
+		{
+			defs = *_definitions;
+		}
+		key.definitions = Collapse(defs);
+		DefinitionsList common;
+		createInstance(key, common, 0, application()->options().generate_shader_debug_info);
+	}
+
 	void Shader::destroyInstanceIFN()
 	{
 		waitForInstanceCreationIFN();
@@ -1518,11 +1531,7 @@ namespace vkl
 				DefinitionsList definitions = *_definitions;
 				definitions += ctx.commonDefinitions()->collapsed();
 
-				for (size_t i = 0; i < definitions.size(); ++i)
-				{
-					new_key.definitions += definitions[i];
-					new_key.definitions += '\n';
-				}
+				Collapse(new_key.definitions, definitions);
 				const bool use_different_spec = new_key != _current_key;
 				if (use_different_spec)
 				{
@@ -1561,6 +1570,10 @@ namespace vkl
 		_definitions(ci.definitions)
 	{
 		_instance_time = std::filesystem::file_time_type::min();
+		if (ci.create_on_construct)
+		{
+			createInstance();
+		}
 	}
 
 	Shader::~Shader()

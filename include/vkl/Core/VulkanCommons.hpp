@@ -874,6 +874,9 @@ namespace vkl
 
 	using DefinitionsList = that::ExtensibleStringContainer32;
 
+	extern void Collapse(std::string& dst, DefinitionsList const& defs);
+
+	extern std::string Collapse(DefinitionsList const& defs);
 }
 
 constexpr bool operator==(VkImageSubresourceRange const& a, VkImageSubresourceRange const& b)
