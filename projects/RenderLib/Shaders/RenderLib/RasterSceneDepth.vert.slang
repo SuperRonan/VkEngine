@@ -55,9 +55,9 @@ vec4 main(
 	let light = SceneLights[_pc.light_id];
 	
 #if TARGET_CUBE
-	const mat4 w2p = PointLight(light).getWorldToProj(view_id);
+	const mat4 w2p = PointLight<SPECTRUM_MODE_RGB>(light).getWorldToProj(view_id);
 #else
-	const mat4 w2p = SpotLight(light).getWorldToProj();
+	const mat4 w2p = SpotLight<SPECTRUM_MODE_RGB>(light).getWorldToProj();
 #endif
 	const mat4 o2w = ResizeMatrix<4, 4>(vd.matrix);
 	const mat4 o2p = w2p * o2w;

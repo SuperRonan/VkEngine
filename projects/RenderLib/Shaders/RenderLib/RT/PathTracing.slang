@@ -20,9 +20,13 @@
 #include <ShaderLib/Maths/transforms.slang>
 
 #include <ShaderLib/Color.slang>
-
+#include <ShaderLib/Spectrum/Spectrum.slang>
 
 //include <ShaderLib/Debug/DebugBuffers.slang>
+
+#ifndef TARGET_IMAGE_FORMAT
+#define TARGET_IMAGE_FORMAT rgba16f
+#endif
 
 layout(SHADER_DESCRIPTOR_BINDING + 2, TARGET_IMAGE_FORMAT) uniform restrict RWTexture2D<float4> Target;
 
@@ -42,24 +46,24 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 	RayTracer ray_tracer;
 	uint samples = 1;
 
-	vec3 shade <RNG : IRNG>(
-		const in LiSampler sampler,
+	Spectrumf<Mode> shade <RNG : IRNG, int Mode>(
+		const in LiSampler<Mode> sampler,
 		const in SurfaceGeometryInfo sgi,
-		const in IMaterial material,
-		const in vec3 beta,
+		const in IMaterial<Mode> material,
+		const in Spectrumf<Mode> beta,
 		inout RNG rng
-	)
-	{
-		vec3 res = vec3(0);
+	) {
+		typealias SpectrumM = Spectrumf<Mode>;
+		SpectrumM res = SpectrumM::Zero();
 		for(uint i = 0; i < samples; ++i)
 		{
 			let sample = sampler.sampleLi(rng, sgi, material, beta);
 			if(sample.pdf > 0)
 			{
-				const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
-				vec3 sample_contribution = max(sample.intensity, vec3(0)) * bsdf * AbsDot(sgi.shading_normal, sample.direction);
+				const SpectrumM bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+				SpectrumM sample_contribution = sample.intensity * bsdf * AbsDot(sgi.shading_normal, sample.direction);
 				float bsdf_pdf = 0;
-				const bool at_infinity = sample.flags & Light::ConnectionSample::Flags::AtInfinity;
+				const bool at_infinity = sample.flags & Light::Sample::Flags::AtInfinity;
 				const bool sample_is_hitable = at_infinity;
 				if(sample_is_hitable)
 				{
@@ -68,7 +72,7 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 				// weight / pdf -> rcp(sum(pdf))
 				float mis_weight = rcp(bsdf_pdf + LIGHT_SAMPLES * sample.pdf);
 				sample_contribution *= mis_weight;
-				if(NonZero(sample_contribution))
+				if(sample_contribution.isNonZero())
 				{
 					Ray3f _ray = Ray3f(sgi.position, sample.direction);
 					RayDesc ray = RayDesc(_ray, RayRangef(RayTMin(_ray, sgi.geometry_normal), sample.distance));
@@ -81,15 +85,19 @@ struct DirectLightSurfaceShading<RayTracer : IRayTracer>
 	}
 }
 
-vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, const in RayTracer ray_tracer, TraversingRay tray, inout RNG rng)
-{
+Spectrumf<Mode> TracePath<RNG : IRNG, RayTracer : IRayTracer, int Mode>(
+	const in BoundScene scene,
+	const in RayTracer ray_tracer,
+	TraversingRay<Mode> tray,
+	inout RNG rng
+) {
 	uint num_vertices = 1;
 	const uint max_vertices = GetMaxDepth() + 1;
-	vec3 res = vec3(0);
+	Spectrumf<Mode> res = Spectrumf<Mode>::Zero();
 	// negative for delta sampling
 	float ray_pdf = 1;
 
-	LiSampler sampler_Li = LiSampler();
+	LiSampler<Mode> sampler_Li = {};
 #ifdef USE_Li_RESAMPLING
 	sampler_Li.resampling = rt_ubo.Li_resampling;
 #else
@@ -103,8 +111,8 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	shader.samples = LIGHT_SAMPLES;
 
 	SurfaceGeometryInfo prev_sgi;
-	PBMaterial prev_material;
-	vec3 prev_beta;
+	PBMaterial<Mode> prev_material;
+	Spectrumf<Mode> prev_beta;
 
 	while(num_vertices <= max_vertices)
 	{
@@ -115,9 +123,9 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		Hit hit = ray_tracer.traceRay<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES>(trace_info);
 		if(!hit.hasValue())
 		{
-			vec3 Le = scene.getEnvLe(tray.ray.direction);
-			vec3 contrib = tray.throughput * Le;
-			if(NonZero(contrib))
+			let Le = scene.getEnvLe<Mode>(tray.ray.direction);
+			let contrib = tray.throughput * Le;
+			if(contrib.isNonZero())
 			{
 				float mis_weight = 1;
 				if(num_vertices > 1 && ray_pdf > 0)
@@ -131,14 +139,15 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 		}
 		++num_vertices;
 		RayDiffTextureSampling sampling = RayDiffTextureSampling(hit.surface_diffs.Juv);
-		PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
+		PBMaterial<Mode> material = scene.readMaterial<Mode>(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 		ApplyMaterialNormalIFN(hit.surface_shading_info, material);
 
 		{
 			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
 			if(kappa.hasValue)
 			{
-				tray.throughput *= exp2(-hit.t * kappa.value);
+				// TODO
+				//tray.throughput *= exp2(-hit.t * kappa.value);
 			}
 		}
 
@@ -180,7 +189,7 @@ vec3 TracePath<RNG : IRNG, RayTracer : IRayTracer>(const in BoundScene scene, co
 	return res;
 }
 
-void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in IRayTracer ray_tracer)
+void CommonMain<int Mode>(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in IRayTracer ray_tracer)
 {
 	uint seed = Hash(pixel);
 	seed = seed ^ Hash(renderer_ubo.frame_idx);
@@ -188,7 +197,7 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 	//seed = Hash(renderer_ubo.frame_idx);
 	RNG_t rng = RNG_t(seed);
 	ICamera cam = MakeCamera(renderer_ubo.camera);
-	vec3 res = vec3(0);
+	vec3 res = vec3(0); // In XYZ
 
 	// _g_debug_signal = (pixel.x % 512 == 0 && pixel.y % 512 == 0);
 	// if(_g_debug_signal)
@@ -214,12 +223,12 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 
 		Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
 		let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
-		TraversingRay tray = TraversingRay(cam_sample);
+		TraversingRay<Mode> tray = TraversingRay<Mode>(cam_sample);
 		
-		res += TracePath(scene, ray_tracer, tray, rng);
+		res += TracePath(scene, ray_tracer, tray, rng).toXYZf();
 	}
 
-	res *= rcp(float(PATH_PER_PIXEL));
+	res = GetXYZToRGBConversionMatrix<float>() * res * rcp(float(PATH_PER_PIXEL));
 	Target.Store(pixel, vec4(res, 1));
 }
 
@@ -235,6 +244,7 @@ void CommonMain(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in I
 [numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]
 void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 {
+	static const int Mode = SPECTRUM_MODE_RGB;
 	const uvec2 pixel = GlobalInvocationID.xy;
 	const uvec2 dims = TextureSize(Target);
 	const vec2 oo_dims = rcp(vec2(dims));
@@ -243,7 +253,7 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 		BoundScene scene;
 		RayQuerier ray_querier = RayQuerier(scene);
 
-		CommonMain(pixel, oo_dims, scene, ray_querier);
+		CommonMain<Mode>(pixel, oo_dims, scene, ray_querier);
 	}
 }
 
@@ -254,6 +264,7 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 [shader("raygen")]
 void main()
 {
+	static const int Mode = SPECTRUM_MODE_RGB;
 	const uvec2 pixel = DispatchRaysIndex().xy;
 	const uvec2 dims = TextureSize(Target);
 	const vec2 oo_dims = rcp(vec2(dims));
@@ -262,7 +273,7 @@ void main()
 		BoundScene scene;
 		RayTracer ray_tracer = RayTracer(scene);
 
-		CommonMain(pixel, oo_dims, scene, ray_tracer);
+		CommonMain<Mode>(pixel, oo_dims, scene, ray_tracer);
 	}
 }
 

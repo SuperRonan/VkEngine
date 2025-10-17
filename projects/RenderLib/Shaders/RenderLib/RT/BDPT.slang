@@ -129,51 +129,54 @@ struct DualNormalColorPack
 
 namespace bdpt
 {
-	struct Vertex
+	[Flags]
+	enum VertexFlags
 	{
-		[Flags]
-		enum Flags
-		{
-			None = 0x0,
-			NonHitable = (0x1 << 0),
-			AtInfinity = (0x1 << 1),
-			MaterialReflect = (0x1 << 3),
-			MaterialTransmit = (0x1 << 4),
-		};
+		None = 0x0,
+		NonHitable = (0x1 << 0),
+		AtInfinity = (0x1 << 1),
+		MaterialReflect = (0x1 << 3),
+		MaterialTransmit = (0x1 << 4),
+	};
 
-		static Flags GetFlags(Camera::Sample::Flags sample_flags)
+	static VertexFlags GetVertexFlags(Camera::Sample::Flags sample_flags)
+	{
+		VertexFlags res = VertexFlags::None;
+		if(sample_flags & (Camera::Sample::Flags::DeltaPosition | Camera::Sample::Flags::DeltaDirection))
 		{
-			Flags res = Flags::None;
-			if(sample_flags & (Camera::Sample::Flags::DeltaPosition | Camera::Sample::Flags::DeltaDirection))
-			{
-				res = res | Vertex::Flags::NonHitable;
-			}
-			// TODO Not connectable, but resamplable
-			// if(sample_flags & Camera::Sample::Flags::DeltaDirection)
-			// {
-			// 	res = res | Vertex::Flags::NonConnectable;
-			// }
-			return res;
+			res = res | VertexFlags::NonHitable;
 		}
+		// TODO Not connectable, but resamplable
+		// if(sample_flags & Camera::Sample::Flags::DeltaDirection)
+		// {
+		// 	res = res | VertexFlags::NonConnectable;
+		// }
+		return res;
+	}
 
-		static Flags GetFlags(Light::Sample::Flags sample_flags)
+	static VertexFlags GetVertexFlags(Light::Sample::Flags sample_flags)
+	{
+		VertexFlags res = VertexFlags::None;
+		if(sample_flags & (Light::Sample::Flags::DeltaPosition | Light::Sample::Flags::DeltaDirection))
 		{
-			Flags res = Flags::None;
-			if(sample_flags & (Light::Sample::Flags::DeltaPosition | Light::Sample::Flags::DeltaDirection))
-			{
-				res = res | Vertex::Flags::NonHitable;
-			}
-			if(sample_flags & Light::Sample::Flags::AtInfinity)
-			{
-				res = res | Vertex::Flags::AtInfinity;
-			}
-			// TODO Not connectable, but resamplable
-			// if(sample_flags & Light::Sample::Flags::DeltaDirection)
-			// {
-			// 	res = res | Vertex::Flags::NonConnectable;
-			// }
-			return res;
+			res = res | VertexFlags::NonHitable;
 		}
+		if(sample_flags & Light::Sample::Flags::AtInfinity)
+		{
+			res = res | VertexFlags::AtInfinity;
+		}
+		// TODO Not connectable, but resamplable
+		// if(sample_flags & Light::Sample::Flags::DeltaDirection)
+		// {
+		// 	res = res | VertexFlags::NonConnectable;
+		// }
+		return res;
+	}
+	struct Vertex<int Mode>
+	{
+		typealias Flags = VertexFlags;
+
+		
 
 #if COMPRESS_VERTEX == 0
 		vec3 position;
@@ -221,10 +224,9 @@ namespace bdpt
 			set{ uv_pack = packSnorm2x16(newValue * rcp(UV_SCALE)); }
 		}
 #endif
-		
-		half3 beta;
+		// TODO find a clever solution for the different spectrum samples
+		Spectrumh<Mode> beta;
 		half3 shading_normal;
-		
 
 		property uint generic_index
 		{
@@ -308,7 +310,7 @@ namespace bdpt
 
 layout(SHADER_DESCRIPTOR_BINDING + 3) restrict RWStructuredBuffer<Vector<LightBufferAccumFloat, 3>, Std430DataLayout> LightTracerAccumBuffer;
 
-float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IArray<PDFPair>>(
+float VertexConnectionWeight<int Mode, VertexArray : IArray<Vertex<Mode>>, PDFStorage : IArray<PDFPair>>(
 	const in VertexArray vertices,
 	const uint camera_offset,
 	const uint light_offset,
@@ -330,7 +332,7 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IArray<P
 		float ri = 1;
 		uint min_s = 1;
 		
-		// if((connection_s == 1 ? resa ? vertices[light_offset].flags) & Vertex::Flags::NonHitable)
+		// if((connection_s == 1 ? resa ? vertices[light_offset].flags) & VertexFlags::NonHitable)
 		// {
 		// 	min_s = 2;
 		// }
@@ -416,7 +418,7 @@ float VertexConnectionWeight<VertexArray : IArray<Vertex>, PDFStorage : IArray<P
 	return res;
 }
 
-float UniDirectionalPTWeight<VertexArray : IArray<Vertex>, PDFStorage : IArray<PDFPair>>(
+float UniDirectionalPTWeight<int Mode, VertexArray : IArray<Vertex<Mode>>, PDFStorage : IArray<PDFPair>>(
 	const in VertexArray vertices,
 	const uint camera_offset,
 	const in PDFStorage storage_pdf, uint camera_pdf_offset,
@@ -485,9 +487,9 @@ float UniDirectionalPTWeight<VertexArray : IArray<Vertex>, PDFStorage : IArray<P
 	return res;
 }
 
-vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWArray<PDFPair>>(
+Spectrumf<Mode> ConnectSubPaths<int Mode, RNG : IRNG, VertexArray : IArray<Vertex<Mode>>, PDFStorage : IRWArray<PDFPair>>(
 	const uint thread_index,
-	const in VertexArray vertices, 
+	const in VertexArray vertices,
 	const uint camera_offset, const uint n_camera,
 	const uint light_offset, const uint n_light,
 	const in PDFStorage pdf_storage, uint camera_pdf_offset, uint light_pdf_offset,
@@ -495,7 +497,8 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 	const vec2 fdims, const uvec2 udims,
 	inout RNG rng
 ) {
-	vec3 res = vec3(0);
+	typealias SpectruM = Spectrumf<Mode>;
+	SpectruM res = SpectruM::Zero();
 	const float num_lt_samples = 1;//Prod(fdims);
 	// The camera subpath vertices are named x, and indexed by t
 	// The light subpath vertices are named y, and indexed by s
@@ -516,7 +519,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 		const uint min_s = 1;
 		for(uint s = min_s; s <= max_s; ++s)
 		{
-			vec3 L = 0;
+			SpectruM L = SpectruM::Zero();
 			
 			// The pdf of xt being sampled by ys
 			float xt_pdf_rev = 0;
@@ -529,19 +532,19 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 
 			const bool resample_light = s == 1;
 			const bool resample_camera = t == 1;
-			vec3 camera_connection = 0;
-			vec3 light_connection = 0;
+			SpectruM camera_connection = SpectruM::Zero();
+			SpectruM light_connection = SpectruM::Zero();
 			float G = 1;
 			bool connection_can_contribute = true;
 
-			const Vertex storage_camera_vertex = vertices[camera_offset + t - 1];
-			const Vertex storage_light_vertex = vertices[light_offset + s - 1];
+			let storage_camera_vertex = vertices[camera_offset + t - 1];
+			let storage_light_vertex = vertices[light_offset + s - 1];
 			// xt
-			Vertex camera_vertex = storage_camera_vertex;
-			PDFPair camera_vertex_pdfs = pdf_storage[camera_pdf_offset + t - 1];
+			var camera_vertex = storage_camera_vertex;
+			var camera_vertex_pdfs = pdf_storage[camera_pdf_offset + t - 1];
 			// ys
-			Vertex light_vertex = storage_light_vertex;
-			PDFPair light_vertex_pdfs = pdf_storage[light_pdf_offset + s - 1];
+			var light_vertex = storage_light_vertex;
+			var light_vertex_pdfs = pdf_storage[light_pdf_offset + s - 1];
 			
 			RayDesc visibility_ray;
 
@@ -549,12 +552,12 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 			// Here it is solved implicitely from the fact that the camera is always sampled at the same position
 			if(resample_light)
 			{
-				let light_sample = scene.sampleLi(rng, camera_vertex.position);
-				{
-					let pdfLi = scene.pdfLi(camera_vertex.position, light_sample.direction, light_sample.index);
-				}
-				const bool at_infinity = light_sample.flags & Light::ConnectionSample::Flags::AtInfinity;
-				Vertex::Flags flags = Vertex::GetFlags(light_sample.flags);
+				let light_sample = scene.sampleLi<Mode>(rng, camera_vertex.position);
+				// {
+				// 	let pdfLi = scene.pdfLi<Mode>(camera_vertex.position, light_sample.direction, light_sample.index);
+				// }
+				const bool at_infinity = light_sample.flags & Light::Sample::Flags::AtInfinity;
+				VertexFlags flags = GetVertexFlags(light_sample.flags);
 				light_vertex.flags = flags;
 				// TODO Light Connection Sample could provide the exact position, rather than computing it (with a possible loss of precision)
 				if(at_infinity)
@@ -566,9 +569,9 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 					light_vertex.position = Ray3f(camera_vertex.position, light_sample.direction).at(light_sample.distance);
 				}
 				light_vertex.generic_index = light_sample.index;
-				RayPdf pdfLe = scene.pdfLe(Ray3f(light_vertex.position, -light_sample.direction), light_sample.index);
+				RayPdf pdfLe = scene.pdfLe<Mode>(Ray3f(light_vertex.position, -light_sample.direction), light_sample.index);
 				light_vertex_pdfs = PDFPair(pdfLe.position_pdf);
-				light_vertex.beta = 1;
+				light_vertex.beta = Spectrumh<Mode>::One();
 
 				s1_pdf_Li = light_sample.pdf / pdfLe.position_pdf;
 				light_connection = light_sample.intensity / light_sample.pdf;
@@ -601,9 +604,9 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 			{
 				// This could be done when generating the sub paths?
 				vec3 refp = light_vertex.position;
-				const bool at_infinity = vertices[light_offset].flags & Vertex::Flags::AtInfinity;
+				const bool at_infinity = vertices[light_offset].flags & VertexFlags::AtInfinity;
 				vec3 dir = at_infinity ? vertices[light_offset].position : (vertices[light_offset].position - refp);
-				s1_pdf_Li = scene.pdfLi(refp, dir, vertices[light_offset].generic_index) / pdf_storage[light_pdf_offset].forward;
+				s1_pdf_Li = scene.pdfLi<Mode>(refp, dir, vertices[light_offset].generic_index) / pdf_storage[light_pdf_offset].forward;
 				if(!at_infinity)
 				{
 					s1_pdf_Li *= rcp(Length2(dir));
@@ -618,23 +621,23 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 				vec3 light_ref_pos = light_vertex.position;
 				const vec3 ng = light_vertex.geometry_normal;
 				uint sample_flags = 0;
-				const bool at_infinity = s == 1 && light_vertex.flags & Vertex::Flags::AtInfinity;
+				const bool at_infinity = s == 1 && light_vertex.flags & VertexFlags::AtInfinity;
 				if(at_infinity)
 				{
 					sample_flags |= CAMERA_SAMPLE_POSITION_AT_INFINITY;
 					light_ref_pos = -light_ref_pos;
 				}
 				let cam_sample = camera.sampleWi(rng, light_ref_pos, sample_flags);
-				camera_vertex.flags = Vertex::GetFlags(cam_sample.flags);
+				camera_vertex.flags = GetVertexFlags(cam_sample.flags);
 				camera_vertex.position = cam_sample.position;
 				RayPdf pdfWe = camera.pdfWe(Ray3f(camera_vertex.position, -cam_sample.direction));
 				camera_vertex_pdfs = PDFPair(pdfWe.position_pdf);
 				camera_vertex.generic_index = cam_sample.index;
-				camera_vertex.beta = 1;
+				camera_vertex.beta = Spectrumh<Mode>::One();
 				light_tracer_uv = cam_sample.uv;
 				
 				t1_pdf_Wi = cam_sample.pdf / pdfWe.position_pdf;
-				camera_connection = cam_sample.intensity / cam_sample.pdf;
+				camera_connection = SpectruM(cam_sample.intensity / cam_sample.pdf);
 				ys_pdf_rev = pdfWe.direction_pdf;
 				if(!at_infinity)
 				{
@@ -694,29 +697,29 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 		
 				if(t > 1)
 				{
-					let material = scene.readMaterial(camera_vertex.generic_index, camera_vertex.uv, true);
+					let material = scene.readMaterial<Mode>(camera_vertex.generic_index, camera_vertex.uv, true);
 					let prev_vertex = vertices[camera_offset + t - 2];
 					vec3 prev_pos = prev_vertex.position;
 					const float prev_d2 = Length2(prev_pos - camera_vertex.position);
 					const vec3 wo = Normalize(prev_pos - camera_vertex.position);
-					camera_connection = camera_vertex.beta * material.bsdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
-					if(!bool(light_vertex.flags & Vertex::Flags::NonHitable))
+					camera_connection = material.bsdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir) * camera_vertex.beta;
+					if(!bool(light_vertex.flags & VertexFlags::NonHitable))
 					{
 						ys_pdf_rev = material.pdf<BSDF_FORWARD_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, wo, connection_dir);
-						if(!bool(light_vertex.flags & Vertex::Flags::AtInfinity))
+						if(!bool(light_vertex.flags & VertexFlags::AtInfinity))
 						{
 							ys_pdf_rev *= AbsDot(connection_dir, light_vertex.geometry_normal) / connection_d2;
 						}
 					}
-					if(!bool(prev_vertex.flags & Vertex::Flags::NonHitable))
+					if(!bool(prev_vertex.flags & VertexFlags::NonHitable))
 						xtm1_pdf_rev = material.pdf<BSDF_ADJOINT_BIT>(camera_vertex.geometry_normal, camera_vertex.shading_normal, connection_dir, wo) * AbsDot(wo, prev_vertex.geometry_normal) / prev_d2;
 					G *= AbsDot(camera_vertex.shading_normal, connection_dir);
 				}
 				if(s > 1)
 				{
-					let material = scene.readMaterial(light_vertex.generic_index, light_vertex.uv, true);
+					let material = scene.readMaterial<Mode>(light_vertex.generic_index, light_vertex.uv, true);
 					let prev_vertex = vertices[light_offset + s - 2];
-					const bool prev_at_infinity = s == 2 && prev_vertex.flags & Vertex::Flags::AtInfinity;
+					const bool prev_at_infinity = s == 2 && prev_vertex.flags & VertexFlags::AtInfinity;
 					vec3 prev_pos = prev_vertex.position;
 					
 					vec3 wo = prev_at_infinity ? prev_vertex.position : Normalize(prev_pos - light_vertex.position);
@@ -729,10 +732,10 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 					const float cos_theta_o_s = Dot(ns, wo);
 					// When connecting vertices on the same suface, cos_theta will be zero, but the correction term explodes to NaN
 					const float correction = FitWrongToZero(Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s)));
-					light_connection = light_vertex.beta * material.bsdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir);
-					if(!bool(camera_vertex.flags & Vertex::Flags::NonHitable))
+					light_connection = material.bsdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir) * light_vertex.beta;
+					if(!bool(camera_vertex.flags & VertexFlags::NonHitable))
 						xt_pdf_rev = material.pdf<BSDF_ADJOINT_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, wo, -connection_dir) * AbsDot(connection_dir, camera_vertex.geometry_normal) / connection_d2;
-					if(!bool(prev_vertex.flags & Vertex::Flags::NonHitable))
+					if(!bool(prev_vertex.flags & VertexFlags::NonHitable))
 						ysm1_pdf_rev = material.pdf<BSDF_FORWARD_BIT>(light_vertex.geometry_normal, light_vertex.shading_normal, -connection_dir, wo);
 					if(!prev_at_infinity)
 					{
@@ -746,7 +749,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 			L = camera_connection * light_connection * G;
 			L = FitWrongToZero(L);
 		
-			if(NonZero(L))
+			if(L.isNonZero())
 			{
 #if SHADER_SEMANTIC_COMPUTE
 				float v = ray_tracer.testVisibility(visibility_ray);
@@ -772,7 +775,7 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 					L = L * w;
 					if(t == 1)
 					{
-						AddLightTracerSample(LightTracerAccumBuffer, light_tracer_uv, fdims, udims, L);
+						AddLightTracerSample(LightTracerAccumBuffer, light_tracer_uv, fdims, udims, L.toRGBf());
 					}
 					else
 					{
@@ -786,23 +789,24 @@ vec3 ConnectSubPaths<RNG : IRNG, VertexArray : IArray<Vertex>, PDFStorage : IRWA
 	return res;
 }
 
-struct RandomWalkResult
+struct RandomWalkResult<int Mode>
 {
 	uint n = 0;
-	vec3 L = 0;
+	Spectrumf<Mode> L = Spectrumf<Mode>::Zero();
 };
 
 // Also compute the contributions of unidirectional PT
-RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage : IRWArray<PDFPair>>(
+RandomWalkResult<Mode> RandomWalk<int Flags, int Mode, VertexArray : IRWArray<Vertex<Mode>>, RNG : IRNG, PDFStorage : IRWArray<PDFPair>>(
 	in VertexArray storage, uint storage_offset, uint max_len,
 	in PDFStorage storage_pdf, uint storage_pdf_offset,
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
-	TraversingRay tray, float prev_cos_theta,
+	TraversingRay<Mode> tray, float prev_cos_theta,
 	float pdf_solid_angle,
 	inout RNG rng
 ) {
-	RandomWalkResult res = {};
+	typealias SpectruM = Spectrumf<Mode>;
+	RandomWalkResult<Mode> res = {};
 	const bool light_tracer = (Flags & BSDF_ADJOINT_BIT) != 0;
 	const bool path_tracer = !light_tracer;
 	float pdf_Wi = 0;
@@ -812,21 +816,22 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 		trace_info.ray = tray.ray;
 		trace_info.range = tray.range;
 		trace_info.diffs = tray.ray_diffs;
-		Vertex v;
+		Vertex<Mode> v;
 		Hit hit = ray_tracer.traceRay<RAY_FLAG_NONE>(trace_info);
 
 		const bool store_vertex = hit.hasValue();
 
 		if(hit.hasValue())
 		{
-			let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true);
+			let material = scene.readMaterial<Mode>(hit.material_id, hit.surface_shading_info.uv, true);
 			if(ApplyMaterialNormalIFN(hit.surface_shading_info, material))
 			{}
-			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
-			if(kappa.hasValue)
-			{
-				tray.throughput *= exp2(-hit.t * kappa.value);
-			}
+			// TODO
+			// let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
+			// if(kappa.hasValue)
+			// {
+			// 	tray.throughput *= exp2(-hit.t * kappa.value);
+			// }
 		}
 
 		// Handle UniDirectional PT contributions here
@@ -857,7 +862,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 			}
 
 
-			vec3 Le = 0;
+			SpectruM Le = SpectruM::Zero();
 			PDFPair xt_pdf = {};
 			float xtm1_pdf_rev = 0;
 			RayPdf pdf_Le = {};
@@ -870,14 +875,14 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 			}
 			else
 			{
-				Le = scene.getEnvLe(tray.ray.direction);
-				if(NonZero(Le))
+				Le = scene.getEnvLe<Mode>(tray.ray.direction);
+				if(Le.isNonZero())
 				{
-					pdf_Le = scene.getEnvPdfLe(Ray3f(tray.ray.origin, -tray.ray.direction));
-					pdf_Li = scene.getEnvPdfLi(tray.ray.origin, tray.ray.direction) / pdf_Le.position_pdf;
+					pdf_Le = scene.getEnvPdfLe<Mode>(Ray3f(tray.ray.origin, -tray.ray.direction));
+					pdf_Li = scene.getEnvPdfLi<Mode>(tray.ray.origin, tray.ray.direction) / pdf_Le.position_pdf;
 
 					xtm1_pdf_rev = pdf_Le.direction_pdf;
-					if(!bool(storage[storage_offset - 1 + res.n].flags & Vertex::Flags::NonHitable))
+					if(!bool(storage[storage_offset - 1 + res.n].flags & VertexFlags::NonHitable))
 					{
 						xtm1_pdf_rev *= AbsDot(tray.ray.direction, storage[storage_offset - 1 + res.n].geometry_normal);
 					}
@@ -885,8 +890,8 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 				}
 			}
 
-			vec3 contribution = Le * tray.throughput; 
-			if(NonZero(contribution))
+			let contribution = Le * tray.throughput; 
+			if(contribution.isNonZero())
 			{
 				storage_pdf[storage_pdf_offset + res.n] = PDFPair(pdf_solid_angle);
 				float w = UniDirectionalPTWeight(
@@ -902,7 +907,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 
 		float reverse_geometric_conversion = 1;
 
-		const bool from_infinity = light_tracer && (res.n == 0) && (storage[storage_offset - 1].flags & Vertex::Flags::AtInfinity);
+		const bool from_infinity = light_tracer && (res.n == 0) && (storage[storage_offset - 1].flags & VertexFlags::AtInfinity);
 		
 		if(store_vertex)
 		{
@@ -917,22 +922,22 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 				reverse_geometric_conversion *= rcp_d2;
 			}
 			storage_pdf[storage_pdf_offset + res.n] = PDFPair(pdf_solid_angle * forward_geometric_conversion);
-			v.beta = tray.throughput;
+			v.beta = Spectrumh<Mode>(tray.throughput);
 			v.position = hit.surface_shading_info.position;
 			v.generic_index = material_id;
 			v.geometry_normal = hit.surface_shading_info.geometry_normal;
 			v.shading_normal = hit.surface_shading_info.shading_normal;
 			v.uv = hit.surface_shading_info.uv;
-			v.flags = Vertex::Flags::None;
+			v.flags = VertexFlags::None;
 			// TODO check why the materials don't provide this info correctly
-			v.flags = Vertex::Flags::MaterialReflect;
+			v.flags = VertexFlags::MaterialReflect;
 			
 			if(hit.hasValue())
 			{
 				if(material_id < scene.getUBO().num_materials)
 				{
 					uint material_bsdf_flags = (ScenePBMaterialsProps[material_id][0].flags >> MATERIAL_FLAG_HEMISPHERE_BIT_OFFSET) & BitMask<uint>(2);
-					v.addFlags(reinterpret<Vertex::Flags>(material_bsdf_flags << 3));
+					v.addFlags(reinterpret<VertexFlags>(material_bsdf_flags << 3));
 				}
 			}
 			storage[storage_offset + res.n] = v;
@@ -949,7 +954,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 		{
 			float reverse_pdf = 0;
 			
-			PBMaterial material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true);
+			let material = scene.readMaterial<Mode>(hit.material_id, hit.surface_shading_info.uv, true);
 			const vec3 wo = -tray.ray.direction;
 			const vec3 ns = hit.surface_shading_info.shading_normal;
 			const vec3 ng = hit.surface_shading_info.geometry_normal;
@@ -966,7 +971,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 				// Mark delta pdf with a negative sign
 				storage_pdf[storage_pdf_offset + res.n - 1].forward = -storage_pdf[storage_pdf_offset + res.n - 1].forward;
 			}
-			const bool prev_non_hitable = (storage[storage_offset + res.n - 2].flags & Vertex::Flags::NonHitable);
+			const bool prev_non_hitable = (storage[storage_offset + res.n - 2].flags & VertexFlags::NonHitable);
 			if(!prev_non_hitable)
 			{
 				if(delta_scattering)
@@ -997,7 +1002,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 			tray.throughput *= (bsdf_sample.bsdf * Abs(cos_theta_i_s * correction) / bsdf_sample.pdf);
 			tray.throughput = FitWrongToZero(tray.throughput);
 			
-			if(!NonZero(tray.throughput) || pdf_solid_angle <= 0)
+			if(!tray.throughput.isNonZero() || pdf_solid_angle <= 0)
 			{
 				break;
 			}
@@ -1010,7 +1015,7 @@ RandomWalkResult RandomWalk<int Flags, VertexArray : IRWArray<Vertex>, RNG : IRN
 	return res;
 }
 
-RandomWalkResult TraceCameraSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage : IRWArray<PDFPair>>(
+RandomWalkResult<Mode> TraceCameraSubPath<int Mode, VertexArray : IRWArray<Vertex<Mode>>, RNG : IRNG, PDFStorage : IRWArray<PDFPair>>(
 	in VertexArray storage, uint storage_offset, uint max_len,
 	in PDFStorage storage_pdf, uint storage_pdf_offset,
 	const in BoundScene scene,
@@ -1022,12 +1027,12 @@ RandomWalkResult TraceCameraSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, 
 ) {
 	let camera = MakeCamera(rt_ubo.camera);
 	let sample = camera.sampleWe(rng, cp, Jcp, layer);
-	TraversingRay tray = TraversingRay(sample);
+	var tray = TraversingRay<Mode>(sample);
 	storage[storage_offset].position = sample.ray.ray.origin;
 	storage[storage_offset].generic_index = layer;
-	storage[storage_offset].flags = Vertex::GetFlags(sample.flags);
+	storage[storage_offset].flags = GetVertexFlags(sample.flags);
 	storage_pdf[storage_pdf_offset] = PDFPair(sample.position_pdf);
-	storage[storage_offset].beta = vec3(1);
+	storage[storage_offset].beta = Spectrumh<Mode>::One();
 
 	var res = RandomWalk<BSDF_FORWARD_BIT>(
 		storage, storage_offset + 1, max_len - 1,
@@ -1041,22 +1046,22 @@ RandomWalkResult TraceCameraSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, 
 	return res;
 }
 
-uint TraceLightSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage : IRWArray<PDFPair>>(
+uint TraceLightSubPath<int Mode, VertexArray : IRWArray<Vertex<Mode>>, RNG : IRNG, PDFStorage : IRWArray<PDFPair>>(
 	in VertexArray storage, uint storage_offset, uint max_len,
 	in PDFStorage storage_pdf, uint storage_pdf_offset,
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
 	inout RNG rng
 ) {
-	let sample = scene.sampleLe(rng);
-	Vertex::Flags flags = Vertex::GetFlags(sample.flags);
+	let sample = scene.sampleLe<Mode>(rng);
+	VertexFlags flags = GetVertexFlags(sample.flags);
 
-	TraversingRay tray = TraversingRay(sample);
+	var tray = TraversingRay<Mode>(sample);
 
-	Vertex vertex;
+	Vertex<Mode> vertex;
 	float pdf_solid_angle = 0;
 	// https://www.pbr-book.org/3ed-2018/Light_Transport_III_Bidirectional_Methods/Bidirectional_Path_Tracing#InfiniteAreaLightsandBDPT
-	if(sample.flags & Light::EmissionSample::Flags::AtInfinity)
+	if(sample.flags & Light::Sample::Flags::AtInfinity)
 	{
 		vertex.position = -sample.ray.direction;
 		//storage_pdf[storage_pdf_offset] = PDFPair(sample.pdf);
@@ -1072,7 +1077,7 @@ uint TraceLightSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage : 
 	vertex.generic_index = sample.index;
 	vertex.flags = flags;
 	
-	vertex.beta = vec3(1);
+	vertex.beta = Spectrumh<Mode>::One();
 
 	storage[storage_offset] = vertex;
 	
@@ -1087,11 +1092,13 @@ uint TraceLightSubPath<VertexArray : IRWArray<Vertex>, RNG : IRNG, PDFStorage : 
 	return n + 1;
 }
 
-layout(SHADER_DESCRIPTOR_BINDING + 4) restrict RWStructuredBuffer<Vertex, Std430DataLayout> SubPathsScratchBuffer;
+static const int CommonSpectrumMode = SPECTRUM_MODE_RGB;
+
+layout(SHADER_DESCRIPTOR_BINDING + 4) restrict RWStructuredBuffer<Vertex<CommonSpectrumMode>, Std430DataLayout> SubPathsScratchBuffer;
 
 layout(SHADER_DESCRIPTOR_BINDING + 5) restrict RWStructuredBuffer<PDFPair, Std430DataLayout> SubPathsPDFScratchBuffer;
 
-vec3 PathTrace<RNG : IRNG>(
+Spectrumf<CommonSpectrumMode> PathTrace<RNG : IRNG>(
 	const uint thread_index,
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
@@ -1101,6 +1108,7 @@ vec3 PathTrace<RNG : IRNG>(
 	uint layer,
 	inout RNG rng
 ) {
+	const int Mode = CommonSpectrumMode;
 	const uint max_vertices = GetMaxVertices();
 	// Assume these for now
 	const bool lights_are_hitable = true;
@@ -1133,7 +1141,8 @@ vec3 PathTrace<RNG : IRNG>(
 		rng
 	);
 
-	vec3 res = 0;
+	Spectrumf<Mode> res = Spectrumf<Mode>::Zero();
+	res += cam_subpath.L;
 	res += ConnectSubPaths(
 		thread_index,
 		SubPathsScratchBuffer,
@@ -1144,7 +1153,6 @@ vec3 PathTrace<RNG : IRNG>(
 		fdims, udims,
 		rng
 	);
-	res += cam_subpath.L;
 
 	return res;
 }
@@ -1189,7 +1197,7 @@ void CommonMain(
 	const vec2 cp = UVToClipSpace(uv);
 	Matrix2f Jcp = DiagonalMatrixV(oo_dims * 2);
 
-	vec3 res = bdpt::PathTrace(
+	let res = bdpt::PathTrace(
 		global_thread_index,
 		scene, ray_tracer, 
 		fdims, dims,
@@ -1197,7 +1205,7 @@ void CommonMain(
 		rng
 	);
 	
-	Target.Store(pixel, vec4(res, 1));
+	Target.Store(pixel, vec4(res.toRGBf(), 1));
 }
 
 #if SHADER_SEMANTIC_COMPUTE

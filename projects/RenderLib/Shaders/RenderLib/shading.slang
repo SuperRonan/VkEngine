@@ -15,7 +15,7 @@
 
 #include "shadingDefinitions.h"
 
-bool ApplyMaterialNormalIFN(inout SurfaceGeometryInfo geom, const in PBMaterial material)
+bool ApplyMaterialNormalIFN<int Mode>(inout SurfaceGeometryInfo geom, const in PBMaterial<Mode> material)
 {
 	bool res = false;
 	if((material.flags & PB_MATERIAL_SAMPLED_NORMAL_TEXTURE) != 0)
@@ -32,33 +32,32 @@ bool ApplyMaterialNormalIFN(inout SurfaceGeometryInfo geom, const in PBMaterial 
 	return res;
 }
 
-interface IDirectLightSurfaceShading
+interface IDirectLightSurfaceShading<int Mode>
 {
-	vec3 shade<RNG : IRNG>(
+	Spectrumf<Mode> shade<RNG : IRNG>(
 		const in SurfaceGeometryInfo sgi,
-		const in IMaterial material,
+		const in IMaterial<Mode> material,
 		inout RNG rng
 	);
 };
 
-struct DirectLightShadingBase
+struct DirectLightShadingBase<int Mode>
 {
 	BoundScene scene;
 
-
-	vec3 shadeLight<RNG : IRNG>(
+	Spectrumf<Mode> shadeLight<RNG : IRNG>(
 		const SurfaceGeometryInfo sgi,
-		const in IMaterial material,
-		const in ILight light, 
+		const in IMaterial<Mode> material,
+		const in ILight<Mode> light, 
 		inout RNG rng
 	) {
-		vec3 res = 0;
-		Light::ConnectionSample sample = light.sampleLi(rng, sgi.position);
+		Spectrumf<Mode> res = Spectrumf<Mode>::Zero();
+		Light::ConnectionSample<Mode> sample = light.sampleLi(rng, sgi.position);
 		if(sample.pdf > 0)
 		{
-			const vec3 bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
-			res = max(sample.intensity, vec3(0)) * bsdf * abs(dot(sgi.shading_normal, sample.direction)) / sample.pdf;
-			if(NonZero(res))
+			let bsdf = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, sample.direction);
+			res = (sample.intensity * bsdf) * (abs(dot(sgi.shading_normal, sample.direction)) / sample.pdf);
+			if(res.isNonZero())
 			{
 				RayDesc ray;
 				ray.Origin = sgi.position;
@@ -74,23 +73,22 @@ struct DirectLightShadingBase
 };
 
 
-struct DirectLightSurfaceShadingEachLight : DirectLightShadingBase, IDirectLightSurfaceShading
+struct DirectLightSurfaceShadingEachLight<int Mode> : DirectLightShadingBase<Mode>, IDirectLightSurfaceShading<Mode>
 {
-
 	uint sample_per_light = 1;
 
-	vec3 shade <RNG : IRNG>(
+	Spectrumf<Mode> shade <RNG : IRNG>(
 		const in SurfaceGeometryInfo sgi,
-		const in IMaterial material,
+		const in IMaterial<Mode> material,
 		inout RNG rng
 	)
 	{
-		vec3 res = vec3(0);
+		Spectrumf<Mode> res = Spectrumf<Mode>::Zero();
 		const uint num_lights = scene.getUBO().num_lights;
 		for(uint i = 0; i < num_lights; ++i)
 		{
-			ILight l = MakeLight(SceneLights[i]);
-			vec3 light_contrib = vec3(0);
+			ILight<Mode> l = MakeLight<Mode>(SceneLights[i]);
+			Spectrumf<Mode> light_contrib = Spectrumf<Mode>::Zero();
 			for(uint s = 0; s < sample_per_light; ++s)
 			{
 				light_contrib += FitWrongToZero(shadeLight(sgi, material, l, rng));
@@ -106,7 +104,7 @@ struct DirectLightSurfaceShadingEachLight : DirectLightShadingBase, IDirectLight
 
 struct DirectShadingResult
 {
-	vec3 L = 0;
+	RGBSpectrumf L = RGBSpectrumf::Zero();
 	
 	__init() {}
 
@@ -120,7 +118,7 @@ struct DirectShadingResult
 DirectShadingResult ShadeLight(
 	const in BoundScene scene,
 	const in SurfaceGeometryInfo sgi,
-	const in PBMaterial material,
+	const in PBMaterial<SPECTRUM_MODE_RGB> material,
 	const in StorageLight light
 ) {
 	DirectShadingResult res = {};
@@ -131,15 +129,14 @@ DirectShadingResult ShadeLight(
 	const bool ray_tracing = (SHADING_SHADOW_METHOD == SHADING_SHADOW_RAY_TRACE);
 	if(light.getType() == LightType::Point)
 	{
-		let pl = PointLight(light);
+		let pl = PointLight<SPECTRUM_MODE_RGB>(light);
 		vec3 dir = pl.position - sgi.position;
 		vec3 wi = Normalize(dir);
-		vec3 Le = pl.emission / Length2(dir);
+		let Le = RGBSpectrumf(pl.emission) / Length2(dir);
 
-		res.L = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le * AbsDot(sgi.shading_normal, wi);
+		res.L = (material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le) * AbsDot(sgi.shading_normal, wi);
 
-		
-		if(NonZero(res.L))
+		if(res.L.isNonZero())
 		{
 			if(ray_tracing)
 			{
@@ -163,10 +160,10 @@ DirectShadingResult ShadeLight(
 	}
 	else if(light.getType() == LightType::Spot)
 	{
-		let sl = SpotLight(light);
+		let sl = SpotLight<SPECTRUM_MODE_RGB>(light);
 		vec3 dir = sl.position - sgi.position;
 		vec3 wi = Normalize(dir);
-		vec3 Le = sl.emission / Length2(dir);
+		var Le = RGBSpectrumf(sl.emission) / Length2(dir);
 	
 		const vec4 proj_h = sl.getWorldToProj() * Homogeneous(sgi.position);
 		const vec3 proj = HomogeneousNormalize(proj_h);
@@ -175,11 +172,11 @@ DirectShadingResult ShadeLight(
 		if(in_frustm)
 		{
 			Le *= sl.evaluateAttenuation(proj.xy);
-			if(NonZero(Le))
+			if(Le.isNonZero())
 			{
-				res.L = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le * AbsDot(sgi.shading_normal, wi);
+				res.L = (material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le) * AbsDot(sgi.shading_normal, wi);
 			
-				if(NonZero(res.L))
+				if(res.L.isNonZero())
 				{
 					if(ray_tracing)
 					{
@@ -202,11 +199,11 @@ DirectShadingResult ShadeLight(
 	}
 	else if(light.getType() == LightType::Directional)
 	{
-		let dl = DirectionalLight(light);
+		let dl = DirectionalLight<SPECTRUM_MODE_RGB>(light);
 		vec3 wi = light.direction;
-		vec3 Le = light.emission;
-		res.L = material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le * AbsDot(sgi.shading_normal, wi);
-		if(NonZero(res.L))
+		let Le = RGBSpectrumf(light.emission);
+		res.L = (material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le) * AbsDot(sgi.shading_normal, wi);
+		if(res.L.isNonZero())
 		{
 			if(ray_tracing)
 			{
@@ -230,7 +227,7 @@ DirectShadingResult ShadeLight(
 DirectShadingResult Shade(
 	const in BoundScene scene,
 	const in SurfaceGeometryInfo sgi,
-	const in PBMaterial material
+	const in PBMaterial<SPECTRUM_MODE_RGB> material
 ) {
 	DirectShadingResult res = {};
 
@@ -240,13 +237,13 @@ DirectShadingResult Shade(
 		res.add(ShadeLight(scene, sgi, material, SceneLights[i]));
 	}
 
-	let env_map = BoundScene::EnvMap(scene.getUBO());
-	if(NonZero(env_map.solar_disk_emission))
+	let env_map = scene.getSkyLight<SPECTRUM_MODE_RGB>();
+	if(env_map.solar_disk_emission.isNonZero())
 	{
 		StorageLight l;
 		l.flags = uint(LightType::Directional);
 		l.direction = l.position = env_map.solar_disk_direction;
-		l.emission = env_map.solar_disk_emission;
+		l.emission = env_map.solar_disk_emission.toRGBf();
 		if(env_map.solar_disk_angle > 0)
 		{
 			l.emission *= sqr(env_map.solar_disk_angle);

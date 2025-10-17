@@ -21,8 +21,10 @@ layout(location = 3) in vec3 v_w_tangent;
 [shader("pixel")]
 vec4 main() : SV_Target0
 {
+	const int Mode = SPECTRUM_MODE_RGB;
+	typealias Spectrum = Spectrumf<Mode>;
 	const vec2 uv = v_uv;
-	var material = ReadBoundMaterial(uv, true);
+	var material = ReadBoundMaterial<Mode>(uv, true);
 
 	BoundScene scene = BoundScene();
 
@@ -58,7 +60,7 @@ vec4 main() : SV_Target0
 	geom.out_direction = wo;
 
 	var res = Shade(scene, geom, material);
-	res.L += material.albedo * scene.getUBO().ambient;
+	res.L += material.getAlbedoSpectrum() * scene.getAmbientSpectrum<Mode>();
 
-	return vec4(res.L, 1);
+	return vec4(res.L.toRGBf(), 1);
 }

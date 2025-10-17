@@ -4,6 +4,8 @@
 
 #include <ShaderLib/Rendering/Scene/Scene.slang>
 
+#include <ShaderLib/Spectrum/Spectrum.slang>
+
 struct RT_UBO : RendererUBO
 {
 	u16 max_depth;
@@ -31,14 +33,14 @@ bool AddLightTracerSample(RWStructuredBuffer<Vector<LightBufferAccumFloat, N>, L
 	return res;
 }
 
-struct TraversingRay
+struct TraversingRay<int Mode>
 {
 	Ray3f ray;
 	RayDiff3f ray_diffs;
 	RayRangef range;
-	vec3 throughput;
+	Spectrumf<Mode> throughput;
 
-	__init(const in Light::EmissionSample sample)
+	__init(const in Light::EmissionSample<Mode> sample)
 	{
 		ray = sample.ray;
 		ray_diffs = {};
@@ -51,7 +53,7 @@ struct TraversingRay
 		ray = sample.ray.ray;
 		ray_diffs = sample.ray.differentials;
 		range = sample.ray.range;
-		throughput = sample.intensity / (sample.pdf * sample.position_pdf);
+		throughput = Spectrumf<Mode>(sample.intensity / (sample.pdf * sample.position_pdf));
 	}
 };
 
@@ -113,41 +115,50 @@ struct RayTraceInfo
 
 #if BIND_SCENE
 
-vec3 Le(const in BoundScene scene, const in Hit hit)
+Spectrumf<Mode> Le<int Mode>(const in BoundScene scene, const in Hit hit)
 {
-	vec3 res = 0;
+	var res = Spectrumf<Mode>::Zero();
 	if(hit.hasValue())
 	{
 
 	}
 	else
 	{
-		res = scene.getEnvLe(hit.surface_shading_info.out_direction);
+		res = scene.getEnvLe<Mode>(hit.surface_shading_info.out_direction);
 	}
 	return res;
 }
 
-struct LiSampler
+struct LiSampler<int Mode>
 {
+	typealias SpectruM = Spectrumf<Mode>;
 	BoundScene scene;
 
 	uint resampling = 0;
 
-	float evalTarget(const in IMaterial material, const in vec3 ng, const in vec3 ns, const in vec3 wo, const in vec3 wi, const in vec3 beta)
-	{
-		return FastLuminance(material.bsdf<BSDF_FORWARD_BIT>(ng, ns, wo, wi) * beta * AbsDot(ns, wi));
+	float evalTarget(
+		const in IMaterial<Mode> material,
+		const in vec3 ng, const in vec3 ns,
+		const in vec3 wo, const in vec3 wi,
+		const in SpectruM beta
+	) {
+		return ((material.bsdf<BSDF_FORWARD_BIT>(ng, ns, wo, wi) * beta) * AbsDot(ns, wi)).fastEnergy();
 	}
 
-	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, const in SurfaceGeometryInfo sgi, const in IMaterial material, vec3 beta)
-	{
-		Light::ConnectionSample res;
-		res = scene.sampleLi(rng, sgi.position);
+	Light::ConnectionSample<Mode> sampleLi<RNG : IRNG>(
+		inout RNG rng,
+		const in SurfaceGeometryInfo sgi,
+		const in IMaterial<Mode> material,
+		const in SpectruM beta
+	) {
+		Light::ConnectionSample<Mode> res;
+		res = scene.sampleLi<Mode>(rng, sgi.position, beta);
 		if(resampling > 0)
 		{
 			float target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, res.direction, beta * res.intensity) / res.pdf;
 			for(uint i = 0; i < resampling; ++i)
 			{
-				let candidate = scene.sampleLi(rng, sgi.position);
+				let candidate = scene.sampleLi<Mode>(rng, sgi.position, beta);
 				float candidate_target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, candidate.direction, beta * candidate.intensity) / candidate.pdf;
 
 				if((target + candidate_target) > 0)
@@ -173,10 +184,17 @@ struct LiSampler
 		return res;
 	}
 
-	float estimatePDFLi<RNG : IRNG>(inout RNG rng, const in SurfaceGeometryInfo sgi, const in IMaterial material, vec3 direction, vec3 beta, uint index, vec3 Le)
-	{
+	float estimatePDFLi<RNG : IRNG>(
+		inout RNG rng,
+		const in SurfaceGeometryInfo sgi,
+		const in IMaterial<Mode> material,
+		vec3 direction,
+		const in SpectruM beta,
+		uint index,
+		const in SpectruM Le
+	) {
 		float res;
-		float pdf = scene.pdfLi(sgi.position, direction, index);
+		float pdf = scene.pdfLi<Mode>(sgi.position, direction, index, beta);
 		if(resampling > 0)
 		{
 			// TODO faster estimation without RNG?
@@ -186,7 +204,7 @@ struct LiSampler
 			float sum = 0;
 			for(uint i = 0; i < resampling; ++i)
 			{
-				let candidate = scene.sampleLi(rng, sgi.position);
+				let candidate = scene.sampleLi<Mode>(rng, sgi.position, beta);
 				float candidate_target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, candidate.direction, beta * candidate.intensity) / candidate.pdf;
 				sum += candidate_target;
 			}
@@ -199,8 +217,14 @@ struct LiSampler
 		return res;
 	}
 
-	float estimateEnvPdfLi<RNG : IRNG>(inout RNG rng, const in SurfaceGeometryInfo sgi, const in IMaterial material, vec3 direction, vec3 beta, vec3 Le)
-	{
+	float estimateEnvPdfLi<RNG : IRNG>(
+		inout RNG rng,
+		const in SurfaceGeometryInfo sgi,
+		const in IMaterial<Mode> material,
+		vec3 direction,
+		const in SpectruM beta,
+		const in SpectruM Le
+	) {
 		return estimatePDFLi(rng, sgi, material, direction, beta, scene.getUBO().num_lights & BitMask<uint>(scene.LightIndexBits), Le);
 	}
 }

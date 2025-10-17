@@ -4,6 +4,14 @@
 #include <ShaderLib/ColorSpace.slang>
 #include "SpectrumWaveLength.slang"
 
+// Could be moved to a common helper header
+#define FOREACH_ARITHMETIC_OP(X) \
+	X(add, +) \
+	X(sub, -) \
+	X(mul, *) \
+	X(div, /) \
+	X(mod, %)
+
 #define _SPECTRUM_SAMPLES_BIT_COUNT 16
 #define _SPECTRUM_FLAG_RGB (0x0 << _SPECTRUM_SAMPLES_BIT_COUNT)
 #define _SPECTRUM_FLAG_XYZ (0x1 << _SPECTRUM_SAMPLES_BIT_COUNT)
@@ -61,6 +69,11 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 	VecT _data;
 
 	typealias Helper = SampledSpectrumHelper<Samples>;
+
+	__init()
+	{
+		_data = {};
+	}
 
 	__init(int v)
 	{
@@ -175,8 +188,8 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		return toRGB<float>();
 	}
 
-	__generic<Float : __BuiltinFloatingPointType, RGBSourceType _FromType>
-	static This MakeFromRGB(const in Vector3<Float> rgb)
+	__generic<Float : __BuiltinFloatingPointType>
+	static This MakeFromRGB(const in Vector3<Float> rgb, RGBSourceType from_type)
 	{
 		if(IsRGB)
 		{
@@ -189,9 +202,10 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		else
 		{
 			This res = This::Zero();
+			// TODO this correctly
 			for(int i = 0; i < Samples; ++i)
 			{
-				uint channel = uint(GetChannelWaveLength(i) * 3);
+				uint channel = 2 - uint(GetChannelWaveLength(i) * 3);
 				res[channel] += ConvertBuiltInTo<Scalar>(rgb[channel]);
 			}
 			return res;
@@ -244,6 +258,10 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		}
 	}
 
+	bool isNonZero()
+	{
+		return NonZero(_data);
+	}
 
 
 	int getCount()
@@ -273,42 +291,12 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 	} \
 	AUTODIFF \
 	__generic <OtherScalar : __BuiltinFloatingPointType> \
-	This operator##OP(const in Spectrum<OtherScalar, Mode> rhs) \
-	{ \
-		return This(this._data.MEMBER(VecT(rhs._data))); \
-	} \
-	AUTODIFF \
-	__generic <OtherScalar : __BuiltinFloatingPointType> \
-	This operator##OP(const in OtherScalar s) \
-	{ \
-		return This(this._data.MEMBER(ConvertBuiltInTo<Scalar>(s))); \
-	} \
-	AUTODIFF \
-	__generic <OtherScalar : __BuiltinFloatingPointType> \
 	This MEMBER(const in OtherScalar s) \
 	{ \
 		return This(this._data.MEMBER(ConvertBuiltInTo<Scalar>(s))); \
-	} \
-	AUTODIFF \
-	[mutating] \
-	__generic <OtherScalar : __BuiltinFloatingPointType> \
-	void operator##OP##=(const in Spectrum<OtherScalar, Mode> rhs) \
-	{ \
-		this._data OP##= VecT(rhs._data); \
-	} \
-	AUTODIFF \
-	[mutating] \
-	__generic <OtherScalar : __BuiltinFloatingPointType> \
-	void operator##OP##=(const in OtherScalar s) \
-	{ \
-		this._data OP##= ConvertBuiltInTo<Scalar>(s); \
 	}
 
-	DECLARE_SPECTRUM_ARITHMETIC_OP(add, +)
-	DECLARE_SPECTRUM_ARITHMETIC_OP(sub, -)
-	DECLARE_SPECTRUM_ARITHMETIC_OP(mul, *)
-	DECLARE_SPECTRUM_ARITHMETIC_OP(div, /)
-	DECLARE_SPECTRUM_ARITHMETIC_OP(mod, %)
+	FOREACH_ARITHMETIC_OP(DECLARE_SPECTRUM_ARITHMETIC_OP)
 
 #undef DECLARE_SPECTRUM_ARITHMETIC_OP
 #pragma warning (pop)
@@ -353,7 +341,44 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 	{
 		return _data.lessThanOrEquals(other._data);
 	}
-}
+};
+
+#pragma warning (push)
+#pragma warning (disable : 15503) // token pasting warning
+#define DECLARE_SPECTRUM_ARITHMETIC_OP(MEMBER, OP) \
+	AUTODIFF \
+	__generic <Scalar : __BuiltinFloatingPointType, int Mode, OtherScalar : __BuiltinFloatingPointType> \
+	Spectrum<Scalar, Mode> operator##OP(const in Spectrum<Scalar, Mode> lhs, const in Spectrum<OtherScalar, Mode> rhs) \
+	{ \
+		return lhs.MEMBER(rhs); \
+	} \
+	AUTODIFF \
+	__generic <Scalar : __BuiltinFloatingPointType, int Mode, OtherScalar : __BuiltinFloatingPointType> \
+	Spectrum<Scalar, Mode> operator##OP(const in Spectrum<Scalar, Mode> lhs, const in OtherScalar rhs) \
+	{ \
+		return lhs.MEMBER(rhs); \
+	} \
+	__generic <Scalar : __BuiltinFloatingPointType, int Mode, OtherScalar : __BuiltinFloatingPointType> \
+	Spectrum<Scalar, Mode> operator##OP(const in OtherScalar lhs, const in Spectrum<Scalar, Mode> rhs) \
+	{ \
+		return rhs.MEMBER(lhs); \
+	} \
+	AUTODIFF \
+	__generic <Scalar : __BuiltinFloatingPointType, int Mode, OtherScalar : __BuiltinFloatingPointType> \
+	void operator##OP##=(inout Spectrum<Scalar, Mode> lhs, const in Spectrum<OtherScalar, Mode> rhs) \
+	{ \
+		lhs._data OP##= Spectrum<Scalar, Mode>::VecT(rhs._data); \
+	} \
+	AUTODIFF \
+	__generic <Scalar : __BuiltinFloatingPointType, int Mode, OtherScalar : __BuiltinFloatingPointType> \
+	void operator##OP##=(inout Spectrum<Scalar, Mode> lhs, const in OtherScalar rhs) \
+	{ \
+		lhs._data OP##= ConvertBuiltInTo<Scalar>(rhs); \
+	}
+
+FOREACH_ARITHMETIC_OP(DECLARE_SPECTRUM_ARITHMETIC_OP)
+#undef DECLARE_SPECTRUM_ARITHMETIC_OP
+#pragma warning (pop)
 
 __generic <int Mode>
 typealias Spectrumf = Spectrum<float, Mode>;

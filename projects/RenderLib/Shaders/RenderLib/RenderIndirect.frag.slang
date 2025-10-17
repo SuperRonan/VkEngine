@@ -25,6 +25,8 @@ layout(RENDERER_BINDING + 1) uniform SamplerState LightDepthSampler_;
 [shader("pixel")]
 void main()
 {
+	const int Mode = SPECTRUM_MODE_RGB;
+	typealias Spectrum = Spectrumf<Mode>;
 	const uint draw_id = v_flat.x;
 	const uint object_id = indirect_model_indices[draw_id];
 	let object_ref = SceneObjectsTable[object_id];
@@ -32,7 +34,7 @@ void main()
 
 	let scene = BoundScene();
 
-	let material = scene.readMaterial(material_id, v_uv, true, QuadDiffTextureSampling());
+	let material = scene.readMaterial<Mode>(material_id, v_uv, true, QuadDiffTextureSampling());
 
 	const vec2 uv = v_uv;
 	const vec3 position = v_w_position; 
@@ -72,7 +74,7 @@ void main()
 
 	var res = Shade(scene, geom, material);
 	
-	res.L += material.albedo * scene.getUBO().ambient;
+	res.L += material.getAlbedoSpectrum() * scene.getAmbientSpectrum<Mode>();
 
-	o_color = vec4(res.L, 1);
+	o_color = vec4(res.L.toRGBf(), 1);
 }

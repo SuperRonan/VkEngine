@@ -43,13 +43,13 @@ namespace microfacets
 		return sqr(n - Float(1)) / sqr(n + Float(1));
 	}
 	
-	template <Float : __BuiltinFloatingPointType>
-	Vector3<Float> FresnelSchlick(Vector3<Float> F0, Vector3<Float> v, Vector3<Float> h)
+	template <Res : IFloat, Float : __BuiltinFloatingPointType>
+	Res FresnelSchlick(Res F0, Vector3<Float> v, Vector3<Float> h, bool use_approx=false)
 	{
-		const Float a = Float(-5.55473);
-		const Float b = Float(-6.98316);
 		const Float d = dot(v, h);
-		return F0 + (Float(1) - F0) * pow(Float(2), (a * d + b) * d);
+		const Float cos_5 = pow(Float(1) - d, Float(5));
+		const Float cos_5_approx = pow(Float(2), (Float(-5.55473) * d + Float(-6.98316)) * d);
+		return F0.add((Res(1) - F0).scale(use_approx ? cos_5_approx : cos_5));
 	}
 
 	struct Approximation

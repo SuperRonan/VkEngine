@@ -2,11 +2,13 @@
 
 #include <ShaderLib/Texturing.slang>
 
-#include <ShaderLib/Rendering/Lights/Light.slang>
+#include <ShaderLib/Rendering/Lights/Lights.slang>
 #include <ShaderLib/Rendering/Materials/PBMaterial.slang>
 #include <ShaderLib/Rendering/Geometry/Mesh.slang>
 
 #include <ShaderLib/RayTracingCommon.slang>
+
+#include <ShaderLib/Rendering/Lights/SkyLight.slang>
 
 #ifndef BIND_ALL_SCENE_COMPONENTS
 #define BIND_ALL_SCENE_COMPONENTS 1
@@ -162,6 +164,11 @@ struct BoundScene : Scene, IRayTracingScene
 		return SceneUBO;
 	}
 
+	Spectrumf<Mode> getAmbientSpectrum<int Mode>()
+	{
+		return Spectrumf<Mode>::MakeFromRGB(getUBO().ambient, RGBSourceType::Illuminant);
+	}
+
 #ifdef SCENE_MESH_ACCESS
 	struct MeshReference : IMesh
 	{
@@ -192,7 +199,7 @@ struct BoundScene : Scene, IRayTracingScene
 		template <int N>
 		uvec<N> getPrimitiveIndices(uint primitive_id)
 		{
-			return Mesh::ReadIndices<N>(SceneMeshIndices[index], primitive_id, getHeader().flags);	
+			return Mesh::ReadIndices<N>(SceneMeshIndices[index], primitive_id, getHeader().flags);
 		}
 
 		template <int N>
@@ -213,7 +220,7 @@ struct BoundScene : Scene, IRayTracingScene
 		}
 
 		SurfaceGeometryDifferentials<3> getTriangleDifferentials(
-			const in Matrix3f object_to_world, 
+			const in Matrix3f object_to_world,
 			const in uvec3 indices
 		) {
 			return Mesh::GetTriangleDifferentials(object_to_world, SceneMeshVertices[index], indices);
@@ -260,10 +267,10 @@ __init()
 		return res;
 	}
 
-	PBMaterial readMaterial(uint material_id, vec2 uv, bool read_textures = true, ITextureSamplingInfo sampling_info = DefaultTextureSampling())
+	PBMaterial<Mode> readMaterial<int Mode>(uint material_id, vec2 uv, bool read_textures = true, ITextureSamplingInfo sampling_info = DefaultTextureSampling())
 	{
 		const PBMaterialProperties props = ScenePBMaterialsProps[material_id][0];
-		PBMaterial res = PBMaterial(props);
+		PBMaterial<Mode> res = PBMaterial<Mode>(props);
 		
 		if(read_textures)
 		{
@@ -324,171 +331,24 @@ __init()
 
 #if defined(SCENE_LIGHTS_ACCESS)
 
-static constexpr const uint LightIndexBits = 24;
-
-struct EnvMap : ILight
+SkyLight<Mode> getSkyLight<int Mode>()
 {
-	vec3 uniform_emission;
-	uint flags = 0;
-	vec3 solar_disk_emission;
-	float solar_disk_angle;
-	vec3 solar_disk_direction;
-	float solar_disk_cosine;
+	let ubo = getUBO();
+	SkyLight<Mode> res;
 
-	__init(const in StorageLight l) {}
-
-	__init(const in Scene::UBO ubo)
-	{
-		uniform_emission = ubo.sky;
-
-		solar_disk_emission = ubo.solar_disk_intensity;
-		solar_disk_angle = ubo.solar_disk_radius;
-		
-		solar_disk_direction = ubo.solar_direction;
-		solar_disk_cosine = ubo.solar_disk_cosine;
-	}
-
-	uint getFlags()
-	{
-		return flags;
-	}
-
-	LightType getType()
-	{
-		return LightType::EnvMap;
-	}
+	// TODO compute atmosphere
+	res.uniform_emission = Spectrumf<Mode>::MakeFromRGB(ubo.sky, RGBSourceType::Illuminant);
+	// TODO black body spectral emission
+	res.solar_disk_emission = Spectrumf<Mode>::MakeFromRGB(ubo.solar_disk_intensity, RGBSourceType::Illuminant);
+	res.solar_disk_angle = ubo.solar_disk_radius;
 	
-	vec3 Le(vec3 direction)
-	{
-		vec3 res = uniform_emission;
-		float ct = dot(direction, solar_disk_direction);
-		if(ct > solar_disk_cosine)
-		{
-			res += solar_disk_emission;
-		}
-		return res;
-	}
-
-	float getPMFUniform(vec3 color_filter)
-	{
-		float uni_weight = ConeSolidAngle(-1) * Luminance(uniform_emission * color_filter);
-		float solar_weight = ConeSolidAngle(solar_disk_cosine) * Luminance(solar_disk_emission * color_filter);
-		float pmf_uni = uni_weight / (uni_weight + solar_weight);
-		return pmf_uni;
-	}
-
-	struct DirectionSample
-	{
-		vec3 emission;
-		vec3 direction; // to env map
-		float pdf;
-	}
-
-	// Common for sampleLe and sampleLi
-	DirectionSample sampleDirection<RNG : IRNG>(inout RNG rng, vec3 color_filter)
-	{
-		DirectionSample res;
-		// This does not take into account the bsdf shape
-		float sampling_cosine_angle = -1;
-		float choice_xi = rng.generate<float>();
-		float pmf_uniform = getPMFUniform(color_filter);
-		bool sample_uniform = choice_xi <= pmf_uniform;
-		if(sample_uniform)
-		{
-			sampling_cosine_angle = -1;
-		}
-		else
-		{
-			sampling_cosine_angle = solar_disk_cosine;
-		}
-		Sample<vec3> dir_sample = SampleUniformDirection(rng.generate<float, 2>(), sampling_cosine_angle);
-		float uni_pdf = rcp(ConeSolidAngle(-1));
-		float solar_pdf = 0;
-		res.emission = uniform_emission;
-		if(sample_uniform)
-		{
-			if(dot(dir_sample.value, solar_disk_direction) > solar_disk_cosine)
-			{
-				solar_pdf = rcp(ConeSolidAngle(solar_disk_cosine));
-				res.emission += solar_disk_emission;
-			}
-		}
-		else
-		{
-			let B = BasisFromDir(solar_disk_direction);
-			dir_sample.value = B * dir_sample.value;
-			solar_pdf = dir_sample.pdf;
-			res.emission += solar_disk_emission;
-		}
-		res.direction = dir_sample.value;
-		res.pdf = lerp(solar_pdf, uni_pdf, pmf_uniform);
-		return res;
-	}
-
-	float getDirectionPDF(vec3 direction, vec3 color_filter)
-	{
-		float res = 0;
-		float pmf_uniform = getPMFUniform(color_filter);
-		float pdf_uni = rcp(ConeSolidAngle(-1));
-		float pdf_solar = 0;
-		if(dot(direction, solar_disk_direction) > solar_disk_cosine)
-		{
-			pdf_solar = rcp(ConeSolidAngle(solar_disk_cosine));
-		}
-		res = lerp(pdf_solar, pdf_uni, pmf_uniform);
-		return res;
-	}
-
-	// Directions can be zero (means no direction)
-	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position, vec3 color_filter)
-	{
-		Light::ConnectionSample res;
-		let dir_sample = sampleDirection(rng, color_filter);
-		res.direction = dir_sample.direction;
-		res.intensity = dir_sample.emission;
-		res.pdf = dir_sample.pdf;
-		res.distance = std::numeric_limits<float>::infinity();
-		res.flags = Light::ConnectionSample::Flags::AtInfinity;
-		return res;
-	}
-
-	Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
-	{
-		return sampleLi(rng, reference_position, vec3(1));
-	}
+	res.solar_disk_direction = ubo.solar_direction;
+	res.solar_disk_cosine = ubo.solar_disk_cosine;
 	
-	float pdfLi(vec3 reference_position, vec3 direction, vec3 filter_color)
-	{
-		return getDirectionPDF(direction, filter_color);
-	}
+	return res;
+}
 
-	float pdfLi(vec3 reference_position, vec3 direction)
-	{
-		return pdfLi(reference_position, direction, vec3(1));
-	}
-	
-	Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
-	{
-		Light::EmissionSample res;
-		let dir_sample = sampleDirection(rng, vec3(1));
-		res.ray.direction = -dir_sample.direction;
-		res.intensity = dir_sample.emission;
-		res.position_pdf = 1;
-		res.pdf = dir_sample.pdf;
-		res.flags = Light::EmissionSample::Flags::AtInfinity;
-		res.range.resetRange();
-		return res;
-	}
-
-	RayPdf pdfLe(Ray3f ray)
-	{
-		RayPdf res = {};
-		res.direction_pdf = getDirectionPDF(-ray.direction, vec3(1));
-		res.position_pdf = 1;
-		return res;
-	}
-
-};
+static constexpr const uint LightIndexBits = 24;
 
 bool sampleEnv()
 {
@@ -510,7 +370,7 @@ float pdfSpawnAtInfinity(vec3 direction)
 	return rcp(PI * sqr(getUBO().radius));
 }
 
-Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
+Light::EmissionSample<Mode> sampleLe<int Mode, RNG : IRNG>(inout RNG rng)
 {
 	// [Assume] would be better
 	const uint n = getUBO().num_lights & BitMask<uint>(LightIndexBits);
@@ -520,14 +380,14 @@ Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 		++m;
 	}
 	uint index = rng.generate<uint>(0, m);
-	Light::EmissionSample sample;
+	Light::EmissionSample<Mode> sample;
 	if(index == n)
 	{
-		sample = EnvMap(getUBO()).sampleLe(rng);
+		sample = getSkyLight<Mode>().sampleLe(rng);
 	}
 	else
 	{
-		sample = MakeLight(SceneLights[index]).sampleLe(rng);
+		sample = MakeLight<Mode>(SceneLights[index]).sampleLe(rng);
 	}
 	sample.index = index;
 	sample.position_pdf *= rcp(float(m));
@@ -539,7 +399,7 @@ Light::EmissionSample sampleLe<RNG : IRNG>(inout RNG rng)
 	return sample;
 }
 
-RayPdf pdfLe(Ray3f ray, uint light_index)
+RayPdf pdfLe<int Mode>(Ray3f ray, uint light_index)
 {
 	let ubo = getUBO();
 	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
@@ -552,11 +412,11 @@ RayPdf pdfLe(Ray3f ray, uint light_index)
 	RayPdf res = {};
 	if(light_index == n)
 	{
-		res = EnvMap(getUBO()).pdfLe(ray);
+		res = getSkyLight<Mode>().pdfLe(ray);
 	}
 	else
 	{
-		res = MakeLight(SceneLights[light_index]).pdfLe(ray);
+		res = MakeLight<Mode>(SceneLights[light_index]).pdfLe(ray);
 	}
 	res.position_pdf *= pmf_light;
 	bool at_infinity = light_index == n;
@@ -567,7 +427,7 @@ RayPdf pdfLe(Ray3f ray, uint light_index)
 	return res;
 }
 
-Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_position)
+Light::ConnectionSample<Mode> sampleLi<int Mode, RNG : IRNG>(inout RNG rng, vec3 reference_position, const in Spectrumf<Mode> filter = Spectrumf<Mode>::One())
 {
 	let ubo = getUBO();
 	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
@@ -577,14 +437,14 @@ Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_posit
 		++m;
 	}
 	uint index = rng.generate<uint>(0, m);
-	Light::ConnectionSample sample;
+	Light::ConnectionSample<Mode> sample;
 	if(index == n)
 	{
-		sample = EnvMap(ubo).sampleLi(rng, reference_position);
+		sample = getSkyLight<Mode>().sampleLi(rng, reference_position, filter);
 	}
 	else
 	{
-		sample = MakeLight(SceneLights[index]).sampleLi(rng, reference_position);
+		sample = MakeLight<Mode>(SceneLights[index]).sampleLi(rng, reference_position/*, filter*/);
 	}
 	
 	sample.index = index;
@@ -592,7 +452,7 @@ Light::ConnectionSample sampleLi<RNG : IRNG>(inout RNG rng, vec3 reference_posit
 	return sample;
 }
 
-float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
+float pdfLi<int Mode>(vec3 reference_position, vec3 direction, uint light_index, const in Spectrumf<Mode> filter = Spectrumf<Mode>::One())
 {
 	let ubo = getUBO();
 	const uint n = ubo.num_lights & BitMask<uint>(LightIndexBits);
@@ -604,28 +464,28 @@ float pdfLi(vec3 reference_position, vec3 direction, uint light_index)
 	float res = rcp(float(m));
 	if(light_index == n)
 	{
-		res *= EnvMap(ubo).pdfLi(reference_position, direction);
+		res *= getSkyLight<Mode>().pdfLi(reference_position, direction, filter);
 	}
 	else
 	{
-		res *= MakeLight(SceneLights[light_index]).pdfLi(reference_position, direction);
+		res *= MakeLight<Mode>(SceneLights[light_index]).pdfLi(reference_position, direction/*, filter*/);
 	}
 	return res;
 }
 
-float getEnvPdfLi(vec3 reference_position, vec3 direction)
+float getEnvPdfLi<int Mode>(vec3 reference_position, vec3 direction, const in Spectrumf<Mode> filter = Spectrumf<Mode>::One())
 {
-	return pdfLi(reference_position, direction, getUBO().num_lights & BitMask<uint>(LightIndexBits));
+	return pdfLi<Mode>(reference_position, direction, getUBO().num_lights & BitMask<uint>(LightIndexBits), filter);
 }
 
-RayPdf getEnvPdfLe(const in Ray3f ray)
+RayPdf getEnvPdfLe<int Mode>(const in Ray3f ray)
 {
-	return pdfLe(ray, getUBO().num_lights & BitMask<uint>(LightIndexBits));
+	return pdfLe<Mode>(ray, getUBO().num_lights & BitMask<uint>(LightIndexBits));
 }
 
-vec3 getEnvLe(vec3 direction)
+Spectrumf<Mode> getEnvLe<int Mode>(vec3 direction)
 {
-	return EnvMap(getUBO()).Le(direction);
+	return getSkyLight<Mode>().Le(direction);
 }
 
 #endif

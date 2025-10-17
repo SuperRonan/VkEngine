@@ -40,28 +40,28 @@ struct PushConstant
 uniform PushConstant _pc;
 
 //[require(GL_EXT_shader_atomic_float)]
-void ConnectToCameraIFP<RNG : IRNG>(
+void ConnectToCameraIFP<RNG : IRNG, int Mode>(
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
 	RayDesc ray,
 	vec2 uv,
-	vec3 contrib,
+	const in Spectrumf<Mode> contrib,
 	inout RNG rng
 ) {
 	let v = ray_tracer.testVisibility(ray);
 	if(NonZero(v))
 	{
-		AddLightTracerSample(Target, uv, _pc.dims, _pc.udims, contrib * v);
+		AddLightTracerSample(Target, uv, _pc.dims, _pc.udims, (contrib * v).toRGBf());
 	}
 }
 
 
-void ConnectToCameraIFP<RNG : IRNG>(
+void ConnectToCameraIFP<RNG : IRNG, int Mode>(
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
 	const in Hit hit,
-	const in IMaterial material,
-	vec3 incoming_throughput,
+	const in IMaterial<Mode> material,
+	const in Spectrumf<Mode> incoming_throughput,
 	inout RNG rng)
 {
 	ICamera camera = MakeCamera(rt_ubo.camera);
@@ -70,12 +70,12 @@ void ConnectToCameraIFP<RNG : IRNG>(
 	{
 		const vec3 wi = connection.direction;
 		const vec3 wo = hit.surface_shading_info.out_direction;
-		vec3 bsdf = material.bsdf<BSDF_ADJOINT_BIT>(
+		let bsdf = material.bsdf<BSDF_ADJOINT_BIT>(
 			hit.surface_shading_info.geometry_normal, 
 			hit.surface_shading_info.shading_normal, 
 			wo, wi
 		);
-		if(NonZero(bsdf))
+		if(bsdf.isNonZero())
 		{
 			const vec3 ns = hit.surface_shading_info.shading_normal;
 			const vec3 ng = hit.surface_shading_info.geometry_normal;
@@ -85,9 +85,9 @@ void ConnectToCameraIFP<RNG : IRNG>(
 			const float cos_theta_o_s = Dot(ns, wo);
 			// correction of shading normals 
 			const float correction = Abs((cos_theta_o_s * cos_theta_i_g) / (cos_theta_o_g * cos_theta_i_s));
-			vec3 contrib = incoming_throughput * bsdf * connection.intensity * (Abs(cos_theta_i_s) * correction / connection.pdf);
+			var contrib = incoming_throughput * bsdf * (connection.intensity * (Abs(cos_theta_i_s) * correction / connection.pdf));
 			contrib = FitWrongToZero(contrib);
-			if(NonZero(contrib))
+			if(contrib.isNonZero())
 			{
 				let ray = Ray3f(hit.surface_shading_info.position, connection.direction);
 				RayRangef range = {};
@@ -99,17 +99,17 @@ void ConnectToCameraIFP<RNG : IRNG>(
 	}
 }
 
-void ConnectLightToCameraIFP<RNG : IRNG>(
+void ConnectLightToCameraIFP<RNG : IRNG, int Mode>(
 	const in BoundScene scene,
 	const in IRayTracer ray_tracer,
-	const in vec3 beta,
+	const in Spectrumf<Mode> beta,
 	inout RNG rng
 ) {
 	ICamera camera = MakeCamera(rt_ubo.camera);
-	let sample = scene.sampleLi(rng, camera.getPosition());
+	let sample = scene.sampleLi<Mode>(rng, camera.getPosition(), beta);
 	vec3 camera_ref_pos;
 	uint flags = 0;
-	const bool at_infinity = sample.flags & Light::ConnectionSample::Flags::AtInfinity;
+	const bool at_infinity = sample.flags & Light::Sample::Flags::AtInfinity;
 	if(at_infinity)
 	{
 		camera_ref_pos = sample.direction;
@@ -124,11 +124,11 @@ void ConnectLightToCameraIFP<RNG : IRNG>(
 	{
 		// TODO implement Light::Le
 		// For now the sample intensity will do fine
-		vec3 Le = sample.intensity / sample.pdf;
+		let Le = sample.intensity / sample.pdf;
 		
-		vec3 contrib = beta * Le * connection.intensity / connection.pdf;
+		var contrib = (beta * Le) * (connection.intensity / connection.pdf);
 		contrib = FitWrongToZero(contrib);
-		if(NonZero(contrib))
+		if(contrib.isNonZero())
 		{
 			Ray3f ray;
 			RayRangef range = {};
@@ -150,7 +150,7 @@ void ConnectLightToCameraIFP<RNG : IRNG>(
 
 
 
-void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const in BoundScene scene, TraversingRay tray)
+void TracePath<int Mode, RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const in BoundScene scene, TraversingRay<Mode> tray)
 {
 	uint num_vertices = 1;
 	const uint max_vertices = GetMaxDepth() + 1;
@@ -172,13 +172,14 @@ void TracePath<RNG : IRNG>(inout RNG rng, const in IRayTracer ray_tracer, const 
 		}
 
 		DefaultTextureSampling sampling = {};
-		let material = scene.readMaterial(hit.material_id, hit.surface_shading_info.uv, true, sampling);
+		let material = scene.readMaterial<Mode>(hit.material_id, hit.surface_shading_info.uv, true, sampling);
 		ApplyMaterialNormalIFN(hit.surface_shading_info, material);
 		{
 			let kappa = material.getKappa(hit.surface_shading_info.geometry_normal, -tray.ray.direction);
 			if(kappa.hasValue)
 			{
-				tray.throughput *= exp2(-hit.t * kappa.value);
+				// TODO
+				//tray.throughput *= exp2(-hit.t * kappa.value);
 			}
 		}
 
@@ -225,7 +226,7 @@ public property uint3 gl_NumWorkGroups {
 	}
 }
 
-void CommonMain(
+void CommonMain<int Mode>(
 	uint index, float weight,
 	const in IRayTracer ray_tracer,
 	BoundScene scene,
@@ -235,33 +236,17 @@ void CommonMain(
 	seed = seed ^ Hash(renderer_ubo.frame_idx);
 	//seed = Hash(renderer_ubo.frame_idx);
 	RNG_t rng = RNG_t(seed);
-
-	if(index == 0 && false)
-	{
-		_g_debug_signal = true;
-		_g_debug_printer = DebugPrinter(vec3(0), DEBUG_UV_SPACE_BIT);
-		_g_debug_printer.state.back_color = hvec4(0..xxx, 1);
-		RNG_t _rng = RNG_t(894145);
-		let env_map = BoundScene::EnvMap(scene.getUBO());
-		_g_debug_printer.print(env_map.getPMFUniform(vec3(1)));
-		for(uint i = 0; i < 20; ++i)
-		{
-			_g_debug_printer.print(i);
-			let sample = env_map.sampleDirection(_rng, vec3(1));
-			_g_debug_printer.print(vec4(sample.emission, sample.pdf));
-		}
-	}
 	
-	ConnectLightToCameraIFP(scene, ray_tracer, 1, rng);
+	ConnectLightToCameraIFP(scene, ray_tracer, Spectrumf<Mode>::One(), rng);
 
-	Light::EmissionSample sample = scene.sampleLe(rng);
+	Light::EmissionSample<Mode> sample = scene.sampleLe<Mode>(rng);
 	sample.intensity *= weight;
-	if(!NonZero(sample.intensity) || sample.pdf <= 0)
+	if(!sample.intensity.isNonZero() || sample.pdf <= 0)
 	{
 		return;
 	}
 
-	TraversingRay tray = TraversingRay(sample);
+	var tray = TraversingRay<Mode>(sample);
 	TracePath(rng, ray_tracer, scene, tray);
 }
 
@@ -275,6 +260,7 @@ void main(
 	const uvec3 GlobalInvocationID : SV_DispatchThreadID,
 	const uvec3 WorkGroupID : SV_GroupID
 ){
+	const int Mode = SPECTRUM_MODE_RGB;
 	const uint group_index = WorkGroupID.x;
 	const uint thread_index = GlobalInvocationID.x;
 	const float num_samples = float(gl_NumWorkGroups.x * LOCAL_SIZE_X);
@@ -285,7 +271,7 @@ void main(
 	BoundScene scene;
 	RayQuerier ray_querier = RayQuerier(scene);
 	
-	CommonMain(
+	CommonMain<Mode>(
 		thread_index, sample_weight,
 		ray_querier,
 		scene
@@ -296,6 +282,7 @@ void main(
 #if SHADER_SEMANTIC_RAYGEN
 [shader("raygen")]
 void main(){
+	const int Mode = SPECTRUM_MODE_RGB;
 	const uint thread_index = DispatchRaysIndex().x;
 	const float num_samples = DispatchRaysDimensions().x;
 	const vec2 dims = _pc.dims;
@@ -305,7 +292,7 @@ void main(){
 	BoundScene scene;
 	RayTracer ray_querier = RayTracer(scene);
 	
-	CommonMain(
+	CommonMain<Mode>(
 		thread_index, sample_weight,
 		ray_querier,
 		scene

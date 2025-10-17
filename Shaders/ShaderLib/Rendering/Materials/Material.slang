@@ -5,6 +5,8 @@
 
 #include "MaterialDefinitions.h"
 
+#include <ShaderLib/Spectrum/Spectrum.slang>
+
 enum MaterialType
 {
 	PhysicalyBased,
@@ -18,10 +20,11 @@ enum BSDFSampleFlags
 	Symmetric = 0x2,
 };
 
-struct BSDFSample<int N>
+struct BSDFSample<int N, int Mode>
 {
 	typealias Flags = BSDFSampleFlags;
-	vec3 bsdf = {};
+	typealias SpectruM = Spectrumf<Mode>;
+	SpectruM bsdf = {};
 	float pdf = {};
 	vec3 direction = {};
 	Flags flags = Flags::None;
@@ -33,33 +36,36 @@ struct BSDFSample<int N>
 #define BSDF_FORWARD_BIT 0
 #define BSDF_ADJOINT_BIT 1
 
-interface IMaterial
+interface IMaterial<int Mode>
 {
 	uint getFlags();
 
 	MaterialType getType();
 
-	float3 bsdf<int Flags>(
-		const in vec3 geometry_normal, 
-		const in vec3 shading_normal, 
-		const in vec3 wo, 
+	Spectrumf<Mode> bsdf<int Flags>(
+		const in vec3 geometry_normal,
+		const in vec3 shading_normal,
+		const in vec3 wo,
 		const in vec3 wi
 	);
 
 	float pdf<int Flags>(
-		const in vec3 geometry_normal, 
-		const in vec3 shading_normal, 
-		const in vec3 wo, 
-		const in vec3 wi
+		const in vec3 geometry_normal,
+		const in vec3 shading_normal,
+		const in vec3 wo,
+		const in vec3 wi,
+		const in Spectrumf<Mode> filter = Spectrumf<Mode>::One(),
+		uint flags = 0
 	);
 
-	BSDFSample<N> sampleBSDF<int Flags, typename RNG : IRNG, int N>(
-		const in vec3 geometry_normal, 
-		const in vec3 shading_normal, 
+	BSDFSample<N, Mode> sampleBSDF<int Flags, typename RNG : IRNG, int N>(
+		const in vec3 geometry_normal,
+		const in vec3 shading_normal,
 		const in Matrixf<3, N> Jnormal,
-		const in vec3 wo, 
+		const in vec3 wo,
 		const in Matrixf<3, N> Jwo,
-		inout RNG rng, 
+		inout RNG rng,
+		const in Spectrumf<Mode> filter = Spectrumf<Mode>::One(),
 		uint flags = 0
 	);
 }

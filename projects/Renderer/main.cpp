@@ -672,7 +672,7 @@ namespace vkl
 			};
 
 			std::shared_ptr<ComputeCommand> slang_test;
-			if (true)
+			if (false)
 			{
 				slang_test = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 					.app = this,
