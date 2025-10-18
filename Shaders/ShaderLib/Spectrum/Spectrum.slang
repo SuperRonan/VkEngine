@@ -449,3 +449,18 @@ extension XYZSpectrum<Scalar>
 
 #undef XYZ_SPECTRUM_DECLARE_CHANNEL_PROP
 }
+
+SampledSpectrumf<N> SampleSpectrumFromTemperature<int N>(float temperature, bool normalize=false)
+{
+	SampledSpectrumf<N> res;
+	let norm = EvalBlackBodyTotalSpectralRadiance(temperature);
+	for(uint i = 0; i < N; ++i)
+	{
+		res[i] = EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(res.GetChannelWaveLength(i)), temperature);
+		if(normalize)
+		{
+			res[i] /= norm;
+		}
+	}
+	return res;
+}

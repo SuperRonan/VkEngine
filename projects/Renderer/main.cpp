@@ -672,7 +672,8 @@ namespace vkl
 			};
 
 			std::shared_ptr<ComputeCommand> slang_test;
-			if (false)
+			bool use_test_shader = false;
+			if (true)
 			{
 				slang_test = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 					.app = this,
@@ -853,6 +854,11 @@ namespace vkl
 					//ImGui::ShowDemoWindow();
 					if(ImGui::Begin("Rendering"))
 					{
+						if (slang_test)
+						{
+							ImGui::Checkbox("Run test shader", &use_test_shader);
+						}
+
 						camera.declareGui(*gui_ctx);
 
 						renderer.declareGui(*gui_ctx);
@@ -935,7 +941,7 @@ namespace vkl
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
 
-					if (slang_test)
+					if (slang_test && use_test_shader)
 					{
 						update_context->resourcesToUpdateLater() += slang_test;
 					}
@@ -968,7 +974,7 @@ namespace vkl
 
 					sui->execute(exec_thread, camera);
 
-					if (slang_test)
+					if (slang_test && use_test_shader)
 					{
 						exec_thread(slang_test);
 					}

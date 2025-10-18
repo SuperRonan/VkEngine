@@ -27,6 +27,8 @@ void main(uint3 gid : SV_DispatchThreadID)
 
 	vec3 res = vec3(0);
 
+	const float temperature = lerp(1000, 10000, x);
+
 	if(gid.y < dims.y / 4)
 	{
 		// Show spectrum
@@ -34,14 +36,24 @@ void main(uint3 gid : SV_DispatchThreadID)
 	}
 	else if(gid.y < dims.y / 2)
 	{
-		// Check that the avg is white
-		const uint samples = 1;
+		// true Check that the avg is white
+		// false Check color temperature
+		bool mode = gid.y < (dims.y * 3) / 8;
+		const uint samples = 4;
 		RNG_t rng = RNG_t(Hash(gid));
 		for(uint i = 0; i < samples; ++i)
 		{
 			typealias Spec = SampledSpectrumf<4>;
 			Spec::Init(rng.generate<float>());
-			Spec spec = Spec(2);
+			Spec spec = {};
+			if(mode)
+			{
+				spec = Spec(2);
+			}
+			else
+			{
+				spec = SampleSpectrumFromTemperature<Spec::Samples>(temperature, true) * 8;
+			}
 			res += spec.toXYZf();
 		}
 		res = (GetXYZToRGBConversionMatrix<float>() * res) / float(samples);
@@ -63,7 +75,8 @@ void main(uint3 gid : SV_DispatchThreadID)
 	// Show nm scale
 	if((gid.x % 128) == 0)
 	{
-		DebugPrinter printer = DebugPrinter(vec3(gid.x, 100, 0), DEBUG_PIXEL_SPACE_BIT);
+		DebugPrinter printer = DebugPrinter(vec3(gid.x, 16, 0), DEBUG_PIXEL_SPACE_BIT);
 		printer.print(int(GetPhysicalWaveLength(BaseWaveLength)), "nm");
+		printer.print(int(temperature), "K");
 	}
 }

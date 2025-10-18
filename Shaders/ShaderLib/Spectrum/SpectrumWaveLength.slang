@@ -69,7 +69,7 @@ Float EvalZStimulus<Float : __BuiltinFloatingPointType>(Float wave_length)
 	return res;
 }
 
-// `wave_length in [0, 1]`
+// `wave_length` in [0, 1]
 Vector3<Float> EvalXYZStimulus<Float : __BuiltinFloatingPointType>(Float wave_length)
 {
 	return Vector3<Float>(
@@ -77,4 +77,40 @@ Vector3<Float> EvalXYZStimulus<Float : __BuiltinFloatingPointType>(Float wave_le
 		EvalYStimulus(wave_length),
 		EvalZStimulus(wave_length)
 	);
+}
+
+// Not normalized, the total energy level might be well outside the unit range!
+// - `physical_wave_length` in nm
+// - `temperature` in K
+// See https://en.wikipedia.org/wiki/Planck%27s_law
+float EvalBlackBodySpectralRadianceFromPhysical(float physical_wave_length, float temperature)
+{
+	physical_wave_length *= 1e-9; // map nm to m
+	let lambda_5 = physical_wave_length * physical_wave_length * physical_wave_length * physical_wave_length * physical_wave_length;
+	let h = 6.62607015e-34f;
+	let c = 299792458.0f;
+	let kB = 1.380649e-23f;
+	let hc = h * c;
+	let _2hc2 = 2.0f * hc * c;
+	let e = exp(hc * rcp(physical_wave_length * kB * temperature));
+	let res = _2hc2 * rcp(lambda_5 * (e - 1.0f));
+	return res;
+}
+
+// Returns the integral of plank's law over the entire spectrum (or an approximation of it)
+// - `temperature` in K
+// See https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law
+float EvalBlackBodyTotalSpectralRadiance(float temperature)
+{
+	// This is the total integral [0, +inf], not just restricted to the visible spectrum
+	let total_spectral_energy = 4.067e-6 * pow(temperature, 5);
+	return total_spectral_energy;
+}
+
+// Returns the integral of plank's law over the visible spectrum (or an approximation of it)
+// - `temperature` in K
+float EvalBlackBodyVisibleSpectralRadiance(float temperature)
+{
+	// TODO
+	return EvalBlackBodyTotalSpectralRadiance(temperature);
 }
