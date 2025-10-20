@@ -1092,7 +1092,7 @@ uint TraceLightSubPath<int Mode, VertexArray : IRWArray<Vertex<Mode>>, RNG : IRN
 	return n + 1;
 }
 
-static const int CommonSpectrumMode = SPECTRUM_MODE_RGB;
+static const int CommonSpectrumMode = SPECTRUM_MODE_SAMPLED(4);
 
 layout(SHADER_DESCRIPTOR_BINDING + 4) restrict RWStructuredBuffer<Vertex<CommonSpectrumMode>, Std430DataLayout> SubPathsScratchBuffer;
 
@@ -1166,6 +1166,9 @@ void CommonMain(
 	const in BoundScene scene,
 
 ) {
+	const int Mode = bdpt::CommonSpectrumMode;
+	typealias SpectruM = Spectrumf<Mode>;
+
 	const uvec2 dims = TextureSize(Target);
 	const vec2 fdims = vec2(dims);
 	const vec2 oo_dims = rcp(fdims);
@@ -1196,6 +1199,12 @@ void CommonMain(
 	const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
 	const vec2 cp = UVToClipSpace(uv);
 	Matrix2f Jcp = DiagonalMatrixV(oo_dims * 2);
+
+	
+	if(SpectruM::IsSampled)
+	{
+		SpectruM::Init(rng.generate<float>());
+	}
 
 	let res = bdpt::PathTrace(
 		global_thread_index,

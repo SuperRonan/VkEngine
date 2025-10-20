@@ -205,8 +205,14 @@ void CommonMain<int Mode>(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, 
 	// 	_g_debug_printer = DebugPrinter(vec3(pixel, 0), DEBUG_PIXEL_SPACE_BIT);
 	// }
 
+	typealias SpectruM = Spectrumf<Mode>;
+
 	for(uint i = 0; i < PATH_PER_PIXEL; ++i)
 	{
+		if (SpectruM::IsSampled)
+		{
+			SpectruM::Init(rng.generate<float>());
+		}
 		// [0, 1]
 		vec2 jitter = vec2(0);
 		if(true)
@@ -240,11 +246,13 @@ void CommonMain<int Mode>(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, 
 #define LOCAL_SIZE_Y 16
 #define LOCAL_SIZE_Z 1
 
+static const int CommonSpectrumMode = SPECTRUM_MODE_SAMPLED(4);
+
 [shader("compute")]
 [numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]
 void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 {
-	static const int Mode = SPECTRUM_MODE_RGB;
+	static const int Mode = CommonSpectrumMode;
 	const uvec2 pixel = GlobalInvocationID.xy;
 	const uvec2 dims = TextureSize(Target);
 	const vec2 oo_dims = rcp(vec2(dims));
@@ -264,7 +272,7 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 [shader("raygen")]
 void main()
 {
-	static const int Mode = SPECTRUM_MODE_RGB;
+	static const int Mode = CommonSpectrumMode;
 	const uvec2 pixel = DispatchRaysIndex().xy;
 	const uvec2 dims = TextureSize(Target);
 	const vec2 oo_dims = rcp(vec2(dims));

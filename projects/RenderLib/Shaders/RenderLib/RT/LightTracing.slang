@@ -236,6 +236,12 @@ void CommonMain<int Mode>(
 	seed = seed ^ Hash(renderer_ubo.frame_idx);
 	//seed = Hash(renderer_ubo.frame_idx);
 	RNG_t rng = RNG_t(seed);
+
+	typealias SpectruM = Spectrumf<Mode>;
+	if(SpectruM::IsSampled)
+	{
+		SpectruM::Init(rng.generate<float>());
+	}
 	
 	ConnectLightToCameraIFP(scene, ray_tracer, Spectrumf<Mode>::One(), rng);
 
@@ -250,6 +256,8 @@ void CommonMain<int Mode>(
 	TracePath(rng, ray_tracer, scene, tray);
 }
 
+static const int CommonSpectrumMode = SPECTRUM_MODE_SAMPLED(4);
+
 #if SHADER_SEMANTIC_COMPUTE
 #define LOCAL_SIZE_X 256
 #define LOCAL_SIZE_Y 1
@@ -260,7 +268,7 @@ void main(
 	const uvec3 GlobalInvocationID : SV_DispatchThreadID,
 	const uvec3 WorkGroupID : SV_GroupID
 ){
-	const int Mode = SPECTRUM_MODE_RGB;
+	const int Mode = CommonSpectrumMode;
 	const uint group_index = WorkGroupID.x;
 	const uint thread_index = GlobalInvocationID.x;
 	const float num_samples = float(gl_NumWorkGroups.x * LOCAL_SIZE_X);
@@ -282,7 +290,7 @@ void main(
 #if SHADER_SEMANTIC_RAYGEN
 [shader("raygen")]
 void main(){
-	const int Mode = SPECTRUM_MODE_RGB;
+	const int Mode = CommonSpectrumMode;
 	const uint thread_index = DispatchRaysIndex().x;
 	const float num_samples = DispatchRaysDimensions().x;
 	const vec2 dims = _pc.dims;

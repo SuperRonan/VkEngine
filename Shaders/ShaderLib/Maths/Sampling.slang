@@ -163,3 +163,22 @@ Sample<vec2> SampleUniformOnRegularPolygon(vec2 xi, uint sides)
 	return res;
 }
 
+Sample<uint> SampleUniformInList(const in IArray<float> weights, float xi)
+{
+	const float sum = Sum<float>(weights);
+	xi *= sum;
+	float sum2 = 0;
+	Sample<uint> res = Sample<uint>(0, 0);
+	for(uint i = 0; i < uint(weights.getCount()); ++i)
+	{
+		res.pdf = weights[i];
+		sum2 += res.pdf;
+		if(sum2 >= xi)
+		{
+			res.value = i;
+			res.pdf /= sum;
+			break;
+		}
+	}
+	return res;
+}

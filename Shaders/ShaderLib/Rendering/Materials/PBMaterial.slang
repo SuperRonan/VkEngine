@@ -340,15 +340,19 @@ struct PhysicalyBasedMaterial<int Mode> : IMaterial<Mode>
 		float base_ior = metallic;
 		const bool sample_spectral = (this.flags & PB_MATERIAL_DIELECTRIC_SPECRAL_APPROX_BIT) != 0;
 		// Very basic approximation of spectral rendering effects
-		if(sample_spectral)
+		if(sample_spectral && SpectruM::IsSampled)
 		{
-			// TODO
-			uint channel = rng.generate<uint>(0, 3);
 			res.bsdf = SpectruM::Zero();
-			res.bsdf[channel] = 1;
-			float deviation = float(channel) - 1.0;
-			base_ior *= (1.0 + deviation * 0.01);
-			res.pdf *= rcp(3);
+			let sample_channel = SampleUniformInList(filter, rng.generate<float>());
+
+			float wl = filter.GetChannelWaveLength(sample_channel.value);
+			float pwl = GetPhysicalWaveLength(wl) * 1e-3; // in µm
+			const float A = base_ior;
+			const float B = 0.00420; // TODO from material prop
+			base_ior = A + B / sqr(pwl);
+
+			res.bsdf[sample_channel.value] = 1;
+			res.pdf *= sample_channel.pdf;
 		}
 		
 		float ior = outside ? rcp(base_ior) : (base_ior);
