@@ -206,7 +206,7 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 			for(int i = 0; i < Samples; ++i)
 			{
 				uint channel = 2 - uint(GetChannelWaveLength(i) * 3);
-				res[channel] += ConvertBuiltInTo<Scalar>(rgb[channel]);
+				res[i] += ConvertBuiltInTo<Scalar>(rgb[channel]);
 			}
 			return res;
 		}
