@@ -10,7 +10,7 @@ namespace vkl
 	{
 		LightGLSL res{
 			.position = position,
-			.flags = LightType::POINT,
+			.flags = LightType::Point,
 			.emission = emission,
 		};
 		return res;
@@ -20,7 +20,7 @@ namespace vkl
 	{
 		LightGLSL res{
 			.position = vec3(0, 0, 0),
-			.flags = LightType::DIRECTIONAL,
+			.flags = LightType::Directional,
 			.emission = emission,
 			.direction = dir,
 		};
@@ -163,7 +163,7 @@ namespace vkl
 		Light(Light::CI{
 			.app = ci.app,
 			.name = ci.name,
-			.type = LightType::POINT,
+			.type = LightType::Point,
 			.emission = ci.emission,
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
@@ -206,7 +206,7 @@ namespace vkl
 		Light(Light::CI{
 			.app = ci.app,
 			.name = ci.name,
-			.type = LightType::POINT,
+			.type = LightType::Directional,
 			.emission = ci.emission,
 			.enable_shadow_map = false,
 		}),
@@ -239,11 +239,11 @@ namespace vkl
 
 
 
-	SpotLight::SpotLight(CreateInfo const& ci):
+	SpotBeamLight::SpotBeamLight(CreateInfo const& ci):
 		Light(Light::CI{
 			.app = ci.app,
 			.name = ci.name,
-			.type = LightType::SPOT,
+			.type = ci.is_beam ? LightType::Beam : LightType::Spot,
 			.emission = ci.emission,
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
@@ -251,28 +251,29 @@ namespace vkl
 		_direction(Normalize(ci.direction)),
 		_up(Normalize(ci.up)),
 		_ratio(ci.aspect_ratio),
-		_fov(ci.fov),
+		_opening(ci.opening),
 		_attenuation(ci.attenuation)
 	{
 		
 	}
 
-	uint32_t SpotLight::flags()const
+	uint32_t SpotBeamLight::flags()const
 	{
 		uint32_t res = Light::flags();
 		res |= ((uint32_t(_attenuation) & 0b11) << 16);
 		return res;
 	}
 
-	LightGLSL SpotLight::getAsGLSL(Matrix3x4f const& xform)const
+	LightGLSL SpotBeamLight::getAsGLSL(Matrix3x4f const& xform)const
 	{
 		LightGLSL res;
 		res.emission = _emission;
-		if (_preserve_intensity_from_fov)
+		auto NotZero = [](float f){return f != 0.0f ? f : 1;};
+		if (_preserve_intensity_from_opening)
 		{
-			res.emission *= 1.0 / std::max(_fov, std::numeric_limits<float>::epsilon());
+			res.emission *= 1.0 / std::max(sqr(NotZero(_opening)) * NotZero(_ratio), std::numeric_limits<float>::epsilon());
 		}
-		res.flags = SpotLight::flags();
+		res.flags = SpotBeamLight::flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		const mat3 dir_mat = DirectionMatrix(mat3(xform));
 		vec3 h_position = xform * Homogeneous(_position);
@@ -280,26 +281,45 @@ namespace vkl
 		const vec3 direction = Normalize(dir_mat * _direction);
 		const vec3 up = Normalize(dir_mat * _up);
 		res.direction = direction;
-		res.z_near = _znear;
-		res.spot = LightGLSL::SpotLightSpecific{
-			.up = up,
-			.tan_half_fov = std::tan(_fov * 0.5f),
-			.aspect = _ratio,
-		};
+		if (_type == LightType::Spot)
+		{
+			res.z_near = _znear;
+			res.spot = LightGLSL::SpotSpecific{
+				.up = up,
+				.tan_half_fov = std::tan(_opening * 0.5f),
+				.aspect = _ratio,
+			};
+		}
+		else
+		{
+			res.beam = LightGLSL::BeamSpecific{
+				.up = up,
+				.radius = _opening,
+				.aspect = _ratio,
+			};
+		}
 		return res;
 	}
 
-	void SpotLight::declareGui(GuiContext& ctx)
+	void SpotBeamLight::declareGui(GuiContext& ctx)
 	{
 		Light::declareGui(ctx);
 		ImGui::PushID(name().c_str());
-		ImGui::SliderAngle("Angle", &_fov, 0, 180);
-		ImGui::Checkbox("Preserve total intensity from angle", &_preserve_intensity_from_fov);
+		if (_type == LightType::Spot)
+		{
+			ImGui::SliderAngle("Angle", &_opening, 0, 180);
+		}
+		else
+		{
+			ImGui::SliderFloat("Opening", &_opening, 0, 1, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+		}
+		ImGui::SliderFloat("Aspect Ratio", &_ratio, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+		ImGui::Checkbox("Preserve total intensity from opening", &_preserve_intensity_from_opening);
 		static ImGuiListSelection gui_attenuation(ImGuiListSelection::CI{
 			.name = "Attenuation",
 			.mode = ImGuiListSelection::Mode::RadioButtons,
 			.same_line = true,
-			.labels = {"None", "Linear", "Quadratic", "Root"},
+			.labels = {"None", "Linear", "Quadratic", "Inside"},
 		});
 		gui_attenuation.setIndex(_attenuation);
 		if (gui_attenuation.declare())
@@ -309,7 +329,10 @@ namespace vkl
 
 		ImGui::Checkbox("Enable Shadow Map", &_enable_shadow_map);
 
-		ImGui::SliderFloat("Z Near", &_znear, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+		if (_type == LightType::Spot)
+		{
+			ImGui::SliderFloat("Z Near", &_znear, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+		}
 
 		ImGui::PopID();
 	}

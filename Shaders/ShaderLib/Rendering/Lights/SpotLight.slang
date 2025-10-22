@@ -81,30 +81,7 @@ struct SpotLight<int Mode> : ILight<Mode>
 		return Spectrumf<Mode>::MakeFromRGB(emission, RGBSourceType::Illuminant);
 	}
 
-	float evaluateAttenuation(vec2 cp)
-	{
-		float res = 1;
-		const uint attenuation_flags = flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
-		if((attenuation_flags) != 0)
-		{
-			float dist_to_center = 0;
-			if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_LINEAR)
-			{
-				dist_to_center = length(cp);
-			}
-			else if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_QUADRATIC)
-			{
-				dist_to_center = Length2(cp);
-			}
-			else if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_ROOT)
-			{
-				dist_to_center = sqrt(length(cp));
-			}
-			
-			res = max(1.0 - dist_to_center, 0);
-		}
-		return res;
-	}
+	
 
 	float getInvArea()
 	{
@@ -128,6 +105,11 @@ struct SpotLight<int Mode> : ILight<Mode>
 			}
 		}
 		return res;
+	}
+
+	float evaluateAttenuation(float2 cp)
+	{
+		return Light::EvaluateAttenuation(flags, cp);
 	}
 
 	Light::ConnectionSample<Mode> sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)
@@ -169,32 +151,29 @@ struct SpotLight<int Mode> : ILight<Mode>
 		res.ray.origin = position;
 		// sample the cp that considers the attenuation
 		vec2 xi = rng.generate<float, 2>();
-		vec2 cp;
-		float pdf = 1.0;
-		const uint attenuation_flags = flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
+		::Sample<vec2> sample_cp;
+		const uint attenuation_flags = flags & LIGHT_FLAG_ATTENUATION_MASK;
 		if((attenuation_flags) != 0)
 		{
-			let sample = SampleUniformOnDisk(xi);
-			cp = sample.value;
-			pdf = sample.pdf;
+			sample_cp = SampleUniformOnDisk(xi);
 		}
 		else
 		{
-			cp = UVToClipSpace(xi);
-			pdf = 0.25;
+			sample_cp.value = UVToClipSpace(xi);
+			sample_cp.pdf = 0.25;
 		}
 		// Explicit z_near at 1
 		// Here the z_near does not mathematically matter,
 		// but with a "usual" value like 1e-3, it makes a loss of precision in the matrix product
 		// which induces some aliasing artifacts in the sampling
-		res.ray.direction = Normalize(getProjToWorld(1) * vec4(cp, 1, 1));
+		res.ray.direction = Normalize(getProjToWorld(1) * vec4(sample_cp.value, 1, 1));
 		res.range = {};
 		const float ct = Dot(res.ray.direction, this.direction);
 		const float ct3 = ct * ct * ct;
 		const float density_conversion = (rcp(ct3 * sqr(this.tan_half_fov)) * getInvArea());
-		res.pdf = pdf * density_conversion;
+		res.pdf = sample_cp.pdf * density_conversion;
 		res.position_pdf = 1;
-		res.intensity = getSpectralEmission() * (density_conversion * evaluateAttenuation(cp));
+		res.intensity = getSpectralEmission() * (density_conversion * evaluateAttenuation(sample_cp.value));
 		res.flags = Sample::Flags::DeltaPosition;
 		return res;
 	}
@@ -211,7 +190,7 @@ struct SpotLight<int Mode> : ILight<Mode>
 				const float ct = dir_c.z;
 				const float ct3 = ct * ct * ct;
 				float area_pdf = 0;
-				const uint attenuation_flags = flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
+				const uint attenuation_flags = flags & LIGHT_FLAG_ATTENUATION_MASK;
 				if(attenuation_flags != 0)
 				{
 					const float l2 = Length2(cp.value);

@@ -332,6 +332,9 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			ImGuiListSelection::Option{
 				.name = "Spot",
 			},
+			ImGuiListSelection::Option{
+				.name = "Beam",
+			},
 		},
 	};
 

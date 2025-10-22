@@ -896,7 +896,7 @@ namespace vkl
 							uint32_t layers = 1;
 							VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_2D;
 							VkImageCreateFlags flags = 0; 
-							if (light->type() == LightType::POINT)
+							if (light->type() == LightType::Point)
 							{
 								layers = 6;
 								view_type = VK_IMAGE_VIEW_TYPE_CUBE;

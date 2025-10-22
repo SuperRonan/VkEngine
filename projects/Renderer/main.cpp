@@ -456,7 +456,7 @@ namespace vkl
 			.app = app,
 			.name = "Point Light",
 			.xform = TranslationMatrix(Vector3f(0, 0.45, 0)),
-			.type = LightType::POINT,
+			.type = LightType::Point,
 			.emission = vec3(1.5, 1.2, 0.8),
 			.enable_shadow_map = true,
 		}));

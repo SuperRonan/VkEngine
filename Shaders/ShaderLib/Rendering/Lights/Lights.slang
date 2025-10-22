@@ -3,6 +3,7 @@
 #include "PointLight.slang"
 #include "DirectionalLight.slang"
 #include "SpotLight.slang"
+#include "BeamLight.slang"
 
 ILight<Mode> MakeLight<int Mode>(const in StorageLight l)
 {
@@ -15,8 +16,12 @@ ILight<Mode> MakeLight<int Mode>(const in StorageLight l)
 	{
 		return DirectionalLight<Mode>(l);
 	}
-	else// if(type == LightType::Spot)
+	else if(type == LightType::Spot)
 	{
 		return SpotLight<Mode>(l);
+	}
+	else// if(type == LightType::Beam)
+	{
+		return BeamLight<Mode>(l);
 	}
 }

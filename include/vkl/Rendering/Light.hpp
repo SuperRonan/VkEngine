@@ -16,9 +16,10 @@ namespace vkl
 	enum LightType
 	{
 		None = 0,
-		POINT = 1,
-		DIRECTIONAL = 2,
-		SPOT = 3,
+		Point = 1,
+		Directional = 2,
+		Spot = 3,
+		Beam = 4,
 	};
 
 	struct LightGLSL
@@ -39,17 +40,25 @@ namespace vkl
 		vec3 direction;
 		float z_near;
 
-		struct SpotLightSpecific
+		struct SpotSpecific
 		{
 			vec3 up;
 			float tan_half_fov;
 			float aspect;
 		};
 
+		struct BeamSpecific
+		{
+			vec3 up;
+			float radius;
+			float aspect;
+		};
+
 		union
 		{
 			uint32_t extra_data[16] = {};
-			SpotLightSpecific spot;
+			SpotSpecific spot;
+			BeamSpecific beam;
 		};
 
 		static LightGLSL MakePoint(vec3 position, vec3 emission);
@@ -187,22 +196,38 @@ namespace vkl
 		virtual uint32_t flags() const override;
 	};
 
-	class SpotLight : public Light
+	class SpotBeamLight : public Light
 	{
 	protected:
-
+		
 		vec3 _position;
 		vec3 _direction;
 		vec3 _up;
+		float _opening; // Spot: fov, Beam: radius
 		float _ratio;
-		float _fov;
 		uint8_t _attenuation = 0;
 		float _znear = 1e-4;
-		bool _preserve_intensity_from_fov = false;
+		bool _preserve_intensity_from_opening = false;
+		bool _is_beam = false;
 		
 	public:
 
 		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			vec3 position = vec3::Zero();
+			vec3 direction = vec3(1, 0, 0);
+			vec3 up = vec3(0, 1, 0);
+			vec3 emission = vec3::Zero();
+			float aspect_ratio = 1;
+			float opening = Radians(90.0f);
+			uint8_t attenuation = 0;
+			bool enable_shadow_map = true;
+			bool is_beam;
+		};
+
+		struct CreateSpotInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
@@ -215,9 +240,56 @@ namespace vkl
 			uint8_t attenuation = 0;
 			bool enable_shadow_map = true;
 		};
+
+		struct CreateBeamInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			vec3 position = vec3::Zero();
+			vec3 direction = vec3(1, 0, 0);
+			vec3 up = vec3(0, 1, 0);
+			vec3 emission = vec3::Zero();
+			float aspect_ratio = 1;
+			float opening = 0;
+			uint8_t attenuation = 0;
+			//bool enable_shadow_map = true;
+		};
+
 		using CI = CreateInfo;
 
-		SpotLight(CreateInfo const& ci);
+		SpotBeamLight(CreateInfo const& ci);
+
+		SpotBeamLight(CreateSpotInfo const& ci):
+			SpotBeamLight(CreateInfo{
+				.app = ci.app,
+				.name = ci.name,
+				.position = ci.position,
+				.direction = ci.direction,
+				.up = ci.up,
+				.emission = ci.emission,
+				.aspect_ratio = ci.aspect_ratio,
+				.opening = ci.fov,
+				.attenuation = ci.attenuation,
+				.enable_shadow_map = ci.enable_shadow_map,
+				.is_beam = false,
+			})
+		{}
+
+		SpotBeamLight(CreateBeamInfo const& ci) :
+			SpotBeamLight(CreateInfo{
+				.app = ci.app,
+				.name = ci.name,
+				.position = ci.position,
+				.direction = ci.direction,
+				.up = ci.up,
+				.emission = ci.emission,
+				.aspect_ratio = ci.aspect_ratio,
+				.opening = ci.opening,
+				.attenuation = ci.attenuation,
+				.enable_shadow_map = false,
+				.is_beam = true,
+			})
+		{}
 		
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
@@ -225,4 +297,7 @@ namespace vkl
 
 		virtual uint32_t flags() const override;
 	};
+
+	using SpotLight = SpotBeamLight;
+	using BeamLight = SpotBeamLight;
 }

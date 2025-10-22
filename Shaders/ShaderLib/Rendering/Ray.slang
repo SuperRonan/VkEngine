@@ -150,7 +150,18 @@ extension RayDesc
 
 struct RayPdf
 {
-	float position_pdf = 0;
-	float direction_pdf = 0;
-	__init() {}
+	float position_pdf;
+	float direction_pdf;
+	
+	__init()
+	{
+		position_pdf = 0;
+		direction_pdf = 0;
+	}
+
+	__init(float position, float direction)
+	{
+		position_pdf = position;
+		direction_pdf = direction;
+	}
 };

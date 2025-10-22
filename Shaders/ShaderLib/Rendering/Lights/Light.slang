@@ -19,6 +19,7 @@ enum LightType
 	Point = LIGHT_TYPE_POINT,
 	Directional = LIGHT_TYPE_DIRECTIONAL,
 	Spot = LIGHT_TYPE_SPOT,
+	Beam = LIGHT_TYPE_BEAM,
 	EnvMap,
 };
 
@@ -59,6 +60,11 @@ struct StorageLight
 		return bit_cast<float>(extra_params[3]);
 	}
 
+	float getBeamRadius()
+	{
+		return bit_cast<float>(extra_params[3]);
+	}
+
 	float getAspect()
 	{
 		return bit_cast<float>(extra_params[4]);
@@ -85,7 +91,7 @@ struct Light
 		
 		Spectrumf<Mode> intensity;
 		PackedEnumIndex<Flags, 8, u32> flags_index;
-		float pdf;
+		float pdf = 0;
 
 		vec3 direction;
 
@@ -130,6 +136,40 @@ struct Light
 			set {flags_index.index = newValue;}
 		}
 	};
+
+	static float EvaluateAttenuation(uint flags, vec2 cp)
+	{
+		float res = 1;
+		const uint attenuation_flags = flags & LIGHT_FLAG_ATTENUATION_MASK;
+		if((attenuation_flags) != 0)
+		{
+			if(attenuation_flags == LIGHT_FLAG_ATTENUATION_INSIDE)
+			{
+				if(Length2(cp) > 1.0f)
+				{
+					res = 0;
+				}
+			}
+			else
+			{
+				float dist_to_center = 0;
+				if(attenuation_flags == LIGHT_FLAG_ATTENUATION_LINEAR)
+				{
+					dist_to_center = length(cp);
+				}
+				else if(attenuation_flags == LIGHT_FLAG_ATTENUATION_QUADRATIC)
+				{
+					dist_to_center = Length2(cp);
+				}
+				else if(attenuation_flags == LIGHT_FLAG_ATTENUATION_INSIDE)
+				{
+					dist_to_center = sqrt(length(cp));
+				}
+				res = max(1.0 - dist_to_center, 0);
+			}
+		}
+		return res;
+	}
 };
 
 interface ILight<int Mode>

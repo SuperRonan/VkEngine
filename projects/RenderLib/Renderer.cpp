@@ -947,11 +947,11 @@ namespace vkl
 							if (!my_lid->framebuffer)
 							{
 								std::shared_ptr<RenderPass> render_pass;
-								if (light->type() == LightType::POINT)
+								if (light->type() == LightType::Point)
 								{
 									render_pass = _render_point_light_depth->renderPass();
 								}
-								else if (light->type() == LightType::SPOT)
+								else if (light->type() == LightType::Spot)
 								{
 									render_pass = _render_spot_light_depth->renderPass();
 								}
@@ -1117,11 +1117,11 @@ namespace vkl
 
 						exec.beginRenderPass(render_pass);
 
-						if (light->type() == LightType::SPOT)
+						if (light->type() == LightType::Spot)
 						{
 							exec(_render_spot_light_depth->with(my_draw_list));
 						}
-						else if (light->type() == LightType::POINT)
+						else if (light->type() == LightType::Point)
 						{
 							exec(_render_point_light_depth->with(my_draw_list));
 						}

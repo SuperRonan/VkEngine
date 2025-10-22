@@ -115,7 +115,7 @@ namespace vkl
 			.matrix = ci.xform,
 		});
 
-		if (ci.type == LightType::POINT)
+		if (ci.type == LightType::Point)
 		{
 			res->light() = std::make_shared<PointLight>(PointLight::CI{
 				.app = ci.app,
@@ -124,7 +124,7 @@ namespace vkl
 				.enable_shadow_map = ci.enable_shadow_map,
 			});
 		}
-		else if (ci.type == LightType::DIRECTIONAL)
+		else if (ci.type == LightType::Directional)
 		{
 			res->light() = std::make_shared<DirectionalLight>(DirectionalLight::CI{
 				.app = ci.app,
@@ -133,13 +133,21 @@ namespace vkl
 				.emission = ci.emission,
 			});
 		}
-		else if (ci.type == LightType::SPOT)
+		else if (ci.type == LightType::Spot)
 		{
-			res->light() = std::make_shared<SpotLight>(SpotLight::CI{
+			res->light() = std::make_shared<SpotBeamLight>(SpotBeamLight::CreateSpotInfo{
 				.app = ci.app,
 				.name = ci.name,
 				.emission = ci.emission,
 				.enable_shadow_map = ci.enable_shadow_map,
+			});
+		}
+		else if (ci.type == LightType::Beam)
+		{
+			res->light() = std::make_shared<SpotBeamLight>(SpotBeamLight::CreateBeamInfo{
+				.app = ci.app,
+				.name = ci.name,
+				.emission = ci.emission,
 			});
 		}
 		return res;
