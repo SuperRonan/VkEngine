@@ -289,7 +289,7 @@ namespace vkl
 	{
 		SDL_DialogFileCallback cb = [](void* p_user_data, const char* const* file_list, int filter)
 		{
-			auto* that = static_cast<CreateNodePopUp*>(p_user_data);;
+			auto* that = static_cast<CreateNodePopUp*>(p_user_data);
 
 			if (file_list && *file_list && filter == 0)
 			{

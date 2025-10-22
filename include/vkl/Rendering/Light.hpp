@@ -64,7 +64,7 @@ namespace vkl
 	public:
 		static constexpr uint32_t shadowMapBitIndex()
 		{
-			return 8;	
+			return 8;
 		}
 
 		enum class ShadowBiasMode
