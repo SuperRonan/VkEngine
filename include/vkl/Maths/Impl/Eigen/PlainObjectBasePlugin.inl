@@ -33,21 +33,28 @@ static constexpr void InitFromOther(
 		}
 	}
 
-	// Size of the square block top left 
-	constexpr const uint SRC_square_N = std::min(SRC_R, SRC_C);
-	constexpr const uint DST_square_N = std::min(DST_R, DST_C);
-
-	// Fill the remaining diagonal
-	if constexpr (DST_square_N > SRC_square_N)
+	if constexpr (IsVectorAtCompileTime && SrcDerived::IsVectorAtCompileTime && SizeAtCompileTime == (SrcDerived::SizeAtCompileTime + 1))
 	{
-		//src.topLeftCorner(std::min(DST_R, SRC_R), std::min(DST_C, SRC_C))
-		constexpr const uint N = DST_square_N - SRC_square_N;
-		constexpr const uint O = SRC_square_N;
-		for (uint i = 0; i < N; ++i)
+		dst[SizeAtCompileTime - 1] = diag;
+	}
+	else
+	{
+		// Size of the square block top left 
+		constexpr const uint SRC_square_N = std::min(SRC_R, SRC_C);
+		constexpr const uint DST_square_N = std::min(DST_R, DST_C);
+		// Fill the remaining diagonal
+		if constexpr (DST_square_N > SRC_square_N)
 		{
-			dst.coeffRef(O + i, O + i) = diag;
+			//src.topLeftCorner(std::min(DST_R, SRC_R), std::min(DST_C, SRC_C))
+			constexpr const uint N = DST_square_N - SRC_square_N;
+			constexpr const uint O = SRC_square_N;
+			for (uint i = 0; i < N; ++i)
+			{
+				dst.coeffRef(O + i, O + i) = diag;
+			}
 		}
 	}
+	
 }
 
 template <
@@ -60,22 +67,27 @@ template <
 	(std::convertible_to<typename OtherMatrix::Scalar, Scalar>)
 EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE constexpr void _init2(OtherMatrix const& other, T1 const& converter)
 {
-	InitFromOther(this->derived(), other.derived(), Scalar(1), converter);
+	InitFromOther(this->derived(), other.derived(), Scalar(IsVectorAtCompileTime ? 0 : 1), converter);
 }
 
+// vec3 v = vec3(some_vec2, z)
+// mat3 m = mat3(some_mat2, m22)
 template <
 	class T0,
 	class T1,
 	vkl::concepts::CompileTimeSizedMatrixCompatible OtherMatrix
 >
-	requires std::convertible_to<T1, Scalar> && 
-	((OtherMatrix::RowsAtCompileTime != RowsAtCompileTime) || (OtherMatrix::ColsAtCompileTime != ColsAtCompileTime)) &&
+	requires std::convertible_to<T1, Scalar> && (
+		((OtherMatrix::RowsAtCompileTime != RowsAtCompileTime) || (OtherMatrix::ColsAtCompileTime != ColsAtCompileTime)) ||
+		((IsVectorAtCompileTime && OtherMatrix::IsVectorAtCompileTime) && (SizeAtCompileTime == (OtherMatrix::SizeAtCompileTime + 1)))
+	) &&
 	(std::convertible_to<typename OtherMatrix::Scalar, Scalar>)
 EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE constexpr void _init2(OtherMatrix const& other, T1 const& diag)
 {
 	InitFromOther(this->derived(), other.derived(), diag, ::vkl::DefaultStaticCastConverter<Scalar, typename OtherMatrix::Scalar>{});
 }
 
+// mat3 m = mat3(some_mat2)
 template <
 	class T,
 	vkl::concepts::CompileTimeSizedMatrixCompatible OtherMatrix
