@@ -19,6 +19,7 @@ void main(uint3 gid : SV_DispatchThreadID)
 	typealias Spectrum = SingleSpectrumf;
 	uint2 dims;
 	target.GetDimensions(dims.x, dims.y);
+	RNG_t rng = RNG_t(Hash(gid));	
 
 	float x = (float(gid.x) + 0.5) / float(dims.x);
 	Spectrum::Init(x);
@@ -33,6 +34,24 @@ void main(uint3 gid : SV_DispatchThreadID)
 	{
 		// Show spectrum
 		res = spec.toRGBf();
+		if(gid.y > (3 * dims.y) / 16)
+		{
+			// Test spectrum -> rgb -> spectrum -> rgb
+			vec3 src_rbg = res;
+			res = vec3::Zero();
+			const uint samples = 16;
+			for(uint i = 0; i < samples; ++i)
+			{
+				SampledSpectrumf<4>::Init(rng.generate<float>());
+				int method = 0;
+				if(gid.y > (7 * dims.y) / 32)
+				{
+					method = 1;
+				}
+				res += SampledSpectrumf<4>::MakeFromRGB(src_rbg, RGBSourceType::Illuminant, method).toRGBf();
+			}
+			res /= float(samples);
+		}
 	}
 	else if(gid.y < dims.y / 2)
 	{
@@ -40,7 +59,6 @@ void main(uint3 gid : SV_DispatchThreadID)
 		// false Check color temperature
 		bool mode = gid.y < (dims.y * 3) / 8;
 		const uint samples = 4;
-		RNG_t rng = RNG_t(Hash(gid));
 		for(uint i = 0; i < samples; ++i)
 		{
 			typealias Spec = SampledSpectrumf<4>;

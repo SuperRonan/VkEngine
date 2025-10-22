@@ -189,7 +189,7 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 	}
 
 	__generic<Float : __BuiltinFloatingPointType>
-	static This MakeFromRGB(const in Vector3<Float> rgb, RGBSourceType from_type)
+	static This MakeFromRGB(const in Vector3<Float> rgb, RGBSourceType from_type, int method)
 	{
 		if(IsRGB)
 		{
@@ -202,14 +202,23 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		else
 		{
 			This res = This::Zero();
+			const float scale = from_type == RGBSourceType::Reflectance ? 1 : 3;
 			// TODO this correctly
 			for(int i = 0; i < Samples; ++i)
 			{
-				uint channel = 2 - uint(GetChannelWaveLength(i) * 3);
-				res[i] += ConvertBuiltInTo<Scalar>(rgb[channel]);
+				// This not as bad an approximation as it looks
+				uint channel = 0;
+				channel = 2 - uint(GetChannelWaveLength(i) * 3);
+				res[i] += ConvertBuiltInTo<Scalar>(rgb[channel]).scale(scale);
 			}
 			return res;
 		}
+	}
+
+	__generic<Float : __BuiltinFloatingPointType>
+	static This MakeFromRGB(const in Vector3<Float> rgb, RGBSourceType from_type)
+	{
+		return MakeFromRGB(rgb, from_type, 0);
 	}
 
 	// __generic<Float : __BuiltinFloatingPointType>
