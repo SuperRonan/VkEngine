@@ -390,8 +390,12 @@ struct PhysicalyBasedMaterial<int Mode> : IMaterial<Mode>
 
 		if(reflect)
 		{
+			// There is small approximation here when spectral rendering is used
+			// The decision to reflect depends on the incidence angle, and the ior,
+			// But the ior depends on the wavelength / channel.
+			// To be 100% correct, we should sum the probability of choosing the reflection for each channel / wavelength * the probability of choosing the channel
 			res.direction = reflected;
-			res.bsdf *= refl_fresnel;
+			res.bsdf = SpectruM::One() * refl_fresnel;
 			res.pdf = refl_fresnel;
 			res.Jdirection = ReflectionDifferentials(wo, normal, Jwo, Jnormal);
 
