@@ -302,6 +302,8 @@ namespace vkl
 			}
 		}
 		compressIndices();
+
+		_aabb += other._aabb;
 	}
 
 	RigidMesh& RigidMesh::operator+=(RigidMesh const& other) noexcept
@@ -429,7 +431,7 @@ namespace vkl
 
 		for (Vertex& v : _host.vertices)
 		{
-			v.normal = vec4(0);
+			v.normal = vec4::Zero();
 		}
 
 		for (size_t i = 0; i < N; i += 3)
@@ -947,6 +949,61 @@ namespace vkl
 		return res;
 	}
 
+	std::shared_ptr<RigidMesh> RigidMesh::MakeDisk(Disk3DMakeInfo const& dmi)
+	{
+		std::vector<Vertex> vertices(dmi.divisions + (dmi.radial ? 1 : 0));
+		std::vector<uint> indices;
+
+		const Vector4f normal = Vector4f(0, 0, dmi.normal_sign ? -1 : 1, 0);
+
+		for (uint i = 0; i < dmi.divisions; ++i)
+		{
+			const float theta = (float(i) / float(dmi.divisions) + dmi.angle_shift) * std::numbers::pi_v<float> * 2.0f;
+			float x = dmi.radius * cos(theta);
+			float y = dmi.radius * sin(theta);
+			vertices[i].position = (dmi.center + Vector3f(x, y, 0)).homogeneous();
+			vertices[i].normal = normal;
+			Vector2f uv = (0.5 * Vector2f(x, y) + Vector2f({ 0.5, 0.5f })) + dmi.base_uv * dmi.range_uv;
+			vertices[i].uv = Vector4f(uv.x(), uv.y(), 0, 0);
+		}
+
+		int compute_normals = 0;
+		bool auto_compute_tangents = true;
+
+		if (dmi.radial)
+		{
+			indices.resize(dmi.divisions * 3);
+			vertices.back() = Vertex{
+				.position = dmi.center.homogeneous().eval(),
+				.normal = normal,
+				.uv = Vector4f(dmi.base_uv + 0.5f * dmi.range_uv),
+			};
+			for (uint i = 0; i < dmi.divisions; ++i)
+			{
+				indices[3 * i + 0] = vertices.size() - 1,
+				indices[3 * i + 1] = i;
+				indices[3 * i + 2] = (i + 1) % dmi.divisions;
+			}
+		}
+		else
+		{
+			NOT_YET_IMPLEMENTED;
+		}
+
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(RigidMesh::CreateInfo{
+			.app = dmi.app,
+			.name = dmi.name,
+			.dims = 3,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.compute_normals = compute_normals,
+			.auto_compute_tangents = auto_compute_tangents,
+			.create_device_buffer = true,
+		});
+
+		return res;
+	}
+
 	std::shared_ptr<RigidMesh> RigidMesh::MakeCube(CubeMakeInfo const& cmi)
 	{
 		using Float = float;
@@ -1320,6 +1377,7 @@ namespace vkl
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
+		NOT_YET_IMPLEMENTED;
 
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
 			.app = pmi.app,
@@ -1337,6 +1395,7 @@ namespace vkl
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
+		NOT_YET_IMPLEMENTED;
 
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
 			.app = pmi.app,
@@ -1345,6 +1404,106 @@ namespace vkl
 			.indices = std::move(indices),
 			.auto_compute_tangents = true,
 		});
+		return res;
+	}
+
+	std::shared_ptr<RigidMesh> RigidMesh::MakeCylinder(CylinderMakeInfo const& cmi)
+	{
+		std::vector<Vertex> vertices;
+		std::vector<uint> indices;
+
+		float v = 1;
+		if (cmi.up_disk || cmi.down_disk)
+		{
+			v = 0.5;
+		}
+
+		if (cmi.phase_shift)
+		{
+			NOT_YET_IMPLEMENTED;
+		}
+		else
+		{
+			vertices.resize(2 * cmi.divisions + 2);
+			indices.resize(6 * cmi.divisions);
+			auto addDivision = [&](uint index, float theta, float u)
+			{
+				Vector2f n2 = Vector2f(cos(theta), sin(theta));
+				Vector2f on_disk = cmi.radius * n2;
+				Vector3f normal = Vector3f(n2, 0);
+				Vector3f top = cmi.center + Vector3f(on_disk, 0.5f * cmi.height);
+				Vector3f bottom = cmi.center + Vector3f(on_disk, -0.5f * cmi.height);
+
+				vertices[2 * index + 0] = Vertex{
+					.position = Vector4f(top),
+					.normal = Vector4f(normal),
+					.uv = Vector4f(u, 0, 0, 0),
+				};
+
+				vertices[2 * index + 1] = Vertex{
+					.position = Vector4f(bottom),
+					.normal = Vector4f(normal),
+					.uv = Vector4f(u, v, 0, 0),
+				};
+			};
+			for (uint i = 0; i < cmi.divisions; ++i)
+			{
+				float u = float(i) / float(cmi.divisions);
+				float theta = u * std::numbers::pi_v<float> * 2.0f;
+				addDivision(i, theta, u);
+
+				indices[6 * i + 0] = 2 * i + 0;
+				indices[6 * i + 1] = 2 * i + 1;
+				indices[6 * i + 2] = 2 * i + 2;
+
+				indices[6 * i + 3] = 2 * i + 3;
+				indices[6 * i + 4] = 2 * i + 2;
+				indices[6 * i + 5] = 2 * i + 1;
+			}
+			// Close the ring
+			addDivision(cmi.divisions, 0, 1);
+		}
+
+		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(RigidMesh::CreateInfo{
+			.app = cmi.app,
+			.name = cmi.name,
+			.dims = 3,
+			.vertices = std::move(vertices),
+			.indices = std::move(indices),
+			.compute_normals = cmi.face_normals ? 2 : 0,
+			.auto_compute_tangents = true,
+			.create_device_buffer = false,
+		});
+
+		if (cmi.up_disk)
+		{
+			auto up_disk = MakeDisk(Disk3DMakeInfo{
+				.app = cmi.app,
+				.name = std::format("{}.UpDisk", cmi.name),
+				.center = cmi.center + Vector3f::UnitZ() * 0.5f * cmi.height,
+				.divisions = cmi.divisions,
+				.radial = cmi.disk_radial,
+				.base_uv = Vector2f(0, v),
+				.range_uv = Vector2f(cmi.down_disk ? 0.5 : 1, 1 - v),
+			});
+			res->merge(*up_disk);
+		}
+		if (cmi.down_disk)
+		{
+			auto down_disk = MakeDisk(Disk3DMakeInfo{
+				.app = cmi.app,
+				.name = std::format("{}.DownDisk", cmi.name),
+				.center = cmi.center - Vector3f::UnitZ() * 0.5f * cmi.height,
+				.divisions = cmi.divisions,
+				.radial = cmi.disk_radial,
+				.normal_sign = true,
+				.base_uv = Vector2f(cmi.up_disk ? 0.5 : 0, v),
+				.range_uv = Vector2f(cmi.up_disk ? 0.5 : 1, 1 - v),
+			});
+			down_disk->flipFaces();
+			res->merge(*down_disk);
+		}
+		res->createDeviceBuffer({});
 		return res;
 	}
 
@@ -1359,6 +1518,17 @@ namespace vkl
 				.name = info.name,
 				.center = info.center,
 				.wireframe = false,
+			});
+		}
+		else if (info.type == RigidMeshMakeInfo::Type::Disk)
+		{
+			res = MakeDisk(Disk3DMakeInfo{
+				.app = info.app,
+				.name = info.name,
+				.center = info.center,
+				.divisions = info.subdivisions.x(),
+				.radius = info.sizes.x(),
+				.radial = true,
 			});
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Cube)
@@ -1391,6 +1561,21 @@ namespace vkl
 				.center = info.center,
 				.radius = info.sizes.x(),
 				.face_normal = info.face_normal,
+			});
+		}
+		else if (info.type == RigidMeshMakeInfo::Type::Cylinder)
+		{
+			res = MakeCylinder(CylinderMakeInfo{
+				.app = info.app,
+				.name = info.name,
+				.center = info.center,
+				.radius = info.sizes.x(),
+				.height = info.sizes.y(),
+				.divisions = info.subdivisions.x(),
+				.up_disk = true,
+				.down_disk = true,
+				.face_normals = info.face_normal && false,
+				.disk_radial = true,
 			});
 		}
 		return res;

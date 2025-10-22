@@ -310,18 +310,12 @@ namespace vkl
 		.name = "Mesh Type",
 		.mode = ImGuiListSelection::Mode::Dropdown,
 		.options = {
-			ImGuiListSelection::Option{
-				.name = "Square",
+#define REGISTER_OPTION(Name) \
+			ImGuiListSelection::Option{ \
+				.name = #Name, \
 			},
-			ImGuiListSelection::Option{
-				.name = "Cube",
-			},
-			ImGuiListSelection::Option{
-				.name = "Sphere",
-			},
-			ImGuiListSelection::Option{
-				.name = "Tetrahedron",
-			},
+ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
+#undef REGISTER_OPTION
 		},
 	};
 
@@ -412,7 +406,8 @@ namespace vkl
 					{
 						_sub_type = static_cast<uint>(index);
 					}
-					if (static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type) == RigidMesh::RigidMeshMakeInfo::Type::Sphere)
+					if (static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type) == RigidMesh::RigidMeshMakeInfo::Type::Sphere ||
+						static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type) == RigidMesh::RigidMeshMakeInfo::Type::Cylinder)
 					{
 						ImGui::InputInt2("Subdivisions", (int*)_subdivisions.data());
 					}

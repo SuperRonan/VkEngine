@@ -448,6 +448,23 @@ namespace vkl
 		};
 		static std::shared_ptr<RigidMesh> MakeSquare(Square3DMakeInfo const& smi);
 
+		struct Disk3DMakeInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Vector3 center = Vector3::Zero();
+			uint divisions = 3;
+			float radius = 1;
+			float angle_shift = 0;
+			bool radial = false;
+			bool wireframe = false;
+			bool normal_sign = false;
+			Vector2f base_uv = Vector2f::Zero();
+			Vector2f range_uv = Vector2f::Ones();
+		};
+
+		static std::shared_ptr<RigidMesh> MakeDisk(Disk3DMakeInfo const& dmi);
+
 		struct CubeMakeInfo
 		{
 			VkApplication * app = nullptr;
@@ -490,14 +507,35 @@ namespace vkl
 		static std::shared_ptr<RigidMesh> MakeIcosahedron(PlatonMakeInfo const& pmi);
 		static std::shared_ptr<RigidMesh> MakeDodecahedron(PlatonMakeInfo const& pmi);
 
+		struct CylinderMakeInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Vector3 center = Vector3::Zero();
+			float radius = 1;
+			float height = 1;
+			uint divisions = 3;
+
+			bool phase_shift = false;
+			bool up_disk = false;
+			bool down_disk = false;
+			bool face_normals = false;
+			bool disk_radial = false;
+		};
+		static std::shared_ptr<RigidMesh> MakeCylinder(CylinderMakeInfo const& cmi);
+
 		struct RigidMeshMakeInfo
 		{
 			enum class Type
 			{
-				Square = 0,
-				Cube = 1,
-				Sphere = 2,
-				Tetrahedron = 3,
+#define ITERATE_OVER_RIGID_MESH_MAKE_TYPE(X) \
+				X(Square) \
+				X(Disk) \
+				X(Cube) \
+				X(Sphere) \
+				X(Tetrahedron) \
+				X(Cylinder)
+ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_ENUM_VALUE_1)
 			};
 			VkApplication* app = nullptr;
 			std::string name = {};
