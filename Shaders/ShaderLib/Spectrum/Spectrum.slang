@@ -54,6 +54,7 @@ enum RGBSourceType
 	Reflectance,
 	Illuminant,
 };
+typealias XYZSourceType = RGBSourceType;
 
 #define AUTODIFF
 
@@ -126,7 +127,7 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		else
 		{
 			// GoodEnough RGB approx
-			return 1.0f - float(i + 1) / float(Samples);
+			return 1.0f - float(i + 1) / float(Samples + 1);
 		}
 	}
 
@@ -197,7 +198,7 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		}
 		else if(IsXYZ)
 		{
-			return (Spectrum<Scalar, SPECTRUM_MODE_XYZ>(GetRGBToXYZConversionMatrix<Float>() * rgb) as This).value;
+			return MakeFromXYZ(GetRGBToXYZConversionMatrix<Float>() * rgb, from_type);
 		}
 		else
 		{
@@ -221,11 +222,18 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		return MakeFromRGB(rgb, from_type, 0);
 	}
 
-	// __generic<Float : __BuiltinFloatingPointType>
-	// static This MakeFromXYZ(const in Vector3<Float> xyz)
-	// {
-
-	// }
+	__generic<Float : __BuiltinFloatingPointType>
+	static This MakeFromXYZ(const in Vector3<Float> xyz, XYZSourceType from_type)
+	{
+		if(IsXYZ)
+		{
+			return (Spectrum<Scalar, SPECTRUM_MODE_XYZ>(xyz) as This).value;
+		}
+		else
+		{
+			return MakeFromRGB(GetXYZToRGBConversionMatrix<Float>() * xyz, from_type);
+		}
+	}
 
 	// 	float energy()
 	// {
