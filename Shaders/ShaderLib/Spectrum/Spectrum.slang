@@ -4,6 +4,8 @@
 #include <ShaderLib/ColorSpace.slang>
 #include "SpectrumWaveLength.slang"
 
+#include <ShaderLib/Maths/Lerp.slang>
+
 // Could be moved to a common helper header
 #define FOREACH_ARITHMETIC_OP(X) \
 	X(add, +) \
@@ -467,17 +469,45 @@ extension XYZSpectrum<Scalar>
 #undef XYZ_SPECTRUM_DECLARE_CHANNEL_PROP
 }
 
+namespace impl
+{
+	Spectrumf<Mode> EvalSpectrumAtTemperature<int Mode>(float temperature, bool normalize=false)
+	{
+		Spectrumf<Mode> res;
+		let norm = EvalBlackBodyTotalSpectralRadiance(temperature);
+		for(uint i = 0; i < res::Samples; ++i)
+		{
+			res[i] = EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(res.GetChannelWaveLength(i)), temperature);
+			if(normalize)
+			{
+				res[i] /= norm;
+			}
+		}
+		return res;
+	}
+}
+
 SampledSpectrumf<N> SampleSpectrumFromTemperature<int N>(float temperature, bool normalize=false)
 {
-	SampledSpectrumf<N> res;
-	let norm = EvalBlackBodyTotalSpectralRadiance(temperature);
-	for(uint i = 0; i < N; ++i)
+	return impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_SAMPLED(N)>(temperature, normalize);
+}
+
+Spectrumf<Mode> SpectrumFromTemperature<int Mode>(float temperature, bool normalize=false)
+{
+	typealias SpectruM = Spectrumf<Mode>;
+	SpectruM res;
+	if(SpectruM::IsSampled)
 	{
-		res[i] = EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(res.GetChannelWaveLength(i)), temperature);
-		if(normalize)
-		{
-			res[i] /= norm;
-		}
+		res = (SampleSpectrumFromTemperature<Mode>(temperature, normalize) as SpectruM).value;
 	}
+	else if(SpectruM::IsRGB)
+	{
+		res = (impl::EvalSpectrumAtTemperature<Mode>(temperature, normalize) as SpectruM).value * 3.0f;
+	}
+	else if(SpectruM::IsXYZ)
+	{
+		res = SpectruM::MakeFromXYZ((impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_RGB>(temperature, normalize) * 3.0f).toXYZf(), XYZSourceType::Illuminant);
+	}
+	
 	return res;
 }

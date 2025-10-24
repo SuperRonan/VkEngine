@@ -89,6 +89,7 @@ namespace vkl
 
 		LightType _type;
 		vec3 _emission;
+		bool _black_body_emission = false;
 		bool _enable_shadow_map;
 		ShadowBiasMode _shadow_bias_mode = ShadowBiasMode::FloatMult;
 		bool _shadow_bias_include_cos_theta = true;
@@ -120,6 +121,8 @@ namespace vkl
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const = 0;
 
 		virtual void declareGui(GuiContext & ctx);
+
+		static bool DeclareEmission(vec3& emission, bool& black_body);
 
 		bool enableShadowMap()const
 		{

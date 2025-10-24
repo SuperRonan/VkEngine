@@ -390,7 +390,8 @@ namespace vkl
 			uint32_t num_materials;
 
 			uint32_t num_textures;
-			
+			uint32_t flags;
+
 			ubo_vec3 ambient;
 			
 			ubo_vec3 sky;
@@ -398,7 +399,7 @@ namespace vkl
 			ubo_vec3 solar_direction;
 			float solar_disk_cosine;
 
-			ubo_vec3 solar_disk_intensity;
+			ubo_vec3 solar_disk_emission;
 			float solar_disk_angle;
 			
 			ubo_vec3 center;
@@ -413,8 +414,8 @@ namespace vkl
 
 		vec2 _solar_disk_direction = vec2(0, 0);
 		float _solar_disk_angle = Radians(0.5f); // Same as the sun viewed from earth
-		vec3 _solar_disk_intensity = vec3::Zero();
-		float _solar_disk_intensity_mult = 1;
+		bool _solar_black_body = false;
+		vec3 _solar_disk_emission = vec3::Zero();
 
 		float _radius = 1;
 
@@ -531,14 +532,24 @@ namespace vkl
 			return _ambient;
 		}
 
-		void setEnvironment(vec3 intensity, vec2 solar_direction, float solar_angle, vec3 solar_intensity)
+		void setEnvironment(vec3 intensity, vec2 solar_direction, float solar_angle, vec3 solar_emission)
 		{
 			_uniform_sky = intensity;
 			_uniform_sky_brightness = 1;
 			_solar_disk_direction = solar_direction;
 			_solar_disk_angle = solar_angle;
-			_solar_disk_intensity = solar_intensity;
-			_solar_disk_intensity_mult = 1;
+			_solar_disk_emission = solar_emission;
+			_solar_black_body = false;
+		}
+
+		void setEnvironment(vec3 intensity, vec2 solar_direction, float solar_angle, float solar_temperature, float solar_intensity)
+		{
+			_uniform_sky = intensity;
+			_uniform_sky_brightness = 1;
+			_solar_disk_direction = solar_direction;
+			_solar_disk_angle = solar_angle;
+			_solar_disk_emission = vec3(solar_temperature, solar_intensity, 0);
+			_solar_black_body = true;
 		}
 
 		friend class SceneUserInterface;

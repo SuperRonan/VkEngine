@@ -1,0 +1,4 @@
+#pragma once
+
+#define SCENE_FLAG_SOLAR_BLACK_BODY_EMISSION_BIT 0x1
+

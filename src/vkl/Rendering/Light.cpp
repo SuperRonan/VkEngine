@@ -4,6 +4,8 @@
 
 #include <vkl/Maths/View.hpp>
 
+#include <ShaderLib/Rendering/Lights/Definitions.h>
+
 namespace vkl
 {
 	LightGLSL LightGLSL::MakePoint(vec3 position, vec3 emission)
@@ -61,6 +63,66 @@ namespace vkl
 		{
 			res |= (1 << (shadowMapBitIndex() + 3));
 		}
+		if (_black_body_emission)
+		{
+			res |= LIGHT_BLACK_BODY_EMISSION_BIT_FLAG;
+		}
+		return res;
+	}
+
+	bool Light::DeclareEmission(vec3& emission, bool& black_body)
+	{
+		bool res = false;
+		if (ImGui::Checkbox("Black Body Emission", &black_body))
+		{
+			if (black_body)
+			{
+				emission.x() = 5500;
+				emission.y() = 1;
+			}
+			else
+			{
+				emission = vec3::Ones();
+			}
+			res |= true;
+		}
+		if (black_body)
+		{
+			res |= ImGui::SliderFloat("Temperature", &emission.x(), 1e3, 1e4, "%.0fK", ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::PushID(1);
+			res |= ImGui::SliderFloat("Intensity", &emission.y(), 1e-2, 1e2, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::PopID();
+		}
+		else
+		{
+			if (ImGui::Button("Snap to Gray average"))
+			{
+				float f = Average(emission);
+				emission = vec3::Constant(f);
+				res |= true;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Snap to Gray luminance"))
+			{
+				vec3 w(0.2126, 0.7152, 0.0722);
+				float f = Dot(w, emission);
+				emission = vec3::Constant(f);
+				res |= true;
+			}
+			float intensity = Average(emission);
+			float old_intensity = intensity;
+			ImGui::PushID(0);
+			bool changed = ImGui::SliderFloat("Intensity", &intensity, 0, 50, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::PopID();
+
+			if (changed && old_intensity > 0.0f)
+			{
+				emission *= (intensity / old_intensity);
+				res |= true;
+			}
+
+			res |= ImGui::ColorEdit3("Emission", emission.data(), ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs);
+		}
 		return res;
 	}
 
@@ -71,30 +133,8 @@ namespace vkl
 		ImGui::Text("Name: ");
 		ImGui::SameLine();
 		ImGui::Text(name().c_str());
-
-		if (ImGui::Button("Snap to Gray average"))
-		{
-			float f = Average(_emission);
-			_emission = vec3::Constant(f);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Snap to Gray luminance"))
-		{
-			vec3 w(0.2126, 0.7152, 0.0722);
-			float f = Dot(w, _emission);
-			_emission = vec3::Constant(f);
-		}
-
-		float intensity = Average(_emission);
-		float old_intensity = intensity;
-		bool changed = ImGui::SliderFloat("Intensity", &intensity, 0, 50, "%.3f", ImGuiSliderFlags_Logarithmic);
-
-		if (changed && old_intensity > 0.0f)
-		{
-			_emission *= (intensity / old_intensity);
-		}
 		
-		ImGui::ColorEdit3("Emission", _emission.data(), ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs);
+		DeclareEmission(_emission, _black_body_emission);
 
 		static thread_local ImGuiListSelection gui_shadow_bias_mode = ImGuiListSelection::CI{
 			.name = "Shadow Bias Mode",
@@ -271,7 +311,15 @@ namespace vkl
 		auto NotZero = [](float f){return f != 0.0f ? f : 1;};
 		if (_preserve_intensity_from_opening)
 		{
-			res.emission *= 1.0 / std::max(sqr(NotZero(_opening)) * NotZero(_ratio), std::numeric_limits<float>::epsilon());
+			float norm = rcp(std::max(sqr(NotZero(_opening)) * NotZero(_ratio), std::numeric_limits<float>::epsilon()));
+			if (_black_body_emission)
+			{
+				res.emission.y() *= norm;
+			}
+			else
+			{
+				res.emission *= norm;
+			}
 		}
 		res.flags = SpotBeamLight::flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);

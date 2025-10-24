@@ -78,7 +78,7 @@ struct SpotLight<int Mode> : ILight<Mode>
 
 	Spectrumf<Mode> getSpectralEmission()
 	{
-		return Spectrumf<Mode>::MakeFromRGB(emission, RGBSourceType::Illuminant);
+		return Light::GetSpectralEmission<Mode>(emission, flags);
 	}
 
 	

@@ -15,6 +15,7 @@
 #endif
 
 #include "SceneDefinitions.h"
+#include "SceneFlags.h"
 
 interface IScene
 {
@@ -71,6 +72,7 @@ struct Scene
 		uint num_materials;
 
 		uint num_textures;
+		uint flags;
 
 		vec3 ambient;
 
@@ -79,7 +81,7 @@ struct Scene
 		vec3 solar_direction;
 		float solar_disk_cosine;
 
-		vec3 solar_disk_intensity;
+		vec3 solar_disk_emission;
 		float solar_disk_radius;
 
 		vec3 center;
@@ -338,8 +340,8 @@ SkyLight<Mode> getSkyLight<int Mode>()
 
 	// TODO compute atmosphere
 	res.uniform_emission = Spectrumf<Mode>::MakeFromRGB(ubo.sky, RGBSourceType::Illuminant);
-	// TODO black body spectral emission
-	res.solar_disk_emission = Spectrumf<Mode>::MakeFromRGB(ubo.solar_disk_intensity, RGBSourceType::Illuminant);
+	
+	res.solar_disk_emission = Light::GetSpectralEmission<Mode>(ubo.solar_disk_emission, (ubo.flags & SCENE_FLAG_SOLAR_BLACK_BODY_EMISSION_BIT) != 0);
 	res.solar_disk_angle = ubo.solar_disk_radius;
 	
 	res.solar_disk_direction = ubo.solar_direction;
@@ -353,7 +355,20 @@ static constexpr const uint LightIndexBits = 24;
 bool sampleEnv()
 {
 	let ubo = getUBO();
-	return NonZero(ubo.sky + ubo.solar_disk_intensity);
+	bool res = NonZero(ubo.sky);
+	if(!res)
+	{
+		if((ubo.flags & SCENE_FLAG_SOLAR_BLACK_BODY_EMISSION_BIT) == 0)
+		{
+			res |= NonZero(ubo.solar_disk_emission);
+		}
+		else
+		{
+			float intensity = ubo.solar_disk_emission.y;
+			res |= intensity != 0.0f;
+		}
+	}
+	return res;
 }
 
 void spawnRayAtInfinity<RNG : IRNG>(inout RNG rng, inout Ray3f ray, inout float pdf)

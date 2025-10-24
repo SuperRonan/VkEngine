@@ -42,7 +42,7 @@ struct DirectionalLight<int Mode> : ILight<Mode>
 
 	Spectrumf<Mode> getSpectralEmission<int Mode>()
 	{
-		return Spectrumf<Mode>::MakeFromRGB(emission, RGBSourceType::Illuminant);
+		return Light::GetSpectralEmission<Mode>(emission, flags);
 	}
 
 	Light::ConnectionSample<Mode> sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)

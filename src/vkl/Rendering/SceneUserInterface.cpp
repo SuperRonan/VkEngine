@@ -6,6 +6,8 @@
 
 #include <vkl/IO/ImGuiUtils.hpp>
 
+#include <ShaderLib/Rendering/Scene/SceneFlags.h>
+
 namespace vkl
 {
 	void SceneUserInterface::checkSelectedNode(SelectedNode& selected_node)
@@ -542,12 +544,14 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			
 			ImGui::SliderFloat("Sky brightness", &_scene->_uniform_sky_brightness, 0, 12, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 
-			ImGui::SliderAngle("Sun Inclination", &_scene->_solar_disk_direction[0], 0, 180);
-			ImGui::SliderAngle("Sun Azimuth", &_scene->_solar_disk_direction[1], -180, 180);
-			ImGui::SliderAngle("Sun Disk angle", &_scene->_solar_disk_angle, 0, 90, "%.1f deg");
-			ImGui::ColorEdit3("Sun", &_scene->_solar_disk_intensity[0], ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
-			ImGui::SliderFloat("Sun brightness", &_scene->_solar_disk_intensity_mult, 0, 24, "%.3f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+			ImGui::SeparatorText("Sun");
+			ImGui::SliderAngle("Inclination", &_scene->_solar_disk_direction[0], 0, 180);
+			ImGui::SliderAngle("Azimuth", &_scene->_solar_disk_direction[1], -180, 180, "%.1f deg", ImGuiSliderFlags_WrapAround);
+			ImGui::SliderAngle("Solar Disk angle", &_scene->_solar_disk_angle, 0, 90, "%.1f deg");
 
+			Light::DeclareEmission(_scene->_solar_disk_emission, _scene->_solar_black_body);
+
+			ImGui::SeparatorText("Bounds");
 			vec3 center = _scene->_aabb.center();
 			ImGui::Text("Center: (%f, %f, %f)", center.x(), center.y(), center.z());
 			ImGui::Text("Radius: %f", _scene->_radius);
@@ -557,7 +561,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 
 			int shadow_resolution = static_cast<int>(_scene->_light_resolution);
-			if (ImGui::InputInt("Base ShadowMap resolution", &shadow_resolution, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue))
+			if (ImGui::InputInt("Base ShadowMap resolution", &shadow_resolution, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue & 0))
 			{
 				_scene->_light_resolution = static_cast<uint32_t>(shadow_resolution);
 			}

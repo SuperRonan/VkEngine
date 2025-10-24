@@ -59,7 +59,7 @@ namespace vkl
 				vec3(0.5, 0.8, 1) * 2,
 				vec2(Radians(15.0f), Radians(60.0f)),
 				Radians(0.5f),
-				vec3(1.2, 1.1, 1) * 20
+				5500, 20
 			);
 		}
 		if (preset == 1)

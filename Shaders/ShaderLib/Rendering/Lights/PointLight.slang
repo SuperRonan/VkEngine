@@ -38,7 +38,7 @@ struct PointLight<int Mode> : ILight<Mode>
 
 	SpectruM getSpectralEmission()
 	{
-		return SpectruM::MakeFromRGB(emission, RGBSourceType::Illuminant);
+		return Light::GetSpectralEmission<Mode>(emission, flags);
 	}
 
 	Light::ConnectionSample<Mode> sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)

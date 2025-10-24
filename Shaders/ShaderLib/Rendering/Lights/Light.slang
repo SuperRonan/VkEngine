@@ -170,6 +170,28 @@ struct Light
 		}
 		return res;
 	}
+
+	static Spectrumf<Mode> GetSpectralEmission<int Mode>(vec3 emission, bool black_body)
+	{
+		Spectrumf<Mode> res;
+		if(black_body)
+		{
+			float temperature = emission.x;
+			float intensity = emission.y;
+			res = SpectrumFromTemperature<Mode>(temperature, true) * intensity;
+		}
+		else
+		{
+			res = Spectrumf<Mode>::MakeFromRGB(emission, RGBSourceType::Illuminant);
+		}
+		return res;
+	}
+	
+	static Spectrumf<Mode> GetSpectralEmission<int Mode>(vec3 emission, uint flags)
+	{
+		bool black_body = (flags & LIGHT_BLACK_BODY_EMISSION_BIT_FLAG) != 0;
+		return GetSpectralEmission<Mode>(emission, black_body);
+	}
 };
 
 interface ILight<int Mode>

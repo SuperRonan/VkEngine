@@ -75,6 +75,10 @@ void main(uint3 gid : SV_DispatchThreadID)
 			res += spec.toXYZf();
 		}
 		res = (GetXYZToRGBConversionMatrix<float>() * res) / float(samples);
+		if((gid.y > (dims.y * 7) / 16))
+		{
+			res = SpectrumFromTemperature<SPECTRUM_MODE_RGB>(temperature, true).toRGBf();
+		}
 	}
 	else
 	{
@@ -91,7 +95,7 @@ void main(uint3 gid : SV_DispatchThreadID)
 	target.Store(gid.xy, vec4(res, 0));
 
 	// Show nm scale
-	if((gid.x % 128) == 0)
+	if((gid.x % 128) == 0 && gid.y == 0)
 	{
 		DebugPrinter printer = DebugPrinter(vec3(gid.x, 16, 0), DEBUG_PIXEL_SPACE_BIT);
 		printer.print(int(GetPhysicalWaveLength(BaseWaveLength)), "nm");

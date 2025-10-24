@@ -53,7 +53,7 @@ struct BeamLight<int Mode> : ILight<Mode>
 
 	Spectrumf<Mode> getSpectralEmission()
 	{
-		return Spectrumf<Mode>::MakeFromRGB(emission, RGBSourceType::Illuminant);
+		return Light::GetSpectralEmission<Mode>(emission, flags);
 	}
 
 	vec3 getPositionCP(vec3 position)
