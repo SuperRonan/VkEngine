@@ -56,8 +56,11 @@ namespace vkl
 		std::string name = {};
 		AffineXForm3Df xform = AffineXForm3Df::Identity();
 		LightType type = LightType::None;
+		float opening = 0;
+		float aspect_ratio = 1;
 		Vector3f emission = Vector3f::Ones().eval();
-		bool enable_shadow_map;
+		bool black_body_emission = false;
+		bool enable_shadow_map = false;
 	};
 	std::shared_ptr<Scene::Node> MakeLightNode(LightNodeCreateInfo const& ci);
 

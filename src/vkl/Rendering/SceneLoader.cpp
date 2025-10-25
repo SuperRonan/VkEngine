@@ -121,6 +121,7 @@ namespace vkl
 				.app = ci.app,
 				.name = ci.name,
 				.emission = ci.emission,
+				.black_body_emission = ci.black_body_emission,
 				.enable_shadow_map = ci.enable_shadow_map,
 			});
 		}
@@ -131,6 +132,7 @@ namespace vkl
 				.name = ci.name,
 				.direction = Vector3f(0, 1, 0),
 				.emission = ci.emission,
+				.black_body_emission = ci.black_body_emission,
 			});
 		}
 		else if (ci.type == LightType::Spot)
@@ -139,6 +141,9 @@ namespace vkl
 				.app = ci.app,
 				.name = ci.name,
 				.emission = ci.emission,
+				.aspect_ratio = ci.aspect_ratio,
+				.fov = ci.opening,
+				.black_body_emission = ci.black_body_emission,
 				.enable_shadow_map = ci.enable_shadow_map,
 			});
 		}
@@ -148,6 +153,9 @@ namespace vkl
 				.app = ci.app,
 				.name = ci.name,
 				.emission = ci.emission,
+				.aspect_ratio = ci.aspect_ratio,
+				.opening = ci.opening,
+				.black_body_emission = ci.black_body_emission,
 			});
 		}
 		return res;

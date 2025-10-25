@@ -107,6 +107,7 @@ namespace vkl
 			std::string name = {};
 			LightType type = LightType::None;
 			vec3 emission = vec3::Zero();
+			bool black_body_emission = false;
 			bool enable_shadow_map = true;
 		};
 		using CI = CreateInfo;
@@ -159,6 +160,7 @@ namespace vkl
 			std::string name = {};
 			vec3 position = vec3::Zero();
 			vec3 emission = vec3::Zero();
+			bool black_body_emission = false;
 			bool enable_shadow_map = true;
 			float z_near = DefaultZNear();
 		};
@@ -187,6 +189,7 @@ namespace vkl
 			std::string name = {};
 			vec3 direction = vec3(1, 0, 0);
 			vec3 emission = vec3::Zero();
+			bool black_body_emission = false;
 		};
 		using CI = CreateInfo;
 
@@ -226,6 +229,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float opening = Radians(90.0f);
 			uint8_t attenuation = 0;
+			bool black_body_emission = false;
 			bool enable_shadow_map = true;
 			bool is_beam;
 		};
@@ -241,6 +245,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float fov = Radians(90.0f);
 			uint8_t attenuation = 0;
+			bool black_body_emission = false;
 			bool enable_shadow_map = true;
 		};
 
@@ -255,6 +260,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float opening = 0;
 			uint8_t attenuation = 0;
+			bool black_body_emission = false;
 			//bool enable_shadow_map = true;
 		};
 
@@ -273,6 +279,7 @@ namespace vkl
 				.aspect_ratio = ci.aspect_ratio,
 				.opening = ci.fov,
 				.attenuation = ci.attenuation,
+				.black_body_emission = ci.black_body_emission,
 				.enable_shadow_map = ci.enable_shadow_map,
 				.is_beam = false,
 			})
@@ -289,6 +296,7 @@ namespace vkl
 				.aspect_ratio = ci.aspect_ratio,
 				.opening = ci.opening,
 				.attenuation = ci.attenuation,
+				.black_body_emission = ci.black_body_emission,
 				.enable_shadow_map = false,
 				.is_beam = true,
 			})

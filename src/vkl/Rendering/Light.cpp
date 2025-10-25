@@ -48,6 +48,7 @@ namespace vkl
 		VkObject(ci.app, ci.name),
 		_type(ci.type),
 		_emission(ci.emission),
+		_black_body_emission(ci.black_body_emission),
 		_enable_shadow_map(ci.enable_shadow_map)
 	{}
 
@@ -205,6 +206,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::Point,
 			.emission = ci.emission,
+			.black_body_emission = ci.black_body_emission,
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position),
@@ -248,6 +250,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::Directional,
 			.emission = ci.emission,
+			.black_body_emission = ci.black_body_emission,
 			.enable_shadow_map = false,
 		}),
 		_direction(Normalize(ci.direction))
@@ -285,6 +288,7 @@ namespace vkl
 			.name = ci.name,
 			.type = ci.is_beam ? LightType::Beam : LightType::Spot,
 			.emission = ci.emission,
+			.black_body_emission = ci.black_body_emission,
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position),
