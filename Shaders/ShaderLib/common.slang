@@ -754,24 +754,6 @@ vector<Float, N> SafeNormalize(vector<Float, N> v)
 	return Length2(v) == Float(0) ? v : Normalize(v);
 }
 
-__generic <Float : IFloat, Interpolant : __BuiltinFloatingPointType>
-Float Lerp(const in Float zero, const in Float one, Interpolant t, bool fast=true)
-{
-	if (fast)
-		return zero.add(one.sub(zero).scale(t));
-	else
-		return zero.scale(Interpolant(1) - t).add(one.scale(t));
-}
-
-__generic <Float : IFloat>
-Float LerpV(const in Float zero, const in Float one, const in Float t, bool fast=true)
-{
-	if (fast)
-		return zero.add(one.sub(zero).mul(t));
-	else
-		return zero.mul(Float(1) - t).add(one.mul(t));
-}
-
 // min/max/abs are only implemented for built-in int and float
 // TODO the cwise version is not linked (with vec3 for example)
 
