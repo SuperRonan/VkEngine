@@ -70,14 +70,19 @@ void main(uint3 gid : SV_DispatchThreadID)
 			}
 			else
 			{
-				spec = SampleSpectrumFromTemperature<Spec::Samples>(temperature, true) * 8;
+				spec = SampleSpectrumFromTemperature<Spec::Samples>(temperature, 2) * 8;
 			}
 			res += spec.toXYZf();
 		}
 		res = (GetXYZToRGBConversionMatrix<float>() * res) / float(samples);
 		if((gid.y > (dims.y * 7) / 16))
 		{
-			res = SpectrumFromTemperature<SPECTRUM_MODE_RGB>(temperature, true).toRGBf();
+			int norm = 1; // visible
+			if(gid.y < (dims.y * 15) / 32)
+			{
+				norm = 2; // total
+			}
+			res = SpectrumFromTemperature<SPECTRUM_MODE_RGB>(temperature, norm).toRGBf();
 		}
 	}
 	else

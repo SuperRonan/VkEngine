@@ -471,28 +471,34 @@ extension XYZSpectrum<Scalar>
 
 namespace impl
 {
-	Spectrumf<Mode> EvalSpectrumAtTemperature<int Mode>(float temperature, bool normalize=false)
+	// `int normalize`: 0 none, 1 visible, 2 total
+	Spectrumf<Mode> EvalSpectrumAtTemperature<int Mode>(float temperature, int normalize=0)
 	{
 		Spectrumf<Mode> res;
-		let norm = EvalBlackBodyTotalSpectralRadiance(temperature);
+		float norm;
+		if(normalize != 0)
+		{
+			norm = rcp(EvalBlackBodySpectralRadiance(temperature, normalize));
+		}
+		
 		for(uint i = 0; i < res::Samples; ++i)
 		{
 			res[i] = EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(res.GetChannelWaveLength(i)), temperature);
-			if(normalize)
+			if(normalize != 0)
 			{
-				res[i] /= norm;
+				res[i] *= norm;
 			}
 		}
 		return res;
 	}
 }
 
-SampledSpectrumf<N> SampleSpectrumFromTemperature<int N>(float temperature, bool normalize=false)
+SampledSpectrumf<N> SampleSpectrumFromTemperature<int N>(float temperature, int normalize=0)
 {
 	return impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_SAMPLED(N)>(temperature, normalize);
 }
 
-Spectrumf<Mode> SpectrumFromTemperature<int Mode>(float temperature, bool normalize=false)
+Spectrumf<Mode> SpectrumFromTemperature<int Mode>(float temperature, int normalize=0)
 {
 	typealias SpectruM = Spectrumf<Mode>;
 	SpectruM res;

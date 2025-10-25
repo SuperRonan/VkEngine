@@ -111,6 +111,20 @@ float EvalBlackBodyTotalSpectralRadiance(float temperature)
 // - `temperature` in K
 float EvalBlackBodyVisibleSpectralRadiance(float temperature)
 {
-	// TODO
-	return EvalBlackBodyTotalSpectralRadiance(temperature);
+	vec3 rgb = vec3(
+		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(0.25), temperature),
+		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(0.5), temperature),
+		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(0.75), temperature)
+	);
+	return Luminance(rgb) * sqrt(2.0f); // * sqrt(2) looks good, no mathematical justification of it
+}
+
+float EvalBlackBodySpectralRadiance(float temperature, bool total=false)
+{
+	return total ? EvalBlackBodyTotalSpectralRadiance(temperature) : EvalBlackBodyVisibleSpectralRadiance(temperature);
+}
+
+float EvalBlackBodySpectralRadiance(float temperature, int mode)
+{
+	return EvalBlackBodySpectralRadiance(temperature, mode == 2);
 }
