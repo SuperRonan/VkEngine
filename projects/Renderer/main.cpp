@@ -284,16 +284,17 @@ namespace vkl
 		struct Preset
 		{
 			bool metallic_walls;
-			bool caustics;
+			uint8_t caustics;
 			bool alternate_boxes;
 		};
-		std::array<Preset, 6> presets = {
-			Preset{.metallic_walls = false, .caustics = false, .alternate_boxes = false},
-			Preset{.metallic_walls = true, .caustics = false, .alternate_boxes = false},
-			Preset{.metallic_walls = false, .caustics = true, .alternate_boxes = false},
-			Preset{.metallic_walls = true, .caustics = true, .alternate_boxes = false},
-			Preset{.metallic_walls = false, .caustics = false, .alternate_boxes = true},
-			Preset{.metallic_walls = true, .caustics = false, .alternate_boxes = true},
+		std::array<Preset, 7> presets = {
+			Preset{.metallic_walls = false, .caustics = 0, .alternate_boxes = false},
+			Preset{.metallic_walls = true, .caustics = 0, .alternate_boxes = false},
+			Preset{.metallic_walls = false, .caustics = 1, .alternate_boxes = false},
+			Preset{.metallic_walls = true, .caustics = 1, .alternate_boxes = false},
+			Preset{.metallic_walls = false, .caustics = 0, .alternate_boxes = true},
+			Preset{.metallic_walls = true, .caustics = 0, .alternate_boxes = true},
+			Preset{.metallic_walls = true, .caustics = 2, .alternate_boxes = false},
 		};
 		Preset preset = presets[preset_id];
 		VkApplication* app = scene->application();
@@ -387,7 +388,9 @@ namespace vkl
 			green, green_roughness, green_metallic
 		));
 
-		if (preset.caustics)
+		float point_light_intensity = 1;
+
+		if (preset.caustics == 1)
 		{
 			float scale = 0.15;
 			bool spectral = false;
@@ -437,6 +440,48 @@ namespace vkl
 				.sample_spectral = spectral,
 			}));
 		}
+		else if (preset.caustics == 2)
+		{
+			float scale = 0.2;
+			bool spectral = true;
+
+			box->addChild(MakeBoxModel(
+				"Box",
+				TranslationMatrix(Vector3f(0, -0.5, 0.0)) * ScalingMatrix(Vector3f(0.5, 0.5, 0.5)),
+				orange, preset.alternate_boxes ? 0.01 : 1, preset.alternate_boxes ? 0.1 : 0
+			));
+
+			box->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Prism",
+				.xform =	TranslationMatrix(Vector3f(0, -0.15, 0)) *
+							MakeAffineTransform(Matrix3f(Rotation3X(Radians(90.0f)))) *
+							ScalingMatrix(Vector3f(scale, scale, scale)),
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Cylinder,
+				.subdivisions = uvec4(3, 1, 1, 1),
+				.albedo = vec3::Zero(),
+				.roughness = 0,
+				.metallic_or_eta = 1.45,
+				.cavity_or_iorB = 0.004 * 2,
+				.is_dielectric = true,
+				.sample_spectral = spectral,
+				.geometry_normal = true,
+			}));
+
+			float opening = 0.25;
+			box->addChild(MakeLightNode(LightNodeCreateInfo{
+				.app = app,
+				.name = "Beam Light",
+				.xform = TranslationMatrix(Vector3f(0.1, -0.15, 1)) * MakeAffineTransform(Rotation3Y(Radians(90.0f))),
+				.type = LightType::Beam,
+				.opening = opening,
+				.aspect_ratio = 0,
+				.emission = vec3(5500, 2, 0),
+				.black_body_emission = true,
+				.enable_shadow_map = true,
+			}));
+			point_light_intensity = 0.1;
+		}
 		else
 		{
 			box->addChild(MakeBoxModel(
@@ -457,7 +502,7 @@ namespace vkl
 			.name = "Point Light",
 			.xform = TranslationMatrix(Vector3f(0, 0.45, 0)),
 			.type = LightType::Point,
-			.emission = vec3(1.5, 1.2, 0.8),
+			.emission = vec3(1.5, 1.2, 0.8) * point_light_intensity,
 			.enable_shadow_map = true,
 		}));
 	}
@@ -473,7 +518,7 @@ namespace vkl
 		{
 			LoadSponza(scene, preset - 1);
 		}
-		else if (Range32i(5, 6).contains(preset))
+		else if (Range32i(5, 7).contains(preset))
 		{
 			LoadCornellBox(scene, preset - 5);
 		}
@@ -733,6 +778,9 @@ namespace vkl
 					},
 					ImGuiListSelection::Option{
 						.name = "Cornell Box alternate cubes metallic walls",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box dispersion caustics",
 					},
 				},
 			};
