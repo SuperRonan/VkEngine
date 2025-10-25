@@ -348,7 +348,7 @@ struct PhysicalyBasedMaterial<int Mode> : IMaterial<Mode>
 			float wl = filter.GetChannelWaveLength(sample_channel.value);
 			float pwl = GetPhysicalWaveLength(wl) * 1e-3; // in µm
 			const float A = base_ior;
-			const float B = 0.00420; // TODO from material prop
+			const float B = cavity;
 			base_ior = A + B / sqr(pwl);
 
 			res.bsdf[sample_channel.value] = 1;

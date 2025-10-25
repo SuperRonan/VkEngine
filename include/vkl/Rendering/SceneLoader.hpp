@@ -74,8 +74,10 @@ namespace vkl
 		vec3 albedo = {};
 		float roughness = {};
 		float metallic_or_eta = {};
+		float cavity_or_iorB = {};
 		bool is_dielectric = {};
 		bool sample_spectral = {};
+		bool geometry_normal = {};
 	};
 
 	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci);

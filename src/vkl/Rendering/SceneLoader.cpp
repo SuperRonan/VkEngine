@@ -189,7 +189,8 @@ namespace vkl
 			.albedo = ci.albedo,
 			.metallic = ci.metallic_or_eta,
 			.roughness = ci.roughness,
-			.cavity = 0,
+			.cavity = ci.cavity_or_iorB,
+			.force_geometry_normal = ci.geometry_normal,
 			.is_dielectric = ci.is_dielectric,
 			.sample_spectral = ci.sample_spectral,
 		});

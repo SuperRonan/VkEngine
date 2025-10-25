@@ -119,6 +119,7 @@ namespace vkl
 		_is_dielectric(ci.is_dielectric),
 		_sample_spectral(ci.sample_spectral),
 		_force_albedo_prop(ci.force_albedo_property),
+		_force_geometry_normal(ci.force_geometry_normal),
 		_cached_props({})
 	{
 		if (ci.albedo_texture)
@@ -248,11 +249,11 @@ namespace vkl
 			return ImGui::ColorEdit3(label, reinterpret_cast<float*>(dv.data()), color_flags);	
 		};
 
-		auto declare_float = [&](ImGuiSliderFlags flags = 0, float max = 1)
+		auto declare_float = [&](ImGuiSliderFlags flags = 0, float max = 1, const char* fmt="%.3f")
 		{
-			return [flags, max](const char* label, float& value)
+			return [flags, max, fmt](const char* label, float& value)
 			{
-				return ImGui::SliderFloat(label, &value, 0, max, "%.3f", flags);
+				return ImGui::SliderFloat(label, &value, 0, max, fmt, flags);
 			};
 		};
 
@@ -261,11 +262,15 @@ namespace vkl
 		_should_update_props_buffer |= ImGui::Checkbox("Force Geometry normal", &_force_geometry_normal);
 		
 		const char* albedo_name = _is_dielectric ? "Absorption" : "Albedo";
-		const char* metalic_name = _is_dielectric ? "Index of Refraction" : "Metallic";
+		const char* metalic_name = _is_dielectric ? (_sample_spectral ? "IoR base" : "Index of Refraction") : "Metallic";
 
 		_should_update_props_buffer |= GUIDeclareDynamic(albedo_name, _albedo, declare_color);
 
-		_should_update_props_buffer |= GUIDeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2 : 1));
+		_should_update_props_buffer |= GUIDeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2.5 : 1.0));
+		if (_sample_spectral)
+		{
+			ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"A parameter of the Cauchy equation: n(l) = A + B/l²"));
+		}
 		if (!_is_dielectric)
 		{
 			_should_update_props_buffer |= GUIDeclareDynamic("Roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
@@ -274,6 +279,17 @@ namespace vkl
 		else
 		{
 			_should_update_props_buffer |= ImGui::Checkbox("Sample spectral", &_sample_spectral);
+			if (_sample_spectral)
+			{
+				ImGui::SameLine();
+				ImGui::Text("|");
+				ImGui::SameLine();
+
+				float lambda = 589; // nm
+				ImGui::Text("IoR at %.0f nm: %g", lambda, *_metallic + *_cavity * 1e6 * rcp(sqr(lambda)));
+				_should_update_props_buffer |= GUIDeclareDynamic("IoR dispersion", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat, 0.02, reinterpret_cast<const char*>(u8"%.6f µm²")));
+				ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"B parameter of the Cauchy equation in µm²: n(l) = A + B/l² (l in µm)"));
+			}
 		}
 
 		std::string txt;
