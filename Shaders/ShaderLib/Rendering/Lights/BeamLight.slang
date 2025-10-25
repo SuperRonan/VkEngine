@@ -79,7 +79,7 @@ struct BeamLight<int Mode> : ILight<Mode>
 	Light::ConnectionSample<Mode> sampleLi<RNG : IRNG>(inout RNG rng, vec3 shading_position)
 	{
 		Light::ConnectionSample<Mode> res = {};
-		if(radius != 0.0f)
+		if(radius != 0.0f && aspect != 0.0f)
 		{
 			const vec3 cp = getPositionCP(shading_position);
 			if(all(cp.xy <= 1) && all(cp.xy >= -1) && cp.z > 0)
@@ -112,7 +112,24 @@ struct BeamLight<int Mode> : ILight<Mode>
 	Light::EmissionSample<Mode> sampleLe<RNG : IRNG>(inout RNG rng)
 	{
 		Light::EmissionSample<Mode> res;
-		if(radius != 0)
+		if(radius == 0) // Sample a starting point
+		{
+			res.position_pdf = 1;
+			res.pdf = 1;
+			res.ray = Ray3f(position, direction);
+			res.intensity = getSpectralEmission();
+			res.flags = Sample::Flags::DeltaDirection | Sample::Flags::DeltaPosition;
+		}
+		else if(aspect == 0) // Sample a point on a segment
+		{
+			float x = rng.generate<float>(-1, 2) * radius;
+			res.ray = Ray3f(this.position + getBasis().t * vec3(0, x, 0), direction);
+			res.pdf = 1;
+			res.position_pdf = 0.5 * rcp(radius);
+			res.intensity = getSpectralEmission();
+			res.flags = Sample::Flags::DeltaDirection | Sample::Flags::DeltaPosition;
+		}
+		else // Sample a point on a surface
 		{
 			vec2 xi = rng.generate<float, 2>();
 			const uint attenuation_flags = flags & LIGHT_FLAG_ATTENUATION_MASK;
@@ -131,14 +148,6 @@ struct BeamLight<int Mode> : ILight<Mode>
 			res.position_pdf = sample_cp.pdf * rcp(sqr(radius) * (aspect != 0 ? aspect : 1));
 			res.intensity = getSpectralEmission() * evaluateAttenuation(sample_cp.value);
 			res.flags = Sample::Flags::DeltaDirection;
-		}
-		else
-		{
-			res.position_pdf = 1;
-			res.pdf = 1;
-			res.ray = Ray3f(position, direction);
-			res.intensity = getSpectralEmission();
-			res.flags = Sample::Flags::DeltaDirection | Sample::Flags::DeltaPosition;
 		}
 		res.range.resetRange();
 		return res;
