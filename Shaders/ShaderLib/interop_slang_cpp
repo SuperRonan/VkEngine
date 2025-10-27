@@ -4,6 +4,8 @@
 
 #define typealias using
 #define __generic template
+#define let_auto const auto
+#define var_auto auto
 
 #define CONSTRUCTOR_INIT(Class) Class
 
@@ -26,6 +28,8 @@
 #elif _slang
 
 #define noexecpt
+#define let_auto let
+#define var_auto var
 
 #define CPP_ONLY(...)
 #define SLANG_ONLY(...) __VA_ARGS__
