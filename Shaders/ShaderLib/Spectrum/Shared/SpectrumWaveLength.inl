@@ -136,9 +136,9 @@ __generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Float)>
 constexpr Float EvalBlackBodyVisibleSpectralRadiance(Float temperature)
 {
 	Vector3<Float> rgb = Vector3<Float>(
-		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(Float(0.25)), temperature),
+		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(Float(0.75)), temperature),
 		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(Float(0.50)), temperature),
-		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(Float(0.75)), temperature)
+		EvalBlackBodySpectralRadianceFromPhysical(GetPhysicalWaveLength(Float(0.25)), temperature)
 	);
 	return Luminance(rgb) * CPP_ONLY(std::)sqrt(Float(2)); // * sqrt(2) looks good, no mathematical justification of it
 }
