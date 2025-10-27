@@ -5,8 +5,10 @@
 #define typealias using
 #define __generic template
 
-#define CPP_ONLY(__VA_ARGS__) __VA_ARGS__
-#define SLANG_ONLY(__VA_ARGS__)
+#define CONSTRUCTOR_INIT(Class) Class
+
+#define CPP_ONLY(...) __VA_ARGS__
+#define SLANG_ONLY(...)
 
 // Use a common concept name between C++ and Slang
 #define CONCEPT_TYPE(CONCEPT, TYPE) CONCEPT TYPE
@@ -25,8 +27,10 @@
 
 #define noexecpt
 
-#define CPP_ONLY(__VA_ARGS__)
-#define SLANG_ONLY(__VA_ARGS__) __VA_ARGS__
+#define CPP_ONLY(...)
+#define SLANG_ONLY(...) __VA_ARGS__
+
+#define CONSTRUCTOR_INIT(Class) __init
 
 // Use a common concept name between C++ and Slang
 #define CONCEPT_TYPE(CONCEPT, TYPE) typename TYPE : CONCEPT
