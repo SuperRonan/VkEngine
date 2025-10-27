@@ -5,7 +5,7 @@
 #include "Shared/AffineXForm.inl"
 
 
-template <typename T : __BuiltinFloatingPointType, int N>
+__generic <typename T : __BuiltinFloatingPointType, int N>
 AffineXForm<T, N> mul(const in AffineXForm<T, N> l, const in AffineXForm<T, N> r)
 {
 #if 1
@@ -16,13 +16,13 @@ AffineXForm<T, N> mul(const in AffineXForm<T, N> l, const in AffineXForm<T, N> r
 #endif
 }
 
-template <typename T : __BuiltinFloatingPointType, int N>
+__generic <typename T : __BuiltinFloatingPointType, int N>
 AffineXForm<T, N> operator*(const in AffineXForm<T, N> l, const in AffineXForm<T, N> r)
 {
 	return mul(l, r);
 }
 
-template <typename Scalar : __BuiltinFloatingPointType, int N>
+__generic <typename Scalar : __BuiltinFloatingPointType, int N>
 Matrix<Scalar, N, N> DirectionMatrix(const in AffineXForm<Scalar, N> xform)
 {
 	return DirectionMatrix(ExtractQBlock(xform));

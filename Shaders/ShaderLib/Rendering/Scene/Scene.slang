@@ -198,19 +198,19 @@ struct BoundScene : Scene, IRayTracingScene
 			return SceneMeshVertices[index][vertex_id];
 		}
 
-		template <int N>
+		__generic <int N>
 		uvec<N> getPrimitiveIndices(uint primitive_id)
 		{
 			return Mesh::ReadIndices<N>(SceneMeshIndices[index], primitive_id, getHeader().flags);
 		}
 
-		template <int N>
+		__generic <int N>
 		Vertex interpolateVertex(uvec<N> indices, Vectorf<N> weights)
 		{
 			return Mesh::InterpolateVertex(SceneMeshVertices[index], indices, weights);
 		}
 
-		template <int N>
+		__generic <int N>
 		Vertex interpolateVertex(uvec<N> indices, Vectorf<N-1> uvs)
 		{
 			return interpolateVertex(indices, UVToBarycentric(uvs));
@@ -260,7 +260,7 @@ __init()
 #ifdef SCENE_MATERIAL_ACCESS
 	typealias texture_id = u16;
 	
-	template <int N>
+	__generic <int N>
 	Vector<texture_id, N> readMaterialTextureIDs(uint mid, uint base_slot = 0)
 	{
 		Vector<texture_id, N> res;
@@ -530,7 +530,7 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 }
 
 #if SHADER_RAY_QUERY_AVAILABLE
-	template <bool Committed = true, uint Flags>
+	__generic <bool Committed = true, uint Flags>
 	SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(inout RayQuery<Flags> rq)
 	{
 		constexpr const bool C = Committed;
@@ -547,7 +547,7 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 	
 	
 	// Only on candidate hit
-	template <bool AssumeTexture, uint Flags>
+	__generic <bool AssumeTexture, uint Flags>
 	bool testTriangleCandidateHitOpacity(inout RayQuery<Flags> rq)
 	{
 		const uint object_index = rq.getRayInstanceCustomIndex<false>();
@@ -555,7 +555,7 @@ SurfaceShadingInfo reconstructTriangleSurfaceShadingInfo(
 		return TestTriangleOpacity<AssumeTexture>(object_index, triangle_index, rq.getRayBarycentrics<false>());
 	}
 
-	template <uint Flags>
+	__generic <uint Flags>
 	void proceedRayQuery(inout RayQuery<Flags> rq)
 	{
 		while(rq.Proceed())

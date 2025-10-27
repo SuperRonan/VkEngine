@@ -9,35 +9,35 @@
 interface IRandomNumberGenerator
 {
 	[mutating]
-	template<typename Scalar : __BuiltinArithmeticType>
+	__generic<typename Scalar : __BuiltinArithmeticType>
 	Scalar generate();
 
 	[mutating]
-	template<typename Scalar : __BuiltinArithmeticType>
+	__generic<typename Scalar : __BuiltinArithmeticType>
 	Scalar generate(Scalar min, Scalar length);
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>, typename Converter : IFunc<Scalar, Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>, typename Converter : IFunc<Scalar, Scalar>>
 	void generate(inout Target target, uint N, const in Converter convert);
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
 	void generate(inout Target target, uint N);
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
 	void generate(inout Target target, uint N, Scalar min, Scalar length);
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, int N>
+	__generic <typename Scalar : __BuiltinArithmeticType, int N>
 	Vector<Scalar, N> generate();
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, int N, typename Converter : IFunc<Scalar, Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, int N, typename Converter : IFunc<Scalar, Scalar>>
 	Vector<Scalar, N> generate(const in Converter converter);
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, int N>
+	__generic <typename Scalar : __BuiltinArithmeticType, int N>
 	Vector<Scalar, N> generate(Scalar min, Scalar length);
 };
 
@@ -45,7 +45,7 @@ typealias IRNG = IRandomNumberGenerator;
 
 namespace impl
 {
-	template <typename Scalar : __BuiltinArithmeticType>
+	__generic <typename Scalar : __BuiltinArithmeticType>
 	struct RNGConverter : IFunc<Scalar, Scalar>
 	{
 		Scalar min;
@@ -116,12 +116,12 @@ namespace impl
 	}
 }
 
-template <typename Hash_t : IHashResult>
+__generic <typename Hash_t : IHashResult>
 struct RandomNumberGenerator : IRandomNumberGenerator
 {
 	Hash_t _seed;
 
-	template <typename UInt :__BuiltinIntegerType>
+	__generic <typename UInt :__BuiltinIntegerType>
 	__init(UInt seed)
 	{
 		_seed = ConvertBuiltInTo<Hash_t>(seed);
@@ -153,7 +153,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Converter : IFunc<Scalar, Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Converter : IFunc<Scalar, Scalar>>
 	Scalar generateImpl(const in Converter converter)
 	{
 		Scalar res;
@@ -173,7 +173,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template<typename Scalar : __BuiltinArithmeticType>
+	__generic<typename Scalar : __BuiltinArithmeticType>
 	Scalar generate()
 	{
 		impl::RNGConverter<Scalar> converter = impl::RNGConverter<Scalar>();
@@ -183,7 +183,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template<typename Scalar : __BuiltinArithmeticType>
+	__generic<typename Scalar : __BuiltinArithmeticType>
 	Scalar generate(Scalar min, Scalar length)
 	{
 		impl::RNGConverter<Scalar> converter;
@@ -193,7 +193,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>, typename Converter : IFunc<Scalar, Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>, typename Converter : IFunc<Scalar, Scalar>>
 	void generate(inout Target target, uint N, const in Converter convert)
 	{
 		const uint S = sizeof(Scalar);
@@ -228,7 +228,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
 	void generate(inout Target target, uint N)
 	{
 		impl::RNGConverter<Scalar> converter = impl::RNGConverter<Scalar>();
@@ -236,7 +236,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, typename Target : IRWArray<Scalar>>
 	void generate(inout Target target, uint N, Scalar min, Scalar length)
 	{
 		impl::RNGConverter<Scalar> converter;
@@ -247,7 +247,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, int N>
+	__generic <typename Scalar : __BuiltinArithmeticType, int N>
 	Vector<Scalar, N> generate()
 	{
 		Vector<Scalar, N> res;
@@ -256,7 +256,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, int N, typename Converter : IFunc<Scalar, Scalar>>
+	__generic <typename Scalar : __BuiltinArithmeticType, int N, typename Converter : IFunc<Scalar, Scalar>>
 	Vector<Scalar, N> generate(const in Converter converter)
 	{
 		Vector<Scalar, N> res;
@@ -265,7 +265,7 @@ struct RandomNumberGenerator : IRandomNumberGenerator
 	}
 
 	[mutating]
-	template <typename Scalar : __BuiltinArithmeticType, int N>
+	__generic <typename Scalar : __BuiltinArithmeticType, int N>
 	Vector<Scalar, N> generate(Scalar min, Scalar length)
 	{
 		Vector<Scalar, N> res;

@@ -3,7 +3,7 @@
 #include <ShaderLib/common.slang>
 #include <ShaderLib/Maths/NumericLimits.slang>
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 struct AlignedAxisBoundingBox
 {
 	typealias This_t = AlignedAxisBoundingBox<T, N>;
@@ -143,16 +143,16 @@ struct AlignedAxisBoundingBox
 	}
 };
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 typealias AABB = AlignedAxisBoundingBox<T, N>;
 
-template <typename T : __BuiltinArithmeticType>
+__generic <typename T : __BuiltinArithmeticType>
 typealias AABB2 = AABB<T, 2>;
 
-template <typename T : __BuiltinArithmeticType>
+__generic <typename T : __BuiltinArithmeticType>
 typealias AABB3 = AABB<T, 3>;
 
-template <int N>
+__generic <int N>
 typealias AABBf = AABB<float, N>;
 
 typealias AABB2f = AABB2<float>;

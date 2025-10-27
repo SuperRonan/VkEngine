@@ -6,7 +6,7 @@
 
 namespace std
 {
-	template <typename T : __BuiltinArithmeticType>
+	__generic <typename T : __BuiltinArithmeticType>
 	struct numeric_limits
 	{
 		// TODO implement the rest of the interface
@@ -274,6 +274,6 @@ namespace std
 	};
 }
 
-template <typename T : __BuiltinArithmeticType>
+__generic <typename T : __BuiltinArithmeticType>
 typealias NumericLimits = std::numeric_limits<T>;
 

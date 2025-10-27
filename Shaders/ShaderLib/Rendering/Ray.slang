@@ -3,7 +3,7 @@
 #include <ShaderLib/common.slang>
 #include <ShaderLib/Maths/NumericLimits.slang>
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 struct Ray
 {
 	Vector<T, N> origin;
@@ -23,7 +23,7 @@ struct Ray
 	}
 };
 
-template <typename T : __BuiltinFloatingPointType>
+__generic <typename T : __BuiltinFloatingPointType>
 extension Ray<T, 3>
 {
 	__init(const in RayDesc rd)
@@ -34,13 +34,13 @@ extension Ray<T, 3>
 };
 
 
-template <T : __BuiltinArithmeticType>
+__generic <T : __BuiltinArithmeticType>
 typealias Ray2 = Ray<T, 2>;
 
-template <T : __BuiltinArithmeticType>
+__generic <T : __BuiltinArithmeticType>
 typealias Ray3 = Ray<T, 3>;
 
-template <int N>
+__generic <int N>
 typealias Rayf = Ray<float, N>;
 
 typealias Ray2f = Ray2<float>;

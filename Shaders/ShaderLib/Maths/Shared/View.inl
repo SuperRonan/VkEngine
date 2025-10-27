@@ -2,7 +2,7 @@
 
 #include <ShaderLib/interop_slang_cpp>
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> LookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down, CONST_REF(Vector3<Scalar>) right)
 {
 	const Matrix3<Scalar> R = MakeFromRows(right, down, front);
@@ -10,14 +10,14 @@ constexpr AffineXForm3D<Scalar> LookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) 
 	return MakeAffineTransform(R, T);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> LookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down)
 {
 	const Vector3<Scalar> right = Cross(front, down);
 	return LookAtDirAssumeOrtho(position, front, down, right);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> LookAtDir(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down)
 {
 	const Vector3<Scalar> s_ = Cross(down, front);
@@ -27,13 +27,13 @@ constexpr AffineXForm3D<Scalar> LookAtDir(CONST_REF(Vector3<Scalar>) position, C
 	return LookAtDirAssumeOrtho(position, front, d, s);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> LookAt(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) focus, CONST_REF(Vector3<Scalar>) down)
 {
 	return LookAtDir(position, Normalize(focus - position), down);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> InverseLookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down, CONST_REF(Vector3<Scalar>) right)
 {
 	const Matrix3<Scalar> R = MakeFromCols(right, down, front);
@@ -41,14 +41,14 @@ constexpr AffineXForm3D<Scalar> InverseLookAtDirAssumeOrtho(CONST_REF(Vector3<Sc
 	return MakeAffineTransform(R, T);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> InverseLookAtDirAssumeOrtho(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down)
 {
 	const Vector3<Scalar> right = Cross(front, down);
 	return InverseLookAtDirAssumeOrtho(position, front, down, right);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> InverseLookAtDir(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) front, CONST_REF(Vector3<Scalar>) down)
 {
 	const Vector3<Scalar> s_ = (Cross(front, down));
@@ -58,13 +58,13 @@ constexpr AffineXForm3D<Scalar> InverseLookAtDir(CONST_REF(Vector3<Scalar>) posi
 	return InverseLookAtDirAssumeOrtho(position, front, d, s);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr AffineXForm3D<Scalar> InverseLookAt(CONST_REF(Vector3<Scalar>) position, CONST_REF(Vector3<Scalar>) focus, CONST_REF(Vector3<Scalar>) down)
 {
 	return InverseLookAtDir(position, Normalize(focus - position), down);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix<Scalar, 4, 4> PerspectiveProjExplicit(CONST_REF(Vector4<Scalar>) coefs)
 {
 	Matrix4<Scalar> res = MakeUniformMatrix<4, 4>(Scalar(0));
@@ -77,7 +77,7 @@ constexpr Matrix<Scalar, 4, 4> PerspectiveProjExplicit(CONST_REF(Vector4<Scalar>
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector<Scalar, 4> ExtractPerspectiveProjCoefs(CONST_REF(Matrix4<Scalar>) m)
 {
 	return Vector4<Scalar>(
@@ -88,7 +88,7 @@ constexpr Vector<Scalar, 4> ExtractPerspectiveProjCoefs(CONST_REF(Matrix4<Scalar
 	);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetPerspectiveProjForwardCoefsFromInvTanInvAspect(Scalar inv_tan_half_fov, Scalar inv_aspect, Vector2<Scalar> z_range)
 {
 	Vector4<Scalar> res;
@@ -99,13 +99,13 @@ constexpr Vector4<Scalar> GetPerspectiveProjForwardCoefsFromInvTanInvAspect(Scal
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetPerspectiveProjReverseCoefsFromInvTanInvAspect(Scalar inv_tan_half_fov, Scalar inv_aspect, Vector2<Scalar> z_range)
 {
 	return GetPerspectiveProjForwardCoefsFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, Vector2<Scalar>(z_range[1], z_range[0]));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetPerspectiveProjCoefsFromInvTanInvAspect(Scalar inv_tan_half_fov, Scalar inv_aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return reverse ? 
@@ -113,26 +113,26 @@ constexpr Vector4<Scalar> GetPerspectiveProjCoefsFromInvTanInvAspect(Scalar inv_
 		GetPerspectiveProjForwardCoefsFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_range);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> PerspectiveProjFromInvTanInvAspect(Scalar inv_tan_half_fov, Scalar inv_aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return PerspectiveProjExplicit(GetPerspectiveProjCoefsFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_range, reverse));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> PerspectiveProjFromTan(Scalar tan_half_fov, Scalar aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return PerspectiveProjFromInvTanInvAspect(rcp(tan_half_fov), rcp(aspect), z_range, reverse);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> PerspectiveProjFromFOV(Scalar fov, Scalar aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return PerspectiveProjFromTan(TanHalfFOV(fov), aspect, z_range, reverse);
 }
 
 // Works in both directions
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> InversePerspectiveProjCoefs(Vector4<Scalar> coefs)
 {
 	Vector4<Scalar> res;
@@ -143,7 +143,7 @@ constexpr Vector4<Scalar> InversePerspectiveProjCoefs(Vector4<Scalar> coefs)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InversePerspectiveProjExplicit(Vector4<Scalar> coefs)
 {
 	Matrix4<Scalar> res = MakeUniformMatrix<4, 4>(Scalar(0));
@@ -155,7 +155,7 @@ constexpr Matrix4<Scalar> InversePerspectiveProjExplicit(Vector4<Scalar> coefs)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetInversePerspectiveProjForwardCoefsFromTan(Scalar tan_half_fov, Scalar aspect, Vector2<Scalar> z_range)
 {
 	Vector4<Scalar> res;
@@ -168,13 +168,13 @@ constexpr Vector4<Scalar> GetInversePerspectiveProjForwardCoefsFromTan(Scalar ta
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetInversePerspectiveProjReverseCoefsFromTan(Scalar tan_half_fov, Scalar aspect, Vector2<Scalar> z_range)
 {
 	return GetInversePerspectiveProjForwardCoefsFromTan(tan_half_fov, aspect, Vector2<Scalar>(z_range[1], z_range[0]));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetInversePerspectiveProjCoefsFromTan(Scalar tan_half_fov, Scalar aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return reverse ? 
@@ -182,19 +182,19 @@ constexpr Vector4<Scalar> GetInversePerspectiveProjCoefsFromTan(Scalar tan_half_
 		GetInversePerspectiveProjForwardCoefsFromTan(tan_half_fov, aspect, z_range);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InversePerspectiveProjFromTan(Scalar tan_half_fov, Scalar aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return InversePerspectiveProjExplicit(GetInversePerspectiveProjCoefsFromTan(tan_half_fov, aspect, z_range, reverse));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InversePerspectiveProjFromFOV(Scalar fov, Scalar aspect, Vector2<Scalar> z_range, bool reverse = false)
 {
 	return InversePerspectiveProjFromTan(TanHalfFOV(fov), aspect, z_range, reverse);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetInfinitePerspectiveProjCoefsFromInvTanInvAspect(Scalar inv_tan_half_fov, Scalar inv_aspect, Scalar z_near, bool reverse = false)
 {
 	Vector4<Scalar> coefs;
@@ -213,32 +213,32 @@ constexpr Vector4<Scalar> GetInfinitePerspectiveProjCoefsFromInvTanInvAspect(Sca
 	return coefs;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetInfinitePerspectiveProjCoefsFromTan(Scalar tan_half_fov, Scalar aspect, Scalar z_near, bool reverse = false)
 {
 	return GetInfinitePerspectiveProjCoefsFromInvTanInvAspect(rcp(tan_half_fov), rcp(aspect), z_near, reverse);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InfinitePerspectiveProjFromInvTanInvAspect(Scalar inv_tan_half_fov, Scalar inv_aspect, Scalar z_near, bool reverse = false)
 {
 	return PerspectiveProjExplicit(GetInfinitePerspectiveProjCoefsFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_near, reverse));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InfinitePerspectiveProjFromTan(Scalar tan_half_fov, Scalar aspect, Scalar z_near, bool reverse = false)
 {
 	return PerspectiveProjExplicit(GetInfinitePerspectiveProjCoefsFromTan(tan_half_fov, aspect, z_near, reverse));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InfinitePerspectiveProjFromFOV(Scalar fov, Scalar aspect, Scalar z_near, bool reverse = false)
 {
 	const Scalar tan_half_fov = TanHalfFOV(fov);
 	return InfinitePerspectiveProjFromTan(tan_half_fov, aspect, z_near, reverse);
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector4<Scalar> GetInverseInfinitePerspectiveProjCoefsFromTanInvZnear(Scalar tan_half_fov, Scalar aspect, Scalar inv_z_near, bool reverse = false)
 {
 	Vector4<Scalar> coefs;
@@ -257,19 +257,19 @@ constexpr Vector4<Scalar> GetInverseInfinitePerspectiveProjCoefsFromTanInvZnear(
 	return coefs;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InverseInfinitePerspectiveProjFromTanInvZnear(Scalar tan_half_fov, Scalar aspect, Scalar inv_z_near, bool reverse = false)
 {
 	return InversePerspectiveProjExplicit(GetInverseInfinitePerspectiveProjCoefsFromTanInvZnear(tan_half_fov, aspect, inv_z_near, reverse));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InverseInfinitePerspectiveProjFromTan(Scalar tan_half_fov, Scalar aspect, Scalar z_near, bool reverse = false)
 {
 	return InversePerspectiveProjExplicit(GetInverseInfinitePerspectiveProjCoefsFromTanInvZnear(tan_half_fov, aspect, rcp(z_near), reverse));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InverseInfinitePerspectiveProjFromFOV(Scalar fov, Scalar aspect, Scalar z_near, bool reverse = false)
 {
 	return InverseInfinitePerspectiveProjFromTan(TanHalfFOV(fov), aspect, z_near, reverse);
@@ -278,7 +278,7 @@ constexpr Matrix4<Scalar> InverseInfinitePerspectiveProjFromFOV(Scalar fov, Scal
 
 // lbn: left, bottom, near
 // rtf: right, top, far
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> OrthoProj(Vector3<Scalar> lbn, Vector3<Scalar> rtf, bool reverse = false)
 {
 	if(reverse)
@@ -295,7 +295,7 @@ constexpr Matrix4<Scalar> OrthoProj(Vector3<Scalar> lbn, Vector3<Scalar> rtf, bo
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix4<Scalar> InverseOrthoProj(Vector3<Scalar> lbn, Vector3<Scalar> rtf, bool reverse = false)
 {
 	if(reverse)

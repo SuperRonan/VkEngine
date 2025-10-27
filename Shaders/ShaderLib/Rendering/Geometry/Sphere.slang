@@ -3,7 +3,7 @@
 #include "Geometry.slang"
 #include <ShaderLib/Rendering/Ray.slang>
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 struct HyperSphere : IGeometry<T, N>
 {
 	Vector<T, N> center;
@@ -18,10 +18,10 @@ struct HyperSphere : IGeometry<T, N>
 	}
 };
 
-template <typename T : __BuiltinArithmeticType>
+__generic <typename T : __BuiltinArithmeticType>
 typealias Circle = HyperSphere<T, 2>;
 
-template <typename T : __BuiltinFloatingPointType>
+__generic <typename T : __BuiltinFloatingPointType>
 typealias Sphere = HyperSphere<T, 3>;
 
 typealias Circlef = Circle<float>;

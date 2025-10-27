@@ -9,13 +9,13 @@
 namespace microfacets
 {
 	// Normal distribution "D"
-	template <Float : __BuiltinFloatingPointType>
+	__generic <Float : __BuiltinFloatingPointType>
 	Float NormalDistribution(Float alpha2, Vector3<Float> normal, Vector3<Float> halfway)
 	{
 		return alpha2 / (Float(M_PI) * sqr(sqr(dot(normal, halfway)) * (alpha2 - Float(1)) + Float(1)));
 	}
 
-	template <Float : __BuiltinFloatingPointType>
+	__generic <Float : __BuiltinFloatingPointType>
 	Float GGX(Vector3<Float> n, Vector3<Float> v, Float k)
 	{
 		const Float d = max(dot(n, v), Float(0));
@@ -26,7 +26,7 @@ namespace microfacets
 	}
 	
 	// Shadowing masking function "G"
-	template <Float : __BuiltinFloatingPointType>
+	__generic <Float : __BuiltinFloatingPointType>
 	Float GeometryShadowMasking(Vector3<Float> n, Vector3<Float> wo, Vector3<Float> wi, Float k)
 	{
 		const Float gi = GGX(n, wi, k);
@@ -37,13 +37,13 @@ namespace microfacets
 		return res;
 	}
 	
-	template <Float : __BuiltinFloatingPointType>
+	__generic <Float : __BuiltinFloatingPointType>
 	Float SpecularFresnelNormalIncidence(Float n)
 	{
 		return sqr(n - Float(1)) / sqr(n + Float(1));
 	}
 	
-	template <Res : IFloat, Float : __BuiltinFloatingPointType>
+	__generic <Res : IFloat, Float : __BuiltinFloatingPointType>
 	Res FresnelSchlick(Res F0, Vector3<Float> v, Vector3<Float> h, bool use_approx=false)
 	{
 		const Float d = dot(v, h);

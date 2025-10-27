@@ -27,7 +27,7 @@ SurfaceGeometryDifferentials<M> operator*(const in SurfaceGeometryDifferentials<
 
 typealias SurfaceGeometryDifferentials2 = SurfaceGeometryDifferentials<2>;
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 interface IGeometry
 {
 

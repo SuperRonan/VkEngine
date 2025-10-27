@@ -11,7 +11,7 @@ interface IMesh : IGeometry<float, 3>
 
 
 
-	template <int N>
+	__generic <int N>
 	uvec<N> getPrimitiveIndices(uint i);
 
 };
@@ -21,7 +21,7 @@ struct MeshBase
 
 };
 
-template <typename T, typename Array_T : IArray<T>, int N>
+__generic <typename T, typename Array_T : IArray<T>, int N>
 Array<T, N> MultiRead(const in Array_T array, uvec<N> indices)
 {
 	Array<T, N> res;
@@ -108,7 +108,7 @@ struct Mesh : MeshBase
 	StructuredBuffer<Vertex, Std430DataLayout> _vertices;
 	ByteAddressBuffer _indices;
 
-	template <UInt : __BuiltinIntegerType, int N>
+	__generic <UInt : __BuiltinIntegerType, int N>
 	static Vector<UInt, N> ReadIndicesWithFormat(const in ByteAddressBuffer buffer, uint i)
 	{
 		Vector<UInt, N> res;
@@ -117,7 +117,7 @@ struct Mesh : MeshBase
 		return res;
 	}
 
-	template <int N>
+	__generic <int N>
 	static uvec<N> ReadIndices(const in ByteAddressBuffer buffer, uint i, uint flags)
 	{
 		uvec<N> res;
@@ -144,19 +144,19 @@ struct Mesh : MeshBase
 		return res;
 	}
 
-	template <UInt : __BuiltinIntegerType, int N>
+	__generic <UInt : __BuiltinIntegerType, int N>
 	Vector<UInt, N> readIndicesWithFormat(uint i)
 	{
 		return ReadIndicesWithFormat<UInt, N>(_indices, i);
 	}
 
-	template <int N>
+	__generic <int N>
 	uvec<N> getPrimitiveIndices(uint i)
 	{
 		return ReadIndices<N>(_indices, i, header.flags);
 	}
 
-	template <int N>
+	__generic <int N>
 	static Vertex InterpolateVertex(const in IArray<Vertex> vertices, uvec<N> indices, Vectorf<N> weights)
 	{
 		Vertex res = {};
@@ -176,13 +176,13 @@ struct Mesh : MeshBase
 		return res;
 	}
 
-	template <int N>
+	__generic <int N>
 	Vertex interpolateVertex(uvec<N> indices, Vectorf<N> weights)
 	{
 		return InterpolateVertex(_vertices, indices, weights);
 	}
 
-	template <int N>
+	__generic <int N>
 	Vertex interpolateVertex(uvec<N> indices, Vectorf<N - 1> uvs)
 	{
 		return interpolateVertex(indices, UVToBarycentric(uvs));

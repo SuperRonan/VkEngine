@@ -29,7 +29,7 @@ typealias TLAS_t = RaytracingAccelerationStructure;
 
 // TODO https://developer.nvidia.com/blog/solving-self-intersection-artifacts-in-directx-raytracing/
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 T RayTMin(const in Vector<T, N> origin)
 {
 	// Not perfect, but good enough
@@ -43,7 +43,7 @@ T RayTMin(const in Vector<T, N> origin)
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 T RayTMin(const in Vector<T, N> origin, T cos_theta)
 {
 	// Not perfect, but good enough
@@ -53,7 +53,7 @@ T RayTMin(const in Vector<T, N> origin, T cos_theta)
 	return res;
 }
 
-template <typename T : __BuiltinArithmeticType, int N>
+__generic <typename T : __BuiltinArithmeticType, int N>
 T RayTMin(const in Ray<T, N> ray, const in Vector<T, N> normal)
 {
 	const T cos_theta = AbsDot(ray.direction, normal);
@@ -62,7 +62,7 @@ T RayTMin(const in Ray<T, N> ray, const in Vector<T, N> normal)
 
 #if SHADER_RAY_QUERY_AVAILABLE
 
-template <uint Flags>
+__generic <uint Flags>
 extension RayQuery<Flags>
 {
 	[mutating]

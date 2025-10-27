@@ -2,7 +2,7 @@
 
 #include <ShaderLib/interop_slang_cpp>
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Scalar TanHalfFOVFast(CONST_REF(Scalar) fov)
 {
 	CPP_ONLY(using namespace std);
@@ -14,7 +14,7 @@ constexpr Scalar TanHalfFOVFast(CONST_REF(Scalar) fov)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Scalar TanHalfFOVCorrect(CONST_REF(Scalar) fov)
 {
 	CPP_ONLY(using namespace std);
@@ -22,7 +22,7 @@ constexpr Scalar TanHalfFOVCorrect(CONST_REF(Scalar) fov)
 	return res1;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Scalar TanHalfFOV(CONST_REF(Scalar) fov)
 {
 	const Scalar c = TanHalfFOVCorrect(fov);
@@ -30,7 +30,7 @@ constexpr Scalar TanHalfFOV(CONST_REF(Scalar) fov)
 	return c;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector2<Scalar>) theta_phi)
 {
 	CPP_ONLY(using namespace std);
@@ -47,13 +47,13 @@ constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector2<Scalar>) theta_
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector3<Scalar> SphericalToCartesian(CONST_REF(Vector3<Scalar>) theta_phi_rho)
 {
 	return SphericalToCartesian(Vector2<Scalar>(theta_phi_rho[0], theta_phi_rho[1])) * theta_phi_rho[2];
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector2<Scalar> CartesianNormalDirToSpherical(CONST_REF(Vector3<Scalar>) dir)
 {
 	Vector2<Scalar> res;
@@ -62,7 +62,7 @@ constexpr Vector2<Scalar> CartesianNormalDirToSpherical(CONST_REF(Vector3<Scalar
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector3<Scalar> CartesianDirToSpherical(CONST_REF(Vector3<Scalar>) dir)
 {
 	const Scalar rho = Length(dir);
@@ -74,13 +74,13 @@ constexpr Vector3<Scalar> CartesianDirToSpherical(CONST_REF(Vector3<Scalar>) dir
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> ClipSpaceToUV(CONST_REF(Vector<Scalar, N>) cp)
 {
 	return cp / Scalar(2) + MakeUniformVector<N>(Scalar(0.5));
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar), int N>
 constexpr Vector<Scalar, N> UVToClipSpace(CONST_REF(Vector<Scalar, N>) uv)
 {
 	return uv * Scalar(2) - MakeUniformVector<N>(Scalar(1));

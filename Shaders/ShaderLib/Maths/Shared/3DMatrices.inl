@@ -1,7 +1,7 @@
 #pragma once
 #include <ShaderLib/interop_slang_cpp>
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Vector2<Scalar> Rotate90(CONST_REF(Vector2<Scalar>) dir)
 {
 	Vector2<Scalar> res;
@@ -10,7 +10,7 @@ constexpr Vector2<Scalar> Rotate90(CONST_REF(Vector2<Scalar>) dir)
 	return res;
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix2<Scalar> BasisFromDir(CONST_REF(Vector2<Scalar>) dir)
 {
 	Matrix2<Scalar> res;
@@ -22,7 +22,7 @@ constexpr Matrix2<Scalar> BasisFromDir(CONST_REF(Vector2<Scalar>) dir)
 
 // Assume dot(Z, X) = 0
 // |X| = |Z| = 1
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix3<Scalar> BasisFrom2DBasisZX(CONST_REF(Vector3<Scalar>) Z, CONST_REF(Vector3<Scalar>) X)
 {
 	const Vector3<Scalar> Y = Cross(Z, X);
@@ -31,7 +31,7 @@ constexpr Matrix3<Scalar> BasisFrom2DBasisZX(CONST_REF(Vector3<Scalar>) Z, CONST
 }
 
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix3<Scalar> BasisFromDir_fast(CONST_REF(Vector3<Scalar>) dir)
 {
 	
@@ -52,7 +52,7 @@ constexpr Matrix3<Scalar> BasisFromDir_fast(CONST_REF(Vector3<Scalar>) dir)
 }
 
 // https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix3<Scalar> BasisFromDir_frisvad(CONST_REF(Vector3<Scalar>) Z)
 {
 	Vector3<Scalar> X;
@@ -69,7 +69,7 @@ constexpr Matrix3<Scalar> BasisFromDir_frisvad(CONST_REF(Vector3<Scalar>) Z)
 	return BasisFrom2DBasisZX(Z, X);
 }
 
-template<CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic<CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix3<Scalar> BasisFromDir_hughes_moeller(CONST_REF(Vector3<Scalar>) Z)
 {
 	CPP_ONLY(using namespace std);
@@ -81,7 +81,7 @@ constexpr Matrix3<Scalar> BasisFromDir_hughes_moeller(CONST_REF(Vector3<Scalar>)
 	return Matrix3<Scalar>(X, Y, Z);
 }
 
-template<CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic<CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix3<Scalar> BasisFromDir(CONST_REF(Vector3<Scalar>) Z, int method = 0)
 {
 	if(method == 0)
@@ -98,7 +98,7 @@ constexpr Matrix3<Scalar> BasisFromDir(CONST_REF(Vector3<Scalar>) Z, int method 
 	}
 }
 
-template <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
+__generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
 constexpr Matrix3<Scalar> CrossProductMatrix(CONST_REF(Vector3<Scalar>) u)
 {
 	Matrix3<Scalar> res = MakeUniformMatrix<3, 3>(Scalar(0));

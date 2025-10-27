@@ -2,7 +2,7 @@
 
 #include "common.slang"
 
-template <T : ITexelElement, int SampleCount, int Access, int IsShadow, int IsCombined, int Format>
+__generic <T : ITexelElement, int SampleCount, int Access, int IsShadow, int IsCombined, int Format>
 uvec2 TextureSize(const in _Texture<T, __Shape2D, 0, 0, SampleCount, Access, IsShadow, IsCombined, Format> texture)
 {
 	uvec2 res;
@@ -26,7 +26,7 @@ float TextureLODOffsetInQuad(vec2 uv)
 
 interface ITextureSamplingInfo
 {
-	template <typename T : ITexelElement>
+	__generic <typename T : ITexelElement>
 	T sample(const in Sampler2D<T> txt, vec2 uv);
 };
 
@@ -39,7 +39,7 @@ struct DefaultTextureSampling : ITextureSamplingInfo
 		this.offset = offset;
 	}
 	
-	template <typename T : ITexelElement>
+	__generic <typename T : ITexelElement>
 	T sample(const in Sampler2D<T> txt, vec2 uv)
 	{
 		return txt.SampleLevel(uv, offset);
@@ -53,7 +53,7 @@ struct QuadDiffTextureSampling : ITextureSamplingInfo
 	__init()
 	{}
 
-	template <typename T : ITexelElement>
+	__generic <typename T : ITexelElement>
 	T sample(const in Sampler2D<T> txt, vec2 uv)
 	{
 		return txt.Sample(uv);
@@ -69,7 +69,7 @@ struct RayDiffTextureSampling : ITextureSamplingInfo
 		this.uv_jacobian = uv_jacobian;
 	}
 
-	template <typename T : ITexelElement>
+	__generic <typename T : ITexelElement>
 	T sample(const in Sampler2D<T> txt, vec2 uv)
 	{
 		return txt.SampleGrad(uv, GetColumn(uv_jacobian, 0), GetColumn(uv_jacobian, 1));

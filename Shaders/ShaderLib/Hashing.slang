@@ -44,7 +44,7 @@ fast_hash_t FastHash64(uint64_t x)
 	return FastHash32(uint32_t(x)) ^ FastHash32(uint32_t(x >> 32));
 }
 
-template <typename UInt : __BuiltinIntegerType>
+__generic <typename UInt : __BuiltinIntegerType>
 fast_hash_t FastHashIntegral(UInt x)
 {
 	fast_hash_t res;
@@ -68,13 +68,13 @@ slow_hash_t SlowHash64(uint64_t x)
 	return x;
 }
 
-template <typename UInt : __BuiltinIntegerType>
+__generic <typename UInt : __BuiltinIntegerType>
 slow_hash_t SlowHashIntegral(UInt x)
 {
 	return SlowHash64(ConvertBuiltInTo<uint64_t>(x));
 }
 
-template <typename T_Hash_t : IHashResult = hash_t, typename UInt : __BuiltinIntegerType>
+__generic <typename T_Hash_t : IHashResult = hash_t, typename UInt : __BuiltinIntegerType>
 T_Hash_t HashIntegral(UInt x)
 {
 	T_Hash_t res;
@@ -89,7 +89,7 @@ T_Hash_t HashIntegral(UInt x)
 	return res;
 }
 
-template <typename T_Hash_t : IHashResult = hash_t, typename Float : __BuiltinFloatingPointType>
+__generic <typename T_Hash_t : IHashResult = hash_t, typename Float : __BuiltinFloatingPointType>
 T_Hash_t HashFloat(Float x)
 {
 	T_Hash_t res;
@@ -108,7 +108,7 @@ T_Hash_t HashFloat(Float x)
 	return res;
 }
 
-template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType>
+__generic <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType>
 T_Hash_t Hash_(T t)
 {
 	T_Hash_t res;
@@ -145,7 +145,7 @@ T_Hash_t Hash_(T t)
 // Sequencial: res[i] = H(res[i-1] ^ H(vec[i]))
 // Recursive: H(vec4 v) = H(V.xy) ^ H(V.zw)
 
-template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, typename Array : IArray<T>>
+__generic <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, typename Array : IArray<T>>
 T_Hash_t HashSequencial(const in Array array)
 {
 	T_Hash_t res = T_Hash_t(0);
@@ -157,7 +157,7 @@ T_Hash_t HashSequencial(const in Array array)
 	return res;
 }
 
-template <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, typename Array : IArray<T>>
+__generic <typename T_Hash_t : IHashResult = hash_t, typename T : __BuiltinArithmeticType, typename Array : IArray<T>>
 T_Hash_t Hash_(const in Array array)
 {
 	return HashSequencial<T_Hash_t>(array);

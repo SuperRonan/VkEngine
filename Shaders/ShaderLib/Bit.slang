@@ -7,7 +7,7 @@
 #define __BuiltinSignedIntegerType __BuiltinIntegerType
 
 
-template <typename Float : __BuiltinFloatingPointType, typename Int : __BuiltinIntegerType>
+__generic <typename Float : __BuiltinFloatingPointType, typename Int : __BuiltinIntegerType>
 Float FloatOffset(Float f, Int o)
 {
 	if(Float is f16)

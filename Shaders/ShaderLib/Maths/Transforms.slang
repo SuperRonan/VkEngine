@@ -2,15 +2,15 @@
 
 #include <ShaderLib/common.slang>
 
-template <typename Scalar, int N>
+__generic <typename Scalar, int N>
 typealias AffineXForm = Matrix<Scalar, N, N+1>;
 
-template <typename Scalar>
+__generic <typename Scalar>
 typealias AffineXForm3D = AffineXForm<Scalar, 3>;
 
 typealias AffineXForm3Df = AffineXForm3D<float>;
 
-template <typename Scalar : __BuiltinArithmeticType, int N>
+__generic <typename Scalar : __BuiltinArithmeticType, int N>
 Vector<Scalar, N + 1> Homogeneous(const in Vector<Scalar, N> vec, Scalar h = Scalar(1))
 {
 	Vector<Scalar, N + 1> res;
@@ -22,7 +22,7 @@ Vector<Scalar, N + 1> Homogeneous(const in Vector<Scalar, N> vec, Scalar h = Sca
 	return res;
 }
 
-template <typename Scalar : __BuiltinFloatingPointType, int N>
+__generic <typename Scalar : __BuiltinFloatingPointType, int N>
 Vector<Scalar, N - 1> HomogeneousNormalize(const in Vector<Scalar, N> vec)
 {
 	Vector<Scalar, N - 1> res;
@@ -38,7 +38,7 @@ Vector<Scalar, N - 1> HomogeneousNormalize(const in Vector<Scalar, N> vec)
 }
 
 // The function is generalized to a N-th dimensional simplex
-template <typename Scalar : __BuiltinArithmeticType, int N>
+__generic <typename Scalar : __BuiltinArithmeticType, int N>
 Vector<Scalar, N + 1> UVToBarycentric(const in Vector<Scalar, N> v)
 {
 	Vector<Scalar, N + 1> res;
@@ -50,7 +50,7 @@ Vector<Scalar, N + 1> UVToBarycentric(const in Vector<Scalar, N> v)
 	return res;
 }
 
-template <typename Scalar : __BuiltinFloatingPointType, int N>
+__generic <typename Scalar : __BuiltinFloatingPointType, int N>
 Matrix<Scalar, N, N> DirectionMatrix(const in Matrix<Scalar, N, N> m)
 {
 	return Transpose(Inverse(m));
