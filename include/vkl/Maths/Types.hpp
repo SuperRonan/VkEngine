@@ -78,13 +78,17 @@ namespace vkl
 		DECLARE_NESTED_CONCEPT(CompileTimeSizedMatrix)
 		DECLARE_NESTED_CONCEPT(CompileTimeSizedSquareMatrix)
 
+		// A compile time sized vector (any size)
 		template <class C>
-		concept PlainCompileTimeSizedVector = PlainCompileTimeSizedMatrix<C> && requires(C const& c)
-		{
-			C::RowsAtCompileTime == 1 || C::ColsAtCompileTime == 1;
-		};
+		concept PlainCompileTimeSizedVector = PlainCompileTimeSizedMatrix<C> && (C::RowsAtCompileTime == 1 || C::ColsAtCompileTime == 1);
 
 		DECLARE_NESTED_CONCEPT(CompileTimeSizedVector)
+
+		// A vector of size N at compile time
+		template <class C, int N>
+		concept PlainCompileTimeVector = PlainCompileTimeSizedVector<C> && (C::SizeAtCompileTime == N);
+
+		DECLARE_NESTED_CONCEPT_N(CompileTimeVector)
 
 		template <class C>
 		concept PlainCompileTimeSizedRowVector = PlainCompileTimeSizedMatrix<C> && (C::RowsAtCompileTime == 1);
@@ -672,6 +676,14 @@ namespace vkl
 	static constexpr auto Lerp(MatL const& l, MatR const& r, typename MatL::Scalar const& t)
 	{
 		return r * t + (typename MatL::Scalar(1) - t) * l;
+	}
+
+	template <concepts::CompileTimeVectorCompatible<3> Vec_3>
+	static constexpr auto Luminance(Vec_3 const& rgb)
+	{
+		using Scalar = typename Vec_3::Scalar;
+		Vector3<Scalar> weights = { Scalar(0.299), Scalar(0.587), Scalar(0.114) };
+		return rgb.dot(weights);
 	}
 	
 

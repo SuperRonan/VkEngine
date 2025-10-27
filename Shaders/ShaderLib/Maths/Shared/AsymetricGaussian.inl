@@ -29,4 +29,4 @@ struct AsymetricGaussian SLANG_ONLY(: IFunc<Float, Float>)
 		Float res = CPP_ONLY(std::)exp(-sqr(t * (x - mu)) * Float(0.5));
 		return res;
 	}
-}
+};

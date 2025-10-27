@@ -6,29 +6,12 @@
 
 #include <ShaderLib/Rendering/Lights/Definitions.h>
 
+#include <vkl/Rendering/SpectrumWaveLength.hpp>
+
+//#include <that/stl_ext/alignment.hpp>
+
 namespace vkl
 {
-	LightGLSL LightGLSL::MakePoint(vec3 position, vec3 emission)
-	{
-		LightGLSL res{
-			.position = position,
-			.flags = LightType::Point,
-			.emission = emission,
-		};
-		return res;
-	}
-
-	LightGLSL LightGLSL::MakeDirectional(vec3 dir, vec3 emission)
-	{
-		LightGLSL res{
-			.position = vec3(0, 0, 0),
-			.flags = LightType::Directional,
-			.emission = emission,
-			.direction = dir,
-		};
-		return res;
-	}
-
 	LightGLSL LightGLSL::transform(Matrix3x4f const& mat) const
 	{
 		LightGLSL res;
@@ -48,7 +31,7 @@ namespace vkl
 		VkObject(ci.app, ci.name),
 		_type(ci.type),
 		_emission(ci.emission),
-		_black_body_emission(ci.black_body_emission),
+		_emission_options(ci.emission_options),
 		_enable_shadow_map(ci.enable_shadow_map)
 	{}
 
@@ -64,25 +47,28 @@ namespace vkl
 		{
 			res |= (1 << (shadowMapBitIndex() + 3));
 		}
-		if (_black_body_emission)
+		if (_emission_options & EMISSION_FLAG_BLACK_BODY_BIT)
 		{
 			res |= LIGHT_BLACK_BODY_EMISSION_BIT_FLAG;
 		}
 		return res;
 	}
 
-	bool Light::DeclareEmission(vec3& emission, bool& black_body)
+	bool Light::DeclareEmission(vec3& emission, uint8_t& options)
 	{
 		bool res = false;
+		bool black_body = (options & EMISSION_FLAG_BLACK_BODY_BIT);
 		if (ImGui::Checkbox("Black Body Emission", &black_body))
 		{
 			if (black_body)
 			{
+				options = BlackBodyEmission(1);
 				emission.x() = 5500;
 				emission.y() = 1;
 			}
 			else
 			{
+				options = 0;
 				emission = vec3::Ones();
 			}
 			res |= true;
@@ -93,6 +79,28 @@ namespace vkl
 			ImGui::PushID(1);
 			res |= ImGui::SliderFloat("Intensity", &emission.y(), 1e-2, 1e2, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
 			ImGui::PopID();
+
+			size_t norm = ExtractBlackBodyEmissionNorm(options);
+			static thread_local ImGuiListSelection normalizations = ImGuiListSelection::CI{
+				.name = "Normalization",
+				.mode = ImGuiListSelection::Mode::RadioButtons,
+				.same_line = true,
+				.options = {
+					ImGuiListSelection::Option{
+						.name = "None",
+					},
+					ImGuiListSelection::Option{
+						.name = "Visible",
+					},
+					ImGuiListSelection::Option{
+						.name = "Total",
+					},
+				},
+			};
+			if (normalizations.declare(norm))
+			{
+				options = BlackBodyEmission(uint(norm));
+			}
 		}
 		else
 		{
@@ -127,6 +135,20 @@ namespace vkl
 		return res;
 	}
 
+	vec3 Light::NormalizeEmission(vec3 emission, uint8_t options, float norm)
+	{
+		vec3 res = emission;
+		if (options & EMISSION_FLAG_BLACK_BODY_BIT)
+		{
+			res.y() /= (norm * vkl::EvalBlackBodySpectralRadianceNorm(res.x(), ExtractBlackBodyEmissionNorm(options)));
+		}
+		else
+		{
+			res /= norm;
+		}
+		return res;
+	}
+
 	void Light::declareGui(GuiContext& ctx)
 	{
 		ImGui::PushID(this);
@@ -135,7 +157,7 @@ namespace vkl
 		ImGui::SameLine();
 		ImGui::Text(name().c_str());
 		
-		DeclareEmission(_emission, _black_body_emission);
+		DeclareEmission(_emission, _emission_options);
 
 		static thread_local ImGuiListSelection gui_shadow_bias_mode = ImGuiListSelection::CI{
 			.name = "Shadow Bias Mode",
@@ -206,7 +228,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::Point,
 			.emission = ci.emission,
-			.black_body_emission = ci.black_body_emission,
+			.emission_options = ci.emission_options,
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position),
@@ -216,7 +238,9 @@ namespace vkl
 	LightGLSL PointLight::getAsGLSL(Matrix3x4f const& xform) const
 	{
 		const vec3 hpos = xform * Homogeneous(_position);
-		LightGLSL res = LightGLSL::MakePoint(hpos, _emission);
+		LightGLSL res = {};
+		res.position = hpos;
+		res.emission = NormalizeEmission(_emission, _emission_options);
 		res.flags = flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		res.z_near = _z_near;
@@ -250,7 +274,7 @@ namespace vkl
 			.name = ci.name,
 			.type = LightType::Directional,
 			.emission = ci.emission,
-			.black_body_emission = ci.black_body_emission,
+			.emission_options = ci.emission_options,
 			.enable_shadow_map = false,
 		}),
 		_direction(Normalize(ci.direction))
@@ -265,7 +289,10 @@ namespace vkl
 	LightGLSL DirectionalLight::getAsGLSL(Matrix3x4f const& xform) const
 	{
 		const vec3 dir = Normalize(DirectionMatrix(mat3(xform)) * _direction);
-		LightGLSL res = LightGLSL::MakeDirectional(dir, _emission);
+		LightGLSL res = {};
+		res.direction = dir;
+		res.emission = NormalizeEmission(_emission, _emission_options);
+		res.flags = flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		return res;
 	}
@@ -288,7 +315,7 @@ namespace vkl
 			.name = ci.name,
 			.type = ci.is_beam ? LightType::Beam : LightType::Spot,
 			.emission = ci.emission,
-			.black_body_emission = ci.black_body_emission,
+			.emission_options = ci.emission_options,
 			.enable_shadow_map = ci.enable_shadow_map,
 		}),
 		_position(ci.position),
@@ -310,21 +337,14 @@ namespace vkl
 
 	LightGLSL SpotBeamLight::getAsGLSL(Matrix3x4f const& xform)const
 	{
-		LightGLSL res;
-		res.emission = _emission;
-		auto NotZero = [](float f){return f != 0.0f ? f : 1;};
+		LightGLSL res = {};
+		float norm = 1;
 		if (_preserve_intensity_from_opening)
 		{
-			float norm = rcp(std::max(sqr(NotZero(_opening)) * NotZero(_ratio), std::numeric_limits<float>::epsilon()));
-			if (_black_body_emission)
-			{
-				res.emission.y() *= norm;
-			}
-			else
-			{
-				res.emission *= norm;
-			}
+			auto NotZero = [](float f){return f != 0.0f ? f : 1;};
+			norm = std::max(sqr(NotZero(_opening)) * NotZero(_ratio), std::numeric_limits<float>::epsilon());
 		}
+		res.emission = NormalizeEmission(_emission, _emission_options, norm);
 		res.flags = SpotBeamLight::flags();
 		res.shadow_bias_data = static_cast<uint32_t>(_int_shadow_bias);
 		const mat3 dir_mat = DirectionMatrix(mat3(xform));

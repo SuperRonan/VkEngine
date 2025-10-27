@@ -22,7 +22,7 @@
 __generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Float)>
 Float GetPhysicalWaveLength(Float wave_length, Float min, Float max)
 {
-	return lerp(min, max, wave_length);
+	return CPP_ONLY(std::)lerp(min, max, wave_length);
 }
 
 // Returns in nm
@@ -150,7 +150,14 @@ constexpr Float EvalBlackBodySpectralRadiance(Float temperature, bool total=fals
 }
 
 __generic <CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Float)>
-constexpr Float EvalBlackBodySpectralRadiance(Float temperature, int mode)
+constexpr Float EvalBlackBodySpectralRadianceNorm(Float temperature, uint mode)
 {
-	return EvalBlackBodySpectralRadiance(temperature, mode == 2);
+	if (mode != 0)
+	{
+		return EvalBlackBodySpectralRadiance(temperature, mode == 2);
+	}
+	else
+	{
+		return Float(1);
+	}
 }

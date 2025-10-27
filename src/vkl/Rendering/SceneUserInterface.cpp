@@ -549,7 +549,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			ImGui::SliderAngle("Azimuth", &_scene->_solar_disk_direction[1], -180, 180, "%.1f deg", ImGuiSliderFlags_WrapAround);
 			ImGui::SliderAngle("Solar Disk angle", &_scene->_solar_disk_angle, 0, 90, "%.1f deg");
 
-			Light::DeclareEmission(_scene->_solar_disk_emission, _scene->_solar_black_body);
+			Light::DeclareEmission(_scene->_solar_disk_emission, _scene->_solar_disk_emission_options);
 
 			ImGui::SeparatorText("Bounds");
 			vec3 center = _scene->_aabb.center();

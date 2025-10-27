@@ -4,8 +4,28 @@
 #include <vkl/Maths/Transforms.hpp>
 #include <vkl/IO/GuiContext.hpp>
 
+#define EMISSION_FLAG_BLACK_BODY_BIT 0x1
+#define EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX 0x1
+#define EMISSION_BLACK_BODY_NORMALIZATION_BIT_COUNT 0x2
+
 namespace vkl
 {
+	static constexpr uint8_t BlackBodyEmission(uint norm)
+	{
+		uint8_t res = EMISSION_FLAG_BLACK_BODY_BIT;
+		if (norm)
+		{
+			res |= uint8_t((norm & std::bitMask<uint8_t>(EMISSION_BLACK_BODY_NORMALIZATION_BIT_COUNT)) << uint8_t(EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX));
+		}
+		return res;
+	}
+
+	static constexpr uint ExtractBlackBodyEmissionNorm(uint8_t options)
+	{
+		return (options >> uint8_t(EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX)) & std::bitMask<uint8_t>(EMISSION_BLACK_BODY_NORMALIZATION_BIT_COUNT);
+	}
+
+
 	using vec2 = Vector2f;
 	using vec3 = Vector3f;
 	using vec4 = Vector4f;
@@ -61,10 +81,6 @@ namespace vkl
 			BeamSpecific beam;
 		};
 
-		static LightGLSL MakePoint(vec3 position, vec3 emission);
-
-		static LightGLSL MakeDirectional(vec3 dir, vec3 emission);
-
 		LightGLSL transform(Matrix3x4f const& mat) const;
 	};
 
@@ -89,7 +105,7 @@ namespace vkl
 
 		LightType _type;
 		vec3 _emission;
-		bool _black_body_emission = false;
+		uint8_t _emission_options = 0;
 		bool _enable_shadow_map;
 		ShadowBiasMode _shadow_bias_mode = ShadowBiasMode::FloatMult;
 		bool _shadow_bias_include_cos_theta = true;
@@ -107,7 +123,7 @@ namespace vkl
 			std::string name = {};
 			LightType type = LightType::None;
 			vec3 emission = vec3::Zero();
-			bool black_body_emission = false;
+			uint8_t emission_options = 0;
 			bool enable_shadow_map = true;
 		};
 		using CI = CreateInfo;
@@ -123,7 +139,9 @@ namespace vkl
 
 		virtual void declareGui(GuiContext & ctx);
 
-		static bool DeclareEmission(vec3& emission, bool& black_body);
+		static bool DeclareEmission(vec3& emission, uint8_t& options);
+
+		static vec3 NormalizeEmission(vec3 emission, uint8_t options, float norm=1);
 
 		bool enableShadowMap()const
 		{
@@ -160,7 +178,7 @@ namespace vkl
 			std::string name = {};
 			vec3 position = vec3::Zero();
 			vec3 emission = vec3::Zero();
-			bool black_body_emission = false;
+			uint8_t emission_options = 0;
 			bool enable_shadow_map = true;
 			float z_near = DefaultZNear();
 		};
@@ -189,7 +207,7 @@ namespace vkl
 			std::string name = {};
 			vec3 direction = vec3(1, 0, 0);
 			vec3 emission = vec3::Zero();
-			bool black_body_emission = false;
+			uint8_t emission_options = 0;
 		};
 		using CI = CreateInfo;
 
@@ -229,7 +247,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float opening = Radians(90.0f);
 			uint8_t attenuation = 0;
-			bool black_body_emission = false;
+			uint8_t emission_options = 0;
 			bool enable_shadow_map = true;
 			bool is_beam;
 		};
@@ -245,7 +263,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float fov = Radians(90.0f);
 			uint8_t attenuation = 0;
-			bool black_body_emission = false;
+			uint8_t emission_options = 0;
 			bool enable_shadow_map = true;
 		};
 
@@ -260,7 +278,7 @@ namespace vkl
 			float aspect_ratio = 1;
 			float opening = 0;
 			uint8_t attenuation = 0;
-			bool black_body_emission = false;
+			uint8_t emission_options = 0;
 			//bool enable_shadow_map = true;
 		};
 
@@ -279,7 +297,7 @@ namespace vkl
 				.aspect_ratio = ci.aspect_ratio,
 				.opening = ci.fov,
 				.attenuation = ci.attenuation,
-				.black_body_emission = ci.black_body_emission,
+				.emission_options = ci.emission_options,
 				.enable_shadow_map = ci.enable_shadow_map,
 				.is_beam = false,
 			})
@@ -296,7 +314,7 @@ namespace vkl
 				.aspect_ratio = ci.aspect_ratio,
 				.opening = ci.opening,
 				.attenuation = ci.attenuation,
-				.black_body_emission = ci.black_body_emission,
+				.emission_options = ci.emission_options,
 				.enable_shadow_map = false,
 				.is_beam = true,
 			})

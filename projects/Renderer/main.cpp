@@ -477,7 +477,7 @@ namespace vkl
 				.opening = opening,
 				.aspect_ratio = 0,
 				.emission = vec3(5500, 2, 0),
-				.black_body_emission = true,
+				.emission_options = EMISSION_FLAG_BLACK_BODY_BIT | (1 << EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX),
 				.enable_shadow_map = true,
 			}));
 			point_light_intensity = 0.1;

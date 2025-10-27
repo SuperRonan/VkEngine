@@ -414,8 +414,8 @@ namespace vkl
 
 		vec2 _solar_disk_direction = vec2(0, 0);
 		float _solar_disk_angle = Radians(0.5f); // Same as the sun viewed from earth
-		bool _solar_black_body = false;
 		vec3 _solar_disk_emission = vec3::Zero();
+		uint8_t _solar_disk_emission_options = 0;
 
 		float _radius = 1;
 
@@ -539,7 +539,7 @@ namespace vkl
 			_solar_disk_direction = solar_direction;
 			_solar_disk_angle = solar_angle;
 			_solar_disk_emission = solar_emission;
-			_solar_black_body = false;
+			_solar_disk_emission_options = 0;
 		}
 
 		void setEnvironment(vec3 intensity, vec2 solar_direction, float solar_angle, float solar_temperature, float solar_intensity)
@@ -549,7 +549,7 @@ namespace vkl
 			_solar_disk_direction = solar_direction;
 			_solar_disk_angle = solar_angle;
 			_solar_disk_emission = vec3(solar_temperature, solar_intensity, 0);
-			_solar_black_body = true;
+			_solar_disk_emission_options = BlackBodyEmission(1);
 		}
 
 		friend class SceneUserInterface;

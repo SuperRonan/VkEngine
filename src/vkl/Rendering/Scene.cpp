@@ -284,19 +284,11 @@ namespace vkl
 	Scene::UBO Scene::getUBO()const
 	{
 		uint32_t flags = 0;
-		if (_solar_black_body)
+		float solar_intensity_norm = _solar_disk_angle == 0 ? 1 : sqr(_solar_disk_angle);
+		vec3 solar_disk_emission = Light::NormalizeEmission(_solar_disk_emission, _solar_disk_emission_options, solar_intensity_norm);
+		if (_solar_disk_emission_options & EMISSION_FLAG_BLACK_BODY_BIT)
 		{
 			flags |= SCENE_FLAG_SOLAR_BLACK_BODY_EMISSION_BIT;
-		}
-		float solar_intensity_norm = rcp(_solar_disk_angle == 0 ? 1 : sqr(_solar_disk_angle));
-		vec3 solar_disk_emission = _solar_disk_emission;
-		if (_solar_black_body)
-		{
-			solar_disk_emission.y() *= solar_intensity_norm;
-		}
-		else
-		{
-			solar_disk_emission *= solar_intensity_norm;
 		}
 		UBO res{
 			.num_lights = _num_lights,

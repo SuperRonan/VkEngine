@@ -59,7 +59,7 @@ namespace vkl
 		float opening = 0;
 		float aspect_ratio = 1;
 		Vector3f emission = Vector3f::Ones().eval();
-		bool black_body_emission = false;
+		uint8_t emission_options = 0;
 		bool enable_shadow_map = false;
 	};
 	std::shared_ptr<Scene::Node> MakeLightNode(LightNodeCreateInfo const& ci);

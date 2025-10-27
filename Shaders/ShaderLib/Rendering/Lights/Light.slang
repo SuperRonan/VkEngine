@@ -178,7 +178,7 @@ struct Light
 		{
 			float temperature = emission.x;
 			float intensity = emission.y;
-			res = SpectrumFromTemperature<Mode>(temperature, true) * intensity;
+			res = SpectrumFromTemperature<Mode>(temperature) * intensity;
 		}
 		else
 		{

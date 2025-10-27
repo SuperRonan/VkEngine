@@ -478,7 +478,7 @@ namespace impl
 		float norm;
 		if(normalize != 0)
 		{
-			norm = rcp(EvalBlackBodySpectralRadiance(temperature, normalize));
+			norm = rcp(EvalBlackBodySpectralRadiance(temperature, normalize == 2));
 		}
 		
 		for(uint i = 0; i < res::Samples; ++i)
