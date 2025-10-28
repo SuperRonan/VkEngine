@@ -411,6 +411,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 					{
 						_sub_type = static_cast<uint>(index);
 					}
+					ImGui::SliderFloat("Scale", & _float_3, 1e-2, 1e2, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
 					if (static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type) == RigidMesh::RigidMeshMakeInfo::Type::Sphere ||
 						static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type) == RigidMesh::RigidMeshMakeInfo::Type::Cylinder)
 					{
@@ -509,7 +510,8 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		}
 		else if (_type == 2)
 		{
-			res = MakeModelNode(BasicModelNodeCreateInfo{
+			
+			BasicModelNodeCreateInfo ci{
 				.app = app,
 				.name = _path_str.empty() ? "Model" : _path_str,
 				.mesh_type = static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type),
@@ -519,7 +521,13 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				.metallic_or_eta = _float_1,
 				.is_dielectric = _bool_1,
 				.sample_spectral = _bool_2,
-			});
+			};
+			float scale = _float_3;
+			if (scale != 0.0f)
+			{
+				ci.xform = ScalingMatrix(Vector3f::Constant(scale).eval());
+			}
+			res = MakeModelNode(ci);
 		}
 		else if (_type == 3)
 		{

@@ -87,7 +87,7 @@ namespace vkl
 			uint _sub_type = 0;
 			Vector2u _subdivisions = {16, 32};
 
-			float _float_1 = 0, _float_2 = 0;
+			float _float_1 = 0, _float_2 = 0, _float_3 = 0;
 			bool _bool_1 = false, _bool_2 = false;
 
 
