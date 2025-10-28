@@ -256,7 +256,11 @@ void CommonMain<int Mode>(
 	TracePath(rng, ray_tracer, scene, tray);
 }
 
-static const int CommonSpectrumMode = SPECTRUM_MODE_SAMPLED(4);
+#ifndef LIGHT_TRANSPORT_SPECTUM_MODE
+#define LIGHT_TRANSPORT_SPECTUM_MODE SPECTRUM_MODE_RGB
+#endif
+
+static const int CommonSpectrumMode = LIGHT_TRANSPORT_SPECTUM_MODE;
 
 #if SHADER_SEMANTIC_COMPUTE
 #define LOCAL_SIZE_X 256

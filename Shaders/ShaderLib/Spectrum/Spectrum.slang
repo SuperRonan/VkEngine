@@ -14,15 +14,7 @@
 	X(div, /) \
 	X(mod, %)
 
-#define _SPECTRUM_SAMPLES_BIT_COUNT 16
-#define _SPECTRUM_FLAG_RGB (0x0 << _SPECTRUM_SAMPLES_BIT_COUNT)
-#define _SPECTRUM_FLAG_XYZ (0x1 << _SPECTRUM_SAMPLES_BIT_COUNT)
-#define _SPECTRUM_FLAG_SAMPLED (0x2 << _SPECTRUM_SAMPLES_BIT_COUNT)
-#define _SPECTRUM_FLAG_MASK (0x3 << _SPECTRUM_SAMPLES_BIT_COUNT)
-
-#define SPECTRUM_MODE_RGB (_SPECTRUM_FLAG_RGB | 3)
-#define SPECTRUM_MODE_XYZ (_SPECTRUM_FLAG_XYZ | 3)
-#define SPECTRUM_MODE_SAMPLED(Samples) (_SPECTRUM_FLAG_SAMPLED | Samples)
+#include "SpectrumDefinitions.h"
 
 // TODO
 // Common for all SampledSpectrum in the thread

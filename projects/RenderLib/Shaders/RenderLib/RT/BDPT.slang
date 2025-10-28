@@ -1092,7 +1092,11 @@ uint TraceLightSubPath<int Mode, VertexArray : IRWArray<Vertex<Mode>>, RNG : IRN
 	return n + 1;
 }
 
-static const int CommonSpectrumMode = SPECTRUM_MODE_SAMPLED(4);
+#ifndef LIGHT_TRANSPORT_SPECTUM_MODE
+#define LIGHT_TRANSPORT_SPECTUM_MODE SPECTRUM_MODE_RGB
+#endif
+
+static const int CommonSpectrumMode = LIGHT_TRANSPORT_SPECTUM_MODE;
 
 layout(SHADER_DESCRIPTOR_BINDING + 4) restrict RWStructuredBuffer<Vertex<CommonSpectrumMode>, Std430DataLayout> SubPathsScratchBuffer;
 

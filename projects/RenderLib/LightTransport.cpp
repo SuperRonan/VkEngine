@@ -4,6 +4,10 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
+#include <ShaderLib/Spectrum/SpectrumDefinitions.h>
+
+#include <vkl/IO/ImGuiUtils.hpp>
+
 namespace vkl
 {
 	LightTransport::LightTransport(CreateInfo const& ci) :
@@ -13,6 +17,8 @@ namespace vkl
 		_ubo(ci.ubo),
 		_sets_layouts(ci.sets_layout)
 	{
+		_spectrum_mode = SPECTRUM_MODE_RGB;
+
 		createInternals();
 	}
 
@@ -93,6 +99,7 @@ namespace vkl
 				.definitions = [this](DefinitionsList& res) {
 					res.clear();
 					res.pushBack(_target_format_str);
+					res.pushBack(_spectrum_mode_str);
 					if (_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 					if(_Li_resampling != 0)
@@ -117,10 +124,12 @@ namespace vkl
 				.definitions = [this](DefinitionsList& res) {
 					res.clear();
 					res.pushBack(_target_format_str);
+					res.pushBack(_spectrum_mode_str);
 					if(_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 					if (_Li_resampling != 0)
 						res.pushBack("USE_Li_RESAMPLING");
+					
 				},
 				.bindings = {
 					Binding{
@@ -175,6 +184,7 @@ namespace vkl
 				},
 				.definitions = [this](DefinitionsList& res) {
 					res.clear();
+					res.pushBack(_spectrum_mode_str);
 					if (_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
@@ -194,6 +204,7 @@ namespace vkl
 				.hit_groups = hit_groups,
 				.definitions = [this](DefinitionsList& res) {
 					res.clear();
+					res.pushBack(_spectrum_mode_str);
 					if (_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
@@ -276,6 +287,7 @@ namespace vkl
 				.definitions = [this](DefinitionsList& res) {
 					res.clear();
 					res.pushBack(_target_format_str);
+					res.pushBack(_spectrum_mode_str);
 					if (_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
@@ -296,6 +308,7 @@ namespace vkl
 				.definitions = [this](DefinitionsList& res) {
 					res.clear();
 					res.pushBack(_target_format_str);
+					res.pushBack(_spectrum_mode_str);
 					if (_compile_time_max_depth)
 						res.pushBackFormatted("MAX_DEPTH {}", _max_depth);
 				},
@@ -406,6 +419,21 @@ namespace vkl
 
 	void LightTransport::updateResources(UpdateContext& ctx)
 	{
+		if (_spectrum_mode & _SPECTRUM_FLAG_SAMPLED)
+		{
+			// TODO Check that Sampled mode is limited up to 4 samples
+			
+		}
+		else
+		{
+			// Enforce that RGB and XYZ has 3 samples
+			_spectrum_mode = (_spectrum_mode & _SPECTRUM_FLAG_MASK) | 3;
+		}
+		if (_spectrum_mode_str.empty())
+		{
+			_spectrum_mode_str = std::format("LIGHT_TRANSPORT_SPECTUM_MODE {0:#0x}", _spectrum_mode);
+		}
+
 		_light_tracer_buffer->updateResource(ctx);
 		_bdpt_scratch_buffer->updateResource(ctx);
 		{
@@ -556,6 +584,47 @@ namespace vkl
 			ImGui::Checkbox("Use RT Pipelines", &_use_rt_pipelines);
 			ImGui::SetItemTooltip("Check to use Ray Tracing Pipelines, Uncheck to use Ray Queries and compute shaders.");
 			ImGui::EndDisabled();
+
+			static thread_local ImGuiListSelection spectum_mode_selection = ImGuiListSelection::CreateInfo{
+				.name = "Spectrum rendering mode",
+				.mode = ImGuiListSelection::Mode::RadioButtons,
+				.same_line = true,
+				.options = {
+					ImGuiListSelection::Option{
+						.name = "RGB",
+					},
+					ImGuiListSelection::Option{
+						.name = "XYZ",
+					},
+					ImGuiListSelection::Option{
+						.name = "Spectal",
+					},
+				},
+			};
+
+			size_t index = static_cast<size_t>((_spectrum_mode >> _SPECTRUM_SAMPLES_BIT_COUNT));
+			if (spectum_mode_selection.declare(index))
+			{
+				_spectrum_mode &= ~(std::bitMask<int>(3) << _SPECTRUM_SAMPLES_BIT_COUNT);
+				_spectrum_mode |= (static_cast<int>(index) << _SPECTRUM_SAMPLES_BIT_COUNT);
+				_spectrum_mode_str.clear();
+			}
+			bool use_sampled = (_spectrum_mode & _SPECTRUM_FLAG_MASK) == _SPECTRUM_FLAG_SAMPLED;
+			ImGui::BeginDisabled(!use_sampled);
+			{
+				int samples = _spectrum_mode & std::bitMask<int>(_SPECTRUM_SAMPLES_BIT_COUNT);
+				bool changed = ImGui::InputInt("Samples", &samples, 1, 1 /*, ImGuiInputTextFlags_EnterReturnsTrue */);
+				samples = std::clamp(samples, 1, 4);
+
+				if (changed)
+				{
+					_spectrum_mode &= ~std::bitMask<int>(_SPECTRUM_SAMPLES_BIT_COUNT);
+					_spectrum_mode |= samples;
+					_spectrum_mode_str.clear();
+				}
+			}
+			ImGui::EndDisabled();
+
 
 			ImGui::InputInt("Max Depth", (int*)&_max_depth);
 			_max_depth = std::clamp<uint>(_max_depth, 1, 16);

@@ -246,7 +246,11 @@ void CommonMain<int Mode>(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, 
 #define LOCAL_SIZE_Y 16
 #define LOCAL_SIZE_Z 1
 
-static const int CommonSpectrumMode = SPECTRUM_MODE_SAMPLED(4);
+#ifndef LIGHT_TRANSPORT_SPECTUM_MODE
+#define LIGHT_TRANSPORT_SPECTUM_MODE SPECTRUM_MODE_RGB
+#endif
+
+static const int CommonSpectrumMode = LIGHT_TRANSPORT_SPECTUM_MODE;
 
 [shader("compute")]
 [numthreads(LOCAL_SIZE_X, LOCAL_SIZE_Y, LOCAL_SIZE_Z)]

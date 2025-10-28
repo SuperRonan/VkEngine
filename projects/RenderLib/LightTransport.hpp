@@ -42,6 +42,9 @@ namespace vkl
 		uint _max_depth = 5;
 		uint _Li_resampling = 0;
 
+		int _spectrum_mode = 0;
+		std::string _spectrum_mode_str = {};
+
 		MultiDescriptorSetsLayouts _sets_layouts;
 
 		float _light_tracer_sample_mult = 1.0f;
