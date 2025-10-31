@@ -5,7 +5,7 @@
 #include <ShaderLib:/common.glsl>
 #include <ShaderLib:/Maths/transforms.glsl>
 
-#include <RenderLibShaders:/shading.glsl>
+#include <RenderLibShaders:/RenderLib/shading.glsl>
 
 #define NORMAL vec3(0, 1, 0)
 #define TANGENT vec3(1, 0, 0)
