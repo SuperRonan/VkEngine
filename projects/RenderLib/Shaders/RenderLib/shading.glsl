@@ -232,25 +232,30 @@ LightSample getLightSample(uint light_id, vec3 position, vec3 normal, uint shadi
 				res.uv = clipSpaceToUV(clip_uv_in_light);
 				res.ref_depth = position_light.z;
 				
-				const uint attenuation_flags = light.flags & SPOT_LIGHT_FLAG_ATTENUATION_MASK;
+				const uint attenuation_flags = light.flags & LIGHT_FLAG_ATTENUATION_MASK;
 				if((attenuation_flags) != 0)
 				{
 					float attenuation = 0;
-					float dist_to_center = 0;
-					if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_LINEAR)
+					if(attenuation_flags == LIGHT_FLAG_ATTENUATION_INSIDE)
 					{
-						dist_to_center = length(clip_uv_in_light);
+						if(length2(clip_uv_in_light) <= 1)
+						{
+							attenuation = 1;
+						}
 					}
-					else if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_QUADRATIC)
+					else
 					{
-						dist_to_center = length2(clip_uv_in_light);
+						float dist_to_center = 0;
+						if(attenuation_flags == LIGHT_FLAG_ATTENUATION_LINEAR)
+						{
+							dist_to_center = length(clip_uv_in_light);
+						}
+						else if(attenuation_flags == LIGHT_FLAG_ATTENUATION_QUADRATIC)
+						{
+							dist_to_center = length2(clip_uv_in_light);
+						}
+						attenuation = max(1.0 - dist_to_center, 0);
 					}
-					else if(attenuation_flags == SPOT_LIGHT_FLAG_ATTENUATION_ROOT)
-					{
-						dist_to_center = sqrt(length(clip_uv_in_light));
-					}
-					
-					attenuation = max(1.0 - dist_to_center, 0);
 					res.Le *= attenuation;
 				}
 			}
