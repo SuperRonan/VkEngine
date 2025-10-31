@@ -29,6 +29,7 @@ Supported platforms:
 - Interactive rendering engine.
 - Basic scene edition with ImGui (place objects, change some properties, ...)
 - Light transport algorithms (Path Tracer, Light tracer, Bidirectional Path Tracer).
+	- Spectral rendering options.
 - More rendering experimentations to come...
 ![sponza-sunlight-2](https://github.com/user-attachments/assets/be6c6dd7-22ac-46cc-81ee-96e1852cb759)
 ![sponza-sunlight](https://github.com/user-attachments/assets/fa7f7bcb-c3b2-4355-9ef3-f613fd3bb788)
@@ -37,6 +38,7 @@ Supported platforms:
 ![caustics-rgb](https://github.com/user-attachments/assets/45a17ba9-13ef-495c-bf51-e6a3cdcd402c)
 ![caustics-dof](https://github.com/user-attachments/assets/aa956783-ff06-4bbf-96bd-5ea61b165496)
 ![caustics-dof-2](https://github.com/user-attachments/assets/1e161f62-853e-426b-937e-e8c8be36e462)
+![caustics-dispersion](https://github.com/user-attachments/assets/e095bed2-ac00-44f7-9f15-1bae4835af53)
 
 
 ## BSDF viewer
