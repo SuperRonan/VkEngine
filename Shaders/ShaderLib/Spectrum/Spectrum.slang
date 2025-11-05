@@ -162,7 +162,7 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 	}
 
 	__generic<Float : __BuiltinFloatingPointType>
-	Vector3<Float> toRGB()
+	Vector3<Float> toRGB(bool strip_negative=true)
 	{
 		if(IsRGB)
 		{
@@ -174,13 +174,13 @@ struct Spectrum : IRWArray<Scalar>, IFloat
 		}
 		else
 		{
-			return Vector3<Float>(GetXYZToRGBConversionMatrix<Float>() * toXYZ<Float>());
+			return max(Vector3<Float>::Zero(), Vector3<Float>(GetXYZToRGBConversionMatrix<Float>() * toXYZ<Float>()));
 		}
 	}
 
-	vec3 toRGBf()
+	vec3 toRGBf(bool strip_negative=true)
 	{
-		return toRGB<float>();
+		return toRGB<float>(strip_negative);
 	}
 
 	__generic<Float : __BuiltinFloatingPointType>
