@@ -140,9 +140,16 @@ namespace vkl
 					void * data = buffer->buffer()->map();
 					std::memcpy(image.rawData(), data, image.byteSize());
 					buffer->buffer()->unMap();
+					
+					if (this->_strip_alpha && format.channels == 4)
+					{
+						format.channels = 3;
+						image.reFormat(format);
+					}
 
 					that::img::io::WriteInfo write_info{
 						.quality = _jpg_quality,
+						.row_major = true,
 						.can_modify_image = true,
 						.format = format,
 						.image = &image,
@@ -233,6 +240,8 @@ namespace vkl
 			{
 				ImGui::SliderInt("Quality", &_jpg_quality, 0, 100);
 			}
+
+			ImGui::Checkbox("Stip alpha channel", &_strip_alpha);
 
 			ImGui::Separator();
 			ImGui::Checkbox("Create Folder IFN", &_create_folder_ifn);

@@ -24,6 +24,7 @@ namespace vkl
 
 		bool _save_image = false;
 		bool _save_in_separate_thread = true;
+		bool _strip_alpha = false;
 
 		uint32_t _pending_capacity = 2;
 		
