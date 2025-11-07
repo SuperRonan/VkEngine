@@ -9,9 +9,16 @@
 #include <vkl/Core/DynamicValue.hpp>
 #include <vkl/Execution/FramePerformanceCounters.hpp>
 
+#include <vkl/Maths/Types.hpp>
 
 namespace vkl
 {
+	union Pack64
+	{
+		uint64_t integral = 0;
+		float64_t floating;
+	};
+
 	class AbstractStatRecord
 	{
 	public:
@@ -92,7 +99,7 @@ namespace vkl
 
 		virtual void advance(size_t index) = 0;
 		
-		virtual void declareGui(GuiContext & ctx, size_t latest_index, bool show_graph, size_t depth = 0) = 0;
+		virtual void declareGui(GuiContext & ctx, size_t latest_index, Pack64 parent_avg, bool show_graph, size_t depth = 0) = 0;
 
 		constexpr Type type()const
 		{
@@ -209,30 +216,70 @@ namespace vkl
 			_provider = p;
 		}
 		
-		virtual void declareGui(GuiContext& ctx, size_t latest_index, bool show_graph, size_t depth) override
+		virtual void declareGui(GuiContext& ctx, size_t latest_index, Pack64 parent_avg, bool show_graph, size_t depth) override
 		{
+			static thread_local std::string text = {};
+			text.clear();
+
 			ImGui::PushID(name().c_str());
 			
 			float avg = _avg_dec * _scale;
-			std::string text = name() + ": %.3f ";
+			text = name() + ": %.3f ";
 			if (!_unit.empty())
 			{
 				text += _unit;
 			}
+
+			std::optional<float> percent = {};
+			int pushed_colors = 0;
+
+			if (parent_avg.floating > 0.0)
+			{
+				float proportion = float(avg / parent_avg.floating);
+				percent = proportion * 100.0f;
+				text += " (%.1f%%)";
+
+				Vector4f color = Lerp(Vector4f(1, 1, 1, 1), Vector4f(1, 0, 0, 1), std::pow(proportion, 0.3));
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(color.x(), color.y(), color.z(), color.w())); ++pushed_colors;
+			}
+
+
 			if (_children_records.empty())
 			{
-				ImGui::Text(text.c_str(), avg);
+				if (percent)
+				{
+					ImGui::Text(text.c_str(), avg, percent.value());
+				}
+				else
+				{
+					ImGui::Text(text.c_str(), avg);
+				}
 			}
 			else
 			{
-				if (ImGui::TreeNode(name().c_str(), text.c_str(), avg))
+				bool open_tree = false;
+				if (percent)
 				{
+					open_tree = ImGui::TreeNode(name().c_str(), text.c_str(), avg, percent.value());
+				}
+				else
+				{
+					open_tree = ImGui::TreeNode(name().c_str(), text.c_str(), avg);
+				}
+				if (open_tree)
+				{
+					Pack64 my_avg {.floating = avg};
 					for (auto& c : _children_records)
 					{
-						c->declareGui(ctx, latest_index, show_graph, depth + 1);
+						c->declareGui(ctx, latest_index, my_avg, show_graph, depth + 1);
 					}
 					ImGui::TreePop();
 				}
+			}
+
+			if (pushed_colors)
+			{
+				ImGui::PopStyleColor(pushed_colors); pushed_colors = 0;
 			}
 
 

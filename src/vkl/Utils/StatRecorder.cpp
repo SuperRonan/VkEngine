@@ -78,7 +78,7 @@ namespace vkl
 
 		for (auto& r : _records)
 		{
-			r->declareGui(ctx, _index, _gui_show_graph);
+			r->declareGui(ctx, _index, Pack64{.floating = -1}, _gui_show_graph);
 		}
 
 		ImGui::PopID();
