@@ -487,7 +487,8 @@ namespace impl
 
 SampledSpectrumf<N> SampleSpectrumFromTemperature<int N>(float temperature, int normalize=0)
 {
-	return impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_SAMPLED(N)>(temperature, normalize);
+	// * 3 because it is an illuminant
+	return impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_SAMPLED(N)>(temperature, normalize) * 3;
 }
 
 Spectrumf<Mode> SpectrumFromTemperature<int Mode>(float temperature, int normalize=0)
@@ -500,11 +501,11 @@ Spectrumf<Mode> SpectrumFromTemperature<int Mode>(float temperature, int normali
 	}
 	else if(SpectruM::IsRGB)
 	{
-		res = (impl::EvalSpectrumAtTemperature<Mode>(temperature, normalize) as SpectruM).value * 3.0f;
+		res = (impl::EvalSpectrumAtTemperature<Mode>(temperature, normalize) as SpectruM).value;
 	}
 	else if(SpectruM::IsXYZ)
 	{
-		res = SpectruM::MakeFromXYZ((impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_RGB>(temperature, normalize) * 3.0f).toXYZf(), XYZSourceType::Illuminant);
+		res = SpectruM::MakeFromXYZ((impl::EvalSpectrumAtTemperature<SPECTRUM_MODE_RGB>(temperature, normalize)).toXYZf(), XYZSourceType::Illuminant);
 	}
 	
 	return res;
