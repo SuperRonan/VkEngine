@@ -1497,6 +1497,7 @@ namespace vkl
 	{
 		using namespace std::containers_append_operators;
 
+		static thread_local DefinitionsList definitions = {};
 		static thread_local SpecializationKey new_key;
 		
 		if (ctx.updateTick() <= _update_tick)
@@ -1526,9 +1527,10 @@ namespace vkl
 
 			if (_definitions.hasValue())
 			{
+				definitions.clear();
 				new_key.clear();
 
-				DefinitionsList definitions = *_definitions;
+				definitions = *_definitions;
 				definitions += ctx.commonDefinitions()->collapsed();
 
 				Collapse(new_key.definitions, definitions);
