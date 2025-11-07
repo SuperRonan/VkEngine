@@ -124,6 +124,18 @@ namespace vkl
 					.provider = Dyn<size_t>(&fpc.update_scene_time),
 					.unit = "ms",
 				});
+				StatRecord<TimeCountClock::rep>* update_main_modules = update_time_record->createChildRecord<TimeCountClock::rep>({
+					.name = "Update executor",
+					.scale = stat_ms_scale,
+					.provider = Dyn<size_t>(&fpc.exec_update_time),
+					.unit = "ms",
+				});
+				StatRecord<TimeCountClock::rep>* exec_update = update_time_record->createChildRecord<TimeCountClock::rep>({
+					.name = "Update main Modules",
+					.scale = stat_ms_scale,
+					.provider = Dyn<size_t>(&fpc.main_script_modules_time),
+					.unit = "ms",
+				});
 				StatRecord<TimeCountClock::rep>* descriptor_updates = update_time_record->createChildRecord<TimeCountClock::rep>({
 					.name = "Descriptor Updates",
 					.provider = Dyn<size_t>(&fpc.descriptor_updates),

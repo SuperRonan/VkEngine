@@ -2,7 +2,7 @@
 
 namespace vkl
 {
-    struct FramePerfCounters
+	struct FramePerfCounters
 	{
 		size_t frame_time = 0;
 
@@ -11,6 +11,8 @@ namespace vkl
 
 		size_t prepare_scene_time = 0;
 		size_t update_scene_time = 0;
+		size_t exec_update_time = 0;
+		size_t main_script_modules_time = 0;
 		size_t descriptor_updates = 0;
 		
 		size_t generate_scene_draw_list_time = 0;

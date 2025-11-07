@@ -973,7 +973,11 @@ namespace vkl
 						frame_counters.prepare_scene_time = prepare_scene_tt.tockd().count();
 					}
 
+					std::TickTock_hrc exec_tt;
+					exec_tt.tick();
 					exec.updateResources(*update_context);
+					frame_counters.exec_update_time = exec_tt.tockd().count();
+
 					renderer.preUpdate(*update_context);
 					{
 						std::TickTock_hrc update_scene_tt;
@@ -981,6 +985,9 @@ namespace vkl
 						scene->updateResources(*update_context);
 						frame_counters.update_scene_time = update_scene_tt.tockd().count();
 					}
+					
+					std::TickTock_hrc modules_tt;
+					modules_tt.tick();
 					renderer.updateResources(*update_context);
 					color_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
@@ -995,6 +1002,7 @@ namespace vkl
 					}
 
 					resources_manager.finishUpdateCycle(update_context);
+					frame_counters.main_script_modules_time = modules_tt.tockd().count();
 				}
 				frame_counters.update_time = update_context->tickTock().tockd().count();
 				
