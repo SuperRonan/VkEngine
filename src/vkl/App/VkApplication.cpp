@@ -1340,6 +1340,7 @@ namespace vkl
 		const std::filesystem::path exe_folder = exe_path.parent_path();
 
 		_file_system = std::make_unique<FileSystem>(FileSystem::CI{
+			.use_cache = 1,
 		});
 
 		that::MountingPoints & _mounting_points = _file_system->mountingPoints();

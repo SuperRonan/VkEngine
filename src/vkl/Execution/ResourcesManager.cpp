@@ -43,6 +43,8 @@ namespace vkl
 			{
 				++_shader_check_tick;
 				_last_shader_check = now;
+
+				application()->fileSystem()->resetCache();
 			}
 		}
 
