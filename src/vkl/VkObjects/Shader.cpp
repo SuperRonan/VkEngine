@@ -22,11 +22,11 @@ break;
 
 namespace vkl
 {
-	that::FileSystem::Path ShaderInstance::resolveIncludePath(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state, IncludeType include_type)
+	FileSystem::Path ShaderInstance::resolveIncludePath(FileSystem::Path const& path, PreprocessingState& preprocessing_state, IncludeType include_type)
 	{
-		that::FileSystem::Path res;
-		that::FileSystem& fs = *application()->fileSystem();
-		that::ResultAnd<that::FileSystem::Path> resolved_path = fs.resolve(path);
+		FileSystem::Path res;
+		auto& fs = *application()->fileSystem();
+		that::ResultAnd<FileSystem::Path> resolved_path = fs.resolve(path);
 		if (resolved_path.result != that::Result::Success)
 		{
 			_creation_result = AsynchTask::ReturnType{
@@ -45,7 +45,7 @@ namespace vkl
 		res = resolved_path.value;
 		const auto validate_path = [&]() -> bool
 		{
-			return (fs.checkFileExists(res, that::FileSystem::Hint::PathIsNative) == that::Result::Success);
+			return (fs.checkFileExists(res, FileSystem::Hint::PathIsNative) == that::Result::Success);
 		};
 		bool path_is_valid = false;
 		res = resolved_path.value;
@@ -111,10 +111,10 @@ namespace vkl
 		return res;
 	}
 
-	ShaderInstance::PreprocessResult ShaderInstance::includeFile(that::FileSystem::Path const& path, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type, that::FileSystem::Path * resolved_path)
+	ShaderInstance::PreprocessResult ShaderInstance::includeFile(FileSystem::Path const& path, PreprocessingState& preprocessing_state, size_t recursion_level, IncludeType include_type, FileSystem::Path * resolved_path)
 	{
-		that::FileSystem::Path _full_path;
-		that::FileSystem::Path & full_path = resolved_path ? *resolved_path : _full_path;
+		FileSystem::Path _full_path;
+		FileSystem::Path & full_path = resolved_path ? *resolved_path : _full_path;
 		full_path = resolveIncludePath(path, preprocessing_state, include_type);
 		PreprocessResult res;
 		if (!full_path.empty())
@@ -128,8 +128,8 @@ namespace vkl
 			}
 			else
 			{
-				that::Result read_result = application()->fileSystem()->readFile(that::FileSystem::ReadFileInfo{
-					.hint = that::FileSystem::Hint::PathIsNative | that::FileSystem::Hint::PathIsCannon,
+				that::Result read_result = application()->fileSystem()->readFile(FileSystem::ReadFileInfo{
+					.hint = FileSystem::Hint::PathIsNative | FileSystem::Hint::PathIsCannon,
 					.path = &full_path,
 					.result_string = &res.content,
 				});
@@ -172,9 +172,9 @@ namespace vkl
 		return res;
 	}
 
-	ShaderInstance::PreprocessResult ShaderInstance::preprocessIncludesAndDefinitions(that::FileSystem::Path const& path, PreprocessingState & preprocessing_state, size_t recursion_level, IncludeType include_type)
+	ShaderInstance::PreprocessResult ShaderInstance::preprocessIncludesAndDefinitions(FileSystem::Path const& path, PreprocessingState & preprocessing_state, size_t recursion_level, IncludeType include_type)
 	{
-		that::FileSystem::Path full_path;
+		FileSystem::Path full_path;
 		PreprocessResult included = includeFile(path, preprocessing_state, recursion_level, include_type, &full_path);
 		std::string & content = included.content;
 		if (!_creation_result.success || included.flags & 1)
@@ -242,7 +242,7 @@ namespace vkl
 				const size_t line_end = content.find("\n", include_begin);
 				const std::string_view include_line(content.data() + include_begin, line_end - include_begin);
 
-				const auto [path_to_include, include_type] = [&]() -> std::pair<that::FileSystem::Path, IncludeType>
+				const auto [path_to_include, include_type] = [&]() -> std::pair<FileSystem::Path, IncludeType>
 				{
 					const size_t rel_path_begin = include_line.find("\"") + 1;
 					const size_t rel_path_end = include_line.rfind("\"");
@@ -260,18 +260,18 @@ namespace vkl
 
 					if(validate(rel_path_begin, rel_path_end))
 					{
-						const that::FileSystem::Path folder = full_path.parent_path();
+						const FileSystem::Path folder = full_path.parent_path();
 						const std::string_view include_path_relative(include_line.data() + rel_path_begin, rel_path_end - rel_path_begin);
-						const that::FileSystem::Path path_to_include = folder.string() + ("/"s + std::string(include_path_relative));
+						const FileSystem::Path path_to_include = folder.string() + ("/"s + std::string(include_path_relative));
 						return {path_to_include, IncludeType::Quotes};
 					}
 					else if(validate(mp_path_begin, mp_path_end))
 					{
-						that::FileSystem & fs = *application()->fileSystem();
+						FileSystem & fs = *application()->fileSystem();
 						const std::string_view mp_path_view(include_line.data() + mp_path_begin, mp_path_end - mp_path_begin);
-						const that::FileSystem::Path mp_path = mp_path_view;
-						const that::ResultAnd<that::FileSystem::PathStringView> result_mounting_point = fs.ExtractMountingPoint(mp_path);
-						const that::FileSystem::PathStringView & mounting_point = result_mounting_point.value;
+						const FileSystem::Path mp_path = mp_path_view;
+						const that::ResultAnd<FileSystem::PathStringView> result_mounting_point = fs.ExtractMountingPoint(mp_path);
+						const FileSystem::PathStringView & mounting_point = result_mounting_point.value;
 						const bool path_is_valid = (result_mounting_point.result == that::Result::Success) && (mounting_point.empty() || fs.mountingPointIsNative(mounting_point) || fs.knowsMountingPoint(mounting_point));
 						if (path_is_valid)
 						{
@@ -294,7 +294,7 @@ namespace vkl
 									_main_path.string(), path.string(), line_index, include_line
 								),	
 							};
-							return {that::FileSystem::Path(), IncludeType::None};
+							return {FileSystem::Path(), IncludeType::None};
 						}
 					}
 					else
@@ -314,7 +314,7 @@ namespace vkl
 								_main_path.string(), path.string(), line_index, include_line
 							),
 						};
-						return { that::FileSystem::Path(), IncludeType::None };
+						return { FileSystem::Path(), IncludeType::None };
 					}
 				}();
 				if (_creation_result.success == false)
@@ -571,14 +571,14 @@ namespace vkl
 		return _source_language != ShadingLanguage::Unknown;
 	}
 	
-	std::string ShaderInstance::preprocess(that::FileSystem::Path const& path, PreprocessingState & preprocessing_state)
+	std::string ShaderInstance::preprocess(FileSystem::Path const& path, PreprocessingState & preprocessing_state)
 	{
 		_dependencies.clear();
 		std::string full_source;
 
 		if (_source_language == ShadingLanguage::Unknown)
 		{
-			const that::FileSystem::Path ext = path.extension();
+			const FileSystem::Path ext = path.extension();
 			if (ext == ".spv")
 			{
 				_source_language = ShadingLanguage::SPIR_V;
@@ -874,8 +874,8 @@ namespace vkl
 
 		virtual shaderc_include_result* GetInclude(const char* requested_source, const shaderc_include_type type, const char* requesting_source, size_t include_depth) final override
 		{
-			that::FileSystem::Path path = requested_source;
-			that::FileSystem::Path resolved_path;
+			FileSystem::Path path = requested_source;
+			FileSystem::Path resolved_path;
 			ShaderInstance::IncludeType include_type = {};
 			switch (type)
 			{
@@ -884,7 +884,7 @@ namespace vkl
 			}
 			if (include_type == ShaderInstance::IncludeType::Quotes)
 			{
-				that::FileSystem::Path folder = that::FileSystem::Path(requesting_source);
+				FileSystem::Path folder = FileSystem::Path(requesting_source);
 				//folder = that->application()->fileSystem()->resolve(folder).value;
 				folder = folder.parent_path();
 				path = folder / path;
@@ -1237,8 +1237,8 @@ namespace vkl
 		if (dump_source || dump_preprocessed || dump_spv || dump_slang_to_glsl)
 		{
 			// Path without mounting point
-			that::ResultAnd<that::FileSystem::PathStringView> rel_path = that::FileSystem::ExtractRelative(_main_path);
-			that::ResultAnd<that::FileSystem::PathStringView> mp = application()->fileSystem()->ExtractMountingPoint(_main_path);
+			that::ResultAnd<FileSystem::PathStringView> rel_path = FileSystem::ExtractRelative(_main_path);
+			that::ResultAnd<FileSystem::PathStringView> mp = application()->fileSystem()->ExtractMountingPoint(_main_path);
 			if (_source_language == ShadingLanguage::Slang)
 			{
 				VKL_BREAKPOINT_HANDLE;
@@ -1247,29 +1247,29 @@ namespace vkl
 			{
 				if (dump_source)
 				{
-					that::FileSystem::Path write_folder = "gen:/shaders_source/";
-					that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
-					that::FileSystem::WriteFileInfo info = {};
+					FileSystem::Path write_folder = "gen:/shaders_source/";
+					FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
+					FileSystem::WriteFileInfo info = {};
 					info.path = &write_path;
 					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(code->data()), code->size());
 					application()->fileSystem()->writeFile(info);
 				}
 				if (dump_preprocessed && preprocessed_code)
 				{
-					that::FileSystem::Path write_folder = "gen:/preprocessed_shaders/";
-					that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
-					that::FileSystem::WriteFileInfo info = {};
+					FileSystem::Path write_folder = "gen:/preprocessed_shaders/";
+					FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
+					FileSystem::WriteFileInfo info = {};
 					info.path = &write_path;
 					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(preprocessed_code->data()), preprocessed_code->size());
 					application()->fileSystem()->writeFile(info);
 				}
 				if (dump_spv)
 				{
-					that::FileSystem::Path spv_rel_path = rel_path.value;
+					FileSystem::Path spv_rel_path = rel_path.value;
 					spv_rel_path += ".spv.bin";
-					that::FileSystem::Path write_folder = "gen:/shaders_SPIRV-V/";
-					that::FileSystem::Path write_path = write_folder / mp.value / spv_rel_path;
-					that::FileSystem::WriteFileInfo info = {};
+					FileSystem::Path write_folder = "gen:/shaders_SPIRV-V/";
+					FileSystem::Path write_path = write_folder / mp.value / spv_rel_path;
+					FileSystem::WriteFileInfo info = {};
 					info.path = &write_path;
 					info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(_spv_code.data()), _spv_code.byte_size());
 					application()->fileSystem()->writeFile(info);
@@ -1278,11 +1278,11 @@ namespace vkl
 				{
 					if (!slang_to_glsl.empty())
 					{
-						that::FileSystem::Path write_folder = "gen:/shaders_GLSL_from_Slang/";
-						that::FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
+						FileSystem::Path write_folder = "gen:/shaders_GLSL_from_Slang/";
+						FileSystem::Path write_path = write_folder / mp.value / rel_path.value;
 						const char * glsl_ext = GetGLSLShaderExtension(_stage);
 						write_path.replace_extension(glsl_ext);
-						that::FileSystem::WriteFileInfo info = {};
+						FileSystem::WriteFileInfo info = {};
 						info.path = &write_path;
 						info.data = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(slang_to_glsl.data()), slang_to_glsl.size());
 						application()->fileSystem()->writeFile(info);
@@ -1377,11 +1377,11 @@ namespace vkl
 			_creation_result.auto_retry_f = [this, compile_time]() -> bool
 			{
 				const std::filesystem::file_time_type update_time = [&]() {
-					that::FileSystem & fs = *application()->fileSystem();
+					FileSystem & fs = *application()->fileSystem();
 					std::filesystem::file_time_type res = std::filesystem::file_time_type::min();
 					for (const auto& dep : _dependencies)
 					{
-						that::ResultAnd<that::FileSystem::TimePoint> file_time = fs.getFileLastWriteTime(dep, that::FileSystem::Hint::PathIsNative);
+						that::ResultAnd<FileSystem::TimePoint> file_time = fs.getFileLastWriteTime(dep, FileSystem::Hint::PathIsNative);
 						if (file_time.result == that::Result::Success)
 						{
 							res = std::max(res, file_time.value);
@@ -1514,7 +1514,7 @@ namespace vkl
 				waitForInstanceCreationIFN();
 				for (const auto& dep : _dependencies)
 				{
-					const that::ResultAnd<std::filesystem::file_time_type> new_time = application()->fileSystem()->getFileLastWriteTime(dep);
+					const that::ResultAnd<std::filesystem::file_time_type> new_time = application()->fileSystem()->getFileLastWriteTime(dep, FileSystem::Hint::QueryCache | FileSystem::Hint::PathIsCannon);
 					if (new_time.result == that::Result::Success && new_time.value > _instance_time)
 					{
 						_specializations.clear();

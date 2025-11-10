@@ -25,7 +25,7 @@
 
 #include <slang/slang-com-ptr.h>
 
-#include <that/IO/FileSystem.hpp>
+#include <vkl/IO/FileSystem.hpp>
 
 namespace argparse
 {
@@ -250,8 +250,8 @@ namespace vkl
 
 		void fillCommonShaderDefinitions();
 
-		std::unique_ptr<that::FileSystem> _file_system = nullptr;
-		MyVector<that::FileSystem::Path> _include_directories = {};
+		std::unique_ptr<FileSystem> _file_system = nullptr;
+		MyVector<FileSystem::Path> _include_directories = {};
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -478,7 +478,7 @@ namespace vkl
 			return _common_shader_definitions;
 		}
 
-		that::FileSystem * fileSystem() const
+		FileSystem * fileSystem() const
 		{
 			return _file_system.get();
 		}
