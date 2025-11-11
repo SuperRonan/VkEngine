@@ -189,11 +189,16 @@ namespace vkl
 
 	extern std::mutex g_common_mutex;
 	
-	struct Callback
+	template <class ...Params>
+	struct GenericCallback
 	{
-		std::function<void(void)> callback;
-		const void * id = nullptr;
+		using Function = std::function<void(Params...)>;
+		using Id = const void*;
+		Function callback;
+		Id id = nullptr;
 	};
+
+	using Callback = GenericCallback<void>;
 
 	template <class Index>
 	using Range = that::Range<Index>;

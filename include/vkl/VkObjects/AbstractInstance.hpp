@@ -51,7 +51,7 @@ namespace vkl
 	{
 	protected:
 
-		std::map<uintptr_t, std::function<void(void)>> _invalidation_callbacks = {};
+		std::map<uintptr_t, Callback::Function> _invalidation_callbacks = {};
 		mutable std::mutex _mutex;
 
 		Dyn<bool> _hold_instance = {};
