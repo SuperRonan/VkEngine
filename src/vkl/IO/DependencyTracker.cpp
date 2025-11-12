@@ -80,6 +80,7 @@ namespace vkl
 	DependencyTracker::DependencyTracker(CreateInfo const& ci) :
 		_fs(ci.file_system),
 		_executor(ci.executor),
+		_log(ci.log),
 		_period(ci.period)
 	{
 		_latest_launch = Clock::now() - 2 * _period;
@@ -179,5 +180,34 @@ namespace vkl
 		}
 
 		return res;
+	}
+
+	DependencyTracker::~DependencyTracker()
+	{
+		if (_task_is_running)
+		{
+			_check_task->waitIFN();
+		}
+		else
+		{
+			_check_task->cancel();
+		}
+
+		if (!_registered.empty())
+		{
+			if (_log && _log->max_verbosity >= uint32_t(Logger::Options::VerbosityMostImportant))
+			{
+				g_common_mutex.lock();
+				_log->log(std::format("Closing DependencyTracker with still {} registered dependencies!", _registered.size()), Logger::Options::VerbosityMostImportant | Logger::Options::TagHighWarning);
+				if (_log->max_verbosity >= uint32_t(Logger::Options::VerbosityImportant))
+				{
+					for (const auto& [k, v] : _registered)
+					{
+						_log->log(std::format("- {} has {} registrations.", Path(k).string(), v.callbacks.size()), Logger::Options::VerbosityImportant | Logger::Options::TagWarning);
+					}
+				}
+				g_common_mutex.unlock();
+			}
+		}
 	}
 }

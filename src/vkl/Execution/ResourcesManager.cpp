@@ -25,6 +25,7 @@ namespace vkl
 		_dependencies_tracker = std::make_unique<DependencyTracker>(DependencyTracker::CI{
 			.file_system = application()->fileSystem(),
 			.executor = &application()->threadPool(),
+			.log = &application()->logger(),
 			.period = _auto_file_check_period,
 		});
 		populateCommonObjects();

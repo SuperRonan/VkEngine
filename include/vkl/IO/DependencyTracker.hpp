@@ -25,6 +25,7 @@ namespace vkl
 
 		FileSystem* _fs;
 		DelayedTaskExecutor* _executor;
+		const Logger * _log;
 
 		Duration _period;
 		TimePoint _latest_launch;
@@ -69,13 +70,14 @@ namespace vkl
 		{
 			FileSystem* file_system = nullptr;
 			DelayedTaskExecutor* executor = nullptr;
+			const Logger* log = nullptr;
 			Duration period = 1s;
 		};
 		using CI = CreateInfo;
 
 		DependencyTracker(CreateInfo const& ci);
 
-		~DependencyTracker() = default;
+		~DependencyTracker();
 
 		void setDependency(PathString const& cannon_file_path, FileCallback const& cb);
 
