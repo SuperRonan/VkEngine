@@ -35,18 +35,10 @@ namespace vkl
 					}
 				}
 
-				auto it = that._back_files.begin();
-				while (it != that._back_files.end())
-				{
-					if (!it->second.registered)
-					{
-						it = that._back_files.erase(it);
-					}
-					else
-					{
-						++it;
-					}
-				}
+				std::erase_if(that._back_files, [](const auto& item) {
+					const auto& [k, v] = item;
+					return !v.registered;
+				});
 			}
 
 			{

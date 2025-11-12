@@ -36,10 +36,8 @@ namespace vkl
 			TimePoint last_write_time;
 		};
 
-		using Map = std::unordered_map<PathString, BackValue>;
-
 		// used by the back thread, might be out of synch
-		Map _back_files;
+		std::unordered_map<PathString, BackValue> _back_files;
 
 		std::shared_mutex _mutex;
 		struct Registration
