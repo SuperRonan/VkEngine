@@ -50,6 +50,7 @@ namespace vkl
 	class SamplerLibrary;
 	class TextureFileCache;
 
+	class DependencyTracker;
 
 	template <class T>
 	using SPtr = std::shared_ptr<T>;

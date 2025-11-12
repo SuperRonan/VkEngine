@@ -115,7 +115,7 @@ namespace vkl
 			ResourcesManager resources_manager = ResourcesManager::CreateInfo{
 				.app = this,
 				.name = "ResourcesManager",
-				.shader_check_period = 1s,
+				.auto_file_check_period = 1s,
 			};
 
 			LinearExecutor exec(LinearExecutor::CI{

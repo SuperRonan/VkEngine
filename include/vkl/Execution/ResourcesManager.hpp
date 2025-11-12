@@ -13,10 +13,8 @@ namespace vkl
 
 		size_t _update_tick = 0;
 
-		size_t _shader_check_tick = 0;
-		using _shader_clock_t = std::chrono::system_clock;
-		std::chrono::time_point<_shader_clock_t> _last_shader_check;
-		std::chrono::milliseconds _shader_check_period;
+		std::chrono::milliseconds _auto_file_check_period;
+		std::unique_ptr<DependencyTracker> _dependencies_tracker;
 
 		// TODO separate device life-time constant definitions
 		// and other possibly non const definitions
@@ -35,16 +33,21 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::chrono::milliseconds shader_check_period = 1000ms;
+			std::chrono::milliseconds auto_file_check_period = 1000ms;
 		};
 
 		ResourcesManager(CreateInfo const& ci);
 
+		virtual ~ResourcesManager();
 
 		std::shared_ptr<UpdateContext>  beginUpdateCycle();
 
 		void finishUpdateCycle(std::shared_ptr<UpdateContext> context);
 
+		DependencyTracker& dependenciesTracker()
+		{
+			return *_dependencies_tracker;
+		}
 
 		UploadQueue& uploadQueue()
 		{

@@ -13,6 +13,8 @@
 #include <slang/slang.h>
 #include <slang/slang-gfx.h>
 
+#include <vkl/IO/DependencyTracker.hpp>
+
 #define SWITCH_CASE_CONVERT(CASE, VALUE, target) \
 case CASE: \
 	target = VALUE; \
@@ -1425,7 +1427,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info)
+	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info, DependencyTracker* dependencies_tracker)
 	{
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
@@ -1446,7 +1448,7 @@ namespace vkl
 				.name = "Compiling shader " + _path.string(),
 				.verbosity = AsynchTask::Verbosity::Medium,
 				.priority = TaskPriority::ASAP(),
-				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey, generate_shader_debug_info]() {
+				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey, generate_shader_debug_info, dependencies_tracker]() {
 
 					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 						.app = application(),
@@ -1463,8 +1465,23 @@ namespace vkl
 					if (res.success)
 					{
 						_specializations[lkey] = _inst;
-						_instance_time = std::chrono::file_clock::now();
+						_instance_time = FileSystem::Clock::now();
 						_dependencies = _inst->dependencies();
+
+						for (const auto& dep : _dependencies)
+						{
+							dependencies_tracker->setDependency(dep.native(), { .callback = [this](DependencyTracker::TimePoint last_write_time, that::Result res_code) {
+								if (res_code == that::Result::Success)
+								{
+									_latest_file_time = std::max(_latest_file_time, last_write_time);
+								}
+								else
+								{
+									// TODO invalidate
+									NOT_YET_IMPLEMENTED;
+								}
+							}, .id = this });
+						}
 					}
 
 					return res;
@@ -1474,18 +1491,18 @@ namespace vkl
 		}
 	}
 
-	void Shader::createInstance()
-	{
-		SpecializationKey key;
-		DefinitionsList defs;
-		if (_definitions)
-		{
-			defs = *_definitions;
-		}
-		key.definitions = Collapse(defs);
-		DefinitionsList common;
-		createInstance(key, common, 0, application()->options().generate_shader_debug_info);
-	}
+	//void Shader::createInstance()
+	//{
+	//	SpecializationKey key;
+	//	DefinitionsList defs;
+	//	if (_definitions)
+	//	{
+	//		defs = *_definitions;
+	//	}
+	//	key.definitions = Collapse(defs);
+	//	DefinitionsList common;
+	//	createInstance(key, common, 0, application()->options().generate_shader_debug_info);
+	//}
 
 	void Shader::destroyInstanceIFN()
 	{
@@ -1509,20 +1526,12 @@ namespace vkl
 
 		if (checkHoldInstance())
 		{
-			if (ctx.checkShadersTick() > _check_tick)
+			waitForInstanceCreationIFN();
+
+			if (_latest_file_time > _instance_time)
 			{
-				waitForInstanceCreationIFN();
-				for (const auto& dep : _dependencies)
-				{
-					const that::ResultAnd<std::filesystem::file_time_type> new_time = application()->fileSystem()->getFileLastWriteTime(dep, FileSystem::Hint::QueryCache | FileSystem::Hint::PathIsCannon);
-					if (new_time.result == that::Result::Success && new_time.value > _instance_time)
-					{
-						_specializations.clear();
-						res = true;
-						break;
-					}
-				}
-				_check_tick = ctx.checkShadersTick();
+				_specializations.clear();
+				res = true;
 			}
 
 			if (_definitions.hasValue())
@@ -1544,6 +1553,10 @@ namespace vkl
 
 			if (res)
 			{
+				for (auto dep : _dependencies)
+				{
+					ctx.dependenciesTracker().removeDependency(dep.native(), this);
+				}
 				destroyInstanceIFN();
 			}
 		
@@ -1557,7 +1570,7 @@ namespace vkl
 					// TODO use a better function that checks the result and can parse hex
 					packed_capcity = std::atoi(capacity.c_str());
 				}
-				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info);
+				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info, &ctx.dependenciesTracker());
 				res = true;
 			}
 		}
@@ -1571,10 +1584,10 @@ namespace vkl
 		_stage(ci.stage),
 		_definitions(ci.definitions)
 	{
-		_instance_time = std::filesystem::file_time_type::min();
+		_instance_time = FileSystem::TimePoint::min();
 		if (ci.create_on_construct)
 		{
-			createInstance();
+			NOT_YET_IMPLEMENTED;
 		}
 	}
 

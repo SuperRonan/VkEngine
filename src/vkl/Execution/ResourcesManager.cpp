@@ -1,13 +1,13 @@
 #include <vkl/Execution/ResourcesManager.hpp>
 
-
+#include <vkl/IO/DependencyTracker.hpp>
 
 namespace vkl
 {
 
 	ResourcesManager::ResourcesManager(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name),
-		_shader_check_period(ci.shader_check_period),
+		_auto_file_check_period(ci.auto_file_check_period),
 		_common_definitions(std::make_unique<DefinitionsMap>()),
 		_upload_queue(UploadQueue::CI{
 			.app = application(),
@@ -22,14 +22,22 @@ namespace vkl
 			.name = name() + ".DescriptorWriter",
 		})
 	{
-		_last_shader_check = _shader_clock_t::now() - 2 * _shader_check_period;
-
+		_dependencies_tracker = std::make_unique<DependencyTracker>(DependencyTracker::CI{
+			.file_system = application()->fileSystem(),
+			.executor = &application()->threadPool(),
+			.period = _auto_file_check_period,
+		});
 		populateCommonObjects();
+	}
+
+	ResourcesManager::~ResourcesManager()
+	{
+
 	}
 
 	void ResourcesManager::populateCommonObjects()
 	{
-
+		
 	}
 
 
@@ -38,14 +46,8 @@ namespace vkl
 		++_update_tick;
 
 		{
-			std::chrono::time_point<_shader_clock_t> now = _shader_clock_t::now();
-			if ((now - _last_shader_check) > _shader_check_period)
-			{
-				++_shader_check_tick;
-				_last_shader_check = now;
-
-				application()->fileSystem()->resetCache();
-			}
+			application()->fileSystem()->resetCache();
+			_dependencies_tracker->update();
 		}
 
 		_common_definitions->update();
@@ -54,7 +56,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".update_context",
 			.update_tick = _update_tick,
-			.shader_check_tick = _shader_check_tick,
+			.dependencies_tracker = _dependencies_tracker.get(),
 			.common_definitions = _common_definitions.get(),
 			.upload_queue = &_upload_queue,
 			.mips_queue = &_mips_queue,

@@ -199,23 +199,23 @@ namespace vkl
 
 		using ParentType = InstanceHolder<ShaderInstance>;
 
-		using Dependecy = std::filesystem::path;
+		using Dependecy = FileSystem::Path;
 
 		size_t _update_tick = 0;
 		bool _latest_update_result = false;
-		size_t _check_tick = 0;
 		std::filesystem::path _path;
 		VkShaderStageFlagBits _stage;
 		DynamicValue<DefinitionsList> _definitions;
 		std::vector<Dependecy> _dependencies;
-		std::chrono::file_time<std::chrono::file_clock::duration> _instance_time;
+		FileSystem::TimePoint _latest_file_time = {};
+		FileSystem::TimePoint _instance_time;
 
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
 
-		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info);
+		void createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info, DependencyTracker* dependencies_tracker);
 
-		void createInstance();
+		//void createInstance();
 
 		virtual void destroyInstanceIFN() override;
 

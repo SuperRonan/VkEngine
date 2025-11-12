@@ -19,8 +19,6 @@ namespace vkl
 
 		size_t _update_tick;
 
-		size_t _shader_check_tick;
-
 		bool _update_resources_anyway = false;
 		
 		const DefinitionsMap * _common_definitions;
@@ -39,6 +37,8 @@ namespace vkl
 
 		DescriptorWriter & _descriptor_writer;
 
+		DependencyTracker * _dependencies_tracker;
+
 	public:
 
 		struct CreateInfo
@@ -46,7 +46,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			size_t update_tick = 0;
-			size_t shader_check_tick = 0;
+			DependencyTracker* dependencies_tracker;
 			const DefinitionsMap* common_definitions;
 			UploadQueue * upload_queue = nullptr;
 			MipMapComputeQueue * mips_queue = nullptr;
@@ -57,11 +57,11 @@ namespace vkl
 		UpdateContext(CreateInfo const& ci) :
 			VkObject(ci.app, ci.name),
 			_update_tick(ci.update_tick),
-			_shader_check_tick(ci.shader_check_tick),
 			_common_definitions(ci.common_definitions),
 			_upload_queue(ci.upload_queue),
 			_mips_queue(ci.mips_queue),
-			_descriptor_writer(ci.descriptor_writer)
+			_descriptor_writer(ci.descriptor_writer),
+			_dependencies_tracker(ci.dependencies_tracker)
 		{
 			_tick_tock.tick();
 		}
@@ -69,11 +69,6 @@ namespace vkl
 		constexpr size_t updateTick()const
 		{
 			return _update_tick;
-		}
-
-		constexpr size_t checkShadersTick() const 
-		{ 
-			return _shader_check_tick; 
 		}
 
 		constexpr const DefinitionsMap * commonDefinitions() const
@@ -124,6 +119,11 @@ namespace vkl
 		DescriptorWriter& descriptorWriter()
 		{
 			return _descriptor_writer;
+		}
+
+		DependencyTracker& dependenciesTracker()
+		{
+			return *_dependencies_tracker;
 		}
 	};
 }
