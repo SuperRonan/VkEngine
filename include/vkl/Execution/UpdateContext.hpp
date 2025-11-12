@@ -37,8 +37,6 @@ namespace vkl
 
 		DescriptorWriter & _descriptor_writer;
 
-		DependencyTracker * _dependencies_tracker;
-
 	public:
 
 		struct CreateInfo
@@ -46,7 +44,6 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			size_t update_tick = 0;
-			DependencyTracker* dependencies_tracker;
 			const DefinitionsMap* common_definitions;
 			UploadQueue * upload_queue = nullptr;
 			MipMapComputeQueue * mips_queue = nullptr;
@@ -60,8 +57,7 @@ namespace vkl
 			_common_definitions(ci.common_definitions),
 			_upload_queue(ci.upload_queue),
 			_mips_queue(ci.mips_queue),
-			_descriptor_writer(ci.descriptor_writer),
-			_dependencies_tracker(ci.dependencies_tracker)
+			_descriptor_writer(ci.descriptor_writer)
 		{
 			_tick_tock.tick();
 		}
@@ -119,11 +115,6 @@ namespace vkl
 		DescriptorWriter& descriptorWriter()
 		{
 			return _descriptor_writer;
-		}
-
-		DependencyTracker& dependenciesTracker()
-		{
-			return *_dependencies_tracker;
 		}
 	};
 }

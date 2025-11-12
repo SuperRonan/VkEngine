@@ -22,7 +22,8 @@ namespace vkl
 			.name = name() + ".DescriptorWriter",
 		})
 	{
-		_dependencies_tracker = std::make_unique<DependencyTracker>(DependencyTracker::CI{
+		assert(!application()->dependenciesTracker());
+		application()->dependenciesTrackerRef() = std::make_unique<DependencyTracker>(DependencyTracker::CI{
 			.file_system = application()->fileSystem(),
 			.executor = &application()->threadPool(),
 			.log = &application()->logger(),
@@ -48,7 +49,7 @@ namespace vkl
 
 		{
 			application()->fileSystem()->resetCache();
-			_dependencies_tracker->update();
+			application()->dependenciesTracker()->update();
 		}
 
 		_common_definitions->update();
@@ -57,7 +58,6 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".update_context",
 			.update_tick = _update_tick,
-			.dependencies_tracker = _dependencies_tracker.get(),
 			.common_definitions = _common_definitions.get(),
 			.upload_queue = &_upload_queue,
 			.mips_queue = &_mips_queue,

@@ -251,8 +251,9 @@ namespace vkl
 
 		void fillCommonShaderDefinitions();
 
-		std::unique_ptr<FileSystem> _file_system = nullptr;
+		std::unique_ptr<FileSystem> _file_system = {};
 		MyVector<FileSystem::Path> _include_directories = {};
+		std::unique_ptr<DependencyTracker> _dependencies_tracker = {};
 
 		virtual void requestFeatures(VulkanFeatures & features);
 
@@ -487,6 +488,16 @@ namespace vkl
 		MyVector<that::FileSystem::Path> const& includeDirectories() const
 		{
 			return _include_directories;
+		}
+
+		DependencyTracker* dependenciesTracker() const
+		{
+			return _dependencies_tracker.get();
+		}
+
+		auto& dependenciesTrackerRef()
+		{
+			return _dependencies_tracker;
 		}
 
 		MyVector<that::FileSystem::Path> & includeDirectories()

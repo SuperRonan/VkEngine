@@ -16,6 +16,7 @@
 
 #include <that/IO/File.hpp>
 #include <vkl/IO/Logging.hpp> 
+#include <vkl/IO/DependencyTracker.hpp>
 
 #include <argparse/argparse.hpp>
 
@@ -1315,6 +1316,8 @@ namespace vkl
 		SDL_Vulkan_UnloadLibrary();
 		SDL_Quit();
 		
+		_dependencies_tracker.reset();
+
 		{
 			if (_thread_pool->waitAll())
 			{

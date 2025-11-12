@@ -1427,7 +1427,7 @@ namespace vkl
 		};
 	}
 
-	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info, DependencyTracker* dependencies_tracker)
+	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info)
 	{
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
@@ -1448,7 +1448,7 @@ namespace vkl
 				.name = "Compiling shader " + _path.string(),
 				.verbosity = AsynchTask::Verbosity::Medium,
 				.priority = TaskPriority::ASAP(),
-				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey, generate_shader_debug_info, dependencies_tracker]() {
+				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey, generate_shader_debug_info]() {
 
 					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 						.app = application(),
@@ -1470,7 +1470,7 @@ namespace vkl
 
 						for (const auto& dep : _dependencies)
 						{
-							dependencies_tracker->setDependency(dep.native(), { .callback = [this](DependencyTracker::TimePoint last_write_time, that::Result res_code) {
+							application()->dependenciesTracker()->setDependency(dep.native(), {.callback = [this](DependencyTracker::TimePoint last_write_time, that::Result res_code) {
 								if (res_code == that::Result::Success)
 								{
 									_latest_file_time = std::max(_latest_file_time, last_write_time);
@@ -1507,6 +1507,11 @@ namespace vkl
 	void Shader::destroyInstanceIFN()
 	{
 		waitForInstanceCreationIFN();
+		DependencyTracker* dependency_tracker = application()->dependenciesTracker();
+		for (auto dep : _dependencies)
+		{
+			dependency_tracker->removeDependency(dep.native(), this);
+		}
 		ParentType::destroyInstanceIFN();
 	}
 
@@ -1553,10 +1558,6 @@ namespace vkl
 
 			if (res)
 			{
-				for (auto dep : _dependencies)
-				{
-					ctx.dependenciesTracker().removeDependency(dep.native(), this);
-				}
 				destroyInstanceIFN();
 			}
 		
@@ -1570,7 +1571,7 @@ namespace vkl
 					// TODO use a better function that checks the result and can parse hex
 					packed_capcity = std::atoi(capacity.c_str());
 				}
-				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info, &ctx.dependenciesTracker());
+				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info);
 				res = true;
 			}
 		}

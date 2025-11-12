@@ -14,7 +14,6 @@ namespace vkl
 		size_t _update_tick = 0;
 
 		std::chrono::milliseconds _auto_file_check_period;
-		std::unique_ptr<DependencyTracker> _dependencies_tracker;
 
 		// TODO separate device life-time constant definitions
 		// and other possibly non const definitions
@@ -43,11 +42,6 @@ namespace vkl
 		std::shared_ptr<UpdateContext>  beginUpdateCycle();
 
 		void finishUpdateCycle(std::shared_ptr<UpdateContext> context);
-
-		DependencyTracker& dependenciesTracker()
-		{
-			return *_dependencies_tracker;
-		}
 
 		UploadQueue& uploadQueue()
 		{
