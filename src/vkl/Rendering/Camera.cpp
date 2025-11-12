@@ -175,7 +175,7 @@ namespace vkl
 				ImGui::SliderFloat("Focal distance", &_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 				
 				float f = focalLength() * 1e3f;
-				if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue))
+				if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue & 0))
 				{
 					// Auto focus
 					float fm = f / 1e3f;
