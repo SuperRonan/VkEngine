@@ -174,9 +174,12 @@ namespace vkl
 				_registration_update = false;
 			}
 
-			_task_is_running = true;
 			_latest_launch = now;
-			_executor->pushTask(_check_task);
+			if (!_back_registered.empty())
+			{
+				_task_is_running = true;
+				_executor->pushTask(_check_task);
+			}
 		}
 
 		return res;
