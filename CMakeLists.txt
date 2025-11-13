@@ -74,7 +74,7 @@ if(AUTO_LOCATE_VULKAN)
 
 	if(NOT ${Vulkan_INCLUDE_DIRS} STREQUAL "")
 		set(VULKAN_PATH ${Vulkan_INCLUDE_DIRS})
-		string(REGEX REPLACE "/Include" "" VULKAN_PATH ${VULKAN_PATH})
+		string(REGEX REPLACE "/(I|i)nclude" "" VULKAN_PATH ${VULKAN_PATH})
 	endif()
 
 	if(NOT Vulkan_FOUND)
