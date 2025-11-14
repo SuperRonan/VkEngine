@@ -15,14 +15,20 @@ namespace vkl
 
 		size_t _latest_update_tick = 0;
 
-		std::filesystem::path _path = {};
+		FileSystem::Path _path = {};
+		FileSystem::Path _resolved_cannon_path = {};
 
 		bool _is_synch = true;
-		
+
 		bool _should_upload = false;
 		bool _upload_done = false;
 		bool _mips_done = false;
-		
+
+		bool _enable_auto_reload = false;
+
+		FileSystem::TimePoint _latest_file_time = {};
+		FileSystem::TimePoint _instance_time = {};
+
 		that::img::FormatedImage _host_image = {};
 
 		std::shared_ptr<AsynchTask> _load_image_task = nullptr;
@@ -49,15 +55,24 @@ namespace vkl
 
 		void reload();
 
+		void registerFileDependencyIFN();
+
+		void unRegisterFileDependencyIFN();
+
+		void setPath(FileSystem::Path const& path);
+
+		void setEnableAutoReload(bool enable_auto_reload);
+
 	public:
 
 		struct CreateInfo
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::filesystem::path path = {};
+			FileSystem::Path path = {};
 			VkFormat desired_format = VK_FORMAT_UNDEFINED;
 			bool synch = false;
+			bool auto_reload = false;
 			MipsOptions mips = MipsOptions::Auto;
 			uint32_t layers = 1;
 		};
@@ -78,7 +93,7 @@ namespace vkl
 
 		std::mutex _mutex;
 		
-		std::unordered_map<std::filesystem::path, std::shared_ptr<TextureFromFile>> _cache;		
+		std::unordered_map<FileSystem::Path, std::shared_ptr<TextureFromFile>> _cache;
 
 	public:
 
@@ -92,7 +107,7 @@ namespace vkl
 		TextureFileCache(CreateInfo const& ci);
 
 
-		std::shared_ptr<TextureFromFile> getTexture(std::filesystem::path const& path, VkFormat desired_format = VK_FORMAT_UNDEFINED);
+		std::shared_ptr<TextureFromFile> getTexture(FileSystem::Path const& path, VkFormat desired_format = VK_FORMAT_UNDEFINED);
 
 		void updateResources(UpdateContext & ctx);
 	};

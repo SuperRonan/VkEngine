@@ -8,6 +8,8 @@
 
 #include <vulkan/vk_enum_string_helper.h>
 
+#include <vkl/IO/DependencyTracker.hpp>
+
 namespace vkl
 {
 	
@@ -63,6 +65,15 @@ namespace vkl
 				.filesystem = application()->fileSystem(),
 				.target = &_host_image,
 			};
+			auto latest_file_time = application()->fileSystem()->getFileLastWriteTime(_resolved_cannon_path, FileSystem::Hint::PathIsCannon | FileSystem::Hint::PathIsNative);
+			if (latest_file_time.result == that::Result::Success)
+			{
+				_instance_time = latest_file_time.value;
+			}
+			else
+			{
+				_instance_time = FileSystem::TimePoint::min();
+			}
 			that::Result read_result = that::img::io::ReadFormatedImage(read_info);
 			if (read_result != that::Result::Success)
 			{
@@ -203,6 +214,7 @@ namespace vkl
 
 	void TextureFromFile::reload()
 	{
+		_is_ready = false;
 		if (!_is_synch)
 		{
 			if (_load_image_task)
@@ -234,11 +246,13 @@ namespace vkl
 			.app = ci.app,
 			.name = ci.name,
 		}),
-		_path(ci.path),
 		_is_synch(ci.synch),
 		_desired_mips(ci.mips),
 		_desired_layers(ci.layers)
 	{
+		_enable_auto_reload = false;
+		setPath(ci.path);
+		setEnableAutoReload(ci.auto_reload);
 		_desired_format = DetailedVkFormat::Find(ci.desired_format);
 
 		reload();
@@ -251,6 +265,11 @@ namespace vkl
 			_load_image_task->cancel();
 			_load_image_task->wait();
 		}
+
+		if (_enable_auto_reload)
+		{
+			unRegisterFileDependencyIFN();
+		}
 	}
 
 	void TextureFromFile::updateResources(UpdateContext& ctx)
@@ -262,6 +281,15 @@ namespace vkl
 
 		_latest_update_tick = ctx.updateTick();
 
+		if (!_load_image_task)
+		{
+			if (_latest_file_time > _instance_time)
+			{
+				_instance_time = _latest_file_time;
+				reload();
+			}
+		}
+
 		if (_image)
 		{
 			_image->updateResource(ctx);
@@ -269,7 +297,6 @@ namespace vkl
 			_all_mips_view->updateResource(ctx);
 		}
 
-		
 		if (_should_upload)
 		{
 			_should_upload = false;
@@ -320,7 +347,7 @@ namespace vkl
 						_all_mips_view = nullptr;
 						callResourceUpdateCallbacks();
 					}
-					_load_image_task = nullptr;	
+					_load_image_task = nullptr;
 				}
 			}
 		}
@@ -357,6 +384,71 @@ namespace vkl
 			_is_ready = true;
 			_mips_done = false;
 			callResourceUpdateCallbacks();
+		}
+	}
+
+	void TextureFromFile::registerFileDependencyIFN()
+	{
+		if (_enable_auto_reload && !_resolved_cannon_path.empty())
+		{
+			application()->dependenciesTracker()->setDependency(_resolved_cannon_path, {
+				.callback = [this](DependencyTracker::TimePoint time, that::Result status)
+				{
+					if (status == that::Result::Success)
+					{
+						_latest_file_time = std::max(_latest_file_time, time);
+					}
+					else
+					{
+						// Should be triggered if the file does not exist anymore
+						_latest_file_time = FileSystem::TimePoint::min();
+					}
+				},
+				.id = this,
+			});
+		}
+	}
+
+	void TextureFromFile::unRegisterFileDependencyIFN()
+	{
+		if (_enable_auto_reload)
+		{
+			if (!_resolved_cannon_path.empty())
+			{
+				application()->dependenciesTracker()->removeDependency(_resolved_cannon_path, this);
+			}
+		}
+	}
+
+	void TextureFromFile::setPath(FileSystem::Path const& path)
+	{
+		unRegisterFileDependencyIFN();
+		_path = path;
+		auto cannon = application()->fileSystem()->resolveAndCannonize(_path);
+		if (cannon.result == that::Result::Success)
+		{
+			_resolved_cannon_path = std::move(cannon.value);
+			registerFileDependencyIFN();
+		}
+		else
+		{
+			_resolved_cannon_path.clear();
+		}
+	}
+	
+	void TextureFromFile::setEnableAutoReload(bool enable_auto_reload)
+	{
+		if (enable_auto_reload != _enable_auto_reload) [[likely]]
+		{
+			if (_enable_auto_reload)
+			{
+				unRegisterFileDependencyIFN();
+			}
+			_enable_auto_reload = enable_auto_reload;
+			if (_enable_auto_reload)
+			{
+				registerFileDependencyIFN();
+			}
 		}
 	}
 
@@ -419,12 +511,23 @@ namespace vkl
 		{
 			if (!file_dialog->getResults().empty())
 			{
-				that::FileSystem::Path new_path = file_dialog->getResults().front();
-				_path = new_path;
+				FileSystem::Path new_path = file_dialog->getResults().front();
+				
+				setPath(new_path);
 				_should_reload = true;
-				_is_ready = false;
 			}
 			file_dialog->close();
+		}
+
+		if (ImGui::Button("Reload"))
+		{
+			_should_reload = true;
+		}
+		ImGui::SameLine();
+		bool enable_auto_reload = _enable_auto_reload;
+		if (ImGui::Checkbox("Auto Reload", &enable_auto_reload))
+		{
+			setEnableAutoReload(enable_auto_reload);
 		}
 		if (_should_reload)
 		{
@@ -501,7 +604,7 @@ namespace vkl
 	{}
 
 
-	std::shared_ptr<TextureFromFile> TextureFileCache::getTexture(std::filesystem::path const& path, VkFormat desired_format)
+	std::shared_ptr<TextureFromFile> TextureFileCache::getTexture(FileSystem::Path const& path, VkFormat desired_format)
 	{
 		std::unique_lock lock(_mutex);
 		std::shared_ptr<TextureFromFile> res;
