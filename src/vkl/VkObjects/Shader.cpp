@@ -1465,7 +1465,7 @@ namespace vkl
 					if (res.success)
 					{
 						_specializations[lkey] = _inst;
-						_instance_time = FileSystem::Clock::now();
+						_instance_time = _latest_file_time;
 						_dependencies = _inst->dependencies();
 
 						for (const auto& dep : _dependencies)

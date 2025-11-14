@@ -208,7 +208,7 @@ namespace vkl
 		DynamicValue<DefinitionsList> _definitions;
 		std::vector<Dependecy> _dependencies;
 		FileSystem::TimePoint _latest_file_time = {};
-		FileSystem::TimePoint _instance_time;
+		FileSystem::TimePoint _instance_time = {};
 
 		SpecializationKey _current_key = {};
 		SpecializationTable _specializations = {};
