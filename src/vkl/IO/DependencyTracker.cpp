@@ -201,12 +201,12 @@ namespace vkl
 			if (_log && _log->max_verbosity >= uint32_t(Logger::Options::VerbosityMostImportant))
 			{
 				g_common_mutex.lock();
-				_log->log(std::format("Closing DependencyTracker with still {} registered dependencies!", _registered.size()), Logger::Options::VerbosityMostImportant | Logger::Options::TagHighWarning);
+				_log->log(std::format("Closing DependencyTracker with still {} registered dependencies!", _registered.size()), Logger::Options::VerbosityMostImportant | Logger::Options::TagHighWarning | Logger::Options::NoLock);
 				if (_log->max_verbosity >= uint32_t(Logger::Options::VerbosityImportant))
 				{
 					for (const auto& [k, v] : _registered)
 					{
-						_log->log(std::format("- {} has {} registrations.", Path(k).string(), v.callbacks.size()), Logger::Options::VerbosityImportant | Logger::Options::TagWarning);
+						_log->log(std::format("- {} has {} registrations.", Path(k).string(), v.callbacks.size()), Logger::Options::VerbosityImportant | Logger::Options::TagWarning | Logger::Options::NoLock);
 					}
 				}
 				g_common_mutex.unlock();
