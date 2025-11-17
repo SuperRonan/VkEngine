@@ -4,6 +4,8 @@
 #include <ShaderLib:/common.glsl>
 #include "DebugBuffersDefinitions.h"
 
+#include <ShaderLib:/CommonUBO.glsl>
+
 #ifndef DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
 #endif 
@@ -74,14 +76,9 @@ struct BufferDebugLine
 #define DEBUG_BUFFER_ACCESS
 #endif
 
-// sizeof: 4 * 4 * u32
+// sizeof: 3 * 4 * u32
 struct DebugBuffersHeader
 {
-	uint max_strings;
-	uint max_chunks;
-	uint max_lines;
-	uint pad_0_0;
-
 	uint strings_counter;
 	uint pad_1_0;
 	uint pad_1_1;
@@ -136,7 +133,7 @@ uint debugStringsCapacity()
 #ifdef DEBUG_BUFFER_STRINGS_CAPACITY
 	const uint m = DEBUG_BUFFER_STRINGS_CAPACITY;
 #elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_writeonly 
-	const uint m = _debug.header.max_strings;
+	const uint m = _common_ubo.debug_buffer_max_strings_mask + 1;
 #else 
 	const uint m = 0;
 #endif
@@ -148,32 +145,22 @@ uint debugLinesCapacity()
 #ifdef DEBUG_BUFFER_LINES_CAPACITY
 	const uint m = DEBUG_BUFFER_LINES_CAPACITY;
 #elif BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_writeonly
-	const uint m = _debug.header.max_lines;
+	const uint m = _common_ubo.debug_buffer_max_lines_mask + 1;
 #else 
 	const uint m = 0;
 #endif
 	return m;
 }
 
-#ifndef DEBUG_BUFFER_ASSUME_Po2_CAPACITIES
-#define DEBUG_BUFFER_ASSUME_Po2_CAPACITIES 1
-#endif
-
 uint allocateDebugStrings(uint n)
 {
+	uint res = 0;
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
-#ifdef DEBUG_BUFFER_STRINGS_CAPACITY
-	const uint m = DEBUG_BUFFER_STRINGS_CAPACITY;
-#else
-	const uint m = _debug.header.max_strings;
+	const uint m = debugStringsCapacity() - 1;
+	res = atomicAdd(_debug.header.strings_counter, n);
+	res = res & m;
 #endif
-#if DEBUG_BUFFER_ASSUME_Po2_CAPACITIES
-	return atomicAdd(_debug.header.strings_counter, n) & (m - 1);
-#else
-	return atomicAdd(_debug.header.strings_counter, n) % m;
-#endif
-#endif
-	return 0;
+	return res;
 }
 
 uint allocateDebugString()
@@ -192,19 +179,13 @@ uint allocateDebugStringContent(uint len)
 
 uint allocateDebugLines(uint n)
 {
+	uint res = 0;
 #if BIND_DEBUG_BUFFERS && !DEBUG_BUFFER_ACCESS_readonly
-#ifdef DEBUG_BUFFER_LINES_CAPACITY
-	const uint m = DEBUG_BUFFER_LINES_CAPACITY;
-#else
-	const uint m = _debug.header.max_lines;
+	const uint m = debugLinesCapacity() - 1;
+	res = atomicAdd(_debug.header.lines_counter, n);
+	res = res & m;
 #endif
-#if DEBUG_BUFFER_ASSUME_Po2_CAPACITIES
-	return atomicAdd(_debug.header.lines_counter, n) & (m - 1);
-#else
-	return atomicAdd(_debug.header.lines_counter, n) % m;
-#endif
-#endif
-	return 0;
+	return res;
 }
 
 uint allocateDebugLine()

@@ -16,6 +16,7 @@
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Execution/ResourcesManager.hpp>
 #include <vkl/Execution/PerformanceReport.hpp>
+#include <vkl/Execution/CommonUBO.hpp>
 
 #include <vkl/Utils/TickTock.hpp>
 #include <vkl/Utils/StatRecorder.hpp>
@@ -558,7 +559,6 @@ namespace vkl
 			features.features_11.storageBuffer16BitAccess = VK_TRUE;
 
 			features.features2.features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
-			features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
 
 			features.shader_atomic_float_ext.shaderSharedFloat32AtomicAdd = VK_TRUE;
 			features.shader_atomic_float_ext.shaderBufferFloat32AtomicAdd = VK_TRUE;
@@ -619,6 +619,7 @@ namespace vkl
 				.name = "exec",
 				.window = _main_window,
 				.common_definitions = resources_manager.commonDefinitions(),
+				.common_ubo_size = sizeof(CommonUBO),
 				.use_ImGui = true,
 				.use_debug_renderer = true,
 			});
@@ -811,8 +812,9 @@ namespace vkl
 
 			double t = 0, dt = 0.0;
 			size_t frame_index = 0;
+			size_t time_tick = 0;
 
-			
+			CommonUBO common_ubo {};
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
 				.camera = &camera, 
@@ -831,7 +833,9 @@ namespace vkl
 			while (!_main_window->shouldClose())
 			{
 				{
-					double new_t = std::chrono::duration<double>(clock.now() - clock_zero).count();
+					auto now = clock.now();
+					time_tick = (now - clock_zero).count();
+					double new_t = std::chrono::duration<double>(now - clock_zero).count();
 					dt = new_t - t;
 					t = new_t;
 				}
@@ -963,6 +967,12 @@ namespace vkl
 
 				frame_counters.reset();
 
+				{
+					FillCommonUBO(common_ubo, t, dt, time_tick, frame_index);
+					FillCommonUBO(common_ubo, mouse);
+					FillCommonUBO(common_ubo, *exec.getDebugRenderer());
+				}
+
 				std::shared_ptr<UpdateContext> update_context = resources_manager.beginUpdateCycle();
 				{
 					getSamplerLibrary().updateResources(*update_context);
@@ -976,6 +986,9 @@ namespace vkl
 					std::TickTock_hrc exec_tt;
 					exec_tt.tick();
 					exec.updateResources(*update_context);
+					{
+						update_context->resourcesToUpload().addBuffer(exec.getCommonUBO()->instance(), &common_ubo, sizeof(CommonUBO), false);
+					}
 					frame_counters.exec_update_time = exec_tt.tockd().count();
 
 					renderer.preUpdate(*update_context);

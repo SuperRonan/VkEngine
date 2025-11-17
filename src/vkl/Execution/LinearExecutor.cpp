@@ -574,6 +574,7 @@ namespace vkl
 			.app = ci.app ? ci.app : ci.window->application(), 
 			.name = ci.name,
 			.common_definitions = ci.common_definitions,
+			.common_ubo_size = ci.common_ubo_size,
 			.use_debug_renderer = ci.use_debug_renderer,
 			.use_ray_tracing_pipeline = ci.use_ray_tracing,
 		}),
@@ -675,6 +676,11 @@ namespace vkl
 				_fifo_aquire_fences.clear();
 				_fifo_fence_to_wait_index = 0;
 			}
+		}
+
+		if (_common_ubo)
+		{
+			_common_ubo->updateResource(context);
 		}
 
 		if (_debug_renderer)

@@ -213,6 +213,10 @@ namespace vkl
 		features.swapchain_maintenance1_ext.swapchainMaintenance1 = t;
 		features.present_id_khr.presentId = t;
 
+		// Used by CommonUBO
+		features.features_11.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+		features.features_12.uniformBufferStandardLayout = VK_TRUE;
+
 		features.features2.features.shaderInt64 = t; // Necessary for ptr arithmetic, Necessary for debug strings
 
 		features.features2.features.geometryShader = t;

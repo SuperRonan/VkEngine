@@ -74,8 +74,6 @@ namespace vkl
 		ImGuiListSelection _default_glyph_size;
 		bool _default_show_plus = false;
 
-		bool _should_write_header = true;
-
 		void declareCommonDefinitions();
 
 		void createRenderShader();
@@ -108,8 +106,24 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		ShaderBindings getBindings() const;
+		ShaderBindings getBindings(uint32_t offset) const;
 
 		static MyVector<DescriptorSetLayout::Binding> getLayoutBindings(uint32_t offset);
+
+		struct Limits
+		{
+			uint32_t max_debug_strings_mask;
+			uint32_t max_chunks_mask;
+			uint32_t max_lines_mask;
+		};
+
+		Limits getLimits() const
+		{
+			return Limits{
+				.max_debug_strings_mask = _number_of_debug_strings - 1,
+				.max_chunks_mask = _debug_chunks_capacity - 1,
+				.max_lines_mask = _number_of_debug_lines - 1,
+			};
+		}
 	};
 }

@@ -7,6 +7,8 @@
 #include "String.slang"
 #include "DebugBuffersDefinitions.h"
 
+#include <ShaderLib/CommonUBO.slang>
+
 #ifndef DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL
 #define DEBUG_ENABLE_DEBUG_GLOBAL_SIGNAL 0
 #endif 
@@ -25,11 +27,6 @@ typealias DebugLowPvec4 = DebugLowPVector<4>;
 // The first part should rather be in a CBO (maybe part of a global options UBO)
 struct DebugBuffersHeader
 {
-	uint max_string;
-	uint max_chunks;
-	uint max_lines;
-	uint pad_0_0;
-
 	uint strings_counter;
 	uint pad_1_0;
 	uint pad_1_1;
@@ -133,6 +130,7 @@ uint AllocateDebugStringMeta(uint n = 1)
 	uint res = 0;
 #if BIND_DEBUG_BUFFERS && DEBUG_BUFFER_ACCESS == RWM
 	InterlockedAdd(b_debug_buffers_header[0].strings_counter, n, res);
+	res = res & _common_ubo.debug_buffer_max_strings_mask;
 #endif
 	return res;
 }
@@ -144,6 +142,7 @@ uint AllocateDebugStringContent(uint len)
 #if BIND_DEBUG_BUFFERS && DEBUG_BUFFER_ACCESS == RWM
 	InterlockedAdd(b_debug_buffers_header[0].chunks_counter, len, res);
 	//res = __atomic_add(b_debug_buffers_header[0].chunks_counter, len);
+	//res = res & _common_ubo.debug_buffer_max_chunks_mask;
 #endif
 	return res;
 }
@@ -153,6 +152,7 @@ uint AllocateDebugLine(uint n = 1)
 	uint res = 0;
 #if BIND_DEBUG_BUFFERS && DEBUG_BUFFER_ACCESS == RWM
 	InterlockedAdd(b_debug_buffers_header[0].lines_counter, n, res);
+	res = res & _common_ubo.debug_buffer_max_lines_mask;
 #endif
 	return res;
 }

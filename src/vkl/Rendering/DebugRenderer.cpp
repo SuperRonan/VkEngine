@@ -269,7 +269,9 @@ namespace vkl
 		};
 
 		_debug_buffer->setInvalidationCallback(Callback{
-			.callback = [this](){_should_write_header = true; },
+			.callback = [this](){
+			
+			},
 			.id = this,
 		});
 
@@ -357,33 +359,6 @@ namespace vkl
 			_font->updateResources(ctx);
 			_sampler->updateResources(ctx);
 
-
-			if (_should_write_header && _debug_buffer->instance())
-			{
-				struct Header {
-					uint32_t num_debug_strings;
-					uint32_t debug_chunk_capacity;
-					uint32_t num_debug_lines;
-					uint32_t pad;
-				};
-				Header header{
-					.num_debug_strings = _number_of_debug_strings,
-					.debug_chunk_capacity = _debug_chunks_capacity,
-					.num_debug_lines = _number_of_debug_lines,
-				};	
-				ResourcesToUpload::BufferSource src{
-					.data = &header,
-					.size = sizeof(header),
-					.copy_data = true,
-				};
-				ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
-					.sources = &src,
-					.sources_count = 1,
-					.dst = _debug_buffer->instance(),
-				};
-				_should_write_header = false;
-			}
-
 			_render_pass->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _framebuffer;
 
@@ -453,17 +428,14 @@ namespace vkl
 
 			// Clear only the atomic counters
 			Buffer::Range clear_range;
-			const size_t header_size = 4 * sizeof(u32);
+
 			if (true) // only clear counters
 			{
-				clear_range = { .begin = header_size, .len = 3 * header_size };
+				clear_range = { .begin = 0, .len = 3 * 4 * sizeof(uint32_t)};
 			}
 			else
 			{
 				clear_range = _debug_buffer->fullRange().value();
-				clear_range.begin += header_size;
-				clear_range.len -= header_size;
-
 			}
 			exec(application()->getPrebuiltTransferCommands().fill_buffer.with(FillBuffer::FillInfo{
 				.buffer = _debug_buffer,
@@ -532,7 +504,6 @@ namespace vkl
 				changed = ImGui::InputInt("log2(Total Strings Capacity)", (int*) & _log2_number_of_debug_strings);
 				if (changed)
 				{
-					_should_write_header = true;
 					_log2_number_of_debug_strings = std::max<int>(_log2_number_of_debug_strings, 0);
 					_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
 					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
@@ -542,7 +513,6 @@ namespace vkl
 				changed = ImGui::InputInt("log2(Total Strings Content Capcity)", (int*)&_log2_debug_chunks);
 				if (changed)
 				{
-					_should_write_header = true;
 					_log2_debug_chunks = std::max<int>(_log2_debug_chunks, 0);
 					_debug_chunks_capacity = (1 << _log2_debug_chunks);
 					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CONTENT_CAPACITY", std::to_string(_debug_chunks_capacity));
@@ -552,7 +522,6 @@ namespace vkl
 				changed = ImGui::InputInt("log2(Total Lines Capacity)", (int*)&_log2_number_of_debug_lines);
 				if (changed)
 				{
-					_should_write_header = true;
 					_log2_number_of_debug_lines = std::max<int>(_log2_number_of_debug_lines, 0);
 					_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
 					if (_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
@@ -585,24 +554,24 @@ namespace vkl
 		}
 	}
 
-	ShaderBindings DebugRenderer::getBindings()const
+	ShaderBindings DebugRenderer::getBindings(uint32_t offset)const
 	{
 		ShaderBindings res = {
 			Binding{
 				.buffer = _debug_buffer_header,
-				.binding = 0,
+				.binding = offset + 0,
 			},
 			Binding{
 				.buffer = _debug_buffer_strings_meta,
-				.binding = 1,
+				.binding = offset + 1,
 			},
 			Binding{
 				.buffer = _debug_buffer_strings_content,
-				.binding = 2,
+				.binding = offset + 2,
 			},
 			Binding{
 				.buffer = _debug_buffer_lines,
-				.binding = 3,
+				.binding = offset + 3,
 			},
 		};
 		return res;

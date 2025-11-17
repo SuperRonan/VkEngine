@@ -231,6 +231,7 @@ namespace vkl
 			std::string name = {};
 			std::shared_ptr<VkWindow> window = nullptr;
 			DefinitionsMap * common_definitions = nullptr;
+			Dyn<size_t> common_ubo_size = {};
 			bool use_ImGui = false;
 			bool use_debug_renderer = true;
 			bool use_ray_tracing = false;

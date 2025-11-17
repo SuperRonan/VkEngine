@@ -38,6 +38,10 @@ layout(row_major) buffer;
 #define uint3 uvec3
 #define uint4 uvec4
 
+#define float32_t float
+#define int16_t2 i16vec2
+#define float16_t2 f16vec2
+
 #define lerp mix
 
 float sum(vec2 v)

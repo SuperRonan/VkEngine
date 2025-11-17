@@ -122,6 +122,7 @@ namespace vkl
 		
 		DefinitionsMap * _common_definitions = nullptr;
 		
+		std::shared_ptr<Buffer> _common_ubo = {};
 		std::shared_ptr<DebugRenderer> _debug_renderer = nullptr;
 
 		std::shared_ptr<DescriptorSetLayout> _common_set_layout;
@@ -140,17 +141,13 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			DefinitionsMap * common_definitions = nullptr;
+			Dyn<size_t> common_ubo_size = {};
 			bool use_debug_renderer = true;
 			bool use_ray_tracing_pipeline = false;
 		};
 		using CI = CreateInfo;
 
-		Executor(CreateInfo const& ci):
-			VkObject(ci.app, ci.name),
-			_use_debug_renderer(ci.use_debug_renderer),
-			_use_rt_pipeline(ci.use_ray_tracing_pipeline),
-			_common_definitions(ci.common_definitions)
-		{}
+		Executor(CreateInfo const& ci);
 
 		virtual void init() = 0;
 
@@ -169,6 +166,11 @@ namespace vkl
 		std::shared_ptr<DebugRenderer> const& getDebugRenderer() const
 		{
 			return _debug_renderer;
+		}
+
+		std::shared_ptr<Buffer> const& getCommonUBO() const
+		{
+			return _common_ubo;
 		}
 	};
 }
