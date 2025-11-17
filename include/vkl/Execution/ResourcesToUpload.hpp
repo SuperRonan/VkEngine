@@ -104,5 +104,7 @@ namespace vkl
 		void offsetImagesData(size_t begin, size_t count, uintptr_t offset);
 
 		void offsetBuffersData(size_t begin, size_t count, uintptr_t data_offset, size_t buffer_source_offset);
+
+		void addBuffer(std::shared_ptr<BufferInstance> const& dst, const void * data, size_t size, bool copy_data=true);
 	};
 }

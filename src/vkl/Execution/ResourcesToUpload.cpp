@@ -130,6 +130,22 @@ namespace vkl
 		return *this;
 	}
 
+	void ResourcesToUpload::addBuffer(std::shared_ptr<BufferInstance> const& dst, const void* data, size_t size, bool copy_data)
+	{
+		BufferSource src{
+			.data = data,
+			.size = size,
+			.offset = 0,
+			.copy_data = copy_data,
+		};
+		BufferUpload upload{
+			.sources = &src,
+			.sources_count = 1,
+			.dst = dst,
+		};
+		*this += upload;
+	}
+
 	size_t ResourcesToUpload::getSize() const
 	{
 		size_t res = 0;
