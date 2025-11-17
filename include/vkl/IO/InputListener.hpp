@@ -181,6 +181,11 @@ namespace vkl
 
 		virtual void processEventAssumeRelevent(SDL_Event const& event) override final;
 
+		const auto& buttons() const
+		{
+			return _buttons;
+		}
+
 		const KeyState& getButton(int b)const
 		{
 			return _buttons[b].key;
