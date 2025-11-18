@@ -263,7 +263,10 @@ namespace vkl
 				{
 					keyboard.update();
 				}
-				mouse.update();
+				if (!imgui_io.WantCaptureMouse)
+				{
+					mouse.update();
+				}
 				gamepad.update();
 				camera_controller.updateCamera(dt);
 

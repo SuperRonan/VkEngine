@@ -869,11 +869,14 @@ namespace vkl
 					}
 				}
 
-				if (imgui_io && !imgui_io->WantCaptureKeyboard)
+				if (!imgui_io || !imgui_io->WantCaptureKeyboard)
 				{
 					keyboard.update();
 				}
-				mouse.update();
+				if (!imgui_io || !imgui_io->WantCaptureMouse)
+				{
+					mouse.update();
+				}
 				gamepad.update();
 				camera_controller.updateCamera(dt);
 
