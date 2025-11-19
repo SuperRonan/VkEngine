@@ -217,6 +217,17 @@ namespace vkl
 
 namespace ImGui
 {
+	bool DragAngle(const char* label, float* v_rad, float v_speed, float v_degrees_min, float v_degrees_max, const char* format, ImGuiSliderFlags flags)
+	{
+		if (format == NULL)
+			format = "%.0f deg";
+		float v_deg = (*v_rad) * 180.0f / std::numbers::pi;
+		bool value_changed = DragFloat(label, &v_deg, v_speed, v_degrees_min, v_degrees_max, format, flags);
+		if (value_changed)
+			*v_rad = v_deg * std::numbers::pi / 180.0f;
+		return value_changed;
+	}
+
 	bool SliderAngleN(const char* label, float* v_rad, uint N, float v_degrees_min, float v_degrees_max, const char* format, ImGuiSliderFlags flags, uint8_t* changed_bit_field)
 	{
 		ImGuiWindow* window = GetCurrentWindow();

@@ -554,7 +554,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 			ImGui::SeparatorText("Sun");
 			ImGui::SliderAngle("Inclination", &_scene->_solar_disk_direction[0], 0, 180);
-			ImGui::SliderAngle("Azimuth", &_scene->_solar_disk_direction[1], -180, 180, "%.1f deg", ImGuiSliderFlags_WrapAround);
+			ImGui::DragAngle("Azimuth", &_scene->_solar_disk_direction[1], 1, -180, 180, "%.1f deg", ImGuiSliderFlags_WrapAround | ImGuiSliderFlags_NoRoundToFormat);
 			ImGui::SliderAngle("Solar Disk angle", &_scene->_solar_disk_angle, 0, 90, "%.1f deg");
 
 			Light::DeclareEmission(_scene->_solar_disk_emission, _scene->_solar_disk_emission_options);

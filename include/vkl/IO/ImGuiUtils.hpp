@@ -295,7 +295,9 @@ namespace ImGui
 		return type;
 	}
 
-	bool SliderAngleN(const char* label, float * v_rad, uint N, float v_degrees_min=-180, float v_degrees_max=180, const char * format = "%.1f", ImGuiSliderFlags flags = 0, uint8_t* changed_bit_field = nullptr);
+	extern bool DragAngle(const char* label, float* v_rad, float v_speed=1, float v_degrees_min=-180, float v_degrees_max=180, const char* format = "%.1f", ImGuiSliderFlags flags = 0);
+
+	extern bool SliderAngleN(const char* label, float * v_rad, uint N, float v_degrees_min=-180, float v_degrees_max=180, const char * format = "%.1f", ImGuiSliderFlags flags = 0, uint8_t* changed_bit_field = nullptr);
 
 	// Returns a bit field (bit N -> axis N changed)
 	static inline uint SliderAngle3(const char* label, float* v_rad, float v_degrees_min = -180, float v_degrees_max = 180, const char* format = "%.1f", ImGuiSliderFlags flags = 0)
