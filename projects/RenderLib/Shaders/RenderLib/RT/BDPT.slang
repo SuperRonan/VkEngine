@@ -28,7 +28,7 @@ layout(SHADER_DESCRIPTOR_BINDING + 2, TARGET_IMAGE_FORMAT) uniform restrict RWTe
 
 struct PushConstant
 {
-	uint value;
+	uint2 offset;
 };
 
 [vk::push_constant]
@@ -1165,13 +1165,15 @@ Spectrumf<CommonSpectrumMode> PathTrace<RNG : IRNG>(
 
 
 void CommonMain(
-	uvec2 pixel,
+	uvec2 thread_invocation_id,
 	const in IRayTracer ray_tracer,
 	const in BoundScene scene,
 
 ) {
 	const int Mode = bdpt::CommonSpectrumMode;
 	typealias SpectruM = Spectrumf<Mode>;
+
+	const uvec2 pixel = thread_invocation_id + _pc.offset;
 
 	const uvec2 dims = TextureSize(Target);
 	const vec2 fdims = vec2(dims);
@@ -1181,7 +1183,7 @@ void CommonMain(
 #if 0
 	const uint global_thread_index = workgroup_index * LOCAL_SIZE + local_thread_index;
 #else
-	const uint global_thread_index = pixel.x + pixel.y * dims.x;
+	const uint global_thread_index = thread_invocation_id.x + thread_invocation_id.y * dims.x;
 #endif
 
 	uint seed = Hash(pixel);

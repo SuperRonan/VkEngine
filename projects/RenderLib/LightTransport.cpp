@@ -19,6 +19,8 @@ namespace vkl
 	{
 		_spectrum_mode = SPECTRUM_MODE_RGB;
 
+		_max_scratch_buffer_size = application()->deviceProperties().props_11.maxMemoryAllocationSize;
+
 		createInternals();
 	}
 
@@ -228,24 +230,18 @@ namespace vkl
 		_bdpt_scratch_buffer = std::make_shared<Buffer>(Buffer::CI{
 			.app = application(),
 			.name = name() + ".BDPTScratchBuffer",
-			.size = [this]() -> size_t {
-				VkExtent3D extent = _target->image()->extent().value();
-				extent.width = std::alignUpAssumePo2<u32>(extent.width, 32);
-				extent.height = std::alignUpAssumePo2<u32>(extent.height, 32);
-				size_t pixels = extent.width * extent.height * extent.depth;
-				// 5 vec4 at most for now (with uncompressed)
-				// 4 vec4 with minimum compression (fastest)
-				// 3 vec4 with aggressive compression, (but slower)
-				const uint max_vertices = _max_depth + 2;
-				const size_t vertex_size = sizeof(vec4) * 3;
-				const size_t pdf_pair_size = sizeof(vec2);
-				size_t res = pixels * 2 * max_vertices * (vertex_size + pdf_pair_size);
-				return res;
-			},
+			.size = &_bdpt_scratch_buffer_size,
 			.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			.hold_instance = [this]() { return _method == Method::BidirectionalPathTracer; },
 		});
+
+		auto bdpt_dispatch_size = [this]() -> VkExtent3D
+		{
+			VkExtent3D res = *_target->image()->extent();
+			res.height = _bdpt_dispatch_height;
+			return res;
+		};
 
 		if (can_rq)
 		{
@@ -253,7 +249,7 @@ namespace vkl
 				.app = application(),
 				.name = name() + ".BDPT",
 				.shader_path = shaders / "BDPT.slang",
-				.extent = _target->image()->extent(),
+				.extent = bdpt_dispatch_size,
 				.dispatch_threads = true,
 				.sets_layouts = _sets_layouts,
 				.bindings = {
@@ -340,7 +336,7 @@ namespace vkl
 						.binding = 5,
 					},
 				},
-				.extent = _target->image()->extent(),
+				.extent = bdpt_dispatch_size,
 				.max_recursion_depth = 0,
 				.create_sbt = true,
 			});
@@ -435,7 +431,8 @@ namespace vkl
 		}
 
 		_light_tracer_buffer->updateResource(ctx);
-		_bdpt_scratch_buffer->updateResource(ctx);
+		
+		// Recompute BDPT scratch buffer memory requirement and dispatch size
 		{
 			VkExtent3D extent = _target->image()->extent().value();
 			extent.width = std::alignUpAssumePo2<u32>(extent.width, 32);
@@ -447,8 +444,26 @@ namespace vkl
 			const uint max_vertices = _max_depth + 2;
 			const size_t vertex_size = sizeof(vec4) * 3;
 			const size_t pdf_pair_size = sizeof(vec2);
-			_bdpt_scratch_buffer_segment_2 = pixels * max_vertices * 2 * vertex_size;
+			_bdpt_needed_scratch_size = pixels * max_vertices * 2 * (vertex_size + pdf_pair_size);
+			size_t needed_vertex_size = pixels * max_vertices * 2 * (vertex_size);
+
+			const size_t max_buffer_size = application()->deviceProperties().props_11.maxMemoryAllocationSize;
+			const size_t max_range_size = size_t(application()->deviceProperties().props2.properties.limits.maxStorageBufferRange);
+
+			size_t max_scratch_buffer_size = std::min(_max_scratch_buffer_size, max_buffer_size);
+
+			size_t alloc_divisions = std::divUpAssumeNoOverflow(_bdpt_needed_scratch_size, max_scratch_buffer_size);
+			size_t range_division = std::divUpAssumeNoOverflow(needed_vertex_size, max_range_size);
+			_bdpt_divisions = std::max(alloc_divisions, range_division);
+
+			_bdpt_dispatch_height = extent.height / _bdpt_divisions;
+
+			size_t reduced_pixels = extent.width * _bdpt_dispatch_height * extent.depth;
+
+			_bdpt_scratch_buffer_size = reduced_pixels * max_vertices * 2 * (vertex_size + pdf_pair_size);
+			_bdpt_scratch_buffer_segment_2 = reduced_pixels * max_vertices * 2 * vertex_size;
 		}
+		_bdpt_scratch_buffer->updateResource(ctx);
 		VkFormat target_format = _target->format().value();
 		if (target_format != _target_format)
 		{
@@ -556,11 +571,32 @@ namespace vkl
 				if (_use_rt_pipelines)
 				{
 					_bdpt_rt->getSBT()->recordUpdateIFN(exec);
-					exec(_bdpt_rt);
 				}
-				else
+				
+				struct BDPT_PC
 				{
-					exec(_bdpt_rq);
+					uint32_t offset_x, offset_y;
+				};
+				for (uint i = 0; i < _bdpt_divisions; ++i)
+				{
+					BDPT_PC pc{
+						.offset_x = 0,
+						.offset_y = i * _bdpt_dispatch_height,
+					};
+					if (_use_rt_pipelines)
+					{
+						exec(_bdpt_rt->with(RayTracingCommand::SingleTraceInfo{
+							.pc_data = &pc,
+							.pc_size = sizeof(BDPT_PC),
+						}));
+					}
+					else
+					{
+						exec(_bdpt_rq->with(ComputeCommand::SingleDispatchInfo{
+							.pc_data = &pc,
+							.pc_size = sizeof(BDPT_PC),
+						}));
+					}
 				}
 			}
 			exec(_resolve_light_tracer);
@@ -645,6 +681,24 @@ namespace vkl
 				u32 samples = std::alignUpAssumePo2(_light_tracer_samples, local_size);
 				ImGui::Text("Light Tracer Samples: %d", samples);
 			}
+
+			if (_method == Method::BidirectionalPathTracer)
+			{
+				const size_t MiB = 1024 * 1024;
+				int max_scratch_size_MiB = _max_scratch_buffer_size / MiB;
+				if (ImGui::InputInt("Max BDPT scratch buffer size (MiB)", &max_scratch_size_MiB, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue & 0))
+				{
+					if (max_scratch_size_MiB > 128)
+					{
+						_max_scratch_buffer_size = max_scratch_size_MiB * MiB;
+					}
+				}
+				size_t scratch_buffer_size_MiB = _bdpt_scratch_buffer_size / MiB;
+				ImGui::Text("BDPT scratch buffer size: %llu MiB", scratch_buffer_size_MiB);
+				ImGui::Text("BDPT divisions: %u", _bdpt_divisions);
+			}
+
+			ImGui::Separator();
 		}
 	}
 }

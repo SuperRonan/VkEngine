@@ -51,8 +51,18 @@ namespace vkl
 		uint32_t _light_tracer_samples;
 		std::shared_ptr<Buffer> _light_tracer_buffer = {};
 
-		std::shared_ptr<Buffer> _bdpt_scratch_buffer = {};
+		size_t _max_scratch_buffer_size = {};
+		
+		// Total needed size, may exeed max allowed range
+		size_t _bdpt_needed_scratch_size = 0;
+		// 
 		size_t _bdpt_scratch_buffer_segment_2 = 0;
+		size_t _bdpt_scratch_buffer_size = 0;
+		// The scratch buffer has two segments [ vertices | pdfs]
+		// Each must be smaller than _max_buffer_range
+		uint32_t _bdpt_divisions;
+		uint32_t _bdpt_dispatch_height;
+		std::shared_ptr<Buffer> _bdpt_scratch_buffer = {};
 
 		Method _method = Method::PathTracer;
 
