@@ -829,6 +829,8 @@ namespace vkl
 			std::TickTock_hrc tt;
 			bool log = false;
 
+			bool show_demo_window = true;
+
 			const int flip_imgui_key = SDL_SCANCODE_F1;
 			while (!_main_window->shouldClose())
 			{
@@ -906,7 +908,10 @@ namespace vkl
 						ImGui::End();
 					}
 					
-					//ImGui::ShowDemoWindow();
+					if (show_demo_window)
+					{
+						ImGui::ShowDemoWindow(&show_demo_window);
+					}
 					if(ImGui::Begin("Rendering"))
 					{
 						if (slang_test)
