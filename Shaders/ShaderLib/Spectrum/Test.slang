@@ -106,4 +106,10 @@ void main(uint3 gid : SV_DispatchThreadID)
 		printer.print(int(GetPhysicalWaveLength(BaseWaveLength)), "nm");
 		printer.print(int(temperature), "K");
 	}
+
+	if(all(gid.xy == uvec2(_common_ubo.getLatestButtonMousePos(MOUSE_BUTTON_X1, true))))
+	{
+		DebugPrinter printer = DebugPrinter(vec3(gid.xy, 0), DEBUG_PIXEL_SPACE_BIT);
+		printer.print(_common_ubo.mouse_pos_pix);
+	}
 }
