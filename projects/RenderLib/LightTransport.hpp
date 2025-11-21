@@ -81,7 +81,7 @@ namespace vkl
 
 		void createInternals();
 
-		bool useLightTracer() const;
+		bool usingLightTracer() const;
 		
 	public:
 

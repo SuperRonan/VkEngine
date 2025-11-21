@@ -162,7 +162,7 @@ namespace vkl
 			},
 			.usage = VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-			.hold_instance = [this](){return useLightTracer();},
+			.hold_instance = [this](){return usingLightTracer();},
 		});
 
 		if (can_rq)
@@ -407,7 +407,7 @@ namespace vkl
 		});
 	}
 
-	bool LightTransport::useLightTracer() const
+	bool LightTransport::usingLightTracer() const
 	{
 		return _method == Method::LightTracer || _method == Method::BidirectionalPathTracer;
 	}
@@ -481,7 +481,7 @@ namespace vkl
 				ctx.resourcesToUpdateLater() += _path_tracer_rq;
 			}
 		}
-		else if (useLightTracer())
+		else if (usingLightTracer())
 		{
 			ctx.resourcesToUpdateLater() += _resolve_light_tracer;
 			if (_method == Method::LightTracer)
@@ -526,7 +526,7 @@ namespace vkl
 				exec(_path_tracer_rq);
 			}
 		}
-		else if (useLightTracer())
+		else if (usingLightTracer())
 		{
 			exec(application()->getPrebuiltTransferCommands().fill_buffer.with(FillBuffer::FillInfo{
 				.buffer = _light_tracer_buffer,
