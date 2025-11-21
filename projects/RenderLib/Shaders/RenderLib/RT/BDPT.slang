@@ -29,6 +29,7 @@ layout(SHADER_DESCRIPTOR_BINDING + 2, TARGET_IMAGE_FORMAT) uniform restrict RWTe
 struct PushConstant
 {
 	uint2 offset;
+	uint flags;
 };
 
 [vk::push_constant]
@@ -553,6 +554,16 @@ Spectrumf<Mode> ConnectSubPaths<int Mode, RNG : IRNG, VertexArray : IArray<Verte
 			if(resample_light)
 			{
 				let light_sample = scene.sampleLi<Mode>(rng, camera_vertex.position);
+				if(resample_camera)
+				{
+					const bool light_is_delta = (light_sample.flags & (Light::Sample::Flags::DeltaDirection | Light::Sample::Flags::DeltaPosition)) != 0;
+					const bool camera_is_delta = MakeCamera(rt_ubo.camera).isDelta();
+					const bool enable_delta_connections = (_pc.flags & 0x1) != 0;
+					if(light_is_delta && camera_is_delta && !enable_delta_connections)
+					{
+						continue;
+					}
+				}
 				// {
 				// 	let pdfLi = scene.pdfLi<Mode>(camera_vertex.position, light_sample.direction, light_sample.index);
 				// }

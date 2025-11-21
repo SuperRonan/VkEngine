@@ -120,6 +120,8 @@ interface ICamera
 
 	uint getFlags();
 
+	bool isDelta();
+
 	vec3 getPosition();
 
 	// [right, up, front]
@@ -264,6 +266,11 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 #else
 		return isinf(z_far);
 #endif
+	}
+
+	bool isDelta()
+	{
+		return true;
 	}
 
 	mat4 getViewToProj(uint layer = 0)
@@ -506,6 +513,11 @@ struct ThinLensCamera : IMatrixCamera
 		return _super.getFlags();
 	}
 
+	bool isDelta()
+	{
+		return false;
+	}
+
 	vec3 getPosition()
 	{
 		return _super.getPosition();
@@ -677,6 +689,11 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		return CameraType::Orthographic;
 	}
 
+	bool isDelta()
+	{
+		return true;
+	}
+
 	[mutating]
 	void initOrthographic(const in StorageCamera cam)
 	{
@@ -821,6 +838,11 @@ struct SphericalCamera : CameraBase, ICamera
 	}
 
 	bool hasInfiniteDepth()
+	{
+		return true;
+	}
+
+	bool isDelta()
 	{
 		return true;
 	}

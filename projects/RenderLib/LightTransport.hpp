@@ -39,6 +39,7 @@ namespace vkl
 		VkFormat _target_format = VK_FORMAT_UNDEFINED;
 		std::string _target_format_str = {};
 		bool _compile_time_max_depth = false;
+		bool _enable_delta_connections = false;
 		uint _max_depth = 5;
 		uint _Li_resampling = 0;
 

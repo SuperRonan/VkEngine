@@ -34,6 +34,7 @@ struct PushConstant
 	vec2 dims;
 	uint2 udims;
 	float dispatched_threads;
+	uint flags;
 };
 
 [vk::push_constant]
@@ -106,6 +107,7 @@ void ConnectLightToCameraIFP<RNG : IRNG, int Mode>(
 	inout RNG rng
 ) {
 	ICamera camera = MakeCamera(rt_ubo.camera);
+	const bool enable_delta_connections = (_pc.flags & 0x1) != 0;
 	let sample = scene.sampleLi<Mode>(rng, camera.getPosition(), beta);
 	vec3 camera_ref_pos;
 	uint flags = 0;
@@ -120,6 +122,14 @@ void ConnectLightToCameraIFP<RNG : IRNG, int Mode>(
 		camera_ref_pos = camera.getPosition() + sample.direction * sample.distance;
 	}
 	Camera::ConnectionSample connection = camera.sampleWi(rng, camera_ref_pos, flags);
+	const bool light_is_delta = (sample.flags & (Light::Sample::Flags::DeltaDirection | Light::Sample::Flags::DeltaPosition)) != 0;
+	const bool camera_is_delta = camera.isDelta();// (connection.flags & (Camera::Flags::DeltaDirection | Camera::Flags::DeltaPosition)) != 0;
+	
+	if(light_is_delta && camera_is_delta && !enable_delta_connections)
+	{
+		return;
+	}
+	
 	if(connection.pdf > 0 && NonZero(connection.intensity))
 	{
 		// TODO implement Light::Le
@@ -145,6 +155,7 @@ void ConnectLightToCameraIFP<RNG : IRNG, int Mode>(
 			ConnectToCameraIFP(scene, ray_tracer, RayDesc(ray, range), connection.uv, contrib, rng);
 		}
 	}
+	
 }
 
 

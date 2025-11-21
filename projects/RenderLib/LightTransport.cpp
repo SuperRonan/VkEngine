@@ -540,6 +540,7 @@ namespace vkl
 					vec2 dims;
 					Vector2u udims_minus_1;
 					float dispatched_threads;
+					uint32_t flags = 0;
 				};
 				VkExtent3D extent = _target->image()->extent().value();
 				vec2 dims = vec2(extent.width, extent.height);
@@ -549,6 +550,10 @@ namespace vkl
 					.udims_minus_1 = Vector2u(extent.width, extent.height),
 					.dispatched_threads = float(_light_tracer_samples),
 				};
+				if (_enable_delta_connections)
+				{
+					pc.flags |= 0x1;
+				}
 
 				if (_use_rt_pipelines)
 				{
@@ -576,13 +581,18 @@ namespace vkl
 				struct BDPT_PC
 				{
 					uint32_t offset_x, offset_y;
+					uint32_t flags = 0;
 				};
+				BDPT_PC pc{
+					.offset_x = 0,
+				};
+				if (_enable_delta_connections)
+				{
+					pc.flags |= 0x1;
+				}
 				for (uint i = 0; i < _bdpt_divisions; ++i)
 				{
-					BDPT_PC pc{
-						.offset_x = 0,
-						.offset_y = i * _bdpt_dispatch_height,
-					};
+					pc.offset_y = i * _bdpt_dispatch_height;
 					if (_use_rt_pipelines)
 					{
 						exec(_bdpt_rt->with(RayTracingCommand::SingleTraceInfo{
@@ -673,6 +683,11 @@ namespace vkl
 					li_resamling = std::max(li_resamling, 0);
 					_Li_resampling = static_cast<uint>(li_resamling);
 				}
+			}
+			if (usingLightTracer())
+			{
+				ImGui::Checkbox("Enable delta light connections with a punctual camera", &_enable_delta_connections);
+				ImGui::SetItemTooltip("May induce a significant performance cost for nearly no benefit");
 			}
 			if (_method == Method::LightTracer)
 			{
