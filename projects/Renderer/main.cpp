@@ -288,7 +288,7 @@ namespace vkl
 			uint8_t caustics;
 			bool alternate_boxes;
 		};
-		std::array<Preset, 7> presets = {
+		std::array<Preset, 8> presets = {
 			Preset{.metallic_walls = false, .caustics = 0, .alternate_boxes = false},
 			Preset{.metallic_walls = true, .caustics = 0, .alternate_boxes = false},
 			Preset{.metallic_walls = false, .caustics = 1, .alternate_boxes = false},
@@ -296,6 +296,7 @@ namespace vkl
 			Preset{.metallic_walls = false, .caustics = 0, .alternate_boxes = true},
 			Preset{.metallic_walls = true, .caustics = 0, .alternate_boxes = true},
 			Preset{.metallic_walls = true, .caustics = 2, .alternate_boxes = false},
+			Preset{.metallic_walls = false, .caustics = 3, .alternate_boxes = false},
 		};
 		Preset preset = presets[preset_id];
 		VkApplication* app = scene->application();
@@ -314,6 +315,7 @@ namespace vkl
 		vec3 green	= vec3(0.5, 1.0, 0.5);
 		vec3 red	= vec3(1.0, 0.5, 0.5);
 		vec3 orange = vec3(0.9, 0.6, 0.1);
+		vec3 gold   = vec3(0.9, 0.7, 0.1);
 		vec3 blue	= vec3(0.5, 0.5, 1.0);
 		float red_metallic = preset.metallic_walls ? 0.9 : 0;
 		float green_metallic = red_metallic;
@@ -390,6 +392,7 @@ namespace vkl
 		));
 
 		float point_light_intensity = 1;
+		Vector3f point_light_position = Vector3f(0, 0.45, 0);
 
 		if (preset.caustics == 1)
 		{
@@ -483,6 +486,83 @@ namespace vkl
 			}));
 			point_light_intensity = 0.1;
 		}
+		else if (preset.caustics == 3)
+		{
+			Vector3f gem_position = Vector3f(0, -0.15, 0);
+			float scale = 0.15;
+			bool spectral = true;
+			
+			if (true)
+			{
+				box->addChild(MakeBoxModel(
+					"Stand",
+					TranslationMatrix(Vector3f(0, -0.5, 0.0)) * ScalingMatrix(Vector3f(0.05, 0.5, 0.05)),
+					gold, 0.01, 1
+				));
+			}
+
+			box->addChild(MakeModelNode(BasicModelNodeCreateInfo{
+				.app = app,
+				.name = "Gem",
+				.xform = TranslationMatrix(gem_position) *
+							MakeAffineTransform(Rotation3XYZ(Vector3f(Radians(25.0f), Radians(30.0f), Radians(0.0f)))) *
+							ScalingMatrix(Vector3f(scale, scale, scale)),
+				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Sphere,
+				.subdivisions = uvec4(3, 6, 1, 1),
+				.albedo = vec3::Zero(),
+				.roughness = 0,
+				.metallic_or_eta = 2.5, // Diamond
+				.cavity_or_iorB = 0.02,
+				.is_dielectric = true,
+				.sample_spectral = spectral,
+				.geometry_normal = true,
+			}));
+
+			point_light_intensity = 0.1;
+
+			std::shared_ptr<Scene::Node> beams = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.name = "Beams",
+				.matrix = TranslationMatrix(Vector3f(0, 0.0, 0)),
+			});
+
+			float opening = 0.1;
+			const uint beams_count = 16;
+			size_t seed = 12;
+
+			for (uint b = 0; b < beams_count; ++b)
+			{
+				std::mt19937_64 rng(seed ^ std::hash<uint>()(b));
+				
+				std::uniform_real_distribution<float> uni(-1, 1);
+				Vector3f position = point_light_position + 0.45 * Vector3f(uni(rng), 0, uni(rng));
+				float theta = std::uniform_real_distribution<float>(0, 2 * std::numbers::pi)(rng);
+				Vector2f on_disk = std::sqrt(std::uniform_real_distribution<float>(0, 1)(rng)) * 0.9 * scale * Vector2f(std::cos(theta), std::sin(theta));
+				Vector3f target = gem_position + Vector3f(on_disk.x(), 0, on_disk.y());
+				Vector3f down = BasisFromDir(Normalize(target - position)).col(1);
+
+				Matrix3f axis = MakeFromRows(
+					Vector3f(0, 0, 1),
+					Vector3f(0, 1, 0),
+					Vector3f(1, 0, 0)
+				);
+				
+				std::shared_ptr<Scene::Node> beam = MakeLightNode(LightNodeCreateInfo{
+					.app = app,
+					.name = std::format("Beam Light {}", b),
+					.xform = InverseLookAt(position, target, down) * MakeAffineTransform(axis),
+					.type = LightType::Beam,
+					.opening = opening,
+					.aspect_ratio = 1,
+					.emission = vec3(5500, 2, 0),
+					.emission_options = EMISSION_FLAG_BLACK_BODY_BIT | (1 << EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX),
+					.attenuation = 1,
+					.enable_shadow_map = true,
+				});
+				beams->addChild(beam);
+			}
+
+			box->addChild(beams);
+		}
 		else
 		{
 			box->addChild(MakeBoxModel(
@@ -501,9 +581,11 @@ namespace vkl
 		box->addChild(MakeLightNode(LightNodeCreateInfo{
 			.app = app,
 			.name = "Point Light",
-			.xform = TranslationMatrix(Vector3f(0, 0.45, 0)),
+			.xform = TranslationMatrix(point_light_position),
 			.type = LightType::Point,
-			.emission = vec3(1.5, 1.2, 0.8) * point_light_intensity,
+			.emission = vec3(4000, point_light_intensity, 0),
+			.emission_options = EMISSION_FLAG_BLACK_BODY_BIT | (1 << EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX),
+			.attenuation = 1,
 			.enable_shadow_map = true,
 		}));
 	}
@@ -519,7 +601,7 @@ namespace vkl
 		{
 			LoadSponza(scene, preset - 1);
 		}
-		else if (Range32i(5, 7).contains(preset))
+		else if (Range32i(5, 8).contains(preset))
 		{
 			LoadCornellBox(scene, preset - 5);
 		}
@@ -782,6 +864,9 @@ namespace vkl
 					},
 					ImGuiListSelection::Option{
 						.name = "Cornell Box dispersion caustics",
+					},
+					ImGuiListSelection::Option{
+						.name = "Cornell Box Gem Show",
 					},
 				},
 			};
