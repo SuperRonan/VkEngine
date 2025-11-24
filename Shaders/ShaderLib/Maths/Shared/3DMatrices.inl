@@ -39,7 +39,7 @@ constexpr Matrix3<Scalar> BasisFromDir_fast(CONST_REF(Vector3<Scalar>) dir)
 	Vector3<Scalar> o;
 	o = Vector3<Scalar>(Scalar(1), Scalar(0), Scalar(0));
 	const Scalar l = Scalar(0.5);
-	if(abs(dot(o, Z)) >= l)
+	if(abs(Dot(o, Z)) >= l)
 	{
 		o = Vector3<Scalar>(Scalar(0), Scalar(1), Scalar(0));
 		// if(dot(o, Z) >= l)
@@ -78,7 +78,7 @@ constexpr Matrix3<Scalar> BasisFromDir_hughes_moeller(CONST_REF(Vector3<Scalar>)
 	else						Y = Vector3<Scalar>(Scalar(0), -Z[2], Z[1]);
 	Y = Normalize(Y);
 	Vector3<Scalar> X = Cross(Y, Z);
-	return Matrix3<Scalar>(X, Y, Z);
+	return MakeFromCols(X, Y, Z);
 }
 
 __generic<CONCEPT_TYPE(FLOATING_POINT_CONCEPT, Scalar)>
