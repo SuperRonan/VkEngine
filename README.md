@@ -39,6 +39,7 @@ Supported platforms:
 ![caustics-dof](https://github.com/user-attachments/assets/aa956783-ff06-4bbf-96bd-5ea61b165496)
 ![caustics-dof-2](https://github.com/user-attachments/assets/1e161f62-853e-426b-937e-e8c8be36e462)
 ![caustics-dispersion](https://github.com/user-attachments/assets/e095bed2-ac00-44f7-9f15-1bae4835af53)
+![caustics-gem](https://github.com/user-attachments/assets/34aed66d-7c92-4db0-995d-fc7a094ab265)
 
 
 ## BSDF viewer
