@@ -143,6 +143,7 @@ namespace vkl
 				.emission = ci.emission,
 				.aspect_ratio = ci.aspect_ratio,
 				.fov = ci.opening,
+				.attenuation = ci.attenuation,
 				.emission_options = ci.emission_options,
 				.enable_shadow_map = ci.enable_shadow_map,
 			});
@@ -155,6 +156,7 @@ namespace vkl
 				.emission = ci.emission,
 				.aspect_ratio = ci.aspect_ratio,
 				.opening = ci.opening,
+				.attenuation = ci.attenuation,
 				.emission_options = ci.emission_options,
 			});
 		}
