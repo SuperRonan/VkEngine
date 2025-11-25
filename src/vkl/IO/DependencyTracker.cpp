@@ -132,8 +132,20 @@ namespace vkl
 			_task_is_running = false;
 			if (_check_results)
 			{
-				_mutex.lock_shared();
 				PathString path;
+				_mutex.lock_shared();
+				const bool do_log = _log->max_verbosity >= uint32_t(Logger::Options::VerbosityMedium);
+				if (do_log)
+				{
+					g_common_mutex.lock();
+					for (size_t i = 0; i < _check_results.size(); ++i)
+					{
+						CheckResult const& cr = _check_results[i];
+						path = _check_results_paths.get(cr.range);
+						_log->log(std::format("Detected file update: {}", Path(path).string()), Logger::Options::VerbosityMedium | Logger::Options::TagInfo3 | Logger::Options::NoLock);
+					}
+					g_common_mutex.unlock();
+				}
 				for (size_t i = 0; i < _check_results.size(); ++i)
 				{
 					CheckResult const& cr = _check_results[i];
