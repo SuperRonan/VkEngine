@@ -217,6 +217,8 @@ namespace vkl
 
 		//void createInstance();
 
+		void registerDependencies();
+
 		virtual void destroyInstanceIFN() override;
 
 		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;

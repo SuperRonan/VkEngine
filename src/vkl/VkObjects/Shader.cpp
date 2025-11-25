@@ -1427,12 +1427,32 @@ namespace vkl
 		};
 	}
 
+	void Shader::registerDependencies()
+	{
+		_dependencies = _inst->dependencies();
+		for (const auto& dep : _dependencies)
+		{
+			application()->dependenciesTracker()->setDependency(dep.native(), { .callback = [this](DependencyTracker::TimePoint last_write_time, that::Result res_code) {
+				if (res_code == that::Result::Success)
+				{
+					_latest_file_time = std::max(_latest_file_time, last_write_time);
+				}
+				else
+				{
+					// TODO invalidate
+					NOT_YET_IMPLEMENTED;
+				}
+			}, .id = this });
+		}
+	}
+
 	void Shader::createInstance(SpecializationKey const& key, DefinitionsList const& common_definitions, size_t string_packed_capacity, bool generate_shader_debug_info)
 	{
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
 		{
 			_inst = _specializations[key];
+			registerDependencies();
 		}
 		else {
 
@@ -1466,22 +1486,7 @@ namespace vkl
 					{
 						_specializations[lkey] = _inst;
 						_instance_time = _latest_file_time;
-						_dependencies = _inst->dependencies();
-
-						for (const auto& dep : _dependencies)
-						{
-							application()->dependenciesTracker()->setDependency(dep.native(), {.callback = [this](DependencyTracker::TimePoint last_write_time, that::Result res_code) {
-								if (res_code == that::Result::Success)
-								{
-									_latest_file_time = std::max(_latest_file_time, last_write_time);
-								}
-								else
-								{
-									// TODO invalidate
-									NOT_YET_IMPLEMENTED;
-								}
-							}, .id = this });
-						}
+						registerDependencies();
 					}
 
 					return res;
