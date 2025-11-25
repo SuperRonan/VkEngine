@@ -655,6 +655,12 @@ namespace vkl
 				_spectrum_mode |= (static_cast<int>(index) << _SPECTRUM_SAMPLES_BIT_COUNT);
 				_spectrum_mode_str.clear();
 			}
+			ImGui::SameLine();
+			if (ImGui::Button("Spectral x4"))
+			{
+				_spectrum_mode = SPECTRUM_MODE_SAMPLED(4);
+				_spectrum_mode_str.clear();
+			}
 			bool use_sampled = (_spectrum_mode & _SPECTRUM_FLAG_MASK) == _SPECTRUM_FLAG_SAMPLED;
 			ImGui::BeginDisabled(!use_sampled);
 			{
