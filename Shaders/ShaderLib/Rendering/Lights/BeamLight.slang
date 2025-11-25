@@ -82,11 +82,13 @@ struct BeamLight<int Mode> : ILight<Mode>
 		if(radius != 0.0f && aspect != 0.0f)
 		{
 			const vec3 cp = getPositionCP(shading_position);
+			
 			if(all(cp.xy <= 1) && all(cp.xy >= -1) && cp.z > 0)
 			{
 				res.direction = -direction;
-				res.pdf = 1;
-				res.intensity = getSpectralEmission() * evaluateAttenuation(cp.xy);
+				float surface = radius * radius * aspect * 4;
+				res.pdf = rcp(surface);
+				res.intensity = getSpectralEmission() * evaluateAttenuation(cp.xy) * rcp(surface);
 				res.flags = Sample::Flags::DeltaDirection;
 				res.distance = cp.z;
 				res.extra = cp.xy;
@@ -105,8 +107,17 @@ struct BeamLight<int Mode> : ILight<Mode>
 
 	float pdfLi(vec3 reference_position, vec3 direction)
 	{
-		// No need to check if in the view
-		return 1;
+		float res = 0;
+		if(radius != 0.0f && aspect != 0.0f)
+		{
+			const vec3 cp = getPositionCP(reference_position);
+			if(all(cp.xy <= 1) && all(cp.xy >= -1) && cp.z > 0)
+			{
+				float surface = radius * radius * aspect * 4;
+				res = rcp(surface);
+			}
+		}
+		return res;
 	}
 
 	Light::EmissionSample<Mode> sampleLe<RNG : IRNG>(inout RNG rng)
@@ -143,9 +154,9 @@ struct BeamLight<int Mode> : ILight<Mode>
 				sample_cp.value = UVToClipSpace(xi);
 				sample_cp.pdf = 0.25;
 			}
-			res.ray = Ray3f(position + getBasis().t * vec3(sample_cp.value * radius * vec2(aspect != 0 ? aspect : 1, 1), 0), direction);
+			res.ray = Ray3f(position + getBasis().t * vec3(sample_cp.value * radius * vec2(aspect, 1), 0), direction);
 			res.pdf = 1;
-			res.position_pdf = sample_cp.pdf * rcp(sqr(radius) * (aspect != 0 ? aspect : 1));
+			res.position_pdf = sample_cp.pdf * rcp(sqr(radius) * aspect);
 			res.intensity = getSpectralEmission() * evaluateAttenuation(sample_cp.value);
 			res.flags = Sample::Flags::DeltaDirection;
 		}
