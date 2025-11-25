@@ -155,27 +155,34 @@ struct LiSampler<int Mode>
 		res = scene.sampleLi<Mode>(rng, sgi.position, beta);
 		if(resampling > 0)
 		{
-			float target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, res.direction, beta * res.intensity) / res.pdf;
+			float target = 0;
+			if(res.pdf > 0)
+			{
+				target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, res.direction, beta * res.intensity) / res.pdf;
+			}
 			for(uint i = 0; i < resampling; ++i)
 			{
 				let candidate = scene.sampleLi<Mode>(rng, sgi.position, beta);
-				float candidate_target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, candidate.direction, beta * candidate.intensity) / candidate.pdf;
-
-				if((target + candidate_target) > 0)
+				if(candidate.pdf > 0)
 				{
-					float candidate_w = candidate_target / (target + candidate_target);
-					float current_w = 1.0f - candidate_w;
-					float xi = rng.generate<float>();
-					if(xi < candidate_w)
+					float candidate_target = evalTarget(material, sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, candidate.direction, beta * candidate.intensity) / candidate.pdf;
+
+					if((target + candidate_target) > 0)
 					{
-						res = candidate;
-						target = candidate_target / candidate_w;
-						res.pdf *= candidate_w;
-					}
-					else
-					{
-						res.pdf *= current_w;
-						target /= current_w;
+						float candidate_w = candidate_target / (target + candidate_target);
+						float current_w = 1.0f - candidate_w;
+						float xi = rng.generate<float>();
+						if(xi < candidate_w)
+						{
+							res = candidate;
+							target = candidate_target / candidate_w;
+							res.pdf *= candidate_w;
+						}
+						else
+						{
+							res.pdf *= current_w;
+							target /= current_w;
+						}
 					}
 				}
 			}
