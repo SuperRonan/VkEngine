@@ -87,8 +87,8 @@ struct BeamLight<int Mode> : ILight<Mode>
 			{
 				res.direction = -direction;
 				float surface = radius * radius * aspect * 4;
-				res.pdf = rcp(surface);
-				res.intensity = getSpectralEmission() * evaluateAttenuation(cp.xy) * rcp(surface);
+				res.pdf = 1;
+				res.intensity = getSpectralEmission() * evaluateAttenuation(cp.xy);
 				res.flags = Sample::Flags::DeltaDirection;
 				res.distance = cp.z;
 				res.extra = cp.xy;
@@ -110,12 +110,7 @@ struct BeamLight<int Mode> : ILight<Mode>
 		float res = 0;
 		if(radius != 0.0f && aspect != 0.0f)
 		{
-			const vec3 cp = getPositionCP(reference_position);
-			if(all(cp.xy <= 1) && all(cp.xy >= -1) && cp.z > 0)
-			{
-				float surface = radius * radius * aspect * 4;
-				res = rcp(surface);
-			}
+			res = 1;
 		}
 		return res;
 	}
