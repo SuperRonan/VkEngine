@@ -172,6 +172,10 @@ set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${VMA_INCLUDE_DIRS})
 
 # ImGui
 set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/imgui/")
+set(IMGUI_DEBUGGER_FILES "")
+if(MSVC)
+	set(IMGUI_DEBUGGER_FILES "${IMGUI_DIR}/misc/debuggers/imgui.natvis" "${IMGUI_DIR}/misc/debuggers/imgui.natstepfilter")
+endif()
 file(GLOB IMGUI_SOURCES 
 "${IMGUI_DIR}imgui.h"
 "${IMGUI_DIR}imgui.cpp"
@@ -185,6 +189,8 @@ file(GLOB IMGUI_SOURCES
 "${IMGUI_DIR}backends/imgui_impl_vulkan.cpp"
 "${IMGUI_DIR}backends/imgui_impl_sdl${VKL_SDL_VERSION}.cpp"
 "${IMGUI_DIR}backends/imgui_impl_win32.cpp"
+
+${IMGUI_DEBUGGER_FILES}
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_compile_definitions(imgui PRIVATE )
