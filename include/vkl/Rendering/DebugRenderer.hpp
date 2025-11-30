@@ -8,8 +8,8 @@
 #include <vkl/Commands/GraphicsCommand.hpp>
 #include <vkl/Commands/TransferCommand.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Execution/Executor.hpp>
@@ -100,7 +100,7 @@ namespace vkl
 
 		void setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth = nullptr);
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		void updateResources(UpdateContext & context);
 

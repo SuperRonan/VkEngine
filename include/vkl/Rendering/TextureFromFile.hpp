@@ -84,7 +84,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext& ctx) override;
 
-		virtual void declareGUI(GuiContext & ctx) override;
+		virtual void declareGUI(GUI::Context & ctx) override;
 	};
 
 	class TextureFileCache : public VkObject

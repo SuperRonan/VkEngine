@@ -1281,7 +1281,7 @@ namespace vkl
 	}
 	
 
-	void SimpleRenderer::declareGui(GuiContext & ctx)
+	void SimpleRenderer::declareGui(GUI::Context & ctx)
 	{
 		ImGui::PushID(this);
 		if (ImGui::CollapsingHeader(name().c_str()))

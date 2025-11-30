@@ -7,7 +7,7 @@
 
 #include <vkl/Rendering/Scene.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 namespace vkl
 {
@@ -106,7 +106,7 @@ namespace vkl
 
 		void render(ExecutionRecorder& exec);
 
-		void declareGUI(GuiContext& ctx);
+		void declareGUI(GUI::Context& ctx);
 
 		void writeUBO(UBO& dst)
 		{

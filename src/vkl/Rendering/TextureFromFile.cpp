@@ -1,5 +1,5 @@
 #include <vkl/Rendering/TextureFromFile.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 #include <that/img/ImRead.hpp>
 
 #include <chrono>
@@ -452,7 +452,7 @@ namespace vkl
 		}
 	}
 
-	void TextureFromFile::declareGUI(GuiContext& ctx)
+	void TextureFromFile::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		static thread_local std::string txt_buffer;

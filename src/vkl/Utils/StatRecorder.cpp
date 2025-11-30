@@ -68,7 +68,7 @@ namespace vkl
 		}
 	}
 
-	void StatRecords::declareGui(GuiContext& ctx)
+	void StatRecords::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(name().c_str());
 

@@ -21,7 +21,7 @@
 #include <vkl/Utils/TickTock.hpp>
 #include <vkl/Utils/StatRecorder.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/IO/InputListener.hpp>
 
 #include <vkl/Rendering/DebugRenderer.hpp>
@@ -271,7 +271,7 @@ namespace vkl
 				camera_controller.updateCamera(dt);
 
 				{
-					GuiContext * gui_ctx = beginImGuiFrame();
+					GUI::Context * gui_ctx = beginImGuiFrame();
 					//ImGui::ShowDemoWindow();
 
 					if(ImGui::Begin("Rendering"))

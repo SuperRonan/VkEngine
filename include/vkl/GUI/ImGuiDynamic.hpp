@@ -4,11 +4,11 @@
 
 #include <imgui/imgui.h>
 
-namespace vkl
+namespace vkl::GUI
 {
 	
 	template <class T, std::convertible_to<std::function<bool(const char*, T&)>> GuiFunc>
-	static bool GUIDeclareDynamic(const char* label, Dyn<T>& value, GuiFunc const& imgui_f)
+	static bool DeclareDynamic(const char* label, Dyn<T>& value, GuiFunc const& imgui_f)
 	{
 		bool res = false;
 		if (value.hasValue())

@@ -4,7 +4,7 @@
 #include <vkl/Execution/FramePerformanceCounters.hpp>
 #include <vkl/Utils/StatRecorder.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 namespace vkl
 {
@@ -40,7 +40,7 @@ namespace vkl
 
 		virtual ~PerformanceReport() override = default;
 
-		void declareGUI(GuiContext & ctx);
+		void declareGUI(GUI::Context & ctx);
 
 		std::unique_ptr<StatRecords> const& statRecords()const
 		{

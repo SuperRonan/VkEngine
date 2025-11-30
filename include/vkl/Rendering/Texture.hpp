@@ -9,8 +9,6 @@
 
 namespace vkl
 {
-	class GuiContext;
-
 	class Texture : public VkObject
 	{
 	public:
@@ -85,6 +83,6 @@ namespace vkl
 
 		static std::shared_ptr<Texture> MakeShared(MakeInfo const& mi);
 
-		 virtual void declareGUI(GuiContext & ctx);
+		 virtual void declareGUI(GUI::Context & ctx);
 	};
 }

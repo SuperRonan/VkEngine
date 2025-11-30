@@ -6,8 +6,8 @@
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Execution/Executor.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Commands/TransferCommand.hpp>
 #include <vkl/Commands/GraphicsTransferCommands.hpp>
@@ -53,6 +53,6 @@ namespace vkl
 
 		void execute(ExecutionRecorder & recorder);
 
-		void declareGUI(GuiContext & ctx);
+		void declareGUI(GUI::Context & ctx);
 	};
 }

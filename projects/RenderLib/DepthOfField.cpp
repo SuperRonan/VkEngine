@@ -137,7 +137,7 @@ namespace vkl
 		}
 	}
 
-	void DepthOfField::declareGUI(GuiContext& ctx)
+	void DepthOfField::declareGUI(GUI::Context& ctx)
 	{
 
 	}

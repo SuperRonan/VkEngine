@@ -3,7 +3,7 @@
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Commands/ComputeCommand.hpp>
 #include <vkl/Execution/Executor.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 #include <vkl/VkObjects/VkWindow.hpp>
 
 namespace vkl
@@ -78,7 +78,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		float computeTransferFunction(float linear)const;
 	};

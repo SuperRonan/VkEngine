@@ -6,8 +6,8 @@
 #include <vkl/Commands/ComputeCommand.hpp>
 #include <vkl/Commands/RayTracingCommand.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Rendering/Camera.hpp>
 
@@ -91,7 +91,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder & recorder, const Camera & camera);
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		bool setCanRT(bool can_rt);
 

@@ -3,11 +3,11 @@
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Execution/Executor.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/VkObjects/ImageView.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 namespace vkl
 {
@@ -57,6 +57,6 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		void declareGUI(GuiContext & ctx);
+		void declareGUI(GUI::Context & ctx);
 	};
 }

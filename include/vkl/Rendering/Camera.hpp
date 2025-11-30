@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vkl/Rendering/RenderObjects.hpp>
-#include <vkl/IO/GuiContext.hpp>
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Maths/Types.hpp>
 
@@ -250,7 +250,7 @@ namespace vkl
 
 		void update(CameraDelta const& delta);
 
-		void declareGui(GuiContext& ctx);
+		void declareGui(GUI::Context& ctx);
 
 		AsGLSL getAsGLSL() const;
 

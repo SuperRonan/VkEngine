@@ -109,6 +109,11 @@ namespace vkl
 		};
 	}
 
+	namespace GUI
+	{
+		class Context;
+	}
+
 	struct pNextChain
 	{
 		VkStruct * current = nullptr;

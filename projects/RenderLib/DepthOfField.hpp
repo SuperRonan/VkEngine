@@ -6,7 +6,7 @@
 
 #include <vkl/Rendering/Camera.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 namespace vkl
 {
@@ -52,6 +52,6 @@ namespace vkl
 
 		virtual void record(ExecutionRecorder& exec);
 
-		virtual void declareGUI(GuiContext& ctx);
+		virtual void declareGUI(GUI::Context& ctx);
 	};
 }

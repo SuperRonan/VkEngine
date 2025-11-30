@@ -12,7 +12,7 @@
 
 #include <vkl/Rendering/Drawable.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/Maths/AlignedAxisBoundingBox.hpp>
 #include <vkl/VkObjects/AccelerationStructure.hpp>
@@ -145,7 +145,7 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const = 0;
 
-		virtual void declareGui(GuiContext & ctx) = 0;
+		virtual void declareGui(GUI::Context & ctx) = 0;
 
 		const AABB3f& getAABB()const
 		{
@@ -399,7 +399,7 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const override;
 
-		virtual void declareGui(GuiContext& ctx) override;
+		virtual void declareGui(GUI::Context& ctx) override;
 
 		virtual VertexInputDescription vertexInputDesc() override
 		{

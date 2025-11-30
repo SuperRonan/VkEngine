@@ -237,11 +237,12 @@ set(VKL_FOLDERS
 	Commands
 	Execution
 	IO
+	GUI
 	Maths
 	Rendering
 	VkObjects
 	Utils
-	Import 
+	Import
 )
 
 set(VKL_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")

@@ -110,7 +110,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		void declareGUI(GuiContext & ctx);
+		void declareGUI(GUI::Context & ctx);
 
 		std::shared_ptr<ImageView> target() const
 		{

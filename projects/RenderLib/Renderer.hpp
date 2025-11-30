@@ -12,8 +12,8 @@
 #include <vkl/Rendering/Scene.hpp>
 #include <vkl/Rendering/Camera.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include "AmbientOcclusion.hpp"
 #include "TemporalAntiAliasingAndUpscaler.hpp"
@@ -226,7 +226,7 @@ namespace vkl
 			return _depth;
 		}
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		std::shared_ptr<ImageView> const& renderTarget() const
 		{

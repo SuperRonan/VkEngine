@@ -18,7 +18,7 @@ namespace vkl
 		_stat_records->createCommonRecords(_perf_counters);
 	}
 
-	void PerformanceReport::declareGUI(GuiContext& ctx)
+	void PerformanceReport::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		_stat_records->declareGui(ctx);

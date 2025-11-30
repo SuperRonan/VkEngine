@@ -2,7 +2,7 @@
 
 #include <vkl/Commands/GraphicsCommand.hpp>
 #include <vkl/Execution/Module.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/Rendering/Camera.hpp>
 
@@ -60,7 +60,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec, Camera & camera);
 
-		void declareGUI(GuiContext & ctx);
+		void declareGUI(GUI::Context & ctx);
 	};
 
 }

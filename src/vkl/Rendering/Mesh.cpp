@@ -858,7 +858,7 @@ namespace vkl
 		return _device.uploaded;
 	}
 
-	void RigidMesh::declareGui(GuiContext& ctx)
+	void RigidMesh::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(name().c_str());
 

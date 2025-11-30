@@ -1,10 +1,10 @@
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
-namespace vkl
+namespace vkl::GUI
 {
-	std::shared_ptr<GUIStyle> g_default_style = [](){
-		using Color = GUIStyle::Color;
-		std::shared_ptr<GUIStyle> res = std::make_shared<GUIStyle>(GUIStyle{
+	std::shared_ptr<Style> g_default_style = [](){
+		using Color = Style::Color;
+		std::shared_ptr<Style> res = std::make_shared<Style>(Style{
 			.valid_green = Color(0, 0.8, 0, 1),
 			.invalid_red = Color(0.8, 0, 0, 1),
 			.warning_yellow = Color(0.8, 0.8, 0, 1),
@@ -14,7 +14,7 @@ namespace vkl
 
 
 
-	GuiContext::GuiContext(CreateInfo const& ci) :
+	Context::Context(CreateInfo const& ci) :
 		_imgui_context(ci.imgui_context),
 		_style(ci.style ? ci.style : g_default_style),
 		_common_file_dialog(ci.common_file_dialog)

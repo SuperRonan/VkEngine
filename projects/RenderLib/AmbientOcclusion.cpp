@@ -263,7 +263,7 @@ namespace vkl
 		}
 	}
 
-	void AmbientOcclusion::declareGui(GuiContext& ctx)
+	void AmbientOcclusion::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(name().c_str());
 

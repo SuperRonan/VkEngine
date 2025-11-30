@@ -31,7 +31,7 @@ namespace vkl
 		ImGui::GetIO().ConfigFlags |= (_imgui_init_flags | ImGuiConfigFlags_IsSRGB);
 		ImGui::GetIO().ConfigViewportsNoDefaultParent = true;
 		
-		_gui_context = GuiContext::CI{
+		_gui_context = GUI::Context::CI{
 			.imgui_context = _imgui_ctx,
 		};
 
@@ -110,7 +110,7 @@ namespace vkl
 			.name = ci.name,
 			.args = ci.args,
 		}),
-		_gui_context(GuiContext::CI{
+		_gui_context(GUI::Context::CI{
 			.imgui_context = nullptr,
 		})
 	{

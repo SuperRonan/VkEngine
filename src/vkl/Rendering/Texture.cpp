@@ -72,7 +72,7 @@ namespace vkl
 		}
 	}
 
-	void Texture::declareGUI(GuiContext& ctx)
+	void Texture::declareGUI(GUI::Context& ctx)
 	{
 		
 	}

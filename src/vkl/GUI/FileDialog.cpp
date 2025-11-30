@@ -1,4 +1,4 @@
-#include <vkl/IO/FileDialog.hpp>
+#include <vkl/GUI/FileDialog.hpp>
 
 #include <iostream>
 

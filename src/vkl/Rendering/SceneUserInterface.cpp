@@ -4,7 +4,7 @@
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <ShaderLib/Rendering/Scene/SceneFlags.h>
 
@@ -340,7 +340,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		},
 	};
 
-	int SceneUserInterface::CreateNodePopUp::declareGUI(GuiContext& ctx)
+	int SceneUserInterface::CreateNodePopUp::declareGUI(GUI::Context& ctx)
 	{
 		int res = 0;
 		if (ImGui::BeginPopupModal(name().data(), nullptr, _flags))
@@ -542,7 +542,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
-	void SceneUserInterface::declareGui(GuiContext& ctx)
+	void SceneUserInterface::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		if (ImGui::CollapsingHeader("Options"))

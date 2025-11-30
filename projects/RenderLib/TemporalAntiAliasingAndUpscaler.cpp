@@ -6,7 +6,7 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
-#include <vkl/IO/ImGuiDynamic.hpp>
+#include <vkl/GUI/ImGuiDynamic.hpp>
 
 namespace vkl
 {
@@ -216,7 +216,7 @@ namespace vkl
 		}
 	}
 
-	void TemporalAntiAliasingAndUpscaler::declareGui(GuiContext& ctx)
+	void TemporalAntiAliasingAndUpscaler::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		{
@@ -244,7 +244,7 @@ namespace vkl
 			_reset |= ImGui::Button("Reset");
 			ImGui::PopStyleColor();
 
-			GUIDeclareDynamic(_gui_acc_format.name().c_str(), _accumation_format, [&](const char*, VkFormat& f)
+			GUI::DeclareDynamic(_gui_acc_format.name().c_str(), _accumation_format, [&](const char*, VkFormat& f)
 			{
 				size_t index = taau::GetFormatIndex(f);
 				bool res = _gui_acc_format.declare(index);

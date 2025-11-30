@@ -7,7 +7,7 @@
 #include <vkl/Utils/stl_extension.hpp>
 
 #include <imgui/imgui.h>
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Execution/Executor.hpp>
 

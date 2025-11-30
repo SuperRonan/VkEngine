@@ -10,7 +10,7 @@
 
 #include <vkl/Maths/Types.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 namespace vkl
 {
@@ -62,7 +62,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder& exec);
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		void setPosition(Vector2f const& pos)
 		{

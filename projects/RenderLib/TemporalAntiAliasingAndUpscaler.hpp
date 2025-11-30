@@ -6,7 +6,7 @@
 
 #include <vkl/Commands/ComputeCommand.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/Rendering/Camera.hpp>
 
@@ -65,7 +65,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder& recorder, Camera const& camera);
 
-		void declareGui(GuiContext& ctx);
+		void declareGui(GUI::Context& ctx);
 
 		std::shared_ptr<ImageView> const& output()const
 		{

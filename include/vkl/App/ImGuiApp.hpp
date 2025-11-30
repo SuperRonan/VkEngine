@@ -8,7 +8,7 @@
 #include <imgui/backends/imgui_impl_win32.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 #include <cassert>
 
 namespace vkl
@@ -34,11 +34,11 @@ namespace vkl
 		ImGuiContext* _imgui_ctx = nullptr;
 		std::vector<ImGuiWindow *> _imgui_windows = {};
 
-		GuiContext _gui_context;
+		GUI::Context _gui_context;
 
 		bool _enable_imgui = false;
 
-		GuiContext * beginImGuiFrame()
+		GUI::Context * beginImGuiFrame()
 		{			
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
@@ -46,7 +46,7 @@ namespace vkl
 			return &_gui_context;
 		}
 
-		void endImGuiFrame(GuiContext * ctx)
+		void endImGuiFrame(GUI::Context * ctx)
 		{
 			assert(ctx == &_gui_context);
 			ImGui::EndFrame();

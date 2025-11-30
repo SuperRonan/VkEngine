@@ -21,7 +21,7 @@
 #include <vkl/Utils/TickTock.hpp>
 #include <vkl/Utils/StatRecorder.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/IO/InputListener.hpp>
 
 #include <vkl/Rendering/DebugRenderer.hpp>
@@ -976,7 +976,7 @@ namespace vkl
 				
 				if (ImGuiIsEnabled())
 				{
-					GuiContext * gui_ctx = beginImGuiFrame();
+					GUI::Context * gui_ctx = beginImGuiFrame();
 
 					if (!load_scene_index)
 					{
@@ -1047,7 +1047,7 @@ namespace vkl
 				}
 				else if (flip_imgui_enable)
 				{
-					GuiContext* gui_ctx = beginImGuiFrame();
+					GUI::Context* gui_ctx = beginImGuiFrame();
 					endImGuiFrame(gui_ctx);
 				}
 

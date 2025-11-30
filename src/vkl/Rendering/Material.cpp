@@ -1,5 +1,5 @@
 #include <vkl/Rendering/Material.hpp>
-#include <vkl/IO/ImGuiDynamic.hpp>
+#include <vkl/GUI/ImGuiDynamic.hpp>
 
 #include <ShaderLib/Rendering/Materials/MaterialDefinitions.h>
 #include <ShaderLib/Rendering/Materials/PBMaterialDefinitions.h>
@@ -234,7 +234,7 @@ namespace vkl
 		};
 	}
 
-	void PhysicallyBasedMaterial::declareGui(GuiContext & ctx)
+	void PhysicallyBasedMaterial::declareGui(GUI::Context & ctx)
 	{
 		
 		ImGui::PushID(name().c_str());
@@ -264,17 +264,17 @@ namespace vkl
 		const char* albedo_name = _is_dielectric ? "Absorption" : "Albedo";
 		const char* metalic_name = _is_dielectric ? (_sample_spectral ? "IoR base" : "Index of Refraction") : "Metallic";
 
-		_should_update_props_buffer |= GUIDeclareDynamic(albedo_name, _albedo, declare_color);
+		_should_update_props_buffer |= GUI::DeclareDynamic(albedo_name, _albedo, declare_color);
 
-		_should_update_props_buffer |= GUIDeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2.5 : 1.0));
+		_should_update_props_buffer |= GUI::DeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2.5 : 1.0));
 		if (_sample_spectral)
 		{
 			ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"A parameter of the Cauchy equation: n(l) = A + B/l²"));
 		}
 		if (!_is_dielectric)
 		{
-			_should_update_props_buffer |= GUIDeclareDynamic("Roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
-			_should_update_props_buffer |= GUIDeclareDynamic("Cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+			_should_update_props_buffer |= GUI::DeclareDynamic("Roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
+			_should_update_props_buffer |= GUI::DeclareDynamic("Cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
 		}
 		else
 		{
@@ -287,7 +287,7 @@ namespace vkl
 
 				float lambda = 589; // nm
 				ImGui::Text("IoR at %.0f nm: %g", lambda, *_metallic + *_cavity * 1e6 * rcp(sqr(lambda)));
-				_should_update_props_buffer |= GUIDeclareDynamic("IoR dispersion", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat, 0.02, reinterpret_cast<const char*>(u8"%.6f µm²")));
+				_should_update_props_buffer |= GUI::DeclareDynamic("IoR dispersion", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat, 0.02, reinterpret_cast<const char*>(u8"%.6f µm²")));
 				ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"B parameter of the Cauchy equation in µm²: n(l) = A + B/l² (l in µm)"));
 			}
 		}

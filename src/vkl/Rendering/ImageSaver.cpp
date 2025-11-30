@@ -212,7 +212,7 @@ namespace vkl
 		}
 	}
 
-	void ImageSaver::declareGUI(GuiContext& ctx)
+	void ImageSaver::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 

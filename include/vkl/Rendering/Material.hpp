@@ -7,7 +7,7 @@
 #include <vkl/Execution/ResourcesHolder.hpp>
 #include <vkl/Execution/SamplerLibrary.hpp>
 #include <vkl/Rendering/Texture.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 namespace vkl
 {
@@ -78,7 +78,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx);
 
-		virtual void declareGui(GuiContext & ctx) = 0;
+		virtual void declareGui(GUI::Context & ctx) = 0;
 
 		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -226,7 +226,7 @@ namespace vkl
 			return !useAlphaTexture();
 		}
 
-		virtual void declareGui(GuiContext & ctx) override;
+		virtual void declareGui(GUI::Context & ctx) override;
 
 		virtual void updateResources(UpdateContext& ctx) override;
 

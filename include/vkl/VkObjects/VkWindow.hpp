@@ -2,8 +2,8 @@
 
 #include <vkl/App/VkApplication.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/Utils/ColorCorrectionDef.hpp>
 
@@ -239,7 +239,7 @@ namespace vkl
 
 		bool updateResources(UpdateContext & ctx);
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		ColorCorrectionInfo getColorCorrectionInfo(bool brightness=false) const
 		{

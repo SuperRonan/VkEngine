@@ -5,9 +5,9 @@
 #include <memory>
 #include "FileDialog.hpp"
 
-namespace vkl
+namespace vkl::GUI
 {
-	struct GUIStyle
+	struct Style
 	{
 		using Color = ImVec4;
 
@@ -16,13 +16,13 @@ namespace vkl
 		Color warning_yellow;
 	};
 	
-	class GuiContext
+	class Context
 	{
 	protected:
 
 		ImGuiContext * _imgui_context;
 
-		std::shared_ptr<GUIStyle> _style;
+		std::shared_ptr<Style> _style;
 
 		std::shared_ptr<FileDialog> _common_file_dialog;
 
@@ -31,19 +31,19 @@ namespace vkl
 		struct CreateInfo
 		{
 			ImGuiContext * imgui_context = nullptr;
-			std::shared_ptr<GUIStyle> style = nullptr;
+			std::shared_ptr<Style> style = nullptr;
 			std::shared_ptr<FileDialog> common_file_dialog = nullptr;
 		};
 		using CI = CreateInfo;
 
-		GuiContext(CreateInfo const& ci);
+		Context(CreateInfo const& ci);
 
 		ImGuiContext* getImGuiContext() const
 		{
 			return _imgui_context;
 		}
 
-		GUIStyle const& style()const
+		Style const& style()const
 		{
 			assert(_style);
 			return *_style;

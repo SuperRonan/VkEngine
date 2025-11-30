@@ -2,7 +2,7 @@
 
 #include <vkl/Execution/Executor.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <random>
 
@@ -407,7 +407,7 @@ namespace vkl
 		});
 	}
 
-	void BSDFViewer::declareGUI(GuiContext& ctx)
+	void BSDFViewer::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 

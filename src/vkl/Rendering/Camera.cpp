@@ -130,7 +130,7 @@ namespace vkl
 		}
 	}
 
-	void Camera::declareGui(GuiContext& ctx)
+	void Camera::declareGui(GUI::Context& ctx)
 	{
 		if (ImGui::CollapsingHeader("Camera"))
 		{

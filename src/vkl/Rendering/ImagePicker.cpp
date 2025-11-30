@@ -78,7 +78,7 @@ namespace vkl
 		}
 	}
 
-	void ImagePicker::declareGUI(GuiContext& ctx)
+	void ImagePicker::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(name().c_str());
 

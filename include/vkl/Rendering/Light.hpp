@@ -2,7 +2,7 @@
 
 #include <vkl/App/VkApplication.hpp>
 #include <vkl/Maths/Transforms.hpp>
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #define EMISSION_FLAG_BLACK_BODY_BIT 0x1
 #define EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX 0x1
@@ -137,7 +137,7 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const = 0;
 
-		virtual void declareGui(GuiContext & ctx);
+		virtual void declareGui(GUI::Context & ctx);
 
 		static bool DeclareEmission(vec3& emission, uint8_t& options);
 
@@ -188,7 +188,7 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
-		virtual void declareGui(GuiContext& ctx) override;
+		virtual void declareGui(GUI::Context& ctx) override;
 
 		virtual uint32_t flags() const override;
 	};
@@ -215,7 +215,7 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
-		virtual void declareGui(GuiContext& ctx) override;
+		virtual void declareGui(GUI::Context& ctx) override;
 
 		virtual uint32_t flags() const override;
 	};
@@ -322,7 +322,7 @@ namespace vkl
 		
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
-		virtual void declareGui(GuiContext& ctx) override;
+		virtual void declareGui(GUI::Context& ctx) override;
 
 		virtual uint32_t flags() const override;
 	};

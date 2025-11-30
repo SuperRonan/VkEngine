@@ -1,6 +1,6 @@
 #include <vkl/Rendering/Light.hpp>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Maths/View.hpp>
 
@@ -149,7 +149,7 @@ namespace vkl
 		return res;
 	}
 
-	void Light::declareGui(GuiContext& ctx)
+	void Light::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 
@@ -253,7 +253,7 @@ namespace vkl
 		return res;
 	}
 
-	void PointLight::declareGui(GuiContext& ctx)
+	void PointLight::declareGui(GUI::Context& ctx)
 	{
 		Light::declareGui(ctx);
 
@@ -297,7 +297,7 @@ namespace vkl
 		return res;
 	}
 
-	void DirectionalLight::declareGui(GuiContext& ctx)
+	void DirectionalLight::declareGui(GUI::Context& ctx)
 	{
 		Light::declareGui(ctx);
 
@@ -373,7 +373,7 @@ namespace vkl
 		return res;
 	}
 
-	void SpotBeamLight::declareGui(GuiContext& ctx)
+	void SpotBeamLight::declareGui(GUI::Context& ctx)
 	{
 		Light::declareGui(ctx);
 		ImGui::PushID(name().c_str());

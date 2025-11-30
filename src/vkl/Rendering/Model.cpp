@@ -190,7 +190,7 @@ namespace vkl
 		return res;
 	}
 
-	void Model::declareGui(GuiContext& ctx)
+	void Model::declareGui(GUI::Context& ctx)
 	{
 		ImGui::PushID(name().c_str());
 		ImGui::Text(name().c_str());

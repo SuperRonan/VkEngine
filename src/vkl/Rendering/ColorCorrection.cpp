@@ -2,7 +2,7 @@
 #include <imgui/imgui.h>
 #include <vkl/Execution/SamplerLibrary.hpp>
 #include <vkl/VkObjects/DetailedVkFormat.hpp>
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 namespace vkl
 {
@@ -158,7 +158,7 @@ namespace vkl
 		return res;
 	}
 
-	void ColorCorrection::declareGui(GuiContext & ctx)
+	void ColorCorrection::declareGui(GUI::Context & ctx)
 	{
 		if (ImGui::CollapsingHeader(name().c_str()))
 		{

@@ -2,7 +2,7 @@
 
 #include <vkl/App/VkApplication.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <vkl/Execution/Module.hpp>
 
@@ -96,6 +96,6 @@ namespace vkl
 			return _begin_timepoint;
 		}
 
-		void declareGUI(GuiContext& ctx);
+		void declareGUI(GUI::Context& ctx);
 	};
 }

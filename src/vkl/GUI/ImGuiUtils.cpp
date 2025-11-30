@@ -1,4 +1,4 @@
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 #include <cassert>
 
 #include <vkl/Maths/Transforms.hpp>

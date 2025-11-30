@@ -3,8 +3,8 @@
 #include <vkl/Rendering/Scene.hpp>
 #include <vkl/Rendering/Camera.hpp>
 
-#include <vkl/IO/GuiContext.hpp>
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Execution/Executor.hpp>
 
@@ -106,7 +106,7 @@ namespace vkl
 			// -1 on close
 			// 0 on pending
 			// 1 on finish
-			int declareGUI(GuiContext& ctx);
+			int declareGUI(GUI::Context& ctx);
 
 			std::shared_ptr<Scene::Node> createNode(VkApplication * app);
 
@@ -161,7 +161,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder & recorder, Camera & camera);
 
-		virtual void declareGui(GuiContext & ctx);
+		virtual void declareGui(GUI::Context & ctx);
 
 		const SelectedNode& getGuiSelectedNode()const
 		{

@@ -5,7 +5,7 @@
 #include <cassert>
 #include <chrono>
 
-#include <vkl/IO/GuiContext.hpp>
+#include <vkl/GUI/Context.hpp>
 #include <vkl/Core/DynamicValue.hpp>
 #include <vkl/Execution/FramePerformanceCounters.hpp>
 
@@ -99,7 +99,7 @@ namespace vkl
 
 		virtual void advance(size_t index) = 0;
 		
-		virtual void declareGui(GuiContext & ctx, size_t latest_index, Pack64 parent_avg, bool show_graph, size_t depth = 0) = 0;
+		virtual void declareGui(GUI::Context & ctx, size_t latest_index, Pack64 parent_avg, bool show_graph, size_t depth = 0) = 0;
 
 		constexpr Type type()const
 		{
@@ -216,7 +216,7 @@ namespace vkl
 			_provider = p;
 		}
 		
-		virtual void declareGui(GuiContext& ctx, size_t latest_index, Pack64 parent_avg, bool show_graph, size_t depth) override
+		virtual void declareGui(GUI::Context& ctx, size_t latest_index, Pack64 parent_avg, bool show_graph, size_t depth) override
 		{
 			static thread_local std::string text = {};
 			text.clear();
@@ -382,7 +382,7 @@ namespace vkl
 
 		void advance();
 
-		void declareGui(GuiContext & ctx);
+		void declareGui(GUI::Context & ctx);
 
 		constexpr const std::string& name()const
 		{

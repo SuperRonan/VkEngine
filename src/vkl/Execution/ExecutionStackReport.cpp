@@ -152,7 +152,7 @@ namespace vkl
 		}
 	}
 
-	void ExecutionStackReport::declareGUI(GuiContext& ctx)
+	void ExecutionStackReport::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		uint32_t d = 0;

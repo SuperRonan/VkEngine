@@ -174,7 +174,7 @@ namespace vkl
 		}
 	}
 
-	void RenderWorldBasis::declareGUI(GuiContext& ctx)
+	void RenderWorldBasis::declareGUI(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		{

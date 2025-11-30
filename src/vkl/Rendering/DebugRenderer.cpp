@@ -445,7 +445,7 @@ namespace vkl
 		}
 	}
 
-	void DebugRenderer::declareGui(GuiContext & ctx)
+	void DebugRenderer::declareGui(GUI::Context & ctx)
 	{
 		if (ImGui::CollapsingHeader("Shader Debugging"))
 		{

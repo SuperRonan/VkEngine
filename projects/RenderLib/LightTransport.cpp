@@ -6,7 +6,7 @@
 
 #include <ShaderLib/Spectrum/SpectrumDefinitions.h>
 
-#include <vkl/IO/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 namespace vkl
 {
@@ -613,7 +613,7 @@ namespace vkl
 		}
 	}
 
-	void LightTransport::declareGUI(GuiContext& ctx)
+	void LightTransport::declareGUI(GUI::Context& ctx)
 	{
 		if (ImGui::CollapsingHeader("LightTransport"))
 		{
