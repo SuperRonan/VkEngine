@@ -26,4 +26,24 @@ namespace vkl::GUI
 			});
 		}
 	}
+
+	void Context::pushPanelHolder(PanelHolder* panel)
+	{
+		_panel_holder_stack.push_back(panel);
+	}
+
+	void Context::popPanelHolder()
+	{
+		_panel_holder_stack.pop_back();
+	}
+
+	PanelHolder* Context::getTopPanelHolder(uint index)
+	{
+		return _panel_holder_stack.at(_panel_holder_stack.size32() - index - 1);
+	}
+
+	PanelHolder* Context::getBottomPanelHolder(uint index)
+	{
+		return _panel_holder_stack.at(index);
+	}
 }

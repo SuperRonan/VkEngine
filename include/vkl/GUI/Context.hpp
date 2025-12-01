@@ -15,6 +15,9 @@ namespace vkl::GUI
 		Color invalid_red;
 		Color warning_yellow;
 	};
+
+	class Panel;
+	class PanelHolder;
 	
 	class Context
 	{
@@ -25,6 +28,8 @@ namespace vkl::GUI
 		std::shared_ptr<Style> _style;
 
 		std::shared_ptr<FileDialog> _common_file_dialog;
+
+		MyVector<PanelHolder*> _panel_holder_stack;
 
 	public:
 
@@ -58,5 +63,13 @@ namespace vkl::GUI
 		{
 			return _common_file_dialog;
 		}
+
+		void pushPanelHolder(PanelHolder* panel);
+
+		void popPanelHolder();
+
+		PanelHolder* getTopPanelHolder(uint index = 0);
+
+		PanelHolder* getBottomPanelHolder(uint index = 0);
 	};
 }

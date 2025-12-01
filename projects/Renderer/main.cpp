@@ -22,6 +22,10 @@
 #include <vkl/Utils/StatRecorder.hpp>
 
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/DemoPanel.hpp>
+#include <vkl/GUI/PanelHolder.hpp>
+
 #include <vkl/IO/InputListener.hpp>
 
 #include <vkl/Rendering/DebugRenderer.hpp>
@@ -914,7 +918,52 @@ namespace vkl
 			std::TickTock_hrc tt;
 			bool log = false;
 
-			bool show_demo_window = true;
+			class MainPanel final : public GUI::PanelHolder
+			{
+			protected:
+
+				std::shared_ptr<GUI::DemoPanel> _demo_panel;
+
+			public:
+
+				MainPanel(VkApplication* app, std::string name):
+					GUI::PanelHolder(PanelHolder::CI{
+						.app = app,
+						.name = name,
+					})
+				{
+					_demo_panel = std::make_shared<GUI::DemoPanel>(application());
+					_show_menu = true;
+					_can_close = false;
+				}
+
+				virtual void declareMenu(GUI::Context& ctx) final override
+				{
+					if (ImGui::BeginMenu("File"))
+					{
+						ImGui::EndMenu();
+					}
+					if (ImGui::BeginMenu("View"))
+					{
+						if (ImGui::MenuItem("Show ImGui Demo"))
+						{
+							_demo_panel->setOpen();
+							ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(_demo_panel.get()), _demo_panel);
+						}
+
+						PanelHolder::declarePanelsMenu(ctx);
+
+						ImGui::EndMenu();
+					}
+				}
+
+				virtual void declareInline(GUI::Context& ctx)
+				{
+
+				}
+			};
+
+			MainPanel _main_gui_panel(this, "Renderer");
 
 			const int flip_imgui_key = SDL_SCANCODE_F1;
 			while (!_main_window->shouldClose())
@@ -978,6 +1027,8 @@ namespace vkl
 				{
 					GUI::Context * gui_ctx = beginImGuiFrame();
 
+					_main_gui_panel.declare(*gui_ctx);
+
 					if (!load_scene_index)
 					{
 						if (ImGui::Begin("LoadScene"))
@@ -992,11 +1043,7 @@ namespace vkl
 						}
 						ImGui::End();
 					}
-					
-					if (show_demo_window)
-					{
-						ImGui::ShowDemoWindow(&show_demo_window);
-					}
+
 					if(ImGui::Begin("Rendering"))
 					{
 						if (slang_test)
