@@ -8,6 +8,7 @@ namespace vkl::GUI
 	{
 	public:
 		using Id = uintptr_t;
+		using DeclareFunction = std::function<void(Context&)>;
 
 	protected:
 

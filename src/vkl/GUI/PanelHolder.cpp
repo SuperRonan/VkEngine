@@ -18,7 +18,7 @@ namespace vkl::GUI
 
 	void PanelHolder::declarePanelsMenu(Context& ctx)
 	{
-		if (ImGui::BeginMenu("Panels"))
+		if (ImGui::BeginMenu("Panels", !_childs.empty()))
 		{
 			for (auto& [id, child] : _childs)
 			{

@@ -24,7 +24,7 @@
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/DemoPanel.hpp>
-#include <vkl/GUI/PanelHolder.hpp>
+#include <vkl/GUI/MainPanel.hpp>
 
 #include <vkl/IO/InputListener.hpp>
 
@@ -918,52 +918,19 @@ namespace vkl
 			std::TickTock_hrc tt;
 			bool log = false;
 
-			class MainPanel final : public GUI::PanelHolder
-			{
-			protected:
-
-				std::shared_ptr<GUI::DemoPanel> _demo_panel;
-
-			public:
-
-				MainPanel(VkApplication* app, std::string name):
-					GUI::PanelHolder(PanelHolder::CI{
-						.app = app,
-						.name = name,
-					})
-				{
-					_demo_panel = std::make_shared<GUI::DemoPanel>(application());
-					_show_menu = true;
-					_can_close = false;
-				}
-
-				virtual void declareMenu(GUI::Context& ctx) final override
-				{
-					if (ImGui::BeginMenu("File"))
-					{
-						ImGui::EndMenu();
-					}
-					if (ImGui::BeginMenu("View"))
-					{
-						if (ImGui::MenuItem("Show ImGui Demo"))
-						{
-							_demo_panel->setOpen();
-							ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(_demo_panel.get()), _demo_panel);
-						}
-
-						PanelHolder::declarePanelsMenu(ctx);
-
-						ImGui::EndMenu();
-					}
-				}
-
-				virtual void declareInline(GUI::Context& ctx)
-				{
-
-				}
-			};
-
-			MainPanel _main_gui_panel(this, "Renderer");
+			GUI::MainPanel _main_gui_panel(this, "Renderer");
+			_main_gui_panel.addMenu(GUI::MainPanel::PanelMenu{
+				.name = "View",
+				.options = {
+					GUI::MainPanel::PanelMenuOption{
+						.panel = GUI::DemoPanel::GetSingleton(),
+						.label = "Show ImGui Demo",
+					},
+				},
+				.post_menu = [&](GUI::Context& ctx) {
+					_main_gui_panel.declarePanelsMenu(ctx);
+				},
+			});
 
 			const int flip_imgui_key = SDL_SCANCODE_F1;
 			while (!_main_window->shouldClose())
