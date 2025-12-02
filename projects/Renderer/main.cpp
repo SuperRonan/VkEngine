@@ -25,6 +25,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/DemoPanel.hpp>
 #include <vkl/GUI/MainPanel.hpp>
+#include <vkl/GUI/PanelRefWrapper.hpp>
 
 #include <vkl/IO/InputListener.hpp>
 
@@ -918,18 +919,64 @@ namespace vkl
 			std::TickTock_hrc tt;
 			bool log = false;
 
+			auto MakePanel = [&] <class T> (T& t, std::string const& name = {})
+			{
+				std::shared_ptr<GUI::PanelRefWrapper<T>> res = std::make_shared<GUI::PanelRefWrapper<T>>(&t, name);
+				return res;
+			};
+
+			class ScriptPanel : public GUI::Panel
+			{
+			};
+
 			GUI::MainPanel _main_gui_panel(this, "Renderer");
 			_main_gui_panel.addMenu(GUI::MainPanel::PanelMenu{
 				.name = "View",
 				.options = {
 					GUI::MainPanel::PanelMenuOption{
+						.panel = MakePanel(*sui),
+						.label = "Scene",
+					},
+					GUI::MainPanel::PanelMenuOption{
+						.panel = MakePanel(*perf_reporter),
+						.label = "Performances",
+					},
+					GUI::MainPanel::PanelMenuOption{
+						.panel = MakePanel(*_main_window, "Display"),
+						.label = "Display",
+					},
+					GUI::MainPanel::PanelMenuOption{
 						.panel = GUI::DemoPanel::GetSingleton(),
 						.label = "Show ImGui Demo",
 					},
 				},
-				.post_menu = [&](GUI::Context& ctx) {
-					_main_gui_panel.declarePanelsMenu(ctx);
+				.post_menu = [&](GUI::Context& ctx, GUI::Panel* panel) {
+					static_cast<GUI::PanelHolder*>(panel)->declarePanelsMenu(ctx);
 				},
+			});
+			_main_gui_panel.setInlineDeclaration([&](GUI::Context& ctx, GUI::Panel* panel)
+			{
+				if (!load_scene_index)
+				{
+					default_scene_selection.declare();
+
+					if (ImGui::Button("Load"))
+					{
+						load_scene_index = uint(default_scene_selection.index());
+						LoadTestScene(scene, *load_scene_index);
+					}
+				}
+				if (slang_test)
+				{
+					ImGui::Checkbox("Run test shader", &use_test_shader);
+				}
+				// TODO properly with auto inline panel management
+				camera.declareGui(ctx);
+				renderer.declareGui(ctx);
+				color_correction.declareGui(ctx);
+				pip.declareGui(ctx);
+				image_picker.declareGUI(ctx);
+				image_saver.declareGUI(ctx);
 			});
 
 			const int flip_imgui_key = SDL_SCANCODE_F1;
@@ -988,75 +1035,10 @@ namespace vkl
 				{
 					AppWithImGui::_enable_imgui = !AppWithImGui::_enable_imgui;
 				}
-				
-				
 				if (ImGuiIsEnabled())
 				{
 					GUI::Context * gui_ctx = beginImGuiFrame();
-
 					_main_gui_panel.declare(*gui_ctx);
-
-					if (!load_scene_index)
-					{
-						if (ImGui::Begin("LoadScene"))
-						{
-							default_scene_selection.declare();
-
-							if (ImGui::Button("Load"))
-							{
-								load_scene_index = uint(default_scene_selection.index());
-								LoadTestScene(scene, *load_scene_index);
-							}
-						}
-						ImGui::End();
-					}
-
-					if(ImGui::Begin("Rendering"))
-					{
-						if (slang_test)
-						{
-							ImGui::Checkbox("Run test shader", &use_test_shader);
-						}
-
-						camera.declareGui(*gui_ctx);
-
-						renderer.declareGui(*gui_ctx);
-
-						color_correction.declareGui(*gui_ctx);
-
-						pip.declareGui(*gui_ctx);
-
-						image_picker.declareGUI(*gui_ctx);
-
-						image_saver.declareGUI(*gui_ctx);
-
-						if (exec.getDebugRenderer())
-						{
-							exec.getDebugRenderer()->declareGui(*gui_ctx);
-						}
-
-					}
-					ImGui::End();
-
-					if(ImGui::Begin("Scene"))
-					{
-						sui->declareGui(*gui_ctx);
-
-					}
-					ImGui::End();
-
-					if(ImGui::Begin("Performances"))
-					{
-						perf_reporter->declareGUI(*gui_ctx);
-					}
-					ImGui::End();
-
-					if (ImGui::Begin("Display"))
-					{
-						_main_window->declareGui(*gui_ctx);
-					}
-					ImGui::End();
-					
 					endImGuiFrame(gui_ctx);
 				}
 				else if (flip_imgui_enable)
@@ -1064,8 +1046,6 @@ namespace vkl
 					GUI::Context* gui_ctx = beginImGuiFrame();
 					endImGuiFrame(gui_ctx);
 				}
-
-				
 
 				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{

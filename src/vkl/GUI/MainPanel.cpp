@@ -8,6 +8,7 @@ namespace vkl::GUI
 		PanelHolder(PanelHolder::CI{ .app = app, .name = name })
 	{
 		_show_menu = true;
+		_can_close = false;
 	}
 
 	MainPanel::~MainPanel()
@@ -24,7 +25,7 @@ namespace vkl::GUI
 			{
 				if (menu.pre_menu)
 				{
-					menu.pre_menu(ctx);
+					menu.pre_menu(ctx, this);
 					ImGui::Separator();
 				}
 				for (uint j = 0; j < menu.options.size32(); ++j)
@@ -43,10 +44,18 @@ namespace vkl::GUI
 				if (menu.post_menu)
 				{
 					ImGui::Separator();
-					menu.post_menu(ctx);
+					menu.post_menu(ctx, this);
 				}
 				ImGui::EndMenu();
 			}
+		}
+	}
+
+	void MainPanel::declareInline(Context& ctx)
+	{
+		if (_inline_declaration)
+		{
+			_inline_declaration(ctx, this);
 		}
 	}
 

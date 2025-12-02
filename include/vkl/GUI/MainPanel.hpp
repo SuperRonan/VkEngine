@@ -26,7 +26,7 @@ namespace vkl::GUI
 
 		MyVector<PanelMenu> _menus;
 
-		
+		DeclareFunction _inline_declaration;
 
 	protected:
 
@@ -37,9 +37,16 @@ namespace vkl::GUI
 
 		virtual ~MainPanel() override;
 
-		virtual void declareMenu(Context& ctx);
+		virtual void declareMenu(Context& ctx) override;
+
+		virtual void declareInline(Context& ctx) override;
 
 		void addMenu(PanelMenu const& menu);
+
+		void setInlineDeclaration(DeclareFunction const& declare_fn)
+		{
+			_inline_declaration = declare_fn;
+		}
 	};
 
 }
