@@ -133,61 +133,58 @@ namespace vkl
 
 	void Camera::declareGui(GUI::Context& ctx)
 	{
-		if (ImGui::CollapsingHeader("Camera"))
+		ImGui::Checkbox("Infinite far", &_infinite_far);
+		ImGui::SameLine();
+		ImGui::Checkbox("Reversed depth", &_reverse_depth);
+		float f;
+		f = _near;
+		if (ImGui::SliderFloat("near plane", &f, 0, _far))
 		{
-			ImGui::Checkbox("Infinite far", &_infinite_far);
-			ImGui::SameLine();
-			ImGui::Checkbox("Reversed depth", &_reverse_depth);
-			float f;
-			f = _near;
-			if (ImGui::SliderFloat("near plane", &f, 0, _far))
-			{
-				_near = f;
-			}
+			_near = f;
+		}
 			
-			if (_type != Type::Spherical)
+		if (_type != Type::Spherical)
+		{
+			f = _far;
+			if (ImGui::SliderFloat("far plane", &f, _near, 1e4 * _near))
 			{
-				f = _far;
-				if (ImGui::SliderFloat("far plane", &f, _near, 1e4 * _near))
-				{
-					_far = f;
-				}
+				_far = f;
 			}
+		}
 
-			if (_gui_type.declare())
+		if (_gui_type.declare())
+		{
+			_type = Type(_gui_type.index());
+		}
+
+		if (_type == Type::Perspective || _type == Type::Spherical)
+		{
+			f = _fov;
+			float max_fov = 180;
+			if(_type == Camera::Type::Spherical)	max_fov *= 2;
+			if (ImGui::SliderAngle("FOV", &f, 0, max_fov))
 			{
-				_type = Type(_gui_type.index());
+				_fov = f;
 			}
+		}
 
-			if (_type == Type::Perspective || _type == Type::Spherical)
-			{
-				f = _fov;
-				float max_fov = 180;
-				if(_type == Camera::Type::Spherical)	max_fov *= 2;
-				if (ImGui::SliderAngle("FOV", &f, 0, max_fov))
-				{
-					_fov = f;
-				}
-			}
-
-			if (_type == Type::Perspective)
-			{
-				ImGui::SliderFloat("Aperture", &_aperture, 0, 100, "%.1f mm", ImGuiSliderFlags_NoRoundToFormat);
-				ImGui::SliderFloat("Focal distance", &_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+		if (_type == Type::Perspective)
+		{
+			ImGui::SliderFloat("Aperture", &_aperture, 0, 100, "%.1f mm", ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Focal distance", &_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 				
-				float f = focalLength() * 1e3f;
-				if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue & 0))
-				{
-					// Auto focus
-					float fm = f / 1e3f;
-					_focal_distance = fm * distanceFilmLens() * rcp(abs(fm - distanceFilmLens()));
-				}
-				ImGui::Text("f-number: f / %.1f", fNumber());
-			}
-			else if (_type == Type::Orthographic)
+			float f = focalLength() * 1e3f;
+			if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue & 0))
 			{
-
+				// Auto focus
+				float fm = f / 1e3f;
+				_focal_distance = fm * distanceFilmLens() * rcp(abs(fm - distanceFilmLens()));
 			}
+			ImGui::Text("f-number: f / %.1f", fNumber());
+		}
+		else if (_type == Type::Orthographic)
+		{
+
 		}
 	}
 

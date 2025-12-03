@@ -1284,57 +1284,56 @@ namespace vkl
 	void SimpleRenderer::declareGui(GUI::Context & ctx)
 	{
 		ImGui::PushID(this);
-		if (ImGui::CollapsingHeader(name().c_str()))
+
+		const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
+		ImGui::BeginDisabled(!can_multi_draw_indirect);
+		ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
+		ImGui::EndDisabled();
+
+		_pipeline_selection.declare();
+
+		RenderPipeline render_pipeline = RenderPipeline(_pipeline_selection.index());
+
+		if (render_pipeline == RenderPipeline::Deferred)
 		{
-			const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
-			ImGui::BeginDisabled(!can_multi_draw_indirect);
-			ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
-			ImGui::EndDisabled();
-
-			_pipeline_selection.declare();
-
-			RenderPipeline render_pipeline = RenderPipeline(_pipeline_selection.index());
-
-			if (render_pipeline == RenderPipeline::Deferred)
+			if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
 			{
-				if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
-				{
-					_ambient_occlusion->declareGui(ctx);
-					ImGui::Separator();
-				}
-			}
-			else if (render_pipeline == RenderPipeline::LightTransport)
-			{
-				_light_transport->declareGUI(ctx);
-			}
-			
-			ImGui::BeginDisabled(true);
-			ImVec4 color;
-			color = _maintain_rt ? ctx.style().valid_green : ctx.style().invalid_red;
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
-			ImGui::PushStyleColor(ImGuiCol_Text, color);
-			ImGui::Checkbox("Ray Tracing", &_maintain_rt);
-			ImGui::PopStyleColor(2);
-			ImGui::EndDisabled();
-			
-			ImGui::PushID("shadow");
-			_shadow_method.declare();
-			ImGui::PopID();
-
-			ImGui::Separator();
-
-			if (ImGui::CollapsingHeader("TAAU"))
-			{
-				_taau->declareGui(ctx);
-				ImGui::Separator();
-			}
-
-			if (ImGui::CollapsingHeader("Depth Of Field"))
-			{
-				_depth_of_field->declareGUI(ctx);
+				_ambient_occlusion->declareGui(ctx);
 				ImGui::Separator();
 			}
 		}
+		else if (render_pipeline == RenderPipeline::LightTransport)
+		{
+			_light_transport->declareGUI(ctx);
+		}
+			
+		ImGui::BeginDisabled(true);
+		ImVec4 color;
+		color = _maintain_rt ? ctx.style().valid_green : ctx.style().invalid_red;
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+		ImGui::Checkbox("Ray Tracing", &_maintain_rt);
+		ImGui::PopStyleColor(2);
+		ImGui::EndDisabled();
+			
+		ImGui::PushID("shadow");
+		_shadow_method.declare();
+		ImGui::PopID();
+
+		ImGui::Separator();
+
+		if (ImGui::CollapsingHeader("TAAU"))
+		{
+			_taau->declareGui(ctx);
+			ImGui::Separator();
+		}
+
+		if (ImGui::CollapsingHeader("Depth Of Field"))
+		{
+			_depth_of_field->declareGUI(ctx);
+			ImGui::Separator();
+		}
+
 		ImGui::PopID();
 	}
 }

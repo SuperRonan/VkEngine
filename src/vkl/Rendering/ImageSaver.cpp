@@ -216,63 +216,61 @@ namespace vkl
 	{
 		ImGui::PushID(this);
 
-		if (ImGui::CollapsingHeader(name().c_str()))
+		_save_image = ImGui::Button("Save Image");
+
+		// TODO open a file dialog
+		if (ImGui::InputText("Folder", &_dst_folder_str))
 		{
-			_save_image = ImGui::Button("Save Image");
-
-			// TODO open a file dialog
-			if (ImGui::InputText("Folder", &_dst_folder_str))
-			{
-				_dst_folder = _dst_folder_str;
-				_dst_folder = std::filesystem::weakly_canonical(_dst_folder);
-				_dst_folder_str = _dst_folder.string();
-			}
-
-			ImGui::InputText("Filename", &_dst_filename);
-
-			ImGui::InputInt("Index", reinterpret_cast<int*>(&_index));
-
-			if (_gui_extension.declare())
-			{
-				setExtension();
-			}
-			if (_gui_extension.index() == FormatIndex::JPG)
-			{
-				ImGui::SliderInt("Quality", &_jpg_quality, 0, 100);
-			}
-
-			ImGui::Checkbox("Stip alpha channel", &_strip_alpha);
-
-			ImGui::Separator();
-			ImGui::Checkbox("Create Folder IFN", &_create_folder_ifn);
-			ImGui::SameLine();
-			ImGui::Checkbox("Multi-Threaded", &_save_in_separate_thread);
-			if (_save_in_separate_thread)
-			{
-				ImGui::InputInt("Save Queue Capacity", reinterpret_cast<int*>(&_pending_capacity));
-				ImGui::BeginDisabled();
-				int queue_size = _pending_tasks.size();
-				const Vector3f red(1, 0, 0);
-				const Vector3f yellow(1, 1, 0);
-				const Vector3f green(0, 1, 0);
-				const float charge = float(queue_size) / float(_pending_capacity);
-				Vector3f color;
-				if (charge < 0.5)
-				{
-					color = Lerp(green, yellow, charge * 2.0f);
-				}
-				else
-				{
-					color = Lerp(yellow, red, (charge - 0.5f) * 2.0f);
-				}
-				ImVec4 gui_color(color.x(), color.y(), color.z(), 1);
-				ImGui::PushStyleColor(ImGuiCol_Text | ImGuiCol_SliderGrab, gui_color);
-				ImGui::SliderInt("Save Queue", &queue_size, 0, _pending_capacity);
-				ImGui::PopStyleColor();
-				ImGui::EndDisabled();
-				ImGui::Separator();
-			}
+			_dst_folder = _dst_folder_str;
+			_dst_folder = std::filesystem::weakly_canonical(_dst_folder);
+			_dst_folder_str = _dst_folder.string();
 		}
+
+		ImGui::InputText("Filename", &_dst_filename);
+
+		ImGui::InputInt("Index", reinterpret_cast<int*>(&_index));
+
+		if (_gui_extension.declare())
+		{
+			setExtension();
+		}
+		if (_gui_extension.index() == FormatIndex::JPG)
+		{
+			ImGui::SliderInt("Quality", &_jpg_quality, 0, 100);
+		}
+
+		ImGui::Checkbox("Stip alpha channel", &_strip_alpha);
+
+		ImGui::Separator();
+		ImGui::Checkbox("Create Folder IFN", &_create_folder_ifn);
+		ImGui::SameLine();
+		ImGui::Checkbox("Multi-Threaded", &_save_in_separate_thread);
+		if (_save_in_separate_thread)
+		{
+			ImGui::InputInt("Save Queue Capacity", reinterpret_cast<int*>(&_pending_capacity));
+			ImGui::BeginDisabled();
+			int queue_size = _pending_tasks.size();
+			const Vector3f red(1, 0, 0);
+			const Vector3f yellow(1, 1, 0);
+			const Vector3f green(0, 1, 0);
+			const float charge = float(queue_size) / float(_pending_capacity);
+			Vector3f color;
+			if (charge < 0.5)
+			{
+				color = Lerp(green, yellow, charge * 2.0f);
+			}
+			else
+			{
+				color = Lerp(yellow, red, (charge - 0.5f) * 2.0f);
+			}
+			ImVec4 gui_color(color.x(), color.y(), color.z(), 1);
+			ImGui::PushStyleColor(ImGuiCol_Text | ImGuiCol_SliderGrab, gui_color);
+			ImGui::SliderInt("Save Queue", &queue_size, 0, _pending_capacity);
+			ImGui::PopStyleColor();
+			ImGui::EndDisabled();
+			ImGui::Separator();
+		}
+
 		ImGui::PopID();
 	}
 }

@@ -160,161 +160,158 @@ namespace vkl
 
 	void ColorCorrection::declareGui(GUI::Context & ctx)
 	{
-		if (ImGui::CollapsingHeader(name().c_str()))
-		{
-			ImGui::PushID(name().c_str());
+		ImGui::PushID(name().c_str());
 	
-			ImGui::Checkbox("Auto Fit to window: ", &_auto_fit_to_window);
+		ImGui::Checkbox("Auto Fit to window: ", &_auto_fit_to_window);
 
-			static thread_local ImGuiListSelection gui_mode = ImGuiListSelection::CI{
-				.name = "Mode",
-				.mode = ImGuiListSelection::Mode::Combo,
-				.same_line = true,
-				.options = {
-					ImGuiListSelection::Option{
-						.name = "None",
-					},
-					ImGuiListSelection::Option{
-						.name = "ITU",
-					},
-					ImGuiListSelection::Option{
-						.name = "sRGB",
-					},
-					ImGuiListSelection::Option{
-						.name = "scRGB",
-					},
-					ImGuiListSelection::Option{
-						.name = "BT1886",
-					},
-					ImGuiListSelection::Option{
-						.name = "HybridLogGamma",
-					},
-					ImGuiListSelection::Option{
-						.name = "PerceptualQuantization",
-					},
-					ImGuiListSelection::Option{
-						.name = "DisplayP3",
-					},
-					ImGuiListSelection::Option{
-						.name = "DCI_P3",
-					},
-					ImGuiListSelection::Option{
-						.name = "LegacyNTSC",
-					},
-					ImGuiListSelection::Option{
-						.name = "LegacyPAL",
-					},
-					ImGuiListSelection::Option{
-						.name = "ST240",
-					},
-					ImGuiListSelection::Option{
-						.name = "AdobeRGB",
-					},
-					ImGuiListSelection::Option{
-						.name = "SonySLog",
-					},
-					ImGuiListSelection::Option{
-						.name = "SonySLog2",
-					},
-					ImGuiListSelection::Option{
-						.name = "ACEScc",
-					},
-					ImGuiListSelection::Option{
-						.name = "ACEScct",
-					},
-					ImGuiListSelection::Option{
-						.name = "Gamma",
-					},
+		static thread_local ImGuiListSelection gui_mode = ImGuiListSelection::CI{
+			.name = "Mode",
+			.mode = ImGuiListSelection::Mode::Combo,
+			.same_line = true,
+			.options = {
+				ImGuiListSelection::Option{
+					.name = "None",
 				},
-			};
+				ImGuiListSelection::Option{
+					.name = "ITU",
+				},
+				ImGuiListSelection::Option{
+					.name = "sRGB",
+				},
+				ImGuiListSelection::Option{
+					.name = "scRGB",
+				},
+				ImGuiListSelection::Option{
+					.name = "BT1886",
+				},
+				ImGuiListSelection::Option{
+					.name = "HybridLogGamma",
+				},
+				ImGuiListSelection::Option{
+					.name = "PerceptualQuantization",
+				},
+				ImGuiListSelection::Option{
+					.name = "DisplayP3",
+				},
+				ImGuiListSelection::Option{
+					.name = "DCI_P3",
+				},
+				ImGuiListSelection::Option{
+					.name = "LegacyNTSC",
+				},
+				ImGuiListSelection::Option{
+					.name = "LegacyPAL",
+				},
+				ImGuiListSelection::Option{
+					.name = "ST240",
+				},
+				ImGuiListSelection::Option{
+					.name = "AdobeRGB",
+				},
+				ImGuiListSelection::Option{
+					.name = "SonySLog",
+				},
+				ImGuiListSelection::Option{
+					.name = "SonySLog2",
+				},
+				ImGuiListSelection::Option{
+					.name = "ACEScc",
+				},
+				ImGuiListSelection::Option{
+					.name = "ACEScct",
+				},
+				ImGuiListSelection::Option{
+					.name = "Gamma",
+				},
+			},
+		};
 
-			bool changed = false;
+		bool changed = false;
+		{
+			size_t mode_index = static_cast<size_t>(_mode);
+			if (gui_mode.declare(mode_index))
 			{
-				size_t mode_index = static_cast<size_t>(_mode);
-				if (gui_mode.declare(mode_index))
-				{
-					_mode = static_cast<ColorCorrectionMode>(mode_index);
-					changed = true;
-				}
+				_mode = static_cast<ColorCorrectionMode>(mode_index);
+				changed = true;
 			}
-
-			{
-				float log_exposure = std::log2(_exposure);
-				bool exposure_changed = false;
-				exposure_changed = ImGui::SliderFloat("log2(Exposure)", &log_exposure, -5, 5, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
-				//ImGui::SameLine();
-				if (ImGui::Button("0"))
-				{
-					exposure_changed |= true;
-					log_exposure = 0;
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("-"))
-				{
-					exposure_changed |= true;
-					log_exposure -= 0.5;
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("+"))
-				{
-					exposure_changed |= true;
-					log_exposure += 0.5;
-				}
-				if (exposure_changed)
-				{
-					changed = true;
-					_exposure = std::exp2f(log_exposure);
-				}
-				ImGui::Text("Exposure: %f", _exposure);
-			}
-
-			if (_mode == ColorCorrectionMode::Gamma)
-			{
-				ImGui::PushID('G');
-				changed |= ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
-				ImGui::PopID();
-				ImGui::Text("Snap Gamma: ");
-				std::array<float, 9> snap_values = {1.0 / 2.4, 1.0 / 2.2, 0.5, 1.0 / 1.2, 1.0, 1.2, 2.0, 2.2, 2.4};
-				char str_buffer[64];
-				for (size_t i = 0; i < snap_values.size(); ++i)
-				{
-					ImGui::SameLine();
-					*std::format_to(str_buffer, "{:.2f}", snap_values[i]) = char(0);
-					bool snap = ImGui::Button(str_buffer);
-					if (snap)
-					{
-						_gamma = snap_values[i];
-						changed |= true;
-					}
-				}
-				ImGui::Separator();
-
-			}
-
-
-			//if (_plot_raw_radiance.size() != _plot_samples)
-			//{
-			//	changed = true;
-			//	_plot_raw_radiance.resize(_plot_samples);
-			//	_plot_corrected_radiance.resize(_plot_samples);
-			//}
-
-			//if (changed)
-			//{
-			//	for (size_t i = 0; i < _plot_samples; ++i)
-			//	{
-			//		float t = (float(i) + (float(i) / float(_plot_samples - 1))) / float(_plot_samples);
-			//		_plot_raw_radiance[i] = std::lerp(_plot_min_radiance, _plot_max_radiance, t);
-			//		_plot_corrected_radiance[i] = computeTransferFunction(_plot_raw_radiance[i]);
-			//	}
-
-			//}
-
-			//ImGui::PlotLines("Gamma Correction Preview", _plot_corrected_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_corrected_radiance.back(), ImVec2(0, 200));
-
-			ImGui::Checkbox("Show Test Card", &_show_test_card);
-			
-			ImGui::PopID();
 		}
+
+		{
+			float log_exposure = std::log2(_exposure);
+			bool exposure_changed = false;
+			exposure_changed = ImGui::SliderFloat("log2(Exposure)", &log_exposure, -5, 5, "%.3f", ImGuiSliderFlags_NoRoundToFormat);
+			//ImGui::SameLine();
+			if (ImGui::Button("0"))
+			{
+				exposure_changed |= true;
+				log_exposure = 0;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("-"))
+			{
+				exposure_changed |= true;
+				log_exposure -= 0.5;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("+"))
+			{
+				exposure_changed |= true;
+				log_exposure += 0.5;
+			}
+			if (exposure_changed)
+			{
+				changed = true;
+				_exposure = std::exp2f(log_exposure);
+			}
+			ImGui::Text("Exposure: %f", _exposure);
+		}
+
+		if (_mode == ColorCorrectionMode::Gamma)
+		{
+			ImGui::PushID('G');
+			changed |= ImGui::SliderFloat("Gamma", &_gamma, 0.1, 4);
+			ImGui::PopID();
+			ImGui::Text("Snap Gamma: ");
+			std::array<float, 9> snap_values = {1.0 / 2.4, 1.0 / 2.2, 0.5, 1.0 / 1.2, 1.0, 1.2, 2.0, 2.2, 2.4};
+			char str_buffer[64];
+			for (size_t i = 0; i < snap_values.size(); ++i)
+			{
+				ImGui::SameLine();
+				*std::format_to(str_buffer, "{:.2f}", snap_values[i]) = char(0);
+				bool snap = ImGui::Button(str_buffer);
+				if (snap)
+				{
+					_gamma = snap_values[i];
+					changed |= true;
+				}
+			}
+			ImGui::Separator();
+
+		}
+
+
+		//if (_plot_raw_radiance.size() != _plot_samples)
+		//{
+		//	changed = true;
+		//	_plot_raw_radiance.resize(_plot_samples);
+		//	_plot_corrected_radiance.resize(_plot_samples);
+		//}
+
+		//if (changed)
+		//{
+		//	for (size_t i = 0; i < _plot_samples; ++i)
+		//	{
+		//		float t = (float(i) + (float(i) / float(_plot_samples - 1))) / float(_plot_samples);
+		//		_plot_raw_radiance[i] = std::lerp(_plot_min_radiance, _plot_max_radiance, t);
+		//		_plot_corrected_radiance[i] = computeTransferFunction(_plot_raw_radiance[i]);
+		//	}
+
+		//}
+
+		//ImGui::PlotLines("Gamma Correction Preview", _plot_corrected_radiance.data(), _plot_samples, 0, nullptr, 0, _plot_corrected_radiance.back(), ImVec2(0, 200));
+
+		ImGui::Checkbox("Show Test Card", &_show_test_card);
+			
+		ImGui::PopID();
 	}
 }

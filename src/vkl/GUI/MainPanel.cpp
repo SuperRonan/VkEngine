@@ -53,14 +53,40 @@ namespace vkl::GUI
 
 	void MainPanel::declareInline(Context& ctx)
 	{
+		bool sep = false;
 		if (_inline_declaration)
 		{
 			_inline_declaration(ctx, this);
+			sep = true;
+		}
+
+		if (sep)
+		{
+			ImGui::Separator();
+			sep = false;
+		}
+		for (uint i = 0; i < _inline_panels.size32(); ++i)
+		{
+			_inline_panels[i].declareInline(ctx);
 		}
 	}
 
 	void MainPanel::addMenu(PanelMenu const& menu)
 	{
 		_menus.push_back(menu);
+	}
+
+	void MainPanel::addInlinePanel(InlinePanel const& ip)
+	{
+		_inline_panels.push_back(ip);
+		InlinePanel& b = _inline_panels.back();
+		if (b.panel)
+		{
+			if (b.id == 0)
+			{
+				b.id = reinterpret_cast<Id>(b.panel.get());
+			}
+		}
+		b.type = InlinePanel::Type::CollapseHeader;
 	}
 }

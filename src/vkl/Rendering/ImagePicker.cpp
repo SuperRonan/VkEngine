@@ -80,40 +80,36 @@ namespace vkl
 
 	void ImagePicker::declareGUI(GUI::Context& ctx)
 	{
-		ImGui::PushID(name().c_str());
+		ImGui::PushID(this);
 
-		if (ImGui::CollapsingHeader(name().c_str()))
+		if (_latest_success)
 		{
-
-			if (_latest_success)
-			{
-				ImGui::TextColored(ctx.style().valid_green, "Success");
-			}
-			else
-			{
-				ImGui::TextColored(ctx.style().invalid_red, "Fail");
-			}
-			
-			_gui_source.declare();
-
-			const char * dst_name = _dst ? _dst->name().c_str() : "No Image";
-			ImGui::Text("Destination: %s", dst_name);
-
-			if(_gui_filter.declare())
-			{
-				switch (_gui_filter.index())
-				{
-					case 0:
-					case 1:
-						_filter = static_cast<VkFilter>(_gui_filter.index());
-					break;
-					case 2:
-						_filter = VK_FILTER_CUBIC_EXT;
-					break;
-				}
-			}
-
+			ImGui::TextColored(ctx.style().valid_green, "Success");
 		}
+		else
+		{
+			ImGui::TextColored(ctx.style().invalid_red, "Fail");
+		}
+			
+		_gui_source.declare();
+
+		const char * dst_name = _dst ? _dst->name().c_str() : "No Image";
+		ImGui::Text("Destination: %s", dst_name);
+
+		if(_gui_filter.declare())
+		{
+			switch (_gui_filter.index())
+			{
+				case 0:
+				case 1:
+					_filter = static_cast<VkFilter>(_gui_filter.index());
+				break;
+				case 2:
+					_filter = VK_FILTER_CUBIC_EXT;
+				break;
+			}
+		}
+
 		ImGui::PopID();
 	}
 }

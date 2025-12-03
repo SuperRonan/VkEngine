@@ -972,14 +972,13 @@ namespace vkl
 				{
 					ImGui::Checkbox("Run test shader", &use_test_shader);
 				}
-				// TODO properly with auto inline panel management
-				camera.declareGui(ctx);
-				renderer.declareGui(ctx);
-				color_correction.declareGui(ctx);
-				pip.declareGui(ctx);
-				image_picker.declareGUI(ctx);
-				image_saver.declareGUI(ctx);
 			});
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(camera), });
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer), });
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_picker), });
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_saver), });
 
 			const int flip_imgui_key = SDL_SCANCODE_F1;
 			while (!_main_window->shouldClose())

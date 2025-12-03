@@ -120,12 +120,9 @@ namespace vkl
 
 	void PictureInPicture::declareGui(GUI::Context & ctx)
 	{
-		if (ImGui::CollapsingHeader(name().c_str()))
-		{
-			ImGui::Checkbox("enable", &_enable);
-			ImGui::SliderFloat("zoom", &_zoom, 1, 16);
-			ImGui::SliderFloat("size", &_pip_size, 0, 1);
-			ImGui::SliderFloat2("position", _pip_position.data(), 0, 1);
-		}
+		ImGui::Checkbox("enable", &_enable);
+		ImGui::SliderFloat("zoom", &_zoom, 1, 16);
+		ImGui::SliderFloat("size", &_pip_size, 0, 1);
+		ImGui::SliderFloat2("position", _pip_position.data(), 0, 1);
 	}
 }

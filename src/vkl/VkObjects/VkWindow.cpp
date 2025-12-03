@@ -653,7 +653,6 @@ namespace vkl
 	void VkWindow::declareGui(GUI::Context & ctx)
 	{
 		ImGui::PushID(this);
-		if (ImGui::CollapsingHeader("Window"))
 		{
 			bool changed = false;
 

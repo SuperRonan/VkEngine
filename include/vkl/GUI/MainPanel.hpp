@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vkl/GUI/PanelHolder.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
 
 namespace vkl::GUI
 {
@@ -26,6 +27,8 @@ namespace vkl::GUI
 
 		MyVector<PanelMenu> _menus;
 
+		MyVector<InlinePanel> _inline_panels;
+
 		DeclareFunction _inline_declaration;
 
 	protected:
@@ -47,6 +50,8 @@ namespace vkl::GUI
 		{
 			_inline_declaration = declare_fn;
 		}
+
+		void addInlinePanel(InlinePanel const& panel);
 	};
 
 }
