@@ -20,6 +20,12 @@ namespace vkl::GUI
 	{
 		if (ImGui::BeginMenu("Panels", !_childs.empty()))
 		{
+			if (ImGui::MenuItem("Close all"))
+			{
+				closeAllChilds();
+			}
+			ImGui::Separator();
+
 			for (auto& [id, child] : _childs)
 			{
 				if (ImGui::MenuItem(child.panel->name().c_str(), nullptr, nullptr, child.panel->isOpen()))
@@ -107,5 +113,11 @@ namespace vkl::GUI
 			_childs.erase(id);
 			_childs_ids_valid &= false;
 		}
+	}
+
+	void PanelHolder::closeAllChilds()
+	{
+		_childs.clear();
+		_childs_ids_valid &= false;
 	}
 }

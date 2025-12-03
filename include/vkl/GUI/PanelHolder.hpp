@@ -61,5 +61,7 @@ namespace vkl::GUI
 			}
 			return res;
 		}
+
+		virtual void closeAllChilds();
 	};
 }
