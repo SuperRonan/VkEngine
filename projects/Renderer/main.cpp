@@ -974,7 +974,7 @@ namespace vkl
 				}
 			});
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(camera), });
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer), });
+			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer, "Rendering"), .label = "Rendering"});
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_picker), });
