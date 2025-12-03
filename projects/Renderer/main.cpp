@@ -712,6 +712,8 @@ namespace vkl
 			});
 
 			Camera camera(Camera::CreateInfo{
+				.app = this,
+				.name = "Camera",
 				.resolution = _main_window->extent2D(),
 				.znear = 0.01,
 				.zfar = 100,

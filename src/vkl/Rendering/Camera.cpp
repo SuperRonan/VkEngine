@@ -6,6 +6,7 @@
 namespace vkl
 {
 	Camera::Camera(CreateInfo const& ci) :
+		VkObject(ci.app, ci.name),
 		_resolution_ifp(ci.resolution),
 		_near(ci.znear),
 		_far(ci.zfar)
