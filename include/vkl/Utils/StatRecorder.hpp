@@ -76,15 +76,17 @@ namespace vkl
 		
 		std::string _name;
 		Type _type = Type::MAX_ENUM;
+		bool _ignore_parent_avg = false;
 		std::string _unit = {};
 
 		std::vector<AbstractStatRecord *> _children_records = {};
 
 	public:
 
-		AbstractStatRecord(std::string const& name, Type type, std::string const& unit) :
+		AbstractStatRecord(std::string const& name, Type type, std::string const& unit, bool ignore_parent_avg = false) :
 			_name(name),
 			_type(type),
+			_ignore_parent_avg(ignore_parent_avg),
 			_unit(unit)
 		{
 
@@ -140,11 +142,12 @@ namespace vkl
 			Dec scale = Dec(1);
 			Dyn<T> provider = {};
 			std::string unit = {};
+			bool ignore_parent_avg = false;
 		};
 		using CI = CreateInfo;
 
 		StatRecord(CreateInfo const& ci):
-			AbstractStatRecord(ci.name, GetType<T>(), ci.unit),
+			AbstractStatRecord(ci.name, GetType<T>(), ci.unit, ci.ignore_parent_avg),
 			_ring_buffer(ci.memory, T(0)),
 			_scale(ci.scale),
 			_provider(ci.provider)
@@ -233,7 +236,7 @@ namespace vkl
 			std::optional<float> percent = {};
 			int pushed_colors = 0;
 
-			if (parent_avg.floating > 0.0)
+			if (!_ignore_parent_avg && parent_avg.floating > 0.0)
 			{
 				float proportion = float(avg / parent_avg.floating);
 				percent = proportion * 100.0f;
@@ -254,6 +257,10 @@ namespace vkl
 				{
 					ImGui::Text(text.c_str(), avg);
 				}
+				if (pushed_colors)
+				{
+					ImGui::PopStyleColor(pushed_colors); pushed_colors = 0;
+				}
 			}
 			else
 			{
@@ -266,6 +273,10 @@ namespace vkl
 				{
 					open_tree = ImGui::TreeNode(name().c_str(), text.c_str(), avg);
 				}
+				if (pushed_colors)
+				{
+					ImGui::PopStyleColor(pushed_colors); pushed_colors = 0;
+				}
 				if (open_tree)
 				{
 					Pack64 my_avg {.floating = avg};
@@ -276,12 +287,6 @@ namespace vkl
 					ImGui::TreePop();
 				}
 			}
-
-			if (pushed_colors)
-			{
-				ImGui::PopStyleColor(pushed_colors); pushed_colors = 0;
-			}
-
 
 			if (show_graph)
 			{
@@ -299,6 +304,7 @@ namespace vkl
 			Dec2 scale = Dec2(1);
 			Dyn<Q> provider = {};
 			std::string unit = {};
+			bool ignore_parent_avg = false;
 		};
 
 		template <class Q = T, class Dec2 = Dec>
@@ -313,6 +319,7 @@ namespace vkl
 				.scale = cri.scale,
 				.provider = cri.provider,
 				.unit = cri.unit,
+				.ignore_parent_avg = cri.ignore_parent_avg,
 			});
 			_children_records.push_back(res);
 			return res;

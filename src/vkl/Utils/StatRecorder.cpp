@@ -164,27 +164,33 @@ namespace vkl
 				StatRecord<size_t>* draw_calls = render_time_cpu_record->createChildRecord<size_t>({
 					.name = "Draw calls",
 					.provider = Dyn<size_t>(&fpc.draw_calls),
+					.ignore_parent_avg = true,
 				});
 				StatRecord<size_t>* dispatch_calls = render_time_cpu_record->createChildRecord<size_t>({
 					.name = "Dispatch calls",
 					.provider = Dyn<size_t>(&fpc.dispatch_calls),
+					.ignore_parent_avg = true,
 				});
 				StatRecord<size_t>* pipeline_barriers = render_time_cpu_record->createChildRecord<size_t>({
 					.name = "Pipeline Barriers",
 					.provider = Dyn<size_t>(&fpc.pipeline_barriers),
+					.ignore_parent_avg = true,
 				});
 				{
 					StatRecord<size_t>* buffer_barriers = pipeline_barriers->createChildRecord<size_t>({
 						.name = "Buffer Barriers",
 						.provider = Dyn<size_t>(&fpc.buffer_barriers),
+						.ignore_parent_avg = true,
 					});
 					StatRecord<size_t>* image_barriers = pipeline_barriers->createChildRecord<size_t>({
 						.name = "Image Barriers",
 						.provider = Dyn<size_t>(&fpc.image_barriers),
+						.ignore_parent_avg = true,
 					});
 					StatRecord<size_t>* layout_transitions = pipeline_barriers->createChildRecord<size_t>({
 						.name = "Layout Transitions",
 						.provider = Dyn<size_t>(&fpc.layout_transitions),
+						.ignore_parent_avg = true,
 					});
 				}
 			}
