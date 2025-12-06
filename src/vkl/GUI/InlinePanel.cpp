@@ -1,9 +1,24 @@
+
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/PanelHolder.hpp>
 #include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 
 namespace vkl::GUI
 {
+	bool DetachPanelButton(Context& ctx, std::shared_ptr<Panel> const& panel, Panel::Id id)
+	{
+		bool res = false;
+		if (ImGui::DetachButton())
+		{
+			panel->setOpen();
+			auto holder = ctx.getTopPanelHolder();
+			holder->setChild(id, panel);
+			res = true;
+		}
+		return res;
+	}
+
 	void InlinePanel::declareInline(GUI::Context& ctx)
 	{
 		const char* label = this->label.empty() ? panel->name().c_str() : this->label.c_str();
@@ -16,12 +31,7 @@ namespace vkl::GUI
 			ImGui::PushID(label);
 		}
 
-		if (ImGui::Button("Detach"))
-		{
-			panel->setOpen();
-			auto holder = ctx.getTopPanelHolder();
-			holder->setChild(id, panel);
-		}
+		DetachPanelButton(ctx, panel, id);
 		ImGui::SameLine();
 		bool declare = !!panel;
 		if (type == Type::None)
@@ -53,4 +63,6 @@ namespace vkl::GUI
 
 		ImGui::PopID();
 	}
+
+	
 }

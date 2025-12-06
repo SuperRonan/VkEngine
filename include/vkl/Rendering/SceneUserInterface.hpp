@@ -3,7 +3,7 @@
 #include <vkl/Rendering/Scene.hpp>
 #include <vkl/Rendering/Camera.hpp>
 
-#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/Panel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Execution/Executor.hpp>
@@ -139,6 +139,8 @@ namespace vkl
 		bool _show_view_basis = false;
 
 		void createInternalResources();
+
+		friend class ScenePanel;
 
 	public:
 

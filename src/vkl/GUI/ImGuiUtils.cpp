@@ -1,3 +1,5 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
+
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <cassert>
 
@@ -272,5 +274,69 @@ namespace ImGui
 
 		EndGroup();
 		return value_changed;
+	}
+
+	bool IconButtonEx(const char* str_id, ImVec2 size, ImGuiButtonFlags flags, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data)
+	{
+		ImGuiContext& g = *GImGui;
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		const ImGuiID id = window->GetID(str_id);
+		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+		const float default_size = GetFrameHeight();
+		ItemSize(size, (size.y >= default_size) ? g.Style.FramePadding.y : -1.0f);
+		if (!ItemAdd(bb, id))
+			return false;
+
+		bool hovered, held;
+		bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+		// Render
+		const ImU32 bg_col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+		const ImU32 text_col = GetColorU32(ImGuiCol_Text);
+		RenderNavCursor(bb, id);
+		RenderFrame(bb.Min, bb.Max, bg_col, true, g.Style.FrameRounding);
+
+		render_frame_fn(render_frame_data, window->DrawList, bb, g.FontSize, text_col);
+
+		IMGUI_TEST_ENGINE_ITEM_INFO(id, str_id, g.LastItemData.StatusFlags);
+		return pressed;
+	}
+
+	void DrawRectNoCorners(ImDrawList* draw_list, ImVec2 top_left, ImVec2 bottom_right, ImU32 color, float thickness)
+	{
+		// top
+		draw_list->AddLine(ImVec2(top_left.x + 1, top_left.y), ImVec2(bottom_right.x, top_left.y), color, thickness);
+		// bottom
+		draw_list->AddLine(ImVec2(top_left.x + 1, bottom_right.y), ImVec2(bottom_right.x, bottom_right.y), color, thickness);
+		// left
+		draw_list->AddLine(ImVec2(top_left.x, top_left.y + 1), ImVec2(top_left.x, bottom_right.y), color, thickness);
+		// right
+		draw_list->AddLine(ImVec2(bottom_right.x, top_left.y + 1), ImVec2(bottom_right.x, bottom_right.y), color, thickness);
+	}
+
+	void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		float rel_size = 0.75;
+		float h = std::max(std::max(rect.GetSize().x, rect.GetSize().y) * rel_size, 1.0f);
+		float d = std::max(ImFloor(h / 16.0f), 1.0f);
+		float thickness = 1;
+		ImVec2 pos = rect.GetTL() + rect.GetSize() * ((1 - rel_size) * 0.5f);
+		// Ensure pixel alignment
+		pos = ImFloor(pos);
+		ImVec2 size = ImFloor(ImVec2(h, h));
+		ImVec2 detachment = ImVec2(d, d);
+		DrawRectNoCorners(draw_list, pos - (detachment + ImVec2(1, 1)), pos + size - (detachment + ImVec2(1, 1)), color, thickness);
+		DrawRectNoCorners(draw_list, pos + detachment, pos + size + detachment, color, thickness);
+	}
+
+	bool DetachButton()
+	{
+		bool res = IconButton("Detach", RenderDetachIcon);
+		//bool res = ImGui::ArrowButton("Detach", ImGuiDir_Up);
+		ImGui::SetItemTooltip("Detach panel");
+		return res;
 	}
 }

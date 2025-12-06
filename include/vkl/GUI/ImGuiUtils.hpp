@@ -267,7 +267,9 @@ namespace vkl
 	};
 
 }
-	
+
+struct ImRect;
+
 namespace ImGui
 {
 	
@@ -321,4 +323,21 @@ namespace ImGui
 		}
 		return res;
 	}
+
+
+	using ButtonIconDrawFunction = void(*)(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
+	extern bool IconButtonEx(const char* str_id, ImVec2 size, ImGuiButtonFlags flags, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data = nullptr);
+
+	static inline bool IconButton(const char* str_id, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data = nullptr)
+	{
+		float sz = ImGui::GetFrameHeight();
+		return IconButtonEx(str_id, ImVec2(sz, sz), ImGuiButtonFlags_None, render_frame_fn, render_frame_data);
+	}
+
+	extern void DrawRectNoCorners(ImDrawList* draw_list, ImVec2 top_left, ImVec2 bottom_right, ImU32 color, float thickness = 1);
+
+	extern void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
+	extern bool DetachButton();
 }

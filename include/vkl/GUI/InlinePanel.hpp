@@ -4,6 +4,8 @@
 
 namespace vkl::GUI
 {
+	extern bool DetachPanelButton(Context& ctx, std::shared_ptr<Panel> const& panel, Panel::Id id);
+
 	struct InlinePanel
 	{
 		enum class Type
