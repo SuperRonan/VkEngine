@@ -57,6 +57,11 @@ namespace vkl
 
 	struct PrebuilTransferCommands;
 
+	namespace GUI
+	{
+		class VkApplicationPanel;
+	}
+
 	class VkApplication
 	{
 	public:
@@ -139,6 +144,8 @@ namespace vkl
 		};
 
 	protected:
+
+		friend class GUI::VkApplicationPanel;
 
 		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 
@@ -255,6 +262,8 @@ namespace vkl
 		MyVector<FileSystem::Path> _include_directories = {};
 		std::unique_ptr<DependencyTracker> _dependencies_tracker = {};
 
+		std::shared_ptr<GUI::Panel> _gui_panel = {};
+
 		virtual void requestFeatures(VulkanFeatures & features);
 
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void* user_data);
@@ -332,6 +341,8 @@ namespace vkl
 		void loadFileSystem();
 
 		void log(std::string_view sv, Logger::Options options);
+
+		virtual void createPanel();
 
 	public:
 
@@ -511,6 +522,15 @@ namespace vkl
 		}
 
 		VkResult deviceWaitIdle();
+
+		std::shared_ptr<GUI::Panel> getGUIPanel()
+		{
+			if (!_gui_panel)
+			{
+				createPanel();
+			}
+			return _gui_panel;
+		}
 	};
 
 	class VkObject

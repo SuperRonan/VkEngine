@@ -22,6 +22,10 @@
 
 #include <ShaderLib/Vulkan/ShaderAtomicFlags.h>
 
+#include <vkl/GUI/PanelHolder.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+
 #include <slang/slang.h>
 
 #include <exception>
@@ -30,6 +34,7 @@
 #include <fstream>
 #include <span>
 
+#include <vulkan/vk_enum_string_helper.h>
 
 namespace vkl
 {
@@ -1477,5 +1482,165 @@ namespace vkl
 				g_common_mutex.unlock();
 			}
 		}
+	}
+
+	namespace GUI
+	{
+		class VkApplicationPanel : public PanelHolder
+		{
+		protected:
+
+			using Parent = PanelHolder;
+
+			struct OptionsPanel : public Panel
+			{
+				OptionsPanel(VkApplication* app) :
+					Panel(app, "Options##VkApplication")
+				{}
+
+				virtual void declareInline(Context& ctx)
+				{
+					auto& a = *application();
+					auto& o = a._options;
+
+					ImGui::SeparatorText("Warning! Advanced options: manipulate at your own risk!");
+
+					auto TooltipBool = [](const char* name)
+					{
+						ImGui::SetItemTooltip("Using command-line option: --%s {0|1}", name);
+					};
+					auto TooltipInt = [](const char* name)
+					{
+						ImGui::SetItemTooltip("Using command-line option: --%s <int>", name);
+					};
+
+					ImGui::LabelCheckbox("Validation", o.enable_validation); TooltipBool("validation");
+					ImGui::LabelCheckbox("Vulkan API Object Naming", o.enable_object_naming); TooltipBool("name_vk_objects");
+					ImGui::LabelCheckbox("Command Buffers labeling", o.enable_command_buffer_labels); TooltipBool("cmd_labels");
+					ImGui::LabelCheckbox("Prefer VkRenderPass over dynamic rendering", o.prefer_render_pass_with_dynamic_rendering);
+					ImGui::LabelCheckbox("Query RenderPass creation feedback", o.query_render_pass_creation_feedback);
+					ImGui::LabelCheckbox("Disallow RenderPass merging", o.render_pass_disallow_merging);
+					
+					IMGUI_DECLARE_BIT_CHECKBOX("Dump shaders sources", o.dump_shader_source); TooltipBool("dump_shader_source");
+					IMGUI_DECLARE_BIT_CHECKBOX("Dump preprocessed shaders", o.dump_shader_preprocessed); TooltipBool("dump_preprocessed_shader");
+					IMGUI_DECLARE_BIT_CHECKBOX("Dump shaders SPIR-V", o.dump_shader_spv); TooltipBool("dump_spv");
+					IMGUI_DECLARE_BIT_CHECKBOX("Dump Slang shaders to GLSL", o.dump_slang_to_glsl); TooltipBool("dump_slang_to_glsl");
+					IMGUI_DECLARE_BIT_CHECKBOX("Generate shaders debug info", o.generate_shader_debug_info); TooltipBool("shader_debug_info");
+
+					ImGui::InputInt("GLSL optimization level", &o.shaderc_optimization_level);
+					ImGui::InputInt("Slang Optimization level", &o.slang_optiomization_level);
+
+
+					{
+						const char* workers_str;
+						if (a.threadPool().isMultiThreaded())
+						{
+							ImGui::LabelValue("Worker threads", a.threadPool().maxCapacity());
+						}
+						else
+						{
+							ImGui::LabelText("Worker threads", "None");
+						}
+						TooltipInt("helper_threads");
+					}
+
+					int verbosity = a._verbosity;
+					if (ImGui::InputInt("Verbosity", &verbosity))
+					{
+						verbosity = std::max(verbosity, 0);
+						a._verbosity = verbosity;
+						a._logger.max_verbosity = verbosity;
+					}
+					ImGui::SetItemTooltip("Max Verbosity level (bigger means more messages).\nUsing command-line option: --verbosity <int>");
+
+
+					ImGui::SeparatorText("Use general layout per usage");
+					ImGui::SetItemTooltip("Select whether to use the general or a usage specific image layout for each image usage.");
+					ImGui::Text("Set All to: "); ImGui::SameLine();
+					if (ImGui::Button("General"))
+					{
+						o.use_general_image_layout_bits = -1;
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("Specific"))
+					{
+						o.use_general_image_layout_bits = 0;
+					}
+
+					constexpr const uint32_t max_usage = VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR;
+					constexpr const uint32_t usage_count = std::countr_zero(max_usage);
+					for (uint32_t i = 0; i <= usage_count; ++i)
+					{
+						VkImageUsageFlagBits usage = VkImageUsageFlagBits(1 << i);
+						auto label = std::string_view(string_VkImageUsageFlagBits(usage));
+						auto prefix = "VK_IMAGE_USAGE_"sv;
+						if (label.find(prefix) != std::string_view::npos)
+						{
+							const size_t offset = prefix.length();
+							bool bit = o.use_general_image_layout_bits & usage;
+							if (ImGui::Checkbox(label.data() + offset , &bit))
+							{
+								if(bit)
+									o.use_general_image_layout_bits |= usage;
+								else
+									o.use_general_image_layout_bits &= ~usage;
+							}
+						}
+					}
+				}
+			};
+
+			struct DevicePanel : public Panel
+			{
+				DevicePanel(VkApplication* app) :
+					Panel(app, "Device##VkApplication")
+				{ }
+
+				virtual void declareInline(Context& ctx)
+				{
+					auto& a = *application();
+					ImGui::LabelHexValue("Id", a.deviceProperties().props2.properties.deviceID);
+					ImGui::TextBox("Name", a.deviceProperties().props2.properties.deviceName);
+					ImGui::TextBox("Type", std::string_view(string_VkPhysicalDeviceType(a.deviceProperties().props2.properties.deviceType)).substr("VK_PHYSICAL_DEVICE_TYPE_"sv.length()).data());
+				}
+			};
+
+			InlinePanel _device;
+			InlinePanel _options;
+
+		public:
+
+			VkApplicationPanel(VkApplication* app) :
+				Parent(app, "Application")
+			{
+				std::enable_shared_from_this<int>;
+				_device = InlinePanel{
+					.panel = std::make_shared<DevicePanel>(app),
+					.id = reinterpret_cast<Id>(_device.panel.get()),
+					.type = InlinePanel::Type::CollapseHeader,
+				};
+				_options = InlinePanel{
+					.panel = std::make_shared<OptionsPanel>(app),
+					.id = reinterpret_cast<Id>(_options.panel.get()),
+					.type = InlinePanel::Type::CollapseHeader,
+				};
+			}
+
+			virtual ~VkApplicationPanel() override
+			{
+				
+			}
+		
+			virtual void declareInline(Context& ctx)
+			{
+				_device.declareInline(ctx);
+				_options.declareInline(ctx);
+			}
+		};
+	}
+
+	void VkApplication::createPanel()
+	{
+		_gui_panel = std::make_shared<GUI::VkApplicationPanel>(this);
 	}
 }

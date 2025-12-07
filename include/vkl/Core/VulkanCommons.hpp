@@ -112,6 +112,7 @@ namespace vkl
 	namespace GUI
 	{
 		class Context;
+		class Panel;
 	}
 
 	struct pNextChain

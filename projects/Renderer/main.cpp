@@ -936,6 +936,9 @@ namespace vkl
 				.name = "View",
 				.options = {
 					GUI::MainPanel::PanelMenuOption{
+						.panel = VkApplication::getGUIPanel(),
+					},
+					GUI::MainPanel::PanelMenuOption{
 						.panel = MakePanel(*sui),
 						.label = "Scene",
 					},
