@@ -30,6 +30,8 @@ namespace vkl::GUI
 
 		PanelHolder(CreateInfo const& ci);
 
+		PanelHolder(VkApplication* app, std::string const& name = {});
+
 	public:
 
 		virtual ~PanelHolder() override;

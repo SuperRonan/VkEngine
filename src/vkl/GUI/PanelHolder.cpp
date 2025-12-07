@@ -11,6 +11,13 @@ namespace vkl::GUI
 		_show_menu = true;
 	}
 
+	PanelHolder::PanelHolder(VkApplication* app, std::string const& name) :
+		PanelHolder(CreateInfo{
+			.app = app,
+			.name = name,
+		})
+	{ }
+
 	PanelHolder::~PanelHolder()
 	{
 
