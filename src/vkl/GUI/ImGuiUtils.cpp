@@ -339,4 +339,51 @@ namespace ImGui
 		ImGui::SetItemTooltip("Detach panel");
 		return res;
 	}
+
+	void LabelCheckbox(const char* label, bool b)
+	{
+		if (false)
+		{
+			BeginDisabled();
+			Checkbox(label, &b);
+			EndDisabled();
+			return;
+		}
+
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return;
+
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		const ImGuiID id = window->GetID(label);
+		const ImVec2 label_size = CalcTextSize(label, NULL, true);
+
+		const float square_sz = GetFrameHeight();
+		const ImVec2 pos = window->DC.CursorPos;
+		const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
+		ItemSize(total_bb, style.FramePadding.y);
+		const bool is_visible = ItemAdd(total_bb, id);
+		if (!is_visible)
+		{
+			return;
+		}
+
+		const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
+		if (is_visible)
+		{
+			RenderFrame(check_bb.Min, check_bb.Max, GetColorU32(ImGuiCol_FrameBg, g.Style.DisabledAlpha), true, style.FrameRounding);
+			if (b)
+			{
+				ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+				const float pad = ImMax(1.0f, IM_TRUNC(square_sz / 6.0f));
+				RenderCheckMark(window->DrawList, check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad * 2.0f);
+			}
+		}
+		const ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+		if (g.LogEnabled)
+			LogRenderedText(&label_pos, b ? "[x]" : "[ ]");
+		if (is_visible && label_size.x > 0.0f)
+			RenderText(label_pos, label);
+	}
 }

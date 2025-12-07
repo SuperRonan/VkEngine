@@ -340,4 +340,78 @@ namespace ImGui
 	extern void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
 
 	extern bool DetachButton();
+
+	static inline void TextBox(const char* label, const char* text)
+	{
+		ImGui::LabelText(label, text);
+	}
+
+	template <class Scalar>
+	static void LabelValue(const char* label, Scalar value, const char* fmt = nullptr)
+	{
+		ImGui::InputScalar(label, GetDataType<Scalar>(), &value, nullptr, nullptr, fmt, ImGuiInputTextFlags_ReadOnly);
+	}
+
+	template <std::integral UInt>
+	static void LabelHexValue(const char* label, UInt value)
+	{
+		const char* fmt;
+		if constexpr (sizeof(UInt) == 2)
+		{
+			fmt = "0x%hX";
+		}
+		else if constexpr (sizeof(UInt) == 4)
+		{
+			fmt = "0x%X";
+		}
+		else if constexpr (sizeof(UInt) == 8)
+		{
+			fmt = "0x%llX";
+		}
+		else
+		{
+			static_assert(false, "Case not handled!");
+		}
+		ImGui::LabelValue(label, value, fmt);
+	}
+
+	template <std::integral UInt>
+	static void LabelHexValueFullWidth(const char* label, UInt value)
+	{
+		const char* fmt = nullptr;
+		if constexpr (sizeof(UInt) == 2)
+		{
+			fmt = "0x%04hX";
+		}
+		else if constexpr (sizeof(UInt) == 4)
+		{
+			fmt = "0x%08X";
+		}
+		else if constexpr (sizeof(UInt) == 8)
+		{
+			fmt = "0x%016llX";
+		}
+		else
+		{
+			static_assert(false, "Case not handled!");
+		}
+		ImGui::LabelValue(label, value, fmt);
+	}
+
+	// const char* label
+	// bool bit (bit field bool, cannot be passed as ref to a regular function)
+	// returns true if changed, false otherwise
+#define IMGUI_DECLARE_BIT_CHECKBOX(label, bit) \
+[&]() { \
+	bool _bit = bit; \
+	bool res = ImGui::Checkbox(label, &_bit); \
+	if(res) \
+	{ \
+		bit = _bit; \
+	} \
+	return res; \
+}()
+
+	// Display a bool with a checkbox (read only)
+	extern void LabelCheckbox(const char* label, bool b);
 }
