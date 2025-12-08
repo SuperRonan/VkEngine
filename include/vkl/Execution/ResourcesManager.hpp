@@ -12,6 +12,7 @@ namespace vkl
 	protected:
 
 		size_t _update_tick = 0;
+		size_t _invalidation_tick = 0;
 
 		std::chrono::milliseconds _auto_file_check_period;
 

@@ -76,6 +76,7 @@ namespace vkl
 
 	UpdateResourcesResult AbstractInstanceHolder::updateResources(UpdateContext& ctx)
 	{
+		const bool invalidation = ctx.invalidationTick() > _latest_update_tick;
 		if (_latest_update_tick >= ctx.updateTick())
 		{
 			auto res = _latest_update_res;
@@ -90,6 +91,13 @@ namespace vkl
 		{
 			return res;
 		}
+
+		if (invalidation)
+		{
+			res.invalidated = true;
+			destroyInstanceIFN();
+		}
+
 		updateResourcesInline(ctx, res);
 
 		return res;

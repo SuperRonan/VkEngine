@@ -255,6 +255,7 @@ namespace vkl
 		Clock::time_point _time_begin = Clock::now();
 		Logger _logger;
 		int _verbosity = 0;
+		bool _should_invalidate_all = false;
 
 		void fillCommonShaderDefinitions();
 
@@ -530,6 +531,11 @@ namespace vkl
 				createPanel();
 			}
 			return _gui_panel;
+		}
+
+		bool& shouldInvalidateAll()
+		{
+			return _should_invalidate_all;
 		}
 	};
 

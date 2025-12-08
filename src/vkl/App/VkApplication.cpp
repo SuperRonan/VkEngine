@@ -25,6 +25,7 @@
 #include <vkl/GUI/PanelHolder.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <slang/slang.h>
 
@@ -1633,6 +1634,13 @@ namespace vkl
 		
 			virtual void declareInline(Context& ctx)
 			{
+				ImGui::TextBox("Application", application()->_name.c_str());
+				ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
+				if (ImGui::Button("Invalidate all API objects"))
+				{
+					application()->_should_invalidate_all = true;
+				}
+				ImGui::PopStyleColor();
 				_device.declareInline(ctx);
 				_options.declareInline(ctx);
 			}

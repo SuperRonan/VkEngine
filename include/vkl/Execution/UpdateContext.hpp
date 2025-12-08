@@ -18,6 +18,7 @@ namespace vkl
 	protected:
 
 		size_t _update_tick;
+		size_t _invalidation_tick;
 
 		bool _update_resources_anyway = false;
 		
@@ -44,6 +45,7 @@ namespace vkl
 			VkApplication * app = nullptr;
 			std::string name = {};
 			size_t update_tick = 0;
+			size_t invalidation_tick = 0;
 			const DefinitionsMap* common_definitions;
 			UploadQueue * upload_queue = nullptr;
 			MipMapComputeQueue * mips_queue = nullptr;
@@ -54,6 +56,7 @@ namespace vkl
 		UpdateContext(CreateInfo const& ci) :
 			VkObject(ci.app, ci.name),
 			_update_tick(ci.update_tick),
+			_invalidation_tick(ci.invalidation_tick),
 			_common_definitions(ci.common_definitions),
 			_upload_queue(ci.upload_queue),
 			_mips_queue(ci.mips_queue),
@@ -65,6 +68,11 @@ namespace vkl
 		constexpr size_t updateTick()const
 		{
 			return _update_tick;
+		}
+
+		constexpr size_t invalidationTick()const
+		{
+			return _invalidation_tick;
 		}
 
 		constexpr const DefinitionsMap * commonDefinitions() const

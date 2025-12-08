@@ -37,6 +37,11 @@ namespace vkl
 			return _collapsed;
 		}
 
+		void invalidate()
+		{
+			_collapsed.clear();
+		}
+
 		void callInvalidationCallbacks()
 		{
 			for (auto& ic : _invalidation_callbacks)

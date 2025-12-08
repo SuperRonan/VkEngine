@@ -46,6 +46,12 @@ namespace vkl
 	std::shared_ptr<UpdateContext> ResourcesManager::beginUpdateCycle()
 	{
 		++_update_tick;
+		if (application()->shouldInvalidateAll())
+		{
+			_invalidation_tick = _update_tick;
+			application()->shouldInvalidateAll() = false;
+			_common_definitions->invalidate();
+		}
 
 		{
 			application()->fileSystem()->resetCache();
@@ -58,6 +64,7 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".update_context",
 			.update_tick = _update_tick,
+			.invalidation_tick = _invalidation_tick,
 			.common_definitions = _common_definitions.get(),
 			.upload_queue = &_upload_queue,
 			.mips_queue = &_mips_queue,
