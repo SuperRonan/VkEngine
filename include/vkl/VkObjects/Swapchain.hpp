@@ -45,6 +45,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			size_t tick = 0;
 			std::shared_ptr<Surface> surface = nullptr;
 			VkSwapchainCreateInfoKHR ci;
 		};
@@ -140,9 +141,11 @@ namespace vkl
 
 		VkSwapchainCreateInfoKHR _ci = {};
 
-		void createInstance();
+		void createInstance(size_t tick);
 
 		virtual void destroyInstanceIFN() override;
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -153,8 +156,6 @@ namespace vkl
 		Swapchain& operator=(Swapchain const&) = delete;
 		
 		virtual ~Swapchain() override;
-
-		bool updateResources(UpdateContext & ctx);
 
 		constexpr VkExtent2D getPossibleExtent(VkExtent2D target, VkSurfaceCapabilitiesKHR capabilities) const
 		{

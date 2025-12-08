@@ -507,28 +507,21 @@ namespace vkl
 		application()->threadPool().pushTask(_create_instance_task);
 	}
 
-	bool Program::updateResources(UpdateContext & ctx)
+	void Program::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
-
 		bool can_create = true;
 
 		for (auto& shader : _shaders)
 		{
-			res |= shader->updateResources(ctx);
+			res.invalidated |= shader->updateResources(ctx).invalidated;
 			can_create &= shader->hasInstanceOrIsPending();
 		}
 		
-		if (checkHoldInstance())
+		if (!_inst && can_create)
 		{
-			if (!_inst && can_create)
-			{
-				launchInstanceCreationTask();
-				res = true;
-			}
+			res.created = true;
+			launchInstanceCreationTask();
 		}
-
-		return res;
 	}
 
 	void Program::waitForInstanceCreationIFN()

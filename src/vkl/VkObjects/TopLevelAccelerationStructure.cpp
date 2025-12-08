@@ -149,91 +149,83 @@ namespace vkl
 		}
 	}
 
-	void TopLevelAccelerationStructure::updateResources(UpdateContext& ctx)
+	void TopLevelAccelerationStructure::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (_update_tick >= ctx.updateTick())
-		{
-			return;
-		}
-		_update_tick = ctx.updateTick();
-
 		static thread_local MyVector<uint32_t> _compact_counter;
 		_compact_counter.resize(_geometries.size());
 
-		if (checkHoldInstance())
-		{
-			VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
-			const VkGeometryFlagsKHR common_flags = _geometry_flags.valueOr(0);
+		VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
+		const VkGeometryFlagsKHR common_flags = _geometry_flags.valueOr(0);
 			
-			if (_inst)
+		if (_inst)
+		{
+			if (_inst->geometryFlags() != common_flags)
 			{
-				if (_inst->geometryFlags() != common_flags)
+				_inst->requireRebuild();
+			}
+		}
+
+		for (size_t i = 0; i < _geometries.size(); ++i)
+		{
+			uint32_t & compact_counter = _compact_counter[i];
+			compact_counter = 0;
+
+			Geometry& g = _geometries[i];
+			for (size_t j = 0; j < g.blases.size(); ++j)
+			{
+				BLASInstance& bi = g.blases[j];
+				if (bi.blas && bi.blas->instance())
 				{
-					_inst->requireRebuild();
+					bool write = false;
+					if (bi.blas->instance() != bi._blas_instance)
+					{
+						bi._blas_instance = bi.blas->instance();
+						write = true;
+					}
+					if (compact_counter != bi._compact_id)
+					{
+						// Relocate
+						bi._compact_id = compact_counter;
+						write = true;
+					}
+					else if (bi._mark_for_update)
+					{
+						write = true;
+					}
+					if (write)
+					{
+						g.instances_buffer->set<VkAccelerationStructureInstanceKHR>(compact_counter, VkAccelerationStructureInstanceKHR{
+							.transform = bi.xform,
+							.instanceCustomIndex = bi.instanceCustomIndex,
+							.mask = bi.mask,
+							.instanceShaderBindingTableRecordOffset = bi.instanceShaderBindingTableRecordOffset,
+							.flags = bi.flags,
+							.accelerationStructureReference = bi._blas_instance->address(),
+							});
+						build_mode = std::min(build_mode, VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR);
+					}
+					bi._mark_for_update = false;
+					++compact_counter;
 				}
 			}
+			g.instances_buffer->updateResources(ctx);
+		}
 
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
+		}
+
+		if (_inst)
+		{
+			TLASI* inst = static_cast<TLASI*>(_inst.get());
+			inst->requireBuildMode(build_mode);
 			for (size_t i = 0; i < _geometries.size(); ++i)
 			{
-				uint32_t & compact_counter = _compact_counter[i];
-				compact_counter = 0;
-
-				Geometry& g = _geometries[i];
-				for (size_t j = 0; j < g.blases.size(); ++j)
-				{
-					BLASInstance& bi = g.blases[j];
-					if (bi.blas && bi.blas->instance())
-					{
-						bool write = false;
-						if (bi.blas->instance() != bi._blas_instance)
-						{
-							bi._blas_instance = bi.blas->instance();
-							write = true;
-						}
-						if (compact_counter != bi._compact_id)
-						{
-							// Relocate
-							bi._compact_id = compact_counter;
-							write = true;
-						}
-						else if (bi._mark_for_update)
-						{
-							write = true;
-						}
-						if (write)
-						{
-							g.instances_buffer->set<VkAccelerationStructureInstanceKHR>(compact_counter, VkAccelerationStructureInstanceKHR{
-								.transform = bi.xform,
-								.instanceCustomIndex = bi.instanceCustomIndex,
-								.mask = bi.mask,
-								.instanceShaderBindingTableRecordOffset = bi.instanceShaderBindingTableRecordOffset,
-								.flags = bi.flags,
-								.accelerationStructureReference = bi._blas_instance->address(),
-								});
-							build_mode = std::min(build_mode, VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR);
-						}
-						bi._mark_for_update = false;
-						++compact_counter;
-					}
-				}
-				g.instances_buffer->updateResources(ctx);
+				inst->setPrimitiveCountIFN(i, _compact_counter[i]);
 			}
-
-			if (!_inst)
-			{
-				createInstance();
-			}
-
-			if (_inst)
-			{
-				TLASI* inst = static_cast<TLASI*>(_inst.get());
-				inst->requireBuildMode(build_mode);
-				for (size_t i = 0; i < _geometries.size(); ++i)
-				{
-					inst->setPrimitiveCountIFN(i, _compact_counter[i]);
-				}
-				inst->link();
-			}
+			inst->link();
 		}
 	}
 

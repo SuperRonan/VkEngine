@@ -462,14 +462,14 @@ namespace vkl
 
 		if (!_use_external_renderpass)
 		{
-			res |= _render_pass->updateResources(ctx);
+			res |= _render_pass->updateResources(ctx).invalidated;
 		}
 
 		res |= ShaderCommand::updateResources(ctx);
 
 		if (_framebuffer)
 		{
-			res |= _framebuffer->updateResources(ctx);
+			res |= _framebuffer->updateResources(ctx).invalidated;
 		}
 
 		return res;

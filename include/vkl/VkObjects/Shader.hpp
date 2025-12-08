@@ -201,8 +201,6 @@ namespace vkl
 
 		using Dependecy = FileSystem::Path;
 
-		size_t _update_tick = 0;
-		bool _latest_update_result = false;
 		std::filesystem::path _path;
 		VkShaderStageFlagBits _stage;
 		DynamicValue<DefinitionsList> _definitions;
@@ -223,6 +221,8 @@ namespace vkl
 
 		mutable std::shared_ptr<AsynchTask> _create_instance_task = nullptr;
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		struct CreateInfo
@@ -240,8 +240,6 @@ namespace vkl
 		Shader(CreateInfo const& ci);
 
 		virtual ~Shader() override;
-
-		bool updateResources(UpdateContext & ctx);
 
 		bool hasInstanceOrIsPending() const
 		{

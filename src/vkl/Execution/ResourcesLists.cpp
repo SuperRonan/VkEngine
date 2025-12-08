@@ -16,37 +16,37 @@ namespace vkl
 		for (auto& image_view : images)
 		{
 			assert(!!image_view);
-			const bool invalidated = image_view->updateResource(context);
+			const auto invalidated = image_view->updateResources(context);
 		}
 
 		for (auto& buffer : buffers)
 		{
 			assert(!!buffer);
-			const bool invalidated = buffer->updateResource(context);
+			const auto invalidated = buffer->updateResources(context);
 		}
 
 		for (auto& sampler : samplers)
 		{
 			assert(!!sampler);
-			const bool invalidated = sampler->updateResources(context);
+			const auto invalidated = sampler->updateResources(context);
 		}
 
 		for (auto& command : commands)
 		{
 			assert(!!command);
-			const bool invalidated = command->updateResources(context);
+			const auto invalidated = command->updateResources(context);
 		}
 
 		for (auto& set : sets)
 		{
 			assert(!!set);
-			const bool invalidated = set->updateResources(context);
+			const auto invalidated = set->updateResources(context);
 		}
 
 		for (auto& fb : framebuffers)
 		{
 			assert(fb);
-			const bool invalidated = fb->updateResources(context);
+			const auto invalidated = fb->updateResources(context);
 		}
 	}
 

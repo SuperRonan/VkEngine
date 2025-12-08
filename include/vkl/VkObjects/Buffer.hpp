@@ -209,7 +209,8 @@ namespace vkl
 		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_MAX_ENUM;
 		VmaAllocator _allocator = nullptr;
-		
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -250,8 +251,6 @@ namespace vkl
 		}
 
 		void createInstance();
-
-		bool updateResource(UpdateContext & ctx);
 	};
 
 	struct BufferAndRangeInstance

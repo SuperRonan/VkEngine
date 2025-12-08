@@ -145,7 +145,6 @@ namespace vkl
 	protected:
 
 		bool _is_dynamic = false;
-		size_t _update_tick = 0;
 
 		// Sorted by Binding Index
 		MyVector<Binding> _bindings;
@@ -154,6 +153,8 @@ namespace vkl
 		VkDescriptorBindingFlags _binding_flags = 0;
 
 		void sortBindings();
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -172,8 +173,6 @@ namespace vkl
 		DescriptorSetLayout(CreateInfo const& ci);
 
 		virtual ~DescriptorSetLayout() override;
-
-		bool updateResources(UpdateContext & ctx);
 
 		void createInstance();
 		

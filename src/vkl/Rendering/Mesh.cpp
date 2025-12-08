@@ -716,7 +716,7 @@ namespace vkl
 	{
 		if (_device.mesh_buffer)
 		{
-			_device.mesh_buffer->updateResource(ctx);
+			_device.mesh_buffer->updateResources(ctx);
 
 			if (!_device.up_to_date)
 			{

@@ -312,7 +312,7 @@ namespace vkl
 	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)
 	{
 		Material::updateResources(ctx);
-		_props_buffer->updateResource(ctx);
+		_props_buffer->updateResources(ctx);
 
 		const Properties new_props = getProperties();
 		if (new_props.flags != _cached_props.flags)

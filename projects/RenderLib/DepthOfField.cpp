@@ -96,8 +96,8 @@ namespace vkl
 	
 	void DepthOfField::updateResources(UpdateContext& ctx)
 	{
-		_target->updateResource(ctx);
-		_target_copy->updateResource(ctx);
+		_target->updateResources(ctx);
+		_target_copy->updateResources(ctx);
 		_sampler->updateResources(ctx);
 		_depth_sampler->updateResources(ctx);
 		ctx.resourcesToUpdateLater() += _command;

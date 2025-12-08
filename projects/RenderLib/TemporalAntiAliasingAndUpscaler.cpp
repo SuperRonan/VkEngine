@@ -166,7 +166,7 @@ namespace vkl
 	void TemporalAntiAliasingAndUpscaler::updateResources(UpdateContext& ctx)
 	{
 		setFormat();
-		_output->updateResource(ctx);
+		_output->updateResources(ctx);
 
 		if (_enable || ctx.updateAnyway())
 		{

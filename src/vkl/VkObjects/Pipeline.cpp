@@ -84,41 +84,30 @@ namespace vkl
 		_program->removeInvalidationCallback(this);
 	}
 
-	bool Pipeline::updateResources(UpdateContext & ctx)
+	void Pipeline::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (_latest_update_tick >= ctx.updateTick())
-		{
-			return _latest_update_result;
-		}
-		_latest_update_tick = ctx.updateTick();
-		bool & res = _latest_update_result = false;
 		bool can_create = true;
-
-		res |= _program->updateResources(ctx);
+		res.invalidated |= _program->updateResources(ctx).invalidated;
 		can_create &= _program->hasInstanceOrIsPending();
 
-		if (checkHoldInstance())
+		if (_inst)
 		{
-			if (_inst)
+			if (checkInstanceParamsReturnInvalid())
 			{
-				if (checkInstanceParamsReturnInvalid())
-				{
-					res = true;
-				}
-
-				if (res)
-				{
-					destroyInstanceIFN();
-				}
+				res.invalidated = true;
 			}
 
-			if (!_inst && can_create)
+			if (res.invalidated)
 			{
-				launchInstanceCreationTask();
-				res = true;
+				destroyInstanceIFN();
 			}
 		}
-		return res;
+
+		if (!_inst && can_create)
+		{
+			res.created = true;
+			launchInstanceCreationTask();
+		}
 	}
 
 	void Pipeline::waitForInstanceCreationIFN()

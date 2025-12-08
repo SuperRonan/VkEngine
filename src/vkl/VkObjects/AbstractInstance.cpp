@@ -1,5 +1,7 @@
 #include <vkl/VkObjects/AbstractInstance.hpp>
 
+#include <vkl/Execution/UpdateContext.hpp>
+
 namespace vkl
 {
 	void AbstractInstanceHolder::callInvalidationCallbacks()
@@ -43,7 +45,7 @@ namespace vkl
 	//	}
 	//}
 
-	bool AbstractInstanceHolder::checkHoldInstance()
+	void AbstractInstanceHolder::checkHoldInstance(UpdateResourcesResult& res)
 	{
 		if (_hold_instance.hasValue())
 		{
@@ -56,13 +58,40 @@ namespace vkl
 			}
 			else if (!hi)
 			{
+				res.invalidated = true;
 				destroyInstanceIFN();
 			}
-			return hi;
+			res.holds_instance = hi;
 		}
 		else
 		{
-			return true;
+			res.holds_instance = true;
 		}
+	}
+
+	void AbstractInstanceHolder::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
+	{
+		assertm(false, "Should not be here.");
+	}
+
+	UpdateResourcesResult AbstractInstanceHolder::updateResources(UpdateContext& ctx)
+	{
+		if (_latest_update_tick >= ctx.updateTick())
+		{
+			auto res = _latest_update_res;
+			res.cached = true;
+			return res;
+		}
+		_latest_update_tick = ctx.updateTick();
+
+		auto& res = _latest_update_res = {};
+		checkHoldInstance(res);
+		if (!res.holds_instance)
+		{
+			return res;
+		}
+		updateResourcesInline(ctx, res);
+
+		return res;
 	}
 }

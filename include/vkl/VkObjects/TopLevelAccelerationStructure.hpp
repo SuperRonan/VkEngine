@@ -124,8 +124,9 @@ namespace vkl
 
 	protected:
 
-
 		MyVector<Geometry> _geometries;
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -155,8 +156,6 @@ namespace vkl
 		{
 			return std::reinterpret_pointer_cast<TopLevelAccelerationStructureInstance>(_inst);
 		}
-
-		virtual void updateResources(UpdateContext& ctx) override;
 
 		void createInstance();
 

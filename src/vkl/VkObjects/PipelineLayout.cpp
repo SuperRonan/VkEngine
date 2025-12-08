@@ -120,35 +120,25 @@ namespace vkl
 		});
 	}
 
-	bool PipelineLayout::updateResources(UpdateContext& ctx)
+	void PipelineLayout::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
 		if (isDynamic())
 		{
-			if (ctx.updateTick() > _update_tick)
+			for (size_t i = 0; i < _sets.size(); ++i)
 			{
-				_update_tick = ctx.updateTick();
-				if (checkHoldInstance())
+				if (_sets[i])
 				{
-					for (size_t i = 0; i < _sets.size(); ++i)
-					{
-						if (_sets[i])
-						{
-							res |= _sets[i]->updateResources(ctx);
-						}
-					}
-
-					if (!_inst)
-					{
-						createInstance();
-						res = true;
-					}
+					res.invalidated |= _sets[i]->updateResources(ctx).invalidated;
 				}
 			}
 		}
 
-		assert(!!_inst);
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
+		}
 
-		return res;
+		assert(!!_inst);
 	}
 }

@@ -85,6 +85,8 @@ namespace vkl
 
 		MyVector<Geometry> _vk_geometries;
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		struct CreateInfo
@@ -107,8 +109,6 @@ namespace vkl
 		{
 			return std::reinterpret_pointer_cast<BottomLevelAccelerationStructureInstance>(_inst);
 		}
-
-		virtual void updateResources(UpdateContext& ctx) override;
 
 		void createInstance();
 	};

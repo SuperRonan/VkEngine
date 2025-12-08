@@ -292,9 +292,9 @@ namespace vkl
 
 		if (_image)
 		{
-			_image->updateResource(ctx);
-			_top_mip_view->updateResource(ctx);
-			_all_mips_view->updateResource(ctx);
+			_image->updateResources(ctx);
+			_top_mip_view->updateResources(ctx);
+			_all_mips_view->updateResources(ctx);
 		}
 
 		if (_should_upload)

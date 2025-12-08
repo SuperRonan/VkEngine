@@ -780,72 +780,64 @@ namespace vkl
 		return res;
 	}
 
-	bool DescriptorSetAndPool::updateResources(UpdateContext& context)
+	void DescriptorSetAndPool::updateResourcesInline(UpdateContext& context, UpdateResourcesResult& res)
 	{
-		bool res = false;
-
-		if (checkHoldInstance())
+		if (!_inst)
 		{
-			if (!_inst)
-			{	
-				res = true;
-				waitForInstanceCreationIFN();
-				std::vector<std::shared_ptr<AsynchTask>> dependencies;
+			res.created = true;
+			waitForInstanceCreationIFN();
+			std::vector<std::shared_ptr<AsynchTask>> dependencies;
 
-				bool can_create = true;
+			bool can_create = true;
 
-				if (_layout_from_prog)
+			if (_layout_from_prog)
+			{
+				assert(_prog);
+				can_create &= _prog->hasInstanceOrIsPending();
+				if (_prog->creationTask())
 				{
-					assert(_prog);
-					can_create &= _prog->hasInstanceOrIsPending();
-					if (_prog->creationTask())
-					{
-						dependencies.push_back(_prog->creationTask());
-					}
-				}
-
-				if (can_create)
-				{
-					_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
-						.name = "Creating DescriptorSetAndPool " + name(),
-						.verbosity = AsynchTask::Verbosity::High,
-						.priority = TaskPriority::ASAP(),
-						.lambda = [this]()
-						{
-							AsynchTask::ReturnType task_res{
-								.success = true,
-							};
-							ResourceBindings instance_bindings = resolveBindings(task_res);
-
-							if (task_res.success)
-							{
-								std::shared_ptr layout = _layout_from_prog ? _prog->instance()->setsLayouts()[_target_set] : _layout->instance();
-								_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
-									.app = application(),
-									.name = name(),
-									.layout = layout,
-									.bindings = instance_bindings,
-								});
-
-								_inst->writeDescriptorSet(nullptr);
-							}
-
-
-							return task_res;
-						},
-						.dependencies = dependencies,
-					});
-					application()->threadPool().pushTask(_create_instance_task);
+					dependencies.push_back(_prog->creationTask());
 				}
 			}
-			else
+
+			if (can_create)
 			{
-				_inst->writeDescriptorSet(&context);
+				_create_instance_task = std::make_shared<AsynchTask>(AsynchTask::CI{
+					.name = "Creating DescriptorSetAndPool " + name(),
+					.verbosity = AsynchTask::Verbosity::High,
+					.priority = TaskPriority::ASAP(),
+					.lambda = [this]()
+					{
+						AsynchTask::ReturnType task_res{
+							.success = true,
+						};
+						ResourceBindings instance_bindings = resolveBindings(task_res);
+
+						if (task_res.success)
+						{
+							std::shared_ptr layout = _layout_from_prog ? _prog->instance()->setsLayouts()[_target_set] : _layout->instance();
+							_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
+								.app = application(),
+								.name = name(),
+								.layout = layout,
+								.bindings = instance_bindings,
+							});
+
+							_inst->writeDescriptorSet(nullptr);
+						}
+
+
+						return task_res;
+					},
+					.dependencies = dependencies,
+				});
+				application()->threadPool().pushTask(_create_instance_task);
 			}
 		}
-		
-
-		return res;
+		else
+		{
+			_inst->writeDescriptorSet(&context);
+		}
 	}
 
 	ResourceBindings::iterator DescriptorSetAndPool::findBinding(uint32_t binding)

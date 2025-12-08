@@ -430,7 +430,7 @@ namespace vkl
 			_spectrum_mode_str = std::format("LIGHT_TRANSPORT_SPECTUM_MODE {0:#0x}", _spectrum_mode);
 		}
 
-		_light_tracer_buffer->updateResource(ctx);
+		_light_tracer_buffer->updateResources(ctx);
 		
 		// Recompute BDPT scratch buffer memory requirement and dispatch size
 		{
@@ -463,7 +463,7 @@ namespace vkl
 			_bdpt_scratch_buffer_size = reduced_pixels * max_vertices * 2 * (vertex_size + pdf_pair_size);
 			_bdpt_scratch_buffer_segment_2 = reduced_pixels * max_vertices * 2 * vertex_size;
 		}
-		_bdpt_scratch_buffer->updateResource(ctx);
+		_bdpt_scratch_buffer->updateResources(ctx);
 		VkFormat target_format = _target->format().value();
 		if (target_format != _target_format)
 		{

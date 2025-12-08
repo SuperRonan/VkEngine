@@ -68,8 +68,7 @@ namespace vkl
 		Dyn<uint32_t> _count = {};
 		VkQueryPipelineStatisticFlags _pipeline_statistics = 0;
 
-		size_t _latest_update_tick = 0;
-
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -100,7 +99,5 @@ namespace vkl
 		}
 		
 		void createInstance();
-
-		void updateResources(UpdateContext & ctx);
 	};
 }

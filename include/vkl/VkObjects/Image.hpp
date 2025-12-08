@@ -20,6 +20,7 @@ namespace vkl
 		{
 			VkApplication  * app = nullptr;
 			std::string name = {};
+			size_t tick = 0;
 			VkImageCreateInfo ci;
 			VmaAllocationCreateInfo aci;
 		};
@@ -30,6 +31,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			size_t tick = 0;
 			VkImageCreateInfo ci;
 			VkImage image = VK_NULL_HANDLE;
 		};
@@ -223,6 +225,10 @@ namespace vkl
 
 		void associateImage(AssociateInfo const& assos);
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
+		virtual void destroyInstanceIFN() override;
+
 	protected:
 
 		VkImageCreateFlags _flags = 0;
@@ -240,9 +246,6 @@ namespace vkl
 
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
 
-		// Could bitpack maybe
-		size_t _latest_update_tick = 0;
-		bool _latest_update_res = false;
 		bool _inst_all_mips = false;
 
 	public:
@@ -253,7 +256,7 @@ namespace vkl
 
 		virtual ~Image() override {};
 
-		void createInstance();
+		void createInstance(size_t tick = 0);
 
 		constexpr VkImageCreateFlags flags()const
 		{
@@ -320,7 +323,5 @@ namespace vkl
 		//VkImageSubresourceRange defaultSubresourceRange();
 
 		Dyn<VkImageSubresourceRange> fullSubresourceRange();
-
-		bool updateResource(UpdateContext & ctx);
 	};
 }

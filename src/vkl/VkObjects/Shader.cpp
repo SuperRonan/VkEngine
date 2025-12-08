@@ -1520,68 +1520,56 @@ namespace vkl
 		ParentType::destroyInstanceIFN();
 	}
 
-	bool Shader::updateResources(UpdateContext & ctx)
+	void Shader::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
 		using namespace std::containers_append_operators;
 
 		static thread_local DefinitionsList definitions = {};
 		static thread_local SpecializationKey new_key;
-		
-		if (ctx.updateTick() <= _update_tick)
+
+		waitForInstanceCreationIFN();
+
+		if (_latest_file_time > _instance_time)
 		{
-			return _latest_update_result;
+			_specializations.clear();
+			res.invalidated = true;
 		}
-		_update_tick = ctx.updateTick();
-		bool &res = _latest_update_result = false;
 
-		if (checkHoldInstance())
+		if (_definitions.hasValue())
 		{
-			waitForInstanceCreationIFN();
+			definitions.clear();
+			new_key.clear();
 
-			if (_latest_file_time > _instance_time)
+			definitions = *_definitions;
+			definitions += ctx.commonDefinitions()->collapsed();
+
+			Collapse(new_key.definitions, definitions);
+			const bool use_different_spec = new_key != _current_key;
+			if (use_different_spec)
 			{
-				_specializations.clear();
-				res = true;
-			}
-
-			if (_definitions.hasValue())
-			{
-				definitions.clear();
-				new_key.clear();
-
-				definitions = *_definitions;
-				definitions += ctx.commonDefinitions()->collapsed();
-
-				Collapse(new_key.definitions, definitions);
-				const bool use_different_spec = new_key != _current_key;
-				if (use_different_spec)
-				{
-					_current_key = new_key;
-					res = true;
-				}
-			}
-
-			if (res)
-			{
-				destroyInstanceIFN();
-			}
-		
-		
-			if (!_inst)
-			{
-				std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
-				uint32_t packed_capcity = 32;
-				if(!capacity.empty())
-				{	
-					// TODO use a better function that checks the result and can parse hex
-					packed_capcity = std::atoi(capacity.c_str());
-				}
-				createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info);
-				res = true;
+				_current_key = new_key;
+				res.invalidated = true;
 			}
 		}
 
-		return res;
+		if (res.invalidated)
+		{
+			destroyInstanceIFN();
+		}
+		
+		
+		if (!_inst)
+		{
+			std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
+			uint32_t packed_capcity = 32;
+			if(!capacity.empty())
+			{	
+				// TODO use a better function that checks the result and can parse hex
+				packed_capcity = std::atoi(capacity.c_str());
+			}
+			res.created = true;
+			createInstance(_current_key, ctx.commonDefinitions()->collapsed(), static_cast<size_t>(packed_capcity), application()->options().generate_shader_debug_info);
+		}
 	}
 
 	Shader::Shader(CreateInfo const& ci):

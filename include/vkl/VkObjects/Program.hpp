@@ -137,6 +137,8 @@ namespace vkl
 
 		virtual void destroyInstanceIFN() override;
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		uint32_t addShader(std::shared_ptr<Shader> const& shader);
@@ -167,8 +169,6 @@ namespace vkl
 		{
 			return _shaders;
 		}
-
-		bool updateResources(UpdateContext & ctx);
 
 		bool hasInstanceOrIsPending() const
 		{

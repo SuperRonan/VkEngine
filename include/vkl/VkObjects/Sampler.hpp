@@ -70,6 +70,8 @@ namespace vkl
 
 		VkSamplerCreateInfo _vk_ci = {};
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		struct CreateInfo
@@ -91,8 +93,6 @@ namespace vkl
 		Sampler(CreateInfo const& ci);
 
 		virtual ~Sampler() override;
-
-		bool updateResources(UpdateContext & ctx);
 
 		static std::shared_ptr<Sampler> MakeNearest(VkApplication * app = nullptr);
 

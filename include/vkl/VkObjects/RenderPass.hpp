@@ -318,6 +318,8 @@ namespace vkl
 
 		void createInstance();
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		struct CreateInfo
@@ -357,8 +359,6 @@ namespace vkl
 		RenderPass(SinglePassCreateInfo const& spci);
 
 		virtual ~RenderPass()override;
-
-		bool updateResources(UpdateContext & ctx);
 
 		constexpr const auto& attachments() const
 		{

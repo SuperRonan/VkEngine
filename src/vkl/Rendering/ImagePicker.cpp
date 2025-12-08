@@ -51,7 +51,7 @@ namespace vkl
 
 	void ImagePicker::updateResources(UpdateContext& ctx)
 	{
-		_dst->updateResource(ctx);
+		_dst->updateResources(ctx);
 
 		ctx.resourcesToUpdateLater() += _blitter;
 	}

@@ -982,13 +982,11 @@ namespace vkl
 		});
 	}
 
-	bool RenderPass::updateResources(UpdateContext& ctx)
+	void RenderPass::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
-
-		if (checkHoldInstance())
+		if (_inst)
 		{
-			if (_inst)
+			res.invalidated = [&]() -> bool
 			{
 				if (_attachments.size() == _inst->_attachement_descriptors.size())
 				{
@@ -998,88 +996,79 @@ namespace vkl
 						const VkFormat new_format = desc.format.value();
 						if (new_format != _inst->_attachement_descriptors[i].format)
 						{
-							res = true;
-							break;
+							return true;
 						}
 						const VkSampleCountFlagBits new_samples = desc.samples.valueOr(VK_SAMPLE_COUNT_1_BIT);
 						if (new_samples != _inst->_attachement_descriptors[i].samples)
 						{
-							res = true;
-							break;
+							return true;
 						}
 						const AttachmentDescription2::Flags new_flags = desc.flags.valueOr(AttachmentDescription2::Flags::None);
 						if (new_flags != _inst->_attachments_usages[i].flags)
 						{
-							res = true;
-							break;
+							return true;
 						}
 					}
 				}
 				else
 				{
-					res = true;
+					return true;
 				}
-				
-				if (!res)
+
+				if (_subpasses.size() == _inst->_subpasses.size())
 				{
-					if (_subpasses.size() == _inst->_subpasses.size())
+					for (uint32_t s = 0; s < _subpasses.size32(); ++s)
 					{
-						for (uint32_t s = 0; s < _subpasses.size32(); ++s)
+						SubPassDescription2 const& desc = _subpasses[s];
+						if (desc.fragment_shading_rate.index != VK_ATTACHMENT_UNUSED)
 						{
-							SubPassDescription2 const& desc = _subpasses[s];
-							if (desc.fragment_shading_rate.index != VK_ATTACHMENT_UNUSED)
+							if (desc.shading_rate_texel_size.hasValue())
 							{
-								if (desc.shading_rate_texel_size.hasValue())
-								{
-									const VkExtent2D new_extent = desc.shading_rate_texel_size.value();
-									const pNextChain chain = _inst->_subpasses.data() + s;
-									if (const VkStruct* candidate = chain.find(VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR))
-									{
-										const VkFragmentShadingRateAttachmentInfoKHR * value = reinterpret_cast<const VkFragmentShadingRateAttachmentInfoKHR*>(candidate);
-										if (value->shadingRateAttachmentTexelSize != new_extent)
-										{
-											res = true;
-											break;
-										}
-									}
-								}
-							}
-							
-							if (desc.inline_multisampling.hasValue())
-							{
-								const VkSampleCountFlagBits new_ms = desc.inline_multisampling.value();
+								const VkExtent2D new_extent = desc.shading_rate_texel_size.value();
 								const pNextChain chain = _inst->_subpasses.data() + s;
-								if (const VkStruct* candidate = chain.find(VK_STRUCTURE_TYPE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_INFO_EXT))
+								if (const VkStruct* candidate = chain.find(VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR))
 								{
-									const VkMultisampledRenderToSingleSampledInfoEXT * value = reinterpret_cast<const VkMultisampledRenderToSingleSampledInfoEXT*>(candidate);
-									if (value->rasterizationSamples != new_ms)
+									const VkFragmentShadingRateAttachmentInfoKHR * value = reinterpret_cast<const VkFragmentShadingRateAttachmentInfoKHR*>(candidate);
+									if (value->shadingRateAttachmentTexelSize != new_extent)
 									{
-										res = true;
-										break;
+										return true;
 									}
 								}
 							}
 						}
-					}
-					else
-					{
-						res = false;
+							
+						if (desc.inline_multisampling.hasValue())
+						{
+							const VkSampleCountFlagBits new_ms = desc.inline_multisampling.value();
+							const pNextChain chain = _inst->_subpasses.data() + s;
+							if (const VkStruct* candidate = chain.find(VK_STRUCTURE_TYPE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_INFO_EXT))
+							{
+								const VkMultisampledRenderToSingleSampledInfoEXT * value = reinterpret_cast<const VkMultisampledRenderToSingleSampledInfoEXT*>(candidate);
+								if (value->rasterizationSamples != new_ms)
+								{
+									return true;
+								}
+							}
+						}
 					}
 				}
-
-				if (res)
+				else
 				{
-					destroyInstanceIFN();
+					return true;
 				}
-			}
+				return false;
+			}();
 
-			if (!_inst)
+			if (res.invalidated)
 			{
-				res = true;
-				createInstance();
+				destroyInstanceIFN();
 			}
 		}
 
-		return res;
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
+		}
 	}
 }

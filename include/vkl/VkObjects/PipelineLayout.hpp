@@ -69,11 +69,12 @@ namespace vkl
 	protected:
 
 		bool _is_dynamic = false;
-		size_t _update_tick = 0;
 		
 		VkPipelineLayoutCreateFlags _flags = 0;
 		std::vector<std::shared_ptr<DescriptorSetLayout>> _sets = {};
 		std::vector<VkPushConstantRange> _push_constants = {};
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -92,8 +93,6 @@ namespace vkl
 		virtual ~PipelineLayout() override;
 
 		void createInstance();
-
-		bool updateResources(UpdateContext & ctx);
 
 		constexpr const auto& setsLayouts()const
 		{

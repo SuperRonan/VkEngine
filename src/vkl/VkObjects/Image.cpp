@@ -88,7 +88,7 @@ namespace vkl
 	}
 
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
-		AbstractInstance(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name, ci.tick),
 		_ci(ci.ci),
 		_vma_ci(ci.aci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
@@ -98,11 +98,12 @@ namespace vkl
 	}
 
 	ImageInstance::ImageInstance(AssociateInfo const& ai) :
-		AbstractInstance(ai.app, ai.name),
+		AbstractInstance(ai.app, ai.name, ai.tick),
 		_ci(ai.ci),
 		_image(ai.image),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
+		setVkNameIFP();
 		setInitialState(0);
 	}
 
@@ -357,7 +358,19 @@ namespace vkl
 		associateImage(assos);
 	}
 
-	void Image::createInstance()
+	void Image::destroyInstanceIFN()
+	{
+		if (_inst && !_inst->ownership())
+		{
+			
+		}
+		else
+		{
+			InstanceHolder<ImageInstance>::destroyInstanceIFN();
+		}
+	}
+
+	void Image::createInstance(size_t tick)
 	{
 		assert(!_inst);
 		uint32_t n_queues = 0;
@@ -409,6 +422,7 @@ namespace vkl
 		{
 			.app = _app,
 			.name = name(),
+			.tick = tick,
 			.ci = image_ci,
 			.aci = alloc,
 		});
@@ -436,67 +450,58 @@ namespace vkl
 	}
 
 
-	bool Image::updateResource(UpdateContext & ctx)
+	void Image::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (ctx.updateTick() <= _latest_update_tick)
+		using namespace vk_operators;
+		if (_inst)
 		{
-			return _latest_update_res;
-		}
-		_latest_update_tick = ctx.updateTick();
-		bool & res = _latest_update_res = false;
-
-		if (checkHoldInstance())
-		{
-			using namespace vk_operators;
-			if (_inst)
+			if (_inst->ownership())
 			{
-				if (_inst->ownership())
+				res.invalidated = [&]()
 				{
 					const VkImageCreateInfo & inst_ci = _inst->createInfo();
 					const VkExtent3D new_extent = *_extent;
 					if (new_extent != inst_ci.extent)
 					{
-						res = true;
+						return true;
 					}
 					const uint32_t new_mips = *_mips;
 					if (new_mips != inst_ci.mipLevels)
 					{
 						if (!(new_mips == uint32_t(-1) && _inst_all_mips))
 						{
-							res = true;
+							return true;
 						}
 					}
 					const VkFormat new_format = *_format;
 					if (new_format != inst_ci.format)
 					{
-						res = true;
+						return true;
 					}
 					const uint32_t new_layers = *_layers;
 					if (new_layers != inst_ci.arrayLayers)
 					{
-						res = true;
+						return true;
 					}
 					const VkSampleCountFlagBits new_samples = *_samples;
 					if (new_samples != inst_ci.samples)
 					{
-						res = true;
+						return true;
 					}
-
-					if (res)
-					{
-						destroyInstanceIFN();
-					}
+					return false;
+				}();
+				if (res.invalidated)
+				{
+					destroyInstanceIFN();
 				}
-			}
-
-			if (!_inst)
-			{
-				createInstance();
-				res = true;
 			}
 		}
 
-		return res;
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance(ctx.updateTick());
+		}
 	}
 
 	//VkImageSubresourceRange Image::defaultSubresourceRange()

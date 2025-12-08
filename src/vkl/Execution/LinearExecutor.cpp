@@ -680,7 +680,7 @@ namespace vkl
 
 		if (_common_ubo)
 		{
-			_common_ubo->updateResource(context);
+			_common_ubo->updateResources(context);
 		}
 
 		if (_debug_renderer)

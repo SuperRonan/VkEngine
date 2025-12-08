@@ -192,7 +192,7 @@ namespace vkl
 
 	void AmbientOcclusion::updateResources(UpdateContext& ctx)
 	{
-		_target->updateResource(ctx);
+		_target->updateResources(ctx);
 		if (_enable)
 		{
 			_method_glsl.back() = '0' + _gui_method.index();

@@ -353,7 +353,7 @@ namespace vkl
 		_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
 		_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
 		_debug_chunks_capacity = (1 << _log2_debug_chunks);
-		_debug_buffer->updateResource(ctx); // this one holds instance based on _enable_debug
+		_debug_buffer->updateResources(ctx); // this one holds instance based on _enable_debug
 		if (_enable_debug)
 		{
 			_font->updateResources(ctx);

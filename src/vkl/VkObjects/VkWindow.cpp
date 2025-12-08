@@ -609,7 +609,8 @@ namespace vkl
 		bool res = false;
 		updateWindowIFP();
 
-		res |= _swapchain->updateResources(ctx);
+		auto swapchain_update = _swapchain->updateResources(ctx);
+		res |= swapchain_update.invalidated || swapchain_update.created;
 
 		deduceColorCorrection();
 

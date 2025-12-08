@@ -32,7 +32,7 @@ namespace vkl
 		}
 
 		std::shared_ptr<BufferInstance> bi = _buffer->instance();
-		_buffer->updateResource(ctx);
+		_buffer->updateResources(ctx);
 		return bi;
 	}
 

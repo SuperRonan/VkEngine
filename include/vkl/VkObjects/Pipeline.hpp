@@ -86,12 +86,8 @@ namespace vkl
 
 	protected:
 
-
 		VkPipelineBindPoint _binding = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-		
-		bool _latest_update_result = false;
-		size_t _latest_update_tick = 0;
-		
+
 		std::shared_ptr<Program> _program = nullptr;
 
 
@@ -104,6 +100,8 @@ namespace vkl
 		virtual void destroyInstanceIFN() override;
 
 		virtual bool checkInstanceParamsReturnInvalid() = 0;
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 	public:
 
@@ -126,8 +124,6 @@ namespace vkl
 		{
 			return _program.get();
 		}
-
-		bool updateResources(UpdateContext & ctx);
 
 		bool instanceIsPending() const
 		{

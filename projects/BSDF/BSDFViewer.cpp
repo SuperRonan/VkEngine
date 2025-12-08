@@ -321,8 +321,8 @@ namespace vkl
 		_ubo->setIFN(ubo_size, _colors.data(), _colors.byte_size());
 
 		_ubo->updateResources(ctx);
-		_statistics_buffer->updateResource(ctx);
-		_functions_image->updateResource(ctx);
+		_statistics_buffer->updateResources(ctx);
+		_functions_image->updateResources(ctx);
 		_set->updateResources(ctx);
 
 		_render_pass->updateResources(ctx);

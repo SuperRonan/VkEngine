@@ -854,17 +854,17 @@ namespace vkl
 
 	void SimpleRenderer::FatDeferredPipeline::updateResources(UpdateContext& ctx, bool update_direct, bool update_indirect)
 	{
-		albedo->updateResource(ctx);
-		position->updateResource(ctx);
-		normal->updateResource(ctx);
-		tangent->updateResource(ctx);
+		albedo->updateResources(ctx);
+		position->updateResources(ctx);
+		normal->updateResources(ctx);
+		tangent->updateResources(ctx);
 		DeferredPipelineBase::updateResources(ctx, update_direct, update_indirect);
 	}
 
 	void SimpleRenderer::MinimalDeferredPipeline::updateResources(UpdateContext& ctx, bool update_direct, bool update_indirect)
 	{
-		ids->updateResource(ctx);
-		uvs->updateResource(ctx);
+		ids->updateResources(ctx);
+		uvs->updateResources(ctx);
 		DeferredPipelineBase::updateResources(ctx, update_direct, update_indirect);
 	}
 
@@ -878,8 +878,8 @@ namespace vkl
 		_shadow_method_glsl_def.back() = '0' + _shadow_method.index();
 
 		_taau->updateResources(ctx);
-		_render_target->updateResource(ctx);
-		_depth->updateResource(ctx);
+		_render_target->updateResources(ctx);
+		_depth->updateResources(ctx);
 
 		{
 			const uint32_t desired_size = _scene->objectCount();
@@ -891,7 +891,7 @@ namespace vkl
 		}
 		if (_use_indirect_rendering || update_all_anyway)
 		{
-			_draw_indexed_indirect_buffer->updateResource(ctx);
+			_draw_indexed_indirect_buffer->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _prepare_draw_list;
 		}
 
@@ -975,7 +975,7 @@ namespace vkl
 
 					if (lid.depth_view)
 					{
-						lid.depth_view->updateResource(ctx);
+						lid.depth_view->updateResources(ctx);
 					}
 					if (my_lid && my_lid->framebuffer && _use_indirect_rendering)
 					{

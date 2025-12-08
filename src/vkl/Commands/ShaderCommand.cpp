@@ -224,11 +224,11 @@ namespace vkl
 	{
 		bool res = false;
 
-		res |= _pipeline->updateResources(ctx);
+		res |= _pipeline->updateResources(ctx).invalidated;
 
 		if (_set)
 		{
-			res |= _set->updateResources(ctx);
+			res |= _set->updateResources(ctx).invalidated;
 		}
 
 		return res;

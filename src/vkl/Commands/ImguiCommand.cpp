@@ -364,7 +364,7 @@ namespace vkl
 
 		if (_render_pass)
 		{
-			res |= _render_pass->updateResources(ctx);
+			res |= _render_pass->updateResources(ctx).invalidated;
 		}
 
 		if (_render_pass && _framebuffers.empty())
@@ -380,7 +380,7 @@ namespace vkl
 
 		for (auto& fb : _framebuffers)
 		{
-			res |= fb->updateResources(ctx);
+			res |= fb->updateResources(ctx).invalidated;
 		}
 
 		if (!_render_pass)

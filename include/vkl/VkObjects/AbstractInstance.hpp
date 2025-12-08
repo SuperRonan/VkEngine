@@ -9,13 +9,15 @@ namespace vkl
 	{
 	protected:
 
+		size_t _creation_tick = {};
 		std::vector<Callback> _destruction_callbacks = {};
 
 	public:
 
 		template <class StringLike>
-		constexpr AbstractInstance(VkApplication* app, StringLike&& name = "") :
-			VkObject(app, std::forward<StringLike>(name))
+		constexpr AbstractInstance(VkApplication* app, StringLike&& name = "", size_t creation_tick = 0) :
+			VkObject(app, std::forward<StringLike>(name)),
+			_creation_tick(creation_tick)
 		{}
 
 		virtual ~AbstractInstance() override
@@ -44,8 +46,22 @@ namespace vkl
 				}
 			}
 		}
+
+		size_t creationTick() const
+		{
+			return _creation_tick;
+		}
 	};
 
+	class UpdateContext;
+
+	struct UpdateResourcesResult
+	{
+		bool holds_instance = false;
+		bool invalidated = false;
+		bool created = false;
+		bool cached = false;
+	};
 
 	class AbstractInstanceHolder : public VkObject
 	{
@@ -55,6 +71,10 @@ namespace vkl
 		mutable std::mutex _mutex;
 
 		Dyn<bool> _hold_instance = {};
+		size_t _latest_update_tick = {};
+		UpdateResourcesResult _latest_update_res;
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res);
 
 	public:
 
@@ -76,7 +96,14 @@ namespace vkl
 
 		//void removeInvalidationCallbacks(const void* id);
 
-		bool checkHoldInstance();
+		void checkHoldInstance(UpdateResourcesResult& res);
+
+		// Uptate internale resources
+		// This version:
+		// - Checks the update tick
+		// - calls checkHoldInstance
+		// - Check the invalidation
+		virtual UpdateResourcesResult updateResources(UpdateContext& ctx);
 
 		constexpr const Dyn<bool>& holdInstance() const
 		{
@@ -138,6 +165,7 @@ namespace vkl
 			{
 				callInvalidationCallbacks();
 				_inst = nullptr;
+				_latest_update_res.invalidated = true;
 			}
 		}
 	};

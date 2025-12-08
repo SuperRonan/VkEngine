@@ -63,19 +63,13 @@ namespace vkl
 		});
 	}
 
-	bool Sampler::updateResources(UpdateContext & ctx)
+	void Sampler::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
-		if (checkHoldInstance())
+		if (!_inst)
 		{
-			if (!_inst)
-			{
-				createInstance();
-				res = true;
-			}
+			res.created = true;
+			createInstance();
 		}
-
-		return res;
 	}
 
 	std::shared_ptr<Sampler> Sampler::MakeNearest(VkApplication* app)

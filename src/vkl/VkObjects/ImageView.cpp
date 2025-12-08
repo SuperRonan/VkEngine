@@ -37,7 +37,7 @@ namespace vkl
 	}
 
 	ImageViewInstance::ImageViewInstance(CreateInfo const& ci):
-		AbstractInstance(ci.app, ci.name),
+		AbstractInstance(ci.app, ci.name, ci.tick),
 		_image(ci.image),
 		_ci(ci.ci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
@@ -54,7 +54,7 @@ namespace vkl
 	}
 
 
-	void ImageView::createInstance()
+	void ImageView::createInstance(size_t tick)
 	{
 		assert(!_inst);
 		VkImageViewCreateInfo ci{
@@ -68,6 +68,7 @@ namespace vkl
 		_inst = std::make_shared<ImageViewInstance>(ImageViewInstance::CI{
 			.app = application(),
 			.name = name(),
+			.tick = tick,
 			.image = _image->instance(),
 			.ci = ci,
 		});
@@ -116,47 +117,39 @@ namespace vkl
 	}
 
 
-	bool ImageView::updateResource(UpdateContext & ctx)
+	void ImageView::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (ctx.updateTick() <= _latest_update_tick)
+		res.invalidated = _image->updateResources(ctx).invalidated;
+
+		if (!res.invalidated && _inst)
 		{
-			return _latest_update_res;
-		}
-		_latest_update_tick = ctx.updateTick();
-		bool & res = _latest_update_res = false;
-		if (checkHoldInstance())
-		{
-			const bool updated = _image->updateResource(ctx);
-			res = updated;
-		
-			if (_inst)
+			res.invalidated = [&]()
 			{
 				const VkImageViewCreateInfo & inst_ci = _inst->createInfo();
 				const VkFormat new_format = *_format;
 				if (inst_ci.format != new_format)
 				{
-					res = true;
+					return true;
 				}
 				const VkImageSubresourceRange range = *_range;
 				if (inst_ci.subresourceRange != range)
 				{
-					res = true;
+					return true;
 				}
+				return false;
+			}();
 
-				if (res)
-				{
-					destroyInstanceIFN();
-				}
-			}
-
-			if (!_inst)
+			if (res.invalidated)
 			{
-				createInstance();
-				res = true;
+				destroyInstanceIFN();
 			}
 		}
 
-		return res;
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance(ctx.updateTick());
+		}
 	}
 
 }

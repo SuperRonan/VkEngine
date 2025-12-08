@@ -223,40 +223,32 @@ namespace vkl
 		
 	}
 	
-	bool DescriptorSetLayout::updateResources(UpdateContext& ctx)
+	void DescriptorSetLayout::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
 		if (isDynamic())
 		{
-			if (ctx.updateTick() > _update_tick)
+			if (_inst)
 			{
-				_update_tick = ctx.updateTick();
-				if (checkHoldInstance())
+				bool destroy_instance = false;
+				for (size_t i = 0; i < _bindings.size(); ++i)
 				{
-					if (_inst)
+					if (_bindings[i].count.value() != _inst->_bindings[i].descriptorCount)
 					{
-						bool destroy_instance = false;
-						for (size_t i = 0; i < _bindings.size(); ++i)
-						{
-							if (_bindings[i].count.value() != _inst->_bindings[i].descriptorCount)
-							{
-								destroy_instance = true;
-								break;
-							}
-						}
-						if (destroy_instance)
-						{
-							destroyInstanceIFN();
-						}
+						destroy_instance = true;
+						break;
 					}
-					if (!_inst)
-					{
-						createInstance();
-						res = true;
-					}
+				}
+				if (destroy_instance)
+				{
+					res.invalidated = true;
+					destroyInstanceIFN();
 				}
 			}
 		}
-		return res;
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
+		}
 	}
 }

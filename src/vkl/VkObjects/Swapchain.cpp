@@ -26,7 +26,8 @@ namespace vkl
 		{
 			ImageInstance::AssociateInfo instance_assos{
 				.app = application(),
-				.name = name() + std::string(".imageInstance_") + std::to_string(i),
+				.name = std::format("{}.imageInstance_{}", name(), i),
+				.tick = _creation_tick,
 				.ci = VkImageCreateInfo{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 					.pNext = nullptr,
@@ -53,7 +54,6 @@ namespace vkl
 				.format = _ci.imageFormat,
 				.extent = extend(_ci.imageExtent, 1),
 			};
-
 			_images[i] = std::make_shared<Image>(assos);
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
 				.name = name() + ".view_" + std::to_string(i),
@@ -89,7 +89,7 @@ namespace vkl
 	}
 
 	SwapchainInstance::SwapchainInstance(CreateInfo const& ci):
-		AbstractInstance(ci.app, std::move(ci.name)),
+		AbstractInstance(ci.app, ci.name, ci.tick),
 		_ci(ci.ci),
 		_surface(ci.surface),
 		_unique_id(std::atomic_fetch_add(&_total_instance_counter, 1))
@@ -107,12 +107,13 @@ namespace vkl
 		std::atomic_fetch_sub(&_alive_instance_counter, 1);
 	}
 
-	void Swapchain::createInstance()
+	void Swapchain::createInstance(size_t tick)
 	{
 		assert(!_inst);
 		_inst = std::make_shared<SwapchainInstance>(SwapchainInstance::CI{
 			.app = application(),
-			.name = name(),
+			.name = std::format("{}-{}", name(), tick),
+			.tick = tick,
 			.ci = _ci,
 		});
 	}
@@ -201,82 +202,77 @@ namespace vkl
 		_ci.oldSwapchain = VK_NULL_HANDLE;
 	}
 
-	bool Swapchain::updateResources(UpdateContext & ctx)
+	void Swapchain::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
-		if (checkHoldInstance())
+		if (_inst)
 		{
-			if (_inst)
+			const Surface::SwapchainSupportDetails& support = _surface->getDetails();
+			VkPresentModeKHR prev_present_mode = _inst->createInfo().presentMode;
+			VkPresentModeKHR new_present_mode = [&]() -> VkPresentModeKHR
 			{
-				const Surface::SwapchainSupportDetails& support = _surface->getDetails();
-				VkPresentModeKHR prev_present_mode = _inst->createInfo().presentMode;
-				VkPresentModeKHR new_present_mode = [&]() -> VkPresentModeKHR
+				if (std::find(support.present_modes.cbegin(), support.present_modes.cend(), *_target_present_mode) != support.present_modes.cend())
 				{
-					if (std::find(support.present_modes.cbegin(), support.present_modes.cend(), *_target_present_mode) != support.present_modes.cend())
-					{
-						return *_target_present_mode;
-					}
-					else
-					{
-						return support.present_modes.front();
-					}
-				}();
-				if (new_present_mode != prev_present_mode)
-				{
-					_ci.presentMode = new_present_mode;
-					res = true;
+					return *_target_present_mode;
 				}
-				const VkSurfaceFormatKHR new_format = *_target_format;
-				if ((new_format.format != _ci.imageFormat) || (new_format.colorSpace != _ci.imageColorSpace))
+				else
 				{
-					const VkSurfaceFormatKHR fmt = [&]()
+					return support.present_modes.front();
+				}
+			}();
+			if (new_present_mode != prev_present_mode)
+			{
+				_ci.presentMode = new_present_mode;
+				res.invalidated = true;
+			}
+			const VkSurfaceFormatKHR new_format = *_target_format;
+			if ((new_format.format != _ci.imageFormat) || (new_format.colorSpace != _ci.imageColorSpace))
+			{
+				const VkSurfaceFormatKHR fmt = [&]()
+				{
+					const Surface::SwapchainSupportDetails& support = _surface->getDetails();
+					VkSurfaceFormatKHR res = support.formats.front();
+					const VkSurfaceFormatKHR target = *_target_format;
+					uint32_t score = 0;
+					for (size_t i = 0; i < support.formats.size(); ++i)
 					{
-						const Surface::SwapchainSupportDetails& support = _surface->getDetails();
-						VkSurfaceFormatKHR res = support.formats.front();
-						const VkSurfaceFormatKHR target = *_target_format;
-						uint32_t score = 0;
-						for (size_t i = 0; i < support.formats.size(); ++i)
+						const VkSurfaceFormatKHR tmp = support.formats[i];
+						uint32_t tmp_score = 0;
+						if (tmp.format == target.format) tmp_score += 1;
+						if (tmp.colorSpace == target.colorSpace) tmp_score += 1;
+						if (tmp_score > score)
 						{
-							const VkSurfaceFormatKHR tmp = support.formats[i];
-							uint32_t tmp_score = 0;
-							if (tmp.format == target.format) tmp_score += 1;
-							if (tmp.colorSpace == target.colorSpace) tmp_score += 1;
-							if (tmp_score > score)
-							{
-								score = tmp_score;
-								res = tmp;
-							}
+							score = tmp_score;
+							res = tmp;
 						}
-						return res;
-					}();
-					_ci.imageFormat = fmt.format;
-					_ci.imageColorSpace = fmt.colorSpace;
-					res = true;
-				}
-				const VkExtent2D new_extent = getPossibleExtent(*_extent, support.capabilities);
-				using namespace vk_operators;
-				if (new_extent != _ci.imageExtent)
-				{
-					_ci.imageExtent = new_extent;
-					res = true;
-				}
-
-				if (res)
-				{
-					destroyInstanceIFN();
-				}
+					}
+					return res;
+				}();
+				_ci.imageFormat = fmt.format;
+				_ci.imageColorSpace = fmt.colorSpace;
+				res.invalidated = true;
+			}
+			const VkExtent2D new_extent = getPossibleExtent(*_extent, support.capabilities);
+			using namespace vk_operators;
+			if (new_extent != _ci.imageExtent)
+			{
+				_ci.imageExtent = new_extent;
+				res.invalidated = true;
 			}
 
-			if (!_inst)
+			if (res.invalidated)
 			{
-				createInstance();
-				res = true;
-			}
-			for (auto& view : _inst->views())
-			{
-				res |= view->updateResource(ctx);
+				destroyInstanceIFN();
 			}
 		}
-		return res;
+
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance(ctx.updateTick());
+		}
+		for (auto& view : _inst->views())
+		{
+			view->updateResources(ctx);
+		}
 	}
 }

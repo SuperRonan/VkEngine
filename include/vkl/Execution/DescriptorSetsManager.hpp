@@ -134,7 +134,9 @@ namespace vkl
 		ResourceBindings::iterator findBinding(uint32_t b);
 
 		ResourceBinding * findBindingOrEmplace(uint32_t b);
-		
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		struct CreateInfo
@@ -152,8 +154,6 @@ namespace vkl
 		DescriptorSetAndPool(CreateInfo const& ci);
 
 		virtual ~DescriptorSetAndPool() override;
-
-		bool updateResources(UpdateContext & context);
 
 		//void setBinding(ShaderBindingDescription const& binding);
 

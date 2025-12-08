@@ -90,58 +90,50 @@ namespace vkl
 		_inst = std::make_shared<BLASI>(std::move(ci));
 	}
 
-	void BottomLevelAccelerationStructure::updateResources(UpdateContext& ctx)
+	void BottomLevelAccelerationStructure::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (ctx.updateTick() <= _update_tick)
-		{
-			return;
-		}
-		_update_tick = ctx.updateTick();
-
 		const VkGeometryFlagsKHR common_flags = _geometry_flags.valueOr(0);
 
 		if (_storage_buffer)
 		{
-			_storage_buffer.buffer->updateResource(ctx);
+			_storage_buffer.buffer->updateResources(ctx);
 		}
 
-		if (checkHoldInstance())
+		if (_inst)
 		{
-			bool res = false;
-
-			if (_inst)
+			BottomLevelAccelerationStructureInstance& inst = *instance();
+			res.invalidated = [&]() -> bool
 			{
-				BottomLevelAccelerationStructureInstance& inst = *instance();
-
 				if (inst.geometryFlags() != common_flags)
 				{
-					res = true;
+					return true;
 				}
-				if (!res)
+			
+				if (inst.triangleMeshGeometries().size() != _vk_geometries.size())
 				{
-					if (inst.triangleMeshGeometries().size() != _vk_geometries.size())
+					return true;
+				}
+				else
+				{
+					for (size_t i = 0; i < _vk_geometries.size(); ++i)
 					{
-						res = true;
-					}
-					else
-					{
-						for (size_t i = 0; i < _vk_geometries.size(); ++i)
-						{
-							// TODO
+						// TODO
 
-						}
 					}
 				}
-			}
-			if (res)
-			{
-				destroyInstanceIFN();
-			}
+				return false;
+			}();
+		}
 
-			if (!_inst)
-			{
-				createInstance();
-			}
+		if (res.invalidated)
+		{
+			destroyInstanceIFN();
+		}
+
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
 		}
 	}
 

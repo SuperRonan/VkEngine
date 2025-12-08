@@ -15,6 +15,7 @@ namespace vkl
 		{
 			VkApplication* app = nullptr;
 			std::string name = {};
+			size_t tick = {};
 			std::shared_ptr<ImageInstance> image = nullptr;
 			VkImageViewCreateInfo ci = {};
 		};
@@ -136,12 +137,10 @@ namespace vkl
 		VkComponentMapping _components = defaultComponentMapping();
 		Dyn<VkImageSubresourceRange> _range = {};
 
-		// Could bitpack maybe
-		size_t _latest_update_tick = 0;
-		bool _latest_update_res = false;
-
 		void constructorBody(bool create_instance);
-		
+
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		ImageView(CreateInfo const& ci);
@@ -150,7 +149,7 @@ namespace vkl
 
 		virtual ~ImageView() override;
 
-		void createInstance();
+		void createInstance(size_t tick = 0);
 
 		constexpr const auto& image()const
 		{
@@ -181,7 +180,5 @@ namespace vkl
 		{
 			return _range;
 		}
-
-		bool updateResource(UpdateContext & ctx);		
 	};
 }

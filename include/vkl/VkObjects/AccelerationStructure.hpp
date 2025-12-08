@@ -144,8 +144,6 @@ namespace vkl
 
 	protected:
 
-		size_t _update_tick = 0;
-
 		VkAccelerationStructureTypeKHR _type;
 		BufferAndRange _storage_buffer;
 
@@ -170,8 +168,6 @@ namespace vkl
 		AccelerationStructure(CreateInfo const& ci);
 
 		virtual ~AccelerationStructure() override;
-
-		virtual void updateResources(UpdateContext& ctx) = 0;
 	};
 
 

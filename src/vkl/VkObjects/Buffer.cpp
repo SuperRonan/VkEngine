@@ -324,32 +324,25 @@ namespace vkl
 		_inst = std::make_shared<BufferInstance>(ci);
 	}
 
-	bool Buffer::updateResource(UpdateContext & ctx)
+	void Buffer::updateResourcesInline(UpdateContext & ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
-
-		if (checkHoldInstance())
+		if (_inst)
 		{
-			if (_inst)
+			if (_inst->createInfo().size != *_size)
 			{
-				if (_inst->createInfo().size != *_size)
-				{
-					res = true;
-				}
-			
-				if (res)
-				{
-					destroyInstanceIFN();
-				}
+				res.invalidated = true;
 			}
-
-			if (!_inst)
+			
+			if (res.invalidated)
 			{
-				createInstance();
-				res = true;
+				destroyInstanceIFN();
 			}
 		}
 
-		return res;
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
+		}
 	}
 }

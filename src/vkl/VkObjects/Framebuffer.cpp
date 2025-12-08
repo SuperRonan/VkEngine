@@ -120,35 +120,29 @@ namespace vkl
 		_attachments.clear();
 	}
 
-	bool Framebuffer::updateResources(UpdateContext & ctx)
+	void Framebuffer::updateResourcesInline(UpdateContext & ctx, UpdateResourcesResult& res)
 	{
-		bool res = false;
-		
-		if (checkHoldInstance())
+		if (_inst)
 		{
-			if (_inst)
+			if (_extent)
 			{
-				if (_extent)
+				const VkExtent3D new_extent = *_extent;
+				if (new_extent != _inst->extent())
 				{
-					const VkExtent3D new_extent = *_extent;
-					if (new_extent != _inst->extent())
-					{
-						res = true;
-					}
-				}
-
-				if (res)
-				{
-					destroyInstanceIFN();
+					res.invalidated = true;
 				}
 			}
 
-			if (!_inst)
+			if (res.invalidated)
 			{
-				createInstanceIFP();
+				destroyInstanceIFN();
 			}
 		}
 
-		return res;
+		if (!_inst)
+		{
+			res.created = true;
+			createInstanceIFP();
+		}
 	}
 }

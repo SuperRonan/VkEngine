@@ -70,34 +70,27 @@ namespace vkl
 		});
 	}
 
-	void QueryPool::updateResources(UpdateContext& ctx)
+	void QueryPool::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (ctx.updateTick() > _latest_update_tick)
+		if (_inst)
 		{
-			_latest_update_tick = ctx.updateTick();
-			if (checkHoldInstance())
+			if (!res.invalidated)
 			{
-				if (_inst)
+				uint32_t count = *_count;
+				if (count != _inst->count())
 				{
-					bool d = false;
-					if (!d)
-					{
-						uint32_t count = *_count;
-						if (count != _inst->count())
-						{
-							d = true;
-						}
-					}
-					if (d)
-					{
-						destroyInstanceIFN();
-					}
-				}
-				if (!_inst)
-				{
-					createInstance();
+					res.invalidated = true;
 				}
 			}
+			if (res.invalidated)
+			{
+				destroyInstanceIFN();
+			}
+		}
+		if (!_inst)
+		{
+			res.created = true;
+			createInstance();
 		}
 	}
 }

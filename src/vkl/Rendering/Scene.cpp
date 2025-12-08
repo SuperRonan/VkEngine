@@ -972,12 +972,12 @@ namespace vkl
 		//updateInternal();
 
 		// Maybe separate between the few scene own internal resources and the lot of nodes resources (models, textures, ...)
-		_ubo_buffer->updateResource(ctx);
+		_ubo_buffer->updateResources(ctx);
 		_lights_buffer->updateResources(ctx);
 		_model_references_buffer->updateResources(ctx);
 		_material_ref_buffer->updateResources(ctx);
 		_xforms_buffer->updateResources(ctx);
-		_prev_xforms_buffer->updateResource(ctx);
+		_prev_xforms_buffer->updateResources(ctx);
 		
 
 

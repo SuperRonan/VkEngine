@@ -81,6 +81,8 @@ namespace vkl
 
 		void createInstanceIFP();
 
+		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
 	public:
 
 		struct CreateInfo
@@ -98,8 +100,6 @@ namespace vkl
 		Framebuffer(CreateInfo const& ci);
 
 		virtual ~Framebuffer() override;
-
-		bool updateResources(UpdateContext & ctx);
 
 		constexpr auto& renderPass()
 		{
