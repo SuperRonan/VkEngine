@@ -662,7 +662,7 @@ namespace vkl
 						resource.type = vkb.descriptorType;
 						resource.begin_state = ResourceState2{
 							.access = meta.access,
-							.stage = getPipelineStageFromShaderStage(vkb.stageFlags),
+							.stage = GetPipelineStageFromShaderStage2(vkb.stageFlags),
 							.layout = meta.layout,
 						};
 						resource.invalidateAll();
@@ -751,7 +751,7 @@ namespace vkl
 							new_bindings[i] = null_binding;
 							new_bindings[i].begin_state = ResourceState2{
 								.access = layout.metas()[i].access,
-								.stage = getPipelineStageFromShaderStage2(layout.bindings()[i].stageFlags),
+								.stage = GetPipelineStageFromShaderStage2(layout.bindings()[i].stageFlags),
 								.layout = layout.metas()[i].layout,
 							};
 							new_bindings[i].type = layout.bindings()[i].descriptorType;
