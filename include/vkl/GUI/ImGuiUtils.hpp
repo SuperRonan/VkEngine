@@ -341,15 +341,21 @@ namespace ImGui
 
 	extern bool DetachButton();
 
+	extern void LabelText2(const char* label, const char* text);
+
 	static inline void TextBox(const char* label, const char* text)
 	{
-		ImGui::LabelText(label, text);
+		ImGui::LabelText2(label, text);
 	}
 
+	extern void LabelValueEx(const char* label, ImGuiDataType type, const void* value, const char* fmt = nullptr);
+
+	extern int PushReadOnlyDisabledStyleCol(ImGuiCol_ col = ImGuiCol_FrameBg);
+
 	template <class Scalar>
-	static void LabelValue(const char* label, Scalar value, const char* fmt = nullptr)
+	static void LabelValue(const char* label, Scalar const& value, const char* fmt = nullptr)
 	{
-		ImGui::InputScalar(label, GetDataType<Scalar>(), &value, nullptr, nullptr, fmt, ImGuiInputTextFlags_ReadOnly);
+		LabelValueEx(label, GetDataType<Scalar>(), &value, fmt);
 	}
 
 	template <std::integral UInt>

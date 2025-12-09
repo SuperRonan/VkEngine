@@ -8,6 +8,7 @@
 #include <numbers>
 
 #include <imgui/imgui_internal.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
 
 namespace vkl
 {
@@ -338,6 +339,30 @@ namespace ImGui
 		//bool res = ImGui::ArrowButton("Detach", ImGuiDir_Up);
 		ImGui::SetItemTooltip("Detach panel");
 		return res;
+	}
+
+	int PushReadOnlyDisabledStyleCol(ImGuiCol_ color_id)
+	{
+		ImVec4 col = ImGui::GetStyleColorVec4(color_id);
+		col.w *= ImGui::GetStyle().DisabledAlpha;
+		ImGui::PushStyleColor(color_id, col);
+		return 1;
+	}
+
+	void LabelText2(const char* label, const char* text)
+	{
+		static std::string local_string;
+		local_string = text;
+		int pushed = PushReadOnlyDisabledStyleCol();
+		ImGui::InputText(label, &local_string, ImGuiInputTextFlags_ReadOnly);
+		ImGui::PopStyleColor(pushed);
+	}
+
+	void LabelValueEx(const char* label, ImGuiDataType type, const void* value, const char* fmt)
+	{
+		int pushed = PushReadOnlyDisabledStyleCol();
+		ImGui::InputScalar(label, type, const_cast<void*>(value), nullptr, nullptr, fmt, ImGuiInputTextFlags_ReadOnly);
+		ImGui::PopStyleColor(pushed);
 	}
 
 	void LabelCheckbox(const char* label, bool b)
