@@ -26,7 +26,7 @@ namespace vkl
 	template <concepts::VkStructLike VkStructLike>
 	void SetsType(VkStructLike& s)
 	{
-		s.sType = vku::GetSType<VkStructLike>()
+		s.sType = vku::GetSType<VkStructLike>();
 	}
 
 	// Some ideas for VulkanFeatures (also applicable to VulkanDeviceProps):
@@ -222,71 +222,85 @@ namespace vkl
 		chain += nullptr;
 		return props2;
 	}
+
+	template <std::convertible_to<std::function<VkBool32(VkBool32, VkBool32)>> BinOp>
+	void VkBool32ArrayOp(VkBool32* res, const VkBool32* a, const VkBool32* b, size_t n, BinOp const& op)
+	{
+		for (size_t i = 0; i < n; ++i)
+		{
+			res[i] = op(a[i], b[i]);
+		}
+	}
+
+	template <class VkBool32InlineArray, std::convertible_to<std::function<VkBool32(VkBool32, VkBool32)>> BinOp>
+	void VkBool32ArrayOp(VkBool32InlineArray& res, const VkBool32InlineArray& a, const VkBool32InlineArray& b, BinOp const& op)
+	{
+		constexpr const size_t count = sizeof(VkBool32InlineArray) / sizeof(VkBool32);
+		VkBool32ArrayOp(
+			reinterpret_cast<VkBool32*>(&res),
+			reinterpret_cast<const VkBool32*>(&a),
+			reinterpret_cast<const VkBool32*>(&b),
+			count, op
+		);
+	}
+
+	template <concepts::VkStructLike VkStructLike, std::convertible_to<std::function<VkBool32(VkBool32, VkBool32)>> BinOp>
+	void CombineFeatures(VkStructLike& res, VkStructLike const& requested, VkStructLike const& available, BinOp const& op)
+	{
+		constexpr const size_t count = (sizeof(VkStructLike) - sizeof(VkStruct)) / sizeof(VkBool32);
+		constexpr const size_t offset = sizeof(VkStruct) / sizeof(VkBool32);
+		VkBool32ArrayOp(
+			reinterpret_cast<VkBool32*>(&res) + offset,
+			reinterpret_cast<const VkBool32*>(&requested) + offset,
+			reinterpret_cast<const VkBool32*>(&available) + offset,
+			count, op
+		);
+	}
 	
 	template <std::convertible_to<std::function<VkBool32(VkBool32, VkBool32)>> BinOp>
 	VulkanFeatures combineFeatures(VulkanFeatures const& requested, VulkanFeatures const& available, BinOp const& op)
 	{
 		VulkanFeatures res;
 
-		VkBool32ArrayOp(
-			&res.features2.features.robustBufferAccess,
-			&requested.features2.features.robustBufferAccess,
-			&available.features2.features.robustBufferAccess,
-			(offsetof(VkPhysicalDeviceFeatures, inheritedQueries) - offsetof(VkPhysicalDeviceFeatures, robustBufferAccess)) / sizeof(VkBool32) + 1,
-			op
-		);
+#define COMBINE_VK_FEATURES(variable) CombineFeatures(res.variable, requested.variable, available.variable, op)
+		VkBool32ArrayOp(res.features2.features, requested.features2.features, available.features2.features, op);
 
-#define COMBINE_VK_FEATURES(StructName, variableName, firstFeature, lastFeature) \
-		VkBool32ArrayOp( \
-			&res. variableName . firstFeature, \
-			&requested. variableName . firstFeature, \
-			&available. variableName . firstFeature, \
-			(offsetof(StructName, lastFeature) - offsetof(StructName, firstFeature)) / sizeof(VkBool32) + 1, \
-			op \
-		)
+		COMBINE_VK_FEATURES(features_11);
+		COMBINE_VK_FEATURES(features_12);
+		COMBINE_VK_FEATURES(features_13);
 
-#define COMBINE_VK_FEATURES_STD(VK_VER, firstFeature, lastFeature) COMBINE_VK_FEATURES(VkPhysicalDeviceVulkan##VK_VER##Features, features_##VK_VER, firstFeature, lastFeature)
+		COMBINE_VK_FEATURES(swapchain_maintenance1_ext);
+		COMBINE_VK_FEATURES(present_id_khr);
+		COMBINE_VK_FEATURES(present_wait_khr);
 
-		COMBINE_VK_FEATURES_STD(11, storageBuffer16BitAccess, shaderDrawParameters);
-		COMBINE_VK_FEATURES_STD(12, samplerMirrorClampToEdge, subgroupBroadcastDynamicId);
-		COMBINE_VK_FEATURES_STD(13, robustImageAccess, maintenance4);
+		COMBINE_VK_FEATURES(shader_atomic_float_ext);
+		COMBINE_VK_FEATURES(shader_atomic_float_2_ext);
+		COMBINE_VK_FEATURES(shader_image_atomic_int64_ext);
 
+		COMBINE_VK_FEATURES(fragment_shading_rate_khr);
+		COMBINE_VK_FEATURES(multisampled_render_to_single_sampled_ext);
+		COMBINE_VK_FEATURES(subpass_merge_feedback);
 
-		//COMBINE_VK_FEATURES(VkPhysicalDevice, , , );
-
-		COMBINE_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
-		COMBINE_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
-		COMBINE_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
-
-		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloatFeaturesEXT, shader_atomic_float_ext, shaderBufferFloat32Atomics, sparseImageFloat32AtomicAdd);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT, shader_atomic_float_2_ext, shaderBufferFloat16Atomics, sparseImageFloat32AtomicMinMax);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT, shader_image_atomic_int64_ext, shaderImageInt64Atomics, sparseImageInt64Atomics);
-
-		COMBINE_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT, subpass_merge_feedback, subpassMergeFeedback, subpassMergeFeedback);
-
-		COMBINE_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRobustness2FeaturesEXT, robustness2_ext, robustBufferAccess2, nullDescriptor);
+		COMBINE_VK_FEATURES(line_raster_ext);
+		COMBINE_VK_FEATURES(index_uint8_ext);
+		COMBINE_VK_FEATURES(mesh_shader_ext);
+		COMBINE_VK_FEATURES(robustness2_ext);
 		
-		COMBINE_VK_FEATURES(VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR, fragment_shader_barycentric_khr, fragmentShaderBarycentric, fragmentShaderBarycentric);
+		COMBINE_VK_FEATURES(fragment_shader_barycentric_khr);
 
-		COMBINE_VK_FEATURES(VkPhysicalDeviceAccelerationStructureFeaturesKHR, acceleration_structure_khr, accelerationStructure, descriptorBindingAccelerationStructureUpdateAfterBind);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayQueryFeaturesKHR, ray_query_khr, rayQuery, rayQuery);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR, ray_tracing_maintenance1_khr, rayTracingMaintenance1, rayTracingPipelineTraceRaysIndirect2);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR, ray_tracing_position_fetch_khr, rayTracingPositionFetch, rayTracingPositionFetch);
+		COMBINE_VK_FEATURES(acceleration_structure_khr);
+		COMBINE_VK_FEATURES(ray_tracing_pipeline_khr);
+		COMBINE_VK_FEATURES(ray_query_khr);
+		COMBINE_VK_FEATURES(ray_tracing_maintenance1_khr);
+		COMBINE_VK_FEATURES(ray_tracing_position_fetch_khr);
 
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
+		COMBINE_VK_FEATURES(ray_tracing_motion_blur_nv);
+		COMBINE_VK_FEATURES(ray_tracing_invocation_reorder_nv);
 		
-		COMBINE_VK_FEATURES(VkPhysicalDeviceRayTracingValidationFeaturesNV, ray_tracing_validation_nv, rayTracingValidation, rayTracingValidation);
+		COMBINE_VK_FEATURES(ray_tracing_validation_nv);
 
-		COMBINE_VK_FEATURES(VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR, compute_shader_derivative_khr, computeDerivativeGroupQuads, computeDerivativeGroupLinear);
+		COMBINE_VK_FEATURES(compute_shader_derivative_khr);
 
-#undef COMBINE_VK_FEATURES_STD
 #undef COMBINE_VK_FEATURES
 
 		return res;
@@ -306,7 +320,7 @@ namespace vkl
 	{
 		uint32_t res = 0;
 
-		auto count_f = [](const VkBool32* begin, uint32_t len)
+		auto count_f = [](const VkBool32* begin, uint32_t len) -> uint32_t
 		{
 			uint32_t res = 0;
 			for (uint32_t i = 0; i < len; ++i)
@@ -316,60 +330,57 @@ namespace vkl
 			return res;
 		};
 
-		res += count_f(
-			&this->features2.features.robustBufferAccess, 
-			(offsetof(VkPhysicalDeviceFeatures, inheritedQueries) - offsetof(VkPhysicalDeviceFeatures, robustBufferAccess)) / sizeof(VkBool32) + 1
-		);
+		auto count_i = [&]<class VkBool32InlineArray>(VkBool32InlineArray const& s) -> uint32_t
+		{
+			return count_f(reinterpret_cast<const VkBool32*>(&s), sizeof(VkBool32InlineArray) / sizeof(VkBool32));
+		};
 
-#define COUNT_VK_FEATURES(StructName, variableName, firstFeature, lastFeature) \
-		count_f( \
-			&this-> variableName . firstFeature, \
-			(offsetof(StructName, lastFeature) - offsetof(StructName, firstFeature)) / sizeof(VkBool32) + 1 \
-		)
+		auto Count = [&]<concepts::VkStructLike VkStructLike>(VkStructLike const& s) -> uint32_t
+		{
+			constexpr const size_t count = (sizeof(VkStructLike) - sizeof(VkStruct)) / sizeof(VkBool32);
+			constexpr const size_t offset = sizeof(VkStruct) / sizeof(VkBool32);
+			return count_f(reinterpret_cast<const VkBool32*>(&s) + offset, count);
+		};
 
-#define COUNT_VK_FEATURES_STD(VK_VER, firstFeature, lastFeature) COUNT_VK_FEATURES(VkPhysicalDeviceVulkan##VK_VER##Features, features_##VK_VER, firstFeature, lastFeature) 
+		res += count_i(this->features2.features);
 
-		res += COUNT_VK_FEATURES_STD(11, storageBuffer16BitAccess, shaderDrawParameters);
-		res += COUNT_VK_FEATURES_STD(12, samplerMirrorClampToEdge, subgroupBroadcastDynamicId);
-		res += COUNT_VK_FEATURES_STD(13, robustImageAccess, maintenance4);
+		res += Count(features_11);
+		res += Count(features_12);
+		res += Count(features_13);
 
 		//res += COUNT_VK_FEATURES(VkPhysicaldevice, , , );
 		
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceSwapchainMaintenance1FeaturesEXT, swapchain_maintenance1_ext, swapchainMaintenance1, swapchainMaintenance1);
-		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentIdFeaturesKHR, present_id_khr, presentId, presentId);
-		res += COUNT_VK_FEATURES(VkPhysicalDevicePresentWaitFeaturesKHR, present_wait_khr, presentWait, presentWait);
+		res += Count(swapchain_maintenance1_ext);
+		res += Count(present_id_khr);
+		res += Count(present_wait_khr);
 
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloatFeaturesEXT, shader_atomic_float_ext, shaderBufferFloat32Atomics, sparseImageFloat32AtomicAdd);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT, shader_atomic_float_2_ext, shaderBufferFloat16Atomics, sparseImageFloat32AtomicMinMax);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT, shader_image_atomic_int64_ext, shaderImageInt64Atomics, sparseImageInt64Atomics);
+		res += Count(shader_atomic_float_ext);
+		res += Count(shader_atomic_float_2_ext);
+		res += Count(shader_image_atomic_int64_ext);
 
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceFragmentShadingRateFeaturesKHR, fragment_shading_rate_khr, pipelineFragmentShadingRate, attachmentFragmentShadingRate);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceMultisampledRenderToSingleSampledFeaturesEXT, multisampled_render_to_single_sampled_ext, multisampledRenderToSingleSampled, multisampledRenderToSingleSampled);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceSubpassMergeFeedbackFeaturesEXT, subpass_merge_feedback, subpassMergeFeedback, subpassMergeFeedback);
+		res += Count(fragment_shading_rate_khr);
+		res += Count(multisampled_render_to_single_sampled_ext);
+		res += Count(subpass_merge_feedback);
 
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceLineRasterizationFeaturesEXT, line_raster_ext, rectangularLines, stippledSmoothLines);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceIndexTypeUint8FeaturesEXT, index_uint8_ext, indexTypeUint8, indexTypeUint8);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceMeshShaderFeaturesEXT, mesh_shader_ext, taskShader, meshShaderQueries);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRobustness2FeaturesEXT, robustness2_ext, robustBufferAccess2, nullDescriptor);
+		res += Count(line_raster_ext);
+		res += Count(index_uint8_ext);
+		res += Count(mesh_shader_ext);
+		res += Count(robustness2_ext);
 
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR, fragment_shader_barycentric_khr, fragmentShaderBarycentric, fragmentShaderBarycentric);
+		res += Count(fragment_shader_barycentric_khr);
 		
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceAccelerationStructureFeaturesKHR, acceleration_structure_khr, accelerationStructure, descriptorBindingAccelerationStructureUpdateAfterBind);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingPipelineFeaturesKHR, ray_tracing_pipeline_khr, rayTracingPipeline, rayTraversalPrimitiveCulling);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayQueryFeaturesKHR, ray_query_khr, rayQuery, rayQuery);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR, ray_tracing_maintenance1_khr, rayTracingMaintenance1, rayTracingPipelineTraceRaysIndirect2);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR, ray_tracing_position_fetch_khr, rayTracingPositionFetch, rayTracingPositionFetch);
+		res += Count(acceleration_structure_khr);
+		res += Count(ray_tracing_pipeline_khr);
+		res += Count(ray_query_khr);
+		res += Count(ray_tracing_maintenance1_khr);
+		res += Count(ray_tracing_position_fetch_khr);
 		
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingMotionBlurFeaturesNV, ray_tracing_motion_blur_nv, rayTracingMotionBlur, rayTracingMotionBlurPipelineTraceRaysIndirect);
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV, ray_tracing_invocation_reorder_nv, rayTracingInvocationReorder, rayTracingInvocationReorder);
+		res += Count(ray_tracing_motion_blur_nv);
+		res += Count(ray_tracing_invocation_reorder_nv);
 		
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceRayTracingValidationFeaturesNV, ray_tracing_validation_nv, rayTracingValidation, rayTracingValidation);
+		res += Count(ray_tracing_validation_nv);
 
-		res += COUNT_VK_FEATURES(VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR, compute_shader_derivative_khr, computeDerivativeGroupQuads, computeDerivativeGroupLinear);
-
-#undef COUNT_VK_FEATURES_STD
-#undef COUNT_VK_FEATURES
-
+		res += Count(compute_shader_derivative_khr);
 
 		return res;
 	}

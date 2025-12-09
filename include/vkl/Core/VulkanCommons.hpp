@@ -635,15 +635,6 @@ namespace vkl
 		return res;
 	}
 
-	template <std::convertible_to<std::function<VkBool32(VkBool32, VkBool32)>> BinOp>
-	void VkBool32ArrayOp(VkBool32 *res, const VkBool32* a, const VkBool32 * b, size_t n, BinOp const& op)
-	{
-		for (size_t i = 0; i < n; ++i)
-		{
-			res[i] = op(a[i], b[i]);
-		}
-	}
-
 	namespace vk_operators
 	{
 		
