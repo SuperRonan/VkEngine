@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <sstream>
 #include <vulkan/vk_enum_string_helper.h>
-
+#include <vulkan/utility/vk_struct_helper.hpp>
 
 namespace vkl
 {
@@ -23,107 +23,127 @@ namespace vkl
 		std::memset(this, 0, sizeof(VulkanFeatures));
 	}
 
+	template <concepts::VkStructLike VkStructLike>
+	void SetsType(VkStructLike& s)
+	{
+		s.sType = vku::GetSType<VkStructLike>()
+	}
+
+	// Some ideas for VulkanFeatures (also applicable to VulkanDeviceProps):
+	// - Maybe use reflection in future C++ standard to improve the implementation
+	// - Maybe keep a map {sType : VkStruct} of extension structs (run-time extensible option)
+
+	void VulkanFeatures::setAllsTypes()
+	{
+		SetsType(features_11);
+		SetsType(features_12);
+		SetsType(features_13);
+
+		SetsType(swapchain_maintenance1_ext);
+		SetsType(present_id_khr);
+		SetsType(present_wait_khr);
+
+		SetsType(shader_atomic_float_ext);
+		SetsType(shader_atomic_float_2_ext);
+
+		SetsType(fragment_shading_rate_khr);
+		SetsType(multisampled_render_to_single_sampled_ext);
+		SetsType(subpass_merge_feedback);
+
+		SetsType(line_raster_ext);
+		SetsType(index_uint8_ext);
+		SetsType(mesh_shader_ext);
+		SetsType(robustness2_ext);
+
+		SetsType(fragment_shader_barycentric_khr);
+
+		SetsType(acceleration_structure_khr);
+		SetsType(ray_tracing_pipeline_khr);
+		SetsType(ray_query_khr);
+		SetsType(ray_tracing_maintenance1_khr);
+		SetsType(ray_tracing_position_fetch_khr);
+
+		SetsType(ray_tracing_motion_blur_nv);
+		SetsType(ray_tracing_invocation_reorder_nv);
+
+		SetsType(ray_tracing_validation_nv);
+
+		SetsType(compute_shader_derivative_khr);
+	}
+
 	VkPhysicalDeviceFeatures2& VulkanFeatures::link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions)
 	{
-		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-		features_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-		features_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-		features_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-
-		swapchain_maintenance1_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SWAPCHAIN_MAINTENANCE_1_FEATURES_EXT;
-		present_id_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
-		present_wait_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR;
-
-		shader_atomic_float_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
-		shader_atomic_float_2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_2_FEATURES_EXT;
-
-		fragment_shading_rate_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
-		multisampled_render_to_single_sampled_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_FEATURES_EXT;
-		subpass_merge_feedback.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBPASS_MERGE_FEEDBACK_FEATURES_EXT;
-
-		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_EXT;
-		index_uint8_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT;
-		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
-		robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
-
-		fragment_shader_barycentric_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
-
-		acceleration_structure_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-		ray_query_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
-		ray_tracing_maintenance1_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR;
-		ray_tracing_position_fetch_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR;
-
-		ray_tracing_motion_blur_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MOTION_BLUR_FEATURES_NV;
-		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV;
-
-		ray_tracing_validation_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_VALIDATION_FEATURES_NV;
-
-		compute_shader_derivative_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_KHR;
+		SetsType(features2);
 
 		pNextChain chain = &features2;
 
+		auto link = [&] <concepts::VkStructLike VkStructLike>(VkStructLike& p)
+		{
+			chain += &p;
+			SetsType(p);
+		};
+
 		if(version >= VK_MAKE_VERSION(1, 1, 0))
-			chain += &features_11;
+			link(features_11);
 		if (version >= VK_MAKE_VERSION(1, 2, 0))
-			chain += &features_12;
+			link(features_12);
 		if (version >= VK_MAKE_VERSION(1, 3, 0))
-			chain += &features_13;
+			link(features_13);
 
 		if(filter_extensions(VK_EXT_SWAPCHAIN_MAINTENANCE_1_EXTENSION_NAME))
-			chain += &swapchain_maintenance1_ext;
+			link(swapchain_maintenance1_ext);
 		if(filter_extensions(VK_KHR_PRESENT_ID_EXTENSION_NAME))
-			chain += &present_id_khr;
+			link(present_id_khr);
 		if(filter_extensions(VK_KHR_PRESENT_WAIT_EXTENSION_NAME))
-			chain += &present_wait_khr;
+			link(present_wait_khr);
 
 		if(filter_extensions(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME))
-			chain += &shader_atomic_float_ext;
+			link(shader_atomic_float_ext);
 		if(filter_extensions(VK_EXT_SHADER_ATOMIC_FLOAT_2_EXTENSION_NAME))
-			chain += &shader_atomic_float_2_ext;
+			link(shader_atomic_float_2_ext);
 		if(filter_extensions(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME))
-			chain += &shader_image_atomic_int64_ext;
+			link(shader_image_atomic_int64_ext);
 
 		if(filter_extensions(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
-			chain += &fragment_shading_rate_khr;
+			link(fragment_shading_rate_khr);
 		if(filter_extensions(VK_EXT_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_EXTENSION_NAME))
-			chain += &multisampled_render_to_single_sampled_ext;
+			link(multisampled_render_to_single_sampled_ext);
 		if(filter_extensions(VK_EXT_SUBPASS_MERGE_FEEDBACK_EXTENSION_NAME))
-			chain += &subpass_merge_feedback;
+			link(subpass_merge_feedback);
 
 		if(filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
-			chain += &line_raster_ext;
+			link(line_raster_ext);
 		if(filter_extensions(VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME))
-			chain += &index_uint8_ext;
+			link(index_uint8_ext);
 		if(filter_extensions(VK_EXT_MESH_SHADER_EXTENSION_NAME))
-			chain += &mesh_shader_ext;
+			link(mesh_shader_ext);
 		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
-			chain += &robustness2_ext;
+			link(robustness2_ext);
 
 		if(filter_extensions(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
-			chain += &fragment_shader_barycentric_khr;
+			link(fragment_shader_barycentric_khr);
 
 		if(filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
-			chain += &acceleration_structure_khr;
+			link(acceleration_structure_khr);
 		if(filter_extensions(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
-			chain += &ray_tracing_pipeline_khr;
+			link(ray_tracing_pipeline_khr);
 		if(filter_extensions(VK_KHR_RAY_QUERY_EXTENSION_NAME))
-			chain += &ray_query_khr;
+			link(ray_query_khr);
 		if(filter_extensions(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME))
-			chain += &ray_tracing_maintenance1_khr;
+			link(ray_tracing_maintenance1_khr);
 		if(filter_extensions(VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME))
-			chain += &ray_tracing_position_fetch_khr;
+			link(ray_tracing_position_fetch_khr);
 
 		if(filter_extensions(VK_NV_RAY_TRACING_MOTION_BLUR_EXTENSION_NAME))
-			chain += &ray_tracing_motion_blur_nv;
+			link(ray_tracing_motion_blur_nv);
 		if(filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
-			chain += &ray_tracing_invocation_reorder_nv;
+			link(ray_tracing_invocation_reorder_nv);
 		
 		if(filter_extensions(VK_NV_RAY_TRACING_VALIDATION_EXTENSION_NAME))
-			chain += &ray_tracing_validation_nv;
+			link(ray_tracing_validation_nv);
 
 		if(filter_extensions(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME))
-			chain += &compute_shader_derivative_khr;
+			link(compute_shader_derivative_khr);
 
 		chain += nullptr;
 		return features2;
@@ -134,60 +154,70 @@ namespace vkl
 		std::memset(this, 0, sizeof(VulkanDeviceProps));
 	}
 
+	void VulkanDeviceProps::setAllsTypes()
+	{
+		SetsType(props_11);
+		SetsType(props_12);
+		SetsType(props_13);
+
+		SetsType(fragment_shading_rate_khr);
+
+		SetsType(line_raster_ext);
+		SetsType(mesh_shader_ext);
+		SetsType(robustness2_ext);
+
+		SetsType(fragment_shader_barycentric_khr);
+
+		SetsType(acceleration_structure_khr);
+		SetsType(ray_tracing_pipeline_khr);
+
+		SetsType(ray_tracing_invocation_reorder_nv);
+
+		SetsType(compute_shader_derivative_khr);
+	}
+
 	VkPhysicalDeviceProperties2& VulkanDeviceProps::link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions)
 	{
 		props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-		props_11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
-		props_12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-		props_13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
-
-		fragment_shading_rate_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR;
-
-		line_raster_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_PROPERTIES_EXT;
-		mesh_shader_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
-		robustness2_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
-
-		fragment_shader_barycentric_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_PROPERTIES_KHR;
-
-		acceleration_structure_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
-		ray_tracing_pipeline_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
-
-		ray_tracing_invocation_reorder_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
-
-		compute_shader_derivative_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_PROPERTIES_KHR;
 
 		pNextChain chain = &props2;
 
+		auto link = [&] <concepts::VkStructLike VkStructLike>(VkStructLike & p)
+		{
+			chain += &p;
+			SetsType(p);
+		};
+
 		if (version >= VK_MAKE_VERSION(1, 1, 0))
-			chain += &props_11;
+			link(props_11);
 		if (version >= VK_MAKE_VERSION(1, 2, 0))
-			chain += &props_12;
+			link(props_12);
 		if (version >= VK_MAKE_VERSION(1, 3, 0))
-			chain += &props_13;
+			link(props_13);
 		
 		if(filter_extensions(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME))
-			chain += &fragment_shading_rate_khr;
+			link(fragment_shading_rate_khr);
 
 		if (filter_extensions(VK_EXT_LINE_RASTERIZATION_EXTENSION_NAME))
-			chain += &line_raster_ext;
+			link(line_raster_ext);
 		if (filter_extensions(VK_EXT_MESH_SHADER_EXTENSION_NAME))
-			chain += &mesh_shader_ext;
+			link(mesh_shader_ext);
 		if(filter_extensions(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
-			chain += &robustness2_ext;
+			link(robustness2_ext);
 
 		if (filter_extensions(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
-			chain += &fragment_shader_barycentric_khr;
+			link(fragment_shader_barycentric_khr);
 
 		if (filter_extensions(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME))
-			chain += &acceleration_structure_khr;
+			link(acceleration_structure_khr);
 		if (filter_extensions(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME))
-			chain += &ray_tracing_pipeline_khr;
+			link(ray_tracing_pipeline_khr);
 
 		if (filter_extensions(VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME))
-			chain += &ray_tracing_invocation_reorder_nv;
+			link(ray_tracing_invocation_reorder_nv);
 
 		if (filter_extensions(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME))
-			chain += &compute_shader_derivative_khr;
+			link(compute_shader_derivative_khr);
 
 		chain += nullptr;
 		return props2;

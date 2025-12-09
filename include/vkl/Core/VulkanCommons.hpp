@@ -293,6 +293,8 @@ namespace vkl
 
 		VulkanFeatures();
 
+		void setAllsTypes();
+
 		VkPhysicalDeviceFeatures2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
 
 		VulkanFeatures operator&&(VulkanFeatures const& other) const;
@@ -330,6 +332,8 @@ namespace vkl
 		VkPhysicalDeviceComputeShaderDerivativesPropertiesKHR compute_shader_derivative_khr = {};
 
 		VulkanDeviceProps();
+
+		void setAllsTypes();
 
 		VkPhysicalDeviceProperties2& link(uint32_t version, std::function<bool(std::string_view ext_name)> const& filter_extensions);
 	};
