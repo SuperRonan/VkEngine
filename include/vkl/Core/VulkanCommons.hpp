@@ -141,6 +141,22 @@ namespace vkl
 		}
 
 		template <concepts::VkStructLike VkStructLike>
+		const bool contains(const VkStructLike* p) const
+		{
+			const VkStruct* pp = reinterpret_cast<const VkStruct*>(p);
+			const VkStruct* it = current;
+			while (it)
+			{
+				if (it == pp)
+				{
+					return true;
+				}
+				it = it->pNext;
+			}
+			return false;
+		}
+
+		template <concepts::VkStructLike VkStructLike>
 		constexpr pNextChain& link(VkStructLike* vk_struct)
 		{
 			if (current)
