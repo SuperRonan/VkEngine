@@ -47,7 +47,8 @@ namespace vkl::GUI
 		// set panel to nullptr to close the child
 		virtual void setChild(Id id, std::shared_ptr<Panel> const& panel = nullptr);
 
-		template <std::derived_from<Panel> _Panel, std::convertible_to<std::function<_Panel(void)>> CreateFn>
+		//template <std::derived_from<Panel> _Panel, std::convertible_to<std::function<std::shared_ptr<_Panel>(void)>> CreateFn>
+		template <std::invocable<> CreateFn, std::derived_from<Panel> _Panel = typename std::remove_cvref_t<std::invoke_result_t<CreateFn>>::element_type>
 		std::shared_ptr<_Panel> getOrCreateChild(Id id, CreateFn const& create_fn)
 		{
 			std::shared_ptr<_Panel> res;
@@ -59,7 +60,8 @@ namespace vkl::GUI
 			else
 			{
 				res = create_fn();
-				_childs[id] = res;
+				_childs[id].panel = res;
+				_childs_ids_valid = false;
 			}
 			return res;
 		}
