@@ -49,6 +49,11 @@ namespace vkl
 		{
 			return _p_exts;
 		}
+
+		const auto& getMap()const
+		{
+			return _extensions;
+		}
 	};
 
 	using VkExtSet = VulkanExtensionsSet;

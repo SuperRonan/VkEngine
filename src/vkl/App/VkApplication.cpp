@@ -1591,6 +1591,114 @@ namespace vkl
 				}
 			};
 
+			struct PhysicalDevicePanel : public Panel
+			{
+				VkPhysicalDevice device;
+				int64_t rating;
+				VulkanExtensionsSet extensions;
+				VulkanDeviceProps props;
+				VulkanFeatures features;
+
+				static void DeclareProps(VulkanDeviceProps const& props)
+				{
+					ImGui::LabelHexValue("Id", props.props2.properties.deviceID);
+					ImGui::TextBox("Name", props.props2.properties.deviceName);
+					ImGui::TextBox("Type", std::string_view(string_VkPhysicalDeviceType(props.props2.properties.deviceType)).substr("VK_PHYSICAL_DEVICE_TYPE_"sv.length()).data());
+				}
+
+				static void DeclareFeatures(VulkanFeatures const& features, uint32_t api_version)
+				{
+					ImGui::Text("TODO");
+				}
+
+				static void DeclareExtensions(VulkanExtensionsSet const& extensions)
+				{
+					if (ImGui::BeginTable("Extensions", 2, ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_NoSavedSettings))
+					{
+						float w = 0.9;
+						ImGui::TableSetupColumn("Extension Name", ImGuiTableColumnFlags_WidthStretch, w);
+						ImGui::TableSetupColumn("Version", ImGuiTableColumnFlags_WidthStretch, 1.0f - w);
+						
+						ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+						ImGui::TableNextColumn();
+						ImGui::Text("Extension Name");
+						ImGui::TableNextColumn();
+						ImGui::Text("Version");
+						uint counter = 0;
+						std::array<char, 32> buffer;
+						std::fill(buffer.begin(), buffer.end(), 0);
+						for (const auto& [ext_name, version] : extensions.getMap())
+						{
+							ImGui::TableNextRow();
+							size_t index = std::format_to(buffer.begin(), "##{}", counter) - buffer.begin();
+							ImGui::TableNextColumn();
+							{
+								buffer[index] = 'a';
+								ImGui::SetNextItemWidth(ImGui::GetColumnWidth());
+								ImGui::TextBox(buffer.data(), ext_name.data());
+								//ImGui::Text(ext_name.data());
+							}
+							ImGui::TableNextColumn();
+							{
+								//buffer[index] = 'b';
+								//ImGui::LabelValue(buffer.data(), version);
+								ImGui::Text("%d", version);
+							}
+							++counter;
+						}
+
+						ImGui::EndTable();
+					}
+				}
+
+				PhysicalDevicePanel(VkApplication* app, VkPhysicalDevice device) :
+					Panel(app, std::format("PhysicalDevice-{}", reinterpret_cast<uintptr_t>(device))),
+					device(device),
+					extensions(device)
+				{
+					auto api_version = vkGetPhysicalDeviceAPIVersion(device);
+					auto ext_filter = [this](std::string_view ext_name) {return extensions.contains(ext_name); };
+					vkGetPhysicalDeviceProperties2(device, &props.link(api_version, ext_filter));
+					vkGetPhysicalDeviceFeatures2(device, &features.link(api_version, ext_filter));
+					setName(props.props2.properties.deviceName);
+
+					VkApplication::DesiredDeviceInfo desired;
+					desired.extensions = application()->getDeviceExtensions();
+					application()->requestFeatures(desired.features);
+					desired.queues = application()->getDesiredQueuesInfo();
+					rating = application()->ratePhysicalDevice(device, desired);
+				}
+
+				virtual void declareInline(Context& ctx)
+				{
+					
+
+					if (ImGui::TreeNodeEx("Summary", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::LabelValue("Rating", rating);
+						ImGui::TreePop();
+					}
+					
+					if (ImGui::TreeNode("Properties"))
+					{
+						DeclareProps(props);
+						ImGui::TreePop();
+					}
+
+					if (ImGui::TreeNode("Features"))
+					{
+						DeclareFeatures(features, props.props2.properties.apiVersion);
+						ImGui::TreePop();
+					}
+
+					if(ImGui::TreeNode("Extensions"))
+					{
+						DeclareExtensions(extensions);
+						ImGui::TreePop();
+					}
+				}
+			};
+
 			struct DevicePanel : public Panel
 			{
 				DevicePanel(VkApplication* app) :
@@ -1600,21 +1708,49 @@ namespace vkl
 				virtual void declareInline(Context& ctx)
 				{
 					auto& a = *application();
-					ImGui::LabelHexValue("Id", a.deviceProperties().props2.properties.deviceID);
-					ImGui::TextBox("Name", a.deviceProperties().props2.properties.deviceName);
-					ImGui::TextBox("Type", std::string_view(string_VkPhysicalDeviceType(a.deviceProperties().props2.properties.deviceType)).substr("VK_PHYSICAL_DEVICE_TYPE_"sv.length()).data());
 				}
 			};
 
+			struct PhysicalDeviceInfo
+			{
+				VkPhysicalDevice handle = {};
+				std::string name = {};
+			};
+
+			MyVector<PhysicalDeviceInfo> _physical_devices;
+
 			InlinePanel _device;
 			InlinePanel _options;
+
+			void queryPhysicalDevices()
+			{
+				uint32_t physical_device_count;
+				vkEnumeratePhysicalDevices(application()->instance(), &physical_device_count, nullptr);
+				_physical_devices.resize(physical_device_count);
+				MyVector<VkPhysicalDevice> p_physical_devices(physical_device_count);
+				vkEnumeratePhysicalDevices(application()->instance(), &physical_device_count, p_physical_devices.data());
+				for (uint32_t i = 0; i < physical_device_count; ++i)
+				{
+					PhysicalDeviceInfo& info = _physical_devices[i];
+					info.handle = p_physical_devices[i];
+					VkPhysicalDeviceProperties props;
+					vkGetPhysicalDeviceProperties(info.handle, &props);
+					if (props.deviceName)
+					{
+						info.name = props.deviceName;
+					}
+					else
+					{
+						info.name = std::format("{:#x}", props.deviceID);
+					}
+				}
+			}
 
 		public:
 
 			VkApplicationPanel(VkApplication* app) :
 				Parent(app, "Application")
 			{
-				std::enable_shared_from_this<int>;
 				_device = InlinePanel{
 					.panel = std::make_shared<DevicePanel>(app),
 					.id = reinterpret_cast<Id>(_device.panel.get()),
@@ -1625,6 +1761,7 @@ namespace vkl
 					.id = reinterpret_cast<Id>(_options.panel.get()),
 					.type = InlinePanel::Type::CollapseHeader,
 				};
+				queryPhysicalDevices();
 			}
 
 			virtual ~VkApplicationPanel() override
@@ -1634,15 +1771,51 @@ namespace vkl
 		
 			virtual void declareInline(Context& ctx)
 			{
-				ImGui::TextBox("Application", application()->_name.c_str());
+				VkApplication& a = *application();
+				ImGui::TextBox("Application", a._name.c_str());
+				{
+					const char* build_str = "Unknown";
+					if(VKL_BUILD_DEBUG) build_str = "Debug";
+					else if(VKL_BUILD_FAST_DEBUG) build_str = "Fast Debug";
+					else if(VKL_BUILD_MIN_SIZE_RELEASE) build_str = "Min Size Release";
+					else if(VKL_BUILD_RELEASE_WITH_DEBUG_INFO) build_str = "Release with Debug Info";
+					else if(VKL_BUILD_RELEASE) build_str = "Release";
+					ImGui::TextBox("Build", build_str);
+				}
+				
 				ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
 				if (ImGui::Button("Invalidate all API objects"))
 				{
-					application()->_should_invalidate_all = true;
+					a._should_invalidate_all = true;
 				}
 				ImGui::PopStyleColor();
+
 				_device.declareInline(ctx);
 				_options.declareInline(ctx);
+
+				if (ImGui::TreeNode("Available Physical Devices"))
+				{
+					// TODO improve the presentation
+					if (ImGui::BeginTable("Available Physical Devices Table", 1, ImGuiTableFlags_Hideable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_NoSavedSettings))
+					{
+						for (uint32_t i = 0; i < _physical_devices.size32(); ++i)
+						{
+							ImGui::TableNextRow();
+							ImGui::TableNextColumn();
+							// The button is not centered, either manually indent it with ImGui::Indent, or find the proper ImGui way to do it
+							const char* label = _physical_devices[i].name.c_str();
+							if (ImGui::Button(label))
+							{
+								std::shared_ptr<PhysicalDevicePanel> panel = ctx.getTopPanelHolder()->getOrCreateChild(reinterpret_cast<Id>(_physical_devices[i].handle), [&]() {
+									return std::make_shared<PhysicalDevicePanel>(application(), _physical_devices[i].handle);
+								});
+								ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(_physical_devices[i].handle), panel);
+							}
+						}
+						ImGui::EndTable();
+					}
+					ImGui::TreePop();
+				}
 			}
 		};
 	}
