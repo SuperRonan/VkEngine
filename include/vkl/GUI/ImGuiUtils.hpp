@@ -341,11 +341,11 @@ namespace ImGui
 
 	extern bool DetachButton();
 
-	extern void LabelText2(const char* label, const char* text);
+	extern void LabelText2(const char* label, const char* text, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
 
-	static inline void TextBox(const char* label, const char* text)
+	static inline void TextBox(const char* label, const char* text, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None)
 	{
-		ImGui::LabelText2(label, text);
+		ImGui::LabelText2(label, text, flags);
 	}
 
 	extern void LabelValueEx(const char* label, ImGuiDataType type, const void* value, const char* fmt = nullptr);

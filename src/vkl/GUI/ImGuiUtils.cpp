@@ -349,12 +349,12 @@ namespace ImGui
 		return 1;
 	}
 
-	void LabelText2(const char* label, const char* text)
+	void LabelText2(const char* label, const char* text, ImGuiInputTextFlags flags)
 	{
 		static std::string local_string;
 		local_string = text;
 		int pushed = PushReadOnlyDisabledStyleCol();
-		ImGui::InputText(label, &local_string, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText(label, &local_string, flags | ImGuiInputTextFlags_ReadOnly);
 		ImGui::PopStyleColor(pushed);
 	}
 
