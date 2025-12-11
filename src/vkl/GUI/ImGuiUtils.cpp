@@ -321,7 +321,7 @@ namespace ImGui
 	void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
 	{
 		float rel_size = 0.75;
-		float h = std::max(std::max(rect.GetSize().x, rect.GetSize().y) * rel_size, 1.0f);
+		float h = std::max(std::min(rect.GetSize().x, rect.GetSize().y) * rel_size, 1.0f);
 		float d = std::max(ImFloor(h / 16.0f), 1.0f);
 		float thickness = 1;
 		ImVec2 pos = rect.GetTL() + rect.GetSize() * ((1 - rel_size) * 0.5f);
@@ -333,11 +333,31 @@ namespace ImGui
 		DrawRectNoCorners(draw_list, pos + detachment, pos + size + detachment, color, thickness);
 	}
 
+	void RenderXCrossIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		float d = std::min(rect.GetWidth(), rect.GetHeight());
+		float rel_size = std::round(d * 0.5f * 0.7071f - 1.0f);
+		float ex = rel_size;
+		float thickness = 1;
+		draw_list->AddLine((rect.GetCenter() - ImVec2(+ex, +ex)), (rect.GetCenter() + ImVec2(+ex, +ex)), color, thickness);
+		draw_list->AddLine((rect.GetCenter() - ImVec2(-ex, +ex)), (rect.GetCenter() + ImVec2(-ex, +ex)), color, thickness);
+	}
+
 	bool DetachButton()
 	{
 		bool res = IconButton("Detach", RenderDetachIcon);
 		//bool res = ImGui::ArrowButton("Detach", ImGuiDir_Up);
 		ImGui::SetItemTooltip("Detach panel");
+		return res;
+	}
+
+	bool XCrossButton(const char* tooltip)
+	{
+		bool res = IconButton("XCross", RenderXCrossIcon);
+		if (tooltip)
+		{
+			ImGui::SetItemTooltip(tooltip);
+		}
 		return res;
 	}
 
@@ -410,5 +430,31 @@ namespace ImGui
 			LogRenderedText(&label_pos, b ? "[x]" : "[ ]");
 		if (is_visible && label_size.x > 0.0f)
 			RenderText(label_pos, label);
+	}
+
+	bool TextFieldEdit(const char* label, std::string* str, const char* hint, ImGuiInputTextFlags flags)
+	{
+		// It would be nice to have a nice icon (a lens if the field is empty)
+		ImGui::SetNextItemAllowOverlap();
+		bool res = ImGui::InputTextWithHint(label, "Filter...", str, flags);
+		
+		if (!str->empty())
+		{
+			const ImVec2 save_pos = ImGui::GetCursorPos();
+
+			ImGui::SameLine();
+			float padding = std::ceil(ImGui::GetFontSize() / 16.0f);
+			ImGui::SetCursorPos(ImGui::GetCursorPos() - ImVec2(ImGui::CalcTextSize(label).x + 3 * ImGui::GetStyle().ItemInnerSpacing.x + ImGui::GetFrameHeight() - padding, -padding));
+
+			float button_size = (ImGui::GetFrameHeight() - 2 * padding);
+			if (ImGui::IconButtonEx("Clear", ImVec2(button_size, button_size), ImGuiButtonFlags_None, ImGui::RenderXCrossIcon))
+			{
+				str->clear();
+				res = true;
+			}
+			ImGui::SetCursorPos(save_pos);
+		}
+		
+		return res;
 	}
 }

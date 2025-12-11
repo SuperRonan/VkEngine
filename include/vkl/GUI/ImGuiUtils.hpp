@@ -339,7 +339,11 @@ namespace ImGui
 
 	extern void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
 
+	extern void RenderXCrossIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
 	extern bool DetachButton();
+
+	extern bool XCrossButton(const char* tooltip=nullptr);
 
 	extern void LabelText2(const char* label, const char* text, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
 
@@ -420,4 +424,7 @@ namespace ImGui
 
 	// Display a bool with a checkbox (read only)
 	extern void LabelCheckbox(const char* label, bool b);
+
+	// Same as InputTextWithHing, with an extra XCross button on the right side of the text field to clear the str
+	extern bool TextFieldEdit(const char* label, std::string* str, const char* hint = nullptr, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
 }
