@@ -1605,9 +1605,18 @@ namespace vkl
 					ImGui::LabelHexValue("Id", props.props2.properties.deviceID);
 					ImGui::TextBox("Name", props.props2.properties.deviceName);
 					ImGui::TextBox("Type", std::string_view(string_VkPhysicalDeviceType(props.props2.properties.deviceType)).substr("VK_PHYSICAL_DEVICE_TYPE_"sv.length()).data());
+					{
+						const uint32_t v = props.props2.properties.apiVersion;
+						ImGui::LabelText("Vulkan API version", "%d.%d.%d (variant: %d)", VK_API_VERSION_MAJOR(v), VK_API_VERSION_MINOR(v), VK_API_VERSION_PATCH(v), VK_API_VERSION_VARIANT(v));
+					}
+					ImGui::TextBox("Vendor Id", string_VkVendorId(VkVendorId(props.props2.properties.vendorID)));
+					{
+						const uint32_t v = props.props2.properties.driverVersion;
+						ImGui::LabelText("Driver version", "0x%X (%d.%d.%d)", v, VK_VERSION_MAJOR(v), VK_VERSION_MINOR(v), VK_VERSION_PATCH(v));
+					}
 				}
 
-				static void DeclareFeatures(VulkanFeatures const& features, uint32_t api_version)
+				static void DeclareFeatures(VulkanFeatures const& features)
 				{
 					ImGui::Text("TODO");
 				}
@@ -1700,7 +1709,7 @@ namespace vkl
 
 					if (ImGui::TreeNode("Features"))
 					{
-						DeclareFeatures(features, props.props2.properties.apiVersion);
+						DeclareFeatures(features);
 						ImGui::TreePop();
 					}
 
@@ -1714,13 +1723,58 @@ namespace vkl
 
 			struct DevicePanel : public Panel
 			{
-				DevicePanel(VkApplication* app) :
-					Panel(app, "Device##VkApplication")
-				{ }
+				std::string* _extension_filter = {};
+
+				VulkanFeatures _desired_features;
+
+				DevicePanel(VkApplication* app, std::string* extension_filter) :
+					Panel(app, "Device##VkApplication"),
+					_extension_filter(extension_filter)
+				{
+					 application()->requestFeatures(_desired_features);
+				}
 
 				virtual void declareInline(Context& ctx)
 				{
 					auto& a = *application();
+
+					if (ImGui::TreeNode("Properties"))
+					{
+						PhysicalDevicePanel::DeclareProps(a.deviceProperties());
+						ImGui::TreePop();
+					}
+
+					if (ImGui::TreeNode("Features"))
+					{
+						PhysicalDevicePanel::DeclareFeatures(a.availableFeatures());
+
+						// TODO synthetic view of the two 
+						// Show the available features (green if matching desired, red otherwise))
+						if (ImGui::TreeNode("Desired Features"))
+						{
+							PhysicalDevicePanel::DeclareFeatures(_desired_features);
+							ImGui::TreePop();
+						}
+						ImGui::TreePop();
+					}
+
+					if (ImGui::TreeNode("Extensions"))
+					{
+						PhysicalDevicePanel::DeclareExtensions(*a._device_extensions, _extension_filter);
+						ImGui::SeparatorText("Instance extensions");
+						ImGui::PushID(a.instance());
+						PhysicalDevicePanel::DeclareExtensions(*a._instance_extensions, _extension_filter);
+						ImGui::PopID();
+						ImGui::TreePop();
+					}
+					
+					if (ImGui::Button("Physical Device"))
+					{
+						std::shared_ptr<PhysicalDevicePanel> panel = ctx.getTopPanelHolder()->getOrCreateChild(reinterpret_cast<Id>(a.physicalDevice()), [&]() {
+							return std::make_shared<PhysicalDevicePanel>(application(), a.physicalDevice(), _extension_filter);
+						});
+						ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(a.physicalDevice()), panel);
+					}
 				}
 			};
 
