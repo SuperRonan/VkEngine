@@ -1595,6 +1595,7 @@ namespace vkl
 			{
 				VkPhysicalDevice device;
 				int64_t rating;
+				std::string* ext_filter;
 				VulkanExtensionsSet extensions;
 				VulkanDeviceProps props;
 				VulkanFeatures features;
@@ -1611,8 +1612,12 @@ namespace vkl
 					ImGui::Text("TODO");
 				}
 
-				static void DeclareExtensions(VulkanExtensionsSet const& extensions)
+				static void DeclareExtensions(VulkanExtensionsSet const& extensions, std::string * filter = nullptr)
 				{
+					if (filter)
+					{
+						ImGui::TextFieldEdit("Filter", filter, "Filter...");
+					}
 					if (ImGui::BeginTable("Extensions", 2, ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_NoSavedSettings))
 					{
 						float w = 0.9;
@@ -1629,20 +1634,28 @@ namespace vkl
 						std::fill(buffer.begin(), buffer.end(), 0);
 						for (const auto& [ext_name, version] : extensions.getMap())
 						{
-							ImGui::TableNextRow();
-							size_t index = std::format_to(buffer.begin(), "##{}", counter) - buffer.begin();
-							ImGui::TableNextColumn();
+							bool cull = false;
+							if (filter && !filter->empty())
 							{
-								buffer[index] = 'a';
-								ImGui::SetNextItemWidth(ImGui::GetColumnWidth());
-								ImGui::TextBox(buffer.data(), ext_name.data());
-								//ImGui::Text(ext_name.data());
+								cull = (ext_name.find(std::string_view(*filter)) == std::string_view::npos);
 							}
-							ImGui::TableNextColumn();
+							if (!cull)
 							{
-								//buffer[index] = 'b';
-								//ImGui::LabelValue(buffer.data(), version);
-								ImGui::Text("%d", version);
+								ImGui::TableNextRow();
+								size_t index = std::format_to(buffer.begin(), "##{}", counter) - buffer.begin();
+								ImGui::TableNextColumn();
+								{
+									buffer[index] = 'a';
+									ImGui::SetNextItemWidth(ImGui::GetColumnWidth());
+									ImGui::TextBox(buffer.data(), ext_name.data());
+									//ImGui::Text(ext_name.data());
+								}
+								ImGui::TableNextColumn();
+								{
+									//buffer[index] = 'b';
+									//ImGui::LabelValue(buffer.data(), version);
+									ImGui::Text("%d", version);
+								}
 							}
 							++counter;
 						}
@@ -1651,15 +1664,17 @@ namespace vkl
 					}
 				}
 
-				PhysicalDevicePanel(VkApplication* app, VkPhysicalDevice device) :
+				PhysicalDevicePanel(VkApplication* app, VkPhysicalDevice device, std::string* ext_filter) :
 					Panel(app, std::format("PhysicalDevice-{}", reinterpret_cast<uintptr_t>(device))),
 					device(device),
+					ext_filter(ext_filter),
 					extensions(device)
 				{
 					auto api_version = vkGetPhysicalDeviceAPIVersion(device);
-					auto ext_filter = [this](std::string_view ext_name) {return extensions.contains(ext_name); };
-					vkGetPhysicalDeviceProperties2(device, &props.link(api_version, ext_filter));
-					vkGetPhysicalDeviceFeatures2(device, &features.link(api_version, ext_filter));
+					//auto _ext_filter = std::bind(&VulkanExtensionsSet::contains, &extensions);
+					auto _ext_filter = [this](std::string_view ext_name) {return extensions.contains(ext_name); };
+					vkGetPhysicalDeviceProperties2(device, &props.link(api_version, _ext_filter));
+					vkGetPhysicalDeviceFeatures2(device, &features.link(api_version, _ext_filter));
 					setName(props.props2.properties.deviceName);
 
 					VkApplication::DesiredDeviceInfo desired;
@@ -1671,8 +1686,6 @@ namespace vkl
 
 				virtual void declareInline(Context& ctx)
 				{
-					
-
 					if (ImGui::TreeNodeEx("Summary", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						ImGui::LabelValue("Rating", rating);
@@ -1693,7 +1706,7 @@ namespace vkl
 
 					if(ImGui::TreeNode("Extensions"))
 					{
-						DeclareExtensions(extensions);
+						DeclareExtensions(extensions, ext_filter);
 						ImGui::TreePop();
 					}
 				}
@@ -1716,6 +1729,8 @@ namespace vkl
 				VkPhysicalDevice handle = {};
 				std::string name = {};
 			};
+
+			std::string _extension_filter = {};
 
 			MyVector<PhysicalDeviceInfo> _physical_devices;
 
@@ -1807,7 +1822,7 @@ namespace vkl
 							if (ImGui::Button(label))
 							{
 								std::shared_ptr<PhysicalDevicePanel> panel = ctx.getTopPanelHolder()->getOrCreateChild(reinterpret_cast<Id>(_physical_devices[i].handle), [&]() {
-									return std::make_shared<PhysicalDevicePanel>(application(), _physical_devices[i].handle);
+									return std::make_shared<PhysicalDevicePanel>(application(), _physical_devices[i].handle, &_extension_filter);
 								});
 								ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(_physical_devices[i].handle), panel);
 							}
