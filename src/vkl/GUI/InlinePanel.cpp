@@ -64,5 +64,12 @@ namespace vkl::GUI
 		ImGui::PopID();
 	}
 
-	
+	InlinePanel InlinePanel::MakeFromUniqePanel(std::shared_ptr<Panel> const& panel, Type type)
+	{
+		return InlinePanel{
+			.panel = panel,
+			.id = reinterpret_cast<Panel::Id>(panel.get()),
+			.type = type,
+		};
+	}
 }
