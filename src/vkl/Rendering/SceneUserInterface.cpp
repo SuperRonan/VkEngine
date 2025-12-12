@@ -188,25 +188,20 @@ namespace vkl
 			});
 		}
 
-
-		for(auto & [k, v] : _childs)
-		{
-			if (NodeInspector* ni = dynamic_cast<NodeInspector*>(v.panel.get()))
+		iterateOnOpenNodes([&](NodeInspector* ni) {
+			auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
+			for (const auto& instance : instances)
 			{
-				auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
-				for (const auto& instance : instances)
-				{
-					const mat4 pc = camera.getWorldToProj() * Matrix4f(instance.matrix);
-					draw_list.pushBack(VertexCommand::DrawCallInfo{
-						.name = "selected node",
-						.pc_data = &pc,
-						.pc_size = sizeof(pc),
-						.draw_count = 3,
-						.instance_count = 1,
-					});
-				}
+				const mat4 pc = camera.getWorldToProj() * Matrix4f(instance.matrix);
+				draw_list.pushBack(VertexCommand::DrawCallInfo{
+					.name = "selected node",
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
+					.draw_count = 3,
+					.instance_count = 1,
+				});
 			}
-		}
+		});
 
 
 		if (draw_list.calls.size())
@@ -218,47 +213,43 @@ namespace vkl
 		draw_list.clear();
 		vertex_draw_info.clear();
 
-		for (auto& [k, v] : _childs)
-		{
-			if (NodeInspector* ni = dynamic_cast<NodeInspector*>(v.panel.get()))
+		iterateOnOpenNodes([&](NodeInspector* ni) {
+			if (const auto& model = ni->node->model())
 			{
-				if (const auto& model = ni->node->model())
+				if (const auto& mesh = model->mesh())
 				{
-					if (const auto& mesh = model->mesh())
+					vdcr.clear();
+					// TODO once, not on each loop
+					_box_mesh->fillVertexDrawCallInfo(vdcr);
+					auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
+					for (const auto& instance : instances)
 					{
+						const AABB3f& aabb = mesh->getAABB();
+						Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
+
+						const std::string name = mesh->name() + "::AABB";
+						Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(instance.matrix)).eval() * aabb_matrix);
+						const Render3DBoxPC pc{
+							.matrix = pc_matrix,
+							.color = vec4(1, 1, 1, 1),
+						};
+						draw_list.pushBack(VertexCommand::DrawCallInfo{
+							.name = name,
+							.pc_data = &pc,
+							.pc_size = sizeof(pc),
+							.draw_count = vdcr.draw_count,
+							.instance_count = vdcr.instance_count,
+							.index_buffer = vdcr.index_buffer,
+							.index_type = vdcr.index_type,
+							.num_vertex_buffers = vdcr.vertex_buffers.size32(),
+							.vertex_buffers = vdcr.vertex_buffers.data(),
+						});
+
 						vdcr.clear();
-						// TODO once, not on each loop
-						_box_mesh->fillVertexDrawCallInfo(vdcr);
-						auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
-						for (const auto& instance : instances)
-						{
-							const AABB3f& aabb = mesh->getAABB();
-							Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
-
-							const std::string name = mesh->name() + "::AABB";
-							Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(instance.matrix)).eval() * aabb_matrix);
-							const Render3DBoxPC pc{
-								.matrix = pc_matrix,
-								.color = vec4(1, 1, 1, 1),
-							};
-							draw_list.pushBack(VertexCommand::DrawCallInfo{
-								.name = name,
-								.pc_data = &pc,
-								.pc_size = sizeof(pc),
-								.draw_count = vdcr.draw_count,
-								.instance_count = vdcr.instance_count,
-								.index_buffer = vdcr.index_buffer,
-								.index_type = vdcr.index_type,
-								.num_vertex_buffers = vdcr.vertex_buffers.size32(),
-								.vertex_buffers = vdcr.vertex_buffers.data(),
-							});
-
-							vdcr.clear();
-						}
 					}
 				}
 			}
-		}
+		});
 		vdcr.clear();
 
 		if (draw_list.calls.size())
@@ -787,6 +778,19 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
+	void SceneUserInterface::iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn)
+	{
+		for (auto& [k, v] : _childs)
+		{
+			if (v.panel->isOpen())
+			{
+				if(NodeInspector* ni = dynamic_cast<NodeInspector*>(v.panel.get()))
+				{
+					fn(ni);
+				}
+			}
+		}
+	}
 
 	SceneUserInterface::NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent):
 		GUI::Panel(parent->application(), node->name()),

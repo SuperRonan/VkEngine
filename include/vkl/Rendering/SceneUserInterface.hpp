@@ -152,6 +152,11 @@ namespace vkl
 			NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent);
 
 			void setPath(Scene::DAG::FastNodePath const& path);
+
+			Id getDefaultId() const
+			{
+				return reinterpret_cast<Id>(node.get());
+			}
 		};
 
 		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path = {});
@@ -161,6 +166,8 @@ namespace vkl
 		void closeAllNodeInspectors();
 
 		NodeInspector* isNodeOpen(GUI::Context& ctx, Scene::Node* node) const;
+
+		void iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn); 
 
 	public:
 
