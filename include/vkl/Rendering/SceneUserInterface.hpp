@@ -160,6 +160,8 @@ namespace vkl
 
 		void closeAllNodeInspectors();
 
+		NodeInspector* isNodeOpen(GUI::Context& ctx, Scene::Node* node) const;
+
 	public:
 
 		struct CreateInfo

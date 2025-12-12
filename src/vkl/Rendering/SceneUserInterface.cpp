@@ -117,7 +117,8 @@ namespace vkl
 
 	void SceneUserInterface::updateResources(UpdateContext& ctx)
 	{
-		bool update_3D_basis = _show_view_basis || _show_world_basis /* || _gui_selected_node.hasValue() */ || ctx.updateAnyway();
+		bool has_any_child_open = true; // TODO check,
+		bool update_3D_basis = _show_view_basis || _show_world_basis || has_any_child_open || ctx.updateAnyway();
 
 		bool render = false;
 
@@ -127,7 +128,7 @@ namespace vkl
 			render = true;
 		}
 
-		if (/*_gui_selected_node.hasValue() || */ ctx.updateAnyway())
+		if (has_any_child_open || ctx.updateAnyway())
 		{
 			_box_mesh->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _render_3D_box;
@@ -143,6 +144,7 @@ namespace vkl
 
 	void SceneUserInterface::execute(ExecutionRecorder& recorder, Camera & camera)
 	{
+		static thread_local VertexDrawCallInfo vdcr;
 		recorder.pushDebugLabel(name(), true);
 
 		bool began_render_pass = false;
@@ -185,18 +187,26 @@ namespace vkl
 				.instance_count = 1,
 			});
 		}
-		// TEMP
-		//if (_gui_selected_node.hasValue())
-		//{
-		//	const mat4 pc = camera.getWorldToProj() * Matrix4f(_gui_selected_node.node.matrix);
-		//	draw_list.pushBack(VertexCommand::DrawCallInfo{
-		//		.name = "selected node",
-		//		.pc_data = &pc,
-		//		.pc_size = sizeof(pc),
-		//		.draw_count = 3,
-		//		.instance_count = 1,
-		//	});
-		//}
+
+
+		for(auto & [k, v] : _childs)
+		{
+			if (NodeInspector* ni = dynamic_cast<NodeInspector*>(v.panel.get()))
+			{
+				auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
+				for (const auto& instance : instances)
+				{
+					const mat4 pc = camera.getWorldToProj() * Matrix4f(instance.matrix);
+					draw_list.pushBack(VertexCommand::DrawCallInfo{
+						.name = "selected node",
+						.pc_data = &pc,
+						.pc_size = sizeof(pc),
+						.draw_count = 3,
+						.instance_count = 1,
+					});
+				}
+			}
+		}
 
 
 		if (draw_list.calls.size())
@@ -208,46 +218,48 @@ namespace vkl
 		draw_list.clear();
 		vertex_draw_info.clear();
 
+		for (auto& [k, v] : _childs)
+		{
+			if (NodeInspector* ni = dynamic_cast<NodeInspector*>(v.panel.get()))
+			{
+				if (const auto& model = ni->node->model())
+				{
+					if (const auto& mesh = model->mesh())
+					{
+						vdcr.clear();
+						// TODO once, not on each loop
+						_box_mesh->fillVertexDrawCallInfo(vdcr);
+						auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
+						for (const auto& instance : instances)
+						{
+							const AABB3f& aabb = mesh->getAABB();
+							Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
 
+							const std::string name = mesh->name() + "::AABB";
+							Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(instance.matrix)).eval() * aabb_matrix);
+							const Render3DBoxPC pc{
+								.matrix = pc_matrix,
+								.color = vec4(1, 1, 1, 1),
+							};
+							draw_list.pushBack(VertexCommand::DrawCallInfo{
+								.name = name,
+								.pc_data = &pc,
+								.pc_size = sizeof(pc),
+								.draw_count = vdcr.draw_count,
+								.instance_count = vdcr.instance_count,
+								.index_buffer = vdcr.index_buffer,
+								.index_type = vdcr.index_type,
+								.num_vertex_buffers = vdcr.vertex_buffers.size32(),
+								.vertex_buffers = vdcr.vertex_buffers.data(),
+							});
 
-		//if (_gui_selected_node.hasValue() && _box_mesh->isReadyToDraw())
-		//{
-		//	vertex_draw_info.clear();
-		//	const auto & model = _gui_selected_node.node.node->model();
-		//	if (model)
-		//	{
-		//		const auto & mesh = model->mesh();
-		//		if (mesh)
-		//		{
-		//			static thread_local VertexDrawCallInfo vdcr;
-		//			vdcr.clear();
-		//			_box_mesh->fillVertexDrawCallInfo(vdcr);
-
-		//			const AABB3f & aabb = mesh->getAABB();
-		//			Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
-		//			
-		//			const std::string name = mesh->name() + "::AABB";
-		//			Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix)).eval() * aabb_matrix);
-		//			const Render3DBoxPC pc{
-		//				.matrix = pc_matrix,
-		//				.color = vec4(1, 1, 1, 1),
-		//			};
-		//			draw_list.pushBack(VertexCommand::DrawCallInfo{
-		//				.name = name,
-		//				.pc_data = &pc,
-		//				.pc_size = sizeof(pc),
-		//				.draw_count = vdcr.draw_count,
-		//				.instance_count = vdcr.instance_count,
-		//				.index_buffer = vdcr.index_buffer,
-		//				.index_type = vdcr.index_type,
-		//				.num_vertex_buffers = vdcr.vertex_buffers.size32(),
-		//				.vertex_buffers = vdcr.vertex_buffers.data(),
-		//			});
-		//			
-		//			vdcr.clear();
-		//		}
-		//	}
-		//}
+							vdcr.clear();
+						}
+					}
+				}
+			}
+		}
+		vdcr.clear();
 
 		if (draw_list.calls.size())
 		{
@@ -638,7 +650,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 					flags |= ImGuiTreeNodeFlags_Leaf;
 				}
 
-				bool is_selected = false;
+				bool is_selected = isNodeOpen(ctx, node.get());
 				is_selected_path_so_far = false;
 				//if (is_selected_path_so_far)
 				//{
@@ -754,7 +766,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		auto count = std::erase_if(_childs, [](const auto& item)
 		{
 			const auto& [key, value] = item;
-			if (dynamic_cast<NodeInspector*>(value.get()))
+			if (dynamic_cast<NodeInspector*>(value.panel.get()))
 			{
 				return true;
 			}
@@ -762,6 +774,19 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		});
 		_childs_ids_valid &= (count == 0);
 	}
+
+	SceneUserInterface::NodeInspector* SceneUserInterface::isNodeOpen(GUI::Context& ctx, Scene::Node* node) const
+	{
+		auto it = _childs.find(reinterpret_cast<Id>(node));
+		NodeInspector* res = nullptr;
+		if (it != _childs.end())
+		{
+			assert(!!dynamic_cast<NodeInspector*>(it->second.panel.get()));
+			res = static_cast<NodeInspector*>(it->second.panel.get());
+		}
+		return res;
+	}
+
 
 	SceneUserInterface::NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent):
 		GUI::Panel(parent->application(), node->name()),
