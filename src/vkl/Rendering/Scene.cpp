@@ -151,6 +151,17 @@ namespace vkl
 		}
 	}
 
+	std::span<const Scene::DirectedAcyclicGraph::PerNodeInstance> Scene::DirectedAcyclicGraph::getNodeInstancesView(std::shared_ptr<Node> const& node) const
+	{
+		std::span<const Scene::DirectedAcyclicGraph::PerNodeInstance> res = {};
+		auto it = _flat_dag.find(node);
+		if (it != _flat_dag.end())
+		{
+			res = std::span<const Scene::DirectedAcyclicGraph::PerNodeInstance>(it->second);
+		}
+		return res;
+	}
+
 	void Scene::DirectedAcyclicGraph::flatten()
 	{
 		_flat_dag.clear();

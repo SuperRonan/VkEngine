@@ -290,6 +290,7 @@ namespace vkl
 
 			void iterateOnNodes(const PerNodeFunction & f);
 
+			std::span<const PerNodeInstance> getNodeInstancesView(std::shared_ptr<Node> const& node) const;
 
 			struct PositionedNode
 			{
