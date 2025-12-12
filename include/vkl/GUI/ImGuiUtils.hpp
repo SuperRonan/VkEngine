@@ -362,50 +362,41 @@ namespace ImGui
 		LabelValueEx(label, GetDataType<Scalar>(), &value, fmt);
 	}
 
-	template <std::integral UInt>
-	static void LabelHexValue(const char* label, UInt value)
+	// cursor must point to an array of at least 9 chars ("0x%016llx")
+	static constexpr char* WriteFormatHex(char* cursor, char size_of_type, bool full_width = false, bool caps = false)
 	{
-		const char* fmt;
-		if constexpr (sizeof(UInt) == 2)
+		auto write = [&](const char* lit)
+			{
+				//cursor = strcpy(cursor, lit);
+				while (*lit)
+				{
+					*(cursor++) = *(lit++);
+				}
+			};
+		write("0x%");
+		if (full_width)
 		{
-			fmt = "0x%hX";
+			*cursor++ = '0';
+			cursor = std::format_to(cursor, "{}", 2 * size_of_type);
 		}
-		else if constexpr (sizeof(UInt) == 4)
+		if (size_of_type == 2)
 		{
-			fmt = "0x%X";
+			*cursor++ = 'h';
 		}
-		else if constexpr (sizeof(UInt) == 8)
+		else if (size_of_type == 8)
 		{
-			fmt = "0x%llX";
+			write("ll");
 		}
-		else
-		{
-			static_assert(false, "Case not handled!");
-		}
-		ImGui::LabelValue(label, value, fmt);
+		*cursor++ = caps ? 'X' : 'x';
+		return cursor;
 	}
 
 	template <std::integral UInt>
-	static void LabelHexValueFullWidth(const char* label, UInt value)
+	static void LabelHexValue(const char* label, UInt value, bool full_width = false, bool caps = false)
 	{
-		const char* fmt = nullptr;
-		if constexpr (sizeof(UInt) == 2)
-		{
-			fmt = "0x%04hX";
-		}
-		else if constexpr (sizeof(UInt) == 4)
-		{
-			fmt = "0x%08X";
-		}
-		else if constexpr (sizeof(UInt) == 8)
-		{
-			fmt = "0x%016llX";
-		}
-		else
-		{
-			static_assert(false, "Case not handled!");
-		}
-		ImGui::LabelValue(label, value, fmt);
+		std::array<char, 16> fmt;
+		*WriteFormatHex(fmt.data(), sizeof(UInt), full_width, caps) = char(0);
+		ImGui::LabelValue(label, value, fmt.data());
 	}
 
 	// const char* label
