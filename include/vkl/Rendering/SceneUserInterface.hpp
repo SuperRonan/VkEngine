@@ -10,9 +10,11 @@
 
 #include <vkl/Commands/GraphicsCommand.hpp>
 
+#include <vkl/GUI/PanelHolder.hpp>
+
 namespace vkl
 {
-	class SceneUserInterface : public VkObject
+	class SceneUserInterface : public GUI::PanelHolder
 	{
 	public:
 
@@ -140,7 +142,6 @@ namespace vkl
 
 		void createInternalResources();
 
-		friend class ScenePanel;
 
 	public:
 
@@ -163,7 +164,7 @@ namespace vkl
 
 		void execute(ExecutionRecorder & recorder, Camera & camera);
 
-		virtual void declareGui(GUI::Context & ctx);
+		virtual void declareInline(GUI::Context & ctx);
 
 		const SelectedNode& getGuiSelectedNode()const
 		{

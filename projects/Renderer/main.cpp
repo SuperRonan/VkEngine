@@ -939,7 +939,7 @@ namespace vkl
 						.panel = VkApplication::getGUIPanel(),
 					},
 					GUI::MainPanel::PanelMenuOption{
-						.panel = MakePanel(*sui),
+						.panel = sui,
 						.label = "Scene",
 					},
 					GUI::MainPanel::PanelMenuOption{

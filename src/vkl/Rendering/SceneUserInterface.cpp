@@ -98,7 +98,10 @@ namespace vkl
 	}
 
 	SceneUserInterface::SceneUserInterface(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name),
+		GUI::PanelHolder(GUI::PanelHolder::CI{
+			.app = ci.app,
+			.name = ci.name,
+		}),
 		_scene(ci.scene),
 		_target(ci.target),
 		_depth(ci.depth),
@@ -542,7 +545,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
-	void SceneUserInterface::declareGui(GUI::Context& ctx)
+	void SceneUserInterface::declareInline(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
 		if (ImGui::CollapsingHeader("Options"))
