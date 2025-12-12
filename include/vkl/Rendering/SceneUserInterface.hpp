@@ -159,6 +159,8 @@ namespace vkl
 			}
 		};
 
+		NodeInspector* _node_in_focus = nullptr;
+
 		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path = {});
 
 		void closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node);

@@ -229,9 +229,14 @@ namespace vkl
 
 						const std::string name = mesh->name() + "::AABB";
 						Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(instance.matrix)).eval() * aabb_matrix);
+						vec4 color = vec4(1, 1, 1, 1);
+						if (ni->in_focus)
+						{
+							color[1] = 0;
+						}
 						const Render3DBoxPC pc{
 							.matrix = pc_matrix,
-							.color = vec4(1, 1, 1, 1),
+							.color = color,
 						};
 						draw_list.pushBack(VertexCommand::DrawCallInfo{
 							.name = name,
@@ -733,6 +738,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		} // Tree
 
 		ImGui::PopID();
+		_node_in_focus = nullptr; // Will be set by a child
 	}
 
 	SceneUserInterface::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path)
@@ -807,7 +813,11 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	void SceneUserInterface::NodeInspector::declareInline(GUI::Context& ctx)
 	{
-		ImGui::Text(node->name().c_str());
+		in_focus = ImGui::IsWindowFocused();
+		if (in_focus)
+		{
+			parent->_node_in_focus = this;
+		}
 
 		bool visible = node->visible();
 		if (ImGui::Checkbox("Visible", &visible))
