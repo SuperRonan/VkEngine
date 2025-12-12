@@ -1609,7 +1609,17 @@ namespace vkl
 						const uint32_t v = props.props2.properties.apiVersion;
 						ImGui::LabelText("Vulkan API version", "%d.%d.%d (variant: %d)", VK_API_VERSION_MAJOR(v), VK_API_VERSION_MINOR(v), VK_API_VERSION_PATCH(v), VK_API_VERSION_VARIANT(v));
 					}
-					ImGui::TextBox("Vendor Id", string_VkVendorId(VkVendorId(props.props2.properties.vendorID)));
+					{
+						const char* vendor_id_str = string_VkVendorId(VkVendorId(props.props2.properties.vendorID));
+						if (std::string_view(vendor_id_str).find("VK_") == 0)
+						{
+							ImGui::TextBox("Vendor Id", vendor_id_str);
+						}
+						else
+						{
+							ImGui::LabelHexValue("Vendor Id", props.props2.properties.vendorID);
+						}
+					}
 					{
 						const uint32_t v = props.props2.properties.driverVersion;
 						ImGui::LabelText("Driver version", "0x%X (%d.%d.%d)", v, VK_VERSION_MAJOR(v), VK_VERSION_MINOR(v), VK_VERSION_PATCH(v));
