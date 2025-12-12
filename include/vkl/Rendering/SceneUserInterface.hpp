@@ -64,8 +64,6 @@ namespace vkl
 			Vec4 color;
 		};
 
-		SelectedNode _gui_selected_node;
-
 		class CreateNodePopUp
 		{
 		protected:
@@ -142,6 +140,15 @@ namespace vkl
 
 		void createInternalResources();
 
+		struct NodeInspector : public GUI::Panel
+		{
+			SceneUserInterface* parent;
+			SelectedNode node;
+
+			virtual void declareInline(GUI::Context& ctx);
+
+			NodeInspector(SelectedNode const& node, SceneUserInterface* parent);
+		};
 
 	public:
 
@@ -166,11 +173,9 @@ namespace vkl
 
 		virtual void declareInline(GUI::Context & ctx);
 
-		const SelectedNode& getGuiSelectedNode()const
-		{
-			return _gui_selected_node;
-		}
-
+		// Find the node in the scene tree
+		// If the same node is found, the matrix is updated
+		// else the node is reseted
 		void checkSelectedNode(SelectedNode& selected_node);
 	};
 }

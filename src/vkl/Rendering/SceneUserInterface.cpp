@@ -117,7 +117,7 @@ namespace vkl
 
 	void SceneUserInterface::updateResources(UpdateContext& ctx)
 	{
-		bool update_3D_basis = _show_view_basis || _show_world_basis || _gui_selected_node.hasValue() || ctx.updateAnyway();
+		bool update_3D_basis = _show_view_basis || _show_world_basis /* || _gui_selected_node.hasValue() */ || ctx.updateAnyway();
 
 		bool render = false;
 
@@ -127,7 +127,7 @@ namespace vkl
 			render = true;
 		}
 
-		if (_gui_selected_node.hasValue() || ctx.updateAnyway())
+		if (/*_gui_selected_node.hasValue() || */ ctx.updateAnyway())
 		{
 			_box_mesh->updateResources(ctx);
 			ctx.resourcesToUpdateLater() += _render_3D_box;
@@ -185,17 +185,18 @@ namespace vkl
 				.instance_count = 1,
 			});
 		}
-		if (_gui_selected_node.hasValue())
-		{
-			const mat4 pc = camera.getWorldToProj() * Matrix4f(_gui_selected_node.node.matrix);
-			draw_list.pushBack(VertexCommand::DrawCallInfo{
-				.name = "selected node",
-				.pc_data = &pc,
-				.pc_size = sizeof(pc),
-				.draw_count = 3,
-				.instance_count = 1,
-			});
-		}
+		// TEMP
+		//if (_gui_selected_node.hasValue())
+		//{
+		//	const mat4 pc = camera.getWorldToProj() * Matrix4f(_gui_selected_node.node.matrix);
+		//	draw_list.pushBack(VertexCommand::DrawCallInfo{
+		//		.name = "selected node",
+		//		.pc_data = &pc,
+		//		.pc_size = sizeof(pc),
+		//		.draw_count = 3,
+		//		.instance_count = 1,
+		//	});
+		//}
 
 
 		if (draw_list.calls.size())
@@ -209,44 +210,44 @@ namespace vkl
 
 
 
-		if (_gui_selected_node.hasValue() && _box_mesh->isReadyToDraw())
-		{
-			vertex_draw_info.clear();
-			const auto & model = _gui_selected_node.node.node->model();
-			if (model)
-			{
-				const auto & mesh = model->mesh();
-				if (mesh)
-				{
-					static thread_local VertexDrawCallInfo vdcr;
-					vdcr.clear();
-					_box_mesh->fillVertexDrawCallInfo(vdcr);
+		//if (_gui_selected_node.hasValue() && _box_mesh->isReadyToDraw())
+		//{
+		//	vertex_draw_info.clear();
+		//	const auto & model = _gui_selected_node.node.node->model();
+		//	if (model)
+		//	{
+		//		const auto & mesh = model->mesh();
+		//		if (mesh)
+		//		{
+		//			static thread_local VertexDrawCallInfo vdcr;
+		//			vdcr.clear();
+		//			_box_mesh->fillVertexDrawCallInfo(vdcr);
 
-					const AABB3f & aabb = mesh->getAABB();
-					Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
-					
-					const std::string name = mesh->name() + "::AABB";
-					Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix)).eval() * aabb_matrix);
-					const Render3DBoxPC pc{
-						.matrix = pc_matrix,
-						.color = vec4(1, 1, 1, 1),
-					};
-					draw_list.pushBack(VertexCommand::DrawCallInfo{
-						.name = name,
-						.pc_data = &pc,
-						.pc_size = sizeof(pc),
-						.draw_count = vdcr.draw_count,
-						.instance_count = vdcr.instance_count,
-						.index_buffer = vdcr.index_buffer,
-						.index_type = vdcr.index_type,
-						.num_vertex_buffers = vdcr.vertex_buffers.size32(),
-						.vertex_buffers = vdcr.vertex_buffers.data(),
-					});
-					
-					vdcr.clear();
-				}
-			}
-		}
+		//			const AABB3f & aabb = mesh->getAABB();
+		//			Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
+		//			
+		//			const std::string name = mesh->name() + "::AABB";
+		//			Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(_gui_selected_node.node.matrix)).eval() * aabb_matrix);
+		//			const Render3DBoxPC pc{
+		//				.matrix = pc_matrix,
+		//				.color = vec4(1, 1, 1, 1),
+		//			};
+		//			draw_list.pushBack(VertexCommand::DrawCallInfo{
+		//				.name = name,
+		//				.pc_data = &pc,
+		//				.pc_size = sizeof(pc),
+		//				.draw_count = vdcr.draw_count,
+		//				.instance_count = vdcr.instance_count,
+		//				.index_buffer = vdcr.index_buffer,
+		//				.index_type = vdcr.index_type,
+		//				.num_vertex_buffers = vdcr.vertex_buffers.size32(),
+		//				.vertex_buffers = vdcr.vertex_buffers.data(),
+		//			});
+		//			
+		//			vdcr.clear();
+		//		}
+		//	}
+		//}
 
 		if (draw_list.calls.size())
 		{
@@ -638,29 +639,30 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				}
 
 				bool is_selected = false;
-				if (is_selected_path_so_far)
-				{
-					if (!path.path.empty())
-					{
-						if (_gui_selected_node.path.path.size() >= path.path.size())
-						{
-							if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
-							{
-								is_selected_path_so_far = false;
-							}
-							else
-							{
-								is_selected = (_gui_selected_node.path.path.size() == path.path.size());
-							}
-						}
-						else
-						{
-							is_selected_path_so_far = false;
-						}
-					}
-				}
+				is_selected_path_so_far = false;
+				//if (is_selected_path_so_far)
+				//{
+				//	if (!path.path.empty())
+				//	{
+				//		if (_gui_selected_node.path.path.size() >= path.path.size())
+				//		{
+				//			if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
+				//			{
+				//				is_selected_path_so_far = false;
+				//			}
+				//			else
+				//			{
+				//				is_selected = (_gui_selected_node.path.path.size() == path.path.size());
+				//			}
+				//		}
+				//		else
+				//		{
+				//			is_selected_path_so_far = false;
+				//		}
+				//	}
+				//}
 
-				if (is_selected || node == _gui_selected_node.node.node)
+				if (is_selected /* || node == _gui_selected_node.node.node*/)
 				{
 					flags |= ImGuiTreeNodeFlags_Selected;
 				}
@@ -679,11 +681,14 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
 				{
 					//std::cout << "Clicked " << node->name() << std::endl;
-					_gui_selected_node.node = Scene::DAG::PositionedNode{
+					SelectedNode selected_node{
 						.node = node,
-						.matrix = node_matrix,
+						.path = path,
 					};
-					_gui_selected_node.path = path;
+					std::shared_ptr<NodeInspector> panel = ctx.getTopPanelHolder()->getOrCreateChild(reinterpret_cast<Id>(node.get()), [&]() {
+						return std::make_shared<NodeInspector>(selected_node, this);
+					});
+					ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(node.get()), panel);
 				}
 				ImGui::PushID("On Node");
 				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
@@ -731,84 +736,70 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			declare_node(_scene->getRootNode(), root_matrix, true, 1, declare_node);
 		} // Tree
 
-		bool inspect_node = ImGui::Begin("Node Inspector");
-		if (inspect_node)
+		ImGui::PopID();
+	}
+
+	SceneUserInterface::NodeInspector::NodeInspector(SelectedNode const& node, SceneUserInterface* parent):
+		GUI::Panel(parent->application(), node.node.node->name()),
+		node(node),
+		parent(parent)
+	{
+
+	}
+
+	void SceneUserInterface::NodeInspector::declareInline(GUI::Context& ctx)
+	{
+		if (node.hasValue())
 		{
-			if (_gui_selected_node.hasValue())
+			parent->checkSelectedNode(node);
+		}
+		if (node.hasValue())
+		{
+			std::shared_ptr<Scene::Node> node = this->node.node.node;
+			ImGui::Text(node->name().c_str());
+
+			bool visible = node->visible();
+			if (ImGui::Checkbox("Visible", &visible))
 			{
-				checkSelectedNode(_gui_selected_node);
+				node->setVisibility(visible);
 			}
-			if (_gui_selected_node.hasValue())
+
+			if (ImGui::CollapsingHeader("Transform"))
 			{
-				std::shared_ptr node = _gui_selected_node.node.node;
-				ImGui::PushID("Node Inspector");
-				ImGui::Text(node->name().c_str());
+				bool changed = false;
 
+				ImGui::Text("Collapsed Matrix");
+				Matrix3x4f node_matrix = node->matrix3x4();
+				ImGui::BeginDisabled();
+				ImGui::DragMatrix("", node_matrix);
+				ImGui::EndDisabled();
+
+				ImGui::Separator();
+				float range = 10;
+				ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
+				if (ImGui::Button("Reset"))
+				{
+					node->resetAuxiliaryTransform();
+				}
 				ImGui::SameLine();
-				ImVec4 c = ctx.style().invalid_red;
-				c.x *= 0.8;
-				ImGui::PushStyleColor(ImGuiCol_Button, c);
-				c.x *= 1.1;
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, c);
-				c.x *= 1.1;
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, c);
-				bool clicked = ImGui::Button("Close");
-				ImGui::PopStyleColor(3);
-				if (clicked)
+				if (ImGui::Button("Collapse Matrix"))
 				{
-					_gui_selected_node.clear();
+					node->collapseAuxiliaryTransform();
 				}
-				else
-				{
-					bool visible = node->visible();
-					if (ImGui::Checkbox("Visible", &visible))
-					{
-						node->setVisibility(visible);
-					}
-					
-					if (ImGui::CollapsingHeader("Transform"))
-					{
-						bool changed = false;
-						
-						ImGui::Text("Collapsed Matrix");
-						Matrix3x4f node_matrix = node->matrix3x4();
-						ImGui::BeginDisabled();
-						ImGui::DragMatrix("", node_matrix);
-						ImGui::EndDisabled();
+				ImGui::DragFloat3("Scale", node->scale().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
+				ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
+				ImGui::DragFloat3("Translation", node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
+			}
 
-						ImGui::Separator();
-						float range = 10;
-						ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
-						if (ImGui::Button("Reset"))
-						{
-							node->resetAuxiliaryTransform();
-						}
-						ImGui::SameLine();
-						if (ImGui::Button("Collapse Matrix"))
-						{
-							 node->collapseAuxiliaryTransform();
-						}
-						ImGui::DragFloat3("Scale", node->scale().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
-						ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
-						ImGui::DragFloat3("Translation", node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
-					}
-
-					if (!!node->model() && ImGui::CollapsingHeader("Model"))
-					{
-						node->model()->declareGui(ctx);
-					}
-					else if (!!node->light() && ImGui::CollapsingHeader("Light"))
-					{
-						node->light()->declareGui(ctx);
-					}
-				}
-
-
-				ImGui::PopID();
+			if (!!node->model() && ImGui::CollapsingHeader("Model"))
+			{
+				node->model()->declareGui(ctx);
+			}
+			else if (!!node->light() && ImGui::CollapsingHeader("Light"))
+			{
+				node->light()->declareGui(ctx);
 			}
 		}
-		ImGui::End();
-
-		ImGui::PopID();
+		
 	}
 }
