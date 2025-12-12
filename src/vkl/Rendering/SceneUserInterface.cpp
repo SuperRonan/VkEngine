@@ -681,14 +681,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
 				{
 					//std::cout << "Clicked " << node->name() << std::endl;
-					SelectedNode selected_node{
-						.node = node,
-						.path = path,
-					};
-					std::shared_ptr<NodeInspector> panel = ctx.getTopPanelHolder()->getOrCreateChild(reinterpret_cast<Id>(node.get()), [&]() {
-						return std::make_shared<NodeInspector>(selected_node, this);
-					});
-					ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(node.get()), panel);
+					openNodeInspector(ctx, node, path);
 				}
 				ImGui::PushID("On Node");
 				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
@@ -739,67 +732,94 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		ImGui::PopID();
 	}
 
-	SceneUserInterface::NodeInspector::NodeInspector(SelectedNode const& node, SceneUserInterface* parent):
-		GUI::Panel(parent->application(), node.node.node->name()),
+	SceneUserInterface::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path)
+	{
+		auto res = ctx.getTopPanelHolder()->openChild(reinterpret_cast<Id>(node.get()), [&]() {
+			return std::make_shared<NodeInspector>(node, this);
+		}).get();
+		if (!path.path.empty())
+		{
+			res->setPath(path);
+		}
+		return res;
+	}
+
+	void SceneUserInterface::closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node)
+	{
+		ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(node));
+	}
+
+	void SceneUserInterface::closeAllNodeInspectors()
+	{
+		auto count = std::erase_if(_childs, [](const auto& item)
+		{
+			const auto& [key, value] = item;
+			if (dynamic_cast<NodeInspector*>(value.get()))
+			{
+				return true;
+			}
+			return false;
+		});
+		_childs_ids_valid &= (count == 0);
+	}
+
+	SceneUserInterface::NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent):
+		GUI::Panel(parent->application(), node->name()),
 		node(node),
 		parent(parent)
 	{
 
 	}
 
+	void SceneUserInterface::NodeInspector::setPath(Scene::DAG::FastNodePath const& path)
+	{
+		latest_path = path;
+	}
+
 	void SceneUserInterface::NodeInspector::declareInline(GUI::Context& ctx)
 	{
-		if (node.hasValue())
+		ImGui::Text(node->name().c_str());
+
+		bool visible = node->visible();
+		if (ImGui::Checkbox("Visible", &visible))
 		{
-			parent->checkSelectedNode(node);
+			node->setVisibility(visible);
 		}
-		if (node.hasValue())
+
+		if (ImGui::CollapsingHeader("Transform"))
 		{
-			std::shared_ptr<Scene::Node> node = this->node.node.node;
-			ImGui::Text(node->name().c_str());
+			bool changed = false;
 
-			bool visible = node->visible();
-			if (ImGui::Checkbox("Visible", &visible))
+			ImGui::Text("Collapsed Matrix");
+			Matrix3x4f node_matrix = node->matrix3x4();
+			ImGui::BeginDisabled();
+			ImGui::DragMatrix("", node_matrix);
+			ImGui::EndDisabled();
+
+			ImGui::Separator();
+			float range = 10;
+			ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
+			if (ImGui::Button("Reset"))
 			{
-				node->setVisibility(visible);
+				node->resetAuxiliaryTransform();
 			}
-
-			if (ImGui::CollapsingHeader("Transform"))
+			ImGui::SameLine();
+			if (ImGui::Button("Collapse Matrix"))
 			{
-				bool changed = false;
-
-				ImGui::Text("Collapsed Matrix");
-				Matrix3x4f node_matrix = node->matrix3x4();
-				ImGui::BeginDisabled();
-				ImGui::DragMatrix("", node_matrix);
-				ImGui::EndDisabled();
-
-				ImGui::Separator();
-				float range = 10;
-				ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
-				if (ImGui::Button("Reset"))
-				{
-					node->resetAuxiliaryTransform();
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("Collapse Matrix"))
-				{
-					node->collapseAuxiliaryTransform();
-				}
-				ImGui::DragFloat3("Scale", node->scale().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
-				ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
-				ImGui::DragFloat3("Translation", node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
+				node->collapseAuxiliaryTransform();
 			}
-
-			if (!!node->model() && ImGui::CollapsingHeader("Model"))
-			{
-				node->model()->declareGui(ctx);
-			}
-			else if (!!node->light() && ImGui::CollapsingHeader("Light"))
-			{
-				node->light()->declareGui(ctx);
-			}
+			ImGui::DragFloat3("Scale", node->scale().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
+			ImGui::DragFloat3("Translation", node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
 		}
-		
+
+		if (!!node->model() && ImGui::CollapsingHeader("Model"))
+		{
+			node->model()->declareGui(ctx);
+		}
+		else if (!!node->light() && ImGui::CollapsingHeader("Light"))
+		{
+			node->light()->declareGui(ctx);
+		}
 	}
 }

@@ -143,12 +143,22 @@ namespace vkl
 		struct NodeInspector : public GUI::Panel
 		{
 			SceneUserInterface* parent;
-			SelectedNode node;
+			std::shared_ptr<Scene::Node> node; // ptr is Id
+			Scene::DAG::FastNodePath latest_path;
+			bool in_focus = false;
 
 			virtual void declareInline(GUI::Context& ctx);
 
-			NodeInspector(SelectedNode const& node, SceneUserInterface* parent);
+			NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent);
+
+			void setPath(Scene::DAG::FastNodePath const& path);
 		};
+
+		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path = {});
+
+		void closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node);
+
+		void closeAllNodeInspectors();
 
 	public:
 
