@@ -132,7 +132,7 @@ DirectShadingResult ShadeLight(
 		let pl = PointLight<SPECTRUM_MODE_RGB>(light);
 		vec3 dir = pl.position - sgi.position;
 		vec3 wi = Normalize(dir);
-		let Le = RGBSpectrumf(pl.emission) / Length2(dir);
+		let Le = RGBSpectrumf(pl.getSpectralEmission()) / Length2(dir);
 
 		res.L = (material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le) * AbsDot(sgi.shading_normal, wi);
 
@@ -163,7 +163,7 @@ DirectShadingResult ShadeLight(
 		let sl = SpotLight<SPECTRUM_MODE_RGB>(light);
 		vec3 dir = sl.position - sgi.position;
 		vec3 wi = Normalize(dir);
-		var Le = RGBSpectrumf(sl.emission) / Length2(dir);
+		var Le = RGBSpectrumf(sl.getSpectralEmission()) / Length2(dir);
 	
 		const vec4 proj_h = sl.getWorldToProj() * Homogeneous(sgi.position);
 		const vec3 proj = HomogeneousNormalize(proj_h);
@@ -201,7 +201,7 @@ DirectShadingResult ShadeLight(
 	{
 		let dl = DirectionalLight<SPECTRUM_MODE_RGB>(light);
 		vec3 wi = light.direction;
-		let Le = RGBSpectrumf(light.emission);
+		let Le = RGBSpectrumf(dl.getSpectralEmission());
 		res.L = (material.bsdf<BSDF_FORWARD_BIT>(sgi.geometry_normal, sgi.shading_normal, sgi.out_direction, wi) * Le) * AbsDot(sgi.shading_normal, wi);
 		if(res.L.isNonZero())
 		{
