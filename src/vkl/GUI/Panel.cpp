@@ -33,7 +33,8 @@ namespace vkl::GUI
 			flags |= ImGuiWindowFlags_MenuBar;
 		}
 		bool* p_open = _can_close ? &_open : nullptr;
-		if (ImGui::Begin(_name.c_str(), p_open, flags))
+		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
+		if (_is_visible)
 		{
 			if (_show_menu)
 			{

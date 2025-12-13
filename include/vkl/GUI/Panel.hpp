@@ -15,6 +15,7 @@ namespace vkl::GUI
 		bool _can_close = true;
 		bool _open = true;
 		bool _show_menu = false;
+		bool _is_visible = false;
 
 		Panel(VkApplication * app, std::string const& name);
 
@@ -36,6 +37,11 @@ namespace vkl::GUI
 		void setOpen(bool value = true)
 		{
 			_open = value;
+		}
+
+		bool isVisible() const
+		{
+			return _is_visible;
 		}
 	};
 }
