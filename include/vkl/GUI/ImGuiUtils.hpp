@@ -418,4 +418,12 @@ namespace ImGui
 
 	// Same as InputTextWithHing, with an extra XCross button on the right side of the text field to clear the str
 	extern bool TextFieldEdit(const char* label, std::string* str, const char* hint = nullptr, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
+
+
+	// Warning: may not work for all scalar types yet! (relies on ImGui::SliderScalar to be implemented for the ImGuiDataType of the scalar)
+	template <class Scalar>
+	static bool SliderScalar(const char* label, Scalar& value, Scalar const& v_min, Scalar const& v_max, const char* fmt = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_None)
+	{
+		return ImGui::SliderScalar(label, GetDataType<Scalar>(), &value, &v_min, &v_max, fmt, flags);
+	}
 }
