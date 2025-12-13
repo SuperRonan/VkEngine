@@ -34,6 +34,8 @@ namespace vkl::GUI
 		}
 		bool* p_open = _can_close ? &_open : nullptr;
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
+		_is_hovered = ImGui::IsWindowHovered();
+		_has_focus = ImGui::IsWindowFocused();
 		if (_is_visible)
 		{
 			if (_show_menu)

@@ -16,6 +16,8 @@ namespace vkl::GUI
 		bool _open = true;
 		bool _show_menu = false;
 		bool _is_visible = false;
+		bool _is_hovered = false;
+		bool _has_focus = false;
 
 		Panel(VkApplication * app, std::string const& name);
 
@@ -42,6 +44,16 @@ namespace vkl::GUI
 		bool isVisible() const
 		{
 			return _is_visible;
+		}
+
+		bool isHovered() const
+		{
+			return _is_hovered;
+		}
+
+		bool hasFocus() const
+		{
+			return _has_focus;
 		}
 	};
 }
