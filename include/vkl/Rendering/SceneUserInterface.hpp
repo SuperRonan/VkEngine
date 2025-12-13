@@ -14,6 +14,11 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class SceneUserInterfacePanels;
+	}
+
 	class SceneUserInterface : public GUI::PanelHolder
 	{
 	public:
@@ -41,6 +46,8 @@ namespace vkl
 		};
 
 	protected:
+
+		friend class GUI::SceneUserInterfacePanels;
 
 		std::shared_ptr<Scene> _scene = nullptr;
 		std::shared_ptr<ImageView> _target = nullptr;
@@ -140,6 +147,12 @@ namespace vkl
 		bool _show_world_basis = false;
 		bool _show_view_basis = false;
 
+		float _out_of_focus_alpha;
+		float _not_visible_alpha;
+		std::chrono::milliseconds _pulse_period;
+
+		void resetInterfaceOptions();
+
 		void createInternalResources();
 
 		struct NodeInspector : public GUI::Panel
@@ -147,7 +160,6 @@ namespace vkl
 			SceneUserInterface* parent;
 			std::shared_ptr<Scene::Node> node; // ptr is Id
 			Scene::DAG::FastNodePath latest_path;
-			bool in_focus = false;
 
 			virtual void declareInline(GUI::Context& ctx);
 
@@ -171,7 +183,7 @@ namespace vkl
 
 		NodeInspector* isNodeOpen(GUI::Context& ctx, Scene::Node* node) const;
 
-		void iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn); 
+		void iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn);
 
 	public:
 
@@ -195,6 +207,8 @@ namespace vkl
 		void execute(ExecutionRecorder & recorder, Camera & camera);
 
 		virtual void declareInline(GUI::Context & ctx);
+
+		virtual void declareMenu(GUI::Context& ctx);
 
 		// Find the node in the scene tree
 		// If the same node is found, the matrix is updated

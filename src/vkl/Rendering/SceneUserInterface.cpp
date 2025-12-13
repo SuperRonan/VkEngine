@@ -8,6 +8,8 @@
 
 #include <ShaderLib/Rendering/Scene/SceneFlags.h>
 
+#include <chrono>
+
 namespace vkl
 {
 	void SceneUserInterface::checkSelectedNode(SelectedNode& selected_node)
@@ -120,11 +122,19 @@ namespace vkl
 		_sets_layouts(ci.sets_layouts)
 	{
 		createInternalResources();
+		resetInterfaceOptions();
 	}
 
 	SceneUserInterface::~SceneUserInterface()
 	{
 
+	}
+
+	void SceneUserInterface::resetInterfaceOptions()
+	{
+		_out_of_focus_alpha = 0.333333;
+		_not_visible_alpha = 0.333333;
+		_pulse_period = 2048ms;
 	}
 
 	void SceneUserInterface::updateResources(UpdateContext& ctx)
@@ -156,23 +166,25 @@ namespace vkl
 
 	void SceneUserInterface::execute(ExecutionRecorder& recorder, Camera & camera)
 	{
-		float out_of_focus_alpha = 0.666666666;
-		float not_visible_alpha = 0.5;
+		const auto now = std::chrono::high_resolution_clock::now();
+		const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+		float pulse_time = float(now_ms.count() % _pulse_period.count()) / float(_pulse_period.count());
+		float highlight_pulse = std::sqr((std::sin(2 * std::numbers::pi * pulse_time)));
 
 		auto GetNodeAlpha = [&](NodeInspector* ni)
 		{
 			float res = 1;
-			if (ni->in_focus)
+			if (ni->isVisible() && ni->hasFocus())
 			{
-
+				res *= std::lerp(sqr(_out_of_focus_alpha), 1.0f, highlight_pulse);
 			}
 			else
 			{
-				res *= out_of_focus_alpha;
+				res *= _out_of_focus_alpha;
 			}
 			if (!ni->isVisible())
 			{
-				res *= not_visible_alpha;
+				res *= _not_visible_alpha;
 			}
 			return res;
 		};
@@ -593,6 +605,61 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
+	namespace GUI
+	{
+		class SceneUserInterfacePanels
+		{
+		public:
+
+			struct Options : public Panel
+			{
+				SceneUserInterface* that = nullptr;
+
+				Options(SceneUserInterface* target) :
+					Panel(target->application(), "Options"),
+					that(target)
+				{
+				}
+
+				virtual void declareInline(Context& ctx)
+				{
+					ImGui::SliderFloat("Out of focus Node Opacity", &that->_out_of_focus_alpha, 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
+					ImGui::SliderFloat("Invisible Node Opacity", &that->_not_visible_alpha, 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
+					{
+						int p = that->_pulse_period.count();
+						// Slider size_t does not work yet
+						const int max = 10'000;
+						if (ImGui::SliderScalar<decltype(p)>("Pulse period", p, 1, max, "%d ms"))
+						{
+							that->_pulse_period = std::chrono::milliseconds(std::clamp(p, 1, max));
+						}
+					}
+					ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
+					if (ImGui::Button("Reset"))
+					{
+						that->resetInterfaceOptions();
+					}
+					ImGui::PopStyleColor();
+				}
+			};
+		};
+	}
+
+	void SceneUserInterface::declareMenu(GUI::Context& ctx)
+	{
+		if (ImGui::BeginMenu("Options"))
+		{
+			if (ImGui::MenuItem("Options..."))
+			{
+				ctx.getTopPanelHolder()->openChild(reinterpret_cast<Id>(this), [&]() {
+					return std::make_shared<GUI::SceneUserInterfacePanels::Options>(this);
+				});
+			}
+			ImGui::EndMenu();
+		}
+		PanelHolder::declarePanelsMenu(ctx);
+	}
+
 	void SceneUserInterface::declareInline(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
@@ -852,8 +919,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	void SceneUserInterface::NodeInspector::declareInline(GUI::Context& ctx)
 	{
-		in_focus = ImGui::IsWindowFocused();
-		if (in_focus)
+		if (hasFocus())
 		{
 			parent->_node_in_focus = this;
 		}
