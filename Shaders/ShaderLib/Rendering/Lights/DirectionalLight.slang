@@ -40,7 +40,7 @@ struct DirectionalLight<int Mode> : ILight<Mode>
 		return LightType::Directional;
 	}
 
-	Spectrumf<Mode> getSpectralEmission<int Mode>()
+	SpectruM getSpectralEmission()
 	{
 		return Light::GetSpectralEmission<Mode>(emission, flags);
 	}
@@ -49,7 +49,7 @@ struct DirectionalLight<int Mode> : ILight<Mode>
 	{
 		Light::ConnectionSample<Mode> res;
 		res.direction = direction;
-		res.intensity = getSpectralEmission<Mode>();
+		res.intensity = getSpectralEmission();
 		res.pdf = 1;
 		res.flags = Light::Sample::Flags::AtInfinity | Light::Sample::Flags::DeltaDirection;
 		res.distance = NumericLimits<float>::infinity();
@@ -65,7 +65,7 @@ struct DirectionalLight<int Mode> : ILight<Mode>
 	{
 		Light::EmissionSample<Mode> res;
 		res.ray.direction = -direction;
-		res.intensity = getSpectralEmission<Mode>();
+		res.intensity = getSpectralEmission();
 		res.position_pdf = 1;
 		res.pdf = 1;
 		res.flags = Light::Sample::Flags::AtInfinity | Light::Sample::Flags::DeltaDirection;
