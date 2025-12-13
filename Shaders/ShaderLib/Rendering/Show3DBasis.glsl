@@ -25,6 +25,7 @@ layout(location = 0) out vec4 frag_color;
 layout(push_constant) uniform PushConstant
 {
 	mat4 matrix;
+	float alpha;
 } _pc;
 
 void main()
@@ -33,7 +34,7 @@ void main()
 
 	const mat4 w2p = _pc.matrix;
 	
-	vec4 color = vec4(0..xxx, 1);
+	vec4 color = vec4(0..xxx, _pc.alpha);
 	color[axis] = 1;
 
 	vec4 p0 = vec4(0..xxx, 1);

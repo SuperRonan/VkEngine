@@ -53,6 +53,8 @@ namespace vkl
 
 		_framebuffer = std::make_shared<Framebuffer>(std::move(fb_ci));
 
+		_blending = AttachmentBlending::DefaultAlphaBlending();
+
 		const std::filesystem::path shader_lib = "ShaderLib:/";
 		GraphicsPipeline::LineRasterizationState line_raster_state{
 			.lineRasterizationMode = VK_LINE_RASTERIZATION_MODE_BRESENHAM_EXT
@@ -66,6 +68,11 @@ namespace vkl
 			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
 			.extern_render_pass = _render_pass,
+			.color_attachments = {
+				GraphicsCommand::ColorAttachment{
+					.blending = &_blending,
+				}
+			},
 			.vertex_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
 			.geometry_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
 			.fragment_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
@@ -89,6 +96,11 @@ namespace vkl
 			.line_raster_state = line_raster_state,
 			.sets_layouts = _sets_layouts,
 			.extern_render_pass = _render_pass,
+			.color_attachments = {
+				GraphicsCommand::ColorAttachment{
+					.blending = &_blending,
+				}
+			},
 			.write_depth = false,
 			.depth_compare_op = _depth ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_ALWAYS,
 			.vertex_shader_path = shader_lib / "Rendering/Geometry/renderOnlyPos.vert",
@@ -144,6 +156,27 @@ namespace vkl
 
 	void SceneUserInterface::execute(ExecutionRecorder& recorder, Camera & camera)
 	{
+		float out_of_focus_alpha = 0.666666666;
+		float not_visible_alpha = 0.5;
+
+		auto GetNodeAlpha = [&](NodeInspector* ni)
+		{
+			float res = 1;
+			if (ni->in_focus)
+			{
+
+			}
+			else
+			{
+				res *= out_of_focus_alpha;
+			}
+			if (!ni->isVisible())
+			{
+				res *= not_visible_alpha;
+			}
+			return res;
+		};
+
 		static thread_local VertexDrawCallInfo vdcr;
 		recorder.pushDebugLabel(name(), true);
 
@@ -164,10 +197,16 @@ namespace vkl
 		
 		vertex_draw_info.clear();
 		auto & draw_list = vertex_draw_info;
+		struct Render3DBasisPC
+		{
+			mat4 matrix;
+			float alpha = 1;
+		};
 
 		if (_show_world_basis)
 		{
-			const mat4 pc = camera.getWorldToProj();
+			Render3DBasisPC pc = {};
+			pc.matrix = camera.getWorldToProj();
 			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "world",
 				.pc_data = &pc,
@@ -178,11 +217,13 @@ namespace vkl
 		}
 		if (_show_view_basis)
 		{
+			Render3DBasisPC pc = {};
 			Matrix4f view_3D_basis_matrix = (camera.getCamToProj() * Matrix4f(TranslationMatrix(Vector3f(0, 0, -0.25)))).eval() * (Matrix4f(camera.getWorldRoationMatrix()) * Matrix4f(DiagonalMatrix<3>(0.03125f))).eval();
+			pc.matrix = view_3D_basis_matrix;
 			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "view",
-				.pc_data = &view_3D_basis_matrix,
-				.pc_size = sizeof(view_3D_basis_matrix),
+				.pc_data = &pc,
+				.pc_size = sizeof(pc),
 				.draw_count = 3,
 				.instance_count = 1,
 			});
@@ -192,7 +233,9 @@ namespace vkl
 			auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
 			for (const auto& instance : instances)
 			{
-				const mat4 pc = camera.getWorldToProj() * Matrix4f(instance.matrix);
+				Render3DBasisPC pc = {};
+				pc.matrix = camera.getWorldToProj() * Matrix4f(instance.matrix);
+				pc.alpha  = GetNodeAlpha(ni);
 				draw_list.pushBack(VertexCommand::DrawCallInfo{
 					.name = "selected node",
 					.pc_data = &pc,
@@ -229,11 +272,7 @@ namespace vkl
 
 						const std::string name = mesh->name() + "::AABB";
 						Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(instance.matrix)).eval() * aabb_matrix);
-						vec4 color = vec4(1, 1, 1, 1);
-						if (ni->in_focus)
-						{
-							color[1] = 0;
-						}
+						vec4 color = vec4(1, 1, 1, GetNodeAlpha(ni));
 						const Render3DBoxPC pc{
 							.matrix = pc_matrix,
 							.color = color,

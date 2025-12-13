@@ -50,6 +50,8 @@ namespace vkl
 		std::shared_ptr<RenderPass> _render_pass = nullptr;
 		std::shared_ptr<Framebuffer> _framebuffer = nullptr;
 
+		AttachmentBlending _blending = {};
+
 		std::shared_ptr<VertexCommand> _render_3D_basis = nullptr;
 		struct Render3DBasisPC
 		{
