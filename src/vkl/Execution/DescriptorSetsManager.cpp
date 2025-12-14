@@ -334,7 +334,7 @@ namespace vkl
 				}
 				else
 				{
-					NOT_YET_IMPLEMENTED;
+					VKL_NOT_YET_IMPLEMENTED;
 				}
 				b.resetUpdateRange();
 			}
@@ -888,7 +888,7 @@ namespace vkl
 
 	void DescriptorSetAndPool::clearBinding(uint32_t binding, uint32_t array_index, uint32_t count)
 	{
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 	}
 
 	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers)

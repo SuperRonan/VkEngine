@@ -288,7 +288,7 @@ namespace vkl
 				}
 				else
 				{
-					NOT_YET_IMPLEMENTED;
+					VKL_NOT_YET_IMPLEMENTED;
 					*subpass_info = SubpassInfo{
 						
 					};
@@ -323,7 +323,7 @@ namespace vkl
 			}
 			else // Dynamic Rendering
 			{
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 
 				_info.recordEndSubpass(*_context);				
 
@@ -385,7 +385,7 @@ namespace vkl
 			}
 			else
 			{
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 			}
 			clearDeferedLists();
 		}

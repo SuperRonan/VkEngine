@@ -222,7 +222,7 @@ namespace vkl
 			}
 			else
 			{
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 			}
 
 			size_t previous_range_size = node->_build_ranges.size();
@@ -244,7 +244,7 @@ namespace vkl
 					}
 					else
 					{
-						NOT_YET_IMPLEMENTED;
+						VKL_NOT_YET_IMPLEMENTED;
 					}
 				}
 			}
@@ -290,7 +290,7 @@ namespace vkl
 				if (align_offset > 0)
 				{
 					// Should not happen anymore
-					NOT_YET_IMPLEMENTED;
+					VKL_NOT_YET_IMPLEMENTED;
 					node->_scratch_buffer.range.begin += (scratch_align - align_offset);
 				}
 			}

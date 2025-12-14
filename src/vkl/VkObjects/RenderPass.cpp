@@ -532,7 +532,7 @@ namespace vkl
 		}
 		else
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 			for (uint32_t s = 0; s < _subpasses.size32(); ++s)
 			{
 				const uint32_t prev_subpass = (s == 0) ? VK_SUBPASS_EXTERNAL : s - 1;

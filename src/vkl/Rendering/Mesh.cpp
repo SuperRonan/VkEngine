@@ -987,7 +987,7 @@ namespace vkl
 		}
 		else
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 		}
 
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(RigidMesh::CreateInfo{
@@ -1377,7 +1377,7 @@ namespace vkl
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
 			.app = pmi.app,
@@ -1395,7 +1395,7 @@ namespace vkl
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 
 		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
 			.app = pmi.app,
@@ -1420,7 +1420,7 @@ namespace vkl
 
 		if (cmi.phase_shift)
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 		}
 		else
 		{

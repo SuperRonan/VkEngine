@@ -15,7 +15,7 @@ namespace vkl
 
 	void VkWindow::frameBufferResizeCallback(SDL_Window* window, int width, int height)
 	{
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 		//
 		//VkWindow* vk_window = reinterpret_cast<VkWindow*>(SDL_GetWindowData(window, nullptr));
 		//vk_window->_sdl_resized = true;
@@ -500,7 +500,7 @@ namespace vkl
 		const VkResult aquire_res = vkAcquireNextImageKHR(_app->device(), *_swapchain->instance(), UINT64_MAX, sem_to_signal, fence_to_signal, &image_index);
 		if (aquire_res == VK_ERROR_OUT_OF_DATE_KHR || aquire_res == VK_SUBOPTIMAL_KHR)
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 			return AquireResult();
 		}
 		else if (aquire_res != VK_SUCCESS && aquire_res != VK_SUBOPTIMAL_KHR)

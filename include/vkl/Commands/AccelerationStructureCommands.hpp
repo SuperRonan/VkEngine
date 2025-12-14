@@ -58,7 +58,7 @@ namespace vkl
 
 		virtual std::shared_ptr<ExecutionNode> getExecutionNode(RecordContext& ctx) override
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 			return nullptr;
 		}
 

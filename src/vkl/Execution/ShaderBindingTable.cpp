@@ -262,7 +262,7 @@ namespace vkl
 
 	void ShaderBindingTable::setRecordProperties(ShaderRecordType record_type, Capacity capacity)
 	{
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 		const uint32_t segment_index = static_cast<uint32_t>(record_type);
 		assert(segment_index < _segments.size());
 		Segment s = _segments[segment_index];
@@ -277,7 +277,7 @@ namespace vkl
 			s.shader_data_record_size = capacity.data_size;	
 			changed_data_size = true;
 
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 			for (size_t i = segment_index; i < _segments.size(); ++i)
 			{
 				

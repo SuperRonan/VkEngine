@@ -550,7 +550,7 @@ namespace vkl
 			if (wanted > capacity)
 			{
 				// TODO merge queues
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 			}
 		}
 		if (desired.need_presentation)

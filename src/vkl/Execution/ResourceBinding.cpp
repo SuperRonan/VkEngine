@@ -361,7 +361,7 @@ namespace vkl
 		}
 		else
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 		}
 	}
 }

@@ -250,7 +250,7 @@ namespace vkl
 			res = static_cast<Button>(res_id);
 		}
 #elif MESSAGE_POPUP_POLICY == MESSAGE_POPUP_USE_STANDALONE
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 #endif
 		if (lock_mutex)
 		{

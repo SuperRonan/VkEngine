@@ -58,7 +58,8 @@ call
 
 #endif
 
-#define NOT_YET_IMPLEMENTED assert(false)
+#define VKL_NOT_YET_IMPLEMENTED assertm(false, "Not Yet Implemented!")
+#define VKL_SHOULD_NOT_BE_HERE assertm(false, "Should Not Be Here!")
 
 #define UBO_ALIGNEMENT 16
 

@@ -562,7 +562,7 @@ namespace vkl
 			{
 				size_t pos = source.find("#lang ", scanned_so_far);
 				// TODO
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 				if (pos == std::string::npos)
 				{
 					break;
@@ -1440,7 +1440,7 @@ namespace vkl
 				else
 				{
 					// TODO invalidate
-					NOT_YET_IMPLEMENTED;
+					VKL_NOT_YET_IMPLEMENTED;
 				}
 			}, .id = this });
 		}
@@ -1581,7 +1581,7 @@ namespace vkl
 		_instance_time = FileSystem::TimePoint::min();
 		if (ci.create_on_construct)
 		{
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 		}
 	}
 

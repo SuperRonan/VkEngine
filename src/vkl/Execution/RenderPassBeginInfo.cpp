@@ -52,7 +52,7 @@ namespace vkl
 				}
 				else
 				{
-					NOT_YET_IMPLEMENTED;
+					VKL_NOT_YET_IMPLEMENTED;
 				}
 			}
 
@@ -60,7 +60,7 @@ namespace vkl
 		else if (framebuffer)
 		{
 			// In the case of dynamic rendering, it is not necessary to create a FramebufferInstance, but we can still get the attachments from the Framebuffer
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 		}
 	}
 
@@ -101,7 +101,7 @@ namespace vkl
 			render_area.extent = extract(fbi->extent());
 			if (render_area.offset.x != 0 || render_area.offset.y != 0)
 			{
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 			}
 		}
 		if (rpi->handle())
@@ -126,7 +126,7 @@ namespace vkl
 		else
 		{
 			// Dynamic Rendering
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 			VkRenderingInfo info{
 				.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
 				.pNext = nullptr,
@@ -178,7 +178,7 @@ namespace vkl
 				recordEndSubpass(ctx);
 			}
 			// Dynamic Rendering
-			NOT_YET_IMPLEMENTED;
+			VKL_NOT_YET_IMPLEMENTED;
 		}
 		++_internal;
 		constexpr const uint32_t subpass_mask = std::bitMask<uint32_t>(31u);
@@ -215,7 +215,7 @@ namespace vkl
 			}
 			else
 			{
-				NOT_YET_IMPLEMENTED;
+				VKL_NOT_YET_IMPLEMENTED;
 			}
 		}
 	}

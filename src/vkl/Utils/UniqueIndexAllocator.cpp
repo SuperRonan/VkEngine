@@ -51,7 +51,7 @@ namespace vkl
 
 	UniqueIndexAllocator::Index UniqueIndexAllocator::allocate(Index count)
 	{
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 		return 0;
 	}
 
@@ -140,7 +140,7 @@ namespace vkl
 
 	void UniqueIndexAllocator::release(Index index, Index count)
 	{
-		NOT_YET_IMPLEMENTED;
+		VKL_NOT_YET_IMPLEMENTED;
 	}
 
 	bool UniqueIndexAllocator::isAllocated(Index index) const
