@@ -147,6 +147,7 @@ namespace vkl
 		bool _show_world_basis = false;
 		bool _show_view_basis = false;
 		bool _limit_unique_selection = false;
+		bool _single_click_selection = false;
 
 		float _out_of_focus_alpha;
 		float _not_visible_alpha;

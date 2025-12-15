@@ -656,6 +656,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 							}
 						}
 					}
+					ImGui::Checkbox("Single Click Selection", &that->_single_click_selection);
 				}
 			};
 		};
@@ -756,11 +757,15 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				Mat3x4 node_matrix = matrix * node->matrix3x4();
 				const std::string & node_gui_name = node->name();
 				const bool node_visible = (node_flags & 0x1) != 0;
+				const bool is_root = path.path.empty();
 
 				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
-				if (!path.path.empty())
+				if (!is_root)
 				{
-					flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+					if (_single_click_selection)
+					{
+						flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+					}
 				}
 				const bool is_leaf = node->children().empty();
 				if (is_leaf)
@@ -808,9 +813,17 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 					ImGui::PopStyleColor(1);
 				}
 
-				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen() && !path.path.empty())
+				bool open_inspector = false;
+				if (_single_click_selection || is_leaf)
 				{
-					//std::cout << "Clicked " << node->name() << std::endl;
+					open_inspector |= ImGui::IsItemClicked();
+				}
+				if(!_single_click_selection)
+				{
+					open_inspector |= ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None);
+				}
+				if (open_inspector && !ImGui::IsItemToggledOpen() && !path.path.empty())
+				{
 					openNodeInspector(ctx, node, path);
 				}
 				ImGui::PushID("On Node");
