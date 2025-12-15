@@ -19,6 +19,6 @@ namespace vkl::GUI
 
 		virtual ~DemoPanel() final override;
 
-		virtual void declare(Context& ctx) final override;
+		virtual void declare(Context& ctx, bool keep_open=false) final override;
 	};
 }

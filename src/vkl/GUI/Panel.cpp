@@ -25,7 +25,7 @@ namespace vkl::GUI
 
 	}
 
-	void Panel::declare(Context& ctx)
+	void Panel::declare(Context& ctx, bool keep_open)
 	{
 		ImGuiWindowFlags flags = _window_flags;
 		bool* p_open = _can_close ? &_open : nullptr;
@@ -44,6 +44,9 @@ namespace vkl::GUI
 			}
 			declareInline(ctx);
 		}
-		ImGui::End();
+		if (!keep_open)
+		{
+			ImGui::End();
+		}
 	}
 }

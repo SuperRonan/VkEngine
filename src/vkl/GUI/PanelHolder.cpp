@@ -47,11 +47,11 @@ namespace vkl::GUI
 		declarePanelsMenu(ctx);
 	}
 
-	void PanelHolder::declare(Context& ctx)
+	void PanelHolder::declare(Context& ctx, bool keep_open)
 	{
 		ctx.pushPanelHolder(this);
 
-		Panel::declare(ctx);
+		Panel::declare(ctx, true);
 
 		// Check _declare_ids
 		if (!_childs_ids_valid)
@@ -90,6 +90,11 @@ namespace vkl::GUI
 				assert(!_childs_ids_valid);
 				_childs_ids_valid &= false;
 			}
+		}
+
+		if (!keep_open)
+		{
+			ImGui::End();
 		}
 
 		ctx.popPanelHolder();

@@ -40,7 +40,7 @@ namespace vkl::GUI
 
 		virtual void declareMenu(Context& ctx) override;
 
-		virtual void declare(Context& ctx) override;
+		virtual void declare(Context& ctx, bool keep_open=false) override;
 
 		virtual std::shared_ptr<Panel> getChild(Id id) const;
 

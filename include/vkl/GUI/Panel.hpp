@@ -32,7 +32,7 @@ namespace vkl::GUI
 
 		virtual void declareInline(Context& ctx);
 
-		virtual void declare(Context& ctx);
+		virtual void declare(Context& ctx, bool keep_open=false);
 
 		bool isOpen() const
 		{
