@@ -436,7 +436,7 @@ namespace ImGui
 	{
 		// It would be nice to have a nice icon (a lens if the field is empty)
 		ImGui::SetNextItemAllowOverlap();
-		bool res = ImGui::InputTextWithHint(label, "Filter...", str, flags);
+		bool res = ImGui::InputTextWithHint(label, hint, str, flags);
 		
 		if (!str->empty())
 		{
