@@ -146,6 +146,7 @@ namespace vkl
 
 		bool _show_world_basis = false;
 		bool _show_view_basis = false;
+		bool _limit_unique_selection = false;
 
 		float _out_of_focus_alpha;
 		float _not_visible_alpha;
@@ -157,13 +158,18 @@ namespace vkl
 
 		struct NodeInspector : public GUI::Panel
 		{
-			SceneUserInterface* parent;
-			std::shared_ptr<Scene::Node> node; // ptr is Id
-			Scene::DAG::FastNodePath latest_path;
+			SceneUserInterface* parent = nullptr;
+			std::shared_ptr<Scene::Node> node = {}; // ptr is Id
+			Scene::DAG::FastNodePath latest_path = {};
+			bool _unique = false;
 
 			virtual void declareInline(GUI::Context& ctx);
 
+			NodeInspector(SceneUserInterface* parent);
+
 			NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent);
+
+			void reset(std::shared_ptr<Scene::Node> const& node);
 
 			void setPath(Scene::DAG::FastNodePath const& path);
 
@@ -171,9 +177,14 @@ namespace vkl
 			{
 				return reinterpret_cast<Id>(node.get());
 			}
+
+			void setUnique(bool unique);
+
+			void resetName();
 		};
 
 		NodeInspector* _node_in_focus = nullptr;
+		
 
 		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path = {});
 
@@ -184,6 +195,12 @@ namespace vkl
 		NodeInspector* isNodeOpen(GUI::Context& ctx, Scene::Node* node) const;
 
 		void iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn);
+
+		void reduceToOneSelectedNode();
+
+		void allowMultipleSelection();
+
+		Id getNodeId(const Scene::Node* node) const;
 
 	public:
 

@@ -640,6 +640,22 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 						that->resetInterfaceOptions();
 					}
 					ImGui::PopStyleColor();
+
+					{
+						bool allow_multi = !that->_limit_unique_selection;
+						if (ImGui::Checkbox("Allow Multiple Nodes Selection", &allow_multi))
+						{
+							that->_limit_unique_selection = !allow_multi;
+							if (that->_limit_unique_selection)
+							{
+								that->reduceToOneSelectedNode();
+							}
+							else
+							{
+								that->allowMultipleSelection();
+							}
+						}
+					}
 				}
 			};
 		};
@@ -847,11 +863,29 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		_node_in_focus = nullptr; // Will be set by a child
 	}
 
+	SceneUserInterface::Id SceneUserInterface::getNodeId(const Scene::Node* node) const
+	{
+		Id res = {};
+		if (_limit_unique_selection)
+		{
+			res = reinterpret_cast<Id>(&_node_in_focus);
+		}
+		else
+		{
+			res = reinterpret_cast<Id>(node);
+		}
+		return res;
+	}
+
 	SceneUserInterface::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path)
 	{
-		auto res = ctx.getTopPanelHolder()->openChild(reinterpret_cast<Id>(node.get()), [&]() {
+		auto res = ctx.getTopPanelHolder()->openChild(getNodeId(node.get()), [&]() {
 			return std::make_shared<NodeInspector>(node, this);
 		}).get();
+		if (res->node != node)
+		{
+			res->reset(node);
+		}
 		if (!path.path.empty())
 		{
 			res->setPath(path);
@@ -861,7 +895,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	void SceneUserInterface::closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node)
 	{
-		ctx.getTopPanelHolder()->setChild(reinterpret_cast<Id>(node));
+		ctx.getTopPanelHolder()->setChild(getNodeId(node));
 	}
 
 	void SceneUserInterface::closeAllNodeInspectors()
@@ -880,12 +914,16 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	SceneUserInterface::NodeInspector* SceneUserInterface::isNodeOpen(GUI::Context& ctx, Scene::Node* node) const
 	{
-		auto it = _childs.find(reinterpret_cast<Id>(node));
+		auto it = _childs.find(getNodeId(node));
 		NodeInspector* res = nullptr;
 		if (it != _childs.end())
 		{
 			assert(!!dynamic_cast<NodeInspector*>(it->second.panel.get()));
 			res = static_cast<NodeInspector*>(it->second.panel.get());
+			if (res->node.get() != node)
+			{
+				res = nullptr;
+			}
 		}
 		return res;
 	}
@@ -904,6 +942,51 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		}
 	}
 
+	void SceneUserInterface::reduceToOneSelectedNode()
+	{
+		_node_in_focus = nullptr; // Should already be the case
+		auto it = _childs.begin();
+		std::shared_ptr<NodeInspector> ni_to_keep = [&]() -> std::shared_ptr<NodeInspector> {
+			// Find first NodeInspector to keep it open
+			while (it != _childs.end())
+			{
+				if (NodeInspector* ni = dynamic_cast<NodeInspector*>(it->second.panel.get()))
+				{
+					assert(std::dynamic_pointer_cast<NodeInspector>(it->second.panel));
+					return std::static_pointer_cast<NodeInspector>(it->second.panel);
+				}
+				else
+				{
+					++it;
+				}
+			}
+			return nullptr;
+		}();
+		closeAllChilds();
+		if (ni_to_keep)
+		{
+			ni_to_keep->setUnique(true);
+			setChild(reinterpret_cast<Id>(&_node_in_focus), ni_to_keep);
+		}
+	}
+
+	void SceneUserInterface::allowMultipleSelection()
+	{
+		std::shared_ptr<NodeInspector> ni = std::static_pointer_cast<NodeInspector>(getChild(reinterpret_cast<Id>(&_node_in_focus)));
+		closeAllChilds();
+		if(ni)
+		{
+			ni->setUnique(false);
+			setChild(ni->getDefaultId(), ni);
+		}
+	}
+
+	SceneUserInterface::NodeInspector::NodeInspector(SceneUserInterface* parent):
+		GUI::Panel(parent->application(), "")
+	{
+
+	}
+
 	SceneUserInterface::NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent):
 		GUI::Panel(parent->application(), node->name()),
 		node(node),
@@ -912,9 +995,46 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	}
 
+	void SceneUserInterface::NodeInspector::reset(std::shared_ptr<Scene::Node> const& node)
+	{
+		if (this->node != node)
+		{
+			this->node = node;
+			resetName();
+		}
+	}
+
 	void SceneUserInterface::NodeInspector::setPath(Scene::DAG::FastNodePath const& path)
 	{
 		latest_path = path;
+	}
+
+	void SceneUserInterface::NodeInspector::setUnique(bool unique)
+	{
+		if (_unique != unique)
+		{
+			_unique = unique;
+			resetName();
+		}
+	}
+
+	void SceneUserInterface::NodeInspector::resetName()
+	{
+		if (node)
+		{
+			if (_unique)
+			{
+				setName("Node Inspector - " + node->name() + "###NodeInspector");
+			}
+			else
+			{
+				setName("Node Inspector - " + node->name());
+			}
+		}
+		else
+		{
+			setName("Node Inspector");
+		}
 	}
 
 	void SceneUserInterface::NodeInspector::declareInline(GUI::Context& ctx)
