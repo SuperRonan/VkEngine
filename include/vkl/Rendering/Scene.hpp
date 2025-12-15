@@ -97,7 +97,7 @@ namespace vkl
 				_visible = v;
 			}
 
-			constexpr const std::vector<std::shared_ptr<Node>>& children()const
+			constexpr const std::span<const std::shared_ptr<Node>> children()const
 			{
 				return _children;
 			}
