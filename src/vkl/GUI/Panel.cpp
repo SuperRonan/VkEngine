@@ -27,18 +27,14 @@ namespace vkl::GUI
 
 	void Panel::declare(Context& ctx)
 	{
-		ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-		if (_show_menu)
-		{
-			flags |= ImGuiWindowFlags_MenuBar;
-		}
+		ImGuiWindowFlags flags = _window_flags;
 		bool* p_open = _can_close ? &_open : nullptr;
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
 		_is_hovered = ImGui::IsWindowHovered();
 		_has_focus = ImGui::IsWindowFocused();
 		if (_is_visible)
 		{
-			if (_show_menu)
+			if (flags & ImGuiWindowFlags_MenuBar)
 			{
 				if (ImGui::BeginMenuBar())
 				{

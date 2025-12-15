@@ -2,6 +2,8 @@
 
 #include <vkl/App/VkApplication.hpp>
 
+#include <imgui/imgui.h>
+
 namespace vkl::GUI
 {
 	class Panel : public VkObject
@@ -14,10 +16,11 @@ namespace vkl::GUI
 
 		bool _can_close = true;
 		bool _open = true;
-		bool _show_menu = false;
 		bool _is_visible = false;
 		bool _is_hovered = false;
 		bool _has_focus = false;
+
+		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
 
 		Panel(VkApplication * app, std::string const& name);
 
@@ -54,6 +57,16 @@ namespace vkl::GUI
 		bool hasFocus() const
 		{
 			return _has_focus;
+		}
+
+		ImGuiWindowFlags& windowFlags()
+		{
+			return _window_flags;
+		}
+
+		ImGuiWindowFlags windowFlags() const
+		{
+			return _window_flags;
 		}
 	};
 }

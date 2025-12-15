@@ -7,7 +7,7 @@ namespace vkl::GUI
 	MainPanel::MainPanel(VkApplication* app, std::string name) :
 		PanelHolder(PanelHolder::CI{ .app = app, .name = name })
 	{
-		_show_menu = true;
+		windowFlags() |= ImGuiWindowFlags_MenuBar;
 		_can_close = false;
 	}
 

@@ -1,14 +1,12 @@
 #include <vkl/GUI/PanelHolder.hpp>
 #include <vkl/GUI/Context.hpp>
 
-#include <imgui/imgui.h>
-
 namespace vkl::GUI
 {
 	PanelHolder::PanelHolder(CreateInfo const& ci) :
 		Panel(ci.app, ci.name)
 	{
-		_show_menu = true;
+		windowFlags() |= ImGuiWindowFlags_MenuBar;
 	}
 
 	PanelHolder::PanelHolder(VkApplication* app, std::string const& name) :
