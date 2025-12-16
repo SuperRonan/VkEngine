@@ -10,6 +10,8 @@
 #include <imgui/imgui_internal.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
+#include <span>
+
 namespace vkl
 {
 	ImGuiListSelection::ImGuiListSelection(CreateInfo const& ci) :
@@ -512,12 +514,18 @@ namespace ImGui
 		return pressed;
 	}
 
-	bool InboxCheckbox(const char* label, bool* v)
+	bool InboxCheckbox(const char* label, bool* v, ImVec2 box_size)
 	{
 		ImVec2 text_size = CalcTextSize(label);
-		ImVec2 sz;
-		sz.y = ImGui::GetFrameHeight();
-		sz.x = ImMax(sz.x, sz.y);
+		ImVec2 sz = box_size;
+		if (box_size.y == 0.0f)
+		{
+			sz.y = ImGui::GetFrameHeight();
+		}
+		if (box_size.x == 0.0f)
+		{
+			sz.x = ImMax(sz.x, sz.y);
+		}
 		struct RenderData
 		{
 			const char* label;
@@ -544,29 +552,56 @@ namespace ImGui
 		return InboxCheckboxEx(label, v, sz, render_label, &render_data);
 	}
 
-	bool TextFieldEdit(const char* label, std::string* str, const char* hint, ImGuiInputTextFlags flags)
+	struct DeclareTextFieldInlineButtons
+	{
+		using DeclareFn = void(*)(void* data, ImVec2 button_size);
+		DeclareFn declare;
+		void* data;
+	};
+
+	bool TextFieldEditEx(const char* label, std::string* str, const char* hint, ImGuiInputTextFlags flags, std::span<DeclareTextFieldInlineButtons> extra_buttons = {})
 	{
 		// It would be nice to have a nice icon (a lens if the field is empty)
 		ImGui::SetNextItemAllowOverlap();
 		bool res = ImGui::InputTextWithHint(label, hint, str, flags);
 		
-		if (!str->empty())
+		if (!str->empty() || !extra_buttons.empty())
 		{
 			const ImVec2 save_pos = ImGui::GetCursorPos();
 
 			ImGui::SameLine();
 			const ImVec2 save_line_pos = ImGui::GetCursorPos();
 			float padding = std::ceil(ImGui::GetFontSize() / 16.0f);
-			ImGui::SetCursorPos(ImGui::GetCursorPos() - ImVec2(ImGui::CalcTextSize(label).x + 3 * ImGui::GetStyle().ItemInnerSpacing.x + ImGui::GetFrameHeight() - padding, -padding));
-
 			float button_size = (ImGui::GetFrameHeight() - 2 * padding);
-			if (ImGui::IconButtonEx("Clear", ImVec2(button_size, button_size), ImGuiButtonFlags_None, ImGui::RenderXCrossIcon))
+			const float interspace = ImGui::GetStyle().ItemInnerSpacing.x;
+			const float button_spacing = button_size + padding;
+			float button_count = extra_buttons.size();
+			if (!str->empty())
 			{
-				str->clear();
-				res = true;
+				++button_count;
 			}
-			ImGui::SameLine();
-			ImGui::SetCursorPos(save_line_pos + ImVec2(- 2 * ImGui::GetStyle().ItemInnerSpacing.x, 0));
+			const ImVec2 base_pos = ImGui::GetCursorPos() - ImVec2(ImGui::CalcTextSize(label).x + 3 * interspace + button_spacing * button_count, 0);
+			const ImVec2 button_size2 = ImVec2(button_size, button_size);
+			uint button_counter = 0;
+			if (!str->empty())
+			{
+				ImGui::SetCursorPos(base_pos + ImVec2(button_counter++ * button_spacing, padding));
+				if (ImGui::IconButtonEx("Clear", button_size2, ImGuiButtonFlags_None, ImGui::RenderXCrossIcon))
+				{
+					str->clear();
+					res = true;
+				}
+				ImGui::SameLine();
+			}
+
+			for (size_t i = 0; i < extra_buttons.size(); ++i)
+			{
+				ImGui::SetCursorPos(base_pos + ImVec2(button_counter++ * button_spacing, padding));
+				extra_buttons[i].declare(extra_buttons[i].data, button_size2);
+				ImGui::SameLine();
+			}
+
+			ImGui::SetCursorPos(save_line_pos + ImVec2(- 2 * interspace, 0));
 			ImGui::NewLine();
 			ImGui::SetCursorPos(save_pos);
 		}
@@ -574,15 +609,38 @@ namespace ImGui
 		return res;
 	}
 
+	bool TextFieldEdit(const char* label, std::string* str, const char* hint, ImGuiInputTextFlags flags)
+	{
+		return TextFieldEditEx(label, str, hint, flags);
+	}
+
 	bool DeclareFilter(std::string* str, bool* p_case_sensitive, ImGuiInputTextFlags flags)
 	{
-		bool res = TextFieldEdit("Filter", str, "Filter...", flags);
+		std::array<DeclareTextFieldInlineButtons, 1> extra_buttons = {};
+		uint extra_button_count = 0;
+		struct CaseSensitiveData
+		{
+			bool* ptr = {};
+			bool res = false;
+		};
+		CaseSensitiveData case_sensitive_data;
 		if (p_case_sensitive)
 		{
-			ImGui::SameLine();
-			res |= ImGui::InboxCheckbox("Aa", p_case_sensitive); // TODO as an inline icon in the text field
-			ImGui::SetItemTooltip(*p_case_sensitive ? "De-Activate Case Sensitive" : "Activate Case Sensitive");
+			case_sensitive_data = {
+				.ptr = p_case_sensitive,
+			};
+			extra_buttons[extra_button_count++] = DeclareTextFieldInlineButtons{
+				.declare = [](void* p_data, ImVec2 size)
+				{
+					CaseSensitiveData* data = reinterpret_cast<CaseSensitiveData*>(p_data);
+					data->res |= ImGui::InboxCheckbox("Aa", data->ptr, size);
+					ImGui::SetItemTooltip(*data->ptr ? "De-Activate Case Sensitive" : "Activate Case Sensitive");
+				},
+				.data = &case_sensitive_data,
+			};
 		}
+		bool res = TextFieldEditEx("Filter", str, "Filter...", flags, std::span(extra_buttons.data(), extra_button_count));
+		res |= case_sensitive_data.res;
 		return res;
 	}
 }
