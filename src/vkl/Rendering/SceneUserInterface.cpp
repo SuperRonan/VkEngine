@@ -677,6 +677,28 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		PanelHolder::declarePanelsMenu(ctx);
 	}
 
+	bool SceneUserInterface::nodePassesFilter(const Scene::Node* node) const
+	{
+		bool this_passes = _filter.accepts(node->name());
+		if (this_passes)
+		{
+			return true;
+		}
+		const auto children = node->children();
+		if (children.empty())
+		{
+			return false;
+		}
+		auto cache_it = _filter_cache_result.find(node);
+		if (cache_it != _filter_cache_result.end())
+		{
+			return cache_it->second;
+		}
+		const bool any_child_passes = std::any_of(children.begin(), children.end(), [&](std::shared_ptr<Scene::Node> const& child) {return nodePassesFilter(child.get()); });
+		_filter_cache_result[node] = any_child_passes;
+		return any_child_passes;
+	}
+
 	void SceneUserInterface::declareInline(GUI::Context& ctx)
 	{
 		ImGui::PushID(this);
@@ -725,8 +747,14 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			}
 		};
 
-		if (ImGui::CollapsingHeader("Tree"))
+		//if (ImGui::CollapsingHeader("Tree"))
+		ImGui::SeparatorText("Scene Tree");
 		{
+			if (ImGui::DeclareFilter(_filter))
+			{
+
+			}
+			_filter_cache_result.clear(); // Could be done more sparsly (if the scene tree changes or the filter changes)
 			if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
 			{
 				bool open_create_window = false;
@@ -748,6 +776,11 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
 			{
+				const bool is_root = path.path.empty();
+				if (!is_root && !_filter.empty() && !nodePassesFilter(node.get()))
+				{
+					return;
+				}
 				ImGui::PushID(node.get());
 				u32 node_flags = parent_flags;
 				if (!node->visible())
@@ -757,7 +790,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				Mat3x4 node_matrix = matrix * node->matrix3x4();
 				const std::string & node_gui_name = node->name();
 				const bool node_visible = (node_flags & 0x1) != 0;
-				const bool is_root = path.path.empty();
+				
 
 				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
 				if (!is_root)
