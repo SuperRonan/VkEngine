@@ -443,6 +443,7 @@ namespace ImGui
 			const ImVec2 save_pos = ImGui::GetCursorPos();
 
 			ImGui::SameLine();
+			const ImVec2 save_line_pos = ImGui::GetCursorPos();
 			float padding = std::ceil(ImGui::GetFontSize() / 16.0f);
 			ImGui::SetCursorPos(ImGui::GetCursorPos() - ImVec2(ImGui::CalcTextSize(label).x + 3 * ImGui::GetStyle().ItemInnerSpacing.x + ImGui::GetFrameHeight() - padding, -padding));
 
@@ -452,6 +453,9 @@ namespace ImGui
 				str->clear();
 				res = true;
 			}
+			ImGui::SameLine();
+			ImGui::SetCursorPos(save_line_pos + ImVec2(- 2 * ImGui::GetStyle().ItemInnerSpacing.x, 0));
+			ImGui::NewLine();
 			ImGui::SetCursorPos(save_pos);
 		}
 		
