@@ -306,16 +306,16 @@ namespace ImGui
 		return pressed;
 	}
 
-	void DrawRectNoCorners(ImDrawList* draw_list, ImVec2 top_left, ImVec2 bottom_right, ImU32 color, float thickness)
+	void DrawRectNoCorners(ImDrawList* draw_list, ImRect rect, ImU32 color, float thickness)
 	{
 		// top
-		draw_list->AddLine(ImVec2(top_left.x + 1, top_left.y), ImVec2(bottom_right.x, top_left.y), color, thickness);
+		draw_list->AddLine(ImVec2(rect.GetTL().x + 1, rect.GetTL().y), ImVec2(rect.GetBR().x, rect.GetTL().y), color, thickness);
 		// bottom
-		draw_list->AddLine(ImVec2(top_left.x + 1, bottom_right.y), ImVec2(bottom_right.x, bottom_right.y), color, thickness);
+		draw_list->AddLine(ImVec2(rect.GetTL().x + 1, rect.GetBR().y), ImVec2(rect.GetBR().x, rect.GetBR().y), color, thickness);
 		// left
-		draw_list->AddLine(ImVec2(top_left.x, top_left.y + 1), ImVec2(top_left.x, bottom_right.y), color, thickness);
+		draw_list->AddLine(ImVec2(rect.GetTL().x, rect.GetTL().y + 1), ImVec2(rect.GetTL().x, rect.GetBR().y), color, thickness);
 		// right
-		draw_list->AddLine(ImVec2(bottom_right.x, top_left.y + 1), ImVec2(bottom_right.x, bottom_right.y), color, thickness);
+		draw_list->AddLine(ImVec2(rect.GetBR().x, rect.GetTL().y + 1), ImVec2(rect.GetBR().x, rect.GetBR().y), color, thickness);
 	}
 
 	void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
@@ -329,8 +329,8 @@ namespace ImGui
 		pos = ImFloor(pos);
 		ImVec2 size = ImFloor(ImVec2(h, h));
 		ImVec2 detachment = ImVec2(d, d);
-		DrawRectNoCorners(draw_list, pos - (detachment + ImVec2(1, 1)), pos + size - (detachment + ImVec2(1, 1)), color, thickness);
-		DrawRectNoCorners(draw_list, pos + detachment, pos + size + detachment, color, thickness);
+		DrawRectNoCorners(draw_list, ImRect(pos - (detachment + ImVec2(1, 1)), pos + size - (detachment + ImVec2(1, 1))), color, thickness);
+		DrawRectNoCorners(draw_list, ImRect(pos + detachment, pos + size + detachment), color, thickness);
 	}
 
 	void RenderXCrossIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
