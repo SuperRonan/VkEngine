@@ -432,6 +432,118 @@ namespace ImGui
 			RenderText(label_pos, label);
 	}
 
+	bool InboxCheckboxEx(const char* label, bool* v, ImVec2 box_size, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		ImGuiContext& g = *GImGui;
+		const ImGuiStyle& style = g.Style;
+		const ImGuiID id = window->GetID(label);
+		
+		const ImVec2 pos = window->DC.CursorPos;
+		const ImRect total_bb(pos, pos + box_size);
+		ItemSize(total_bb, style.FramePadding.y);
+		const bool is_visible = ItemAdd(total_bb, id);
+		const bool is_multi_select = (g.LastItemData.ItemFlags & ImGuiItemFlags_IsMultiSelect) != 0;
+		if (!is_visible)
+			if (!is_multi_select || !g.BoxSelectState.UnclipMode || !g.BoxSelectState.UnclipRect.Overlaps(total_bb)) // Extra layer of "no logic clip" for box-select support
+			{
+				IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
+				return false;
+			}
+
+		// Range-Selection/Multi-selection support (header)
+		bool checked = *v;
+		if (is_multi_select)
+			MultiSelectItemHeader(id, &checked, NULL);
+
+		bool hovered, held;
+		bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
+
+		// Range-Selection/Multi-selection support (footer)
+		if (is_multi_select)
+			MultiSelectItemFooter(id, &checked, &pressed);
+		else if (pressed)
+			checked = !checked;
+
+		if (*v != checked)
+		{
+			*v = checked;
+			pressed = true; // return value
+			MarkItemEdited(id);
+		}
+
+		const ImRect check_bb = total_bb;
+		const bool mixed_value = (g.LastItemData.ItemFlags & ImGuiItemFlags_MixedValue) != 0;
+		if (is_visible)
+		{
+			RenderNavCursor(total_bb, id);
+			RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
+			ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+			ImU32 text_col = GetColorU32(ImGuiCol_Text);
+			ImU32 disabled_col = GetColorU32(ImGuiCol_TextDisabled);
+			if (render_frame_fn)
+			{
+				render_frame_fn(render_frame_data, window->DrawList, total_bb, ImGui::GetFontSize(), text_col);
+			}
+			if (mixed_value)
+			{
+				// Undocumented tristate/mixed/indeterminate checkbox (#2644)
+				// This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
+				// 
+				// TODO
+				// 
+				//ImVec2 pad(ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)), ImMax(1.0f, IM_TRUNC(square_sz / 3.6f)));
+				//window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
+				IM_ASSERT("Not Yet Implemented");
+			}
+			else if (*v)
+			{
+				DrawRectNoCorners(window->DrawList, ImRect(total_bb.GetTL(), total_bb.GetBR() - ImVec2(1, 1)), check_col);
+			}
+		}
+		const ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
+		if (g.LogEnabled)
+			LogRenderedText(&label_pos, mixed_value ? "[~]" : *v ? "[x]" : "[ ]");
+
+		IMGUI_TEST_ENGINE_ITEM_INFO(id, label, g.LastItemData.StatusFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
+		return pressed;
+	}
+
+	bool InboxCheckbox(const char* label, bool* v)
+	{
+		ImVec2 text_size = CalcTextSize(label);
+		ImVec2 sz;
+		sz.y = ImGui::GetFrameHeight();
+		sz.x = ImMax(sz.x, sz.y);
+		struct RenderData
+		{
+			const char* label;
+			ImFont* font;
+			ImVec2 size;
+			ImVec2 padding;
+		};
+		RenderData render_data{
+			.label = label,
+			.font = ImGui::GetFont(),
+			.size = text_size,
+			.padding = ImGui::GetStyle().FramePadding,
+		};
+		auto render_label = [](const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+		{
+			const RenderData* render_data = reinterpret_cast<const RenderData*>(p_data);
+			ImVec2 pos = rect.GetTL();
+			// Center text in rect
+			pos = pos + (rect.GetSize() - render_data->size) * 0.5;
+			pos = ImFloor(pos);
+			pos = ImMax(pos, rect.GetTL());
+			draw_list->AddText(render_data->font, font_size, pos, color, render_data->label, nullptr, render_data->size.x);
+		};
+		return InboxCheckboxEx(label, v, sz, render_label, &render_data);
+	}
+
 	bool TextFieldEdit(const char* label, std::string* str, const char* hint, ImGuiInputTextFlags flags)
 	{
 		// It would be nice to have a nice icon (a lens if the field is empty)

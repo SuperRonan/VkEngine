@@ -426,4 +426,8 @@ namespace ImGui
 	{
 		return ImGui::SliderScalar(label, GetDataType<Scalar>(), &value, &v_min, &v_max, fmt, flags);
 	}
+
+	extern bool InboxCheckboxEx(const char* label, bool* v, ImVec2 box_size, ButtonIconDrawFunction render_frame_fn = nullptr, const void* render_frame_data = nullptr);
+
+	extern bool InboxCheckbox(const char* label, bool* v);
 }
