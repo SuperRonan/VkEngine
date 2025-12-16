@@ -317,9 +317,9 @@ namespace vkl
 		// There is a bug in the current SDK's VLL which emits this incorrect error
 		std::string_view message = callback_data->pMessage;
 		// Bug in SDK 1.3.283
-		ignore |= ((message.find("VUID-vkCmdTraceRaysKHR-None-08608") != std::string_view::npos) && (message.find("VK_DYNAMIC_STATE_VIEWPORT") != std::string_view::npos));
+		ignore |= (std::contains(message, "VUID-vkCmdTraceRaysKHR-None-08608") && std::contains(message, "VK_DYNAMIC_STATE_VIEWPORT"));
 		// Bug in SDK 1.3.290
-		ignore |= ((message.find("VUID-VkShaderModuleCreateInfo-pCode-08737") != std::string_view::npos) && (message.find("Expected Image to have the same type as Result Type Image") != std::string_view::npos));
+		ignore |= (std::contains(message, "VUID-VkShaderModuleCreateInfo-pCode-08737") && std::contains(message, "Expected Image to have the same type as Result Type Image"));
 		if (!ignore)
 		{
 			bool bp = message_severity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
@@ -1573,9 +1573,9 @@ namespace vkl
 					for (uint32_t i = 0; i <= usage_count; ++i)
 					{
 						VkImageUsageFlagBits usage = VkImageUsageFlagBits(1 << i);
-						auto label = std::string_view(string_VkImageUsageFlagBits(usage));
-						auto prefix = "VK_IMAGE_USAGE_"sv;
-						if (label.find(prefix) != std::string_view::npos)
+						const auto label = std::string_view(string_VkImageUsageFlagBits(usage));
+						const auto prefix = "VK_IMAGE_USAGE_"sv;
+						if (label.find(prefix) == 0)
 						{
 							const size_t offset = prefix.length();
 							bool bit = o.use_general_image_layout_bits & usage;
@@ -1656,7 +1656,7 @@ namespace vkl
 							bool cull = false;
 							if (filter && !filter->empty())
 							{
-								cull = (ext_name.find(std::string_view(*filter)) == std::string_view::npos);
+								cull = !std::contains(ext_name, *filter);
 							}
 							if (!cull)
 							{

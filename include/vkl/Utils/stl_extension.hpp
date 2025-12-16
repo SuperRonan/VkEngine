@@ -8,6 +8,9 @@
 #include <vector>
 #include <iterator>
 #include <string>
+#include <string_view>
+
+#include <that/core/Strings.hpp>
 
 #include <vkl/Utils/Container.hpp>
 
@@ -368,5 +371,38 @@ namespace std
 	bool contains(std::vector<T> const& vec, Q const& value)
 	{
 		return std::contains(vec.cbegin(), vec.cend(), value);
+	}
+
+	// TODO C++23 (std::string_view with implement this natively as a member function)
+	template <class Char>
+	bool contains_sv(const std::basic_string_view<Char>& hay, const std::basic_string_view<Char>& needle)
+	{
+		return hay.find(needle) != std::basic_string_view<Char>::npos;
+	}
+
+	template <that::concepts::GenericString StrHay, that::concepts::BasicStringLike<that::GenericStringCharType<StrHay>> StrNeedle>
+	bool contains(const StrHay& hay, const StrNeedle& needle)
+	{
+		using Char = that::GenericStringCharType<StrHay>;
+		using SV = std::basic_string_view<Char>;
+		return contains_sv<Char>(SV(hay), SV(needle));
+	}
+
+	template <class Char>
+	bool containsCaseInsensitive_sv(const std::basic_string_view<Char>& hay, const std::basic_string_view<Char>& needle)
+	{
+		return std::search(
+			hay.cbegin(), hay.cend(),
+			needle.cbegin(), needle.cend(),
+			[](Char a, Char b) {return std::tolower(a) == std::tolower(b); }
+		) != hay.cend();
+	}
+
+	template <that::concepts::GenericString StrHay, that::concepts::BasicStringLike<that::GenericStringCharType<StrHay>> StrNeedle>
+	bool containsCaseInsensitive(const StrHay& hay, const StrNeedle& needle)
+	{
+		using Char = that::GenericStringCharType<StrHay>;
+		using SV = std::basic_string_view<Char>;
+		return containsCaseInsensitive_sv<Char>(SV(hay), SV(needle));
 	}
 }	
