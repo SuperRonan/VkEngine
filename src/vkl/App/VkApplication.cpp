@@ -1595,7 +1595,7 @@ namespace vkl
 			{
 				VkPhysicalDevice device;
 				int64_t rating;
-				std::string* ext_filter;
+				StringFilter* ext_filter;
 				VulkanExtensionsSet extensions;
 				VulkanDeviceProps props;
 				VulkanFeatures features;
@@ -1631,11 +1631,11 @@ namespace vkl
 					ImGui::Text("TODO");
 				}
 
-				static void DeclareExtensions(VulkanExtensionsSet const& extensions, std::string * filter = nullptr)
+				static void DeclareExtensions(VulkanExtensionsSet const& extensions, StringFilter* filter = nullptr)
 				{
 					if (filter)
 					{
-						ImGui::TextFieldEdit("Filter", filter, "Filter...");
+						ImGui::DeclareFilter(*filter);
 					}
 					if (ImGui::BeginTable("Extensions", 2, ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_NoSavedSettings))
 					{
@@ -1656,7 +1656,7 @@ namespace vkl
 							bool cull = false;
 							if (filter && !filter->empty())
 							{
-								cull = !std::contains(ext_name, *filter);
+								cull = filter->rejects(ext_name);
 							}
 							if (!cull)
 							{
@@ -1683,7 +1683,7 @@ namespace vkl
 					}
 				}
 
-				PhysicalDevicePanel(VkApplication* app, VkPhysicalDevice device, std::string* ext_filter) :
+				PhysicalDevicePanel(VkApplication* app, VkPhysicalDevice device, StringFilter* ext_filter) :
 					Panel(app, std::format("PhysicalDevice-{}", reinterpret_cast<uintptr_t>(device))),
 					device(device),
 					ext_filter(ext_filter),
@@ -1733,11 +1733,11 @@ namespace vkl
 
 			struct DevicePanel : public Panel
 			{
-				std::string* _extension_filter = {};
+				StringFilter* _extension_filter = {};
 
 				VulkanFeatures _desired_features;
 
-				DevicePanel(VkApplication* app, std::string* extension_filter) :
+				DevicePanel(VkApplication* app, StringFilter* extension_filter) :
 					Panel(app, "Device##VkApplication"),
 					_extension_filter(extension_filter)
 				{
@@ -1794,7 +1794,7 @@ namespace vkl
 				std::string name = {};
 			};
 
-			std::string _extension_filter = {};
+			StringFilter _extension_filter;
 
 			MyVector<PhysicalDeviceInfo> _physical_devices;
 

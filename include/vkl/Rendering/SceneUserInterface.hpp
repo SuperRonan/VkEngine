@@ -148,10 +148,14 @@ namespace vkl
 		bool _show_view_basis = false;
 		bool _limit_unique_selection = false;
 		bool _single_click_selection = false;
+		bool _filter_case_sensitive = false;
 
 		float _out_of_focus_alpha;
 		float _not_visible_alpha;
 		std::chrono::milliseconds _pulse_period;
+
+		std::string _filter = {};
+		mutable std::unordered_map<const Scene::Node*, bool> _filter_cache_result = {};
 
 		void resetInterfaceOptions();
 
@@ -202,6 +206,8 @@ namespace vkl
 		void allowMultipleSelection();
 
 		Id getNodeId(const Scene::Node* node) const;
+
+		bool nodePassesFilter(const Scene::Node* node) const;
 
 	public:
 

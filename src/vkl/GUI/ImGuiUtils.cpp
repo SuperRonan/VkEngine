@@ -573,4 +573,16 @@ namespace ImGui
 		
 		return res;
 	}
+
+	bool DeclareFilter(std::string* str, bool* p_case_sensitive, ImGuiInputTextFlags flags)
+	{
+		bool res = TextFieldEdit("Filter", str, "Filter...", flags);
+		if (p_case_sensitive)
+		{
+			ImGui::SameLine();
+			res |= ImGui::InboxCheckbox("Aa", p_case_sensitive); // TODO as an inline icon in the text field
+			ImGui::SetItemTooltip(*p_case_sensitive ? "De-Activate Case Sensitive" : "Activate Case Sensitive");
+		}
+		return res;
+	}
 }

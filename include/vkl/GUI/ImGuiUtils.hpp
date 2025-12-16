@@ -266,6 +266,39 @@ namespace vkl
 
 	};
 
+	struct StringFilter
+	{
+		std::string filter = {};
+		bool case_sensitive = false;
+
+		bool accepts(std::string_view sv) const
+		{
+			if (case_sensitive)
+			{
+				return std::contains(sv, filter);
+			}
+			else
+			{
+				return std::containsCaseInsensitive(sv, filter);
+			}
+		}
+
+		bool rejects(std::string_view sv) const
+		{
+			return !accepts(sv);
+		}
+
+		constexpr bool empty() const
+		{
+			return filter.empty();
+		}
+		
+		constexpr operator bool() const
+		{
+			return !empty();
+		}
+
+	};
 }
 
 struct ImRect;
@@ -419,6 +452,12 @@ namespace ImGui
 	// Same as InputTextWithHing, with an extra XCross button on the right side of the text field to clear the str
 	extern bool TextFieldEdit(const char* label, std::string* str, const char* hint = nullptr, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
 
+	extern bool DeclareFilter(std::string* str, bool* p_case_sensitive, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
+
+	static inline bool DeclareFilter(vkl::StringFilter& filter, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None)
+	{
+		return DeclareFilter(&filter.filter, &filter.case_sensitive, flags);
+	}
 
 	// Warning: may not work for all scalar types yet! (relies on ImGui::SliderScalar to be implemented for the ImGuiDataType of the scalar)
 	template <class Scalar>
