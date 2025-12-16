@@ -271,16 +271,21 @@ namespace vkl
 		std::string filter = {};
 		bool case_sensitive = false;
 
-		bool accepts(std::string_view sv) const
+		static bool Accepts(std::string_view filter, std::string_view candidate, bool case_sensitive)
 		{
 			if (case_sensitive)
 			{
-				return std::contains(sv, filter);
+				return std::contains(candidate, filter);
 			}
 			else
 			{
-				return std::containsCaseInsensitive(sv, filter);
+				return std::containsCaseInsensitive(candidate, filter);
 			}
+		}
+
+		bool accepts(std::string_view candidate) const
+		{
+			return Accepts(filter, candidate, case_sensitive);
 		}
 
 		bool rejects(std::string_view sv) const
