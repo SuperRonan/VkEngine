@@ -3,6 +3,7 @@
 #include <vkl/Rendering/SceneLoader.hpp>
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
+#include <imgui/imgui_internal.h>
 
 #include <vkl/GUI/ImGuiUtils.hpp>
 
@@ -792,7 +793,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				const bool node_visible = (node_flags & 0x1) != 0;
 				
 
-				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_None;
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanLabelWidth;
 				if (!is_root)
 				{
 					if (_single_click_selection)
@@ -905,6 +906,35 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 						_create_node_popup.open(node);
 					}
 				}
+
+				// Declare Small buttons next to the node
+				//ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12);
+				{
+					const auto color_id = ImGuiCol_Button;
+					ImVec4 color = ImGui::GetStyleColorVec4(color_id);
+					color.w = 0.0f;
+					ImGui::PushStyleColor(color_id, color);
+				}
+				{
+					ImGui::SameLine();
+					bool v = node->visible();
+					if (ImGui::BarredIconButton("Visibility", &v, ImGui::RenderEyeIcon, nullptr, true))
+					{
+						node->setVisibility(v);
+					}
+					ImGui::SetItemTooltip("Flip Node Visivility");
+				}
+				if (is_selected)
+				{
+					ImGui::SameLine();
+					if (ImGui::XCrossButton("Close Inspector", true))
+					{
+						closeNodeInspector(ctx, node.get());
+					}
+				}
+				ImGui::PopStyleColor();
+				//ImGui::PopStyleVar();
+
 				declare_create_node_popup();
 				ImGui::PopID();
 
