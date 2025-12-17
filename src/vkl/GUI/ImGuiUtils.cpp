@@ -302,7 +302,10 @@ namespace ImGui
 		RenderNavCursor(bb, id);
 		RenderFrame(bb.Min, bb.Max, bg_col, true, g.Style.FrameRounding);
 
-		render_frame_fn(render_frame_data, window->DrawList, bb, g.FontSize, text_col);
+		if (render_frame_fn)
+		{
+			render_frame_fn(render_frame_data, window->DrawList, bb, g.FontSize, text_col);
+		}
 
 		IMGUI_TEST_ENGINE_ITEM_INFO(id, str_id, g.LastItemData.StatusFlags);
 		return pressed;
@@ -345,6 +348,50 @@ namespace ImGui
 		draw_list->AddLine((rect.GetCenter() - ImVec2(-ex, +ex)), (rect.GetCenter() + ImVec2(-ex, +ex)), color, thickness);
 	}
 
+	void RenderEyeIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		const float r = std::min(rect.GetWidth(), rect.GetHeight());
+		draw_list->AddCircleFilled(rect.GetCenter(), ImMax<float>(0.1 * r, 1), color);
+		if (true)
+		{
+			float w = 0.45 * r;
+			float h = 0.5 * r;
+			draw_list->AddBezierQuadratic(rect.GetCenter() - ImVec2(w, 0), rect.GetCenter() + ImVec2(0, h), rect.GetCenter() + ImVec2(w, 0), color, 1);
+			draw_list->AddBezierQuadratic(rect.GetCenter() - ImVec2(w, 0), rect.GetCenter() - ImVec2(0, h), rect.GetCenter() + ImVec2(w, 0), color, 1);
+		}
+		else
+		{
+			draw_list->AddCircle(rect.GetCenter(), 0.45 * r, color);
+		}
+	}
+
+	void RenderBarredIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		uintptr_t options = reinterpret_cast<uintptr_t>(p_data);
+		float scale = 0.4;
+		uint16_t scale_bits = uint16_t((options >> 2) & 0xffff);
+		if (scale_bits != 0)
+		{
+			scale = float(scale_bits) / float(0xffff);
+		}
+		if (options == 0 || (options & 0x1) != 0)
+		{
+			ImVec2 dir = rect.GetTR() - rect.GetBL();
+			draw_list->AddLine((rect.GetCenter() + dir * scale), (rect.GetCenter() - dir * scale), color);
+		}
+		if (options & (0x2))
+		{
+			ImVec2 dir = rect.GetTL() - rect.GetBR();
+			draw_list->AddLine((rect.GetCenter() + dir * scale), (rect.GetCenter() - dir * scale), color);
+		}
+	}
+
+	void RenderBarredEyeIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		RenderEyeIcon(p_data, draw_list, rect, font_size, color);
+		RenderBarredIcon(reinterpret_cast<const void*>(uintptr_t(0x1)), draw_list, rect, font_size, color);
+	}
+
 	bool DetachButton()
 	{
 		bool res = IconButton("Detach", RenderDetachIcon);
@@ -353,9 +400,9 @@ namespace ImGui
 		return res;
 	}
 
-	bool XCrossButton(const char* tooltip)
+	bool XCrossButton(const char* tooltip, bool small_button)
 	{
-		bool res = IconButton("XCross", RenderXCrossIcon);
+		bool res = IconButton("XCross", RenderXCrossIcon, nullptr, small_button);
 		if (tooltip)
 		{
 			ImGui::SetItemTooltip(tooltip);
@@ -552,6 +599,41 @@ namespace ImGui
 		return InboxCheckboxEx(label, v, sz, render_label, &render_data);
 	}
 
+	bool InboxCheckbox(const char* label, bool* v, bool small_box)
+	{
+		ImVec2 size = ImVec2(0, 0);
+		if (small_box)
+		{
+			size.y = ImGui::GetFontSize();
+		}
+		return InboxCheckbox(label, v, size);
+	}
+
+	bool IconCheckbox(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data, ImVec2 box_size)
+	{
+		return InboxCheckboxEx(label, v, box_size, render_frame_fn, render_frame_data);
+	}
+
+	ImVec2 GetDefaultBoxSize(bool small_box)
+	{
+		float sz = 0;
+		if (small_box)
+		{
+			sz = ImGui::GetFontSize();
+		}
+		else
+		{
+			sz = ImGui::GetFrameHeight();
+		}
+		ImVec2 size = ImVec2(sz, sz);
+		return size;
+	}
+
+	bool IconCheckbox(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data, bool small_box)
+	{
+		return IconCheckbox(label, v, render_frame_fn, render_frame_data, GetDefaultBoxSize(small_box));
+	}
+
 	struct DeclareTextFieldInlineButtons
 	{
 		using DeclareFn = void(*)(void* data, ImVec2 button_size);
@@ -642,5 +724,55 @@ namespace ImGui
 		bool res = TextFieldEditEx("Filter", str, "Filter...", flags, std::span(extra_buttons.data(), extra_button_count));
 		res |= case_sensitive_data.res;
 		return res;
+	}
+
+	bool FlipIconButton(const char* label, bool* v, ImVec2 box_size,
+		ButtonIconDrawFunction false_render_frame_fn, const void* false_render_frame_data,
+		ButtonIconDrawFunction true_render_frame_fn, const void* true_render_frame_data
+	)
+	{
+		if (ImGui::IconButtonEx(label, box_size, ImGuiButtonFlags_None, *v ? true_render_frame_fn : false_render_frame_fn, *v ? true_render_frame_data : false_render_frame_data))
+		{
+			*v = !*v;
+			return true;
+		}
+		return false;
+	}
+
+	bool FlipIconButton(const char* label, bool* v,
+		ButtonIconDrawFunction false_render_frame_fn, const void* false_render_frame_data,
+		ButtonIconDrawFunction true_render_frame_fn, const void* true_render_frame_data,
+		bool small_box
+	)
+	{
+		return FlipIconButton(label, v, GetDefaultBoxSize(small_box), false_render_frame_fn, false_render_frame_data, true_render_frame_fn, true_render_frame_data);
+	}
+
+	bool BarredIconButton(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data, bool small_box, bool x_cross)
+	{
+		struct RenderData
+		{
+			ButtonIconDrawFunction render_fn;
+			const void* render_data;
+			bool x_cross;
+		};
+		RenderData render_data{
+			.render_fn = render_frame_fn,
+			.render_data = render_frame_data,
+			.x_cross = x_cross,
+		};
+		ButtonIconDrawFunction render_barred_icon = [](const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+		{
+			const RenderData * render_data = reinterpret_cast<const RenderData*>(p_data);
+			if (render_data->render_fn)
+			{
+				render_data->render_fn(render_data->render_data, draw_list, rect, font_size, color);
+			}
+			uintptr_t bar_options = render_data->x_cross ? 0b11 : 0b1;
+			float scale = 0.35;
+			bar_options |= (uintptr_t(scale * 0xffff) << 2);
+			RenderBarredIcon(reinterpret_cast<const void*>(bar_options), draw_list, rect, font_size, color);
+		};
+		return FlipIconButton(label, v, render_barred_icon, &render_data, render_frame_fn, render_frame_data, small_box);
 	}
 }

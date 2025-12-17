@@ -367,9 +367,9 @@ namespace ImGui
 
 	extern bool IconButtonEx(const char* str_id, ImVec2 size, ImGuiButtonFlags flags, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data = nullptr);
 
-	static inline bool IconButton(const char* str_id, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data = nullptr)
+	static inline bool IconButton(const char* str_id, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data = nullptr, bool small_button = false)
 	{
-		float sz = ImGui::GetFrameHeight();
+		float sz = small_button ? ImGui::GetTextLineHeight() : ImGui::GetFrameHeight();
 		return IconButtonEx(str_id, ImVec2(sz, sz), ImGuiButtonFlags_None, render_frame_fn, render_frame_data);
 	}
 
@@ -379,9 +379,15 @@ namespace ImGui
 
 	extern void RenderXCrossIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
 
+	extern void RenderEyeIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
+	extern void RenderBarredIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
+	extern void RenderBarredEyeIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
 	extern bool DetachButton();
 
-	extern bool XCrossButton(const char* tooltip=nullptr);
+	extern bool XCrossButton(const char* tooltip=nullptr, bool small_button = false);
 
 	extern void LabelText2(const char* label, const char* text, ImGuiInputTextFlags flags = ImGuiInputTextFlags_None);
 
@@ -470,8 +476,39 @@ namespace ImGui
 	{
 		return ImGui::SliderScalar(label, GetDataType<Scalar>(), &value, &v_min, &v_max, fmt, flags);
 	}
-
+	
 	extern bool InboxCheckboxEx(const char* label, bool* v, ImVec2 box_size, ButtonIconDrawFunction render_frame_fn = nullptr, const void* render_frame_data = nullptr);
 
-	extern bool InboxCheckbox(const char* label, bool* v, ImVec2 box_size = ImVec2(0, 0));
+	// Explicit sizing of the box
+	extern bool InboxCheckbox(const char* label, bool* v, ImVec2 box_size);
+
+	// Implicit sizing of the box
+	extern bool InboxCheckbox(const char* label, bool* v, bool small_box=false);
+
+	// Explicit sizing of the box
+	extern bool IconCheckbox(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data, ImVec2 box_size);
+
+	// Implicit sizing of the box
+	extern bool IconCheckbox(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn = nullptr, const void* render_frame_data = nullptr, bool small_box = false);
+
+	extern bool FlipIconButton(const char* label, bool* v, ImVec2 box_size,
+		ButtonIconDrawFunction false_render_frame_fn = nullptr, const void* false_render_frame_data = nullptr,
+		ButtonIconDrawFunction true_render_frame_fn = nullptr, const void* true_render_frame_data = nullptr
+	);
+
+	extern bool FlipIconButton(const char* label, bool* v,
+		ButtonIconDrawFunction false_render_frame_fn = nullptr, const void* false_render_frame_data = nullptr,
+		ButtonIconDrawFunction true_render_frame_fn = nullptr, const void* true_render_frame_data = nullptr,
+		bool small_button = false
+	);
+
+	static inline bool FlipIconButton(const char* label, bool* v,
+		ButtonIconDrawFunction false_render_frame_fn = nullptr,
+		ButtonIconDrawFunction true_render_frame_fn = nullptr,
+		bool small_button = false
+	) {
+		return FlipIconButton(label, v, false_render_frame_fn, nullptr, true_render_frame_fn, nullptr, small_button);
+	}
+
+	extern bool BarredIconButton(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn = nullptr, const void* render_frame_data = nullptr, bool small_box = false, bool x_cross = false);
 }
