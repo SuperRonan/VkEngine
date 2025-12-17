@@ -874,7 +874,29 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 						// TODO
 					}
 					ImGui::EndDisabled();
-					
+
+					ImGui::Separator();
+					ImGui::BeginDisabled(is_root);
+					if (ImGui::MenuItem("Open"))
+					{
+						openNodeInspector(ctx, node, path);
+					}
+					ImGui::BeginDisabled(!is_selected);
+					if (ImGui::MenuItem("Close"))
+					{
+						closeNodeInspector(ctx, node.get());
+					}
+					ImGui::EndDisabled();
+
+					{
+						bool visible = node->visible();
+						if (ImGui::MenuItem("Visible", nullptr, &visible))
+						{
+							node->setVisibility(visible);
+						}
+					}
+					ImGui::EndDisabled();
+
 					ImGui::EndMenu();
 					//ImGui::EndPopup();
 
