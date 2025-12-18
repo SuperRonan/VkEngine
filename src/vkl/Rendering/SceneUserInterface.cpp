@@ -1060,7 +1060,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			}
 			return nullptr;
 		}();
-		closeAllChilds();
+		closeAllNodeInspectors();
 		if (ni_to_keep)
 		{
 			ni_to_keep->setUnique(true);
@@ -1071,7 +1071,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 	void SceneUserInterface::allowMultipleSelection()
 	{
 		std::shared_ptr<NodeInspector> ni = std::static_pointer_cast<NodeInspector>(getChild(reinterpret_cast<Id>(&_node_in_focus)));
-		closeAllChilds();
+		closeAllNodeInspectors();
 		if(ni)
 		{
 			ni->setUnique(false);
