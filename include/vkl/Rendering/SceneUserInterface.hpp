@@ -148,9 +148,12 @@ namespace vkl
 		bool _show_view_basis = false;
 		bool _limit_unique_selection = false;
 		bool _single_click_selection = false;
+		bool _hide_tree_outline = false;
+		bool _hide_tree_nodes_quick_buttons = false;
 
 		float _out_of_focus_alpha;
 		float _not_visible_alpha;
+		float _tree_not_visible_tint;
 		std::chrono::milliseconds _pulse_period;
 
 		StringFilter _filter = {};

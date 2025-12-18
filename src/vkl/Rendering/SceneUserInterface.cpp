@@ -135,6 +135,7 @@ namespace vkl
 	{
 		_out_of_focus_alpha = 0.333333;
 		_not_visible_alpha = 0.333333;
+		_tree_not_visible_tint = 0.4;
 		_pulse_period = 2048ms;
 	}
 
@@ -626,6 +627,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				{
 					ImGui::SliderFloat("Out of focus Node Opacity", &that->_out_of_focus_alpha, 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
 					ImGui::SliderFloat("Invisible Node Opacity", &that->_not_visible_alpha, 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
+					ImGui::SliderFloat("Tree Nodes tint (not visible)", &that->_tree_not_visible_tint, 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
 					{
 						int p = that->_pulse_period.count();
 						// Slider size_t does not work yet
@@ -635,6 +637,10 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 							that->_pulse_period = std::chrono::milliseconds(std::clamp(p, 1, max));
 						}
 					}
+
+					ImGui::Checkbox("Hide Tree Outline", &that->_hide_tree_outline);
+					ImGui::Checkbox("Hide Tree Nodes Quick Butttons", &that->_hide_tree_nodes_quick_buttons);
+
 					ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
 					if (ImGui::Button("Reset"))
 					{
@@ -794,6 +800,10 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				
 
 				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanLabelWidth;
+				if (!_hide_tree_outline)
+				{
+					flags |= ImGuiTreeNodeFlags_DrawLinesFull;
+				}
 				if (!is_root)
 				{
 					if (_single_click_selection)
@@ -838,7 +848,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 				if (!node_visible)
 				{
-					float c = 0.666;
+					float c = _tree_not_visible_tint;
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(c, c, c, 1));
 				}
 				const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
@@ -915,6 +925,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 					color.w = 0.0f;
 					ImGui::PushStyleColor(color_id, color);
 				}
+				if(!_hide_tree_nodes_quick_buttons)
 				{
 					ImGui::SameLine();
 					bool v = node->visible();
