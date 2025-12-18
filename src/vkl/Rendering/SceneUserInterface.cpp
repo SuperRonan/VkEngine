@@ -232,7 +232,7 @@ namespace vkl
 		if (_show_view_basis)
 		{
 			Render3DBasisPC pc = {};
-			Matrix4f view_3D_basis_matrix = (camera.getCamToProj() * Matrix4f(TranslationMatrix(Vector3f(0, 0, -0.25)))).eval() * (Matrix4f(camera.getWorldRoationMatrix()) * Matrix4f(DiagonalMatrix<3>(0.03125f))).eval();
+			Matrix4f view_3D_basis_matrix = (camera.getCamToProj() * Matrix4f(TranslationMatrix(Vector3f(0, 0, 0.25)))).eval() * (Matrix4f(camera.getWorldRoationMatrix()) * Matrix4f(DiagonalMatrix<3>(0.03125f))).eval();
 			pc.matrix = view_3D_basis_matrix;
 			draw_list.pushBack(VertexCommand::DrawCallInfo{
 				.name = "view",
