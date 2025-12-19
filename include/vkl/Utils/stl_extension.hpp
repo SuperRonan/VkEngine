@@ -9,6 +9,9 @@
 #include <iterator>
 #include <string>
 #include <string_view>
+#include <span>
+#include <ranges>
+#include <concepts>
 
 #include <that/core/Strings.hpp>
 
@@ -405,4 +408,76 @@ namespace std
 		using SV = std::basic_string_view<Char>;
 		return containsCaseInsensitive_sv<Char>(SV(hay), SV(needle));
 	}
-}	
+
+
+
+	template <std::forward_iterator It>
+	size_t HashSequence(It const& begin, It const& end) noexcept
+	{
+		auto it = begin;
+		size_t res = 0;
+		std::hash<typename It::value_type> hasher = {};
+		while (it != end)
+		{
+			res ^= hasher(*it++);
+		}
+		return res;
+	}
+
+	template <ranges::input_range Range>
+	size_t HashRange(Range const& r) noexcept
+	{
+		return HashSequence(r.begin(), r.end());
+	}
+
+
+	template <class C, template <class> class ValidRet, class ...Args>
+	concept invocable_valid_returns = std::invocable<C, Args...> && ValidRet<typename std::invoke_result<C, Args...>::type>::value;
+
+	template <template <class, class> class Bin, class Second>
+	struct bind_second
+	{
+		template <class First>
+		using type = Bin<First, Second>;
+	};
+
+	template <template <class, class> class Bin, class First>
+	struct bind_first
+	{
+		template <class Second>
+		using type = Bin<First, Second>;
+	};
+
+	template <class C, class R, class ...Args>
+	concept invocable_compatible_returns = invocable_valid_returns<C, bind_second<std::is_convertible, R>::template type, Args...>;
+
+	namespace ranges
+	{
+		// std::ranges does not provide std::ranges::lexicographical_compare_three_way()
+		template <input_range _Rng1, input_range _Rng2, class _Pj1 = identity, class _Pj2 = identity,
+			std::invocable<typename projected<iterator_t<_Rng1>, _Pj1>::value_type, typename projected<iterator_t<_Rng2>, _Pj2>::value_type> _Pr = std::compare_three_way>
+		constexpr auto lexicographical_compare_three_way(_Rng1&& _Range1, _Rng2&& _Range2, _Pr _Pred = {}, _Pj1 _Proj1 = {}, _Pj2 _Proj2 = {})
+		{
+			return ::std::lexicographical_compare_three_way(
+				ranges::begin(_Range1), ranges::end(_Range1),
+				ranges::begin(_Range2), ranges::end(_Range2),
+				[&](auto&& lhs, auto&& rhs) {
+					return _Pred(std::invoke(_Proj1, lhs), std::invoke(_Proj2, rhs));
+				}
+			);
+		}
+
+		// First compare the sizes of the operands, than a lixicographical comp if same size
+		template <sized_range _Rng1, sized_range _Rng2, class _Pj1 = identity, class _Pj2 = identity,
+			std::invocable_compatible_returns<std::strong_ordering, typename projected<iterator_t<_Rng1>, _Pj1>::value_type, typename projected<iterator_t<_Rng2>, _Pj2>::value_type> _Pr = std::compare_three_way>
+		constexpr std::strong_ordering compare_three_way_size_lexicographical(_Rng1&& _Range1, _Rng2&& _Range2, _Pr _Pred = {}, _Pj1 _Proj1 = {}, _Pj2 _Proj2 = {})
+		{
+			const std::strong_ordering size_comp = ranges::size(_Range1) <=> ranges::size(_Range2);
+			if (size_comp != std::strong_ordering::equal)
+			{
+				return size_comp;
+			}
+			return lexicographical_compare_three_way(std::forward<_Rng1>(_Range1), std::forward<_Rng2>(_Range2), _Pred, _Proj1, _Proj2);
+		}
+	}
+}
