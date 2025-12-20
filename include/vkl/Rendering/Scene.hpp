@@ -209,48 +209,116 @@ namespace vkl
 			}
 
 		};
-		
-		
-		
+
+
+
 		class DirectedAcyclicGraph
 		{
+		private:
+			template <class T>
+			struct NodePathParent
+			{};
+
 		public:
 
-
 			friend class Scene;
-			
-			struct FastNodePath
+
+			template <class T>
+			struct NodePathViewBase : public NodePathParent<T>
 			{
-				MyVector<uint32_t> path;
+				std::span<T const> path;
 
-				size_t hash() const;
+				size_t hash() const noexcept
+				{
+					return HashRange(path);
+				}
 
-				auto operator<=>(FastNodePath const&) const = default;
+				template <std::convertible_to<NodePathViewBase> RhsPath>
+				constexpr bool operator==(RhsPath const& rhs) const noexcept
+				{
+					return std::ranges::equal(path, rhs.path);
+				}
 
-				bool operator==(FastNodePath const& other) const = default;
+				template <std::convertible_to<NodePathViewBase> RhsPath>
+				constexpr auto operator<=>(RhsPath const& rhs) const noexcept
+				{
+					return std::ranges::compare_three_way_size_lexicographical(path, rhs.path);
+				}
 			};
 
-			struct RobustNodePath
+			template <class T>
+			struct NodePathBase : public NodePathParent<T>
 			{
-				MyVector<Node*> path;
-				
-				size_t hash() const;
+				using ViewType = NodePathViewBase<T>;
+				MyVector<T> path;
 
-				auto operator<=>(RobustNodePath const&) const = default;
+				constexpr NodePathBase() = default;
+				constexpr NodePathBase(NodePathBase const&) = default;
+				constexpr NodePathBase(NodePathBase &&) noexcept = default;
 
-				bool operator==(RobustNodePath const& other) const = default;
+				NodePathBase(ViewType view):
+					path(view.path.begin(), view.path.end())
+				{ }
+
+				constexpr NodePathBase& operator=(NodePathBase const& rhs)
+				{
+					path = rhs.path;
+					return *this;
+				}
+
+				constexpr NodePathBase& operator=(NodePathBase && rhs) noexcept
+				{
+					path = std::move(rhs.path);
+					return *this;
+				}
+
+				ViewType view() const noexcept
+				{
+					return ViewType{
+						.path = std::span(path),
+					};
+				}
+
+				operator ViewType() const noexcept
+				{
+					return view();
+				}
+
+				size_t hash() const noexcept
+				{
+					return view().hash();
+				}
+
+				template <std::convertible_to<NodePathViewBase<T>> RhsPath>
+				constexpr bool operator==(RhsPath const& rhs) const noexcept
+				{
+					return view() == rhs;
+				}
+
+				template <std::convertible_to<NodePathViewBase<T>> RhsPath>
+				constexpr auto operator<=>(RhsPath const& rhs) const noexcept
+				{
+					return view() <=> rhs;
+				}
 			};
+
+			using FastNodePathView = NodePathViewBase<uint32_t>;
+			using FastNodePath = NodePathBase<uint32_t>;
+
+			using RobustNodePathView = NodePathViewBase<Node*>;
+			using RobustNodePath = NodePathBase<Node*>;
 			
 			struct PerNodeInstance
 			{
 				Mat3x4 matrix;
 				uint32_t flags;
+				Range32u fast_path_ref;
 			};
 
 			using PerNodeInstanceFunction = std::function<bool(std::shared_ptr<Node> const&, Mat3x4 const& matrix, uint32_t)>;
-			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node> const&, FastNodePath const&, Mat3x4 const&, uint32_t)>;
-			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node> const&, RobustNodePath const&, Mat3x4 const&, uint32_t)>;
-			using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::vector<PerNodeInstance> const&)>;
+			using PerNodeInstanceFastPathFunction = std::function<bool(std::shared_ptr<Node> const&, FastNodePathView, Mat3x4 const&, uint32_t)>;
+			using PerNodeInstanceRobustPathFunction = std::function<bool(std::shared_ptr<Node> const&, RobustNodePathView, Mat3x4 const&, uint32_t)>;
+			using PerNodeAllInstancesFunction = std::function<void(std::shared_ptr<Node> const&, std::span<const PerNodeInstance>)>;
 			using PerNodeFunction = std::function<void(std::shared_ptr<Node> const&)>;
 
 
@@ -260,11 +328,10 @@ namespace vkl
 
 			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFunction& f);
 
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath & path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFastPathFunction& f);
-			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath & path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, FastNodePath& path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceFastPathFunction& f);
+			void iterateOnNodeThenSons(std::shared_ptr<Node> const& node, RobustNodePath& path, Mat3x4 const& matrix, uint32_t flags, const PerNodeInstanceRobustPathFunction& f);
 
-
-
+			that::ExtensibleStorage<uint32_t> _flat_path_storage = {};
 			std::unordered_map<std::shared_ptr<Node>, std::vector<PerNodeInstance>> _flat_dag;
 
 		public:
@@ -298,9 +365,20 @@ namespace vkl
 				Mat3x4 matrix;
 			};
 
-			PositionedNode findNode(FastNodePath const& path) const;
+			PositionedNode findNode(FastNodePathView const& path);
 
-			PositionedNode findNode(RobustNodePath const& path) const;
+			PositionedNode findNode(RobustNodePathView const& path);
+
+			FastNodePath getFastPath(RobustNodePathView const& path);
+
+			RobustNodePath getRobustPath(FastNodePathView const& path);
+
+			FastNodePathView getFlattenFastPath(Range32u ref)
+			{
+				return FastNodePathView{
+					.path = _flat_path_storage.getSpan(ref),
+				};
+			}
 
 			bool empty() const
 			{

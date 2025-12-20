@@ -107,6 +107,8 @@ namespace vkl
 	void Scene::DirectedAcyclicGraph::iterateOnDag(const PerNodeInstanceFastPathFunction & f)
 	{
 		FastNodePath path;
+		const std::span<int> s;
+		std::span(path.path);
 		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
@@ -165,13 +167,16 @@ namespace vkl
 	void Scene::DirectedAcyclicGraph::flatten()
 	{
 		_flat_dag.clear();
+		_flat_path_storage.clear();
 
-		const auto process_node = [&](std::shared_ptr<Node> const& node, Mat3x4 const& matrix, uint32_t flags)
+		const auto process_node = [&](std::shared_ptr<Node> const& node, FastNodePathView path, Mat3x4 const& matrix, uint32_t flags)
 		{
 			std::vector<PerNodeInstance> & matrices = _flat_dag[node];
+			size_t path_index = _flat_path_storage.pushBack(path.path.data(), path.path.size());
 			matrices.push_back(PerNodeInstance{
-				.matrix = matrix, 
+				.matrix = matrix,
 				.flags = flags,
+				.fast_path_ref = Range32u{.begin = u32(path_index), .len = u32(path.path.size())},
 			});
 			return true;
 		};
@@ -185,27 +190,7 @@ namespace vkl
 		
 	}
 
-	size_t Scene::DirectedAcyclicGraph::FastNodePath::hash()const
-	{
-		size_t res = 0;
-		for (size_t i = 0; i < path.size(); ++i)
-		{
-			res = std::hash<size_t>()(res ^ std::hash<uint32_t>()(path[i]));
-		}
-		return res;
-	}
-
-	size_t Scene::DirectedAcyclicGraph::RobustNodePath::hash()const
-	{
-		size_t res = 0;
-		for (size_t i = 0; i < path.size(); ++i)
-		{
-			res = std::hash<size_t>()(res ^ std::hash<void*>()(path[i]));
-		}
-		return res;
-	}
-
-	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(FastNodePath const& path) const
+	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(FastNodePathView const& path)
 	{
 		PositionedNode res;
 
@@ -236,26 +221,17 @@ namespace vkl
 		return res;
 	}
 
-	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(RobustNodePath const& path) const
+	Scene::DirectedAcyclicGraph::PositionedNode Scene::DirectedAcyclicGraph::findNode(RobustNodePathView const& path)
 	{
 		PositionedNode res;
-
 		std::shared_ptr<Node> n = _root;
 		Mat3x4 matrix = n->matrix3x4();
 		for (size_t i = 0; i < path.path.size(); ++i)
 		{
-			size_t found = size_t(-1);
-			for (size_t j = 0; j < n->children().size(); ++j)
+			auto it = std::ranges::find_if(n->children(), [&](auto const& it){return it.get() == path.path[i]; });
+			if (it != n->children().end())
 			{
-				if (n->children()[j].get() == path.path[i])
-				{
-					found = j;
-					break;
-				}
-			}
-			if (found != size_t(-1))
-			{
-				n = n->children()[found];
+				n = *it;
 				matrix *= n->matrix3x4();
 			}
 			else
@@ -264,7 +240,6 @@ namespace vkl
 				break;
 			}
 		}
-
 		if (n)
 		{
 			res = PositionedNode{
@@ -272,7 +247,50 @@ namespace vkl
 				.matrix = matrix,
 			};
 		}
+		return res;
+	}
 
+	Scene::DirectedAcyclicGraph::FastNodePath Scene::DirectedAcyclicGraph::getFastPath(RobustNodePathView const& path)
+	{
+		FastNodePath res = {};
+		res.path.resize(path.path.size());
+		const Node* n = _root.get();
+		for (size_t i = 0; i < path.path.size(); ++i)
+		{
+			auto it = std::ranges::find_if(n->children(), [&](auto const& it) {return it.get() == path.path[i]; });
+			if (it != n->children().end())
+			{
+				res.path[i] = (it - n->children().begin());
+				n = it->get();
+			}
+			else
+			{
+				res.path.clear();
+				break;
+			}
+		}
+		return res;
+	}
+
+	Scene::DirectedAcyclicGraph::RobustNodePath Scene::DirectedAcyclicGraph::getRobustPath(FastNodePathView const& path)
+	{
+		RobustNodePath res = {};
+		res.path.resize(path.path.size());
+		Node* n = _root.get();
+		for (size_t i = 0; i < path.path.size(); ++i)
+		{
+			const uint32_t index = path.path[i];
+			if (index < n->children().size())
+			{
+				n = n->children()[i].get();
+				res.path[i] = n;
+			}
+			else
+			{
+				res.path.clear();
+				break;
+			}
+		}
 		return res;
 	}
 
@@ -688,7 +706,7 @@ namespace vkl
 		
 		_aabb.reset();
 
-		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePath const& path, Mat3x4 const& matrix4, uint32_t flags)
+		_tree->iterateOnDag([&](std::shared_ptr<Node> const& node, DirectedAcyclicGraph::RobustNodePathView const& path, Mat3x4 const& matrix4, uint32_t flags)
 		{
 			const Mat3x4 matrix = matrix4;
 			const bool visible = (flags & 1) && node->visible();
