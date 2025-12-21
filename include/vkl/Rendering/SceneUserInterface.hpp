@@ -41,7 +41,7 @@ namespace vkl
 			{
 				node.node = nullptr;
 				node.matrix = Mat3x4::Identity();
-				path.path.clear();
+				path.clear();
 			}
 		};
 

@@ -215,90 +215,101 @@ namespace vkl
 		class DirectedAcyclicGraph
 		{
 		private:
-			template <class T>
-			struct NodePathParent
-			{};
+
+			template <class T, std::ranges::range Storage>
+			struct NodePathParent : public Storage
+			{
+				template<class ...Args>
+				constexpr NodePathParent(Args&&... args) noexcept :
+					Storage(std::forward<Args>(args)...)
+				{ }
+
+				size_t hash() const noexcept
+				{
+					return HashRange(*this);
+				}
+
+				template <class OtherStorage, class RhsPath = NodePathParent<T, OtherStorage>>
+				constexpr bool operator==(RhsPath const& rhs) const noexcept
+				{
+					return std::ranges::equal(*this, rhs);
+				}
+
+				template <class OtherStorage, class RhsPath = NodePathParent<T, OtherStorage>>
+				constexpr auto operator<=>(RhsPath const& rhs) const noexcept
+				{
+					return std::ranges::compare_three_way_size_lexicographical(*this, rhs);
+				}
+			};
 
 		public:
 
 			friend class Scene;
 
 			template <class T>
-			struct NodePathViewBase : public NodePathParent<T>
+			struct NodePathViewBase : public NodePathParent<T, std::span<T const>>
 			{
-				std::span<T const> path;
+				using Parent = NodePathParent<T, std::span<T const>>;
+				using Storage = std::span<T const>;
 
-				size_t hash() const noexcept
-				{
-					return HashRange(path);
-				}
+				constexpr NodePathViewBase() noexcept = default;
+				constexpr NodePathViewBase(NodePathViewBase const&) noexcept = default;
+				
+				template <std::convertible_to<std::span<T const>> OtherStorage>
+				constexpr NodePathViewBase(OtherStorage const& s) noexcept :
+					Parent(s)
+				{ }
 
-				template <std::convertible_to<NodePathViewBase> RhsPath>
-				constexpr bool operator==(RhsPath const& rhs) const noexcept
-				{
-					return std::ranges::equal(path, rhs.path);
-				}
+				constexpr NodePathViewBase(T const * ptr, size_t size) noexcept :
+					Parent(ptr, size)
+				{ }
 
-				template <std::convertible_to<NodePathViewBase> RhsPath>
-				constexpr auto operator<=>(RhsPath const& rhs) const noexcept
+				constexpr NodePathViewBase& operator=(NodePathViewBase const&) noexcept = default;
+
+				template <std::convertible_to<std::span<T const>> OtherStorage>
+				constexpr NodePathViewBase& operator=(OtherStorage const& rhs) noexcept
 				{
-					return std::ranges::compare_three_way_size_lexicographical(path, rhs.path);
+					Storage::operator=(rhs);
+					return *this;
 				}
 			};
 
-			template <class T>
-			struct NodePathBase : public NodePathParent<T>
+			template <class T, template <class> class GenContainer = MyVector>
+			struct NodePathBase : public NodePathParent<T, GenContainer<T>>
 			{
+				using Parent = NodePathParent<T, GenContainer<T>>;
 				using ViewType = NodePathViewBase<T>;
-				MyVector<T> path;
+				using Storage = GenContainer<T>;
 
 				constexpr NodePathBase() = default;
+				constexpr NodePathBase(NodePathBase&&) noexcept = default;
 				constexpr NodePathBase(NodePathBase const&) = default;
-				constexpr NodePathBase(NodePathBase &&) noexcept = default;
 
-				NodePathBase(ViewType view):
-					path(view.path.begin(), view.path.end())
+				template <std::ranges::range RhsPath>
+					requires std::convertible_to<std::ranges::range_value_t<RhsPath>, T>
+				constexpr NodePathBase(RhsPath const& other) :
+					Parent(other.begin(), other.end())
 				{ }
 
-				constexpr NodePathBase& operator=(NodePathBase const& rhs)
+				template <std::ranges::range RhsPath>
+					requires std::convertible_to<std::ranges::range_value_t<RhsPath>, T>
+				constexpr NodePathBase& operator=(RhsPath const& rhs)
 				{
-					path = rhs.path;
+					Storage::assign(rhs.begin(), rhs.end());
 					return *this;
 				}
 
-				constexpr NodePathBase& operator=(NodePathBase && rhs) noexcept
-				{
-					path = std::move(rhs.path);
-					return *this;
-				}
+				constexpr NodePathBase& operator=(NodePathBase&& rhs) noexcept = default;
+				constexpr NodePathBase& operator=(NodePathBase const& rhs) = default;
 
 				ViewType view() const noexcept
 				{
-					return ViewType{
-						.path = std::span(path),
-					};
+					return ViewType(*this);
 				}
 
 				operator ViewType() const noexcept
 				{
 					return view();
-				}
-
-				size_t hash() const noexcept
-				{
-					return view().hash();
-				}
-
-				template <std::convertible_to<NodePathViewBase<T>> RhsPath>
-				constexpr bool operator==(RhsPath const& rhs) const noexcept
-				{
-					return view() == rhs;
-				}
-
-				template <std::convertible_to<NodePathViewBase<T>> RhsPath>
-				constexpr auto operator<=>(RhsPath const& rhs) const noexcept
-				{
-					return view() <=> rhs;
 				}
 			};
 
@@ -375,9 +386,7 @@ namespace vkl
 
 			FastNodePathView getFlattenFastPath(Range32u ref)
 			{
-				return FastNodePathView{
-					.path = _flat_path_storage.getSpan(ref),
-				};
+				return FastNodePathView(_flat_path_storage.getSpan(ref));
 			}
 
 			bool empty() const

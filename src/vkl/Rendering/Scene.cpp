@@ -17,7 +17,9 @@
 
 namespace vkl
 {
-
+	static_assert(std::convertible_to<Scene::DAG::FastNodePathView, Scene::DAG::FastNodePath>);
+	static_assert(std::convertible_to<Scene::DAG::FastNodePath, Scene::DAG::FastNodePathView>);
+	
 	void Scene::Node::updateResources(UpdateContext& ctx)
 	{
 		if (_model)
@@ -60,15 +62,15 @@ namespace vkl
 		uint32_t new_flags = flags_bits.to_ulong();
 		if (f(node, path, new_matrix, new_flags))
 		{
-			path.path.push_back(0);
-			for (size_t i=0; i < node->children().size(); ++i)
+			path.push_back(0);
+			for (size_t i = 0; i < node->children().size(); ++i)
 			{
-				path.path.back() = static_cast<uint32_t>(i);
+				path.back() = static_cast<uint32_t>(i);
 				std::shared_ptr<Node> const& n = node->children()[i];
 				assert(!!n);
 				iterateOnNodeThenSons(n, path, new_matrix, new_flags, f);
 			}
-			path.path.pop_back();
+			path.pop_back();
 		}
 	}
 
@@ -82,16 +84,16 @@ namespace vkl
 		uint32_t new_flags = flags_bits.to_ulong();
 		if (f(node, path, new_matrix, new_flags))
 		{
-			path.path.push_back(nullptr);
+			path.push_back(nullptr);
 
 			for (size_t i = 0; i < node->children().size(); ++i)
 			{
 				std::shared_ptr<Node> const& n = node->children()[i];
 				assert(!!n);
-				path.path.back() = n.get();
+				path.back() = n.get();
 				iterateOnNodeThenSons(n, path, new_matrix, new_flags, f);
 			}
-			path.path.pop_back();
+			path.pop_back();
 		}
 	}
 
@@ -107,8 +109,6 @@ namespace vkl
 	void Scene::DirectedAcyclicGraph::iterateOnDag(const PerNodeInstanceFastPathFunction & f)
 	{
 		FastNodePath path;
-		const std::span<int> s;
-		std::span(path.path);
 		Mat3x4 matrix = Mat3x4::Identity();
 		if (root())
 		{
@@ -172,11 +172,11 @@ namespace vkl
 		const auto process_node = [&](std::shared_ptr<Node> const& node, FastNodePathView path, Mat3x4 const& matrix, uint32_t flags)
 		{
 			std::vector<PerNodeInstance> & matrices = _flat_dag[node];
-			size_t path_index = _flat_path_storage.pushBack(path.path.data(), path.path.size());
+			size_t path_index = _flat_path_storage.pushBack(path.data(), path.size());
 			matrices.push_back(PerNodeInstance{
 				.matrix = matrix,
 				.flags = flags,
-				.fast_path_ref = Range32u{.begin = u32(path_index), .len = u32(path.path.size())},
+				.fast_path_ref = Range32u{.begin = u32(path_index), .len = u32(path.size())},
 			});
 			return true;
 		};
@@ -196,11 +196,11 @@ namespace vkl
 
 		std::shared_ptr<Node> n = _root;
 		Mat3x4 matrix = n->matrix3x4();
-		for (size_t i = 0; i < path.path.size(); ++i)
+		for (size_t i = 0; i < path.size(); ++i)
 		{
-			if (path.path[i] < n->children().size())
+			if (path[i] < n->children().size())
 			{
-				n = n->children()[path.path[i]];
+				n = n->children()[path[i]];
 				matrix = matrix * (n->matrix4x4());
 			}
 			else
@@ -226,9 +226,9 @@ namespace vkl
 		PositionedNode res;
 		std::shared_ptr<Node> n = _root;
 		Mat3x4 matrix = n->matrix3x4();
-		for (size_t i = 0; i < path.path.size(); ++i)
+		for (size_t i = 0; i < path.size(); ++i)
 		{
-			auto it = std::ranges::find_if(n->children(), [&](auto const& it){return it.get() == path.path[i]; });
+			auto it = std::ranges::find_if(n->children(), [&](auto const& it){return it.get() == path[i]; });
 			if (it != n->children().end())
 			{
 				n = *it;
@@ -253,41 +253,42 @@ namespace vkl
 	Scene::DirectedAcyclicGraph::FastNodePath Scene::DirectedAcyclicGraph::getFastPath(RobustNodePathView const& path)
 	{
 		FastNodePath res = {};
-		res.path.resize(path.path.size());
+		res.resize(path.size());
 		const Node* n = _root.get();
-		for (size_t i = 0; i < path.path.size(); ++i)
+		for (size_t i = 0; i < path.size(); ++i)
 		{
-			auto it = std::ranges::find_if(n->children(), [&](auto const& it) {return it.get() == path.path[i]; });
+			auto it = std::ranges::find_if(n->children(), [&](auto const& it) {return it.get() == path[i]; });
 			if (it != n->children().end())
 			{
-				res.path[i] = (it - n->children().begin());
+				res[i] = (it - n->children().begin());
 				n = it->get();
 			}
 			else
 			{
-				res.path.clear();
+				res.clear();
 				break;
 			}
 		}
+		RobustNodePath tmp = RobustNodePath(path);
 		return res;
 	}
 
 	Scene::DirectedAcyclicGraph::RobustNodePath Scene::DirectedAcyclicGraph::getRobustPath(FastNodePathView const& path)
 	{
 		RobustNodePath res = {};
-		res.path.resize(path.path.size());
+		res.resize(path.size());
 		Node* n = _root.get();
-		for (size_t i = 0; i < path.path.size(); ++i)
+		for (size_t i = 0; i < path.size(); ++i)
 		{
-			const uint32_t index = path.path[i];
+			const uint32_t index = path[i];
 			if (index < n->children().size())
 			{
 				n = n->children()[i].get();
-				res.path[i] = n;
+				res[i] = n;
 			}
 			else
 			{
-				res.path.clear();
+				res.clear();
 				break;
 			}
 		}

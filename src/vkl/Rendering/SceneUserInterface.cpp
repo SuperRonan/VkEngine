@@ -783,7 +783,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
 			{
-				const bool is_root = path.path.empty();
+				const bool is_root = path.empty();
 				if (!is_root && !_filter.empty() && !nodePassesFilter(node.get()))
 				{
 					return;
@@ -866,7 +866,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				{
 					open_inspector |= ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None);
 				}
-				if (open_inspector && !ImGui::IsItemToggledOpen() && !path.path.empty())
+				if (open_inspector && !ImGui::IsItemToggledOpen() && !path.empty())
 				{
 					openNodeInspector(ctx, node, path);
 				}
@@ -951,13 +951,13 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 				if (node_open)
 				{
-					path.path.push_back(0);
+					path.push_back(0);
 					for (size_t i = 0; i < node->children().size(); ++i)
 					{
-						path.path.back() = i;
+						path.back() = i;
 						recurse(node->children()[i], node_matrix, is_selected_path_so_far, node_flags, recurse);
 					}
-					path.path.pop_back();
+					path.pop_back();
 
 					ImGui::TreePop();
 				}
@@ -995,7 +995,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		{
 			res->reset(node);
 		}
-		if (!path.path.empty())
+		if (!path.empty())
 		{
 			res->setPath(path);
 		}

@@ -932,7 +932,7 @@ namespace vkl
 		{
 			for (auto& [path, lid] : _scene->_unique_light_instances)
 			{
-				std::shared_ptr<Light> const& light = path.path.back()->light();
+				std::shared_ptr<Light> const& light = path.back()->light();
 				{
 					if (!lid.specific_data)
 					{
@@ -1103,7 +1103,7 @@ namespace vkl
 				
 				for (auto& [path, lid] : _scene->_unique_light_instances)
 				{
-					std::shared_ptr<Light> const& light = path.path.back()->light();
+					std::shared_ptr<Light> const& light = path.back()->light();
 					LightInstanceData * my_lid = dynamic_cast<LightInstanceData*>(lid.specific_data.get());
 					if (light->enableShadowMap() && my_lid && my_lid->framebuffer && ((lid.flags & 1) != 0))
 					{

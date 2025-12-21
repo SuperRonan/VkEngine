@@ -9,7 +9,7 @@
 namespace vkl
 {
 	template <class T, class Allocator = std::allocator<T>>
-	class MyVector final : public std::vector<T, Allocator>
+	class MyVector : public std::vector<T, Allocator>
 	{ 
 	protected:
 
