@@ -1185,5 +1185,19 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		{
 			node->light()->declareGui(ctx);
 		}
+
+		if (ImGui::CollapsingHeader("Children"))
+		{
+			for (uint32_t i = 0; i < node->children().size(); ++i)
+			{
+				ImGui::PushID(i);
+				std::shared_ptr<Scene::Node>const& child = node->children()[i];
+				if (ImGui::SmallButton(child->name().c_str()))
+				{
+					parent->openNodeInspector(ctx, child);
+				}
+				ImGui::PopID();
+			}
+		}
 	}
 }
