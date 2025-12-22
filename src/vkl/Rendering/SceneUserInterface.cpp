@@ -868,7 +868,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				}
 				if (open_inspector && !ImGui::IsItemToggledOpen() && !path.empty())
 				{
-					openNodeInspector(ctx, node, path);
+					openNodeInspector(ctx, node);
 				}
 				ImGui::PushID("On Node");
 				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
@@ -890,7 +890,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 					ImGui::BeginDisabled(is_root);
 					if (ImGui::MenuItem("Open"))
 					{
-						openNodeInspector(ctx, node, path);
+						openNodeInspector(ctx, node);
 					}
 					ImGui::BeginDisabled(!is_selected);
 					if (ImGui::MenuItem("Close"))
@@ -986,7 +986,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
-	SceneUserInterface::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path)
+	SceneUserInterface::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node)
 	{
 		auto res = ctx.getTopPanelHolder()->openChild(getNodeId(node.get()), [&]() {
 			return std::make_shared<NodeInspector>(node, this);
@@ -994,10 +994,6 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		if (res->node != node)
 		{
 			res->reset(node);
-		}
-		if (!path.empty())
-		{
-			res->setPath(path);
 		}
 		return res;
 	}
@@ -1111,11 +1107,6 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			this->node = node;
 			resetName();
 		}
-	}
-
-	void SceneUserInterface::NodeInspector::setPath(Scene::DAG::FastNodePath const& path)
-	{
-		latest_path = path;
 	}
 
 	void SceneUserInterface::NodeInspector::setUnique(bool unique)

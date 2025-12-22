@@ -167,7 +167,6 @@ namespace vkl
 		{
 			SceneUserInterface* parent = nullptr;
 			std::shared_ptr<Scene::Node> node = {}; // ptr is Id
-			Scene::DAG::FastNodePath latest_path = {};
 			bool _unique = false;
 
 			virtual void declareInline(GUI::Context& ctx);
@@ -177,8 +176,6 @@ namespace vkl
 			NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent);
 
 			void reset(std::shared_ptr<Scene::Node> const& node);
-
-			void setPath(Scene::DAG::FastNodePath const& path);
 
 			Id getDefaultId() const
 			{
@@ -191,9 +188,8 @@ namespace vkl
 		};
 
 		NodeInspector* _node_in_focus = nullptr;
-		
 
-		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node, Scene::DAG::FastNodePath const& path = {});
+		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node);
 
 		void closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node);
 
