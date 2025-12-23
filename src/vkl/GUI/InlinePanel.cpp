@@ -21,33 +21,33 @@ namespace vkl::GUI
 
 	void InlinePanel::declareInline(GUI::Context& ctx)
 	{
-		const char* label = this->label.empty() ? panel->name().c_str() : this->label.c_str();
-		if (panel)
+		const char* label = this->label.empty() && panel ? panel->name().c_str() : this->label.c_str();
+		const bool can_declare = !!panel;
+		InlinePanel::ReturnType res = {};
+		ImGui::PushID(id);
+		res.declare_inline = can_declare;
+		if (!can_declare)
 		{
-			ImGui::PushID(panel.get());
+			ImGui::BeginDisabled();
 		}
-		else
 		{
-			ImGui::PushID(label);
-		}
+		res.detach = DetachPanelButton(ctx, panel, id);
 
-		DetachPanelButton(ctx, panel, id);
 		ImGui::SameLine();
-		bool declare = !!panel;
 		if (type == Type::None)
 		{
 			ImGui::SeparatorText(label);
 		}
 		if (type == Type::CollapseHeader)
 		{
-			declare &= ImGui::CollapsingHeader(label);
+			res.declare_inline &= ImGui::CollapsingHeader(label);
 		}
 		else if (type == Type::Child)
 		{
-			declare &= ImGui::BeginChild(label);
+			res.declare_inline &= ImGui::BeginChild(label);
 		}
 
-		if (declare)
+		if (res.declare_inline)
 		{
 			panel->declareInline(ctx);
 		}
@@ -61,7 +61,12 @@ namespace vkl::GUI
 			ImGui::Separator();
 		}
 
+		if (!can_declare)
+		{
+			ImGui::EndDisabled();
+		}
 		ImGui::PopID();
+		return res;
 	}
 
 	InlinePanel InlinePanel::MakeFromUniqePanel(std::shared_ptr<Panel> const& panel, Type type)

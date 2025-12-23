@@ -19,7 +19,13 @@ namespace vkl::GUI
 		Panel::Id id = {};
 		Type type = Type::None;
 
-		void declareInline(GUI::Context& ctx);
+		struct ReturnType
+		{
+			bool declare_inline = false;
+			bool detach = false;
+		};
+
+		ReturnType declareInline(GUI::Context& ctx);
 
 		static InlinePanel MakeFromUniqePanel(std::shared_ptr<Panel> const& panel, Type type = Type::None);
 	};
