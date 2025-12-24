@@ -14,13 +14,16 @@ namespace vkl::GUI
 
 	protected:
 
-		bool _can_close = true;
-		bool _open = true;
-		bool _is_visible = false;
-		bool _is_hovered = false;
-		bool _has_focus = false;
+		bool _can_close : 1 = true;
+		bool _open : 1 = true;
+		bool _used : 1 = false;
+		bool _is_visible : 1 = false;
+		bool _is_hovered : 1 = false;
+		bool _has_focus : 1 = false;
 
+		ImVec2 _window_initial_size = ImVec2(0, 0);
 		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
+		
 
 		Panel(VkApplication * app, std::string const& name);
 
@@ -37,6 +40,16 @@ namespace vkl::GUI
 		bool isOpen() const
 		{
 			return _open;
+		}
+
+		bool isUsed() const
+		{
+			return _used;
+		}
+
+		void setUsed(bool value = true)
+		{
+			_used = value;
 		}
 
 		void setOpen(bool value = true)
