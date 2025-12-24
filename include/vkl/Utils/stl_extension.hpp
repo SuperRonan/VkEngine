@@ -21,6 +21,10 @@ using namespace std::literals;
 
 namespace std
 {
+	// D is strictly derived from B (D cannot be B)
+	template <class D, class B>
+	concept strictly_derived_from = std::derived_from<D, B> && !std::same_as<D, B>;
+
 	//template <class T, Container<T> C>
 	//std::vector<typename C::value_type> makeVector(C const& c)
 	//{
