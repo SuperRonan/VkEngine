@@ -92,6 +92,9 @@ namespace vkl
 {
 	class VkObject;
 
+	class AbstractInstance;
+	class AbstractInstanceHolder;
+
 	struct VkStruct
 	{
 		VkStructureType sType;
