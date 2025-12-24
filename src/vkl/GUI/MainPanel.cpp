@@ -76,17 +76,24 @@ namespace vkl::GUI
 		_menus.push_back(menu);
 	}
 
+	void MainPanel::addInlinePanel(IndirectInlinePanel const& iip)
+	{
+		_inline_panels.push_back(iip);
+		IndirectInlinePanel& b = _inline_panels.back();
+		if (b.id == 0)
+		{
+			b.id = reinterpret_cast<Id>(b.panel.get());
+		}
+		if (b.type == InlinePanel::Type::None)
+		{
+			b.type = InlinePanel::Type::CollapseHeader;
+		}
+	}
+
 	void MainPanel::addInlinePanel(InlinePanel const& ip)
 	{
-		_inline_panels.push_back(ip);
-		InlinePanel& b = _inline_panels.back();
-		if (b.panel)
-		{
-			if (b.id == 0)
-			{
-				b.id = reinterpret_cast<Id>(b.panel.get());
-			}
-		}
-		b.type = InlinePanel::Type::CollapseHeader;
+		IndirectInlinePanel iip;
+		static_cast<InlinePanel&>(iip) = ip;
+		addInlinePanel(iip);
 	}
 }

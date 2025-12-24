@@ -27,7 +27,7 @@ namespace vkl::GUI
 
 		MyVector<PanelMenu> _menus;
 
-		MyVector<InlinePanel> _inline_panels;
+		MyVector<IndirectInlinePanel> _inline_panels;
 
 		DeclareFunction _inline_declaration;
 
@@ -52,6 +52,7 @@ namespace vkl::GUI
 		}
 
 		void addInlinePanel(InlinePanel const& panel);
+		void addInlinePanel(IndirectInlinePanel const& panel);
 	};
 
 }

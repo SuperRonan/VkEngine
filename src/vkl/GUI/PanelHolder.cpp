@@ -78,8 +78,16 @@ namespace vkl::GUI
 						ImGui::SetNextWindowFocus();
 						child.should_focus = false;
 					}
-					child.panel->declare(ctx);
-					if (!child.panel->isOpen())
+					if (child.panel->isOpen())
+					{
+						child.panel->declare(ctx);
+					}
+					bool keep_child = child.panel->isOpen() || child.panel->isUsed();
+					if (keep_child)
+					{
+						child.panel->setUsed(false);
+					}
+					else
 					{
 						setChild(id, nullptr);
 					}
@@ -116,7 +124,10 @@ namespace vkl::GUI
 			_childs_ids_valid &= _childs.contains(id);
 			auto & child = _childs[id];
 			child.panel = panel;
-			child.should_focus = true;
+			if (panel->isOpen())
+			{
+				child.should_focus = true;
+			}
 		}
 		else
 		{

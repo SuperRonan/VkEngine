@@ -14,8 +14,8 @@ namespace vkl::GUI
 
 	protected:
 
+		bool _open = true; // Need to be addressable
 		bool _can_close : 1 = true;
-		bool _open : 1 = true;
 		bool _used : 1 = false;
 		bool _is_visible : 1 = false;
 		bool _is_hovered : 1 = false;
