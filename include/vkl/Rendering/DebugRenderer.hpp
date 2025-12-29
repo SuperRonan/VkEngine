@@ -8,9 +8,6 @@
 #include <vkl/Commands/GraphicsCommand.hpp>
 #include <vkl/Commands/TransferCommand.hpp>
 
-#include <vkl/GUI/ImGuiUtils.hpp>
-#include <vkl/GUI/Context.hpp>
-
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Execution/Executor.hpp>
 #include <vkl/Rendering/TextureFromFile.hpp>
@@ -71,7 +68,8 @@ namespace vkl
 
 		int _default_float_precision = 3;
 		// In shader display font size
-		ImGuiListSelection _default_glyph_size;
+		int _default_glyph_size = 0;
+
 		bool _default_show_plus = false;
 
 		void declareCommonDefinitions();
@@ -81,6 +79,8 @@ namespace vkl
 		void createResources();
 
 		//void loadFont(ExecutionRecorder& exec);
+
+		friend class DebugRendererPanel;
 
 	public:
 
@@ -99,8 +99,6 @@ namespace vkl
 		virtual ~DebugRenderer() override;
 
 		void setTargets(std::shared_ptr<ImageView> const& target, std::shared_ptr<ImageView> const& depth = nullptr);
-
-		void declareGui(GUI::Context & ctx);
 
 		void updateResources(UpdateContext & context);
 
@@ -125,5 +123,7 @@ namespace vkl
 				.max_lines_mask = _number_of_debug_lines - 1,
 			};
 		}
+		
+		std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<DebugRenderer> const& shared_this, GUI::Context& ctx);
 	};
 }

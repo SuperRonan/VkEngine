@@ -8,6 +8,9 @@
 #include <that/img/ImRead.hpp>
 #include <that/img/ImWrite.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+
 namespace vkl
 {
 	DebugRenderer::DebugRenderer(CreateInfo const& ci) :
@@ -18,18 +21,7 @@ namespace vkl
 		_depth(ci.depth)
 	{
 
-		_default_glyph_size = ImGuiListSelection::CI{
-			.name = "Font size",
-			.mode = ImGuiListSelection::Mode::Dropdown,
-			.labels = {
-				"Tiny",
-				"Small",
-				"Normal",
-				"Large",
-				"Huge",
-			},
-			.default_index = 2,
-		};
+		
 		
 		createResources();
 		
@@ -56,7 +48,7 @@ namespace vkl
 			auto& common_defs = *_common_definitions;
 			common_defs.setDefinition("GLOBAL_ENABLE_SHADER_DEBUG", std::to_string(int(_enable_debug)));
 			common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
-			common_defs.setDefinition("GLYPH_SIZE", std::to_string(int(_default_glyph_size.index()) - 2));
+			common_defs.setDefinition("GLYPH_SIZE", std::to_string(_default_glyph_size));
 			common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
 			common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
 
@@ -445,54 +437,84 @@ namespace vkl
 		}
 	}
 
-	void DebugRenderer::declareGui(GUI::Context & ctx)
+	class DebugRendererPanel : public GUI::Panel
 	{
-		if (ImGui::CollapsingHeader("Shader Debugging"))
+	protected:
+
+		std::shared_ptr<DebugRenderer> _target;
+		GUI::IndirectInlinePanel _buffer_panel;
+
+		ImGuiListSelection _default_glyph_size;
+
+	public:
+
+		DebugRendererPanel(std::shared_ptr<DebugRenderer> const& target) :
+			Panel(target->application(), target->name()),
+			_target(target)
 		{
-			if (_common_definitions)
+			_buffer_panel = GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(_target->_debug_buffer);
+
+			_default_glyph_size = ImGuiListSelection::CI{
+				.name = "Font size",
+				.mode = ImGuiListSelection::Mode::Dropdown,
+				.labels = {
+					"Tiny",
+					"Small",
+					"Normal",
+					"Large",
+					"Huge",
+				},
+				.default_index = 2,
+			};
+		}
+
+		virtual void declareInline(GUI::Context& ctx) override
+		{
+			if (_target->_common_definitions)
 			{
-				auto& common_defs = *_common_definitions;
+				auto& common_defs = *_target->_common_definitions;
 				bool changed = false;
-			
-				changed = ImGui::Checkbox("Enable", &_enable_debug);
+
+				changed = ImGui::Checkbox("Enable", &_target->_enable_debug);
 				if (changed)
 				{
-					common_defs.setDefinition("GLOBAL_ENABLE_SHADER_DEBUG", std::to_string(int(_enable_debug)));
-				}
-			
-				changed = ImGui::SliderInt("Shader String Chunks", & _shader_string_chunks, 1, 16);
-				if (changed)
-				{
-					_shader_string_capacity = 4 * _shader_string_chunks;
-					common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_shader_string_capacity));
+					common_defs.setDefinition("GLOBAL_ENABLE_SHADER_DEBUG", std::to_string(int(_target->_enable_debug)));
 				}
 
-				
+				changed = ImGui::SliderInt("Shader String Chunks", &_target->_shader_string_chunks, 1, 16);
+				if (changed)
+				{
+					_target->_shader_string_capacity = 4 * _target->_shader_string_chunks;
+					common_defs.setDefinition("SHADER_STRING_CAPACITY", std::to_string(_target->_shader_string_capacity));
+				}
+
+				_default_glyph_size.setIndex(_target->_default_glyph_size);
 				changed = _default_glyph_size.declare();
 				if (changed)
 				{
-					common_defs.setDefinition("GLYPH_SIZE", std::to_string(int(_default_glyph_size.index()) - 2));
+					_target->_default_glyph_size = _default_glyph_size.index();
+					common_defs.setDefinition("GLYPH_SIZE", std::to_string(_target->_default_glyph_size));
 				}
 
-				changed = ImGui::SliderInt("Float precision", &_default_float_precision, 1, 12);
+				changed = ImGui::SliderInt("Float precision", &_target->_default_float_precision, 1, 12);
 				if (changed)
 				{
-					common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_default_float_precision) + "u");
+					common_defs.setDefinition("DEFAULT_FLOAT_PRECISION", std::to_string(_target->_default_float_precision) + "u");
 				}
 
-				changed = ImGui::Checkbox("Always print +", &_default_show_plus);
+				changed = ImGui::Checkbox("Always print +", &_target->_default_show_plus);
 				if (changed)
 				{
-					common_defs.setDefinition("DEFAULT_SHOW_PLUS", _default_show_plus ? "true"s : "false"s);
+					common_defs.setDefinition("DEFAULT_SHOW_PLUS", _target->_default_show_plus ? "true"s : "false"s);
 				}
 
-				changed = ImGui::Checkbox("#define capacities", &_define_capacity);
+				changed = ImGui::Checkbox("#define capacities", &_target->_define_capacity);
 				if (changed)
 				{
-					if (_define_capacity)
+					if (_target->_define_capacity)
 					{
-						common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
-						common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
+						common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_target->_number_of_debug_strings));
+						common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_target->_number_of_debug_lines));
 					}
 					else
 					{
@@ -501,38 +523,38 @@ namespace vkl
 					}
 				}
 
-				changed = ImGui::InputInt("log2(Total Strings Capacity)", (int*) & _log2_number_of_debug_strings);
+				changed = ImGui::InputInt("log2(Total Strings Capacity)", (int*)&_target->_log2_number_of_debug_strings);
 				if (changed)
 				{
-					_log2_number_of_debug_strings = std::max<int>(_log2_number_of_debug_strings, 0);
-					_number_of_debug_strings = (1 << _log2_number_of_debug_strings);
-					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_number_of_debug_strings));
+					_target->_log2_number_of_debug_strings = std::max<int>(_target->_log2_number_of_debug_strings, 0);
+					_target->_number_of_debug_strings = (1 << _target->_log2_number_of_debug_strings);
+					if (_target->_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CAPACITY", std::to_string(_target->_number_of_debug_strings));
 				}
-				ImGui::Text("Total Strings Capacity: %d", _number_of_debug_strings);
+				ImGui::Text("Total Strings Capacity: %d", _target->_number_of_debug_strings);
 
-				changed = ImGui::InputInt("log2(Total Strings Content Capcity)", (int*)&_log2_debug_chunks);
+				changed = ImGui::InputInt("log2(Total Strings Content Capcity)", (int*)&_target->_log2_debug_chunks);
 				if (changed)
 				{
-					_log2_debug_chunks = std::max<int>(_log2_debug_chunks, 0);
-					_debug_chunks_capacity = (1 << _log2_debug_chunks);
-					if(_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CONTENT_CAPACITY", std::to_string(_debug_chunks_capacity));
+					_target->_log2_debug_chunks = std::max<int>(_target->_log2_debug_chunks, 0);
+					_target->_debug_chunks_capacity = (1 << _target->_log2_debug_chunks);
+					if (_target->_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_STRINGS_CONTENT_CAPACITY", std::to_string(_target->_debug_chunks_capacity));
 				}
-				ImGui::Text("Total Strings Content Capacity %dB", _debug_chunks_capacity);
-				
-				changed = ImGui::InputInt("log2(Total Lines Capacity)", (int*)&_log2_number_of_debug_lines);
+				ImGui::Text("Total Strings Content Capacity %dB", _target->_debug_chunks_capacity);
+
+				changed = ImGui::InputInt("log2(Total Lines Capacity)", (int*)&_target->_log2_number_of_debug_lines);
 				if (changed)
 				{
-					_log2_number_of_debug_lines = std::max<int>(_log2_number_of_debug_lines, 0);
-					_number_of_debug_lines = (1 << _log2_number_of_debug_lines);
-					if (_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_number_of_debug_lines));
+					_target->_log2_number_of_debug_lines = std::max<int>(_target->_log2_number_of_debug_lines, 0);
+					_target->_number_of_debug_lines = (1 << _target->_log2_number_of_debug_lines);
+					if (_target->_define_capacity)	common_defs.setDefinition("DEBUG_BUFFER_LINES_CAPACITY", std::to_string(_target->_number_of_debug_lines));
 				}
-				ImGui::Text("Total Lines Capacity: %d", _number_of_debug_lines);
+				ImGui::Text("Total Lines Capacity: %d", _target->_number_of_debug_lines);
 			}
 
 			size_t size = 0;
-			if (_enable_debug)
+			if (_target->_enable_debug)
 			{
-				size = _debug_buffer->size().value();
+				size = _target->_debug_buffer->size().value();
 			}
 			if (size < 1024)
 			{
@@ -542,16 +564,23 @@ namespace vkl
 			{
 				uint32_t i = -1;
 				double dec;
-				const char * units[3] = {"KiB", "MiB", "GiB"};
+				const char* units[3] = { "KiB", "MiB", "GiB" };
 				do
 				{
 					dec = size / 1024.0;
 					size /= 1024;
 					++i;
-				} while(size > 1024 && i < 3);
+				} while (size > 1024 && i < 3);
 				ImGui::Text("DebugBuffer memory consumption: %.3f %s", dec, units[i]);
 			}
+
+			_buffer_panel.declareInline(ctx);
 		}
+	};
+
+	std::shared_ptr<GUI::Panel> DebugRenderer::makeInspector(std::shared_ptr<DebugRenderer> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<DebugRendererPanel>(shared_this);
 	}
 
 	ShaderBindings DebugRenderer::getBindings(uint32_t offset)const

@@ -289,11 +289,6 @@ namespace vkl
 
 						image_saver.declareGUI(*gui_ctx);
 
-						if (exec.getDebugRenderer())
-						{
-							exec.getDebugRenderer()->declareGui(*gui_ctx);
-						}
-
 					}
 					ImGui::End();
 
