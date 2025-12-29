@@ -31,3 +31,6 @@
 [submodule "assets/models/sponza"]
 	path = assets/models/sponza
 	url = https://github.com/SuperRonan/Sponza.git
+[submodule "ext/VulkanDocs"]
+	path = ext/VulkanDocs
+	url = https://github.com/SuperRonan/Vulkan-Docs.git
