@@ -1,6 +1,12 @@
 #include <vkl/VkObjects/Buffer.hpp>
 #include <cassert>
 
+#include <vkl/GUI/Panel.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/ImGuiDynamic.hpp>
+#include <vulkan/vk_enum_string_helper.h>
+
 namespace vkl
 {
 	std::atomic<size_t> BufferInstance::_instance_counter = 0;
@@ -273,12 +279,82 @@ namespace vkl
 					it = is.states.erase(next);
 				}
 			}
+			assert(statesAreSorted(tid));
 		}
 
-		assert(statesAreSorted(tid));
 	}
 
+	class BufferInstanceInspector : public GUI::Panel
+	{
+	protected:
+		std::shared_ptr<BufferInstance> _target;
 
+	
+	public:
+	
+		BufferInstanceInspector(std::shared_ptr<BufferInstance> const& target):
+			Panel(target->application(), std::format("{} - Instance##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+			_target(target)
+		{
+			
+		}
+
+		virtual void declareInline(GUI::Context& ctx) override
+		{
+			auto const& ci = _target->_ci;
+			
+			ImGui::LabelHexValue("Minimum Align", _target->_min_align);
+
+			ImGui::LabelValue("Size", _target->_ci.size);
+			ImGui::LabelText2("Sharing Mode", string_VkSharingMode(_target->_ci.sharingMode));
+			ImGui::LabelValue("Queue family index count", _target->_ci.queueFamilyIndexCount);
+			ImGui::LabelHexValue("Address", _target->_address, true);
+
+			ImGui::LabelHexValue("Handle", reinterpret_cast<uint64_t>(_target->handle()));
+			ImGui::LabelHexValue("Unique Buffer Id", _target->_unique_id);
+		}
+
+	};
+
+	class BufferInspector : public GUI::Panel
+	{
+	protected:
+		
+		std::shared_ptr<Buffer> _target;
+		GUI::IndirectInlinePanel _instance_panel;
+
+	public:
+		BufferInspector(std::shared_ptr<Buffer> const& target):
+			Panel(target->application(), std::format("{} - Descriptor##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+			_target(target)
+		{
+			_instance_panel = GUI::IndirectInlinePanel::MakeInstanceIndirectPanelFromDesc(_target);
+			_instance_panel.type = GUI::InlinePanel::Type::Child;
+		}
+
+		virtual void declareInline(GUI::Context& ctx) override
+		{
+			ImGui::LabelText2("Name", _target->name().c_str());
+			GUI::DeclareDynamic("Size", _target->_size, [](const char* label, VkDeviceSize& sz){ImGui::LabelValue(label, sz); return false; });
+			ImGui::LabelHexValue("Minimum Align", _target->_min_align);
+			ImGui::LabelText2("Usage", string_VkBufferUsageFlags(_target->_usage).c_str()); // TODO make a template bitfield edit
+
+
+			_instance_panel.invalid_panel = !_target->instance();
+			_instance_panel.id = reinterpret_cast<GUI::Panel::Id>(_target->instance().get());
+			_instance_panel.declareInline(ctx);
+		}
+	};
+
+	std::shared_ptr<GUI::Panel> BufferInstance::makeInspector(std::shared_ptr<BufferInstance> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<BufferInstanceInspector>(shared_this);
+	}
+
+	std::shared_ptr<GUI::Panel> Buffer::makeInspector(std::shared_ptr<Buffer> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<BufferInspector>(shared_this);
+	}
 
 	Buffer::Buffer(CreateInfo const& ci) :
 		InstanceHolder<BufferInstance>(ci.app, ci.name, ci.hold_instance),

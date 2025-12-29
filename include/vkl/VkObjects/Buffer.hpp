@@ -61,6 +61,8 @@ namespace vkl
 
 		bool statesAreSorted(size_t tid) const;
 
+		friend class BufferInstanceInspector;
+
 	public:
 
 		struct CreateInfo
@@ -177,6 +179,8 @@ namespace vkl
 
 		void setState(size_t tid, Range range, ResourceState2 const& state);
 
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<BufferInstance> const& shared_this, GUI::Context& ctx);
+
 	};
 
 	class Buffer : public InstanceHolder<BufferInstance>
@@ -211,6 +215,8 @@ namespace vkl
 		VmaAllocator _allocator = nullptr;
 
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
+
+		friend class BufferInspector;
 
 	public:
 
@@ -251,6 +257,8 @@ namespace vkl
 		}
 
 		void createInstance();
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Buffer> const& shared_this, GUI::Context& ctx);
 	};
 
 	struct BufferAndRangeInstance
