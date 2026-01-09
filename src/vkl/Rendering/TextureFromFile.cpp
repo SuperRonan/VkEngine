@@ -10,6 +10,8 @@
 
 #include <vkl/IO/DependencyTracker.hpp>
 
+#include <SDL3/SDL.h>
+
 namespace vkl
 {
 	

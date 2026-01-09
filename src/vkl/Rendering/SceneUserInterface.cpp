@@ -11,6 +11,8 @@
 
 #include <chrono>
 
+#include <SDL3/SDL.h>
+
 namespace vkl
 {
 	void SceneUserInterface::checkSelectedNode(SelectedNode& selected_node)

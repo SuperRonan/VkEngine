@@ -2,6 +2,9 @@
 
 #include <iostream>
 
+#include <SDL3/SDL.h>
+
+
 namespace vkl
 {
 	FileDialog::FileDialog(CreateInfo const& ci) {}

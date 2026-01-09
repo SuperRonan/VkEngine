@@ -1,10 +1,6 @@
 #pragma once
 
 //#define VK_USE_PLATFORM_WIN32_KHR
-
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-
 #include <vulkan/vulkan.h>
 
 #include <vk_mem_alloc.h>
@@ -87,6 +83,12 @@ struct std::SetUseCommonOperators<std::set<T, Less, Allocator>> : public std::tr
 template <class T, class H, class Eq, class Allocator>
 struct std::SetUseCommonOperators<std::unordered_set<T, H, Eq, Allocator>> : public std::true_type
 {};
+
+// SDL forward declarations
+struct SDL_Window;
+union SDL_Event;
+struct SDL_DialogFileFilter;
+
 
 namespace vkl
 {

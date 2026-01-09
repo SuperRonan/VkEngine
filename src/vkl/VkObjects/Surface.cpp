@@ -1,6 +1,8 @@
 #include <vkl/VkObjects/Surface.hpp>
 #include <cassert>
 
+#include <SDL3/SDL_vulkan.h>
+
 namespace vkl
 {
 	void Surface::create()

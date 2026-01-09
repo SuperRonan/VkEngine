@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cassert>
 
+#include <SDL3/SDL.h>
+
 #define MESSAGE_POPUP_USE_STANDALONE 0
 #define MESSAGE_POPUP_USE_SDL 1
 #define MESSAGE_POPUP_USE_WINDOWS 2

@@ -37,6 +37,9 @@
 
 #include <vulkan/vk_enum_string_helper.h>
 
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+
 namespace vkl
 {
 
