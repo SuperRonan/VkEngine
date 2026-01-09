@@ -114,7 +114,7 @@ namespace vkl
 			VkShaderStageFlags stages = 0;
 			VkDescriptorBindingFlags flags = 0;
 			//std::vector<std::shared_ptr<Sampler>> immutable_samplers = {}; // TODO
-			VkAccessFlagBits2 access = VK_ACCESS_2_NONE;
+			VkAccessFlags2 access = VK_ACCESS_2_NONE;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFlags usage = 0;
 
