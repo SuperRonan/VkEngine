@@ -775,4 +775,19 @@ namespace ImGui
 		};
 		return FlipIconButton(label, v, render_barred_icon, &render_data, render_frame_fn, render_frame_data, small_box);
 	}
+
+	bool ArrowFlipButton(const char* label_id)
+	{
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		ImGuiID storage_id = window->GetID(label_id);
+		ImGuiStorage* storage = window->DC.StateStorage;
+		bool is_open = storage->GetBool(storage_id);
+		ImGuiDir button_dir = is_open ? ImGuiDir_Up : ImGuiDir_Down;
+		if (ImGui::ArrowButton(label_id, button_dir))
+		{
+			is_open = !is_open;
+			storage->SetBool(storage_id, is_open);
+		}
+		return is_open;
+	}
 }

@@ -531,4 +531,7 @@ namespace ImGui
 	}
 
 	extern bool BarredIconButton(const char* label, bool* v, ButtonIconDrawFunction render_frame_fn = nullptr, const void* render_frame_data = nullptr, bool small_box = false, bool x_cross = false);
+
+
+	extern bool ArrowFlipButton(const char* label_id);
 }
