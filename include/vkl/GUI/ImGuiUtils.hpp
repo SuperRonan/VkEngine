@@ -457,6 +457,26 @@ namespace ImGui
 	return res; \
 }()
 
+	template <std::integral Int>
+	bool CheckboxBit(const char* label, Int& bitfield, unsigned int bit_index)
+	{
+		Int flag = Int(1) << Int(bit_index);
+		bool bit = (bitfield & flag);
+		bool res = ImGui::Checkbox(label, &bit);
+		if (res)
+		{
+			if (bit)
+			{
+				bitfield |= flag;
+			}
+			else
+			{
+				bitfield &= ~flag;
+			}
+		}
+		return res;
+	}
+
 	// Display a bool with a checkbox (read only)
 	extern void LabelCheckbox(const char* label, bool b);
 
