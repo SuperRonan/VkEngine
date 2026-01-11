@@ -4,6 +4,8 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 
+#include <imgui/imgui_internal.h>
+
 namespace vkl::GUI
 {
 	template <class GetPanelFn = std::nullptr_t>
@@ -75,7 +77,11 @@ namespace vkl::GUI
 		}
 		else if (type == Type::Child)
 		{
-			res.declare_inline &= ImGui::BeginChild(label, ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiChildFlags_None);
+			const float top_item_width = ImGui::GetCurrentWindow()->DC.ItemWidth;
+			res.declare_inline &= ImGui::BeginChild(label, ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+			const auto& style = ImGui::GetStyle();
+			float item_width = top_item_width - 2 * style.FramePadding.x - style.FrameBorderSize;
+			ImGui::PushItemWidth(item_width); // Use the full available witdh for the child
 			if (res.declare_inline)
 			{
 				declare_detach();
@@ -95,6 +101,7 @@ namespace vkl::GUI
 
 		if (type == Type::Child)
 		{
+			ImGui::PopItemWidth();
 			ImGui::EndChild();
 		}
 		else if (type == Type::TreeNode)
