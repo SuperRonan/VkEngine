@@ -86,7 +86,7 @@ namespace vkl::GUI
 		}
 		if (b.type == InlinePanel::Type::None)
 		{
-			b.type = InlinePanel::Type::CollapseHeader;
+			b.type = InlinePanel::Type::Child;
 		}
 	}
 

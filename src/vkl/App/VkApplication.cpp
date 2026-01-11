@@ -1833,8 +1833,8 @@ namespace vkl
 			VkApplicationPanel(VkApplication* app) :
 				Parent(app, "Application")
 			{
-				_device = InlinePanel::MakeFromUniqePanel(std::make_shared<DevicePanel>(app, &_extension_filter), InlinePanel::Type::CollapseHeader);
-				_options = InlinePanel::MakeFromUniqePanel(std::make_shared<OptionsPanel>(app), InlinePanel::Type::CollapseHeader);
+				_device = InlinePanel::MakeFromUniqePanel(std::make_shared<DevicePanel>(app, &_extension_filter), InlinePanel::Type::Child);
+				_options = InlinePanel::MakeFromUniqePanel(std::make_shared<OptionsPanel>(app), InlinePanel::Type::Child);
 				queryPhysicalDevices();
 			}
 

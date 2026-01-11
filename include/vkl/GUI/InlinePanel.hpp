@@ -11,9 +11,9 @@ namespace vkl::GUI
 		enum class Type
 		{
 			None = 0,
-			CollapseHeader = 1,
+			Child = 1,
 			TreeNode = 2,
-			Child = 3,
+			CollapseHeader = 3,
 		};
 		std::shared_ptr<Panel> panel;
 		std::string label = {};

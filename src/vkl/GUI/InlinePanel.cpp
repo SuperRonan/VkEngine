@@ -187,7 +187,7 @@ namespace vkl::GUI
 		res.make_panel = fn;
 		res.label = label;
 		res.id = id;
-		res.type = Type::CollapseHeader;
+		res.type = Type::Child;
 		return res;
 	}
 }
