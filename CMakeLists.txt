@@ -225,9 +225,31 @@ set(VK_ENGINE_INCLUDE_DIRS "${VK_ENGINE_INCLUDE_DIRS}" ${ARGPARSE_INCLUDE_DIRS})
 # set(SPV_CROSS_LIBS spirv-cross-glsl spirv-cross-cpp spirv-cross-reflect spirv-cross-util spirv-cross-core)
 
 # VkEngine
+set(VKL_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(VKL_SOURCE_FOLDER "${VKL_ROOT_DIR}/src/")
+set(VKL_INCLUDE_FOLDER "${VKL_ROOT_DIR}/include/")
+set(VKL_SHADER_FOLDER "${VKL_ROOT_DIR}/Shaders/")
 
 
-
+# Run Gen Scripts
+find_package(Python3 COMPONENTS Interpreter)
+if(${Python3_Interpreter_FOUND})
+	set(HAS_GEN_SCRIPTS true)
+	file(GLOB GENERATED_FILES ${VKL_INCLUDE_FOLDER}/vkl/Generated/*)
+	# Use a custom command to run gen scripts (runs only when needed)
+	add_custom_command(
+		OUTPUT ${GENERATED_FILES}
+		COMMAND ${Python3_INTERPRETER} ${CMAKE_CURRENT_LIST_DIR}/scripts/runGenScripts.py
+		BYPRODUCTS ${GENERATED_FILES}
+		COMMENT "Generating Vulkan Reflection..."
+	)
+	# Add an empty target to create a dependency betwenn the generated files, and VkEngine later
+	add_custom_target(
+		RunGenScripts ALL DEPENDS ${GENERATED_FILES}
+	)
+else()
+	message("Warning: Python Not Found, Skipping Gen Scripts! Make sure to provide the generated files.")
+endif()
 
 
 
@@ -238,17 +260,13 @@ set(VKL_FOLDERS
 	Execution
 	IO
 	GUI
+	Generated
 	Maths
 	Rendering
 	VkObjects
 	Utils
 	Import
 )
-
-set(VKL_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
-set(VKL_SOURCE_FOLDER "${VKL_ROOT_DIR}/src/")
-set(VKL_INCLUDE_FOLDER "${VKL_ROOT_DIR}/include/")
-set(VKL_SHADER_FOLDER "${VKL_ROOT_DIR}/Shaders/")
 
 
 
@@ -303,6 +321,10 @@ target_link_libraries(VkEngine PUBLIC $<IF:$<CONFIG:Debug>, ${VK_ENGINE_LINK_DEB
 target_link_libraries(VkEngine PUBLIC SlangLib)
 
 target_link_directories(VkEngine PUBLIC ${VK_ENGINE_LINK_DIRS})
+
+if(${HAS_GEN_SCRIPTS})
+	add_dependencies(VkEngine RunGenScripts)
+endif()
 
 if(${MSVC})
 	target_sources(VkEngine PUBLIC ${VK_ENGINE_NATVIS_LIST})

@@ -3,3 +3,5 @@ x64
 build*/
 docs
 gen
+scripts/__pycache__
+include/vkl/Generated
