@@ -1,6 +1,6 @@
 #include <vkl/Execution/SynchronizationHelper.hpp>
 
-#include <vulkan/vk_enum_string_helper.h>
+#include <vkl/VkObjects/VulkanEnumMeta.hpp>
 
 namespace vkl
 {
@@ -692,8 +692,8 @@ namespace vkl
 	template <class Stream>
 	Stream& logBufferBarrier(Stream & stream, BufferAndRangeInstance const& bari, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
 	{
-		stream << "Barrier from (" << string_VkAccessFlags2(synch_from.access) << ", " << string_VkPipelineStageFlags2(synch_from.stage) <<
-			") -> (" << string_VkAccessFlags2(synch_to.access) << ", " << string_VkPipelineStageFlags2(synch_to.stage) << 
+		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlags2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_from.stage) <<
+			") -> (" << vku::GetFlagsStr<VkAccessFlags2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_to.stage) << 
 			") on Buffer: " << bari.buffer->handle() << " (" << bari.buffer->name() << "), Range("
 			<< bari.range.begin << ", " << bari.range.len << ")";
 		return stream;
@@ -702,10 +702,10 @@ namespace vkl
 	template <class Stream>
 	Stream logImageBarrier(Stream & stream, std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
 	{
-		stream << "Barrier from (" << string_VkAccessFlags2(synch_from.access) << ", " << string_VkPipelineStageFlags2(synch_from.stage) << ", " << string_VkImageLayout(synch_from.layout) <<
-			") -> (" << string_VkAccessFlags2(synch_to.access) << ", " << string_VkPipelineStageFlags2(synch_to.stage) << ", " << string_VkImageLayout(synch_to.layout) <<
+		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlags2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_from.stage) << ", " << vku::GetFlagsStr<VkImageLayout>(synch_from.layout) <<
+			") -> (" << vku::GetFlagsStr<VkAccessFlags2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_to.stage) << ", " << vku::GetFlagsStr<VkImageLayout>(synch_to.layout) <<
 			") on Image: " << ii->handle() << " (" << ii->name() << "), Range: "
-			<< string_VkImageAspectFlags(range.aspectMask)  << ", mips Range(" << range.baseMipLevel << ", " << range.levelCount << 
+			<< vku::GetFlagsStr<VkImageAspectFlags>(range.aspectMask)  << ", mips Range(" << range.baseMipLevel << ", " << range.levelCount << 
 			"), layers Range(" << range.baseArrayLayer << ", " << range.layerCount << ")" << std::endl;
 		return stream;
 	}

@@ -6,7 +6,7 @@
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
-#include <vulkan/vk_enum_string_helper.h>
+#include <vkl/VkObjects/VulkanEnumMeta.hpp>
 
 #include <vkl/IO/DependencyTracker.hpp>
 
@@ -588,7 +588,7 @@ namespace vkl
 				layers = instance->createInfo().subresourceRange.layerCount;
 				mips = instance->createInfo().subresourceRange.levelCount;
 			}
-			const char * format_str = string_VkFormat(format);
+			const char * format_str = vku::GetEnumLabel(format);
 			ImGui::Text("Format: %s", format_str);
 			ImGui::InputInt3("Resolution", (int*)&extent.width, ImGuiInputTextFlags_ReadOnly);
 			ImGui::InputInt("Mips", (int*) &mips, 0, 0, ImGuiInputTextFlags_ReadOnly);

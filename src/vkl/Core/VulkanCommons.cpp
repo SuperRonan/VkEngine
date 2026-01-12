@@ -1,8 +1,9 @@
 #include <vkl/Core/VulkanCommons.hpp>
 #include <unordered_map>
 #include <sstream>
-#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/utility/vk_struct_helper.hpp>
+
+#include <vkl/VkObjects/VulkanEnumMeta.hpp>
 
 namespace vkl
 {
@@ -26,7 +27,7 @@ namespace vkl
 	template <concepts::VkStructLike VkStructLike>
 	void SetsType(VkStructLike& s)
 	{
-		s.sType = vku::GetSType<VkStructLike>();
+		s.sType = ::vku::GetSType<VkStructLike>();
 	}
 
 	// Some ideas for VulkanFeatures (also applicable to VulkanDeviceProps):
@@ -405,7 +406,7 @@ namespace vkl
 			case VK_PRESENT_MODE_FIFO_RELAXED_KHR :						res = "FIFO Relaxed"; break;
 			case VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR :			res = "Shared Demand Refresh"; break;
 			case VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR :		res = "Shader Continuous Refresh"; break;
-			default:													res = string_VkPresentModeKHR(p); break;
+			default:													res = ::vku::EnumMetaInfo<VkPresentModeKHR>::GetValueName(p); break;
 		}
 		return res;
 	}

@@ -2,7 +2,7 @@
 #include <map>
 #include <cassert>
 
-#include <vulkan/vk_enum_string_helper.h>
+#include <vkl/VkObjects/VulkanEnumMeta.hpp>
 
 namespace vkl
 {
@@ -381,7 +381,7 @@ namespace vkl
 						if (!same_type && !!stream)
 						{
 							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
-								"): Descriptor type does not match, provided " << string_VkDescriptorType(pb.descriptorType) << " but expected " << string_VkDescriptorType(rb.descriptorType) << "!\n";
+								"): Descriptor type does not match, provided " << ::vku::EnumMetaInfo<VkDescriptorType>::GetValueName(pb.descriptorType) << " but expected " << ::vku::EnumMetaInfo<VkDescriptorType>::GetValueName(rb.descriptorType) << "!\n";
 						}
 						if (!same_count && !!stream)
 						{
@@ -391,7 +391,7 @@ namespace vkl
 						if (!has_stages && !!stream)
 						{
 							*stream << "checking Program " << name() << " sets layouts match error at (set = " << s << ", binding = " << rb.binding << 
-								"): Provided stages " << string_VkShaderStageFlags(pb.stageFlags) << " doest not contain expected stages " << string_VkShaderStageFlags(rb.stageFlags) << "!\n";
+								"): Provided stages " << vku::GetFlagsStr<VkShaderStageFlagBits>(pb.stageFlags) << " doest not contain expected stages " << vku::GetFlagsStr<VkShaderStageFlagBits>(rb.stageFlags) << "!\n";
 						}
 
 						if (!res)
