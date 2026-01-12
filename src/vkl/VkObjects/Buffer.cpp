@@ -5,7 +5,10 @@
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/ImGuiDynamic.hpp>
-#include <vulkan/vk_enum_string_helper.h>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
+
+#include <vkl/VkObjects/VulkanEnumMeta.hpp>
+
 
 namespace vkl
 {
@@ -305,13 +308,30 @@ namespace vkl
 			
 			ImGui::LabelHexValue("Minimum Align", _target->_min_align);
 
+			GUI::InspectVkBitField<VkBufferCreateFlagBits>("Creation Flags", _target->createInfo().flags);
 			ImGui::LabelValue("Size", _target->_ci.size);
-			ImGui::LabelText2("Sharing Mode", string_VkSharingMode(_target->_ci.sharingMode));
-			ImGui::LabelValue("Queue family index count", _target->_ci.queueFamilyIndexCount);
-			ImGui::LabelHexValue("Address", _target->_address, true);
+			GUI::InspectVkBitField<VkBufferUsageFlagBits>("Usage", _target->createInfo().usage);
+			GUI::InspectVkEnum("Sharing Mode", _target->_ci.sharingMode);
+			ImGui::LabelValue("Queue family index count", _target->_ci.queueFamilyIndexCount); // TODO proper span inspector
+			// TODO inspect list of queues
 
 			ImGui::LabelHexValue("Handle", reinterpret_cast<uint64_t>(_target->handle()));
 			ImGui::LabelHexValue("Unique Buffer Id", _target->_unique_id);
+			ImGui::LabelHexValue("Address", _target->_address, true);
+
+			ImGui::SeparatorText("Allocation");
+			const auto& aci = _target->allocationCreateInfo();
+			GUI::InspectVkBitField<VmaAllocationCreateFlagBits>("Flags##Allocation", aci.flags);
+			GUI::InspectVkEnum("Memory Usage", aci.usage);
+			GUI::InspectVkBitField<VkMemoryPropertyFlagBits>("Required Flags", aci.requiredFlags);
+			GUI::InspectVkBitField<VkMemoryPropertyFlagBits>("Preferred Flags", aci.preferredFlags);
+			ImGui::LabelHexValue("Memory type bits", aci.memoryTypeBits); // TODO proper inspector
+			ImGui::LabelHexValue("Pool", reinterpret_cast<uintptr_t>(aci.pool));
+			ImGui::LabelValue("Priority", aci.priority);
+
+			// TODO inspect allocation
+
+			// TODO inspect states
 		}
 
 	};
@@ -337,8 +357,11 @@ namespace vkl
 			ImGui::LabelText2("Name", _target->name().c_str());
 			GUI::DeclareDynamic("Size", _target->_size, [](const char* label, VkDeviceSize& sz){ImGui::LabelValue(label, sz); return false; });
 			ImGui::LabelHexValue("Minimum Align", _target->_min_align);
-			ImGui::LabelText2("Usage", string_VkBufferUsageFlags(_target->_usage).c_str()); // TODO make a template bitfield edit
-
+			GUI::InspectVkBitField<VkBufferUsageFlagBits>("Usage", &_target->_usage);
+			ImGui::LabelValue("Queues family index count", uint32_t(_target->_queues.size())); // TODO inspect queues
+			GUI::InspectVkEnum("Sharing Mode", _target->_sharing_mode);
+			GUI::InspectVkEnum("Memory Usage", _target->_mem_usage);
+			ImGui::LabelHexValue("Allocator", reinterpret_cast<uintptr_t>(_target->_allocator));
 
 			_instance_panel.invalid_panel = !_target->instance();
 			_instance_panel.id = reinterpret_cast<GUI::Panel::Id>(_target->instance().get());

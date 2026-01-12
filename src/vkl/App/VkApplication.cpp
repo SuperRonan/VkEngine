@@ -26,6 +26,7 @@
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
 
 #include <slang/slang.h>
 
@@ -35,7 +36,6 @@
 #include <fstream>
 #include <span>
 
-#include <vulkan/vk_enum_string_helper.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -1570,27 +1570,8 @@ namespace vkl
 					{
 						o.use_general_image_layout_bits = 0;
 					}
-
-					constexpr const uint32_t max_usage = VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR;
-					constexpr const uint32_t usage_count = std::countr_zero(max_usage);
-					for (uint32_t i = 0; i <= usage_count; ++i)
-					{
-						VkImageUsageFlagBits usage = VkImageUsageFlagBits(1 << i);
-						const auto label = std::string_view(string_VkImageUsageFlagBits(usage));
-						const auto prefix = "VK_IMAGE_USAGE_"sv;
-						if (label.find(prefix) == 0)
-						{
-							const size_t offset = prefix.length();
-							bool bit = o.use_general_image_layout_bits & usage;
-							if (ImGui::Checkbox(label.data() + offset , &bit))
-							{
-								if(bit)
-									o.use_general_image_layout_bits |= usage;
-								else
-									o.use_general_image_layout_bits &= ~usage;
-							}
-						}
-					}
+					
+					GUI::InspectVkBitField_Detail<VkImageUsageFlagBits>((uint32_t*)&o.use_general_image_layout_bits);
 				}
 			};
 
@@ -1607,22 +1588,12 @@ namespace vkl
 				{
 					ImGui::LabelHexValue("Id", props.props2.properties.deviceID);
 					ImGui::TextBox("Name", props.props2.properties.deviceName);
-					ImGui::TextBox("Type", std::string_view(string_VkPhysicalDeviceType(props.props2.properties.deviceType)).substr("VK_PHYSICAL_DEVICE_TYPE_"sv.length()).data());
+					ImGui::TextBox("Type", vku::GetEnumLabel(props.props2.properties.deviceType));
 					{
 						const uint32_t v = props.props2.properties.apiVersion;
 						ImGui::LabelText("Vulkan API version", "%d.%d.%d (variant: %d)", VK_API_VERSION_MAJOR(v), VK_API_VERSION_MINOR(v), VK_API_VERSION_PATCH(v), VK_API_VERSION_VARIANT(v));
 					}
-					{
-						const char* vendor_id_str = string_VkVendorId(VkVendorId(props.props2.properties.vendorID));
-						if (std::string_view(vendor_id_str).find("VK_") == 0)
-						{
-							ImGui::TextBox("Vendor Id", vendor_id_str);
-						}
-						else
-						{
-							ImGui::LabelHexValue("Vendor Id", props.props2.properties.vendorID);
-						}
-					}
+					GUI::InspectVkEnum<VkVendorId>("Vendor Id", static_cast<VkVendorId>(props.props2.properties.vendorID));
 					{
 						const uint32_t v = props.props2.properties.driverVersion;
 						ImGui::LabelText("Driver version", "0x%X (%d.%d.%d)", v, VK_VERSION_MAJOR(v), VK_VERSION_MINOR(v), VK_VERSION_PATCH(v));
