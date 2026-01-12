@@ -14,7 +14,7 @@ namespace vkl
 		VkPhysicalDevice _device = VK_NULL_HANDLE;
 		const char * _p_layer_name = nullptr;
 		MyVector<VkExtensionProperties> _queried_props = {};
-		std::unordered_map<std::string_view, uint32_t> _extensions = {};
+		std::map<std::string_view, uint32_t> _extensions = {};
 		MyVector<const char *> _p_exts = {};
 
 		void recordExtensions(std::function<bool(std::string_view)> const& filter = {});
