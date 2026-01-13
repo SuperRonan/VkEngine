@@ -14,6 +14,12 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class BufferInstanceInspector;
+		class BufferInspector;
+	}
+
 	class BufferInstance : public AbstractInstance
 	{
 	public:
@@ -60,8 +66,6 @@ namespace vkl
 		void destroy();
 
 		bool statesAreSorted(size_t tid) const;
-
-		friend class BufferInstanceInspector;
 
 	public:
 
@@ -179,6 +183,9 @@ namespace vkl
 
 		void setState(size_t tid, Range range, ResourceState2 const& state);
 
+		using InspectorType = GUI::BufferInstanceInspector;
+		friend class InspectorType;
+
 		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<BufferInstance> const& shared_this, GUI::Context& ctx);
 
 	};
@@ -215,8 +222,6 @@ namespace vkl
 		VmaAllocator _allocator = nullptr;
 
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
-
-		friend class BufferInspector;
 
 	public:
 
@@ -257,6 +262,9 @@ namespace vkl
 		}
 
 		void createInstance();
+
+		using InspectorType = GUI::BufferInspector;
+		friend class InspectorType;
 
 		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Buffer> const& shared_this, GUI::Context& ctx);
 	};
