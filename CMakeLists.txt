@@ -236,11 +236,18 @@ find_package(Python3 COMPONENTS Interpreter)
 if(${Python3_Interpreter_FOUND})
 	set(HAS_GEN_SCRIPTS true)
 	file(GLOB GENERATED_FILES ${VKL_INCLUDE_FOLDER}/vkl/Generated/*)
+	set(VK_DOCS_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/VulkanDocs)
+	file(GLOB GENERATOR_DEPENDENCIES 
+		${CMAKE_CURRENT_LIST_DIR}/scripts/*.py 
+		${VK_DOCS_DIR}/xml/vk.xml
+		#TODO maybe also list python scripts in VulkanDocs?
+	)
 	# Use a custom command to run gen scripts (runs only when needed)
 	add_custom_command(
 		OUTPUT ${GENERATED_FILES}
 		COMMAND ${Python3_INTERPRETER} ${CMAKE_CURRENT_LIST_DIR}/scripts/runGenScripts.py
 		BYPRODUCTS ${GENERATED_FILES}
+		DEPENDS ${GENERATOR_DEPENDENCIES}
 		COMMENT "Generating Vulkan Reflection..."
 	)
 	# Add an empty target to create a dependency betwenn the generated files, and VkEngine later
