@@ -17,6 +17,7 @@ namespace vkl
 	namespace GUI
 	{
 		class SceneUserInterfacePanels;
+		class NodeInspector;
 	}
 
 	class SceneUserInterface : public GUI::PanelHolder
@@ -163,41 +164,15 @@ namespace vkl
 
 		void createInternalResources();
 
-		struct NodeInspector : public GUI::Panel
-		{
-			SceneUserInterface* parent = nullptr;
-			std::shared_ptr<Scene::Node> node = {}; // ptr is Id
-			bool _unique = false;
+		GUI::NodeInspector* _node_in_focus = nullptr;
 
-			virtual void declareInline(GUI::Context& ctx);
-
-			NodeInspector(SceneUserInterface* parent);
-
-			NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent);
-
-			void reset(std::shared_ptr<Scene::Node> const& node);
-
-			Id getDefaultId() const
-			{
-				return reinterpret_cast<Id>(node.get());
-			}
-
-			void setUnique(bool unique);
-
-			void resetName();
-		};
-
-		NodeInspector* _node_in_focus = nullptr;
-
-		NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node);
-
-		void closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node);
+		
 
 		void closeAllNodeInspectors();
 
-		NodeInspector* isNodeOpen(GUI::Context& ctx, Scene::Node* node) const;
+		GUI::NodeInspector* isNodeOpen(GUI::Context& ctx, Scene::Node* node) const;
 
-		void iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn);
+		void iterateOnOpenNodes(std::function<void(GUI::NodeInspector*)> const& fn);
 
 		void reduceToOneSelectedNode();
 
@@ -236,5 +211,14 @@ namespace vkl
 		// If the same node is found, the matrix is updated
 		// else the node is reseted
 		void checkSelectedNode(SelectedNode& selected_node);
+
+		GUI::NodeInspector* openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node);
+
+		void closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node);
+
+		void setNodeInFocus(GUI::NodeInspector* ni)
+		{
+			_node_in_focus = ni;
+		}
 	};
 }

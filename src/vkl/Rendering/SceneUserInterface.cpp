@@ -1,6 +1,6 @@
 #include <vkl/Rendering/SceneUserInterface.hpp>
-
 #include <vkl/Rendering/SceneLoader.hpp>
+#include <vkl/Rendering/NodeInspector.hpp>
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
 #include <imgui/imgui_internal.h>
@@ -15,6 +15,7 @@
 
 namespace vkl
 {
+
 	void SceneUserInterface::checkSelectedNode(SelectedNode& selected_node)
 	{
 		Scene::DAG::PositionedNode found = _scene->getTree()->findNode(selected_node.path);
@@ -175,7 +176,7 @@ namespace vkl
 		float pulse_time = float(now_ms.count() % _pulse_period.count()) / float(_pulse_period.count());
 		float highlight_pulse = std::sqr((std::sin(2 * std::numbers::pi * pulse_time)));
 
-		auto GetNodeAlpha = [&](NodeInspector* ni)
+		auto GetNodeAlpha = [&](GUI::NodeInspector* ni)
 		{
 			float res = 1;
 			if (ni->isVisible() && ni->hasFocus())
@@ -245,8 +246,8 @@ namespace vkl
 			});
 		}
 
-		iterateOnOpenNodes([&](NodeInspector* ni) {
-			auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
+		iterateOnOpenNodes([&](GUI::NodeInspector* ni) {
+			auto instances = _scene->getTree()->getNodeInstancesView(ni->node());
 			for (const auto& instance : instances)
 			{
 				Render3DBasisPC pc = {};
@@ -272,15 +273,15 @@ namespace vkl
 		draw_list.clear();
 		vertex_draw_info.clear();
 
-		iterateOnOpenNodes([&](NodeInspector* ni) {
-			if (const auto& model = ni->node->model())
+		iterateOnOpenNodes([&](GUI::NodeInspector* ni) {
+			if (const auto& model = ni->node()->model())
 			{
 				if (const auto& mesh = model->mesh())
 				{
 					vdcr.clear();
 					// TODO once, not on each loop
 					_box_mesh->fillVertexDrawCallInfo(vdcr);
-					auto instances = _scene->getTree()->getNodeInstancesView(ni->node);
+					auto instances = _scene->getTree()->getNodeInstancesView(ni->node());
 					for (const auto& instance : instances)
 					{
 						const AABB3f& aabb = mesh->getAABB();
@@ -988,12 +989,12 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
-	SceneUserInterface::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node)
+	GUI::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node)
 	{
 		auto res = ctx.getTopPanelHolder()->openChild(getNodeId(node.get()), [&]() {
-			return std::make_shared<NodeInspector>(node, this);
+			return std::make_shared<GUI::NodeInspector>(node, this);
 		}).get();
-		if (res->node != node)
+		if (res->node() != node)
 		{
 			res->reset(node);
 		}
@@ -1010,7 +1011,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		auto count = std::erase_if(_childs, [](const auto& item)
 		{
 			const auto& [key, value] = item;
-			if (dynamic_cast<NodeInspector*>(value.panel.get()))
+			if (dynamic_cast<GUI::NodeInspector*>(value.panel.get()))
 			{
 				return true;
 			}
@@ -1019,15 +1020,15 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		_childs_ids_valid &= (count == 0);
 	}
 
-	SceneUserInterface::NodeInspector* SceneUserInterface::isNodeOpen(GUI::Context& ctx, Scene::Node* node) const
+	GUI::NodeInspector* SceneUserInterface::isNodeOpen(GUI::Context& ctx, Scene::Node* node) const
 	{
 		auto it = _childs.find(getNodeId(node));
-		NodeInspector* res = nullptr;
+		GUI::NodeInspector* res = nullptr;
 		if (it != _childs.end())
 		{
-			assert(!!dynamic_cast<NodeInspector*>(it->second.panel.get()));
-			res = static_cast<NodeInspector*>(it->second.panel.get());
-			if (res->node.get() != node)
+			assert(!!dynamic_cast<GUI::NodeInspector*>(it->second.panel.get()));
+			res = static_cast<GUI::NodeInspector*>(it->second.panel.get());
+			if (res->node().get() != node)
 			{
 				res = nullptr;
 			}
@@ -1035,13 +1036,13 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		return res;
 	}
 
-	void SceneUserInterface::iterateOnOpenNodes(std::function<void(NodeInspector*)> const& fn)
+	void SceneUserInterface::iterateOnOpenNodes(std::function<void(GUI::NodeInspector*)> const& fn)
 	{
 		for (auto& [k, v] : _childs)
 		{
 			if (v.panel->isOpen())
 			{
-				if(NodeInspector* ni = dynamic_cast<NodeInspector*>(v.panel.get()))
+				if(GUI::NodeInspector* ni = dynamic_cast<GUI::NodeInspector*>(v.panel.get()))
 				{
 					fn(ni);
 				}
@@ -1053,14 +1054,14 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 	{
 		_node_in_focus = nullptr; // Should already be the case
 		auto it = _childs.begin();
-		std::shared_ptr<NodeInspector> ni_to_keep = [&]() -> std::shared_ptr<NodeInspector> {
+		std::shared_ptr<GUI::NodeInspector> ni_to_keep = [&]() -> std::shared_ptr<GUI::NodeInspector> {
 			// Find first NodeInspector to keep it open
 			while (it != _childs.end())
 			{
-				if (NodeInspector* ni = dynamic_cast<NodeInspector*>(it->second.panel.get()))
+				if (GUI::NodeInspector* ni = dynamic_cast<GUI::NodeInspector*>(it->second.panel.get()))
 				{
-					assert(std::dynamic_pointer_cast<NodeInspector>(it->second.panel));
-					return std::static_pointer_cast<NodeInspector>(it->second.panel);
+					assert(std::dynamic_pointer_cast<GUI::NodeInspector>(it->second.panel));
+					return std::static_pointer_cast<GUI::NodeInspector>(it->second.panel);
 				}
 				else
 				{
@@ -1079,7 +1080,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	void SceneUserInterface::allowMultipleSelection()
 	{
-		std::shared_ptr<NodeInspector> ni = std::static_pointer_cast<NodeInspector>(getChild(reinterpret_cast<Id>(&_node_in_focus)));
+		std::shared_ptr<GUI::NodeInspector> ni = std::static_pointer_cast<GUI::NodeInspector>(getChild(reinterpret_cast<Id>(&_node_in_focus)));
 		closeAllNodeInspectors();
 		if(ni)
 		{
@@ -1088,118 +1089,5 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		}
 	}
 
-	SceneUserInterface::NodeInspector::NodeInspector(SceneUserInterface* parent):
-		GUI::Panel(parent->application(), "")
-	{
-
-	}
-
-	SceneUserInterface::NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent):
-		GUI::Panel(parent->application(), node->name()),
-		node(node),
-		parent(parent)
-	{
-
-	}
-
-	void SceneUserInterface::NodeInspector::reset(std::shared_ptr<Scene::Node> const& node)
-	{
-		if (this->node != node)
-		{
-			this->node = node;
-			resetName();
-		}
-	}
-
-	void SceneUserInterface::NodeInspector::setUnique(bool unique)
-	{
-		if (_unique != unique)
-		{
-			_unique = unique;
-			resetName();
-		}
-	}
-
-	void SceneUserInterface::NodeInspector::resetName()
-	{
-		if (node)
-		{
-			if (_unique)
-			{
-				setName("Node Inspector - " + node->name() + "###NodeInspector");
-			}
-			else
-			{
-				setName("Node Inspector - " + node->name());
-			}
-		}
-		else
-		{
-			setName("Node Inspector");
-		}
-	}
-
-	void SceneUserInterface::NodeInspector::declareInline(GUI::Context& ctx)
-	{
-		if (hasFocus())
-		{
-			parent->_node_in_focus = this;
-		}
-
-		bool visible = node->visible();
-		if (ImGui::Checkbox("Visible", &visible))
-		{
-			node->setVisibility(visible);
-		}
-
-		if (ImGui::CollapsingHeader("Transform"))
-		{
-			bool changed = false;
-
-			ImGui::Text("Collapsed Matrix");
-			Matrix3x4f node_matrix = node->matrix3x4();
-			ImGui::BeginDisabled();
-			ImGui::DragMatrix("", node_matrix);
-			ImGui::EndDisabled();
-
-			ImGui::Separator();
-			float range = 10;
-			ImGuiSliderFlags flags = ImGuiSliderFlags_NoRoundToFormat;
-			if (ImGui::Button("Reset"))
-			{
-				node->resetAuxiliaryTransform();
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Collapse Matrix"))
-			{
-				node->collapseAuxiliaryTransform();
-			}
-			ImGui::DragFloat3("Scale", node->scale().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
-			ImGui::SliderAngle3("Rotation", node->rotation().data(), -180, 180, "%.2f", flags);
-			ImGui::DragFloat3("Translation", node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
-		}
-
-		if (!!node->model() && ImGui::CollapsingHeader("Model"))
-		{
-			node->model()->declareGui(ctx);
-		}
-		else if (!!node->light() && ImGui::CollapsingHeader("Light"))
-		{
-			node->light()->declareGui(ctx);
-		}
-
-		if (ImGui::CollapsingHeader("Children"))
-		{
-			for (uint32_t i = 0; i < node->children().size(); ++i)
-			{
-				ImGui::PushID(i);
-				std::shared_ptr<Scene::Node>const& child = node->children()[i];
-				if (ImGui::SmallButton(child->name().c_str()))
-				{
-					parent->openNodeInspector(ctx, child);
-				}
-				ImGui::PopID();
-			}
-		}
-	}
+	
 }
