@@ -308,10 +308,10 @@ namespace vkl
 			
 			ImGui::LabelHexValue("Minimum Align", _target->_min_align);
 
-			GUI::InspectVkBitField<VkBufferCreateFlagBits>("Creation Flags", _target->createInfo().flags);
+			GUI::InspectVkBitField<VkBufferCreateFlagBits>(ctx, "Creation Flags", _target->createInfo().flags);
 			ImGui::LabelValue("Size", _target->_ci.size);
-			GUI::InspectVkBitField<VkBufferUsageFlagBits>("Usage", _target->createInfo().usage);
-			GUI::InspectVkEnum("Sharing Mode", _target->_ci.sharingMode);
+			GUI::InspectVkBitField<VkBufferUsageFlagBits>(ctx, "Usage", _target->createInfo().usage);
+			GUI::InspectVkEnum(ctx, "Sharing Mode", _target->_ci.sharingMode);
 			ImGui::LabelValue("Queue family index count", _target->_ci.queueFamilyIndexCount); // TODO proper span inspector
 			// TODO inspect list of queues
 
@@ -321,10 +321,10 @@ namespace vkl
 
 			ImGui::SeparatorText("Allocation");
 			const auto& aci = _target->allocationCreateInfo();
-			GUI::InspectVkBitField<VmaAllocationCreateFlagBits>("Flags##Allocation", aci.flags);
-			GUI::InspectVkEnum("Memory Usage", aci.usage);
-			GUI::InspectVkBitField<VkMemoryPropertyFlagBits>("Required Flags", aci.requiredFlags);
-			GUI::InspectVkBitField<VkMemoryPropertyFlagBits>("Preferred Flags", aci.preferredFlags);
+			GUI::InspectVkBitField<VmaAllocationCreateFlagBits>(ctx, "Flags##Allocation", aci.flags);
+			GUI::InspectVkEnum(ctx, "Memory Usage", aci.usage);
+			GUI::InspectVkBitField<VkMemoryPropertyFlagBits>(ctx, "Required Flags", aci.requiredFlags);
+			GUI::InspectVkBitField<VkMemoryPropertyFlagBits>(ctx, "Preferred Flags", aci.preferredFlags);
 			ImGui::LabelHexValue("Memory type bits", aci.memoryTypeBits); // TODO proper inspector
 			ImGui::LabelHexValue("Pool", reinterpret_cast<uintptr_t>(aci.pool));
 			ImGui::LabelValue("Priority", aci.priority);
@@ -357,10 +357,10 @@ namespace vkl
 			ImGui::LabelText2("Name", _target->name().c_str());
 			GUI::DeclareDynamic("Size", _target->_size, [](const char* label, VkDeviceSize& sz){ImGui::LabelValue(label, sz); return false; });
 			ImGui::LabelHexValue("Minimum Align", _target->_min_align);
-			GUI::InspectVkBitField<VkBufferUsageFlagBits>("Usage", &_target->_usage);
+			GUI::InspectVkBitField<VkBufferUsageFlagBits>(ctx, "Usage", &_target->_usage);
 			ImGui::LabelValue("Queues family index count", uint32_t(_target->_queues.size())); // TODO inspect queues
-			GUI::InspectVkEnum("Sharing Mode", _target->_sharing_mode);
-			GUI::InspectVkEnum("Memory Usage", _target->_mem_usage);
+			GUI::InspectVkEnum(ctx, "Sharing Mode", _target->_sharing_mode);
+			GUI::InspectVkEnum(ctx, "Memory Usage", _target->_mem_usage);
 			ImGui::LabelHexValue("Allocator", reinterpret_cast<uintptr_t>(_target->_allocator));
 
 			_instance_panel.invalid_panel = !_target->instance();

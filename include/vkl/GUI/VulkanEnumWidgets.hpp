@@ -53,6 +53,16 @@ namespace vkl::GUI
 	}
 
 	template <concepts::VkFlagBits EnumFlagsBits>
+	bool InspectVkBitField_Detail(
+		Context& ctx,
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type* value,
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type enabled_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1),
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1)
+	) {
+		return InspectVkBitField_Detail<EnumFlagsBits>(value, enabled_values, available_values);
+	}
+
+	template <concepts::VkFlagBits EnumFlagsBits>
 	bool InspectVkBitField(
 		const char* label,
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type* value,
@@ -84,6 +94,17 @@ namespace vkl::GUI
 
 	template <concepts::VkFlagBits EnumFlagsBits>
 	bool InspectVkBitField(
+		Context& ctx,
+		const char* label,
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type* value,
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type enabled_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1),
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1)
+	) {
+		return InspectVkBitField<EnumFlagsBits>(label, value, enabled_values, available_values);
+	}
+
+	template <concepts::VkFlagBits EnumFlagsBits>
+	void InspectVkBitField(
 		const char* label,
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type const& value,
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1),
@@ -100,7 +121,16 @@ namespace vkl::GUI
 		assert(value_before == value);
 #endif
 		assert(res == false);
-		return res;
+	}
+
+	template <concepts::VkFlagBits EnumFlagsBits>
+	void InspectVkBitField(
+		Context& ctx,
+		const char* label,
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type const& value,
+		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1)
+	) {
+		return InspectVkBitField<EnumFlagsBits>(label, value, available_values);
 	}
 
 	template <concepts::VkRawEnum Enum>
@@ -122,5 +152,10 @@ namespace vkl::GUI
 		return false;
 	}
 
+	template <concepts::VkRawEnum Enum>
+	bool InspectVkEnum(Context& ctx, const char* label, Enum const& value)
+	{
+		return InspectVkEnum(label, value);
+	}
 
 } // namespace vkl::GUI
