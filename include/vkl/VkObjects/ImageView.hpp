@@ -7,6 +7,11 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class ImageViewInstanceInspector;
+		class ImageViewInspector;
+	}
 	class ImageViewInstance : public AbstractInstance
 	{
 	public:
@@ -107,6 +112,11 @@ namespace vkl
 		{
 			_image->setState(tid, _ci.subresourceRange, state);
 		}
+
+		using InspectorType = GUI::ImageViewInstanceInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<ImageViewInstance> const& shared_this, GUI::Context& ctx);
 	};
 
 	class ImageView : public InstanceHolder<ImageViewInstance>
@@ -180,5 +190,10 @@ namespace vkl
 		{
 			return _range;
 		}
+
+		using InspectorType = GUI::ImageViewInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<ImageView> const& shared_this, GUI::Context& ctx);
 	};
 }

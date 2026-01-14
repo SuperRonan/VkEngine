@@ -12,6 +12,11 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class ImageInstanceInspector;
+		class ImageInspector;
+	}
 	class ImageInstance : public AbstractInstance
 	{
 	public:
@@ -100,7 +105,7 @@ namespace vkl
 			return _ci;
 		}
 
-		constexpr VmaAllocationCreateInfo const& AllocationInfo()const
+		constexpr VmaAllocationCreateInfo const& allocationInfo()const
 		{
 			return _vma_ci;
 		}
@@ -163,6 +168,10 @@ namespace vkl
 
 		void setState(size_t tid, Range const& range, ResourceState2 const& state);
 
+		using InspectorType = GUI::ImageInstanceInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<ImageInstance> const& shared_this, GUI::Context& ctx);
 	};
 
 	class Image : public InstanceHolder<ImageInstance>
@@ -323,5 +332,10 @@ namespace vkl
 		//VkImageSubresourceRange defaultSubresourceRange();
 
 		Dyn<VkImageSubresourceRange> fullSubresourceRange();
+
+		using InspectorType = GUI::ImageInspector;
+		friend class InspectorType;
+		
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Image> const& shared_this, GUI::Context& ctx);
 	};
 }

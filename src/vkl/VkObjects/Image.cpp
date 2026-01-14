@@ -1,4 +1,10 @@
 #include <vkl/VkObjects/Image.hpp>
+#include <vkl/VkObjects/ImageView.hpp>
+
+#include <vkl/GUI/DescriptorInstancePanel.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/ImGuiDynamic.hpp>
 
 namespace vkl
 {
@@ -445,7 +451,7 @@ namespace vkl
 		_usage = assos.instance->createInfo().usage;
 		_queues = std::vector<uint32_t>(assos.instance->createInfo().pQueueFamilyIndices, assos.instance->createInfo().pQueueFamilyIndices + assos.instance->createInfo().queueFamilyIndexCount);
 		_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-		_mem_usage = assos.instance->AllocationInfo().usage;
+		_mem_usage = assos.instance->allocationInfo().usage;
 		_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?+
 	}
 
@@ -540,5 +546,83 @@ namespace vkl
 				.layerCount = _layers.value(),
 			};
 		};
+	}
+	
+	namespace GUI
+	{
+		class ImageInstanceInspector : public InstanceInspector<ImageInstance>
+		{
+			using Parent = InstanceInspector<ImageInstance>;
+		protected:
+
+		public:
+
+			ImageInstanceInspector(std::shared_ptr<ImageInstance> const& target):
+				Parent(target)
+			{
+
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				const auto& ci = _target->createInfo();
+				const auto& aci = _target->allocationInfo();
+				InspectVkBitField<VkImageCreateFlagBits>(ctx, "Creation Flags", ci.flags);
+				InspectVkEnum(ctx, "Type", ci.imageType);
+				InspectVkEnum(ctx, "Format", ci.format);
+				ImGui::InputScalarN("Extent", ImGuiDataType_U32, const_cast<uint32_t*>(&ci.extent.width), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+				ImGui::InputScalarN("Mips / Layers", ImGuiDataType_U32, const_cast<uint32_t*>(&ci.mipLevels), 2 , nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+				uint32_t sample_count = std::countr_zero(uint32_t(ci.samples));
+				ImGui::LabelValue("Samples", sample_count);
+				InspectVkEnum(ctx, "Tiling", ci.tiling);
+				InspectVkBitField<VkImageUsageFlagBits>(ctx, "Usage", ci.usage);
+				InspectVkEnum(ctx, "Sharing Mode", ci.sharingMode);
+				ImGui::LabelValue("Queue family index count", ci.queueFamilyIndexCount); // TODO proper span inspector
+				InspectVkEnum(ctx, "Initial Layout", ci.initialLayout);
+
+				ImGui::SeparatorText("Allocation");
+				InspectVkBitField<VmaAllocationCreateFlagBits>(ctx, "Flags##Allocation", aci.flags);
+				InspectVkEnum(ctx, "Memory Usage", aci.usage);
+				InspectVkBitField<VkMemoryPropertyFlagBits>(ctx, "Required Flags", aci.requiredFlags);
+				InspectVkBitField<VkMemoryPropertyFlagBits>(ctx, "Preferred Flags", aci.preferredFlags);
+				ImGui::LabelHexValue("Memory type bits", aci.memoryTypeBits); // TODO proper inspector
+				ImGui::LabelHexValue("Pool", reinterpret_cast<uintptr_t>(aci.pool));
+				ImGui::LabelValue("Priority", aci.priority);
+			}
+		};
+
+		class ImageInspector : public DescriptorInspector<Image>
+		{
+			using Parent = DescriptorInspector<Image>;
+		protected:
+
+		public:
+
+			ImageInspector(std::shared_ptr<Image> const& target) :
+				Parent(target)
+			{
+
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				InspectVkBitField<VkImageCreateFlagBits>(ctx, "Creation Flags", _target->_flags);
+				InspectVkEnum(ctx, "Type", _target->_type);
+				DeclareDynamic("Format", _target->_format, [&](const char* label, VkFormat& format){InspectVkEnum(label, format); return false; });
+				// TODO
+
+				Parent::declareInstance(ctx);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> ImageInstance::makeInspector(std::shared_ptr<ImageInstance> const& shared_this, GUI::Context& ctx)
+	{
+		return GUI::MakeInspectorFromTarget(ctx, shared_this);
+	}
+
+	std::shared_ptr<GUI::Panel> Image::makeInspector(std::shared_ptr<Image> const& shared_this, GUI::Context& ctx)
+	{
+		return GUI::MakeInspectorFromTarget<Image>(ctx, shared_this);
 	}
 }

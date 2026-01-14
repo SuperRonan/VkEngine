@@ -1,5 +1,9 @@
 #include <vkl/VkObjects/ImageView.hpp>
 
+#include <vkl/GUI/DescriptorInstancePanel.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
+
 namespace vkl
 {
 	std::atomic<size_t> ImageViewInstance::_instance_counter = 0;
@@ -152,4 +156,92 @@ namespace vkl
 		}
 	}
 
+	namespace GUI
+	{
+		class ImageViewInstanceInspector : public InstanceInspector<ImageViewInstance>
+		{
+			using Parent = InstanceInspector<ImageViewInstance>;
+		protected:
+
+			IndirectInlinePanel _image_panel;
+
+		public:
+
+			ImageViewInstanceInspector(std::shared_ptr<ImageViewInstance> const& target):
+				Parent(target)
+			{
+				_image_panel = IndirectInlinePanel::MakeUniqueIndirectPanel(_target->image());
+			}
+
+			static void DeclareSubresourceRange(Context& ctx, VkImageSubresourceRange const& range)
+			{
+				InspectVkBitField<VkImageAspectFlagBits>(ctx, "Apsect Mask", range.aspectMask);
+				ImGui::LabelValue("Base Mip level", range.baseMipLevel);
+				ImGui::LabelValue("Level count", range.levelCount);
+				ImGui::LabelValue("Base array layer", range.baseArrayLayer);
+				ImGui::LabelValue("Layer count", range.layerCount);
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				const auto& ci = _target->_ci;
+				InspectVkBitField<VkImageViewCreateFlagBits>(ctx, "Creation Flags", ci.flags);
+				InspectVkEnum(ctx, "View Type", ci.viewType);
+				InspectVkEnum(ctx, "Format", ci.format);
+
+				if(ImGui::TreeNode("Components"))
+				{
+					const VkComponentSwizzle* comp_swizzle = &ci.components.r;
+					std::array comp_names = {'R', 'G', 'B', 'A'};
+					char label[] = "R";
+					for (uint i = 0; i < 4; ++i)
+					{
+						label[0] = comp_names[i];
+						InspectVkEnum(ctx, label, comp_swizzle[i]);
+					}
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNodeEx("Subresource Range", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					DeclareSubresourceRange(ctx, ci.subresourceRange);
+					ImGui::TreePop();
+				}
+
+				_image_panel.declareInline(ctx);
+			}
+		};
+
+		class ImageViewInspector : public DescriptorInspector<ImageView>
+		{
+			using Parent = DescriptorInspector<ImageView>;
+		protected:
+
+			IndirectInlinePanel _image_panel;
+
+		public:
+
+			ImageViewInspector(std::shared_ptr<ImageView> const& target) :
+				Parent(target)
+			{
+				_image_panel = IndirectInlinePanel::MakeUniqueIndirectPanel(_target->image());
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				_image_panel.declareInline(ctx);
+				Parent::declareInstance(ctx);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> ImageViewInstance::makeInspector(std::shared_ptr<ImageViewInstance> const& shared_this, GUI::Context& ctx)
+	{
+		return GUI::MakeInspectorFromTarget(ctx, shared_this);
+	}
+
+	std::shared_ptr<GUI::Panel> ImageView::makeInspector(std::shared_ptr<ImageView> const& shared_this, GUI::Context& ctx)
+	{
+		return GUI::MakeInspectorFromTarget(ctx, shared_this);
+	}
 }
