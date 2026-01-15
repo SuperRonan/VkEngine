@@ -118,6 +118,10 @@ namespace vkl::GUI
 				if (target)
 				{
 					label = target->name();
+					if (label.empty())
+					{
+						label = "Unnamed";
+					}
 				}
 				else
 				{
