@@ -12,8 +12,6 @@
 
 #include <vkl/Rendering/Drawable.hpp>
 
-#include <vkl/GUI/Context.hpp>
-
 #include <vkl/Maths/AlignedAxisBoundingBox.hpp>
 #include <vkl/VkObjects/AccelerationStructure.hpp>
 
@@ -21,7 +19,11 @@
 
 namespace vkl
 {
-	
+	namespace GUI
+	{
+		class MeshInspector;
+		class RigidMeshInspector;
+	}
 	struct MeshHeader
 	{
 		uint32_t num_vertices = 0;
@@ -145,7 +147,9 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const = 0;
 
-		virtual void declareGui(GUI::Context & ctx) = 0;
+		using InspectorType = GUI::MeshInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx) = 0;
 
 		const AABB3f& getAABB()const
 		{
@@ -399,7 +403,9 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const override;
 
-		virtual void declareGui(GUI::Context& ctx) override;
+		using InspectorType = GUI::RigidMeshInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx) override;
 
 		virtual VertexInputDescription vertexInputDesc() override
 		{

@@ -4,6 +4,9 @@
 #include <vkl/VkObjects/Pipeline.hpp>
 #include <vkl/Execution/SynchronizationHelper.hpp>
 
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
+
 namespace vkl
 {
 	
@@ -858,15 +861,36 @@ namespace vkl
 		return _device.uploaded;
 	}
 
-	void RigidMesh::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		ImGui::PushID(name().c_str());
+		class RigidMeshInspector : public Panel
+		{
+		protected:
 
-		ImGui::Text("Name: ");
-		ImGui::SameLine();
-		ImGui::Text(name().c_str());
+			std::shared_ptr<RigidMesh> _target;
 
-		ImGui::PopID();
+			TargetIndirectInlinePanel<Buffer> _buffer_panel;
+
+		public:
+
+			RigidMeshInspector(std::shared_ptr<RigidMesh> const& target) :
+				Panel(target->application(), std::format("{} - Rigid Mesh Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				_target(target)
+			{
+				_buffer_panel.init("Buffer");
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				
+				_buffer_panel.declareInline(ctx, _target->_device.mesh_buffer);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> RigidMesh::makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::RigidMeshInspector>(std::static_pointer_cast<RigidMesh>(shared_this));
 	}
 
 	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square2DMakeInfo const& smi)

@@ -202,6 +202,7 @@ namespace vkl
 			std::shared_ptr<Model> _target;
 
 			TargetIndirectInlinePanel<Material> _material_panel;
+			TargetIndirectInlinePanel<Mesh>	_mesh_panel;
 
 		public:
 
@@ -210,22 +211,12 @@ namespace vkl
 				_target(target)
 			{
 				_material_panel.init("Material");
+				_mesh_panel.init("Mesh");
 			}
 
 			virtual void declareInline(Context& ctx) override
 			{
-				if (ImGui::CollapsingHeader("Mesh"))
-				{
-					if (_target->_mesh)
-					{
-						_target->_mesh->declareGui(ctx);
-					}
-					else
-					{
-						ImGui::Text("None");
-					}
-				}
-
+				_mesh_panel.declareInline(ctx, _target->_mesh);
 				_material_panel.declareInline(ctx, _target->_material);
 			}
 		};
