@@ -88,6 +88,7 @@ namespace vkl::GUI
 		{
 			b.type = InlinePanel::Type::Child;
 		}
+		
 	}
 
 	void MainPanel::addInlinePanel(InlinePanel const& ip)
@@ -95,5 +96,10 @@ namespace vkl::GUI
 		IndirectInlinePanel iip;
 		static_cast<InlinePanel&>(iip) = ip;
 		addInlinePanel(iip);
+		IndirectInlinePanel& b = _inline_panels.back();
+		if (b.label.empty())
+		{
+			b.label = iip.panel->name();
+		}
 	}
 }

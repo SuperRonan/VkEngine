@@ -1,5 +1,6 @@
 #include <vkl/Rendering/TextureFromFile.hpp>
 #include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
 #include <that/img/ImRead.hpp>
 
 #include <chrono>
@@ -454,157 +455,16 @@ namespace vkl
 		}
 	}
 
-	void TextureFromFile::declareGUI(GUI::Context& ctx)
-	{
-		ImGui::PushID(this);
-		static thread_local std::string txt_buffer;
-		txt_buffer = _path.string();
-		ImGui::InputText("Path", &txt_buffer, ImGuiInputTextFlags_ReadOnly);
-		ImGui::SameLine();
-		auto file_dialog = ctx.getCommonFileDialog();
-		bool can_open = file_dialog->canOpen();
-		ImGui::BeginDisabled(!can_open);
-		if (ImGui::Button("..."))
-		{
-			FileDialog::OpenInfo info{};
-			if (!_path.empty())
-			{
-				auto resolved = application()->fileSystem()->resolve(_path);
-				if (resolved.result == that::Result::Success)
-				{
-					resolved = application()->fileSystem()->cannonize(resolved.value);
-				}
-				if (resolved.result == that::Result::Success)
-				{
-					info.default_location = resolved.value;
-				}
-			}
-			std::array filters = {
-				SDL_DialogFileFilter{
-					.name = "Any image file",
-					.pattern = "*",
-				},
-				SDL_DialogFileFilter{
-					.name = "PNG image",
-					.pattern = "png",
-				},
-				SDL_DialogFileFilter{
-					.name = "JPEG image",
-					.pattern = "jpg;jpeg",
-				},
-				SDL_DialogFileFilter{
-					.name = "TGA image",
-					.pattern = "tga",
-				},
-				SDL_DialogFileFilter{
-					.name = "HDR image",
-					.pattern = "hdr",
-				},
-			};
-			info.filters = filters;
-			info.allow_multiple = false;
-			info.parent_window = ctx.getCurrentWindow();
-			file_dialog->open(this, info);
-		}
-		ImGui::EndDisabled();
-
-		bool _should_reload = false;
-		if (file_dialog->owner() == this && file_dialog->completed())
-		{
-			if (!file_dialog->getResults().empty())
-			{
-				FileSystem::Path new_path = file_dialog->getResults().front();
-				
-				setPath(new_path);
-				_should_reload = true;
-			}
-			file_dialog->close();
-		}
-
-		if (ImGui::Button("Reload"))
-		{
-			_should_reload = true;
-		}
-		ImGui::SameLine();
-		bool enable_auto_reload = _enable_auto_reload;
-		if (ImGui::Checkbox("Auto Reload", &enable_auto_reload))
-		{
-			setEnableAutoReload(enable_auto_reload);
-		}
-		if (_should_reload)
-		{
-			reload();
-		}
-
-		{
-			ImVec4 color = ImVec4(1, 1, 1, 1);
-			const char* status = "Unknown!";
-			if (isReady())
-			{
-				if ((_desired_mips == MipsOptions::None) || (_view == _all_mips_view))
-				{
-					status = "Ready!";
-				}
-				else
-				{
-					status = "Ready (waiting on MIPs)!";
-				}
-			}
-			else
-			{
-				if (_host_image.empty())
-				{
-					if (_path.empty())
-					{
-						status = "Empty!";
-						color = ctx.style().warning_yellow;
-					}
-					else
-					{
-						status = "Failed to load image!";
-						color = ctx.style().invalid_red;
-
-					}
-				}
-				else
-				{
-					status = "Loading...";
-					color = ctx.style().warning_yellow;
-				}
-			}
-			ImGui::TextColored(color, "Status: %s", status);
-		}
-
-		{
-			VkFormat format = VK_FORMAT_UNDEFINED;
-			VkExtent3D extent = makeUniformExtent3D(0);
-			uint layers = 0;
-			uint mips = 0;
-			if (isReady())
-			{
-				auto& instance = _view->instance();
-				format = instance->createInfo().format;
-				extent = instance->image()->createInfo().extent;
-				layers = instance->createInfo().subresourceRange.layerCount;
-				mips = instance->createInfo().subresourceRange.levelCount;
-			}
-			const char * format_str = vku::GetEnumLabel(format);
-			ImGui::Text("Format: %s", format_str);
-			ImGui::InputInt3("Resolution", (int*)&extent.width, ImGuiInputTextFlags_ReadOnly);
-			ImGui::InputInt("Mips", (int*) &mips, 0, 0, ImGuiInputTextFlags_ReadOnly);
-			ImGui::InputInt("Layers", (int*)&layers, 0, 0, ImGuiInputTextFlags_ReadOnly);
-		}
-		ImGui::PopID();
-	}
-
-
-
-
 
 	TextureFileCache::TextureFileCache(CreateInfo const& ci):
 		VkObject(ci.app, ci.name)
 	{}
 
+	std::string TextureFileCache::getSmallNameFromPath(FileSystem::Path const& path) const
+	{
+		std::string res = path.filename().string();
+		return res;
+	}
 
 	std::shared_ptr<TextureFromFile> TextureFileCache::getTexture(FileSystem::Path const& path, VkFormat desired_format)
 	{
@@ -614,7 +474,7 @@ namespace vkl
 		{
 			res = std::make_shared<TextureFromFile>(TextureFromFile::CI{
 				.app = application(),
-				.name = path.string(),
+				.name = getSmallNameFromPath(path),
 				.path = path,
 				.desired_format = desired_format,
 			});
@@ -647,5 +507,159 @@ namespace vkl
 			}
 		}
 
+	}
+
+	namespace GUI
+	{
+		class TextureFromFileInspector : public Panel
+		{
+			using Parent = Panel;
+		protected:
+
+			std::shared_ptr<TextureFromFile> _target;
+
+			TargetIndirectInlinePanel<Image> _image_panel;
+			TargetIndirectInlinePanel<ImageView> _view_panel;
+
+			std::string _text_buffer;
+
+		public:
+
+			TextureFromFileInspector(std::shared_ptr<TextureFromFile> const& target):
+				Parent(target->application(), std::format("{} - Texture##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				_target(target)
+			{
+				_image_panel.init("Image");
+				_view_panel.init("View (Current)");
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				_text_buffer = _target->_path.string();
+				ImGui::InputText("Path", &_text_buffer, ImGuiInputTextFlags_ReadOnly);
+				ImGui::SameLine();
+				auto file_dialog = ctx.getCommonFileDialog();
+				bool can_open = file_dialog->canOpen();
+				ImGui::BeginDisabled(!can_open);
+				if (ImGui::Button("..."))
+				{
+					FileDialog::OpenInfo info{};
+					if (!_target->_path.empty())
+					{
+						auto resolved = application()->fileSystem()->resolve(_target->_path);
+						if (resolved.result == that::Result::Success)
+						{
+							resolved = application()->fileSystem()->cannonize(resolved.value);
+						}
+						if (resolved.result == that::Result::Success)
+						{
+							info.default_location = resolved.value;
+						}
+					}
+					std::array filters = {
+						SDL_DialogFileFilter{
+							.name = "Any image file",
+							.pattern = "*",
+						},
+						SDL_DialogFileFilter{
+							.name = "PNG image",
+							.pattern = "png",
+						},
+						SDL_DialogFileFilter{
+							.name = "JPEG image",
+							.pattern = "jpg;jpeg",
+						},
+						SDL_DialogFileFilter{
+							.name = "TGA image",
+							.pattern = "tga",
+						},
+						SDL_DialogFileFilter{
+							.name = "HDR image",
+							.pattern = "hdr",
+						},
+					};
+					info.filters = filters;
+					info.allow_multiple = false;
+					info.parent_window = ctx.getCurrentWindow();
+					file_dialog->open(this, info);
+				}
+				ImGui::EndDisabled();
+
+				bool _should_reload = false;
+				if (file_dialog->owner() == this && file_dialog->completed())
+				{
+					if (!file_dialog->getResults().empty())
+					{
+						FileSystem::Path new_path = file_dialog->getResults().front();
+
+						_target->setPath(new_path);
+						_should_reload = true;
+					}
+					file_dialog->close();
+				}
+
+				if (ImGui::Button("Reload"))
+				{
+					_should_reload = true;
+				}
+				ImGui::SameLine();
+				bool enable_auto_reload = _target->_enable_auto_reload;
+				if (ImGui::Checkbox("Auto Reload", &enable_auto_reload))
+				{
+					_target->setEnableAutoReload(enable_auto_reload);
+				}
+				if (_should_reload)
+				{
+					_target->reload();
+				}
+
+				{
+					ImVec4 color = ImVec4(1, 1, 1, 1);
+					const char* status = "Unknown!";
+					if (_target->isReady())
+					{
+						if ((_target->_desired_mips == Texture::MipsOptions::None) || (_target->_view == _target->_all_mips_view))
+						{
+							status = "Ready!";
+						}
+						else
+						{
+							status = "Ready (waiting on MIPs)!";
+						}
+					}
+					else
+					{
+						if (_target->_host_image.empty())
+						{
+							if (_target->_path.empty())
+							{
+								status = "Empty!";
+								color = ctx.style().warning_yellow;
+							}
+							else
+							{
+								status = "Failed to load image!";
+								color = ctx.style().invalid_red;
+
+							}
+						}
+						else
+						{
+							status = "Loading...";
+							color = ctx.style().warning_yellow;
+						}
+					}
+					ImGui::TextColored(color, "Status: %s", status);
+				}
+
+				_view_panel.declareInline(ctx, _target->_view);
+				_image_panel.declareInline(ctx, _target->_image);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> TextureFromFile::makeInspector(std::shared_ptr<Texture> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::TextureFromFileInspector>(std::dynamic_pointer_cast<TextureFromFile>(shared_this));
 	}
 }

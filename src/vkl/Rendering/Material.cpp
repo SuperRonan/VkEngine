@@ -1,8 +1,13 @@
 #include <vkl/Rendering/Material.hpp>
+
 #include <vkl/GUI/ImGuiDynamic.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
 
 #include <ShaderLib/Rendering/Materials/MaterialDefinitions.h>
 #include <ShaderLib/Rendering/Materials/PBMaterialDefinitions.h>
+
 
 namespace vkl
 {
@@ -234,81 +239,6 @@ namespace vkl
 		};
 	}
 
-	void PhysicallyBasedMaterial::declareGui(GUI::Context & ctx)
-	{
-		
-		ImGui::PushID(name().c_str());
-		ImGui::Text("Name: %s", name().c_str());
-
-		ImGui::Checkbox("Dielectric", &_is_dielectric);
-
-		const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR;
-
-		auto declare_color = [&](const char* label, vec3& dv)
-		{
-			return ImGui::ColorEdit3(label, reinterpret_cast<float*>(dv.data()), color_flags);	
-		};
-
-		auto declare_float = [&](ImGuiSliderFlags flags = 0, float max = 1, const char* fmt="%.3f")
-		{
-			return [flags, max, fmt](const char* label, float& value)
-			{
-				return ImGui::SliderFloat(label, &value, 0, max, fmt, flags);
-			};
-		};
-
-		_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_force_albedo_prop);
-		ImGui::SameLine();
-		_should_update_props_buffer |= ImGui::Checkbox("Force Geometry normal", &_force_geometry_normal);
-		
-		const char* albedo_name = _is_dielectric ? "Absorption" : "Albedo";
-		const char* metalic_name = _is_dielectric ? (_sample_spectral ? "IoR base" : "Index of Refraction") : "Metallic";
-
-		_should_update_props_buffer |= GUI::DeclareDynamic(albedo_name, _albedo, declare_color);
-
-		_should_update_props_buffer |= GUI::DeclareDynamic(metalic_name, _metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _is_dielectric ? 2.5 : 1.0));
-		if (_sample_spectral)
-		{
-			ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"A parameter of the Cauchy equation: n(l) = A + B/l²"));
-		}
-		if (!_is_dielectric)
-		{
-			_should_update_props_buffer |= GUI::DeclareDynamic("Roughness", _roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
-			_should_update_props_buffer |= GUI::DeclareDynamic("Cavity", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
-		}
-		else
-		{
-			_should_update_props_buffer |= ImGui::Checkbox("Sample spectral", &_sample_spectral);
-			if (_sample_spectral)
-			{
-				ImGui::SameLine();
-				ImGui::Text("|");
-				ImGui::SameLine();
-
-				float lambda = 589; // nm
-				ImGui::Text("IoR at %.0f nm: %g", lambda, *_metallic + *_cavity * 1e6 * rcp(sqr(lambda)));
-				_should_update_props_buffer |= GUI::DeclareDynamic("IoR dispersion", _cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat, 0.02, reinterpret_cast<const char*>(u8"%.6f µm²")));
-				ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"B parameter of the Cauchy equation in µm²: n(l) = A + B/l² (l in µm)"));
-			}
-		}
-
-		std::string txt;
-		for (uint i = 0; i < _textures.size(); ++i)
-		{
-			std::shared_ptr<Texture>& texture = _textures[i];
-			if (texture)
-			{
-				txt = std::format("Texture {}", i);
-				if (ImGui::CollapsingHeader(txt.data()))
-				{
-					texture->declareGUI(ctx);
-				}
-			}
-		}
-
-		ImGui::PopID();
-	}
-
 	void PhysicallyBasedMaterial::updateResources(UpdateContext& ctx)
 	{
 		Material::updateResources(ctx);
@@ -453,5 +383,100 @@ namespace vkl
 		{
 			callRegistrationCallback(reg.registration, reg.include_textures);
 		}
+	}
+
+	namespace GUI
+	{
+		class PhysicallyBasedMaterialInspector : public Panel
+		{
+		protected:
+
+			std::shared_ptr<PhysicallyBasedMaterial> _target;
+
+			using TexturePanel = TargetIndirectInlinePanel<Texture>;
+
+			std::array<TexturePanel, PhysicallyBasedMaterial::MAX_TEXTURE_COUNT> _textures; 
+
+		public:
+
+			PhysicallyBasedMaterialInspector(std::shared_ptr<PhysicallyBasedMaterial> const& target) :
+				Panel(target->application(), std::format("{} - Physically Based Material - Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				_target(target)
+			{
+				for (uint i = 0; i < _textures.size(); ++i)
+				{
+					_textures[i].init(std::format("Texture {}", i));
+				}
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				ImGui::Checkbox("Dielectric", &_target->_is_dielectric);
+
+				const ImGuiColorEditFlags color_flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR;
+
+				auto declare_color = [&](const char* label, Vector3f& dv)
+					{
+						return ImGui::ColorEdit3(label, reinterpret_cast<float*>(dv.data()), color_flags);
+					};
+
+				auto declare_float = [&](ImGuiSliderFlags flags = 0, float max = 1, const char* fmt = "%.3f")
+					{
+						return [flags, max, fmt](const char* label, float& value)
+							{
+								return ImGui::SliderFloat(label, &value, 0, max, fmt, flags);
+							};
+					};
+
+				_target->_should_update_props_buffer |= ImGui::Checkbox("Force Albedo property", &_target->_force_albedo_prop);
+				ImGui::SameLine();
+				_target->_should_update_props_buffer |= ImGui::Checkbox("Force Geometry normal", &_target->_force_geometry_normal);
+
+				const char* albedo_name = _target->_is_dielectric ? "Absorption" : "Albedo";
+				const char* metalic_name = _target->_is_dielectric ? (_target->_sample_spectral ? "IoR base" : "Index of Refraction") : "Metallic";
+
+				_target->_should_update_props_buffer |= GUI::DeclareDynamic(albedo_name, _target->_albedo, declare_color);
+
+				_target->_should_update_props_buffer |= GUI::DeclareDynamic(metalic_name, _target->_metallic, declare_float(ImGuiSliderFlags_NoRoundToFormat, _target->_is_dielectric ? 2.5 : 1.0));
+				if (_target->_sample_spectral)
+				{
+					ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"A parameter of the Cauchy equation: n(l) = A + B/l²"));
+				}
+				if (!_target->_is_dielectric)
+				{
+					_target->_should_update_props_buffer |= GUI::DeclareDynamic("Roughness", _target->_roughness, declare_float(ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic));
+					_target->_should_update_props_buffer |= GUI::DeclareDynamic("Cavity", _target->_cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat));
+				}
+				else
+				{
+					_target->_should_update_props_buffer |= ImGui::Checkbox("Sample spectral", &_target->_sample_spectral);
+					if (_target->_sample_spectral)
+					{
+						ImGui::SameLine();
+						ImGui::Text("|");
+						ImGui::SameLine();
+
+						float lambda = 589; // nm
+						ImGui::Text("IoR at %.0f nm: %g", lambda, *_target->_metallic + *_target->_cavity * 1e6 * rcp(sqr(lambda)));
+						_target->_should_update_props_buffer |= GUI::DeclareDynamic("IoR dispersion", _target->_cavity, declare_float(ImGuiSliderFlags_NoRoundToFormat, 0.02, reinterpret_cast<const char*>(u8"%.6f µm²")));
+						ImGui::SetItemTooltip(reinterpret_cast<const char*>(u8"B parameter of the Cauchy equation in µm²: n(l) = A + B/l² (l in µm)"));
+					}
+				}
+
+				std::string txt;
+				for (uint i = 0; i < _target->_textures.size(); ++i)
+				{
+					std::shared_ptr<Texture>& texture = _target->_textures[i];
+					ImGui::PushID(i);
+					_textures[i].declareInline(ctx, texture);
+					ImGui::PopID();
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> PhysicallyBasedMaterial::makeInspector(std::shared_ptr<Material> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::PhysicallyBasedMaterialInspector>(std::dynamic_pointer_cast<PhysicallyBasedMaterial>(shared_this));
 	}
 }

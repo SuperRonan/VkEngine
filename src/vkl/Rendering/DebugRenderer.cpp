@@ -444,6 +444,8 @@ namespace vkl
 		std::shared_ptr<DebugRenderer> _target;
 		GUI::IndirectInlinePanel _buffer_panel;
 
+		GUI::TargetIndirectInlinePanel<Texture> _texture_panel;
+
 		ImGuiListSelection _default_glyph_size;
 
 	public:
@@ -453,6 +455,8 @@ namespace vkl
 			_target(target)
 		{
 			_buffer_panel = GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(_target->_debug_buffer);
+			_buffer_panel.child_label = "Buffer";
+			_texture_panel.init("Font Glyph Texture");
 
 			_default_glyph_size = ImGuiListSelection::CI{
 				.name = "Font size",
@@ -575,6 +579,8 @@ namespace vkl
 			}
 
 			_buffer_panel.declareInline(ctx);
+
+			_texture_panel.declareInline(ctx, _target->_font);
 		}
 	};
 

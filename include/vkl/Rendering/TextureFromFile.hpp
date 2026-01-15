@@ -9,6 +9,10 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class TextureFromFileInspector;
+	}
 	class TextureFromFile : public Texture
 	{
 	protected:
@@ -84,7 +88,10 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext& ctx) override;
 
-		virtual void declareGUI(GUI::Context & ctx) override;
+		using InspectorType = GUI::TextureFromFileInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Texture> const& shared_this, GUI::Context& ctx);
 	};
 
 	class TextureFileCache : public VkObject
@@ -106,6 +113,7 @@ namespace vkl
 
 		TextureFileCache(CreateInfo const& ci);
 
+		std::string getSmallNameFromPath(FileSystem::Path const& path) const;
 
 		std::shared_ptr<TextureFromFile> getTexture(FileSystem::Path const& path, VkFormat desired_format = VK_FORMAT_UNDEFINED);
 

@@ -982,7 +982,7 @@ namespace vkl
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_picker), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_saver), });
-			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(exec.getDebugRenderer()));
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(exec.getDebugRenderer(), "Debug Renderer"));
 
 			const int flip_imgui_key = SDL_SCANCODE_F1;
 			while (!_main_window->shouldClose())

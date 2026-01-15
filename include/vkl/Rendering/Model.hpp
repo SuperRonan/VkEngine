@@ -9,6 +9,10 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class ModelInspector;
+	}
 	class Model : public VkObject, public Drawable
 	{
 	public:
@@ -129,9 +133,9 @@ namespace vkl
 
 		virtual bool isReadyToDraw() const;
 
-		virtual void declareGui(GUI::Context & ctx);
-
-
+		using InspectorType = GUI::ModelInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Model> const& shared_this, GUI::Context& ctx);
 
 
 		

@@ -15,7 +15,7 @@ namespace vkl::GUI
 		_node(node),
 		_parent(parent)
 	{
-
+		_model_panel.init("Model");
 	}
 
 	void NodeInspector::reset(std::shared_ptr<Scene::Node> const& node)
@@ -95,11 +95,9 @@ namespace vkl::GUI
 			ImGui::DragFloat3("Translation", _node->translation().data(), 0.1, -range, range, "%.3f", flags | ImGuiSliderFlags_Logarithmic);
 		}
 
-		if (!!_node->model() && ImGui::CollapsingHeader("Model"))
-		{
-			_node->model()->declareGui(ctx);
-		}
-		else if (!!_node->light() && ImGui::CollapsingHeader("Light"))
+		_model_panel.declareInline(ctx, _node->model());
+
+		if (!!_node->light() && ImGui::CollapsingHeader("Light"))
 		{
 			_node->light()->declareGui(ctx);
 		}

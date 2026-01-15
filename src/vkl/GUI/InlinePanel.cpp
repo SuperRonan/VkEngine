@@ -38,12 +38,23 @@ namespace vkl::GUI
 		GUI::Context& ctx,
 		InlinePanel::Type type,
 		const char* label,
+		const char* child_label,
 		Panel::Id id,
 		GetPanelFn const& get_panel_fn = {}
 	) {
 		InlinePanel::ReturnType res = {};
 		using Type = InlinePanel::Type;
 		ImGui::PushID(id);
+
+		if (label && label[0] == char(0))
+		{
+			label = nullptr;
+		}
+		if (child_label && child_label[0] == char(0))
+		{
+			child_label = nullptr;
+		}
+		assert(!!label);
 
 		constexpr const bool can_declare = !std::same_as<GetPanelFn, std::nullptr_t>;
 		res.declare_inline = can_declare;
@@ -78,7 +89,11 @@ namespace vkl::GUI
 		else if (type == Type::Child)
 		{
 			const float top_item_width = ImGui::GetCurrentWindow()->DC.ItemWidth;
-			res.declare_inline &= ImGui::BeginChild(label, ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+			res.declare_inline &= ImGui::BeginChild(child_label ? child_label : label, ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+			if (child_label)
+			{
+				ImGui::SeparatorText(child_label);
+			}
 			const auto& style = ImGui::GetStyle();
 			float item_width = top_item_width - 2 * style.FramePadding.x - style.FrameBorderSize;
 			ImGui::PushItemWidth(item_width); // Use the full available witdh for the child
@@ -122,13 +137,13 @@ namespace vkl::GUI
 
 	InlinePanel::ReturnType InlinePanel::declareInline(GUI::Context& ctx)
 	{
-		const char* label = this->label.empty() && panel ? panel->name().c_str() : this->label.c_str();
 		if(panel && !invalid_panel)
 		{
 			return DeclareInlinePanelEx(
 				ctx,
 				type,
-				label,
+				label.c_str(),
+				child_label.c_str(),
 				id,
 				[&](GUI::Context& ctx) -> std::shared_ptr<Panel> const& {return panel; }
 			);
@@ -138,7 +153,8 @@ namespace vkl::GUI
 			return DeclareInlinePanelEx(
 				ctx,
 				type,
-				label,
+				label.c_str(),
+				child_label.c_str(),
 				id
 			);
 		}
@@ -148,6 +164,7 @@ namespace vkl::GUI
 	{
 		return InlinePanel{
 			.panel = panel,
+			.label = panel->name(),
 			.id = reinterpret_cast<Panel::Id>(panel.get()),
 			.type = type,
 		};
@@ -178,6 +195,7 @@ namespace vkl::GUI
 			ctx,
 			type,
 			label.c_str(),
+			child_label.c_str(),
 			id,
 			get_panel_fn
 		);

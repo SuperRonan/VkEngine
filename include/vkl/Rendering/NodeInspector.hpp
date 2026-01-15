@@ -2,6 +2,7 @@
 
 #include <vkl/GUI/Panel.hpp>
 #include <vkl/Rendering/Scene.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
 
 namespace vkl
 {
@@ -19,9 +20,11 @@ namespace vkl::GUI
 		std::shared_ptr<Scene::Node> _node = {}; // ptr is Id
 		bool _unique = false;
 
+		TargetIndirectInlinePanel<Model> _model_panel;
+
 	public:
 
-		virtual void declareInline(Context& ctx);
+		virtual void declareInline(Context& ctx) override;
 
 		NodeInspector(SceneUserInterface* parent);
 

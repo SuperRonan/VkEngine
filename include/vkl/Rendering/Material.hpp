@@ -7,7 +7,6 @@
 #include <vkl/Execution/ResourcesHolder.hpp>
 #include <vkl/Execution/SamplerLibrary.hpp>
 #include <vkl/Rendering/Texture.hpp>
-#include <vkl/GUI/Context.hpp>
 
 namespace vkl
 {
@@ -78,7 +77,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx);
 
-		virtual void declareGui(GUI::Context & ctx) = 0;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Material> const& shared_this, GUI::Context& ctx) = 0;
 
 		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -116,6 +115,11 @@ namespace vkl
 			};
 		}
 	};
+
+	namespace GUI
+	{
+		class PhysicallyBasedMaterialInspector;
+	}
 
 	class PhysicallyBasedMaterial : public Material
 	{
@@ -226,8 +230,6 @@ namespace vkl
 			return !useAlphaTexture();
 		}
 
-		virtual void declareGui(GUI::Context & ctx) override;
-
 		virtual void updateResources(UpdateContext& ctx) override;
 
 		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) override
@@ -244,6 +246,11 @@ namespace vkl
 		virtual void unRegistgerFromDescriptorSet(std::shared_ptr<DescriptorSetAndPool> const& set, bool include_textures = true) override;
 
 		virtual void callResourceUpdateCallbacks() override;
+
+		using InspectorType = GUI::PhysicallyBasedMaterialInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Material> const& shared_this, GUI::Context& ctx) override;
 	};
 
 	using PBMaterial = PhysicallyBasedMaterial;

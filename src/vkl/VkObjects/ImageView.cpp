@@ -171,6 +171,7 @@ namespace vkl
 				Parent(target)
 			{
 				_image_panel = IndirectInlinePanel::MakeUniqueIndirectPanel(_target->image());
+				_image_panel.child_label = "Image";
 			}
 
 			static void DeclareSubresourceRange(Context& ctx, VkImageSubresourceRange const& range)
@@ -225,6 +226,7 @@ namespace vkl
 				Parent(target)
 			{
 				_image_panel = IndirectInlinePanel::MakeUniqueIndirectPanel(_target->image());
+				_image_panel.child_label = "Image";
 			}
 
 			virtual void declareInline(Context& ctx) override

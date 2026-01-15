@@ -4,6 +4,9 @@
 
 #include <vkl/Rendering/TextureFromFile.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiDynamic.hpp>
+
 #include <unordered_map>
 #include <functional>
 
@@ -190,44 +193,48 @@ namespace vkl
 		return res;
 	}
 
-	void Model::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		ImGui::PushID(name().c_str());
-		ImGui::Text(name().c_str());
-
-		if (ImGui::CollapsingHeader("Mesh"))
+		class ModelInspector : public Panel
 		{
-			if (_mesh)
-			{
-				_mesh->declareGui(ctx);
-			}
-			else
-			{
-				ImGui::Text("None");
-			}
-		}
+		protected:
 
-		if (ImGui::CollapsingHeader("Material"))
-		{
-			if (_material)
-			{
-				_material->declareGui(ctx);
-			}
-			else
-			{
-				ImGui::Text("None");
-			}
-		}
+			std::shared_ptr<Model> _target;
 
-		ImGui::PopID();
+			TargetIndirectInlinePanel<Material> _material_panel;
+
+		public:
+
+			ModelInspector(std::shared_ptr<Model> const& target):
+				Panel(target->application(), std::format("{} - Model Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				_target(target)
+			{
+				_material_panel.init("Material");
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				if (ImGui::CollapsingHeader("Mesh"))
+				{
+					if (_target->_mesh)
+					{
+						_target->_mesh->declareGui(ctx);
+					}
+					else
+					{
+						ImGui::Text("None");
+					}
+				}
+
+				_material_panel.declareInline(ctx, _target->_material);
+			}
+		};
 	}
 
-
-
-
-
-
-
+	std::shared_ptr<GUI::Panel> Model::makeInspector(std::shared_ptr<Model> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::ModelInspector>(shared_this);
+	}
 
 
 
