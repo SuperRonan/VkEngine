@@ -148,6 +148,7 @@ namespace vkl
 			});
 
 			std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.app = app,
 				.name = "Mirror",
 				.matrix = TranslationMatrix(Vector3f(4, 0.5, -2.5)) * ScalingMatrix(Vector3f(2, 1, 0.1)),
 				.model = model,
@@ -225,6 +226,7 @@ namespace vkl
 					});
 
 					std::shared_ptr<Scene::Node> model_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+						.app = app,
 						.name = std::format("TestModelNode_{0:d}_{1:d}", i_m, i_r),
 						.matrix = Matrix3x4f(TranslationMatrix(position)),
 						.model = model,
