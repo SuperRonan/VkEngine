@@ -14,6 +14,7 @@ namespace vkl
 			for (auto& lm : _loaded_models)
 			{
 				std::shared_ptr<Scene::Node> n = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.app = application(),
 					.name = lm->name(),
 					.model = lm,
 					});
@@ -25,10 +26,10 @@ namespace vkl
 
 	NodeFromFile::NodeFromFile(CreateInfo const& ci):
 		Scene::Node(Scene::Node::CI{
+			.app = ci.app,
 			.name = ci.name,
 			.matrix = ci.matrix,
 		}),
-		_app(ci.app),
 		_path(ci.path),
 		_mtl_path(ci.mtl_path),
 		_synch(ci.synch)
@@ -111,6 +112,7 @@ namespace vkl
 	{
 		std::shared_ptr<Scene::Node> res;
 		res = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.app = ci.app,
 			.name = ci.name,
 			.matrix = ci.xform,
 		});
@@ -169,13 +171,15 @@ namespace vkl
 		std::shared_ptr<Material> const& material,
 		AffineXForm3Df const& xform
 	) {
+		VkApplication* app = mesh->application();
 		std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
-			.app = mesh->application(),
+			.app = app,
 			.name = std::format("{}.Model", name),
 			.mesh = mesh,
 			.material = material,
 		});
 		std::shared_ptr<Scene::Node> res = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.app = app,
 			.name = std::string(name),
 			.matrix = xform,
 			.model = model,

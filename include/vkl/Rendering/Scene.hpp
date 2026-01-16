@@ -41,7 +41,7 @@ namespace vkl
 		using Mat4 = Matrix4f;
 		using Mat3x4 = Matrix3x4f;
 
-		class Node
+		class Node : public VkObject
 		{
 		protected:
 			
@@ -63,24 +63,16 @@ namespace vkl
 
 			struct CreateInfo 
 			{
+				VkApplication* app = nullptr;
 				std::string name = {};
 				Mat3x4 matrix = Mat3x4::Identity();
 				std::shared_ptr<Model> model = nullptr;
 			};
 			using CI = CreateInfo;
 
-			Node(CreateInfo const& ci):
-				_name(ci.name),
-				_matrix(ci.matrix),
-				_model(ci.model)
-			{}
+			Node(CreateInfo const& ci);
 
 			virtual ~Node() = default;
-
-			constexpr const std::string& name() const
-			{
-				return _name;
-			}
 
 			constexpr void setMatrix(Mat3x4 const& matrix)
 			{

@@ -20,6 +20,17 @@ namespace vkl
 	static_assert(std::convertible_to<Scene::DAG::FastNodePathView, Scene::DAG::FastNodePath>);
 	static_assert(std::convertible_to<Scene::DAG::FastNodePath, Scene::DAG::FastNodePathView>);
 	
+	Scene::Node::Node(CreateInfo const& ci):
+		VkObject(ci.app, ci.name),
+		_matrix(ci.matrix),
+		_model(ci.model)
+	{
+		if (!application())
+		{
+			VKL_BREAKPOINT_HANDLE;
+		}
+	}
+
 	void Scene::Node::updateResources(UpdateContext& ctx)
 	{
 		if (_model)
@@ -300,7 +311,7 @@ namespace vkl
 	Scene::Scene(CreateInfo const& ci) :
 		VkObject(ci.app, ci.name)
 	{
-		std::shared_ptr<Node> root = std::make_shared<Node>(Node::CI{.name = "root"});
+		std::shared_ptr<Node> root = std::make_shared<Node>(Node::CI{.app = application(), .name = "root"});
 		_tree = std::make_shared<DirectedAcyclicGraph>(root);
 
 		if (application()->availableFeatures().acceleration_structure_khr.accelerationStructure)

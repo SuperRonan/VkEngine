@@ -9,8 +9,6 @@ namespace vkl
 	{
 	protected:
 
-		VkApplication * _app = nullptr;
-		
 		std::filesystem::path _path = {};
 		std::filesystem::path _mtl_path = {};
 

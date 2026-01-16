@@ -89,6 +89,7 @@ namespace vkl
 		if (!sunlight)
 		{
 			std::shared_ptr<Scene::Node> spotlights = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.app = app,
 				.name = "SpotLights",
 				.matrix = TranslationMatrix(Vector3f(2, 1, 0)),
 			});
@@ -114,6 +115,7 @@ namespace vkl
 					position += Vector3f(0.25, sqrt(3.0) / 2.0 * 0.5, 0);
 				}
 				std::shared_ptr<Scene::Node> spot_light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.app = app,
 					.name = std::format("SpotLight_{}", i),
 					.matrix = TranslationMatrix(position),
 				});
@@ -166,6 +168,7 @@ namespace vkl
 			for (int i = 0; i < n_lights; ++i)
 			{
 				std::shared_ptr<Scene::Node> light_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+					.app = app,
 					.name = "PointLight" + std::to_string(i),
 					.matrix = TranslationMatrix(Vector3f((i - (n_lights / 2)) * 6, 6, 0)),
 				});
@@ -191,6 +194,7 @@ namespace vkl
 			Matrix3x4f node_matrix = TranslationMatrix(vec3(-1, 0, -2)) * (DiagonalMatrix<3, 4>(0.2f));
 
 			std::shared_ptr<Scene::Node> test_material_node = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.app = app,
 				.name = "TestMaterials",
 				.matrix = node_matrix,
 				});
@@ -234,6 +238,7 @@ namespace vkl
 		if (true)
 		{
 			std::shared_ptr<Scene::Node> in_spotlight = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.app = app,
 				.name = "In Spotlight",
 				.matrix = TranslationMatrix(vec3(1.7, 0.25, -1.8)) * ScalingMatrix(vec3::Constant(0.25).eval()),
 			});
@@ -309,6 +314,7 @@ namespace vkl
 		std::shared_ptr<Scene::Node> root = scene->getRootNode();
 		
 		std::shared_ptr<Scene::Node> box = std::make_shared<Scene::Node>(Scene::Node::CI{
+			.app = app,
 			.name = "Cornell Box",
 			.matrix = ScalingMatrix(Vector3f::Constant(2).eval()),
 		});
