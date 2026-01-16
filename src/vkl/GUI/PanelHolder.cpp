@@ -49,7 +49,11 @@ namespace vkl::GUI
 
 	void PanelHolder::declare(Context& ctx, bool keep_open)
 	{
-		ctx.pushPanelHolder(this);
+		const bool push_to_stack = !_disable_from_ctx_stack;
+		if (push_to_stack)
+		{
+			ctx.pushPanelHolder(this);
+		}
 
 		Panel::declare(ctx, true);
 
@@ -105,7 +109,10 @@ namespace vkl::GUI
 			ImGui::End();
 		}
 
-		ctx.popPanelHolder();
+		if (push_to_stack)
+		{
+			ctx.popPanelHolder();
+		}
 	}
 
 	std::shared_ptr<Panel> PanelHolder::getChild(Id id) const
