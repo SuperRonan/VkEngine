@@ -73,7 +73,9 @@ namespace vkl::GUI
 		{
 			declare_detach();
 		}
-		
+		const auto stack_color = ctx.pushStack();
+		ImGui::PushStyleColor(ImGuiCol_Border, stack_color);
+		ImGui::PushStyleColor(ImGuiCol_Separator, stack_color);
 		if (type == Type::None)
 		{
 			ImGui::SeparatorText(label);
@@ -88,6 +90,7 @@ namespace vkl::GUI
 		}
 		else if (type == Type::Child)
 		{
+			
 			const float top_item_width = ImGui::GetCurrentWindow()->DC.ItemWidth;
 			res.declare_inline &= ImGui::BeginChild(child_label ? child_label : label, ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 			if (child_label)
@@ -103,6 +106,7 @@ namespace vkl::GUI
 				res.declare_inline &= ImGui::CollapsingHeader(label);
 			}
 		}
+		ImGui::PopStyleColor(2);
 
 		if (res.declare_inline)
 		{
@@ -114,6 +118,8 @@ namespace vkl::GUI
 			}
 		}
 
+		ImGui::PushStyleColor(ImGuiCol_Border, stack_color);
+		ImGui::PushStyleColor(ImGuiCol_Separator, stack_color);
 		if (type == Type::Child)
 		{
 			ImGui::PopItemWidth();
@@ -127,6 +133,8 @@ namespace vkl::GUI
 		{
 			ImGui::Separator();
 		}
+		ImGui::PopStyleColor(2);
+		ctx.popStack();
 		if (!can_declare)
 		{
 			ImGui::EndDisabled();

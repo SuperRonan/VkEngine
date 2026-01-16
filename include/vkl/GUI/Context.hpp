@@ -14,6 +14,8 @@ namespace vkl::GUI
 		Color valid_green;
 		Color invalid_red;
 		Color warning_yellow;
+
+		std::vector<Color> stack_colors;
 	};
 
 	class Panel;
@@ -26,6 +28,8 @@ namespace vkl::GUI
 		ImGuiContext * _imgui_context;
 
 		std::shared_ptr<Style> _style;
+
+		uint _stack_counter = 0;
 
 		std::shared_ptr<FileDialog> _common_file_dialog;
 
@@ -71,5 +75,9 @@ namespace vkl::GUI
 		PanelHolder* getTopPanelHolder(uint index = 0);
 
 		PanelHolder* getBottomPanelHolder(uint index = 0);
+
+		Style::Color pushStack();
+
+		Style::Color popStack();
 	};
 }
