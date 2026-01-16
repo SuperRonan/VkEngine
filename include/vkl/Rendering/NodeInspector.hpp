@@ -16,26 +16,22 @@ namespace vkl::GUI
 	
 	protected:
 
-		SceneUserInterface* _parent = nullptr; // May be nullptr
 		std::shared_ptr<Scene::Node> _node = {}; // ptr is Id
+		SceneUserInterface* _parent = nullptr; // May be nullptr
 		bool _unique = false;
 
 		TargetIndirectInlinePanel<Model> _model_panel;
 
 	public:
 
+		NodeInspector(std::shared_ptr<Scene::Node> const& node);
+
 		virtual void declareInline(Context& ctx) override;
-
-		NodeInspector(SceneUserInterface* parent);
-
-		NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent);
 
 		void setParent(SceneUserInterface* parent)
 		{
 			_parent = parent;
 		}
-
-		void reset(std::shared_ptr<Scene::Node> const& node);
 
 		Id getDefaultId() const
 		{

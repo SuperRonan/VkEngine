@@ -4,27 +4,12 @@
 
 namespace vkl::GUI
 {
-	NodeInspector::NodeInspector(SceneUserInterface* parent) :
-		GUI::Panel(parent->application(), "")
+	NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node) :
+		GUI::Panel(node->application(), node->name()),
+		_node(node)
 	{
-
-	}
-
-	NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node, SceneUserInterface* parent) :
-		GUI::Panel(parent->application(), node->name()),
-		_node(node),
-		_parent(parent)
-	{
+		resetName();
 		_model_panel.init("Model");
-	}
-
-	void NodeInspector::reset(std::shared_ptr<Scene::Node> const& node)
-	{
-		if (_node != node)
-		{
-			_node = node;
-			resetName();
-		}
 	}
 
 	void NodeInspector::setUnique(bool unique)
@@ -108,9 +93,16 @@ namespace vkl::GUI
 			{
 				ImGui::PushID(i);
 				std::shared_ptr<Scene::Node>const& child = _node->children()[i];
-				if (ImGui::SmallButton(child->name().c_str()) && _parent)
+				if (ImGui::SmallButton(child->name().c_str()))
 				{
-					_parent->openNodeInspector(ctx, child);
+					if (_parent)
+					{
+						_parent->openNodeInspector(ctx, child);
+					}
+					else
+					{
+						ctx.getTopPanelHolder()->openChild(reinterpret_cast<uintptr_t>(child.get()), [&](){return child->makeInspector(child, ctx); });
+					}
 				}
 				ImGui::PopID();
 			}

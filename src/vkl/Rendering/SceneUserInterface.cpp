@@ -991,14 +991,31 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	GUI::NodeInspector* SceneUserInterface::openNodeInspector(GUI::Context& ctx, std::shared_ptr<Scene::Node> const& node)
 	{
-		auto res = ctx.getTopPanelHolder()->openChild(getNodeId(node.get()), [&]() {
-			return std::make_shared<GUI::NodeInspector>(node, this);
-		}).get();
-		if (res->node() != node)
+		GUI::Panel* res = nullptr;
+		Id node_id = getNodeId(node.get());
+		if (_limit_unique_selection)
 		{
-			res->reset(node);
+			std::shared_ptr<GUI::NodeInspector> current_node_inspector = std::dynamic_pointer_cast<GUI::NodeInspector>(ctx.getTopPanelHolder()->getChild(node_id));
+			if (current_node_inspector && current_node_inspector->node() != node)
+			{
+				std::shared_ptr<GUI::Panel> ni_panel = node->makeInspector(node, ctx);
+				res = ni_panel.get();
+				ctx.getTopPanelHolder()->setChild(node_id, ni_panel);
+			}
 		}
-		return res;
+		else
+		{
+			res = ctx.getTopPanelHolder()->openChild(node_id, [&]() {
+				return node->makeInspector(node, ctx);
+			}).get();
+		}
+		GUI::NodeInspector* ni = dynamic_cast<GUI::NodeInspector*>(res);
+		if (ni)
+		{
+			ni->setParent(this);
+			ni->setUnique(_limit_unique_selection);
+		}
+		return ni;
 	}
 
 	void SceneUserInterface::closeNodeInspector(GUI::Context& ctx, Scene::Node* const& node)

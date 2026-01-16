@@ -200,6 +200,7 @@ namespace vkl
 				return _translation;
 			}
 
+			virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Node> const& shared_this, GUI::Context& ctx);
 		};
 
 

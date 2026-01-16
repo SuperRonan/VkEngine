@@ -6,8 +6,7 @@
 
 #include <vkl/Utils/stl_extension.hpp>
 
-#include <imgui/imgui.h>
-#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/Rendering/NodeInspector.hpp>
 
 #include <vkl/Execution/Executor.hpp>
 
@@ -37,6 +36,11 @@ namespace vkl
 		{
 			_model->updateResources(ctx);
 		}
+	}
+
+	std::shared_ptr<GUI::Panel> Scene::Node::makeInspector(std::shared_ptr<Scene::Node> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::NodeInspector>(shared_this);
 	}
 
 	bool Scene::DirectedAcyclicGraph::checkIsAcyclic()const
