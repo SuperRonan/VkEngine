@@ -135,6 +135,7 @@ namespace vkl
 
 			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
 				.app = app,
+				.name = "Mirror Box",
 			});
 
 			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
