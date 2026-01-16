@@ -57,11 +57,11 @@ namespace vkl::GUI
 		assert(!!label);
 
 		constexpr const bool can_declare = !std::same_as<GetPanelFn, std::nullptr_t>;
-		res.declare_inline = can_declare;
 		if (!can_declare)
 		{
 			ImGui::BeginDisabled();
 		}
+		res.declare_inline = true;
 
 		const auto& declare_detach = [&]()
 		{
@@ -90,7 +90,6 @@ namespace vkl::GUI
 		}
 		else if (type == Type::Child)
 		{
-			
 			const float top_item_width = ImGui::GetCurrentWindow()->DC.ItemWidth;
 			res.declare_inline &= ImGui::BeginChild(child_label ? child_label : label, ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
 			if (child_label)
@@ -108,6 +107,7 @@ namespace vkl::GUI
 		}
 		ImGui::PopStyleColor(2);
 
+		res.declare_inline &= can_declare;
 		if (res.declare_inline)
 		{
 			if constexpr (can_declare)
