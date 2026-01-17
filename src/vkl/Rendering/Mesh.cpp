@@ -6,6 +6,7 @@
 
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
 
 namespace vkl
 {
@@ -882,8 +883,39 @@ namespace vkl
 
 			virtual void declareInline(Context& ctx) override
 			{
-				
+				auto& _host = _target->_host;
+				auto& _device = _target->_device;
+
+				ImGui::LabelCheckbox("Synchronous", _target->_is_synch);
+
+				if (ImGui::TreeNode("Host Data"))
+				{
+					ImGui::LabelCheckbox("Loaded", _host.loaded);
+					ImGui::LabelCheckbox("Use Full Vertices", _host.use_full_vertices);
+					ImGui::LabelValue("Dimensions", uint32_t(_host.dims));
+					ImGui::LabelValue("Vertices", uint32_t(_host.numVertices()));
+					ImGui::LabelValue("Indices", uint32_t(_host.indicesSize()));
+					InspectVkEnum("Index Type", _host.index_type);
+					ImGui::InputScalarN("AABB min", ImGuiDataType_Float, const_cast<float*>(_target->_aabb.bottom().data()), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+					ImGui::InputScalarN("AABB max", ImGuiDataType_Float, const_cast<float*>(_target->_aabb.top().data()), 3, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
+					ImGui::TreePop();
+				}
+
+				if (ImGui::TreeNode("Device Data"))
+				{
+					ImGui::LabelValue("Indices", _device.num_indices);
+					ImGui::LabelValue("Vertices", _device.num_vertices);
+					InspectVkEnum("Index Type", _device.index_type);
+					ImGui::LabelValue("Header Size", _device.header_size, "%llu B");
+					ImGui::LabelValue("Vertices Size", _device.vertices_size, "%llu B");
+					ImGui::LabelValue("Index Size", _device.indices_size, "%llu B");
+					ImGui::LabelCheckbox("Up To Date", _device.up_to_date);
+					ImGui::TreePop();
+				}
+
 				_buffer_panel.declareInline(ctx, _target->_device.mesh_buffer);
+
+				ImGui::LabelValue("Descriptor Set registrations", _target->_registered_sets.size32());
 			}
 		};
 	}
