@@ -312,7 +312,7 @@ namespace vkl
 	{
 		assert(_host.use_full_vertices == other._host.use_full_vertices);
 		assert(_host.dims == other._host.dims);
-		const size_t offset = _host.numVertices();
+		const uint offset = _host.numVertices();
 		if (_host.use_full_vertices)
 		{
 			_host.vertices.resize(offset + other._host.vertices.size());
@@ -329,20 +329,18 @@ namespace vkl
 		decompressIndices();
 		{
 			_host.indices32.resize(new_size);
+			auto append_indices = [&]<std::integral Index>(std::vector<Index> const& indices)
+			{
+				for (size_t i = 0; i < indices.size(); ++i)
+				{
+					_host.indices32[i + old_size] = static_cast<uint>(static_cast<uint>(indices[i]) + offset);
+				}
+			};
 			switch (other._host.index_type)
 			{
-			case VK_INDEX_TYPE_UINT32:
-				for(size_t i = 0; i < other._host.indices32.size(); ++i)
-					_host.indices32[i + old_size] = other._host.indices32[i] + offset;
-			break;
-			case VK_INDEX_TYPE_UINT16:
-				for (size_t i = 0; i < other._host.indices16.size(); ++i)
-					_host.indices32[i + old_size] = other._host.indices16[i] + offset;
-			break;
-			case VK_INDEX_TYPE_UINT8_EXT:
-				for (size_t i = 0; i < other._host.indices8.size(); ++i)
-					_host.indices32[i + old_size] = other._host.indices8[i] + offset;
-			break;
+			case VK_INDEX_TYPE_UINT16: append_indices(other._host.indices16); break;
+			case VK_INDEX_TYPE_UINT32: append_indices(other._host.indices32); break;
+			case VK_INDEX_TYPE_UINT8 : append_indices(other._host.indices8 ); break;
 			}
 		}
 		compressIndices();
@@ -544,20 +542,20 @@ namespace vkl
 	void RigidMesh::flipFaces()
 	{
 		const size_t N = _host.indicesSize() / 3;
-		for (size_t t = 0; t < N; ++t)
+		auto flip_all_faces = []<std::integral Index>(std::vector<Index>& indices)
 		{
-			switch (_host.index_type)
+			const size_t N = indices.size() / 3;
+			for (size_t t = 0; t < N; ++t)
 			{
-			case VK_INDEX_TYPE_UINT32:
-				std::swap(_host.indices32[3 * t + 0], _host.indices32[3 * t + 2]);
-				break;
-			case VK_INDEX_TYPE_UINT16:
-				std::swap(_host.indices16[3 * t + 0], _host.indices16[3 * t + 2]);
-				break;
-			case VK_INDEX_TYPE_UINT8_EXT:
-				std::swap(_host.indices8[3 * t + 0], _host.indices8[3 * t + 2]);
-				break;
+				std::swap(indices[3 * t + 0], indices[3 * t + 2]);
 			}
+		};
+		
+		switch (_host.index_type)
+		{
+		case VK_INDEX_TYPE_UINT16: flip_all_faces(_host.indices16); break;
+		case VK_INDEX_TYPE_UINT32: flip_all_faces(_host.indices32); break;
+		case VK_INDEX_TYPE_UINT8 : flip_all_faces(_host.indices8 ); break;
 		}
 	}
 
