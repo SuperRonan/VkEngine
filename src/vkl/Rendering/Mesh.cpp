@@ -17,6 +17,15 @@ namespace vkl
 		_is_synch(ci.synch)
 	{}
 
+	Mesh::Mesh(Mesh&& other) noexcept :
+		VkObject(std::move(other)),
+		_type(other._type),
+		_is_synch(other._is_synch),
+		_aabb(other._aabb),
+		_blas(std::move(other._blas)),
+		_registered_sets(std::move(other._registered_sets))
+	{}
+
 
 	VertexInputDescription RigidMesh::vertexInputDescFullVertex()
 	{
@@ -157,7 +166,38 @@ namespace vkl
 			createDeviceBuffer({});
 		}
 	}
-	
+
+	RigidMesh::HostData::HostData(HostData&& other) noexcept:
+		loaded(other.loaded),
+		use_full_vertices(other.use_full_vertices),
+		dims(other.dims),
+		positions(std::move(other.positions)),
+		vertices(std::move(other.vertices)),
+		index_type(other.index_type)
+	{
+		switch (index_type)
+		{
+			case VK_INDEX_TYPE_UINT16:
+				indices16 = std::move(other.indices16);
+			break;
+			case VK_INDEX_TYPE_UINT32:
+				indices32 = std::move(other.indices32);
+			break;
+			case VK_INDEX_TYPE_UINT8:
+				indices8 = std::move(other.indices8);
+			break;
+		}
+	}
+
+	RigidMesh::RigidMesh(RigidMesh&& other) noexcept:
+		Mesh(std::move(other)),
+		_host(std::move(other._host))
+	{
+		if (other._device.loaded())
+		{
+			createDeviceBuffer({});
+		}
+	}
 
 	RigidMesh::~RigidMesh()
 	{
@@ -925,91 +965,104 @@ namespace vkl
 		return std::make_shared<GUI::RigidMeshInspector>(std::static_pointer_cast<RigidMesh>(shared_this));
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square2DMakeInfo const& smi)
+	RigidMesh RigidMesh::MakeSquare(Square2DMakeInfo const& smi)
 	{
 		using Float = float;
 		const Float h = Float(0.5);
 
+		CreateInfo ci{
+			.app = smi.app,
+			.name = smi.name,
+			.dims = 2,
+			.compute_normals = false,
+			.auto_compute_tangents = false,
+			.create_device_buffer = true,
+		};
+
 		const Vector2 c = smi.center;
-
-		std::shared_ptr<RigidMesh> res;
-
-		if (smi.wireframe)
-		{
-			std::vector<float> positions = {
-				c.x() - h,	 c.y() - h,
-				c.x() - h,	 c.y() + h,
-				c.x() + h,	 c.y() + h,
-				c.x() + h,	 c.y() - h,
-			};
-
-			std::vector<uint> indices = {
-				0, 1,
-				1, 2,
-				2, 3, 
-				3, 0,
-			};
-
-			res = std::make_shared<RigidMesh>(RigidMesh::CI{
-				.app = smi.app,
-				.name = smi.name,
-				.dims = 2,
-				.positions = std::move(positions),
-				.indices = std::move(indices),
-				.create_device_buffer = true,
-			});
-		}
-
+		std::vector<float>& positions = ci.positions;
+		std::vector<uint>& indices = ci.indices;
+		positions = {
+			c.x() - h, c.y() - h,
+			c.x() - h, c.y() + h,
+			c.x() + h, c.y() + h,
+			c.x() + h, c.y() - h,
+		};
+		indices = {
+			0, 1,
+			1, 2,
+			2, 3,
+			3, 0,
+		};
+		
+		RigidMesh res(ci);
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeSquare(Square3DMakeInfo const& smi)
+	RigidMesh RigidMesh::MakeSquare(Square3DMakeInfo const& smi)
 	{
 		using Float = float;
 		const Float h = Float(0.5);
 
 		const Vector3 c = smi.center;
 
-		std::shared_ptr<RigidMesh> res;
-
 		Vector4 n = Vector4(0, 0, 1, 0);
 		Vector4 t = Vector4(1, 0, 0, 0);
 
+		CreateInfo ci{
+			.app = smi.app,
+			.name = smi.name,
+			.dims = 3,
+			.compute_normals = 0,
+			.auto_compute_tangents = false,
+			.create_device_buffer = true,
+		};
 
-		std::vector<Vertex> vertices = {
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<float>& positions = ci.positions;
+		std::vector<uint>& indices = ci.indices;
+		
+		vertices = {
 			Vertex{.position = Vector4(c.x() - h, c.y() - h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(0, 0, 0, 0), },
 			Vertex{.position = Vector4(c.x() - h, c.y() + h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(0, 1, 0, 0), },
 			Vertex{.position = Vector4(c.x() + h, c.y() + h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(1, 1, 0, 0), },
 			Vertex{.position = Vector4(c.x() + h, c.y() - h, 0, 1), .normal = n, .tangent = t, .uv = Vector4(1, 0, 0, 0), },
 		};
-		
 		if (!smi.wireframe)
 		{
-			std::vector<uint> indices = {
+			indices = {
 				2, 1, 0,
 				3, 2, 0,
 			};
-
-			res = std::make_shared<RigidMesh>(RigidMesh::CI{
-				.app = smi.app,
-				.name = smi.name,
-				.dims = 3,
-				.vertices = std::move(vertices),
-				.indices = std::move(indices),
-				.compute_normals = 0,
-				.auto_compute_tangents = false,
-				.create_device_buffer = true,
-			});
 		}
+		else
+		{
+			indices = {
+				0, 1,
+				1, 2,
+				2, 3,
+				3, 0,
+			};
+		}
+		RigidMesh res = ci;
 
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeDisk(Disk3DMakeInfo const& dmi)
+	RigidMesh RigidMesh::MakeDisk(Disk3DMakeInfo const& dmi)
 	{
-		std::vector<Vertex> vertices(dmi.divisions + (dmi.radial ? 1 : 0));
-		std::vector<uint> indices;
+		CreateInfo ci{
+			.app = dmi.app,
+			.name = dmi.name,
+			.dims = 3,
+			.compute_normals = 0,
+			.auto_compute_tangents = true,
+			.create_device_buffer = true,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
+		vertices.resize(dmi.divisions + (dmi.radial ? 1 : 0));
 		const Vector4f normal = Vector4f(0, 0, dmi.normal_sign ? -1 : 1, 0);
 
 		for (uint i = 0; i < dmi.divisions; ++i)
@@ -1022,9 +1075,6 @@ namespace vkl
 			Vector2f uv = (0.5 * Vector2f(x, y) + Vector2f({ 0.5, 0.5f })) + dmi.base_uv * dmi.range_uv;
 			vertices[i].uv = Vector4f(uv.x(), uv.y(), 0, 0);
 		}
-
-		int compute_normals = 0;
-		bool auto_compute_tangents = true;
 
 		if (dmi.radial)
 		{
@@ -1043,24 +1093,14 @@ namespace vkl
 		}
 		else
 		{
-			VKL_NOT_YET_IMPLEMENTED;
 		}
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(RigidMesh::CreateInfo{
-			.app = dmi.app,
-			.name = dmi.name,
-			.dims = 3,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.compute_normals = compute_normals,
-			.auto_compute_tangents = auto_compute_tangents,
-			.create_device_buffer = true,
-		});
+		RigidMesh res = ci;
 
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeCube(CubeMakeInfo const& cmi)
+	RigidMesh RigidMesh::MakeCube(CubeMakeInfo const& cmi)
 	{
 		using Float = float;
 		const Float h = Float(0.5);
@@ -1069,11 +1109,21 @@ namespace vkl
 		const Vector3 center = cmi.center;
 		const Vector3 c = center;
 
-		std::shared_ptr<RigidMesh> res;
+		CreateInfo ci{
+			.app = cmi.app,
+			.name = cmi.name,
+			.dims = 3,
+			.auto_compute_tangents = true,
+			.synch = cmi.synch,
+		};
+
+		std::vector<float>& positions = ci.positions;
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
 		if (cmi.wireframe)
 		{
-			std::vector<float> positions = {
+			positions = {
 				c.x() - h, c.y() - h, c.z() - h,
 				c.x() - h, c.y() - h, c.z() + h,
 				c.x() - h, c.y() + h, c.z() + h,
@@ -1084,7 +1134,7 @@ namespace vkl
 				c.x() + h, c.y() + h, c.z() + h,
 				c.x() + h, c.y() + h, c.z() - h,
 			};
-			std::vector<uint> indices = {
+			indices = {
 				0, 1,
 				1, 2,
 				2, 3, 
@@ -1100,35 +1150,21 @@ namespace vkl
 				2, 6,
 				3, 7,
 			};
-
-			res = std::make_shared<RigidMesh>(RigidMesh::CI{
-				.app = cmi.app,
-				.name = cmi.name,
-				.dims = 3,
-				.positions = std::move(positions),
-				.indices = std::move(indices),
-				.create_device_buffer = true,
-				.synch = cmi.synch,
-			});
 		}
 		else
 		{
-			std::vector<Vertex> vertices;
-			std::vector<uint> indices;
-
-
 			if (cmi.face_normal)
 			{
 				const Vector3 X(1, 0, 0), Y(0, 1, 0), Z(0, 0, 1);
 				const auto sign = [](Float f) {return f > 0 ? Float(1) : (f < 0 ? Float(-1) : Float(0)); };
-				const auto addVertexes = [&](Float x, Float y, Float z, Float u, Float v)
+				const auto addVertices = [&](Float x, Float y, Float z, Float u, Float v)
 				{
 					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3(x, y, z)), .normal = Vector4(sign(x) * X), .uv = Vector4(Vector2(u, v)) });
 					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3(x, y, z)), .normal = Vector4(sign(y) * Y), .uv = Vector4(Vector2(u, v)) });
 					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3(x, y, z)), .normal = Vector4(sign(z) * Z), .uv = Vector4(Vector2(u, v)) });
 				};
 
-				const auto addVertexes3 = [&](Float x, Float y, Float z, Float u0, Float v0, Float u1, Float v1, Float u2, Float v2)
+				const auto addVertices3 = [&](Float x, Float y, Float z, Float u0, Float v0, Float u1, Float v1, Float u2, Float v2)
 				{
 					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3(x, y, z)), .normal = Vector4(sign(x) * X), .uv = Vector4(Vector2(u0, v0)) });
 					vertices.emplace_back(Vertex{ .position = Vector4(center + Vector3(x, y, z)), .normal = Vector4(sign(y) * Y), .uv = Vector4(Vector2(u1, v1)) });
@@ -1137,14 +1173,14 @@ namespace vkl
 
 				if (cmi.same_face)
 				{
-					addVertexes3(-h, h, -h,		0, 0, 0, 1, 1, 0); // x0
-					addVertexes3(h, h, -h,		1, 0, 1, 1, 0, 0); // x1
-					addVertexes3(h, h, h,		0, 0, 1, 0, 1, 0); // x2
-					addVertexes3(-h, h, h,		1, 0, 0, 0, 0, 0); // x3
-					addVertexes3(-h, -h, -h,	0, 1, 0, 1, 1, 1); // x4
-					addVertexes3(h, -h, -h,		1, 1, 0, 0, 0, 1); // x5
-					addVertexes3(h, -h, h,		0, 1, 1, 0, 1, 1); // x6
-					addVertexes3(-h, -h, h,		1, 1, 1, 1, 0, 1); // x7
+					addVertices3(-h, h, -h,		0, 0, 0, 1, 1, 0); // x0
+					addVertices3(h, h, -h,		1, 0, 1, 1, 0, 0); // x1
+					addVertices3(h, h, h,		0, 0, 1, 0, 1, 0); // x2
+					addVertices3(-h, h, h,		1, 0, 0, 0, 0, 0); // x3
+					addVertices3(-h, -h, -h,	0, 1, 0, 1, 1, 1); // x4
+					addVertices3(h, -h, -h,		1, 1, 0, 0, 0, 1); // x5
+					addVertices3(h, -h, h,		0, 1, 1, 0, 1, 1); // x6
+					addVertices3(-h, -h, h,		1, 1, 1, 1, 0, 1); // x7
 				}
 				else
 				{
@@ -1174,28 +1210,26 @@ namespace vkl
 
 			}
 
-			res = std::make_shared<RigidMesh>(CreateInfo{
-				.app = cmi.app, 
-				.name = cmi.name,
-				.vertices = std::move(vertices),
-				.indices = std::move(indices),
-				.auto_compute_tangents = true,
-				.synch = cmi.synch,
-			});
-
 		}
-		
+		RigidMesh res = ci;
 		
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeSphere(SphereMakeInfo const& smi)
+	RigidMesh RigidMesh::MakeSphere(SphereMakeInfo const& smi)
 	{
 		const uint theta_divisions = smi.theta_divisions;
 		const uint phi_divisions = smi.phi_divisions;
 		const size_t num_vertices = (theta_divisions + 1) * (phi_divisions + 1);
-		std::vector<Vertex> vertices(num_vertices);
-		std::vector<uint> indices(num_vertices * 2 * 3);
+		CreateInfo ci{
+			.app = smi.app,
+			.name = smi.name,
+			.auto_compute_tangents = true,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
+		vertices.resize(num_vertices);
+		indices.resize(num_vertices * 2 * 3);
 
 		for (int t = 0; t <= theta_divisions; ++t)
 		{
@@ -1245,27 +1279,24 @@ namespace vkl
 
 		}
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
-			.app = smi.app,
-			.name = smi.name,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.auto_compute_tangents = true,
-		});
+		RigidMesh res = ci;
 		return res;
 	}
 
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeTetrahedron(PlatonMakeInfo const& pmi)
+	RigidMesh RigidMesh::MakeTetrahedron(PlatonMakeInfo const& pmi)
 	{
-		std::vector<Vertex> vertices;
-		std::vector<uint> indices;
+		CreateInfo ci{
+			.app = pmi.app,
+			.name = pmi.name,
+			.compute_normals = 1,
+			.auto_compute_tangents = true,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
 		const float r = pmi.radius;
 		const vec3 c = pmi.center;
-
-		int compute_normals = 1;
-		bool compute_tangents = true;
 
 		if (pmi.face_normal)
 		{
@@ -1293,7 +1324,7 @@ namespace vkl
 			
 			indices.resize(3 * 4);
 			std::iota(indices.begin(), indices.end(), 0);
-			compute_normals = false;
+			ci.compute_normals = 0;
 		}
 		else
 		{
@@ -1319,22 +1350,21 @@ namespace vkl
 			addFace(0, 3, 1);
 		}
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
-			.app = pmi.app,
-			.name = pmi.name,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.compute_normals = compute_normals,
-			.auto_compute_tangents = compute_tangents,
-		});
+		RigidMesh res = ci;
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeOctahedron(PlatonMakeInfo const& pmi)
+	RigidMesh RigidMesh::MakeOctahedron(PlatonMakeInfo const& pmi)
 	{
 		const float phi = std::numbers::phi_v<float>;
-		std::vector<Vertex> vertices;
-		std::vector<uint> indices;
+		CreateInfo ci{
+			.app = pmi.app,
+			.name = pmi.name,
+			.compute_normals = 1,
+			.auto_compute_tangents = false,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
 		const float r = pmi.radius;
 		const vec3 c = pmi.center;
@@ -1410,64 +1440,64 @@ namespace vkl
 		}
 
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
-			.app = pmi.app,
-			.name = pmi.name,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.compute_normals = 1,
-			.auto_compute_tangents = false,
-		});
-
-		res->_host.vertices[4].normal = vec4(vec3(0, -1, 0));
-		res->_host.vertices[6].normal = vec4(vec3(0, -1, 0));
-		res->_host.vertices[7].normal = vec4(vec3(0, -1, 0));
-		res->_host.vertices[8].normal = vec4(vec3(0, -1, 0));
+		RigidMesh res = ci;
+		// What?
+		res._host.vertices[4].normal = vec4(vec3(0, -1, 0));
+		res._host.vertices[6].normal = vec4(vec3(0, -1, 0));
+		res._host.vertices[7].normal = vec4(vec3(0, -1, 0));
+		res._host.vertices[8].normal = vec4(vec3(0, -1, 0));
 
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeIcosahedron(PlatonMakeInfo const& pmi)
+	RigidMesh RigidMesh::MakeIcosahedron(PlatonMakeInfo const& pmi)
 	{
 		const float phi = std::numbers::phi_v<float>;
-		std::vector<Vertex> vertices;
-		std::vector<uint> indices;
+		CreateInfo ci{
+			.app = pmi.app,
+			.name = pmi.name,
+			.auto_compute_tangents = true,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
 		VKL_NOT_YET_IMPLEMENTED;
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
-			.app = pmi.app,
-			.name = pmi.name,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.auto_compute_tangents = true,
-		});
+		RigidMesh res = ci;
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeDodecahedron(PlatonMakeInfo const& pmi)
+	RigidMesh RigidMesh::MakeDodecahedron(PlatonMakeInfo const& pmi)
 	{
 		const float phi = std::numbers::phi_v<float>;
-		std::vector<Vertex> vertices;
-		std::vector<uint> indices;
+		CreateInfo ci{
+			.app = pmi.app,
+			.name = pmi.name,
+			.auto_compute_tangents = true,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
 		VKL_NOT_YET_IMPLEMENTED;
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(CreateInfo{
-			.app = pmi.app,
-			.name = pmi.name,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.auto_compute_tangents = true,
-		});
+		RigidMesh res = ci;
 		return res;
 	}
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeCylinder(CylinderMakeInfo const& cmi)
+	RigidMesh RigidMesh::MakeCylinder(CylinderMakeInfo const& cmi)
 	{
-		std::vector<Vertex> vertices;
-		std::vector<uint> indices;
+		CreateInfo ci{
+			.app = cmi.app,
+			.name = cmi.name,
+			.dims = 3,
+			.compute_normals = cmi.face_normals ? 2 : 0,
+			.auto_compute_tangents = true,
+			.create_device_buffer = false,
+		};
+		std::vector<Vertex>& vertices = ci.vertices;
+		std::vector<uint>& indices = ci.indices;
 
+		// UV's V
 		float v = 1;
 		if (cmi.up_disk || cmi.down_disk)
 		{
@@ -1520,16 +1550,7 @@ namespace vkl
 			addDivision(cmi.divisions, 0, 1);
 		}
 
-		std::shared_ptr<RigidMesh> res = std::make_shared<RigidMesh>(RigidMesh::CreateInfo{
-			.app = cmi.app,
-			.name = cmi.name,
-			.dims = 3,
-			.vertices = std::move(vertices),
-			.indices = std::move(indices),
-			.compute_normals = cmi.face_normals ? 2 : 0,
-			.auto_compute_tangents = true,
-			.create_device_buffer = false,
-		});
+		RigidMesh res = ci;
 
 		if (cmi.up_disk)
 		{
@@ -1542,7 +1563,7 @@ namespace vkl
 				.base_uv = Vector2f(0, v),
 				.range_uv = Vector2f(cmi.down_disk ? 0.5 : 1, 1 - v),
 			});
-			res->merge(*up_disk);
+			res.merge(up_disk);
 		}
 		if (cmi.down_disk)
 		{
@@ -1556,20 +1577,19 @@ namespace vkl
 				.base_uv = Vector2f(cmi.up_disk ? 0.5 : 0, v),
 				.range_uv = Vector2f(cmi.up_disk ? 0.5 : 1, 1 - v),
 			});
-			down_disk->flipFaces();
-			res->merge(*down_disk);
+			down_disk.flipFaces();
+			res.merge(down_disk);
 		}
-		res->createDeviceBuffer({});
+		res.createDeviceBuffer({});
 		return res;
 	}
 
 
-	std::shared_ptr<RigidMesh> RigidMesh::MakeRigidMesh(RigidMeshMakeInfo const& info)
+	RigidMesh RigidMesh::MakeRigidMesh(RigidMeshMakeInfo const& info)
 	{
-		std::shared_ptr<RigidMesh> res = {};
 		if (info.type == RigidMeshMakeInfo::Type::Square)
 		{
-			res = MakeSquare(Square3DMakeInfo{
+			return MakeSquare(Square3DMakeInfo{
 				.app = info.app,
 				.name = info.name,
 				.center = info.center,
@@ -1578,7 +1598,7 @@ namespace vkl
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Disk)
 		{
-			res = MakeDisk(Disk3DMakeInfo{
+			return MakeDisk(Disk3DMakeInfo{
 				.app = info.app,
 				.name = info.name,
 				.center = info.center,
@@ -1589,7 +1609,7 @@ namespace vkl
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Cube)
 		{
-			res = MakeCube(CubeMakeInfo{
+			return MakeCube(CubeMakeInfo{
 				.app = info.app,
 				.name = info.name,
 				.center = info.center,
@@ -1600,7 +1620,7 @@ namespace vkl
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Sphere)
 		{
-			res = MakeSphere(SphereMakeInfo{
+			return MakeSphere(SphereMakeInfo{
 				.app = info.app,
 				.name = info.name,
 				.center = info.center,
@@ -1611,7 +1631,7 @@ namespace vkl
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Tetrahedron)
 		{
-			res = MakeTetrahedron(PlatonMakeInfo{
+			return MakeTetrahedron(PlatonMakeInfo{
 				.app = info.app,
 				.name = info.name,
 				.center = info.center,
@@ -1621,7 +1641,7 @@ namespace vkl
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Cylinder)
 		{
-			res = MakeCylinder(CylinderMakeInfo{
+			return MakeCylinder(CylinderMakeInfo{
 				.app = info.app,
 				.name = info.name,
 				.center = info.center,
@@ -1634,7 +1654,13 @@ namespace vkl
 				.disk_radial = true,
 			});
 		}
-		return res;
+		else
+		{
+			return RigidMesh(CreateInfo{
+				.app = info.app,
+				.name = info.name,
+			});
+		}
 	}
 	
 }

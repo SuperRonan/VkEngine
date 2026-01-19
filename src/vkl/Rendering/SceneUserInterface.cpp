@@ -84,12 +84,12 @@ namespace vkl
 			.fragment_shader_path = shader_lib / "Rendering/Show3DBasis.glsl",
 		});
 
-		_box_mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+		_box_mesh = std::make_shared<RigidMesh>(RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
 			.app = application(),
 			.name = name() + ".BoxMesh",
 			.center = Vector3f::Constant(0.5),
 			.wireframe = true,
-		});
+		}));
 		
 		DefinitionsList render_box_3D_defs = {
 			"DIMENSIONS 3",

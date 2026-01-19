@@ -189,13 +189,13 @@ namespace vkl
 
 	std::shared_ptr<Scene::Node> MakeModelNode(BasicModelNodeCreateInfo const& ci)
 	{
-		std::shared_ptr<Mesh> mesh = RigidMesh::MakeRigidMesh(RigidMesh::RigidMeshMakeInfo{
+		std::shared_ptr<Mesh> mesh = std::make_shared<RigidMesh>(RigidMesh::MakeRigidMesh(RigidMesh::RigidMeshMakeInfo{
 			.app = ci.app,
 			.name = std::format("{}.Mesh", ci.name),
 			.type = ci.mesh_type,
 			.subdivisions = ci.subdivisions,
 			.face_normal = true,
-		});
+		}));
 
 		std::shared_ptr<PBMaterial> material = std::make_shared<PBMaterial>(PBMaterial::CI{
 			.app = ci.app,

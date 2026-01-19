@@ -135,10 +135,10 @@ namespace vkl
 				.cavity = 0,
 			});
 
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+			std::shared_ptr<RigidMesh> mesh = std::make_shared<RigidMesh>(RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
 				.app = app,
 				.name = "Mirror Box",
-			});
+			}));
 
 			std::shared_ptr<Model> model = std::make_shared<Model>(Model::CreateInfo{
 				.app = app,
@@ -180,10 +180,10 @@ namespace vkl
 
 		if (true)
 		{
-			std::shared_ptr<RigidMesh> mesh = RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
+			std::shared_ptr<RigidMesh> mesh = std::make_shared<RigidMesh>(RigidMesh::MakeSphere(RigidMesh::SphereMakeInfo{
 				.app = app,
 				.radius = 0.4,
-			});
+			}));
 
 			const size_t n_m = 5;
 			const size_t n_r = 5;
@@ -336,18 +336,18 @@ namespace vkl
 		float red_roughness = preset.metallic_walls ? 0.1 : 1;
 		float green_roughness = preset.metallic_walls ? 0.05 : 1;
 
-		std::shared_ptr<RigidMesh> wall_mesh = RigidMesh::MakeSquare(RigidMesh::Square3DMakeInfo{
+		std::shared_ptr<RigidMesh> wall_mesh = std::make_shared<RigidMesh>(RigidMesh::MakeSquare(RigidMesh::Square3DMakeInfo{
 			.app = app,
 			.name = "Square",
 			.wireframe = false,
-		});
+		}));
 
-		std::shared_ptr<RigidMesh> box_mesh = RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+		std::shared_ptr<RigidMesh> box_mesh = std::make_shared<RigidMesh>(RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
 			.app = app,
 			.name = "Cube",
 			.wireframe = false,
 			.face_normal = true,
-		});
+		}));
 
 		auto MakeMaterial = [&](std::string_view name, vec3 const& color, float roughness = 1, float metallic = 0)
 		{

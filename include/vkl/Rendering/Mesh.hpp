@@ -108,6 +108,8 @@ namespace vkl
 
 		Mesh(CreateInfo const& ci);
 
+		Mesh(Mesh&& other) noexcept;
+
 		virtual ~Mesh() = default;
 
 		constexpr Type type()const
@@ -169,7 +171,7 @@ namespace vkl
 		struct HostData
 		{
 			bool loaded = false;
-			bool use_full_vertices = true;
+			bool use_full_vertices = true; // TODO a bitfield for the different attributes
 			uint8_t dims = 3;
 			// Can be 2D or 3D
 			std::vector<float> positions;
@@ -182,6 +184,8 @@ namespace vkl
 			};
 
 			HostData() = default;
+
+			HostData(HostData&& other) noexcept;
 
 			~HostData()
 			{
@@ -354,6 +358,8 @@ namespace vkl
 
 		RigidMesh(CreateInfo const& ci);
 
+		RigidMesh(RigidMesh&& other) noexcept;
+
 		virtual ~RigidMesh();
 
 		MeshHeader getHeader() const;
@@ -443,7 +449,7 @@ namespace vkl
 			Vector2 center = Vector2::Zero();
 			bool wireframe = false;
 		};
-		static std::shared_ptr<RigidMesh> MakeSquare(Square2DMakeInfo const& smi);
+		static RigidMesh MakeSquare(Square2DMakeInfo const& smi);
 
 		struct Square3DMakeInfo
 		{
@@ -452,7 +458,7 @@ namespace vkl
 			Vector3 center = Vector3::Zero();
 			bool wireframe = false;
 		};
-		static std::shared_ptr<RigidMesh> MakeSquare(Square3DMakeInfo const& smi);
+		static RigidMesh MakeSquare(Square3DMakeInfo const& smi);
 
 		struct Disk3DMakeInfo
 		{
@@ -469,7 +475,7 @@ namespace vkl
 			Vector2f range_uv = Vector2f::Ones();
 		};
 
-		static std::shared_ptr<RigidMesh> MakeDisk(Disk3DMakeInfo const& dmi);
+		static RigidMesh MakeDisk(Disk3DMakeInfo const& dmi);
 
 		struct CubeMakeInfo
 		{
@@ -484,7 +490,7 @@ namespace vkl
 			bool synch = true;
 		};
 
-		static std::shared_ptr<RigidMesh> MakeCube(CubeMakeInfo const& cmi);
+		static RigidMesh MakeCube(CubeMakeInfo const& cmi);
 
 		struct SphereMakeInfo
 		{
@@ -496,7 +502,7 @@ namespace vkl
 			uint phi_divisions = 32;
 		};
 
-		static std::shared_ptr<RigidMesh> MakeSphere(SphereMakeInfo const& smi);
+		static RigidMesh MakeSphere(SphereMakeInfo const& smi);
 
 		struct PlatonMakeInfo
 		{
@@ -508,10 +514,10 @@ namespace vkl
 			bool face_normal = false;
 		};
 
-		static std::shared_ptr<RigidMesh> MakeTetrahedron(PlatonMakeInfo const& pmi);
-		static std::shared_ptr<RigidMesh> MakeOctahedron(PlatonMakeInfo const& pmi);
-		static std::shared_ptr<RigidMesh> MakeIcosahedron(PlatonMakeInfo const& pmi);
-		static std::shared_ptr<RigidMesh> MakeDodecahedron(PlatonMakeInfo const& pmi);
+		static RigidMesh MakeTetrahedron(PlatonMakeInfo const& pmi);
+		static RigidMesh MakeOctahedron(PlatonMakeInfo const& pmi);
+		static RigidMesh MakeIcosahedron(PlatonMakeInfo const& pmi);
+		static RigidMesh MakeDodecahedron(PlatonMakeInfo const& pmi);
 
 		struct CylinderMakeInfo
 		{
@@ -528,7 +534,7 @@ namespace vkl
 			bool face_normals = false;
 			bool disk_radial = false;
 		};
-		static std::shared_ptr<RigidMesh> MakeCylinder(CylinderMakeInfo const& cmi);
+		static RigidMesh MakeCylinder(CylinderMakeInfo const& cmi);
 
 		struct RigidMeshMakeInfo
 		{
@@ -552,6 +558,6 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_ENUM_VALUE_1)
 			bool face_normal = true;
 		};
 
-		static std::shared_ptr<RigidMesh> MakeRigidMesh(RigidMeshMakeInfo const& info);
+		static RigidMesh MakeRigidMesh(RigidMeshMakeInfo const& info);
 	};
 }
