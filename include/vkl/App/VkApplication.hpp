@@ -554,7 +554,7 @@ namespace vkl
 			_app(app)
 		{}
 
-		template <typename StringLike = std::string>
+		template <that::concepts::StringLike StringLike>
 		constexpr VkObject(VkApplication* app, StringLike && name) noexcept :
 			_app(app),
 			_name(std::forward<StringLike>(name))
@@ -593,7 +593,7 @@ namespace vkl
 			return _name;
 		}
 
-		template <typename StringLike = std::string>
+		template <that::concepts::StringLike StringLike>
 		constexpr void setName(StringLike && new_name)
 		{
 			_name = std::forward<StringLike>(new_name);
