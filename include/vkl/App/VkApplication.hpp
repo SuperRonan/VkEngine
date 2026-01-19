@@ -560,11 +560,11 @@ namespace vkl
 			_name(std::forward<StringLike>(name))
 		{}
 
-		VkObject(VkObject const& ) noexcept = delete;
-		VkObject(VkObject&&) noexcept = delete;
+		VkObject(VkObject const& ) = delete;
+		VkObject(VkObject&&) noexcept = default;
 
-		VkObject& operator=(VkObject const&) noexcept = delete;
-		VkObject& operator=(VkObject&&) noexcept = delete;
+		VkObject& operator=(VkObject const&) = delete;
+		VkObject& operator=(VkObject&&) noexcept = default;
 
 		virtual ~VkObject() {};
 
