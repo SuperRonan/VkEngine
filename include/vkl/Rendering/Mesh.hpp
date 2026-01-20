@@ -86,6 +86,7 @@ namespace vkl
 
 		Type _type = Type::None;
 		bool _is_synch = true;
+		bool _static = false;
 
 		AABB3f _aabb;
 
@@ -351,7 +352,7 @@ namespace vkl
 			std::vector<uint> indices = {};
 			int compute_normals = 0;
 			bool auto_compute_tangents = false;
-			bool create_device_buffer = true;
+			bool create_device_buffer =  false;
 			bool synch = true;
 		};
 		using CI = CreateInfo;
@@ -385,6 +386,8 @@ namespace vkl
 		void flipFaces();
 
 		void createDeviceBuffer(std::vector<uint32_t> const& queues);
+
+		void updateDeviceData();
 
 		virtual Status getStatus() const override;
 

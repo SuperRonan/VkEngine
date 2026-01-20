@@ -310,8 +310,16 @@ namespace vkl
 
 	void RigidMesh::merge(RigidMesh const& other) noexcept
 	{
-		assert(_host.use_full_vertices == other._host.use_full_vertices);
-		assert(_host.dims == other._host.dims);
+		if (_host.indicesSize() == 0 && _host.numVertices() == 0)
+		{
+			_host.use_full_vertices = other._host.use_full_vertices;
+			_host.dims = other._host.dims;
+		}
+		else
+		{
+			assert(_host.use_full_vertices == other._host.use_full_vertices);
+			assert(_host.dims == other._host.dims);
+		}
 		const uint offset = _host.numVertices();
 		if (_host.use_full_vertices)
 		{
@@ -562,43 +570,36 @@ namespace vkl
 	void RigidMesh::createDeviceBuffer(std::vector<uint32_t> const& queues)
 	{
 		assert(_host.loaded);
-		assert(!_device.loaded());
-
-		const MeshHeader header = getHeader();
-
-		const size_t ssbo_align = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
-		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
-		
-		_device.header_size = std::alignUp(sizeof(header), ssbo_align);
-		if (_host.use_full_vertices)
+		const bool const_buffer = _static;
+		if (_device.loaded())
 		{
-			_device.vertices_size = std::alignUp(header.num_vertices * sizeof(Vertex), ssbo_align);
+			
 		}
-		else
-		{
-			_device.vertices_size = std::alignUp(header.num_vertices * sizeof(float) * _host.dims, ssbo_align);
-		}
-		_device.indices_size = std::alignUp(_host.indexBufferSize(), ssbo_align);
-		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
 
-		_device.num_indices = header.num_indices;
-		_device.num_vertices = header.num_vertices;
-		_device.index_type = _host.index_type;
-		
+		updateDeviceData();
+
 		bool enable_blas = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
 		VkBufferUsageFlags buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_BITS | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		if (enable_blas)
 		{
 			buffer_usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 		}
-		_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
-			.app = _app,
-			.name = name() + ".mesh_buffer",
-			.size = &_device.total_buffer_size,
-			.usage =  buffer_usage,
-			.queues = queues,
-			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
-		});
+		auto buffer_size = Dyn<VkDeviceSize>::MakeMaybeDyn(const_buffer, &_device.total_buffer_size);
+		if (!_device.mesh_buffer)
+		{
+			_device.mesh_buffer = std::make_shared<Buffer>(Buffer::CI{
+				.app = _app,
+				.name = name() + ".mesh_buffer",
+				.size = buffer_size,
+				.usage =  buffer_usage,
+				.queues = queues,
+				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
+			});
+		}
+		else
+		{
+			_device.mesh_buffer->size() = buffer_size;
+		}
 
 		_device.index_type_size = [&]() {
 			uint8_t res = 0;
@@ -617,43 +618,93 @@ namespace vkl
 			return res;
 		}();
 
-		_device.header_buffer = BufferAndRange{
-			.buffer = _device.mesh_buffer,
-			.range = Buffer::Range{.begin = 0, .len = _device.header_size},
-		};
-		_device.vertex_buffer = BufferAndRange{
-			.buffer = _device.mesh_buffer,
-			.range = Buffer::Range{.begin = _device.header_size, .len = _device.vertices_size},
-		};
-		_device.index_buffer = BufferAndRange{
-			.buffer = _device.mesh_buffer,
-			.range = Buffer::Range{.begin = _device.header_size + _device.vertices_size, .len = _device.indices_size},
-		};
-
-
+		_device.header_buffer.buffer = _device.mesh_buffer;
+		_device.vertex_buffer.buffer = _device.mesh_buffer;
+		_device.index_buffer.buffer = _device.mesh_buffer;
+		_device.header_buffer.range = Buffer::Range{ .begin = 0, .len = _device.header_size };
+		_device.vertex_buffer.range = Dyn<Buffer::Range>::MakeMaybeDyn(const_buffer, 
+			[this]() {return Buffer::Range{ .begin = _device.header_size, .len = _device.vertices_size }; }
+		);
+		_device.index_buffer.range = Dyn<Buffer::Range>::MakeMaybeDyn(const_buffer,
+			[this]() {return Buffer::Range{ .begin = _device.header_size + _device.vertices_size, .len = _device.indices_size }; }
+		);
+		callResourceUpdateCallbacks();
 		if(enable_blas)
 		{
-			_blas = std::make_shared<BLAS>(BLAS::CI{
-				.app = application(),
-				.name = name() + ".BLAS",
-				.geometry_flags = {},
-				.build_flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
-				.geometries = {
-					BLAS::Geometry{
-						.vertex_buffer = _device.vertex_buffer,
-						.vertex_description = VertexDescriptionAS{
-							.format = VK_FORMAT_R32G32B32_SFLOAT,
-							.stride = sizeof(Vertex),
-						},
-						.index_buffer = _device.index_buffer,
-						.index_type = _device.index_type,
-						.capacity = BLAS::Geometry::Capacity{
-							.max_vertex = header.num_vertices,
-							.max_primitives = header.num_primitives,
-						},
-					}
-				}
+			auto capacity = Dyn<BLAS::Geometry::Capacity>::MakeMaybeDyn(const_buffer, [this]() {
+				const MeshHeader header = getHeader();
+				return BLAS::Geometry::Capacity{
+					.max_vertex = header.num_vertices,
+					.max_primitives = header.num_primitives,
+				};
 			});
+			auto index_type = Dyn<VkIndexType>::MakeMaybeDyn(const_buffer, &_device.index_type);
+			VkBuildAccelerationStructureFlagsKHR build_flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+			if (!const_buffer)
+			{
+				build_flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+			}
+			if (_blas)
+			{
+				_blas.reset();
+			}
+			if (!_blas)
+			{
+				_blas = std::make_shared<BLAS>(BLAS::CI{
+					.app = application(),
+					.name = name() + ".BLAS",
+					.geometry_flags = {},
+					.build_flags = build_flags,
+					.geometries = {
+						BLAS::Geometry{
+							.vertex_buffer = _device.vertex_buffer,
+							.vertex_description = VertexDescriptionAS{
+								.format = VK_FORMAT_R32G32B32_SFLOAT,
+								.stride = sizeof(Vertex),
+							},
+							.index_buffer = _device.index_buffer,
+							.index_type = index_type,
+							.capacity = std::move(capacity),
+						}
+					}
+				});
+			}
+		}
+	}
+
+	void RigidMesh::updateDeviceData()
+	{
+		const MeshHeader header = getHeader();
+
+		const size_t ssbo_align = application()->deviceProperties().props2.properties.limits.minStorageBufferOffsetAlignment;
+		const size_t ubo_align = application()->deviceProperties().props2.properties.limits.minUniformBufferOffsetAlignment;
+
+		_device.header_size = std::alignUp(sizeof(header), ssbo_align);
+		if (_host.use_full_vertices)
+		{
+			_device.vertices_size = std::alignUp(header.num_vertices * sizeof(Vertex), ssbo_align);
+		}
+		else
+		{
+			_device.vertices_size = std::alignUp(header.num_vertices * sizeof(float) * _host.dims, ssbo_align);
+		}
+		_device.indices_size = std::alignUp(_host.indexBufferSize(), ssbo_align);
+		_device.total_buffer_size = _device.header_size + _device.vertices_size + _device.indices_size;
+
+		_device.num_indices = header.num_indices;
+		_device.num_vertices = header.num_vertices;
+		_device.index_type = _host.index_type;
+
+		_device.up_to_date = false;
+		_device.uploaded = false;
+
+		if (_blas)
+		{
+			_blas->destroyInstanceIFN();
+			//if (const auto& blasi = _blas->instance())
+			//{
+			//	blasi->requireRebuild();
+			//}
 		}
 	}
 
@@ -756,6 +807,10 @@ namespace vkl
 
 	void RigidMesh::updateResources(UpdateContext& ctx)
 	{
+		if (!_device.mesh_buffer)
+		{
+			createDeviceBuffer({});
+		}
 		if (_device.mesh_buffer)
 		{
 			_device.mesh_buffer->updateResources(ctx);
