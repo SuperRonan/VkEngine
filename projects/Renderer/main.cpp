@@ -630,7 +630,7 @@ namespace vkl
 	{
 	public:
 
-		virtual std::string getProjectName() const override
+		virtual const char* getProjectName() const override
 		{
 			return PROJECT_NAME;
 		}

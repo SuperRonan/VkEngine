@@ -104,7 +104,7 @@ namespace vkl
 
 		static void FillArgs(argparse::ArgumentParser & args_parser);
 
-		virtual std::string getProjectName() const = 0;
+		virtual const char* getProjectName() const = 0;
 		
 		struct DesiredQueueInfo
 		{
