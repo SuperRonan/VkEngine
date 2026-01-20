@@ -413,7 +413,11 @@ namespace std
 		return containsCaseInsensitive_sv<Char>(SV(hay), SV(needle));
 	}
 
-
+	template <class T, class ...Args>
+	static constexpr bool IsAnyOf(T const& value, Args&& ...args)
+	{
+		return ((value == args) || ...);
+	}
 
 	template <std::forward_iterator It>
 	size_t HashSequence(It const& begin, It const& end) noexcept
