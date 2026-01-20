@@ -522,7 +522,7 @@ namespace vkl
 							MakeAffineTransform(Rotation3XYZ(Vector3f(Radians(25.0f), Radians(30.0f), Radians(0.0f)))) *
 							ScalingMatrix(Vector3f(scale, scale, scale)),
 				.mesh_type = RigidMesh::RigidMeshMakeInfo::Type::Sphere,
-				.subdivisions = uvec4(3, 6, 1, 1),
+				.subdivisions = uvec4(6, 3, 1, 1),
 				.albedo = vec3::Zero(),
 				.roughness = 0,
 				.metallic_or_eta = 2.5, // Diamond
@@ -535,6 +535,7 @@ namespace vkl
 			point_light_intensity = 0.1;
 
 			std::shared_ptr<Scene::Node> beams = std::make_shared<Scene::Node>(Scene::Node::CI{
+				.app = app,
 				.name = "Beams",
 				.matrix = TranslationMatrix(Vector3f(0, 0.0, 0)),
 			});

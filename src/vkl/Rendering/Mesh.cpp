@@ -1227,7 +1227,7 @@ namespace vkl
 		std::vector<Vertex>& vertices = ci.vertices;
 		std::vector<uint>& indices = ci.indices;
 		vertices.resize(num_vertices);
-		indices.resize(num_vertices * 2 * 3);
+		indices.resize(((theta_divisions) * (phi_divisions + 1) - 1) * 2 * 3);
 
 		for (int t = 0; t <= theta_divisions; ++t)
 		{
@@ -1623,8 +1623,8 @@ namespace vkl
 				.name = info.name,
 				.center = info.center,
 				.radius = info.sizes.x(),
-				.theta_divisions = info.subdivisions.x(),
-				.phi_divisions = info.subdivisions.y(),
+				.theta_divisions = info.subdivisions.y(),
+				.phi_divisions = info.subdivisions.x(),
 			});
 		}
 		else if (info.type == RigidMeshMakeInfo::Type::Tetrahedron)
