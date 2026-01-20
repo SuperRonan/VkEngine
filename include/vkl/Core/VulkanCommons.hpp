@@ -87,7 +87,6 @@ struct std::SetUseCommonOperators<std::unordered_set<T, H, Eq, Allocator>> : pub
 // SDL forward declarations
 struct SDL_Window;
 union SDL_Event;
-struct SDL_DialogFileFilter;
 
 
 namespace vkl

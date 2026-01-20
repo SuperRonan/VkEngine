@@ -11,8 +11,6 @@
 
 #include <vkl/IO/DependencyTracker.hpp>
 
-#include <SDL3/SDL.h>
-
 namespace vkl
 {
 	
@@ -557,23 +555,23 @@ namespace vkl
 						}
 					}
 					std::array filters = {
-						SDL_DialogFileFilter{
+						FileDialog::Filter{
 							.name = "Any image file",
 							.pattern = "*",
 						},
-						SDL_DialogFileFilter{
+						FileDialog::Filter{
 							.name = "PNG image",
 							.pattern = "png",
 						},
-						SDL_DialogFileFilter{
+						FileDialog::Filter{
 							.name = "JPEG image",
 							.pattern = "jpg;jpeg",
 						},
-						SDL_DialogFileFilter{
+						FileDialog::Filter{
 							.name = "TGA image",
 							.pattern = "tga",
 						},
-						SDL_DialogFileFilter{
+						FileDialog::Filter{
 							.name = "HDR image",
 							.pattern = "hdr",
 						},

@@ -12,6 +12,13 @@ namespace vkl
 	{
 	public:
 
+		// Must match SDL_DialogFileFilter
+		struct Filter
+		{
+			const char* name = nullptr;
+			const char* pattern = nullptr;
+		};
+
 		enum class Mode {
 			OpenFile,
 			OpenFolder,
@@ -22,7 +29,7 @@ namespace vkl
 
 		struct OpenInfo
 		{
-			std::span<SDL_DialogFileFilter> filters;
+			std::span<Filter> filters;
 			Path default_location = {};
 			SDL_Window* parent_window = nullptr;
 			bool allow_multiple = false;
@@ -32,7 +39,7 @@ namespace vkl
 	protected:
 
 		that::ExtensibleStringStorage _string_storage;
-		MyVector<SDL_DialogFileFilter> _filters;
+		MyVector<Filter> _filters;
 		
 		std::mutex _mutex = {};
 		std::condition_variable _cv = {};

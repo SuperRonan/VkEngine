@@ -7,6 +7,8 @@
 
 namespace vkl
 {
+	static_assert(sizeof(FileDialog::Filter) == sizeof(SDL_DialogFileFilter));
+
 	FileDialog::FileDialog(CreateInfo const& ci) {}
 
 	FileDialog::~FileDialog() {}
@@ -52,7 +54,7 @@ namespace vkl
 			{
 				size_t name_index = _string_storage.pushBack(info.filters[i].name);
 				size_t pattern_index = _string_storage.pushBack(info.filters[i].pattern);
-				SDL_DialogFileFilter tmp;
+				Filter tmp;
 				tmp.name = std::bit_cast<const char*>(uintptr_t(name_index));
 				tmp.pattern = std::bit_cast<const char*>(uintptr_t(pattern_index));
 				_filters[i] = tmp;
@@ -67,7 +69,7 @@ namespace vkl
 		
 		if (info.mode == Mode::OpenFile)
 		{
-			SDL_ShowOpenFileDialog(callback, this, info.parent_window, _filters.data(), _filters.size(), _string_storage.data() + default_location_id, info.allow_multiple);
+			SDL_ShowOpenFileDialog(callback, this, info.parent_window, reinterpret_cast<SDL_DialogFileFilter*>(_filters.data()), _filters.size(), _string_storage.data() + default_location_id, info.allow_multiple);
 		}
 		else if (info.mode == Mode::OpenFolder)
 		{
@@ -75,7 +77,7 @@ namespace vkl
 		}
 		else if (info.mode == Mode::SaveFile)
 		{
-			SDL_ShowSaveFileDialog(callback, this, info.parent_window, _filters.data(), _filters.size(), _string_storage.data() + default_location_id);
+			SDL_ShowSaveFileDialog(callback, this, info.parent_window, reinterpret_cast<SDL_DialogFileFilter*>(_filters.data()), _filters.size(), _string_storage.data() + default_location_id);
 		}
 	}
 
