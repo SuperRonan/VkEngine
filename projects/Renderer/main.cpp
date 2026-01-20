@@ -336,18 +336,21 @@ namespace vkl
 		float red_roughness = preset.metallic_walls ? 0.1 : 1;
 		float green_roughness = preset.metallic_walls ? 0.05 : 1;
 
-		std::shared_ptr<RigidMesh> wall_mesh = std::make_shared<RigidMesh>(RigidMesh::MakeSquare(RigidMesh::Square3DMakeInfo{
+		std::shared_ptr<RigidMesh> wall_mesh = std::make_shared<ParametrableRigidMesh>(ParametrableRigidMesh::CI{
 			.app = app,
 			.name = "Square",
-			.wireframe = false,
-		}));
+			.params = ParametrableRigidMesh::Parameters{
+				.type = ParametrableRigidMesh::Type::Square,
+			},
+		});
 
-		std::shared_ptr<RigidMesh> box_mesh = std::make_shared<RigidMesh>(RigidMesh::MakeCube(RigidMesh::CubeMakeInfo{
+		std::shared_ptr<RigidMesh> box_mesh = std::make_shared<ParametrableRigidMesh>(ParametrableRigidMesh::CI{
 			.app = app,
-			.name = "Cube",
-			.wireframe = false,
-			.face_normal = true,
-		}));
+			.name = "Box",
+			.params = ParametrableRigidMesh::Parameters{
+				.type = ParametrableRigidMesh::Type::Box,
+			},
+		});
 
 		auto MakeMaterial = [&](std::string_view name, vec3 const& color, float roughness = 1, float metallic = 0)
 		{

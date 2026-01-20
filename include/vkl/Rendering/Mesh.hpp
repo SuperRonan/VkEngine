@@ -23,6 +23,7 @@ namespace vkl
 	{
 		class MeshInspector;
 		class RigidMeshInspector;
+		class ParametrableRigidMeshInspector;
 	}
 	struct MeshHeader
 	{
@@ -546,11 +547,12 @@ namespace vkl
 #define ITERATE_OVER_RIGID_MESH_MAKE_TYPE(X) \
 				X(Square) \
 				X(Disk) \
-				X(Cube) \
+				X(Box) \
 				X(Sphere) \
 				X(Tetrahedron) \
 				X(Cylinder)
 ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_ENUM_VALUE_1)
+				Cube = Box,
 			};
 			VkApplication* app = nullptr;
 			std::string name = {};
@@ -562,5 +564,46 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_ENUM_VALUE_1)
 		};
 
 		static RigidMesh MakeRigidMesh(RigidMeshMakeInfo const& info);
+	};
+
+	class ParametrableRigidMesh : public RigidMesh
+	{
+	public:
+		using Type = RigidMeshMakeInfo::Type;
+		
+		struct Parameters
+		{
+			Type type = Type::Box;
+			Vector3 center = Vector3::Zero();
+			Vector3 sizes = Vector3::Ones();
+			Vector<uint, 4> subdivisions = {};
+			bool face_normal = true;
+		};
+	protected:
+
+		Parameters _params;
+		bool _invalidate_params = false;
+
+		void generateMesh();
+
+	public:
+
+		struct CreateInfo
+		{
+			VkApplication* app = nullptr;
+			std::string name = {};
+			Parameters params = {};
+		};
+		using CI = CreateInfo;
+
+		ParametrableRigidMesh(CreateInfo const& ci);
+
+		virtual ~ParametrableRigidMesh() override;
+
+		virtual void updateResources(UpdateContext& ctx) override;
+
+		using InspectorType = GUI::ParametrableRigidMeshInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx) override;
 	};
 }

@@ -1716,4 +1716,132 @@ namespace vkl
 		}
 	}
 	
+	ParametrableRigidMesh::ParametrableRigidMesh(CreateInfo const& ci) :
+		RigidMesh(RigidMesh::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.create_device_buffer = false,
+		}),
+		_params(ci.params)
+	{
+		_invalidate_params = true;
+	}
+
+	ParametrableRigidMesh::~ParametrableRigidMesh()
+	{
+		
+	}
+
+	void ParametrableRigidMesh::generateMesh()
+	{
+		decompressIndices();
+		_host.loaded = false;
+		_host.positions.clear();
+		_host.vertices.clear();
+		_host.indices32.clear();
+
+		RigidMeshMakeInfo info{
+			.app = application(),
+			.name = {},
+			.type = static_cast<RigidMeshMakeInfo::Type>(_params.type),
+			.center = _params.center,
+			.sizes = _params.sizes,
+			.subdivisions = _params.subdivisions,
+			.face_normal = _params.face_normal,
+		};
+		merge(MakeRigidMesh(info));
+		computeAABB();
+
+		_host.loaded = true;
+		_invalidate_params = false;
+
+		updateDeviceData();
+	}
+
+	void ParametrableRigidMesh::updateResources(UpdateContext& ctx)
+	{
+		if (_invalidate_params)
+		{
+			generateMesh();
+		}
+
+		RigidMesh::updateResources(ctx);
+	}
+
+	namespace GUI
+	{
+		class ParametrableRigidMeshInspector : public RigidMeshInspector
+		{
+		protected:
+
+			ImGuiListSelection _type_selection;
+
+		public:
+			ParametrableRigidMeshInspector(std::shared_ptr<ParametrableRigidMesh> const& target):
+				RigidMeshInspector(target)
+			{
+				_type_selection = ImGuiListSelection::CI{
+					.name = "Type",
+					.mode = ImGuiListSelection::Mode::Dropdown,
+					.options = {
+#define DECLARE_OPTION(value) \
+						ImGuiListSelection::Option{ \
+							.name = X_STRINGIFY(value),\
+						},
+						ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_OPTION)
+					},
+					.default_index = static_cast<size_t>(params().type),
+				};
+			}
+
+			ParametrableRigidMesh* target() const
+			{
+				return static_cast<ParametrableRigidMesh*>(_target.get());
+			}
+
+			ParametrableRigidMesh::Parameters& params()
+			{
+				return target()->_params;
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				using Type = ParametrableRigidMesh::Type;
+				bool invalidate = false;
+				if (_type_selection.declare())
+				{
+					params().type = static_cast<Type>(_type_selection.index());
+					invalidate |= true;
+				}
+				if (std::IsAnyOf(params().type, Type::Cylinder, Type::Sphere, Type::Disk))
+				{
+					uint step = 1, fast = 16;
+					uint& div = params().subdivisions[0];
+					const uint old = div;
+					ImGui::InputScalar("Horizontal Subdivisions", ImGuiDataType_U32, &div, &step, &fast, nullptr);
+					div = std::max<uint>(div, 1);
+					invalidate |= old != div;
+				}
+				if (std::IsAnyOf(params().type, Type::Sphere))
+				{
+					uint step = 1, fast = 16;
+					uint& div = params().subdivisions[1];
+					const uint old = div;
+					ImGui::InputScalar("Vertical Subdivisions", ImGuiDataType_U32, &div, &step, &fast, nullptr);
+					div = std::max<uint>(div, 1);
+					invalidate |= old != div;
+				}
+				invalidate |= ImGui::Checkbox("Face Normal", &params().face_normal);
+
+				target()->_invalidate_params |= invalidate;
+				ImGui::Separator();
+				RigidMeshInspector::declareInline(ctx);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> ParametrableRigidMesh::makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::ParametrableRigidMeshInspector>(std::static_pointer_cast<ParametrableRigidMesh>(shared_this));
+	}
 }
