@@ -12,7 +12,8 @@ namespace vkl::GUI
 	bool PathWidget::declareInline(Context& ctx)
 	{
 		bool res = false;
-		res |= ImGui::TextFieldEdit(label.c_str(), &path_string, "...", text_edit_flags);
+		const char* plabel = label.empty() ? "Path" : label.c_str();
+		res |= ImGui::TextFieldEdit(plabel, &path_string, "...", text_edit_flags);
 		auto& file_dialog = ctx.getCommonFileDialog();
 		bool can_open = file_dialog->canOpen() && ((text_edit_flags & ImGuiInputTextFlags_ReadOnly) == 0);
 		{
