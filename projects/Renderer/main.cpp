@@ -811,13 +811,13 @@ namespace vkl
 				.dst = final_image,
 			};
 
-			ImageSaver image_saver = ImageSaver::CI{
+			std::shared_ptr<ImageSaver> image_saver = std::make_shared<ImageSaver>(ImageSaver::CI{
 				.app = this,
 				.name = "ImageSaver",
 				.src = final_image,
 				.dst_folder = "gen:/saved_images/",
 				.dst_filename = "renderer_",
-			};
+			});
 
 			std::shared_ptr<ComputeCommand> slang_test;
 			bool use_test_shader = false;
@@ -994,7 +994,7 @@ namespace vkl
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_picker), });
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_saver), });
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_saver, "Image Saver"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(exec.getDebugRenderer(), "Debug Renderer"));
 
 			const int flip_imgui_key = SDL_SCANCODE_F1;
@@ -1110,7 +1110,7 @@ namespace vkl
 					color_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
 					image_picker.updateResources(*update_context);
-					image_saver.updateResources(*update_context);
+					image_saver->updateResources(*update_context);
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
 
@@ -1164,7 +1164,7 @@ namespace vkl
 					});
 
 					exec.renderDebugIFP();
-					image_saver.execute(exec_thread);
+					image_saver->execute(exec_thread);
 					exec.endCommandBuffer(ptr_exec_thread);
 
 					ptr_exec_thread = exec.beginCommandBuffer(false);

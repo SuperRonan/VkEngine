@@ -11,6 +11,10 @@
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Panel.hpp>
+#include <vkl/GUI/PathWidget.hpp>
+
 #include <format>
 
 namespace vkl
@@ -34,40 +38,12 @@ namespace vkl
 		_dst_folder(ci.dst_folder),
 		_dst_filename(ci.dst_filename)
 	{
-		MyVector<ImGuiListSelection::Option> extensions_options(extensions_list.size() + 1);
-		for (size_t i = 0; i < extensions_list.size(); ++i)
-		{
-			extensions_options[i].name = extensions_list[i];
-		}
-		extensions_options.back().name = "AUTO";
-		extensions_options.back().desc = "Deduce from image pixel type";
-		_gui_extension = ImGuiListSelection::CI{
-			.name = "File type",
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.options = std::move(extensions_options),
-			.default_index = extensions_list.size(),
-		};
-		_dst_folder = std::filesystem::weakly_canonical(_dst_folder);
-		_dst_folder_str = _dst_folder.string();
+		
 	}
 
 	ImageSaver::~ImageSaver()
 	{
 
-	}
-
-	void ImageSaver::setExtension()
-	{
-		const size_t index = _gui_extension.index();
-		if (index < extensions_list.size())
-		{
-			_extension = extensions_list[index];
-		}
-		else
-		{
-			_extension.clear();
-		}
 	}
 
 	void ImageSaver::updateResources(UpdateContext& ctx)
@@ -112,7 +88,16 @@ namespace vkl
 
 				DelayedTaskExecutor * thread_pool = nullptr;
 			};
-			std::filesystem::path path = _dst_folder / (_dst_filename + std::to_string(_index));
+			std::string filename = nullptr;
+			if (_dst_filename.empty())
+			{
+				filename = std::format("{}_", application()->getProjectName());
+			}
+			else
+			{
+				filename = _dst_filename;
+			}
+			std::filesystem::path path = _dst_folder / (filename + std::to_string(_index));
 			if (!_extension.empty())
 			{
 				path += _extension;
@@ -211,66 +196,115 @@ namespace vkl
 			_save_image = false;
 		}
 	}
-
-	void ImageSaver::declareGUI(GUI::Context& ctx)
+	namespace GUI
 	{
-		ImGui::PushID(this);
-
-		_save_image = ImGui::Button("Save Image");
-
-		// TODO open a file dialog
-		if (ImGui::InputText("Folder", &_dst_folder_str))
+		class ImageSaverInspector : public Panel
 		{
-			_dst_folder = _dst_folder_str;
-			_dst_folder = std::filesystem::weakly_canonical(_dst_folder);
-			_dst_folder_str = _dst_folder.string();
-		}
+		protected:
 
-		ImGui::InputText("Filename", &_dst_filename);
+			std::shared_ptr<ImageSaver> _target;
 
-		ImGui::InputInt("Index", reinterpret_cast<int*>(&_index));
+			ImGuiListSelection _extension;
 
-		if (_gui_extension.declare())
-		{
-			setExtension();
-		}
-		if (_gui_extension.index() == FormatIndex::JPG)
-		{
-			ImGui::SliderInt("Quality", &_jpg_quality, 0, 100);
-		}
+			PathWidget _path;
 
-		ImGui::Checkbox("Stip alpha channel", &_strip_alpha);
+		public:
 
-		ImGui::Separator();
-		ImGui::Checkbox("Create Folder IFN", &_create_folder_ifn);
-		ImGui::SameLine();
-		ImGui::Checkbox("Multi-Threaded", &_save_in_separate_thread);
-		if (_save_in_separate_thread)
-		{
-			ImGui::InputInt("Save Queue Capacity", reinterpret_cast<int*>(&_pending_capacity));
-			ImGui::BeginDisabled();
-			int queue_size = _pending_tasks.size();
-			const Vector3f red(1, 0, 0);
-			const Vector3f yellow(1, 1, 0);
-			const Vector3f green(0, 1, 0);
-			const float charge = float(queue_size) / float(_pending_capacity);
-			Vector3f color;
-			if (charge < 0.5)
+			ImageSaverInspector(std::shared_ptr<ImageSaver> const& target) :
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
 			{
-				color = Lerp(green, yellow, charge * 2.0f);
+				MyVector<ImGuiListSelection::Option> extensions_options(extensions_list.size() + 1);
+				for (size_t i = 0; i < extensions_list.size(); ++i)
+				{
+					extensions_options[i].name = extensions_list[i];
+				}
+				extensions_options.back().name = "AUTO";
+				extensions_options.back().desc = "Deduce from image pixel type";
+				_extension = ImGuiListSelection::CI{
+					.name = "File type",
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.options = std::move(extensions_options),
+					.default_index = extensions_list.size(),
+				};
+				_path.label = "Directory";
+				_path.text_edit_flags = ImGuiInputTextFlags_EnterReturnsTrue;
+				_path.mode = FileDialog::Mode::OpenFolder;
+				_path.setPath(_target->_dst_folder);
 			}
-			else
-			{
-				color = Lerp(yellow, red, (charge - 0.5f) * 2.0f);
-			}
-			ImVec4 gui_color(color.x(), color.y(), color.z(), 1);
-			ImGui::PushStyleColor(ImGuiCol_Text | ImGuiCol_SliderGrab, gui_color);
-			ImGui::SliderInt("Save Queue", &queue_size, 0, _pending_capacity);
-			ImGui::PopStyleColor();
-			ImGui::EndDisabled();
-			ImGui::Separator();
-		}
 
-		ImGui::PopID();
+			virtual void declareInline(Context& ctx) override
+			{
+				_target->_save_image = ImGui::Button("Save Image");
+
+				ImGui::PushID(0);
+				if (_path.declareInline(ctx))
+				{
+					_target->_dst_folder = _path.path;
+				}
+				ImGui::PopID();
+
+				ImGui::PushID(1);
+				ImGui::TextFieldEdit("Filename", &_target->_dst_filename, application()->getProjectName());
+				ImGui::PopID();
+
+				ImGui::InputInt("Index", reinterpret_cast<int*>(&_target->_index));
+
+				if (_extension.declare())
+				{
+					const size_t index = _extension.index();
+					if (index < extensions_list.size())
+					{
+						_target->_extension = extensions_list[index];
+					}
+					else
+					{
+						_target->_extension.clear();
+					}
+				}
+				if (_extension.index() == FormatIndex::JPG)
+				{
+					ImGui::SliderInt("Quality", &_target->_jpg_quality, 0, 100);
+				}
+
+				ImGui::Checkbox("Stip alpha channel", &_target->_strip_alpha);
+
+				ImGui::Separator();
+				ImGui::Checkbox("Create Folder IFN", &_target->_create_folder_ifn);
+				ImGui::SameLine();
+				ImGui::Checkbox("Multi-Threaded", &_target->_save_in_separate_thread);
+				if (_target->_save_in_separate_thread)
+				{
+					ImGui::InputInt("Save Queue Capacity", reinterpret_cast<int*>(&_target->_pending_capacity));
+					ImGui::BeginDisabled();
+					int queue_size = _target->_pending_tasks.size();
+					const Vector3f red(1, 0, 0);
+					const Vector3f yellow(1, 1, 0);
+					const Vector3f green(0, 1, 0);
+					const float charge = float(queue_size) / float(_target->_pending_capacity);
+					Vector3f color;
+					if (charge < 0.5)
+					{
+						color = Lerp(green, yellow, charge * 2.0f);
+					}
+					else
+					{
+						color = Lerp(yellow, red, (charge - 0.5f) * 2.0f);
+					}
+					ImVec4 gui_color(color.x(), color.y(), color.z(), 1);
+					ImGui::PushStyleColor(ImGuiCol_Text | ImGuiCol_SliderGrab, gui_color);
+					ImGui::SliderInt("Save Queue", &queue_size, 0, _target->_pending_capacity);
+					ImGui::PopStyleColor();
+					ImGui::EndDisabled();
+					ImGui::Separator();
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> ImageSaver::makeInspector(std::shared_ptr<ImageSaver> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::ImageSaverInspector>(shared_this);
 	}
 }

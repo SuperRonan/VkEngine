@@ -7,17 +7,18 @@
 
 #include <vkl/VkObjects/ImageView.hpp>
 
-#include <vkl/GUI/ImGuiUtils.hpp>
-
 namespace vkl
 {
+	namespace GUI
+	{
+		class ImageSaverInspector;
+	}
 	class ImageSaver : public Module
 	{
 	protected:
 
 		std::shared_ptr<ImageView> _src = nullptr;
-		std::filesystem::path _dst_folder = {};
-		std::string _dst_folder_str = {};
+		FileSystem::Path _dst_folder = {};
 		std::string _dst_filename = {};
 		std::string _extension;
 		size_t _index = 0;
@@ -31,11 +32,8 @@ namespace vkl
 		std::mutex _mutex;
 		std::deque<std::shared_ptr<AsynchTask>> _pending_tasks;
 
-		ImGuiListSelection _gui_extension;
 		int _jpg_quality = 100;
 		bool _create_folder_ifn = true;
-
-		void setExtension();
 
 	public:
 
@@ -57,6 +55,8 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		void declareGUI(GUI::Context & ctx);
+		using InspectorType = GUI::ImageSaverInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<ImageSaver> const& shared_this, GUI::Context& ctx);
 	};
 }

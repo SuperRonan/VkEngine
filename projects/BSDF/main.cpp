@@ -287,7 +287,7 @@ namespace vkl
 
 						pip.declareGui(*gui_ctx);
 
-						image_saver.declareGUI(*gui_ctx);
+						//image_saver.declareGUI(*gui_ctx);
 
 					}
 					ImGui::End();
