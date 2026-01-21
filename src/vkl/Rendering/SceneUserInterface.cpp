@@ -11,8 +11,6 @@
 
 #include <chrono>
 
-#include <SDL3/SDL.h>
-
 namespace vkl
 {
 
@@ -334,7 +332,7 @@ namespace vkl
 
 	bool SceneUserInterface::CreateNodePopUp::canCreateNodeFromFile() const
 	{
-		return std::filesystem::exists(_path) && std::filesystem::is_regular_file(_path);
+		return std::filesystem::exists(_path.path) && std::filesystem::is_regular_file(_path.path);
 	}
 
 	void SceneUserInterface::CreateNodePopUp::open(std::shared_ptr<Scene::Node> const& parent)
@@ -348,32 +346,18 @@ namespace vkl
 		ImGui::CloseCurrentPopup();
 	}
 
-	std::array<SDL_DialogFileFilter, 1> Wavefront_file_filter = {
-		SDL_DialogFileFilter{
-			.name = "Wavefront OBJ",
-			.pattern = "obj",
-		}
-	};
-
-	void SceneUserInterface::CreateNodePopUp::openFileDialog()
+	SceneUserInterface::CreateNodePopUp::CreateNodePopUp()
 	{
-		SDL_DialogFileCallback cb = [](void* p_user_data, const char* const* file_list, int filter)
-		{
-			auto* that = static_cast<CreateNodePopUp*>(p_user_data);
-
-			if (file_list && *file_list && filter == 0)
-			{
-				const char* file_path = *file_list;
-				std::unique_lock lock(that->_file_dialog_mutex);
-				that->_path = file_path;
-				that->_path_str = that->_path.string();
-			}
-			that->_file_dialog_open = false;
+		_path.filters = {
+			FileDialog::Filter{
+				.name = "Wavefront OBJ",
+				.pattern = "obj",
+			},
 		};
-
-		SDL_Window* parent_sdl_window = static_cast<SDL_Window*>(ImGui::GetWindowViewport()->PlatformHandle);
-		
-		SDL_ShowOpenFileDialog(cb, this, parent_sdl_window, Wavefront_file_filter.data(), static_cast<int>(Wavefront_file_filter.size()), nullptr, false);
+		_path.label = "Path";
+		_path.mode = FileDialog::Mode::OpenFile,
+		_path.setPath(FileSystem::Path{});
+		_path.text_edit_flags = ImGuiInputTextFlags_EnterReturnsTrue;
 	}
 
 	static ImGuiListSelection mesh_type_selection = ImGuiListSelection::CI{
@@ -413,12 +397,6 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		int res = 0;
 		if (ImGui::BeginPopupModal(name().data(), nullptr, _flags))
 		{
-			std::unique_lock lock(_file_dialog_mutex, std::defer_lock);
-			if (_file_dialog_open)
-			{
-				lock.lock();
-			}
-
 			bool can_create = false;
 			const char* create_label = "Create";
 
@@ -428,7 +406,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				if (ImGui::BeginTabItem("Empty Node"))
 				{
 					_type = 0;
-					if (ImGui::InputText("Name", &_path_str))
+					if (ImGui::InputText("Name", &_str))
 					{
 						
 					}
@@ -438,20 +416,10 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				if (ImGui::BeginTabItem("Load model file"))
 				{
 					_type = 1;
-					if (ImGui::InputText("Path", &_path_str))
-					{
-						_path = _path_str;
-					}
-					ImGui::SameLine();
-					ImGui::BeginDisabled(_file_dialog_open);
-					if (ImGui::Button("..."))
-					{
-						openFileDialog();
-					}
-					ImGui::EndDisabled();
+					_path.declareInline(ctx);
 					ImGui::Checkbox("Synchronous load", &_synch);
 
-					if (_path.empty())
+					if (_path.path.empty())
 					{
 						create_label = "Create Empty Node";
 					}
@@ -473,7 +441,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				{
 					_type = 2;
 
-					ImGui::InputText("Name", &_path_str);
+					ImGui::InputText("Name", &_str);
 					size_t index = std::min<size_t>(_sub_type, mesh_type_selection.options().size() - 1);
 					if (mesh_type_selection.declare(index))
 					{
@@ -508,7 +476,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 				{
 					_type = 3;
 
-					ImGui::InputText("Name", &_path_str);
+					ImGui::InputText("Name", &_str);
 
 					size_t index = std::min<size_t>(_sub_type - 1, light_type_selection.options().size() - 1);
 					if (light_type_selection.declare(index))
@@ -559,7 +527,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		if (_type == 0)
 		{
 			res = std::make_shared<Scene::Node>(Scene::Node::CI{
-				.name = _path_str.empty() ? "Empty Node" : _path_str,
+				.name = _str.empty() ? "Empty Node" : _str,
 				.matrix = Matrix3x4f::Identity(),
 			});
 		}
@@ -569,9 +537,9 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			{
 				res = std::make_shared<NodeFromFile>(NodeFromFile::CI{
 					.app = app,
-					.name = _path.filename().string(),
+					.name = _path.path.filename().string(),
 					.matrix = Matrix3x4f::Identity(),
-					.path = _path,
+					.path = _path.path,
 					.synch = _synch,
 				});
 			}
@@ -581,7 +549,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			
 			BasicModelNodeCreateInfo ci{
 				.app = app,
-				.name = _path_str.empty() ? "Model" : _path_str,
+				.name = _str.empty() ? "Model" : _str,
 				.mesh_type = static_cast<RigidMesh::RigidMeshMakeInfo::Type>(_sub_type),
 				.subdivisions = uvec4(_subdivisions.x(), _subdivisions.y(), 1, 1),
 				.albedo = _color,
@@ -601,7 +569,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		{
 			res = MakeLightNode(LightNodeCreateInfo{
 				.app = app,
-				.name = _path_str.empty() ? "Light" : _path_str,
+				.name = _str.empty() ? "Light" : _str,
 				.type = static_cast<LightType>(_sub_type),
 				.emission = _color,
 				.enable_shadow_map = _bool_1,

@@ -11,6 +11,7 @@
 #include <vkl/Commands/GraphicsCommand.hpp>
 
 #include <vkl/GUI/PanelHolder.hpp>
+#include <vkl/GUI/PathWidget.hpp>
 
 namespace vkl
 {
@@ -84,14 +85,11 @@ namespace vkl
 			// 3 : Light
 			uint _type = 0;
 			ImGuiPopupFlags _flags = ImGuiWindowFlags_AlwaysAutoResize * 0;
-			
-			std::string _path_str = {};
-			std::filesystem::path _path = {};
+
+			std::string _str;
+			GUI::PathWidget _path;
 			bool _synch = false;
 			bool _popup_open = true;
-			bool _file_dialog_open = false;
-
-			std::mutex _file_dialog_mutex;
 
 			Vector3f _color = {};
 			uint _sub_type = 0;
@@ -105,6 +103,8 @@ namespace vkl
 			//friend void FileDialogCallback(void* p_user_data, const char* const* file_list, int filter);
 
 		public:
+
+			CreateNodePopUp();
 
 			void open(std::shared_ptr<Scene::Node> const& parent);
 
