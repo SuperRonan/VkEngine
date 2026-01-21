@@ -1,13 +1,13 @@
 #include <vkl/Rendering/TextureFromFile.hpp>
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/PathWidget.hpp>
+
 #include <that/img/ImRead.hpp>
 
 #include <chrono>
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
-
-#include <vkl/VkObjects/VulkanEnumMeta.hpp>
 
 #include <vkl/IO/DependencyTracker.hpp>
 
@@ -519,7 +519,7 @@ namespace vkl
 			TargetIndirectInlinePanel<Image> _image_panel;
 			TargetIndirectInlinePanel<ImageView> _view_panel;
 
-			std::string _text_buffer;
+			PathWidget _path;
 
 		public:
 
@@ -529,73 +529,43 @@ namespace vkl
 			{
 				_image_panel.init("Image");
 				_view_panel.init("View (Current)");
+				
+				_path.filters = {
+					PathWidget::Filter{
+						.name = "Any image file",
+						.pattern = "*",
+					},
+					PathWidget::Filter{
+						.name = "PNG image",
+						.pattern = "png",
+					},
+					PathWidget::Filter{
+						.name = "JPEG image",
+						.pattern = "jpg;jpeg",
+					},
+					PathWidget::Filter{
+						.name = "TGA image",
+						.pattern = "tga",
+					},
+					PathWidget::Filter{
+						.name = "HDR image",
+						.pattern = "hdr",
+					},
+				};
+				_path.mode = FileDialog::Mode::OpenFile;
+				_path.label = "Path";
+				_path.setPath(_target->_path);
+				_path.text_edit_flags = ImGuiInputTextFlags_EnterReturnsTrue;
 			}
 
 			virtual void declareInline(Context& ctx) override
 			{
-				_text_buffer = _target->_path.string();
-				ImGui::InputText("Path", &_text_buffer, ImGuiInputTextFlags_ReadOnly);
-				ImGui::SameLine();
-				auto file_dialog = ctx.getCommonFileDialog();
-				bool can_open = file_dialog->canOpen();
-				ImGui::BeginDisabled(!can_open);
-				if (ImGui::Button("..."))
-				{
-					FileDialog::OpenInfo info{};
-					if (!_target->_path.empty())
-					{
-						auto resolved = application()->fileSystem()->resolve(_target->_path);
-						if (resolved.result == that::Result::Success)
-						{
-							resolved = application()->fileSystem()->cannonize(resolved.value);
-						}
-						if (resolved.result == that::Result::Success)
-						{
-							info.default_location = resolved.value;
-						}
-					}
-					std::array filters = {
-						FileDialog::Filter{
-							.name = "Any image file",
-							.pattern = "*",
-						},
-						FileDialog::Filter{
-							.name = "PNG image",
-							.pattern = "png",
-						},
-						FileDialog::Filter{
-							.name = "JPEG image",
-							.pattern = "jpg;jpeg",
-						},
-						FileDialog::Filter{
-							.name = "TGA image",
-							.pattern = "tga",
-						},
-						FileDialog::Filter{
-							.name = "HDR image",
-							.pattern = "hdr",
-						},
-					};
-					info.filters = filters;
-					info.allow_multiple = false;
-					info.parent_window = ctx.getCurrentWindow();
-					file_dialog->open(this, info);
-				}
-				ImGui::EndDisabled();
-
 				bool _should_reload = false;
-				if (file_dialog->owner() == this && file_dialog->completed())
+				if (_path.declareInline(ctx))
 				{
-					if (!file_dialog->getResults().empty())
-					{
-						FileSystem::Path new_path = file_dialog->getResults().front();
-
-						_target->setPath(new_path);
-						_should_reload = true;
-					}
-					file_dialog->close();
+					_target->setPath(_path.path);
+					_should_reload |= true;
 				}
-
 				if (ImGui::Button("Reload"))
 				{
 					_should_reload = true;
