@@ -7,6 +7,7 @@ namespace vkl
 	using DAG = DirectedAcyclicGraph;
 	static_assert(std::convertible_to<DAG::FastNodePathView, DAG::FastNodePath>);
 	static_assert(std::convertible_to<DAG::FastNodePath, DAG::FastNodePathView>);
+	static_assert(std::concepts::HashableFromMethod<DirectedAcyclicGraph::RobustNodePath>);
 
 	bool DirectedAcyclicGraph::checkIsAcyclic()const
 	{

@@ -413,10 +413,7 @@ namespace vkl
 		_tree->_flat_dag.clear();
 		_num_lights = 0;
 
-		std::unordered_map<DirectedAcyclicGraph::RobustNodePath, size_t> m;
-		m[DirectedAcyclicGraph::RobustNodePath()] = 21;
-		std::hash<DirectedAcyclicGraph::RobustNodePath> h;
-		static_assert(std::concepts::HashableFromMethod<DirectedAcyclicGraph::RobustNodePath>);
+		
 		
 		_aabb.reset();
 
