@@ -213,7 +213,7 @@ namespace vkl
 			if (it != n->children().end())
 			{
 				n = *it;
-				matrix *= n->matrix3x4();
+				matrix = matrix * n->matrix3x4();
 			}
 			else
 			{
