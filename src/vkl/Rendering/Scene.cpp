@@ -10,8 +10,84 @@
 
 namespace vkl
 {
+	namespace impl
+	{
+		struct SceneHelper
+		{
+			using DAG = Scene::DAG;
+			using Node = Scene::Node;
+
+			Scene* _that;
+
+			template <std::unsigned_integral Index = uint32_t>
+			struct UniqueIndexData
+			{
+				using IB = IndexBool<Index>;
+				IB _index_access;
+
+				UniqueIndexData() :
+					_index_access(0, false)
+				{
+				}
+
+				UniqueIndexData(Index unique_index, bool accessed = true) :
+					_index_access(unique_index, accessed)
+				{
+				}
+
+				constexpr Index index() const
+				{
+					return _index_access.index();
+				}
+
+				constexpr bool accessed() const
+				{
+					return _index_access.boolean();
+				}
+
+				constexpr void setIndex(Index index)
+				{
+					_index_access.setIndex(index);
+				}
+
+				constexpr void setAccessed(bool value)
+				{
+					_index_access.setBoolean(value);
+				}
+			};
+
+			using UniqueIndexData32 = UniqueIndexData<uint32_t>;
+			using MeshData = UniqueIndexData32;
+			using TextureData = UniqueIndexData32;
+			using MaterialData = UniqueIndexData32;
+
+			UniqueIndexAllocator _unique_mesh_index_pool;
+			std::unordered_map<Mesh*, MeshData> _unique_meshes;
+
+			UniqueIndexAllocator _unique_texture_2D_index_pool;
+			std::unordered_map<Texture*, TextureData> _unique_textures;
+
+			UniqueIndexAllocator _unique_material_index_pool;
+			std::unordered_map<Material*, MaterialData> _unique_materials;
+
+			struct ModelInstance
+			{
+				UniqueIndexData32 model_unique_index;
+				UniqueIndexData32 xform_unique_index;
+			};
+			UniqueIndexAllocator _unique_model_index_pool;
+			UniqueIndexAllocator _unique_xform_index_pool;
+			std::unordered_map<DAG::RobustNodePath, ModelInstance> _unique_models;
+
+			SceneHelper(Scene* that):
+				_that(that)
+			{ }
+		};
+	}
+
 	Scene::Scene(CreateInfo const& ci) :
-		VkObject(ci.app, ci.name)
+		VkObject(ci.app, ci.name),
+		_internal(std::make_unique<impl::SceneHelper>((this)))
 	{
 		std::shared_ptr<Node> root = std::make_shared<Node>(Node::CI{.app = application(), .name = "root"});
 		_tree = std::make_shared<DirectedAcyclicGraph>(root);
@@ -22,6 +98,11 @@ namespace vkl
 		}
 
 		createSet();
+	}
+
+	Scene::~Scene()
+	{
+
 	}
 
 	Scene::UBO Scene::getUBO()const
@@ -143,7 +224,7 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
-			Dyn<uint32_t> mesh_count = [this](){return _unique_mesh_index_pool.capacity();};
+			Dyn<uint32_t> mesh_count = [this](){return _internal->_unique_mesh_index_pool.capacity();};
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "SceneMeshHeadersBindings",
@@ -175,7 +256,7 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 
-			Dyn<uint32_t> material_count = [this](){return _unique_material_index_pool.capacity();};
+			Dyn<uint32_t> material_count = [this](){return _internal->_unique_material_index_pool.capacity();};
 			
 			bindings += DescriptorSetLayout::Binding{
 				.name = "ScenePBMaterialsBinding",
@@ -197,7 +278,7 @@ namespace vkl
 				.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			};
 			
-			Dyn<uint32_t> texture_2D_count = [this](){return _unique_texture_2D_index_pool.capacity();};
+			Dyn<uint32_t> texture_2D_count = [this](){return _internal->_unique_texture_2D_index_pool.capacity();};
 
 			bindings += DescriptorSetLayout::Binding{
 				.name = "SceneTextures2D",
@@ -410,6 +491,11 @@ namespace vkl
 
 	void Scene::updateInternal()
 	{
+		using MeshData = impl::SceneHelper::MeshData;
+		using MaterialData = impl::SceneHelper::MaterialData;
+		using TextureData = impl::SceneHelper::TextureData;
+		using ModelInstance = impl::SceneHelper::ModelInstance;
+
 		_tree->_flat_dag.clear();
 		_num_lights = 0;
 
@@ -441,19 +527,18 @@ namespace vkl
 					RigidMesh * rigid_mesh = dynamic_cast<RigidMesh*>(mesh.get());
 					if (rigid_mesh)
 					{
-						if (!_unique_meshes.contains(mesh.get())) // unknown mesh so far
+						if (!_internal->_unique_meshes.contains(mesh.get())) // unknown mesh so far
 						{
-							mesh_unique_id = _unique_mesh_index_pool.allocate();
-							_unique_meshes[mesh.get()] = MeshData{
-								.unique_index = mesh_unique_id,
-							};
+							mesh_unique_id = _internal->_unique_mesh_index_pool.allocate();
+							_internal->_unique_meshes[mesh.get()] = MeshData(mesh_unique_id);
 
 							rigid_mesh->registerToDescriptorSet(_set, _mesh_bindings_base, mesh_unique_id);
 						}
 						else
 						{
-							MeshData & md = _unique_meshes.at(mesh.get());
-							mesh_unique_id = md.unique_index;
+							MeshData & md = _internal->_unique_meshes.at(mesh.get());
+							mesh_unique_id = md.index();
+							md.setAccessed(true);
 						}
 					}
 
@@ -465,18 +550,18 @@ namespace vkl
 				if(material)
 				{
 					bool write_material = false;
-					if (!_unique_materials.contains(material.get()))
+					if (!_internal->_unique_materials.contains(material.get()))
 					{
-						material_unique_id = _unique_material_index_pool.allocate();
-						_unique_materials[material.get()] = MaterialData{
-							.unique_index = material_unique_id,
-						};
+						material_unique_id = _internal->_unique_material_index_pool.allocate();
+						_internal->_unique_materials[material.get()] = MaterialData(material_unique_id);
 						material->registerToDescriptorSet(_set, _material_bindings_base + 0, material_unique_id, false);
 						write_material = true;
 					}
 					else
 					{
-						material_unique_id = _unique_materials[material.get()].unique_index;
+						MaterialData & md = _internal->_unique_materials[material.get()];
+						material_unique_id = md.index();
+						md.setAccessed(true);
 					}
 					const MaterialReference& old_ref = _material_ref_buffer->get<MaterialReference>(material_unique_id);
 
@@ -489,19 +574,19 @@ namespace vkl
 						const TextureAndSampler tas = material->getTextureAndSampler(i);
 						if (tas.texture)
 						{
-							if (!_unique_textures.contains(tas.texture.get()))
+							if (!_internal->_unique_textures.contains(tas.texture.get()))
 							{
-								id = _unique_texture_2D_index_pool.allocate();
+								id = _internal->_unique_texture_2D_index_pool.allocate();
 								tas.texture->registerToDescriptorSet(_set, _textures_bindings_base + 0, id);
-								_unique_textures[tas.texture.get()] = TextureData{
-									.unique_index = static_cast<uint32_t>(id),
-								};
+								_internal->_unique_textures[tas.texture.get()] = TextureData(static_cast<u32>(id));
 								// TODO register the sample change too
 								_set->setBinding(_textures_bindings_base + 0, id, 1, nullptr, &tas.sampler);
 							}
 							else
 							{
-								id = static_cast<uint16_t>(_unique_textures.at(tas.texture.get()).unique_index);
+								TextureData& td = _internal->_unique_textures.at(tas.texture.get());
+								id = static_cast<uint16_t>(td.index());
+								td.setAccessed(true);
 							}
 							if (old_ref.ids[i] != id)
 							{
@@ -525,11 +610,11 @@ namespace vkl
 				Mat3x4 model_matrix = matrix;
 				if(visible)
 					model_flags |= 1;
-				if (!_unique_models.contains(path))
+				if (!_internal->_unique_models.contains(path))
 				{
-					unique_model_id = _unique_model_index_pool.allocate();
-					xform_unique_id = _unique_xform_index_pool.allocate();
-					_unique_models[path] = ModelInstance{
+					unique_model_id = _internal->_unique_model_index_pool.allocate();
+					xform_unique_id = _internal->_unique_xform_index_pool.allocate();
+					_internal->_unique_models[path] = ModelInstance{
 						.model_unique_index = unique_model_id,
 						.xform_unique_index = xform_unique_id,
 					};
@@ -538,9 +623,11 @@ namespace vkl
 				}
 				else
 				{
-					auto & um = _unique_models[path];
-					unique_model_id = um.model_unique_index;
-					xform_unique_id = um.xform_unique_index;
+					auto & um = _internal->_unique_models[path];
+					unique_model_id = um.model_unique_index.index();
+					xform_unique_id = um.xform_unique_index.index();
+					um.model_unique_index.setAccessed(true);
+					um.xform_unique_index.setAccessed(true);
 					const ModelReference & mr = _model_references_buffer->get<ModelReference>(unique_model_id);
 
 					set_model_reference |= 
@@ -695,11 +782,70 @@ namespace vkl
 					++_num_lights;
 				}
 			}
-			
+
 			return true;
 		});
 
 		_radius = _aabb.getContainingSphere().radius();
+
+		// Clean unused ressouces
+		if(true)
+		{
+			auto clean_impl = []<class Key, class Value>(std::unordered_map<Key, Value>& map, auto const& should_drop, const auto& drop_action, const auto reset_access)
+			{
+				auto it = map.begin();
+				while (it != map.end())
+				{
+					if (should_drop(it))
+					{
+						drop_action(it);
+						it = map.erase(it);
+					}
+					else
+					{
+						reset_access(it->second);
+						++it;
+					}
+				}
+			};
+			auto clean = [&clean_impl]<class Key, class Value>(UniqueIndexAllocator& pool, std::unordered_map<Key, Value>& map)
+			{
+				clean_impl(map,
+					[&](auto const& it) // should drop
+					{
+						return !it->second.accessed();
+					},
+					[&](auto const& it) // drop action
+					{
+						pool.release(it->second.index());
+					},
+					[&](Value& value) // reset access
+					{
+						value.setAccessed(false);
+					}
+				);
+			};
+			clean(_internal->_unique_mesh_index_pool, _internal->_unique_meshes);
+			clean(_internal->_unique_texture_2D_index_pool, _internal->_unique_textures);
+			clean(_internal->_unique_material_index_pool, _internal->_unique_materials);
+
+			clean_impl(_internal->_unique_models,
+				[&](auto const& it) // should drop
+				{
+					return !(it->second.model_unique_index.accessed() || it->second.xform_unique_index.accessed());
+				},
+				[&](auto const& it) // drop action
+				{
+					_internal->_unique_model_index_pool.release(it->second.model_unique_index.index());
+					_internal->_unique_xform_index_pool.release(it->second.xform_unique_index.index());
+				},
+				[&](impl::SceneHelper::ModelInstance& value) // reset access
+				{
+					value.model_unique_index.setAccessed(false);
+					value.xform_unique_index.setAccessed(false);
+				}
+			);
+		}
 	}
 
 	void Scene::setMaintainRT(bool value)
@@ -754,6 +900,11 @@ namespace vkl
 				.dst = _ubo_buffer->instance(),
 			};
 		}
+	}
+
+	uint32_t Scene::objectCount()const
+	{
+		return _tree->_flat_dag.size();
 	}
 
 	void Scene::prepareForRendering(ExecutionRecorder& exec)

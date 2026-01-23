@@ -20,6 +20,7 @@
 #include <vkl/Rendering/Light.hpp>
 
 #include <vkl/Utils/UniqueIndexAllocator.hpp>
+#include <vkl/Utils/IndexBool.hpp>
 
 #include <vkl/VkObjects/TopLevelAccelerationStructure.hpp>
 #include <vkl/Commands/AccelerationStructureCommands.hpp>
@@ -32,6 +33,10 @@
 
 namespace vkl
 {
+	namespace impl
+	{
+		struct SceneHelper;
+	}
 	class Scene : public VkObject
 	{
 	
@@ -52,6 +57,7 @@ namespace vkl
 		};
 
 	protected:
+		friend struct impl::SceneHelper;
 
 		std::shared_ptr<DirectedAcyclicGraph> _tree;
 
@@ -66,30 +72,7 @@ namespace vkl
 		std::shared_ptr<DescriptorSetLayout> _set_layout;
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
-		struct MeshData
-		{
-			uint32_t unique_index;
-		};
-
-		struct TextureData
-		{
-			uint32_t unique_index;
-		};
-
-		struct MaterialData
-		{
-			uint32_t unique_index;
-		};
-
-		UniqueIndexAllocator _unique_mesh_index_pool;
-		std::unordered_map<Mesh*, MeshData> _unique_meshes;
-
-		UniqueIndexAllocator _unique_texture_2D_index_pool;
-		std::unordered_map<Texture*, TextureData> _unique_textures;
-
-		UniqueIndexAllocator _unique_material_index_pool;
-		std::unordered_map<Material*, MaterialData> _unique_materials;
-		std::shared_ptr<HostManagedBuffer> _material_ref_buffer;
+		std::unique_ptr<impl::SceneHelper> _internal;
 
 		struct MaterialReference
 		{
@@ -97,6 +80,7 @@ namespace vkl
 			static constexpr const Ids DefaultIds = std::MakeUniformArray<uint16_t, Material::MAX_TEXTURE_COUNT>(uint16_t(-1));
 			Ids ids = DefaultIds;
 		};
+		std::shared_ptr<HostManagedBuffer> _material_ref_buffer;
 
 		struct ModelReference
 		{
@@ -105,16 +89,8 @@ namespace vkl
 			uint32_t xform_id;
 			uint32_t flags;
 		};
-		struct ModelInstance
-		{
-			uint32_t model_unique_index;
-			uint32_t xform_unique_index;
-		};
-		UniqueIndexAllocator _unique_model_index_pool;
-		std::unordered_map<DAG::RobustNodePath, ModelInstance> _unique_models; 
 		std::shared_ptr<HostManagedBuffer> _model_references_buffer;
 
-		UniqueIndexAllocator _unique_xform_index_pool;
 		std::shared_ptr<HostManagedBuffer> _xforms_buffer;
 		std::shared_ptr<Buffer> _prev_xforms_buffer;
 		BufferAndRange _xforms_segment;
@@ -209,6 +185,8 @@ namespace vkl
 
 		Scene(CreateInfo const& ci);
 
+		virtual ~Scene() override;
+
 		const std::shared_ptr<DirectedAcyclicGraph>& getTree()const
 		{
 			return _tree;
@@ -243,10 +221,7 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetAndPool> set();
 
-		uint32_t objectCount()const
-		{
-			return _unique_model_index_pool.count();
-		}
+		uint32_t objectCount()const;
 
 		VkFormat lightDepthFormat() const
 		{
