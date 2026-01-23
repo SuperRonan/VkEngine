@@ -9,32 +9,26 @@ namespace vkl
 	{
 	public:
 
-		enum class Policy
-		{
-			FastButWasteful,
-			FitCapacity,
-			AlwaysRecycle,
-		};
-		
 		using Index = uint32_t;
 
 	protected:
 
 		using Segment = Range<Index>;
 
-		Policy _policy = Policy::FastButWasteful;
+		bool _recycle = false;
 
-		// Sorted
-		std::deque<Segment> _free_segments;
-
-		Index _count = 0;
+		Index _num_allocated = 0;
 		Index _capacity = 1;
+
+		// Sorted, keep track of free segments when not using FastButWasteful
+		std::deque<Segment> _free_segments = {};
 
 	public:
 
-		UniqueIndexAllocator(Policy policy = Policy::FastButWasteful):
-			_policy(policy)
-		{}
+		UniqueIndexAllocator(Index initial_capacity=1, bool recycle=true);
+
+		// Clear allocated, does not alter capacity
+		void clear();
 
 		Index allocate();
 
@@ -46,15 +40,15 @@ namespace vkl
 
 		bool isAllocated(Index index) const;
 
-		Index count()const
-		{
-			return _count;
-		}
-
 		Index capacity()const
 		{
 			return _capacity;
 		}
+
+		void growCapacity();
+
+		// Release excess capacity
+		void shrinkToFit();
 
 		bool checkIntegrity() const;
 		
