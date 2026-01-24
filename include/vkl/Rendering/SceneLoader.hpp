@@ -5,6 +5,11 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class NodeFromFileInspector;
+	}
+
 	class NodeFromFile : public Scene::Node
 	{
 	protected:
@@ -40,12 +45,19 @@ namespace vkl
 
 		virtual ~NodeFromFile() override;
 
+		void reload();
+
 		virtual void updateResources(UpdateContext & ctx) override;
 
 		constexpr bool isSynch()const
 		{
 			return _synch;
 		}
+
+		using InspectorType = GUI::NodeFromFileInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Scene::Node> const& target, GUI::Context& ctx) override;
 	};
 
 	struct LightNodeCreateInfo

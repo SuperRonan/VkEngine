@@ -1,5 +1,14 @@
 #include <vkl/Rendering/SceneLoader.hpp>
 
+#include <vkl/Rendering/NodeInspector.hpp>
+
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/PathWidget.hpp>
+
+#include <vkl/Utils/stl_extension.hpp>
+
 namespace vkl
 {
 	void NodeFromFile::createChildrenFromLoadedModels()
@@ -17,23 +26,16 @@ namespace vkl
 					.app = application(),
 					.name = lm->name(),
 					.model = lm,
-					});
+				});
 				_children.push_back(n);
 			}
 		}
 		_loaded_models.clear();
 	}
 
-	NodeFromFile::NodeFromFile(CreateInfo const& ci):
-		Scene::Node(Scene::Node::CI{
-			.app = ci.app,
-			.name = ci.name,
-			.matrix = ci.matrix,
-		}),
-		_path(ci.path),
-		_mtl_path(ci.mtl_path),
-		_synch(ci.synch)
+	void NodeFromFile::reload()
 	{
+		_children.clear();
 		_visible = false;
 		if (!_path.empty())
 		{
@@ -56,7 +58,7 @@ namespace vkl
 					.lambda = [this]() {
 
 						//std::this_thread::sleep_for(5s);
-					
+
 						_loaded_models = Model::loadModelsFromObj(Model::LoadInfo{
 							.app = _app,
 							.path = _path,
@@ -69,10 +71,23 @@ namespace vkl
 						};
 						return res;
 					},
-				});	
+					});
 				_app->threadPool().pushTask(_load_task);
 			}
 		}
+	}
+
+	NodeFromFile::NodeFromFile(CreateInfo const& ci):
+		Scene::Node(Scene::Node::CI{
+			.app = ci.app,
+			.name = ci.name,
+			.matrix = ci.matrix,
+		}),
+		_path(ci.path),
+		_mtl_path(ci.mtl_path),
+		_synch(ci.synch)
+	{
+		reload();
 	}
 
 	NodeFromFile::~NodeFromFile()
@@ -105,8 +120,85 @@ namespace vkl
 		Scene::Node::updateResources(ctx);
 	}
 
+	namespace GUI
+	{
+		class NodeFromFileInspector : public NodeInspector
+		{
+		protected:
 
+			PathWidget _path;
 
+		public:
+
+			NodeFromFileInspector(std::shared_ptr<NodeFromFile> const& ptarget) :
+				NodeInspector(ptarget)
+			{
+				_path.setPath(target()->_path);
+				_path.text_edit_flags = ImGuiInputTextFlags_EnterReturnsTrue;
+				_path.mode = FileDialog::Mode::OpenFile;
+				_path.filters = {
+					FileDialog::Filter{
+						.name = "Wavefront OBJ",
+						.pattern = "obj",
+					},
+				};
+			}
+
+			NodeFromFile* target() const
+			{
+				return static_cast<NodeFromFile*>(_node.get());
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				NodeInspector::declareInline(ctx);
+
+				ImGui::SeparatorText("File Source");
+
+				if (_path.declareInline(ctx))
+				{
+
+				}
+				if (ImGui::Button("ReLoad"))
+				{
+					target()->_path = _path.path;
+					target()->reload();
+				}
+				{
+					if (target()->_load_task)
+					{
+						ImVec4 color = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+						const char* status = "Unknown!";
+						auto task_status = target()->_load_task->getStatus();
+						if (std::IsAnyOf(task_status, AsynchTask::Status::Pending, AsynchTask::Status::Running, AsynchTask::Status::Paused))
+						{
+							status = "Loading...";
+							color = ctx.style().warning_yellow;
+						}
+						else
+						{
+							if (std::IsAnyOf(task_status, AsynchTask::Status::Success))
+							{
+								status = "Success!";
+								color = ctx.style().valid_green;
+							}
+							else
+							{
+								status = "Fail!";
+								color = ctx.style().invalid_red;
+							}
+						}
+						ImGui::TextColored(color, status);
+					}
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> NodeFromFile::makeInspector(std::shared_ptr<Scene::Node> const& target, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::NodeFromFileInspector>(std::static_pointer_cast<NodeFromFile>(target));
+	}
 
 	std::shared_ptr<Scene::Node> MakeLightNode(LightNodeCreateInfo const& ci)
 	{
