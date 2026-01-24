@@ -98,6 +98,16 @@ namespace vkl
 			//return (_bottom + _top) * Float(0.5);
 		}
 
+		constexpr bool operator==(AlignedAxisBoundingBox const& rhs) const
+		{
+			return _bottom == rhs._bottom && _top == rhs._top;
+		}
+
+		constexpr bool operator!=(AlignedAxisBoundingBox const& rhs) const
+		{
+			return !(*this == rhs);
+		}
+
 		// TODO simd version
 
 		constexpr AlignedAxisBoundingBox& operator+=(vecN const& p)

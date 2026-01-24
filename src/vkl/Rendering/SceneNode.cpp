@@ -17,9 +17,24 @@ namespace vkl
 
 	void SceneNode::updateResources(UpdateContext& ctx)
 	{
+		if (ctx.updateTick() <= _latest_update_tick)
+		{
+			return;
+		}
+		_latest_update_tick = ctx.updateTick();
+		_aabb.clear();
 		if (_model)
 		{
 			_model->updateResources(ctx);
+			if (auto& mesh = _model->mesh())
+			{
+				_aabb += mesh->getAABB();
+			}
+		}
+		for (auto& child : _children)
+		{
+			child->updateResources(ctx);
+			child->_aabb.getContainingAABB(child->getXForm(), _aabb);
 		}
 	}
 

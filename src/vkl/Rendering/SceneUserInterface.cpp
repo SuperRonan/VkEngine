@@ -271,40 +271,51 @@ namespace vkl
 		draw_list.clear();
 		vertex_draw_info.clear();
 
+		std::string tmp_name;
+		vdcr.clear();
+		_box_mesh->fillVertexDrawCallInfo(vdcr);
+		auto draw_aabb = [&](GUI::NodeInspector* ni, AABB3f const& box, std::string_view name, vec3 color)
+		{
+			auto instances = _scene->getTree()->getNodeInstancesView(ni->node());
+			for (const auto& instance : instances)
+			{
+				AffineXForm3Df aabb_matrix = TranslationMatrix(box.bottom()) * ScalingMatrix(box.diagonal());
+
+				Mat4 pc_matrix = camera.getWorldToProj() * Mat4(instance.matrix * aabb_matrix);
+				const Render3DBoxPC pc{
+					.matrix = pc_matrix,
+					.color = vec4(color.x(), color.y(), color.z(), GetNodeAlpha(ni)),
+				};
+				VertexCommand::DrawCallInfo draw_call{
+					.name = name,
+					.pc_data = &pc,
+					.pc_size = sizeof(pc),
+					.draw_count = vdcr.draw_count,
+					.instance_count = vdcr.instance_count,
+					.index_buffer = vdcr.index_buffer,
+					.index_type = vdcr.index_type,
+					.num_vertex_buffers = vdcr.vertex_buffers.size32(),
+					.vertex_buffers = vdcr.vertex_buffers.data(),
+				};
+				// Don't move the vdcr buffers pointers
+				draw_list.pushBack(draw_call);
+			}
+		};
+
 		iterateOnOpenNodes([&](GUI::NodeInspector* ni) {
+			const AABB3f& node_aabb = ni->node()->getAABB();
+			if (!node_aabb.empty())
+			{
+				draw_aabb(ni, node_aabb, ni->node()->name(), vec3(1, 0.5, 0.5));
+			}
 			if (const auto& model = ni->node()->model())
 			{
 				if (const auto& mesh = model->mesh())
 				{
-					vdcr.clear();
-					// TODO once, not on each loop
-					_box_mesh->fillVertexDrawCallInfo(vdcr);
-					auto instances = _scene->getTree()->getNodeInstancesView(ni->node());
-					for (const auto& instance : instances)
+					const AABB3f& mesh_aabb = mesh->getAABB();
+					if (!mesh_aabb.empty())
 					{
-						const AABB3f& aabb = mesh->getAABB();
-						Mat4 aabb_matrix = Mat4(TranslationMatrix(aabb.bottom())) * Mat4(DiagonalMatrixV(aabb.diagonal()));
-
-						const std::string name = mesh->name() + "::AABB";
-						Mat4 pc_matrix = ((camera.getWorldToProj() * Mat4(instance.matrix)).eval() * aabb_matrix);
-						vec4 color = vec4(1, 1, 1, GetNodeAlpha(ni));
-						const Render3DBoxPC pc{
-							.matrix = pc_matrix,
-							.color = color,
-						};
-						draw_list.pushBack(VertexCommand::DrawCallInfo{
-							.name = name,
-							.pc_data = &pc,
-							.pc_size = sizeof(pc),
-							.draw_count = vdcr.draw_count,
-							.instance_count = vdcr.instance_count,
-							.index_buffer = vdcr.index_buffer,
-							.index_type = vdcr.index_type,
-							.num_vertex_buffers = vdcr.vertex_buffers.size32(),
-							.vertex_buffers = vdcr.vertex_buffers.data(),
-						});
-
-						vdcr.clear();
+						draw_aabb(ni, mesh_aabb, mesh->name(), vec3(0.5, 0.5, 1));
 					}
 				}
 			}

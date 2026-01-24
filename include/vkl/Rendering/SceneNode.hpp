@@ -29,7 +29,10 @@ namespace vkl
 		Vec3 _scale = Vec3::Ones();
 		Vec3 _rotation = Vec3::Zero();
 
+		AABB3f _aabb = {};
+
 		bool _visible = true;
+		size_t _latest_update_tick = size_t(0);
 
 		std::shared_ptr<Model> _model = nullptr;
 		std::shared_ptr<Light> _light = nullptr;
@@ -134,7 +137,7 @@ namespace vkl
 			return Mat4(matrix3x4());
 		}
 
-		const Mat3x4& getXForm() const
+		Mat3x4 getXForm() const
 		{
 			return matrix3x4();
 		}
@@ -171,6 +174,11 @@ namespace vkl
 		const Vec3& translation()const
 		{
 			return _translation;
+		}
+
+		const AABB3f& getAABB() const
+		{
+			return _aabb;
 		}
 
 		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<SceneNode> const& shared_this, GUI::Context& ctx);
