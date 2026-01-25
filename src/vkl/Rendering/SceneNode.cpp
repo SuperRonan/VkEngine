@@ -15,6 +15,28 @@ namespace vkl
 		}
 	}
 
+	void SceneNode::removeAllChildren()
+	{
+		_children.clear();
+	}
+
+	void SceneNode::removeChild(uint32_t index)
+	{
+		_children.erase(_children.begin() + index);
+	}
+
+	bool SceneNode::removeChildIFP(const SceneNode* node)
+	{
+		auto it = std::find_if(_children.begin(), _children.end(), [node](std::shared_ptr<SceneNode> const& n){return node == n.get();});
+		bool res = false;
+		if (it != _children.end())
+		{
+			removeChild(it - _children.begin());
+			res = true;
+		}
+		return res;
+	}
+
 	void SceneNode::updateResources(UpdateContext& ctx)
 	{
 		if (ctx.updateTick() <= _latest_update_tick)

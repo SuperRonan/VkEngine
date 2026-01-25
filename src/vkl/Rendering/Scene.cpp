@@ -825,9 +825,6 @@ namespace vkl
 					}
 				);
 			};
-			clean(_internal->_unique_mesh_index_pool, _internal->_unique_meshes);
-			clean(_internal->_unique_texture_2D_index_pool, _internal->_unique_textures);
-			clean(_internal->_unique_material_index_pool, _internal->_unique_materials);
 
 			clean_impl(_internal->_unique_models,
 				[&](auto const& it) // should drop
@@ -838,6 +835,13 @@ namespace vkl
 				{
 					_internal->_unique_model_index_pool.release(it->second.model_unique_index.index());
 					_internal->_unique_xform_index_pool.release(it->second.xform_unique_index.index());
+					if (_maintain_rt)
+					{
+						const uint32_t tlas_geometry_id = 0;
+						_tlas->registerBLAS(tlas_geometry_id, it->second.model_unique_index.index(), TLAS::BLASInstance{
+							.blas = nullptr,
+						});
+					}
 				},
 				[&](impl::SceneHelper::ModelInstance& value) // reset access
 				{
@@ -845,6 +849,12 @@ namespace vkl
 					value.xform_unique_index.setAccessed(false);
 				}
 			);
+
+			clean(_internal->_unique_mesh_index_pool, _internal->_unique_meshes);
+			clean(_internal->_unique_texture_2D_index_pool, _internal->_unique_textures);
+			clean(_internal->_unique_material_index_pool, _internal->_unique_materials);
+
+			
 		}
 	}
 

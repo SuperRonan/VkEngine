@@ -100,14 +100,11 @@ namespace vkl
 			_children.push_back(n);
 		}
 
-		void removeChildIFP(std::shared_ptr<SceneNode> const& n)
-		{
-			auto it = std::find(_children.begin(), _children.end(), n);
-			if (it != _children.end())
-			{
-				_children.erase(it);
-			}
-		}
+		void removeAllChildren();
+
+		void removeChild(uint32_t index);
+
+		bool removeChildIFP(const SceneNode* n);
 
 		Mat3x4 getAuxiliaryTransform() const
 		{

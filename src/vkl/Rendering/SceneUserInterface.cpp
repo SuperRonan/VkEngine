@@ -762,6 +762,9 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 			declare_create_node_popup();
 
+			Scene::DAG::FastNodePath node_to_remove_path = {};
+			Scene::Node* node_to_remove_ptr = nullptr;
+
 			Scene::DAG::FastNodePath path;
 			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
 			{
@@ -861,10 +864,11 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 						open_create_window = true;
 					}
 
-					ImGui::BeginDisabled();
+					ImGui::BeginDisabled(is_root);
 					if (ImGui::MenuItem("Remove"))
 					{
-						// TODO
+						node_to_remove_path = path;
+						node_to_remove_ptr = node.get();
 					}
 					ImGui::EndDisabled();
 
@@ -948,6 +952,17 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 			Mat3x4 root_matrix = Mat3x4::Identity();
 			declare_node(_scene->getRootNode(), root_matrix, true, 1, declare_node);
+
+			if (!node_to_remove_path.empty())
+			{
+				
+				node_to_remove_path.pop_back();
+				std::shared_ptr<Scene::Node> parent_node_to_remove = _scene->getTree()->findNode(node_to_remove_path).node;
+				if (parent_node_to_remove)
+				{
+					parent_node_to_remove->removeChildIFP(node_to_remove_ptr);
+				}
+			}
 		} // Tree
 
 		ImGui::PopID();
