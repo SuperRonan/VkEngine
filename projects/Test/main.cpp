@@ -22,7 +22,7 @@
 
 void TestUniqueIdAllocator()
 {
-	vkl::UniqueIndexAllocator pool(vkl::UniqueIndexAllocator::Policy::FitCapacity);
+	vkl::UniqueIndexAllocator pool{};
 
 	while (true)
 	{
