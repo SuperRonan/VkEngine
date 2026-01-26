@@ -19,6 +19,8 @@ namespace vkl::GUI
 		std::shared_ptr<Scene::Node> _node = {}; // ptr is Id
 		SceneUserInterface* _parent = nullptr; // May be nullptr
 		bool _unique = false;
+		bool _uniform_scale_edit = true;
+		bool _uniform_scale_edit_set = false;
 
 		TargetIndirectInlinePanel<Model> _model_panel;
 		TargetIndirectInlinePanel<Light> _light_panel;
