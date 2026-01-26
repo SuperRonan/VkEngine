@@ -563,6 +563,8 @@ namespace ImGui
 
 	bool InboxCheckbox(const char* label, bool* v, ImVec2 box_size)
 	{
+		auto& style = ImGui::GetStyle();
+		const float padding = style.FramePadding.x;
 		ImVec2 text_size = CalcTextSize(label);
 		ImVec2 sz = box_size;
 		if (box_size.y == 0.0f)
@@ -571,7 +573,7 @@ namespace ImGui
 		}
 		if (box_size.x == 0.0f)
 		{
-			sz.x = ImMax(sz.x, sz.y);
+			sz.x = ImMax(text_size.x + 2 * padding, sz.y);
 		}
 		struct RenderData
 		{
@@ -584,7 +586,7 @@ namespace ImGui
 			.label = label,
 			.font = ImGui::GetFont(),
 			.size = text_size,
-			.padding = ImGui::GetStyle().FramePadding,
+			.padding = style.FramePadding,
 		};
 		auto render_label = [](const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
 		{
