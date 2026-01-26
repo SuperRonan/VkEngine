@@ -651,6 +651,244 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		};
 	}
 
+	void SceneUserInterface::DeclareNodeHierarchy(GUI::Context& ctx, SceneUserInterface* that, std::shared_ptr<SceneNode> const& root)
+	{
+		auto declare_create_node_popup = [&]()
+			{
+				int popup_res = that->_create_node_popup.declareGUI(ctx);
+				if (popup_res > 0)
+				{
+					std::shared_ptr<Scene::Node> new_node = that->_create_node_popup.createNode(that->application());
+					if (new_node)
+					{
+						std::shared_ptr<Scene::Node> parent = that->_create_node_popup.getParent();
+						parent->addChild(std::move(new_node));
+					}
+					that->_create_node_popup.resetParent();
+				}
+			};
+
+		if (ImGui::DeclareFilter(that->_filter))
+		{
+
+		}
+		that->_filter_cache_result.clear(); // Could be done more sparsly (if the scene tree changes or the filter changes)
+		if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
+		{
+			bool open_create_window = false;
+			if (ImGui::MenuItem("New"))
+			{
+				open_create_window = true;
+			}
+			ImGui::EndMenu();
+
+
+			if (open_create_window)
+			{
+				that->_create_node_popup.open(root);
+			}
+		}
+
+		declare_create_node_popup();
+
+		Scene::Node* node_to_remove_ptr = nullptr;
+		Scene::Node* node_to_remove_parent_ptr = nullptr;
+
+		Scene::DAG::FastNodePath path;
+
+		using Mat3x4 = SceneUserInterface::Mat3x4;
+		auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, std::shared_ptr<Scene::Node> const& parent, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
+			{
+				const bool is_root = path.empty();
+				if (!is_root && !that->_filter.empty() && !that->nodePassesFilter(node.get()))
+				{
+					return;
+				}
+				ImGui::PushID(node.get());
+				u32 node_flags = parent_flags;
+				if (!node->visible())
+				{
+					node_flags &= u32(~0x1);
+				}
+				Mat3x4 node_matrix = matrix * node->matrix3x4();
+				const std::string& node_gui_name = node->name();
+				const bool node_visible = (node_flags & 0x1) != 0;
+
+
+				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanLabelWidth;
+				if (!that->_hide_tree_outline)
+				{
+					flags |= ImGuiTreeNodeFlags_DrawLinesFull;
+				}
+				if (!is_root)
+				{
+					if (that->_single_click_selection)
+					{
+						flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+					}
+				}
+				const bool is_leaf = node->children().empty();
+				if (is_leaf)
+				{
+					flags |= ImGuiTreeNodeFlags_Leaf;
+				}
+
+				bool is_selected = that->isNodeOpen(ctx, node.get());
+				is_selected_path_so_far = false;
+				//if (is_selected_path_so_far)
+				//{
+				//	if (!path.path.empty())
+				//	{
+				//		if (_gui_selected_node.path.path.size() >= path.path.size())
+				//		{
+				//			if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
+				//			{
+				//				is_selected_path_so_far = false;
+				//			}
+				//			else
+				//			{
+				//				is_selected = (_gui_selected_node.path.path.size() == path.path.size());
+				//			}
+				//		}
+				//		else
+				//		{
+				//			is_selected_path_so_far = false;
+				//		}
+				//	}
+				//}
+
+				if (is_selected /* || node == _gui_selected_node.node.node*/)
+				{
+					flags |= ImGuiTreeNodeFlags_Selected;
+				}
+
+				if (!node_visible)
+				{
+					float c = that->_tree_not_visible_tint;
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(c, c, c, 1));
+				}
+				const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
+				if (!node_visible)
+				{
+					ImGui::PopStyleColor(1);
+				}
+
+				bool open_inspector = false;
+				if (that->_single_click_selection || is_leaf)
+				{
+					open_inspector |= ImGui::IsItemClicked();
+				}
+				if (!that->_single_click_selection)
+				{
+					open_inspector |= ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None);
+				}
+				if (open_inspector && !ImGui::IsItemToggledOpen() && !path.empty())
+				{
+					that->openNodeInspector(ctx, node);
+				}
+				ImGui::PushID("On Node");
+				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
+				{
+					bool open_create_window = false;
+					if (ImGui::MenuItem("New"))
+					{
+						open_create_window = true;
+					}
+
+					ImGui::BeginDisabled(is_root);
+					if (ImGui::MenuItem("Remove"))
+					{
+						node_to_remove_parent_ptr = parent.get();
+						node_to_remove_ptr = node.get();
+					}
+					ImGui::EndDisabled();
+
+					ImGui::Separator();
+					ImGui::BeginDisabled(is_root);
+					if (ImGui::MenuItem("Open"))
+					{
+						that->openNodeInspector(ctx, node);
+					}
+					ImGui::BeginDisabled(!is_selected);
+					if (ImGui::MenuItem("Close"))
+					{
+						that->closeNodeInspector(ctx, node.get());
+					}
+					ImGui::EndDisabled();
+
+					{
+						bool visible = node->visible();
+						if (ImGui::MenuItem("Visible", nullptr, &visible))
+						{
+							node->setVisibility(visible);
+						}
+					}
+					ImGui::EndDisabled();
+
+					ImGui::EndMenu();
+					//ImGui::EndPopup();
+
+					if (open_create_window)
+					{
+						that->_create_node_popup.open(node);
+					}
+				}
+
+				// Declare Small buttons next to the node
+				//ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12);
+				{
+					const auto color_id = ImGuiCol_Button;
+					ImVec4 color = ImGui::GetStyleColorVec4(color_id);
+					color.w = 0.0f;
+					ImGui::PushStyleColor(color_id, color);
+				}
+				if (!that->_hide_tree_nodes_quick_buttons)
+				{
+					ImGui::SameLine();
+					bool v = node->visible();
+					if (ImGui::BarredIconButton("Visibility", &v, ImGui::RenderEyeIcon, nullptr, true))
+					{
+						node->setVisibility(v);
+					}
+					ImGui::SetItemTooltip("Flip Node Visivility");
+				}
+				if (is_selected)
+				{
+					ImGui::SameLine();
+					if (ImGui::XCrossButton("Close Inspector", true))
+					{
+						that->closeNodeInspector(ctx, node.get());
+					}
+				}
+				ImGui::PopStyleColor();
+				//ImGui::PopStyleVar();
+
+				declare_create_node_popup();
+				ImGui::PopID();
+
+				if (node_open)
+				{
+					path.push_back(0);
+					for (size_t i = 0; i < node->children().size(); ++i)
+					{
+						path.back() = i;
+						recurse(node->children()[i], node, node_matrix, is_selected_path_so_far, node_flags, recurse);
+					}
+					path.pop_back();
+
+					ImGui::TreePop();
+				}
+				ImGui::PopID();
+			};
+		Mat3x4 root_matrix = Mat3x4::Identity();
+		declare_node(root, nullptr, root_matrix, true, 1, declare_node);
+
+		if (node_to_remove_ptr && node_to_remove_parent_ptr)
+		{
+			node_to_remove_parent_ptr->removeChildIFP(node_to_remove_ptr);
+		}
+	}
+
 	void SceneUserInterface::declareMenu(GUI::Context& ctx)
 	{
 		if (ImGui::BeginMenu("Options"))
@@ -721,248 +959,9 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			}
 		}
 
-		auto declare_create_node_popup = [&]()
-		{
-			int popup_res = _create_node_popup.declareGUI(ctx);
-			if (popup_res > 0)
-			{
-				std::shared_ptr<Scene::Node> new_node = _create_node_popup.createNode(application());
-				if (new_node)
-				{
-					std::shared_ptr<Scene::Node> parent = _create_node_popup.getParent();
-					parent->addChild(std::move(new_node));
-				}
-				_create_node_popup.resetParent();
-			}
-		};
-
-		//if (ImGui::CollapsingHeader("Tree"))
 		ImGui::SeparatorText("Scene Tree");
 		{
-			if (ImGui::DeclareFilter(_filter))
-			{
-
-			}
-			_filter_cache_result.clear(); // Could be done more sparsly (if the scene tree changes or the filter changes)
-			if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
-			{
-				bool open_create_window = false;
-				if (ImGui::MenuItem("New"))
-				{
-					open_create_window = true;
-				}
-				ImGui::EndMenu();
-
-
-				if (open_create_window)
-				{
-					_create_node_popup.open(_scene->getRootNode());
-				}
-			}
-
-			declare_create_node_popup();
-
-			Scene::DAG::FastNodePath node_to_remove_path = {};
-			Scene::Node* node_to_remove_ptr = nullptr;
-
-			Scene::DAG::FastNodePath path;
-			auto declare_node = [&](std::shared_ptr<Scene::Node> const& node, Mat3x4 const& matrix, bool is_selected_path_so_far, u32 parent_flags, const auto& recurse) -> void
-			{
-				const bool is_root = path.empty();
-				if (!is_root && !_filter.empty() && !nodePassesFilter(node.get()))
-				{
-					return;
-				}
-				ImGui::PushID(node.get());
-				u32 node_flags = parent_flags;
-				if (!node->visible())
-				{
-					node_flags &= u32(~0x1);
-				}
-				Mat3x4 node_matrix = matrix * node->matrix3x4();
-				const std::string & node_gui_name = node->name();
-				const bool node_visible = (node_flags & 0x1) != 0;
-				
-
-				ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanLabelWidth;
-				if (!_hide_tree_outline)
-				{
-					flags |= ImGuiTreeNodeFlags_DrawLinesFull;
-				}
-				if (!is_root)
-				{
-					if (_single_click_selection)
-					{
-						flags |= ImGuiTreeNodeFlags_OpenOnArrow;
-					}
-				}
-				const bool is_leaf = node->children().empty();
-				if (is_leaf)
-				{
-					flags |= ImGuiTreeNodeFlags_Leaf;
-				}
-
-				bool is_selected = isNodeOpen(ctx, node.get());
-				is_selected_path_so_far = false;
-				//if (is_selected_path_so_far)
-				//{
-				//	if (!path.path.empty())
-				//	{
-				//		if (_gui_selected_node.path.path.size() >= path.path.size())
-				//		{
-				//			if (_gui_selected_node.path.path[path.path.size() - 1] != path.path.back())
-				//			{
-				//				is_selected_path_so_far = false;
-				//			}
-				//			else
-				//			{
-				//				is_selected = (_gui_selected_node.path.path.size() == path.path.size());
-				//			}
-				//		}
-				//		else
-				//		{
-				//			is_selected_path_so_far = false;
-				//		}
-				//	}
-				//}
-
-				if (is_selected /* || node == _gui_selected_node.node.node*/)
-				{
-					flags |= ImGuiTreeNodeFlags_Selected;
-				}
-
-				if (!node_visible)
-				{
-					float c = _tree_not_visible_tint;
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(c, c, c, 1));
-				}
-				const bool node_open = ImGui::TreeNodeEx(node_gui_name.c_str(), flags);
-				if (!node_visible)
-				{
-					ImGui::PopStyleColor(1);
-				}
-
-				bool open_inspector = false;
-				if (_single_click_selection || is_leaf)
-				{
-					open_inspector |= ImGui::IsItemClicked();
-				}
-				if(!_single_click_selection)
-				{
-					open_inspector |= ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered(ImGuiHoveredFlags_None);
-				}
-				if (open_inspector && !ImGui::IsItemToggledOpen() && !path.empty())
-				{
-					openNodeInspector(ctx, node);
-				}
-				ImGui::PushID("On Node");
-				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
-				{
-					bool open_create_window = false;
-					if (ImGui::MenuItem("New"))
-					{
-						open_create_window = true;
-					}
-
-					ImGui::BeginDisabled(is_root);
-					if (ImGui::MenuItem("Remove"))
-					{
-						node_to_remove_path = path;
-						node_to_remove_ptr = node.get();
-					}
-					ImGui::EndDisabled();
-
-					ImGui::Separator();
-					ImGui::BeginDisabled(is_root);
-					if (ImGui::MenuItem("Open"))
-					{
-						openNodeInspector(ctx, node);
-					}
-					ImGui::BeginDisabled(!is_selected);
-					if (ImGui::MenuItem("Close"))
-					{
-						closeNodeInspector(ctx, node.get());
-					}
-					ImGui::EndDisabled();
-
-					{
-						bool visible = node->visible();
-						if (ImGui::MenuItem("Visible", nullptr, &visible))
-						{
-							node->setVisibility(visible);
-						}
-					}
-					ImGui::EndDisabled();
-
-					ImGui::EndMenu();
-					//ImGui::EndPopup();
-
-					if (open_create_window)
-					{
-						_create_node_popup.open(node);
-					}
-				}
-
-				// Declare Small buttons next to the node
-				//ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12);
-				{
-					const auto color_id = ImGuiCol_Button;
-					ImVec4 color = ImGui::GetStyleColorVec4(color_id);
-					color.w = 0.0f;
-					ImGui::PushStyleColor(color_id, color);
-				}
-				if(!_hide_tree_nodes_quick_buttons)
-				{
-					ImGui::SameLine();
-					bool v = node->visible();
-					if (ImGui::BarredIconButton("Visibility", &v, ImGui::RenderEyeIcon, nullptr, true))
-					{
-						node->setVisibility(v);
-					}
-					ImGui::SetItemTooltip("Flip Node Visivility");
-				}
-				if (is_selected)
-				{
-					ImGui::SameLine();
-					if (ImGui::XCrossButton("Close Inspector", true))
-					{
-						closeNodeInspector(ctx, node.get());
-					}
-				}
-				ImGui::PopStyleColor();
-				//ImGui::PopStyleVar();
-
-				declare_create_node_popup();
-				ImGui::PopID();
-
-				if (node_open)
-				{
-					path.push_back(0);
-					for (size_t i = 0; i < node->children().size(); ++i)
-					{
-						path.back() = i;
-						recurse(node->children()[i], node_matrix, is_selected_path_so_far, node_flags, recurse);
-					}
-					path.pop_back();
-
-					ImGui::TreePop();
-				}
-				ImGui::PopID();
-			};
-
-			Mat3x4 root_matrix = Mat3x4::Identity();
-			declare_node(_scene->getRootNode(), root_matrix, true, 1, declare_node);
-
-			if (!node_to_remove_path.empty())
-			{
-				
-				node_to_remove_path.pop_back();
-				std::shared_ptr<Scene::Node> parent_node_to_remove = _scene->getTree()->findNode(node_to_remove_path).node;
-				if (parent_node_to_remove)
-				{
-					parent_node_to_remove->removeChildIFP(node_to_remove_ptr);
-				}
-			}
+			DeclareNodeHierarchy(ctx, this, _scene->getRootNode());
 		} // Tree
 
 		ImGui::PopID();

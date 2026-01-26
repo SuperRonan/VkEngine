@@ -87,25 +87,9 @@ namespace vkl::GUI
 			_node->light()->declareGui(ctx);
 		}
 
-		if (ImGui::CollapsingHeader("Children"))
+		ImGui::SeparatorText("Children");
 		{
-			for (uint32_t i = 0; i < _node->children().size(); ++i)
-			{
-				ImGui::PushID(i);
-				std::shared_ptr<Scene::Node>const& child = _node->children()[i];
-				if (ImGui::SmallButton(child->name().c_str()))
-				{
-					if (_parent)
-					{
-						_parent->openNodeInspector(ctx, child);
-					}
-					else
-					{
-						ctx.getTopPanelHolder()->openChild(reinterpret_cast<uintptr_t>(child.get()), [&](){return child->makeInspector(child, ctx); });
-					}
-				}
-				ImGui::PopID();
-			}
+			SceneUserInterface::DeclareNodeHierarchy(ctx, _parent, _node);
 		}
 	}
 }

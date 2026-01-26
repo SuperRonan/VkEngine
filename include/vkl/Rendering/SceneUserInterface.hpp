@@ -220,5 +220,7 @@ namespace vkl
 		{
 			_node_in_focus = ni;
 		}
+
+		static void DeclareNodeHierarchy(GUI::Context& ctx, SceneUserInterface* that, std::shared_ptr<SceneNode> const& root);
 	};
 }
