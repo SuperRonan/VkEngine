@@ -373,6 +373,12 @@ namespace ImGui
 		return IconButtonEx(str_id, ImVec2(sz, sz), ImGuiButtonFlags_None, render_frame_fn, render_frame_data);
 	}
 
+	static inline bool SquareButton(const char* label, bool small_button=false)
+	{
+		float sz = small_button ? ImGui::GetTextLineHeight() : ImGui::GetFrameHeight();
+		return Button(label, ImVec2(sz, sz));
+	}
+
 	extern void DrawRectNoCorners(ImDrawList* draw_list, ImRect rect, ImU32 color, float thickness = 1);
 
 	extern void RenderDetachIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
