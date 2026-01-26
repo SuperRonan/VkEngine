@@ -21,6 +21,7 @@ namespace vkl::GUI
 		bool _unique = false;
 
 		TargetIndirectInlinePanel<Model> _model_panel;
+		TargetIndirectInlinePanel<Light> _light_panel;
 
 	public:
 

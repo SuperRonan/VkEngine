@@ -2,7 +2,6 @@
 
 #include <vkl/App/VkApplication.hpp>
 #include <vkl/Maths/Transforms.hpp>
-#include <vkl/GUI/Context.hpp>
 
 #define EMISSION_FLAG_BLACK_BODY_BIT 0x1
 #define EMISSION_BLACK_BODY_NORMALIZATION_BIT_INDEX 0x1
@@ -84,6 +83,14 @@ namespace vkl
 		LightGLSL transform(Matrix3x4f const& mat) const;
 	};
 
+	namespace GUI
+	{
+		class LightInspector;
+		class PointLightInspector;
+		class DirectionalLightInspector;
+		class SpotBeamLightInspector;
+	}
+
 	class Light : public VkObject
 	{
 	public:
@@ -137,8 +144,6 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const = 0;
 
-		virtual void declareGui(GUI::Context & ctx);
-
 		static bool DeclareEmission(vec3& emission, uint8_t& options);
 
 		static vec3 NormalizeEmission(vec3 emission, uint8_t options, float norm=1);
@@ -154,6 +159,11 @@ namespace vkl
 		}
 
 		virtual uint32_t flags() const;
+
+		using InspectorType = GUI::LightInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx) = 0;
 	};
 
 	class PointLight : public Light
@@ -188,9 +198,12 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
-		virtual void declareGui(GUI::Context& ctx) override;
-
 		virtual uint32_t flags() const override;
+
+		using InspectorType = GUI::PointLightInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx) override;
 	};
 
 	class DirectionalLight : public Light
@@ -215,9 +228,12 @@ namespace vkl
 
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
-		virtual void declareGui(GUI::Context& ctx) override;
-
 		virtual uint32_t flags() const override;
+
+		using InspectorType = GUI::DirectionalLightInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx) override;
 	};
 
 	class SpotBeamLight : public Light
@@ -322,9 +338,12 @@ namespace vkl
 		
 		virtual LightGLSL getAsGLSL(Matrix3x4f const& xform) const override;
 
-		virtual void declareGui(GUI::Context& ctx) override;
-
 		virtual uint32_t flags() const override;
+
+		using InspectorType = GUI::SpotBeamLightInspector;
+		friend class InspectorType;
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx) override;
 	};
 
 	using SpotLight = SpotBeamLight;

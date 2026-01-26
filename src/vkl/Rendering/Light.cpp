@@ -1,5 +1,7 @@
 #include <vkl/Rendering/Light.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Maths/View.hpp>
@@ -52,6 +54,90 @@ namespace vkl
 			res |= LIGHT_BLACK_BODY_EMISSION_BIT_FLAG;
 		}
 		return res;
+	}
+
+	namespace GUI
+	{
+		class LightInspector : public Panel
+		{
+		protected:
+
+			std::shared_ptr<Light> _target;
+
+			ImGuiListSelection _shadow_bias_mode;
+
+		public:
+
+			LightInspector(std::shared_ptr<Light> const& target):
+				Panel(_target->application(), std::format("{} - Light Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				_target(target)
+			{
+				_shadow_bias_mode = ImGuiListSelection::CI{
+					.name = "Shadow Bias Mode",
+					.mode = ImGuiListSelection::Mode::Combo,
+					.same_line = true,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "None",
+							.desc = "No shadow bias",
+						},
+						ImGuiListSelection::Option{
+							.name = "Float bit Offset",
+						},
+						ImGuiListSelection::Option{
+							.name = "Float Multiplication"
+						},
+						ImGuiListSelection::Option{
+							.name = "Float Addition",
+						},
+					},
+				};
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				Light::DeclareEmission(_target->_emission, _target->_emission_options);
+
+				_shadow_bias_mode.setIndex(size_t(_target->_shadow_bias_mode));
+				if (_shadow_bias_mode.declare())
+				{
+					const Light::ShadowBiasMode new_mode = Light::ShadowBiasMode(_shadow_bias_mode.index());
+					_target->_shadow_bias_mode = new_mode;
+					switch (_target->_shadow_bias_mode)
+					{
+					case Light::ShadowBiasMode::None:
+					case Light::ShadowBiasMode::Offset:
+					case Light::ShadowBiasMode::FloatAdd:
+						_target->_int_shadow_bias = 0;
+						break;
+					case Light::ShadowBiasMode::FloatMult:
+						_target->_float_shadow_bias = float(1);
+						break;
+					}
+				}
+				if (_target->_shadow_bias_mode == Light::ShadowBiasMode::Offset)
+				{
+					ImGui::InputInt("Offset", &_target->_int_shadow_bias);
+				}
+				else if (_target->_shadow_bias_mode == Light::ShadowBiasMode::FloatMult)
+				{
+					float omm = 1 - _target->_float_shadow_bias;
+					if (ImGui::SliderFloat("Multiplicator", &omm, 0, 1, "1 - %.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+					{
+						_target->_float_shadow_bias = 1 - omm;
+					}
+					ImGui::BeginDisabled();
+					ImGui::InputFloat("Mult:", &_target->_float_shadow_bias, 0, 0, "%.5f");
+					ImGui::EndDisabled();
+				}
+				else if (_target->_shadow_bias_mode == Light::ShadowBiasMode::FloatMult)
+				{
+					ImGui::SliderFloat("Bias", &_target->_float_shadow_bias, -1, 1, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+				}
+
+				ImGui::Checkbox("Shadow Bias include cos theta", &_target->_shadow_bias_include_cos_theta);
+			}
+		};
 	}
 
 	bool Light::DeclareEmission(vec3& emission, uint8_t& options)
@@ -149,79 +235,6 @@ namespace vkl
 		return res;
 	}
 
-	void Light::declareGui(GUI::Context& ctx)
-	{
-		ImGui::PushID(this);
-
-		ImGui::Text("Name: ");
-		ImGui::SameLine();
-		ImGui::Text(name().c_str());
-		
-		DeclareEmission(_emission, _emission_options);
-
-		static thread_local ImGuiListSelection gui_shadow_bias_mode = ImGuiListSelection::CI{
-			.name = "Shadow Bias Mode",
-			.mode = ImGuiListSelection::Mode::Combo,
-			.same_line = true,
-			.options = {
-				ImGuiListSelection::Option{
-					.name = "None",
-					.desc = "No shadow bias",
-				},
-				ImGuiListSelection::Option{
-					.name = "Float bit Offset",
-				},
-				ImGuiListSelection::Option{
-					.name = "Float Multiplication"
-				},
-				ImGuiListSelection::Option{
-					.name = "Float Addition",
-				},
-			},
-		};
-		gui_shadow_bias_mode.setIndex(size_t(_shadow_bias_mode));
-		if (gui_shadow_bias_mode.declare())
-		{
-			const ShadowBiasMode new_mode = ShadowBiasMode(gui_shadow_bias_mode.index());
-			_shadow_bias_mode = new_mode;
-			switch (_shadow_bias_mode)
-			{
-			case ShadowBiasMode::None:
-			case ShadowBiasMode::Offset:
-			case ShadowBiasMode::FloatAdd:
-				_int_shadow_bias = 0;
-			break;
-			case ShadowBiasMode::FloatMult:
-				_float_shadow_bias = float(1);
-			break;
-			}
-		}
-		if (_shadow_bias_mode == ShadowBiasMode::Offset)
-		{
-			ImGui::InputInt("Offset", &_int_shadow_bias);
-		}
-		else if (_shadow_bias_mode == ShadowBiasMode::FloatMult)
-		{
-			float omm = 1 - _float_shadow_bias;
-			if (ImGui::SliderFloat("Multiplicator", &omm, 0, 1, "1 - %.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
-			{
-				_float_shadow_bias = 1 - omm;
-			}
-			ImGui::BeginDisabled();
-			ImGui::InputFloat("Mult:", &_float_shadow_bias, 0, 0, "%.5f");
-			ImGui::EndDisabled();
-		}
-		else if (_shadow_bias_mode == ShadowBiasMode::FloatMult)
-		{
-			ImGui::SliderFloat("Bias", &_float_shadow_bias, -1, 1, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-		}
-
-		ImGui::Checkbox("Shadow Bias include cos theta", &_shadow_bias_include_cos_theta);
-
-		ImGui::PopID();
-	}
-
-
 	PointLight::PointLight(CreateInfo const& ci):
 		Light(Light::CI{
 			.app = ci.app,
@@ -253,20 +266,60 @@ namespace vkl
 		return res;
 	}
 
-	void PointLight::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		Light::declareGui(ctx);
+		template <std::strictly_derived_from<Light> L>
+		class DerivedLightInspector : public LightInspector
+		{
+		protected:
 
-		ImGui::PushID(name().c_str());
+		public:
 
-		ImGui::Checkbox("Enable Shadow Map", &_enable_shadow_map);
+			DerivedLightInspector(std::shared_ptr<L> const& target, std::string_view class_name={}) :
+				LightInspector(target)
+			{
+				if (!class_name.empty())
+				{
+					_name.clear();
+					std::format_to(std::back_inserter(_name), "{} - {} Inspector##{}", _target->name(), class_name, reinterpret_cast<uintptr_t>(_target.get()));
+				}
+			}
+		
+			L* target() const
+			{
+				return static_cast<L*>(_target.get());
+			}
+		};
 
-		ImGui::SliderFloat("Z Near", &_z_near, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+		class PointLightInspector : public DerivedLightInspector<PointLight>
+		{
+		protected:
 
-		ImGui::PopID();
+			using Parent = DerivedLightInspector<PointLight>;
+
+		public:
+
+			PointLightInspector(std::shared_ptr<PointLight> const& target) :
+				Parent(target, "Point Light")
+			{
+
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				LightInspector::declareInline(ctx);
+				ImGui::Separator();
+				ImGui::Checkbox("Enable Shadow Map", &target()->_enable_shadow_map);
+
+				ImGui::SliderFloat("Z Near", &target()->_z_near, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+			}
+		};
 	}
 
-
+	std::shared_ptr<GUI::Panel> PointLight::makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::PointLightInspector>(std::static_pointer_cast<PointLight>(shared_this));
+	}
 
 	DirectionalLight::DirectionalLight(CreateInfo const& ci):
 		Light(Light::CI{
@@ -297,13 +350,32 @@ namespace vkl
 		return res;
 	}
 
-	void DirectionalLight::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		Light::declareGui(ctx);
+		class DirectionalLightInspector : public DerivedLightInspector<DirectionalLight>
+		{
+		protected:
 
-		ImGui::PushID(name().c_str());
+			using Parent = DerivedLightInspector<DirectionalLight>;
 
-		ImGui::PopID();
+		public:
+
+			DirectionalLightInspector(std::shared_ptr<DirectionalLight> const& target) :
+				Parent(target, "Directional Light")
+			{
+
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				LightInspector::declareInline(ctx);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> DirectionalLight::makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::DirectionalLightInspector>(std::static_pointer_cast<DirectionalLight>(shared_this));
 	}
 
 
@@ -373,39 +445,60 @@ namespace vkl
 		return res;
 	}
 
-	void SpotBeamLight::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		Light::declareGui(ctx);
-		ImGui::PushID(name().c_str());
-		if (_type == LightType::Spot)
+		class SpotBeamLightInspector : public DerivedLightInspector<SpotBeamLight>
 		{
-			ImGui::SliderAngle("Angle", &_opening, 0, 180);
-		}
-		else
-		{
-			ImGui::SliderFloat("Opening", &_opening, 0, 1, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-		}
-		ImGui::SliderFloat("Aspect Ratio", &_ratio, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-		ImGui::Checkbox("Preserve total intensity from opening", &_preserve_intensity_from_opening);
-		static ImGuiListSelection gui_attenuation(ImGuiListSelection::CI{
-			.name = "Attenuation",
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.labels = {"None", "Linear", "Quadratic", "Inside"},
-		});
-		gui_attenuation.setIndex(_attenuation);
-		if (gui_attenuation.declare())
-		{
-			_attenuation = gui_attenuation.index();
-		}
+		protected:
 
-		ImGui::Checkbox("Enable Shadow Map", &_enable_shadow_map);
+			using Parent = DerivedLightInspector<SpotBeamLight>;
 
-		if (_type == LightType::Spot)
-		{
-			ImGui::SliderFloat("Z Near", &_znear, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-		}
+		public:
 
-		ImGui::PopID();
+			SpotBeamLightInspector(std::shared_ptr<SpotBeamLight> const& target) :
+				Parent(target, "Spot / Beam Light")
+			{
+
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				LightInspector::declareInline(ctx);
+				ImGui::Separator();
+				if (target()->_type == LightType::Spot)
+				{
+					ImGui::SliderAngle("Angle", &target()->_opening, 0, 180);
+				}
+				else
+				{
+					ImGui::SliderFloat("Opening", &target()->_opening, 0, 1, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+				}
+				ImGui::SliderFloat("Aspect Ratio", &target()->_ratio, 0, 10, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+				ImGui::Checkbox("Preserve total intensity from opening", &target()->_preserve_intensity_from_opening);
+				static ImGuiListSelection gui_attenuation(ImGuiListSelection::CI{
+					.name = "Attenuation",
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.labels = {"None", "Linear", "Quadratic", "Inside"},
+					});
+				gui_attenuation.setIndex(target()->_attenuation);
+				if (gui_attenuation.declare())
+				{
+					target()->_attenuation = gui_attenuation.index();
+				}
+
+				ImGui::Checkbox("Enable Shadow Map", &target()->_enable_shadow_map);
+
+				if (target()->_type == LightType::Spot)
+				{
+					ImGui::SliderFloat("Z Near", &target()->_znear, 0, 10, "%.5f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> SpotBeamLight::makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::SpotBeamLightInspector>(std::static_pointer_cast<SpotBeamLight>(shared_this));
 	}
 }

@@ -10,6 +10,7 @@ namespace vkl::GUI
 	{
 		resetName();
 		_model_panel.init("Model");
+		_light_panel.init("Light");
 	}
 
 	void NodeInspector::setUnique(bool unique)
@@ -82,10 +83,7 @@ namespace vkl::GUI
 
 		_model_panel.declareInline(ctx, _node->model());
 
-		if (!!_node->light() && ImGui::CollapsingHeader("Light"))
-		{
-			_node->light()->declareGui(ctx);
-		}
+		_light_panel.declareInline(ctx, _node->light());
 
 		ImGui::SeparatorText("Children");
 		{
