@@ -43,7 +43,7 @@ else:
 	dst_dir = args.destination + "/"
 
 time = datetime.datetime.now()
-dst_dir = os.path.abspath(os.path.join(dst_dir, f"Release-{time.year}-{time.month}-{time.day}"))
+dst_dir = os.path.abspath(os.path.join(dst_dir, f"Release-{time.year}-{time.month:02}-{time.day:02}"))
 
 print(f"Making release: {dst_dir}")
 print(f"From: {root}")
