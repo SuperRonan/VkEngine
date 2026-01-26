@@ -297,7 +297,7 @@ namespace vkl
 		{
 			return filter.empty();
 		}
-		
+
 		constexpr operator bool() const
 		{
 			return !empty();
@@ -310,7 +310,7 @@ struct ImRect;
 
 namespace ImGui
 {
-	
+
 	template <class Scalar>
 	static constexpr ImGuiDataType GetDataType() noexcept
 	{
@@ -335,9 +335,9 @@ namespace ImGui
 		return type;
 	}
 
-	extern bool DragAngle(const char* label, float* v_rad, float v_speed=1, float v_degrees_min=-180, float v_degrees_max=180, const char* format = "%.1f", ImGuiSliderFlags flags = 0);
+	extern bool DragAngle(const char* label, float* v_rad, float v_speed = 1, float v_degrees_min = -180, float v_degrees_max = 180, const char* format = "%.1f", ImGuiSliderFlags flags = 0);
 
-	extern bool SliderAngleN(const char* label, float * v_rad, uint N, float v_degrees_min=-180, float v_degrees_max=180, const char * format = "%.1f", ImGuiSliderFlags flags = 0, uint8_t* changed_bit_field = nullptr);
+	extern bool SliderAngleN(const char* label, float* v_rad, uint N, float v_degrees_min = -180, float v_degrees_max = 180, const char* format = "%.1f", ImGuiSliderFlags flags = 0, uint8_t* changed_bit_field = nullptr);
 
 	// Returns a bit field (bit N -> axis N changed)
 	static inline uint SliderAngle3(const char* label, float* v_rad, float v_degrees_min = -180, float v_degrees_max = 180, const char* format = "%.1f", ImGuiSliderFlags flags = 0)
@@ -349,7 +349,7 @@ namespace ImGui
 	}
 
 	template <class Scalar, uint R, uint C, int Options>
-		requires (((Options & Eigen::RowMajor) != 0))
+		requires (((Options& Eigen::RowMajor) != 0))
 	static bool DragMatrix(const char* label, ::vkl::Matrix<Scalar, R, C, Options>& matrix, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
 	{
 		bool res = false;
