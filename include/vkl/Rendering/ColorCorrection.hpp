@@ -3,11 +3,16 @@
 #include <vkl/Execution/Module.hpp>
 #include <vkl/Commands/ComputeCommand.hpp>
 #include <vkl/Execution/Executor.hpp>
-#include <vkl/GUI/Context.hpp>
+
 #include <vkl/VkObjects/VkWindow.hpp>
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class ColorCorrectionInspector;
+	}
+
 	class ColorCorrection : public Module
 	{
 	public:
@@ -50,12 +55,6 @@ namespace vkl
 		float _exposure = 1.0f;
 		float _gamma = 1.0f;
 
-		size_t _plot_samples = 100;
-		size_t _plot_min_radiance = 0;
-		size_t _plot_max_radiance = 1;
-		std::vector<float> _plot_raw_radiance;
-		std::vector<float> _plot_corrected_radiance;
-
 		void createInternalResources();
 
 	public:
@@ -78,7 +77,9 @@ namespace vkl
 
 		void execute(ExecutionRecorder & exec);
 
-		void declareGui(GUI::Context & ctx);
+		using InspectorType = GUI::ColorCorrectionInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<ColorCorrection> const& shared_this, GUI::Context& ctx);
 
 		float computeTransferFunction(float linear)const;
 	};

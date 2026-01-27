@@ -772,13 +772,13 @@ namespace vkl
 				exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
 			}
 
-			ColorCorrection color_correction = ColorCorrection::CI{
+			std::shared_ptr<ColorCorrection> color_correction = std::make_shared<ColorCorrection>(ColorCorrection::CI{
 				.app = this,
 				.name = "ColorCorrection",
 				.dst = final_image,
 				.sets_layouts = sets_layouts,
 				.target_window = _main_window,
-			};
+			});
 
 			std::shared_ptr<PictureInPicture> pip = std::make_shared<PictureInPicture>(PictureInPicture::CI{
 				.app = this,
@@ -991,7 +991,7 @@ namespace vkl
 			});
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(camera, "Camera"));
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer, "Rendering"), .label = "Rendering"});
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(color_correction, "Color Correction"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(pip, "Picture In Picture"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_picker, "Image Picker"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_saver, "Image Saver"));
@@ -1107,7 +1107,7 @@ namespace vkl
 					std::TickTock_hrc modules_tt;
 					modules_tt.tick();
 					renderer.updateResources(*update_context);
-					color_correction.updateResources(*update_context);
+					color_correction->updateResources(*update_context);
 					pip->updateResources(*update_context);
 					image_picker->updateResources(*update_context);
 					image_saver->updateResources(*update_context);
@@ -1153,7 +1153,7 @@ namespace vkl
 						exec_thread(slang_test);
 					}
 
-					color_correction.execute(exec_thread);
+					color_correction->execute(exec_thread);
 					
 					pip->execute(exec_thread);
 
