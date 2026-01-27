@@ -53,10 +53,17 @@ namespace vkl
 				_aabb += mesh->getAABB();
 			}
 		}
+		if (_light)
+		{
+			_aabb += _light->getAsGLSL(AffineXForm3Df::Identity()).position;
+		}
 		for (auto& child : _children)
 		{
 			child->updateResources(ctx);
-			child->_aabb.getContainingAABB(child->getXForm(), _aabb);
+			if (!child->_aabb.empty())
+			{
+				child->_aabb.getContainingAABB(child->getXForm(), _aabb);
+			}
 		}
 	}
 
