@@ -724,14 +724,14 @@ namespace vkl
 				.use_debug_renderer = true,
 			});
 
-			Camera camera(Camera::CreateInfo{
+			std::shared_ptr<Camera> camera = std::make_shared<Camera>(Camera::CreateInfo{
 				.app = this,
 				.name = "Camera",
 				.resolution = _main_window->extent2D(),
 				.znear = 0.01,
 				.zfar = 100,
 			});
-			camera.update(Camera::CameraDelta{
+			camera->update(Camera::CameraDelta{
 				.angle = Vector2f(std::numbers::pi, 0),
 			});
 
@@ -765,7 +765,7 @@ namespace vkl
 				.sets_layouts = sets_layouts,
 				.scene = scene,
 				.target = final_image,
-				.camera = &camera,
+				.camera = camera.get(),
 			});
 			if (exec.getDebugRenderer())
 			{
@@ -922,7 +922,7 @@ namespace vkl
 			CommonUBO common_ubo {};
 
 			FirstPersonCameraController camera_controller(FirstPersonCameraController::CreateInfo{
-				.camera = &camera, 
+				.camera = camera.get(),
 				.keyboard = &keyboard,
 				.mouse = &mouse,
 				.gamepad = &gamepad,
@@ -989,7 +989,7 @@ namespace vkl
 					ImGui::Checkbox("Run test shader", &use_test_shader);
 				}
 			});
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(camera), });
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(camera, "Camera"));
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer, "Rendering"), .label = "Rendering"});
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
@@ -1146,7 +1146,7 @@ namespace vkl
 
 					image_picker.execute(exec_thread);
 
-					sui->execute(exec_thread, camera);
+					sui->execute(exec_thread, *camera);
 
 					if (slang_test && use_test_shader)
 					{

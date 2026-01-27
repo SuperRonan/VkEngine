@@ -1,8 +1,6 @@
 #pragma once
 
 #include <vkl/Rendering/RenderObjects.hpp>
-#include <vkl/GUI/Context.hpp>
-#include <vkl/GUI/ImGuiUtils.hpp>
 
 #include <vkl/Maths/Types.hpp>
 
@@ -12,6 +10,10 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class CameraInspector;
+	}
 	class Camera : public VkObject
 	{
 	public:
@@ -74,8 +76,6 @@ namespace vkl
 		bool _reverse_depth = false;
 
 		Type _type = Type::Perspective;
-
-		ImGuiListSelection _gui_type;
 
 	public:
 
@@ -250,7 +250,9 @@ namespace vkl
 
 		void update(CameraDelta const& delta);
 
-		void declareGui(GUI::Context& ctx);
+		using InspectorType = GUI::CameraInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Camera> const& shared_this, GUI::Context& ctx);
 
 		AsGLSL getAsGLSL() const;
 

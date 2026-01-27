@@ -3,6 +3,9 @@
 
 #include <ShaderLib/Rendering/Camera/CameraDefinitions.h>
 
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Panel.hpp>
+
 namespace vkl
 {
 	Camera::Camera(CreateInfo const& ci) :
@@ -11,16 +14,7 @@ namespace vkl
 		_near(ci.znear),
 		_far(ci.zfar)
 	{
-		_gui_type = ImGuiListSelection::CI{
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.labels = {
-				"Perspective",
-				"Orthographic",
-				"Spherical"
-			},
-			.default_index = 0,
-		};
+	
 	}
 
 	Ray Camera::getRay(vec2 uv) const
@@ -131,61 +125,96 @@ namespace vkl
 		}
 	}
 
-	void Camera::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		ImGui::Checkbox("Infinite far", &_infinite_far);
-		ImGui::SameLine();
-		ImGui::Checkbox("Reversed depth", &_reverse_depth);
-		float f;
-		f = _near;
-		if (ImGui::SliderFloat("near plane", &f, 0, _far))
+		class CameraInspector : public Panel
 		{
-			_near = f;
-		}
+		protected:
+
+			std::shared_ptr<Camera> _target;
+
+			ImGuiListSelection _type;
+		public:
 			
-		if (_type != Type::Spherical)
-		{
-			f = _far;
-			if (ImGui::SliderFloat("far plane", &f, _near, 1e4 * _near))
+			CameraInspector(std::shared_ptr<Camera> const& target) :
+				Panel(target->application(), std::format("{} - Camera Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				_target(target)
 			{
-				_far = f;
+				_type = ImGuiListSelection::CI{
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.labels = {
+						"Perspective",
+						"Orthographic",
+						"Spherical"
+					},
+					.default_index = 0,
+				};
 			}
-		}
 
-		if (_gui_type.declare())
-		{
-			_type = Type(_gui_type.index());
-		}
-
-		if (_type == Type::Perspective || _type == Type::Spherical)
-		{
-			f = _fov;
-			float max_fov = 180;
-			if(_type == Camera::Type::Spherical)	max_fov *= 2;
-			if (ImGui::SliderAngle("FOV", &f, 0, max_fov))
+			virtual void declareInline(Context& ctx) override
 			{
-				_fov = f;
-			}
-		}
+				ImGui::Checkbox("Infinite far", &_target->_infinite_far);
+				ImGui::SameLine();
+				ImGui::Checkbox("Reversed depth", &_target->_reverse_depth);
+				float f;
+				f = _target->_near;
+				if (ImGui::SliderFloat("near plane", &f, 0, _target->_far))
+				{
+					_target->_near = f;
+				}
 
-		if (_type == Type::Perspective)
-		{
-			ImGui::SliderFloat("Aperture", &_aperture, 0, 100, "%.1f mm", ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Focal distance", &_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-				
-			float f = focalLength() * 1e3f;
-			if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue & 0))
-			{
-				// Auto focus
-				float fm = f / 1e3f;
-				_focal_distance = fm * distanceFilmLens() * rcp(abs(fm - distanceFilmLens()));
-			}
-			ImGui::Text("f-number: f / %.1f", fNumber());
-		}
-		else if (_type == Type::Orthographic)
-		{
+				if (_target->_type != Camera::Type::Spherical)
+				{
+					f = _target->_far;
+					if (ImGui::SliderFloat("far plane", &f, _target->_near, 1e4 * _target->_near))
+					{
+						_target->_far = f;
+					}
+				}
 
-		}
+				_type.setIndex(static_cast<size_t>(_target->type()));
+				if (_type.declare())
+				{
+					_target->_type = Camera::Type(_type.index());
+				}
+
+				if (std::IsAnyOf(_target->_type,Camera::Type::Perspective ,Camera::Type::Spherical))
+				{
+					f = _target->_fov;
+					float max_fov = 180;
+					if (_target->_type == Camera::Type::Spherical)	max_fov *= 2;
+					if (ImGui::SliderAngle("FOV", &f, 0, max_fov))
+					{
+						_target->_fov = f;
+					}
+				}
+
+				if (_target->_type == Camera::Type::Perspective)
+				{
+					ImGui::SliderFloat("Aperture", &_target->_aperture, 0, 100, "%.1f mm", ImGuiSliderFlags_NoRoundToFormat);
+					ImGui::SliderFloat("Focal distance", &_target->_focal_distance, 0, 100, "%.3f m", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+
+					float f = _target->focalLength() * 1e3f;
+					if (ImGui::InputFloat("Focal Length", &f, 0, 0, "%.1f mm", ImGuiInputTextFlags_EnterReturnsTrue & 0))
+					{
+						// Auto focus
+						float fm = f / 1e3f;
+						_target->_focal_distance = fm * _target->distanceFilmLens() * rcp(abs(fm - _target->distanceFilmLens()));
+					}
+					ImGui::Text("f-number: f / %.1f", _target->fNumber());
+				}
+				else if (_target->_type == Camera::Type::Orthographic)
+				{
+
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> Camera::makeInspector(std::shared_ptr<Camera> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::CameraInspector>(shared_this);
 	}
 
 	Camera::AsGLSL Camera::getAsGLSL() const
