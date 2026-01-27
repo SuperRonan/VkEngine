@@ -1,6 +1,9 @@
 #include "PicInPic.hpp"
 #include <vkl/Execution/Executor.hpp>
-#include "imgui.h"
+
+#include <imgui/imgui.h>
+
+#include <vkl/GUI/Panel.hpp>
 
 namespace vkl
 {
@@ -118,11 +121,31 @@ namespace vkl
 		}
 	}
 
-	void PictureInPicture::declareGui(GUI::Context & ctx)
+	namespace GUI
 	{
-		ImGui::Checkbox("enable", &_enable);
-		ImGui::SliderFloat("zoom", &_zoom, 1, 16);
-		ImGui::SliderFloat("size", &_pip_size, 0, 1);
-		ImGui::SliderFloat2("position", _pip_position.data(), 0, 1);
+		class PictureInPictureInspector : public Panel
+		{
+		protected:
+			std::shared_ptr<PictureInPicture> _target;
+		public:
+
+			PictureInPictureInspector(std::shared_ptr<PictureInPicture> const& target):
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
+			{ }
+
+			virtual void declareInline(Context& ctx) override
+			{
+				ImGui::Checkbox("enable", &_target->_enable);
+				ImGui::SliderFloat("zoom", &_target->_zoom, 1, 16);
+				ImGui::SliderFloat("size", &_target->_pip_size, 0, 1);
+				ImGui::SliderFloat2("position", _target->_pip_position.data(), 0, 1);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> PictureInPicture::makeInspector(std::shared_ptr<PictureInPicture> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::PictureInPictureInspector>(shared_this);
 	}
 }

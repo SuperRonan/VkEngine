@@ -780,12 +780,12 @@ namespace vkl
 				.target_window = _main_window,
 			};
 
-			PictureInPicture pip = PictureInPicture::CI{
+			std::shared_ptr<PictureInPicture> pip = std::make_shared<PictureInPicture>(PictureInPicture::CI{
 				.app = this,
 				.name = "PiP",
 				.target = final_image,
 				.sets_layouts = sets_layouts,
-			};
+			});
 
 			std::shared_ptr<SceneUserInterface> sui = std::make_shared<SceneUserInterface>(SceneUserInterface::CI{
 				.app = this,
@@ -992,7 +992,7 @@ namespace vkl
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(camera, "Camera"));
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer, "Rendering"), .label = "Rendering"});
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(pip, "Picture In Picture"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_picker, "Image Picker"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_saver, "Image Saver"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(exec.getDebugRenderer(), "Debug Renderer"));
@@ -1067,7 +1067,7 @@ namespace vkl
 
 				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{
-					pip.setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / Vector2f(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
+					pip->setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / Vector2f(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
 				}
 
 				frame_counters.reset();
@@ -1108,7 +1108,7 @@ namespace vkl
 					modules_tt.tick();
 					renderer.updateResources(*update_context);
 					color_correction.updateResources(*update_context);
-					pip.updateResources(*update_context);
+					pip->updateResources(*update_context);
 					image_picker->updateResources(*update_context);
 					image_saver->updateResources(*update_context);
 					sui->updateResources(*update_context);
@@ -1155,7 +1155,7 @@ namespace vkl
 
 					color_correction.execute(exec_thread);
 					
-					pip.execute(exec_thread);
+					pip->execute(exec_thread);
 
 
 					exec_thread.bindSet(BindSetInfo{

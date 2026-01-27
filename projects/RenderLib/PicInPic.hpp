@@ -10,10 +10,12 @@
 
 #include <vkl/Maths/Types.hpp>
 
-#include <vkl/GUI/Context.hpp>
-
 namespace vkl
 {
+	namespace GUI
+	{
+		class PictureInPictureInspector;
+	}
 	class PictureInPicture : public Module
 	{
 	protected:
@@ -62,12 +64,13 @@ namespace vkl
 
 		void execute(ExecutionRecorder& exec);
 
-		void declareGui(GUI::Context & ctx);
-
 		void setPosition(Vector2f const& pos)
 		{
 			_pip_position = pos;
 		}
 
+		using InspectorType = GUI::PictureInPictureInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<PictureInPicture> const& shared_this, GUI::Context& ctx);
 	};
 }
