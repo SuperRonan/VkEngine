@@ -1,5 +1,10 @@
 #include <vkl/Rendering/ImagePicker.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
+
 namespace vkl
 {
 	ImagePicker::ImagePicker(CreateInfo const& ci) :
@@ -12,41 +17,6 @@ namespace vkl
 			.app = application(),
 			.name = name() + ".Blitter",
 		});
-
-		MyVector<std::string> src_labels(_sources.size());
-		for (size_t i = 0; i < _sources.size(); ++i)
-		{
-			if (_sources[i])
-			{
-				src_labels[i] = _sources[i]->name();
-			}
-			else
-			{
-				src_labels[i] = "No Image";
-			}
-		}
-
-		_gui_source = ImGuiListSelection::CI{
-			.name = "Source",
-			.labels = std::move(src_labels),
-			.default_index = ci.index,
-		};
-
-		_gui_filter = ImGuiListSelection::CI{
-			.name = "Filter",
-			.options = {
-				ImGuiListSelection::Option{
-					.name = "Nearest",
-				},
-				ImGuiListSelection::Option{
-					.name = "Linear",
-				},
-				ImGuiListSelection::Option{
-					.name = "Cubic",
-					.disable = true,
-				},
-			},
-		};
 	}
 
 	void ImagePicker::updateResources(UpdateContext& ctx)
@@ -58,58 +28,97 @@ namespace vkl
 
 	void ImagePicker::execute(ExecutionRecorder& recorder)
 	{
-		const size_t index = _gui_source.index();
-		assert(index < _sources.size());
-
-		std::shared_ptr<ImageView> const& src = _sources[index];
+		if (_source_index < _sources.size())
+		{
+			std::shared_ptr<ImageView> const& src = _sources[_source_index];
 		
-		if (src != _dst)
-		{
-			bool exec = src && _dst && src->instance() && _dst->instance();
-			if (exec)
+			if (src != _dst)
 			{
-				recorder(_blitter->with(BlitImage::BlitInfo{
-					.src = src,
-					.dst = _dst,
-					.filter = _filter,
-				}));
+				bool exec = src && _dst && src->instance() && _dst->instance();
+				if (exec)
+				{
+					recorder(_blitter->with(BlitImage::BlitInfo{
+						.src = src,
+						.dst = _dst,
+						.filter = _filter,
+					}));
+				}
+				_latest_success = exec;
 			}
-			_latest_success = exec;
-		}
-	}
-
-	void ImagePicker::declareGUI(GUI::Context& ctx)
-	{
-		ImGui::PushID(this);
-
-		if (_latest_success)
-		{
-			ImGui::TextColored(ctx.style().valid_green, "Success");
 		}
 		else
 		{
-			ImGui::TextColored(ctx.style().invalid_red, "Fail");
+			_latest_success = false;
 		}
-			
-		_gui_source.declare();
+	}
 
-		const char * dst_name = _dst ? _dst->name().c_str() : "No Image";
-		ImGui::Text("Destination: %s", dst_name);
-
-		if(_gui_filter.declare())
+	namespace GUI
+	{
+		class ImagePickerInspector : public Panel
 		{
-			switch (_gui_filter.index())
+		protected:
+			std::shared_ptr<ImagePicker> _target;
+			ImGuiListSelection _source;
+			TargetIndirectInlinePanel<ImageView> _current_source, _dst;
+		public:
+			ImagePickerInspector(std::shared_ptr<ImagePicker> const& target):
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
 			{
-				case 0:
-				case 1:
-					_filter = static_cast<VkFilter>(_gui_filter.index());
-				break;
-				case 2:
-					_filter = VK_FILTER_CUBIC_EXT;
-				break;
-			}
-		}
+				MyVector<std::string> src_labels(_target->_sources.size());
+				for (size_t i = 0; i < _target->_sources.size(); ++i)
+				{
+					if (_target->_sources[i])
+					{
+						src_labels[i] = _target->_sources[i]->name();
+					}
+					else
+					{
+						src_labels[i] = "No Image";
+					}
+				}
+				_source = ImGuiListSelection::CI{
+					.name = "Source",
+					.labels = std::move(src_labels),
+					.default_index = _target->_source_index,
+				};
 
-		ImGui::PopID();
+				_current_source.init("Current Source");
+				_dst.init("Destination");
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				if (_target->_latest_success)
+				{
+					ImGui::TextColored(ctx.style().valid_green, "Success");
+				}
+				else
+				{
+					ImGui::TextColored(ctx.style().invalid_red, "Fail");
+				}
+
+				_source.setIndex(_target->_source_index);
+				if (_source.declare())
+				{
+					_target->_source_index = _source.index();
+				}
+
+				const char* dst_name = _target->_dst ? _target->_dst->name().c_str() : "No Image";
+				ImGui::Text("Destination: %s", dst_name);
+
+				const bool cubic_allowed = false;
+				std::array allowed_filters = { VK_FILTER_NEAREST, VK_FILTER_LINEAR, VK_FILTER_CUBIC_EXT };
+				InspectVkEnum<VkFilter>(ctx, "Filter", &_target->_filter, std::span(allowed_filters.data(), cubic_allowed ? 3 : 2));
+
+				_current_source.declareInline(ctx, _target->source());
+				_dst.declareInline(ctx, _target->_dst);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> ImagePicker::makeInspector(std::shared_ptr<ImagePicker> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::ImagePickerInspector>(shared_this);
 	}
 }

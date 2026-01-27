@@ -796,7 +796,7 @@ namespace vkl
 				.sets_layouts = sets_layouts,
 			});
 
-			ImagePicker image_picker = ImagePicker::CI{
+			std::shared_ptr<ImagePicker> image_picker = std::make_shared<ImagePicker>(ImagePicker::CI{
 				.app = this,
 				.name = "ImagePicker",
 				.sources = {
@@ -809,7 +809,7 @@ namespace vkl
 					renderer.depth(), // Does not work yet
 				},
 				.dst = final_image,
-			};
+			});
 
 			std::shared_ptr<ImageSaver> image_saver = std::make_shared<ImageSaver>(ImageSaver::CI{
 				.app = this,
@@ -993,7 +993,7 @@ namespace vkl
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer, "Rendering"), .label = "Rendering"});
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(color_correction), });
 			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(pip), });
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(image_picker), });
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_picker, "Image Picker"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_saver, "Image Saver"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(exec.getDebugRenderer(), "Debug Renderer"));
 
@@ -1109,7 +1109,7 @@ namespace vkl
 					renderer.updateResources(*update_context);
 					color_correction.updateResources(*update_context);
 					pip.updateResources(*update_context);
-					image_picker.updateResources(*update_context);
+					image_picker->updateResources(*update_context);
 					image_saver->updateResources(*update_context);
 					sui->updateResources(*update_context);
 					script_resources.update(*update_context);
@@ -1144,7 +1144,7 @@ namespace vkl
 					scene->prepareForRendering(exec_thread);
 					renderer.execute(exec_thread, t, dt, frame_index);
 
-					image_picker.execute(exec_thread);
+					image_picker->execute(exec_thread);
 
 					sui->execute(exec_thread, *camera);
 

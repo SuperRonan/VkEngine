@@ -158,4 +158,40 @@ namespace vkl::GUI
 		return InspectVkEnum(label, value);
 	}
 
+	template <concepts::VkRawEnum Enum>
+	bool InspectVkEnum(Context& ctx, const char* label, Enum* value, std::span<Enum> values)
+	{
+		bool res = false;
+		assert(!!value);
+		auto get_value_str = [](Enum value) -> const char*
+		{
+			using MetaInfo = ::vku::EnumMetaInfo<Enum>;
+			const char* res = MetaInfo::GetValueName(value);
+			if (!res)
+			{
+				impl::_str_tmp.clear();
+				std::format_to(std::back_inserter(impl::_str_tmp), "Unknown Value {}", static_cast<typename std::underlying_type<Enum>::type>(value));
+				res = impl::_str_tmp.c_str();
+			}
+			return res;
+		};
+		if (ImGui::BeginCombo(label, get_value_str(*value), ImGuiComboFlags_None))
+		{
+			for (uint32_t i = 0; i < values.size(); ++i)
+			{
+				bool b = *value == values[i];
+				if (ImGui::Selectable(get_value_str(values[i]), b, ImGuiSelectableFlags_None))
+				{
+					res = !b;
+					*value = values[i];
+				}
+				if (b)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		return res;
+	}
 } // namespace vkl::GUI
