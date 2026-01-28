@@ -159,39 +159,77 @@ namespace vkl::GUI
 	}
 
 	template <concepts::VkRawEnum Enum>
-	bool InspectVkEnum(Context& ctx, const char* label, Enum* value, std::span<Enum> values)
+	struct EnumOption
 	{
-		bool res = false;
-		assert(!!value);
-		auto get_value_str = [](Enum value) -> const char*
+		Enum value = {};
+		bool disabled = false;
+
+		constexpr operator Enum() const
 		{
-			using MetaInfo = ::vku::EnumMetaInfo<Enum>;
-			const char* res = MetaInfo::GetValueName(value);
-			if (!res)
+			return value;
+		}
+	};
+
+	namespace impl
+	{
+		template <concepts::VkRawEnum Enum, class EnumOptionType = Enum>
+		bool InspectVkEnum(Context& ctx, const char* label, Enum* value, std::span<const EnumOptionType> values)
+		{
+			bool res = false;
+			assert(!!value);
+			auto get_value_str = [](Enum value) -> const char*
+				{
+					using MetaInfo = ::vku::EnumMetaInfo<Enum>;
+					const char* res = MetaInfo::GetValueName(value);
+					if (!res)
+					{
+						impl::_str_tmp.clear();
+						std::format_to(std::back_inserter(impl::_str_tmp), "Unknown Value {}", static_cast<typename std::underlying_type<Enum>::type>(value));
+						res = impl::_str_tmp.c_str();
+					}
+					return res;
+				};
+			if (ImGui::BeginCombo(label, get_value_str(*value), ImGuiComboFlags_None))
 			{
-				impl::_str_tmp.clear();
-				std::format_to(std::back_inserter(impl::_str_tmp), "Unknown Value {}", static_cast<typename std::underlying_type<Enum>::type>(value));
-				res = impl::_str_tmp.c_str();
+				for (uint32_t i = 0; i < values.size(); ++i)
+				{
+					Enum vi = values[i];
+					bool b = *value == vi;
+					constexpr const bool has_disable = std::is_same<typename std::remove_cv<EnumOptionType>::type, EnumOption<Enum>>::value;
+					if constexpr (has_disable)
+					{
+						ImGui::BeginDisabled(values[i].disabled);
+					}
+					if (ImGui::Selectable(get_value_str(vi), b, ImGuiSelectableFlags_None))
+					{
+						res = !b;
+						*value = vi;
+					}
+					if (b)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+					if constexpr (has_disable)
+					{
+						ImGui::EndDisabled();
+					}
+				}
+				ImGui::EndCombo();
 			}
 			return res;
-		};
-		if (ImGui::BeginCombo(label, get_value_str(*value), ImGuiComboFlags_None))
-		{
-			for (uint32_t i = 0; i < values.size(); ++i)
-			{
-				bool b = *value == values[i];
-				if (ImGui::Selectable(get_value_str(values[i]), b, ImGuiSelectableFlags_None))
-				{
-					res = !b;
-					*value = values[i];
-				}
-				if (b)
-				{
-					ImGui::SetItemDefaultFocus();
-				}
-			}
-			ImGui::EndCombo();
 		}
-		return res;
 	}
+
+	template <concepts::VkRawEnum Enum>
+	bool InspectVkEnum(Context& ctx, const char* label, Enum* value, std::span<const Enum> values)
+	{
+		return impl::InspectVkEnum<Enum, Enum>(ctx, label, value, values);
+	}
+
+	template <concepts::VkRawEnum Enum>
+	bool InspectVkEnum(Context& ctx, const char* label, Enum* value, std::span<const EnumOption<Enum>> values)
+	{
+		return impl::InspectVkEnum<Enum, EnumOption<Enum>>(ctx, label, value, values);
+	}
+	
 } // namespace vkl::GUI
