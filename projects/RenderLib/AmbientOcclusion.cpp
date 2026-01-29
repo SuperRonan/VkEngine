@@ -13,26 +13,12 @@ namespace vkl
 		_positions(ci.positions),
 		_normals(ci.normals),
 		_can_rt(ci.can_rt),
-		_gui_method(ImGuiListSelection::CI{
-			.name = "Method",
-			.mode = ImGuiListSelection::Mode::Dropdown,
-			.labels = {"SSAO", "RTAO", "RQAO"},
-		})
+		_method(ci.default_method)
 	{
-		_gui_method.setIndex(ci.default_method);
-		
 		const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
 		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
 		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
 		_can_rt &= can_as;
-
-		_gui_method.enableOptions(static_cast<uint32_t>(Method::RTAO), _can_rt && can_rt);
-		_gui_method.enableOptions(static_cast<uint32_t>(Method::RQAO), _can_rt && can_rq);
-
-		if (_gui_method.options()[_gui_method.index()].disable)
-		{
-			_gui_method.setIndex(0);
-		}
 
 		assert(!!_positions);
 
@@ -48,25 +34,23 @@ namespace vkl
 		bool res = false;
 		if (want_rt != _can_rt)
 		{
-			_gui_method.enableOptions(static_cast<uint32_t>(Method::RTAO), want_rt && can_rt);
-			_gui_method.enableOptions(static_cast<uint32_t>(Method::RQAO), want_rt && can_rq);
-			if (_gui_method.options()[_gui_method.index()].disable)
+			_can_rt = want_rt;
+			if (!_can_rt && std::IsAnyOf(_method, Method::RTAO, Method::RQAO))
 			{
-				if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO) && !_gui_method.options()[static_cast<uint32_t>(Method::RQAO)].disable)
+				_method = Method::SSAO;
+			}
+			else if (_can_rt && !std::IsAnyOf(_method, Method::RTAO, Method::RQAO))
+			{
+				if (can_rt)
 				{
-					_gui_method.setIndex(static_cast<uint32_t>(Method::RQAO));
+					_method = Method::RTAO;
 				}
-				else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO) && !_gui_method.options()[static_cast<uint32_t>(Method::RTAO)].disable)
+				else if (can_rq)
 				{
-					_gui_method.setIndex(static_cast<uint32_t>(Method::RTAO));
-				}
-				else
-				{
-					_gui_method.setIndex(static_cast<uint32_t>(Method::SSAO));
+					_method = Method::RQAO;
 				}
 			}
-			_can_rt = can_rt;
-			res = true;
+			_method_glsl.clear();
 		}
 		return res;
 	}
@@ -199,18 +183,18 @@ namespace vkl
 		_target->updateResources(ctx);
 		if (_enable)
 		{
-			_method_glsl.back() = '0' + _gui_method.index();
+			_method_glsl.back() = '0' + static_cast<char>(_method);
 			_sampler->updateResources(ctx);
 
-			if (_gui_method.index() == static_cast<uint32_t>(Method::SSAO))
+			if (_method == Method::SSAO)
 			{
 				ctx.resourcesToUpdateLater() += _ssao_compute_command;
 			}
-			else if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
+			else if (_method == Method::RTAO)
 			{
 				ctx.resourcesToUpdateLater() += _rtao_command;
 			}
-			else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
+			else if (_method == Method::RQAO)
 			{
 				ctx.resourcesToUpdateLater() += _rqao_compute_command;
 			}
@@ -224,7 +208,6 @@ namespace vkl
 		if (_enable)
 		{
 			//recorder.pushDebugLabel(name());
-				
 			uint32_t flags = 0;
 
 			if (_normals)
@@ -239,14 +222,14 @@ namespace vkl
 				.seed = uint32_t(std::hash<uint32_t>()(_seed)),
 			};
 
-			if (_gui_method.index() == static_cast<uint32_t>(Method::SSAO))
+			if (_method == Method::SSAO)
 			{
 				recorder(_ssao_compute_command->with(ComputeCommand::SingleDispatchInfo{
 					.pc_data = &pc,
 					.pc_size = sizeof(pc),
 				}));
 			}
-			else if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
+			else if (_method == Method::RTAO)
 			{
 				_rtao_command->getSBT()->recordUpdateIFN(recorder);
 				recorder(_rtao_command->with(RayTracingCommand::SingleTraceInfo{
@@ -255,7 +238,7 @@ namespace vkl
 					.pc_size = sizeof(pc),
 				}));
 			}
-			else if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
+			else if (_method == Method::RQAO)
 			{
 				recorder(_rqao_compute_command->with(ComputeCommand::SingleDispatchInfo{
 					.pc_data = &pc,
@@ -273,19 +256,52 @@ namespace vkl
 		{
 		protected:
 			std::shared_ptr<AmbientOcclusion> _target;
+			bool _can_rt;
+			ImGuiListSelection _method;
 		public:
 
 			AmbientOcclusionInspector(std::shared_ptr<AmbientOcclusion> const& target) :
 				Panel(target->application(), std::format("{}", target->name())),
 				_target(target)
 			{
-
+				const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+				const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+				_can_rt = _target->_can_rt;
+				_method = ImGuiListSelection::CI{
+					.name = "Method",
+					.mode = ImGuiListSelection::Mode::Dropdown,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "SSAO",
+						},
+						ImGuiListSelection::Option{
+							.name = "RTAO",
+							.disable = !(_can_rt && can_rt),
+						},
+						ImGuiListSelection::Option{
+							.name = "RQAO",
+							.disable = !(_can_rt && can_rq),
+						},
+					},
+				};
 			}
 
 			virtual void declareInline(GUI::Context& ctx) override
 			{
+				if (_can_rt != _target->_can_rt)
+				{
+					const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+					const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+					_can_rt = _target->_can_rt;
+					_method.enableOptions(static_cast<size_t>(AmbientOcclusion::Method::RTAO), _can_rt && can_rt);
+					_method.enableOptions(static_cast<size_t>(AmbientOcclusion::Method::RQAO), _can_rt && can_rq);
+				}
 				ImGui::Checkbox("Enable", &_target->_enable);
-				_target->_gui_method.declare();
+				_method.setIndex(static_cast<size_t>(_target->_method));
+				if (_method.declare())
+				{
+					_target->_method = static_cast<AmbientOcclusion::Method>(_method.index());
+				}
 				ImGui::InputInt("Samples", &_target->_ao_samples);
 				ImGui::SliderFloat("Radius", &_target->_radius, 0, 0.2);
 

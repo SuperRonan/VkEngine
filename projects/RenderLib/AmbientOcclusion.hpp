@@ -41,7 +41,7 @@ namespace vkl
 		int _downscale = 2;
 		uint32_t _seed = 0;
 
-		ImGuiListSelection _gui_method;
+		Method _method = Method::SSAO;
 
 		MultiDescriptorSetsLayouts _sets_layouts = {};
 
@@ -81,13 +81,12 @@ namespace vkl
 			std::shared_ptr<ImageView> positions = nullptr;
 			std::shared_ptr<ImageView> normals = nullptr;
 			bool can_rt = false;
-			uint32_t default_method = 1;
+			Method default_method = Method::RTAO;
 		};
 		using CI = CreateInfo;
 
 		AmbientOcclusion(CreateInfo const& ci);
 
-		
 		void updateResources(UpdateContext & ctx);
 
 		void execute(ExecutionRecorder & recorder, const Camera & camera);
@@ -115,11 +114,11 @@ namespace vkl
 			uint32_t res = 0;
 			if (enable())
 			{
-				if (_gui_method.index() == static_cast<uint32_t>(Method::RTAO))
+				if (_method == Method::RTAO)
 				{
 					res |= 1;
 				}
-				if (_gui_method.index() == static_cast<uint32_t>(Method::RQAO))
+				if (_method == Method::RQAO)
 				{
 					res |= 2;
 				}
