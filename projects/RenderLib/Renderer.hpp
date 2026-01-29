@@ -12,9 +12,6 @@
 #include <vkl/Rendering/Scene.hpp>
 #include <vkl/Rendering/Camera.hpp>
 
-#include <vkl/GUI/ImGuiUtils.hpp>
-#include <vkl/GUI/Context.hpp>
-
 #include "AmbientOcclusion.hpp"
 #include "TemporalAntiAliasingAndUpscaler.hpp"
 #include "DepthOfField.hpp"
@@ -27,6 +24,10 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class SimpleRendererInspector;
+	}
 	class SimpleRenderer : public Module
 	{
 	public:
@@ -71,10 +72,8 @@ namespace vkl
 		std::shared_ptr<DescriptorSetAndPool> _set;
 
 		std::shared_ptr<ComputeCommand> _prepare_draw_list = nullptr;
-		
 
-		ImGuiListSelection _pipeline_selection;
-		
+		RenderPipeline _render_pipeline;
 
 		std::vector<uint32_t> _model_types;
 
@@ -194,7 +193,7 @@ namespace vkl
 		std::shared_ptr<BuildAccelerationStructureCommand> _build_as = nullptr;
 		BuildAccelerationStructureCommand::BuildInfo _blas_build_list;
 
-		ImGuiListSelection _shadow_method;
+		ShadowMethod _shadow_method = ShadowMethod::None;
 		std::string _shadow_method_glsl_def;
 		std::string _use_ao_glsl_def;
 
@@ -226,7 +225,9 @@ namespace vkl
 			return _depth;
 		}
 
-		void declareGui(GUI::Context & ctx);
+		using InspectorType = GUI::SimpleRendererInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<SimpleRenderer> const& shared_this, GUI::Context& ctx);
 
 		std::shared_ptr<ImageView> const& renderTarget() const
 		{

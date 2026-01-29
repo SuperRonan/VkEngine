@@ -6,6 +6,7 @@
 
 #include <ShaderLib/Spectrum/SpectrumDefinitions.h>
 
+#include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 
 namespace vkl
@@ -383,28 +384,6 @@ namespace vkl
 				}
 			},
 		});
-
-		_method_selection = ImGuiListSelection(ImGuiListSelection::CI{
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.options = {
-				ImGuiListSelection::Option{
-					.name = "Path Tracing",
-				},
-				ImGuiListSelection::Option{
-					.name = "Light Tracing",
-				},
-				ImGuiListSelection::Option{
-					.name = "BDPT",
-					.desc = 
-						"BiDirectional Path Tracer\n"
-						"Requires a large scratch buffer!\n"
-						"Visibility rays are currently disabled with RT pipelines."
-					,
-				},
-			},
-			.default_index = 0,
-		});
 	}
 
 	bool LightTransport::usingLightTracer() const
@@ -613,113 +592,154 @@ namespace vkl
 		}
 	}
 
-	void LightTransport::declareGUI(GUI::Context& ctx)
+	namespace GUI
 	{
-		if (ImGui::CollapsingHeader("LightTransport"))
+		class LightTransportInspector : public Panel
 		{
-			if (_method_selection.declare())
+		protected:
+			std::shared_ptr<LightTransport> _target;
+
+			ImGuiListSelection _method;
+
+			ImGuiListSelection _spectum_mode;
+		public:
+
+			LightTransportInspector(std::shared_ptr<LightTransport> target):
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
 			{
-				_method = static_cast<Method>(_method_selection.index());
+				_method = ImGuiListSelection(ImGuiListSelection::CI{
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "Path Tracing",
+						},
+						ImGuiListSelection::Option{
+							.name = "Light Tracing",
+						},
+						ImGuiListSelection::Option{
+							.name = "BDPT",
+							.desc =
+								"BiDirectional Path Tracer\n"
+								"Requires a large scratch buffer!\n"
+								"Visibility rays are currently disabled with RT pipelines.",
+						},
+					},
+					.default_index = 0,
+				});
+
+				_spectum_mode = ImGuiListSelection::CreateInfo{
+					.name = "Spectrum rendering mode",
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "RGB",
+						},
+						ImGuiListSelection::Option{
+							.name = "XYZ",
+						},
+						ImGuiListSelection::Option{
+							.name = "Spectal",
+						},
+					},
+				};
 			}
 
-			
-			const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
-			const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
-			const bool can_change_rt_backend = can_rt && can_rq;
-			ImGui::BeginDisabled(!can_change_rt_backend);
-			ImGui::Checkbox("Use RT Pipelines", &_use_rt_pipelines);
-			ImGui::SetItemTooltip("Check to use Ray Tracing Pipelines, Uncheck to use Ray Queries and compute shaders.");
-			ImGui::EndDisabled();
-
-			static thread_local ImGuiListSelection spectum_mode_selection = ImGuiListSelection::CreateInfo{
-				.name = "Spectrum rendering mode",
-				.mode = ImGuiListSelection::Mode::RadioButtons,
-				.same_line = true,
-				.options = {
-					ImGuiListSelection::Option{
-						.name = "RGB",
-					},
-					ImGuiListSelection::Option{
-						.name = "XYZ",
-					},
-					ImGuiListSelection::Option{
-						.name = "Spectal",
-					},
-				},
-			};
-
-			size_t index = static_cast<size_t>((_spectrum_mode >> _SPECTRUM_SAMPLES_BIT_COUNT));
-			if (spectum_mode_selection.declare(index))
+			virtual void declareInline(Context& ctx) override
 			{
-				_spectrum_mode &= ~(std::bitMask<int>(3) << _SPECTRUM_SAMPLES_BIT_COUNT);
-				_spectrum_mode |= (static_cast<int>(index) << _SPECTRUM_SAMPLES_BIT_COUNT);
-				_spectrum_mode_str.clear();
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Spectral x4"))
-			{
-				_spectrum_mode = SPECTRUM_MODE_SAMPLED(4);
-				_spectrum_mode_str.clear();
-			}
-			bool use_sampled = (_spectrum_mode & _SPECTRUM_FLAG_MASK) == _SPECTRUM_FLAG_SAMPLED;
-			ImGui::BeginDisabled(!use_sampled);
-			{
-				int samples = _spectrum_mode & std::bitMask<int>(_SPECTRUM_SAMPLES_BIT_COUNT);
-				bool changed = ImGui::InputInt("Samples", &samples, 1, 1 /*, ImGuiInputTextFlags_EnterReturnsTrue */);
-				samples = std::clamp(samples, 1, 4);
-
-				if (changed)
+				_method.setIndex(static_cast<uint32_t>(_target->_method));
+				if (_method.declare())
 				{
-					_spectrum_mode &= ~std::bitMask<int>(_SPECTRUM_SAMPLES_BIT_COUNT);
-					_spectrum_mode |= samples;
-					_spectrum_mode_str.clear();
+					_target->_method = static_cast<LightTransport::Method>(_method.index());
 				}
-			}
-			ImGui::EndDisabled();
 
 
-			ImGui::InputInt("Max Depth", (int*)&_max_depth);
-			_max_depth = std::clamp<uint>(_max_depth, 1, 16);
-			ImGui::Checkbox("Compile time Max Depth", &_compile_time_max_depth);
-			if (_method == Method::PathTracer)
-			{
-				int li_resamling = static_cast<int>(_Li_resampling);
-				if (ImGui::InputInt("Li Resampling", &li_resamling))
+				const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+				const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+				const bool can_change_rt_backend = can_rt && can_rq;
+				ImGui::BeginDisabled(!can_change_rt_backend);
+				ImGui::Checkbox("Use RT Pipelines", &_target->_use_rt_pipelines);
+				ImGui::SetItemTooltip("Check to use Ray Tracing Pipelines, Uncheck to use Ray Queries and compute shaders.");
+				ImGui::EndDisabled();
+
+				size_t index = static_cast<size_t>((_target->_spectrum_mode >> _SPECTRUM_SAMPLES_BIT_COUNT));
+				if (_spectum_mode.declare(index))
 				{
-					li_resamling = std::max(li_resamling, 0);
-					_Li_resampling = static_cast<uint>(li_resamling);
+					_target->_spectrum_mode &= ~(std::bitMask<int>(3) << _SPECTRUM_SAMPLES_BIT_COUNT);
+					_target->_spectrum_mode |= (static_cast<int>(index) << _SPECTRUM_SAMPLES_BIT_COUNT);
+					_target->_spectrum_mode_str.clear();
 				}
-			}
-			if (usingLightTracer())
-			{
-				ImGui::Checkbox("Enable delta light connections with a punctual camera", &_enable_delta_connections);
-				ImGui::SetItemTooltip("May induce a significant performance cost for nearly no benefit");
-			}
-			if (_method == Method::LightTracer)
-			{
-				ImGui::SliderFloat("Samples multiplicator", &_light_tracer_sample_mult, 1, 16, "%.3f", ImGuiSliderFlags_Logarithmic);
-				const u32 local_size = 256;
-				u32 samples = std::alignUpAssumePo2(_light_tracer_samples, local_size);
-				ImGui::Text("Light Tracer Samples: %d", samples);
-			}
-
-			if (_method == Method::BidirectionalPathTracer)
-			{
-				const size_t MiB = 1024 * 1024;
-				int max_scratch_size_MiB = _max_scratch_buffer_size / MiB;
-				if (ImGui::InputInt("Max BDPT scratch buffer size (MiB)", &max_scratch_size_MiB, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue & 0))
+				ImGui::SameLine();
+				if (ImGui::Button("Spectral x4"))
 				{
-					if (max_scratch_size_MiB > 128)
+					_target->_spectrum_mode = SPECTRUM_MODE_SAMPLED(4);
+					_target->_spectrum_mode_str.clear();
+				}
+				bool use_sampled = (_target->_spectrum_mode & _SPECTRUM_FLAG_MASK) == _SPECTRUM_FLAG_SAMPLED;
+				ImGui::BeginDisabled(!use_sampled);
+				{
+					int samples = _target->_spectrum_mode & std::bitMask<int>(_SPECTRUM_SAMPLES_BIT_COUNT);
+					bool changed = ImGui::InputInt("Samples", &samples, 1, 1 /*, ImGuiInputTextFlags_EnterReturnsTrue */);
+					samples = std::clamp(samples, 1, 4);
+
+					if (changed)
 					{
-						_max_scratch_buffer_size = max_scratch_size_MiB * MiB;
+						_target->_spectrum_mode &= ~std::bitMask<int>(_SPECTRUM_SAMPLES_BIT_COUNT);
+						_target->_spectrum_mode |= samples;
+						_target->_spectrum_mode_str.clear();
 					}
 				}
-				size_t scratch_buffer_size_MiB = _bdpt_scratch_buffer_size / MiB;
-				ImGui::Text("BDPT scratch buffer size: %llu MiB", scratch_buffer_size_MiB);
-				ImGui::Text("BDPT divisions: %u", _bdpt_divisions);
-			}
+				ImGui::EndDisabled();
 
-			ImGui::Separator();
-		}
+
+				ImGui::InputInt("Max Depth", (int*)&_target->_max_depth);
+				_target->_max_depth = std::clamp<uint>(_target->_max_depth, 1, 16);
+				ImGui::Checkbox("Compile time Max Depth", &_target->_compile_time_max_depth);
+				if (_target->_method == LightTransport::Method::PathTracer)
+				{
+					int li_resamling = static_cast<int>(_target->_Li_resampling);
+					if (ImGui::InputInt("Li Resampling", &li_resamling))
+					{
+						li_resamling = std::max(li_resamling, 0);
+						_target->_Li_resampling = static_cast<uint>(li_resamling);
+					}
+				}
+				if (_target->usingLightTracer())
+				{
+					ImGui::Checkbox("Enable delta light connections with a punctual camera", &_target->_enable_delta_connections);
+					ImGui::SetItemTooltip("May induce a significant performance cost for nearly no benefit");
+				}
+				if (_target->_method == LightTransport::Method::LightTracer)
+				{
+					ImGui::SliderFloat("Samples multiplicator", &_target->_light_tracer_sample_mult, 1, 16, "%.3f", ImGuiSliderFlags_Logarithmic);
+					const u32 local_size = 256;
+					u32 samples = std::alignUpAssumePo2(_target->_light_tracer_samples, local_size);
+					ImGui::Text("Light Tracer Samples: %d", samples);
+				}
+
+				if (_target->_method == LightTransport::Method::BidirectionalPathTracer)
+				{
+					const size_t MiB = 1024 * 1024;
+					int max_scratch_size_MiB = _target->_max_scratch_buffer_size / MiB;
+					if (ImGui::InputInt("Max BDPT scratch buffer size (MiB)", &max_scratch_size_MiB, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue & 0))
+					{
+						if (max_scratch_size_MiB > 128)
+						{
+							_target->_max_scratch_buffer_size = max_scratch_size_MiB * MiB;
+						}
+					}
+					size_t scratch_buffer_size_MiB = _target->_bdpt_scratch_buffer_size / MiB;
+					ImGui::Text("BDPT scratch buffer size: %llu MiB", scratch_buffer_size_MiB);
+					ImGui::Text("BDPT divisions: %u", _target->_bdpt_divisions);
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> LightTransport::makeInspector(std::shared_ptr<LightTransport> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::LightTransportInspector>(shared_this);
 	}
 }

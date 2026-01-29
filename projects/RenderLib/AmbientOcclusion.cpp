@@ -1,6 +1,10 @@
 #include "AmbientOcclusion.hpp"
 #include <vkl/VkObjects/DetailedVkFormat.hpp>
 
+#include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/InlinePanel.hpp>
+
 namespace vkl
 {
 	AmbientOcclusion::AmbientOcclusion(CreateInfo const& ci) :
@@ -263,22 +267,40 @@ namespace vkl
 		}
 	}
 
-	void AmbientOcclusion::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		ImGui::PushID(name().c_str());
-
-		ImGui::Checkbox("Enable", &_enable);
-		_gui_method.declare();
-		ImGui::InputInt("Samples", &_ao_samples);
-		ImGui::SliderFloat("Radius", &_radius, 0, 0.2);
-
-		if (ImGui::InputInt("Downscale", &_downscale))
+		class AmbientOcclusionInspector : public Panel
 		{
-			_downscale = std::max(_downscale, 1);
-		}
+		protected:
+			std::shared_ptr<AmbientOcclusion> _target;
+		public:
 
-		ImGui::InputInt("Seed", (int*)(&_seed));
+			AmbientOcclusionInspector(std::shared_ptr<AmbientOcclusion> const& target) :
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
+			{
 
-		ImGui::PopID();
+			}
+
+			virtual void declareInline(GUI::Context& ctx) override
+			{
+				ImGui::Checkbox("Enable", &_target->_enable);
+				_target->_gui_method.declare();
+				ImGui::InputInt("Samples", &_target->_ao_samples);
+				ImGui::SliderFloat("Radius", &_target->_radius, 0, 0.2);
+
+				if (ImGui::InputInt("Downscale", &_target->_downscale))
+				{
+					_target->_downscale = std::max(_target->_downscale, 1);
+				}
+
+				ImGui::InputInt("Seed", (int*)(&_target->_seed));
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> AmbientOcclusion::makeInspector(std::shared_ptr<AmbientOcclusion> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::AmbientOcclusionInspector>(shared_this);
 	}
 }

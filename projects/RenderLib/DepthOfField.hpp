@@ -6,10 +6,12 @@
 
 #include <vkl/Rendering/Camera.hpp>
 
-#include <vkl/GUI/Context.hpp>
-
 namespace vkl
 {
+	namespace GUI
+	{
+		class DepthOfFieldInspector;
+	}
 	class DepthOfField : public Module
 	{
 	protected:
@@ -47,11 +49,12 @@ namespace vkl
 
 		virtual ~DepthOfField() override = default;
 
-
 		virtual void updateResources(UpdateContext& ctx);
 
 		virtual void record(ExecutionRecorder& exec);
 
-		virtual void declareGUI(GUI::Context& ctx);
+		using InspectorType = GUI::DepthOfFieldInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<DepthOfField> const& shared_this, GUI::Context& ctx);
 	};
 }

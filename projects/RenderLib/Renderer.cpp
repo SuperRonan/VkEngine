@@ -2,6 +2,9 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+
 namespace vkl
 {
 	SimpleRenderer::SimpleRenderer(CreateInfo const& ci):
@@ -11,32 +14,9 @@ namespace vkl
 		_output_target(ci.target),
 		_camera(ci.camera)
 	{
-		_pipeline_selection = ImGuiListSelection::CI{
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.options = {
-				ImGuiListSelection::Option{
-					.name = "Forward V1",
-				},
-				ImGuiListSelection::Option{
-					.name = "Deferred V1",
-					.desc = "Deferred Rendering is currently on maintenance",
-					.disable = true,
-				},
-				ImGuiListSelection::Option{
-					.name = "Light Transport",
-				},
-			},
-			.default_index = 0,
-		};
+		
 
-		_shadow_method = ImGuiListSelection::CI{
-			.name = "Shadows",
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.labels = {"None", "Shadow Maps", "Ray Tracing"},
-			.default_index = 1,
-		};
+		
 		_shadow_method_glsl_def = "SHADING_SHADOW_METHOD 0";
 		_use_ao_glsl_def = "USE_AO 0";
 
@@ -49,18 +29,16 @@ namespace vkl
 
 		if (can_as && (can_rq || can_rt))
 		{
-			_pipeline_selection.setIndex(2);
+			_render_pipeline = RenderPipeline::LightTransport;
 		}
-		
-		_pipeline_selection.enableOptions(2, can_as && (can_rq || can_rt));
-		if (!can_as && (can_rq || can_rt) && RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
+
+		if (!can_as && (can_rq || can_rt) && _render_pipeline == RenderPipeline::LightTransport)
 		{
-			_pipeline_selection.setIndex(1);
+			_render_pipeline = RenderPipeline::Deferred;
 		}
-		_shadow_method.enableOptions(size_t(ShadowMethod::RayTraced), can_as && (can_rq || can_rt));
-		if (!can_as && (can_rq || can_rt) && _shadow_method.index() == size_t(ShadowMethod::RayTraced))
+		if (!can_as && (can_rq || can_rt) && _shadow_method == ShadowMethod::RayTraced)
 		{
-			_shadow_method.setIndex(size_t(ShadowMethod::ShadowMap));
+			_shadow_method = ShadowMethod::ShadowMap;
 		}
 
 		_maintain_rt = false;
@@ -76,7 +54,7 @@ namespace vkl
 		
 		bool need_rq = false;
 		bool need_rt = false;
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
+		if (_render_pipeline == RenderPipeline::LightTransport)
 		{
 			need_rq |= true;
 		}
@@ -86,7 +64,7 @@ namespace vkl
 			need_rt |= (ao_needs & 0x1) != 0;
 			need_rq |= (ao_needs & 0x2) != 0;
 		}
-		if (_shadow_method.index() == size_t(ShadowMethod::RayTraced))
+		if (_shadow_method == ShadowMethod::RayTraced)
 		{
 			need_rq |= true;
 		}
@@ -875,7 +853,7 @@ namespace vkl
 		_use_reverse_depth = _camera->hasReverseDepth();
 
 		_use_ao_glsl_def.back() = '0' + (_ambient_occlusion->enable() ? 1 : 0);
-		_shadow_method_glsl_def.back() = '0' + _shadow_method.index();
+		_shadow_method_glsl_def.back() = '0' + static_cast<char>(_shadow_method);
 
 		_taau->updateResources(ctx);
 		_render_target->updateResources(ctx);
@@ -895,11 +873,11 @@ namespace vkl
 			ctx.resourcesToUpdateLater() += _prepare_draw_list;
 		}
 
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Forward || update_all_anyway)
+		if (_render_pipeline == RenderPipeline::Forward || update_all_anyway)
 		{
 			_forward_pipeline.updateResources(ctx, !_use_indirect_rendering || update_all_anyway, _use_indirect_rendering || update_all_anyway);
 		}
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::Deferred || update_all_anyway)
+		if (_render_pipeline == RenderPipeline::Deferred || update_all_anyway)
 		{
 			if (_use_fat_gbuffer || update_all_anyway)
 			{
@@ -912,7 +890,7 @@ namespace vkl
 
 			_ambient_occlusion->updateResources(ctx);
 		}
-		if ((RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
+		if ((_render_pipeline == RenderPipeline::LightTransport || update_all_anyway) && application()->availableFeatures().acceleration_structure_khr.accelerationStructure)
 		{
 			_light_transport->updateResources(ctx);
 		}
@@ -1006,7 +984,7 @@ namespace vkl
 			.camera = _camera->getAsGLSL(),
 		};
 		_ubo_buffer->set(0, &ubo, sizeof(ubo));
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
+		if (_render_pipeline == RenderPipeline::LightTransport)
 		{
 			LightTransport::UBO rt_ubo;
 			_light_transport->writeUBO(rt_ubo);
@@ -1027,7 +1005,7 @@ namespace vkl
 		std::TickTock_hrc tick_tock;
 		MultiVertexDrawCallList & draw_list = _cached_draw_list;
 
-		const bool needs_draw_list = _pipeline_selection.index() <= size_t(RenderPipeline::Deferred);
+		const bool needs_draw_list = int(_render_pipeline) <= int(RenderPipeline::Deferred);
 		const bool generate_indirect_draw_list = needs_draw_list && _use_indirect_rendering;
 		const bool generate_host_draw_list = needs_draw_list && !_use_indirect_rendering;
 		
@@ -1085,7 +1063,7 @@ namespace vkl
 			_scene->buildTLAS(exec);
 		}
 
-		const bool render_shadows = _pipeline_selection.index() < 2 && _shadow_method.index() == size_t(ShadowMethod::ShadowMap);
+		const bool render_shadows = int(_render_pipeline) <= int(RenderPipeline::Deferred) && _shadow_method == ShadowMethod::ShadowMap;
 		if(render_shadows)
 		{
 			if (_use_indirect_rendering)
@@ -1138,9 +1116,9 @@ namespace vkl
 
 		VkClearValue clear_depth = VkClearValue{ .depthStencil = VkClearDepthStencilValue{.depth = _use_reverse_depth ? 0.0f : 1.0f} };
 
-		if (!draw_list.empty() && _pipeline_selection.index() < 2)
+		if (!draw_list.empty() && int(_render_pipeline) <= int(RenderPipeline::Deferred))
 		{
-			const RenderPipeline selected_pipeline = static_cast<RenderPipeline>(_pipeline_selection.index());
+			const RenderPipeline selected_pipeline = _render_pipeline;
 			if (selected_pipeline == RenderPipeline::Forward)
 			{
 				tick_tock.tick();
@@ -1254,7 +1232,7 @@ namespace vkl
 			_depth_of_field->record(exec);
 		}
 		
-		if (RenderPipeline(_pipeline_selection.index()) == RenderPipeline::LightTransport)
+		if (_render_pipeline == RenderPipeline::LightTransport)
 		{
 			_light_transport->render(exec);
 		}
@@ -1279,61 +1257,130 @@ namespace vkl
 
 		exec.popDebugLabel();
 	}
-	
 
-	void SimpleRenderer::declareGui(GUI::Context & ctx)
+	namespace GUI
 	{
-		ImGui::PushID(this);
-
-		const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
-		ImGui::BeginDisabled(!can_multi_draw_indirect);
-		ImGui::Checkbox("Indirect Draw", &_use_indirect_rendering);
-		ImGui::EndDisabled();
-
-		_pipeline_selection.declare();
-
-		RenderPipeline render_pipeline = RenderPipeline(_pipeline_selection.index());
-
-		if (render_pipeline == RenderPipeline::Deferred)
+		class SimpleRendererInspector : public Panel
 		{
-			if (ImGui::CollapsingHeader(_ambient_occlusion->name().c_str()))
+		protected:
+			std::shared_ptr<SimpleRenderer> _target;
+
+			ImGuiListSelection _pipeline_selection;
+			ImGuiListSelection _shadow_method;
+
+			TargetIndirectInlinePanel<LightTransport> _light_transport;
+			TargetIndirectInlinePanel<TemporalAntiAliasingAndUpscaler> _taau;
+			TargetIndirectInlinePanel<AmbientOcclusion> _ambient_occlusion;
+			TargetIndirectInlinePanel<DepthOfField> _depth_of_field;
+		public:
+
+			SimpleRendererInspector(std::shared_ptr<SimpleRenderer> const& target) :
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
 			{
-				_ambient_occlusion->declareGui(ctx);
-				ImGui::Separator();
+				const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
+				const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
+				const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
+				const bool disable_rt = !(can_as && (can_rq || can_rt));
+
+				_pipeline_selection = ImGuiListSelection::CI{
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "Forward V1",
+						},
+						ImGuiListSelection::Option{
+							.name = "Deferred V1",
+							.desc = "Deferred Rendering is currently on maintenance",
+							.disable = true,
+						},
+						ImGuiListSelection::Option{
+							.name = "Light Transport",
+							.disable = disable_rt,
+						},
+					},
+					.default_index = 0,
+				};
+
+
+				_shadow_method = ImGuiListSelection::CI{
+					.name = "Shadows",
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "None",
+						},
+						ImGuiListSelection::Option{
+							.name = "Shadow Maps",
+						},
+						ImGuiListSelection::Option{
+							.name = "Ray Tracing",
+							.disable = disable_rt,
+						},
+					},
+					.default_index = 1,
+				};
+
+				_light_transport.init("Light Transport");
+				_taau.init("TAAU");
+				_ambient_occlusion.init("Ambient Occlusion");
+				_depth_of_field.init("Depth of Field");
 			}
-		}
-		else if (render_pipeline == RenderPipeline::LightTransport)
-		{
-			_light_transport->declareGUI(ctx);
-		}
-			
-		ImGui::BeginDisabled(true);
-		ImVec4 color;
-		color = _maintain_rt ? ctx.style().valid_green : ctx.style().invalid_red;
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
-		ImGui::PushStyleColor(ImGuiCol_Text, color);
-		ImGui::Checkbox("Ray Tracing", &_maintain_rt);
-		ImGui::PopStyleColor(2);
-		ImGui::EndDisabled();
-			
-		ImGui::PushID("shadow");
-		_shadow_method.declare();
-		ImGui::PopID();
 
-		ImGui::Separator();
+			virtual void declareInline(Context& ctx) override
+			{
+				using RenderPipeline = SimpleRenderer::RenderPipeline;
+				using ShadowMethod = SimpleRenderer::ShadowMethod;
+				const bool can_multi_draw_indirect = application()->availableFeatures().features2.features.multiDrawIndirect;
+				ImGui::BeginDisabled(!can_multi_draw_indirect);
+				ImGui::Checkbox("Indirect Draw", &_target->_use_indirect_rendering);
+				ImGui::EndDisabled();
 
-		if (ImGui::CollapsingHeader("TAAU"))
-		{
-			_taau->declareGui(ctx);
-			ImGui::Separator();
-		}
+				_pipeline_selection.setIndex(static_cast<size_t>(_target->_render_pipeline));
+				if (_pipeline_selection.declare())
+				{
+					_target->_render_pipeline = static_cast<RenderPipeline>(_pipeline_selection.index());
+				}
 
-		if (ImGui::CollapsingHeader("Depth Of Field"))
-		{
-			_depth_of_field->declareGUI(ctx);
-			ImGui::Separator();
-		}
+				RenderPipeline render_pipeline = RenderPipeline(_pipeline_selection.index());
 
-		ImGui::PopID();
+				if (render_pipeline == RenderPipeline::Deferred)
+				{
+					_ambient_occlusion.declareInline(ctx, _target->_ambient_occlusion);
+				}
+				else if (render_pipeline == RenderPipeline::LightTransport)
+				{
+					_light_transport.declareInline(ctx, _target->_light_transport);
+				}
+
+				ImGui::BeginDisabled(true);
+				ImVec4 color;
+				color = _target->_maintain_rt ? ctx.style().valid_green : ctx.style().invalid_red;
+				ImGui::PushStyleColor(ImGuiCol_FrameBg, color);
+				ImGui::PushStyleColor(ImGuiCol_Text, color);
+				ImGui::Checkbox("Ray Tracing", &_target->_maintain_rt);
+				ImGui::PopStyleColor(2);
+				ImGui::EndDisabled();
+
+				ImGui::PushID("shadow");
+				_shadow_method.setIndex(static_cast<size_t>(_target->_shadow_method));
+				if (_shadow_method.declare())
+				{
+					_target->_shadow_method = static_cast<ShadowMethod>(_shadow_method.index());
+				}
+				ImGui::PopID();
+
+				_taau.declareInline(ctx, _target->_taau);
+
+				_depth_of_field.declareInline(ctx, _target->_depth_of_field);
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> SimpleRenderer::makeInspector(std::shared_ptr<SimpleRenderer> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::SimpleRendererInspector>(shared_this);
 	}
 }

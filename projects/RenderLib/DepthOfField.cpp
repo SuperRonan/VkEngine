@@ -5,6 +5,9 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+
 namespace vkl
 {
 
@@ -137,9 +140,31 @@ namespace vkl
 		}
 	}
 
-	void DepthOfField::declareGUI(GUI::Context& ctx)
+	namespace GUI
 	{
+		class DepthOfFieldInspector : public Panel
+		{
+		protected:
+			std::shared_ptr<DepthOfField> _target;
+		public:
 
+			DepthOfFieldInspector(std::shared_ptr<DepthOfField> const& target) :
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
+			{
+
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> DepthOfField::makeInspector(std::shared_ptr<DepthOfField> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::DepthOfFieldInspector>(shared_this);
 	}
 }
 

@@ -759,7 +759,7 @@ namespace vkl
 			sets_layouts += {0, common_layout};
 			sets_layouts += {1, scene_layout};
 
-			SimpleRenderer renderer(SimpleRenderer::CI{
+			std::shared_ptr<SimpleRenderer> renderer = std::make_shared<SimpleRenderer>(SimpleRenderer::CI{
 				.app = this,
 				.name = "Renderer",
 				.sets_layouts = sets_layouts,
@@ -769,7 +769,7 @@ namespace vkl
 			});
 			if (exec.getDebugRenderer())
 			{
-				exec.getDebugRenderer()->setTargets(final_image, renderer.depth());
+				exec.getDebugRenderer()->setTargets(final_image, renderer->depth());
 			}
 
 			std::shared_ptr<ColorCorrection> color_correction = std::make_shared<ColorCorrection>(ColorCorrection::CI{
@@ -800,13 +800,13 @@ namespace vkl
 				.app = this,
 				.name = "ImagePicker",
 				.sources = {
-					renderer.output(),
-					renderer.renderTarget(),
-					renderer.getAmbientOcclusionTargetIFP(),
-					renderer.getAlbedoImage(),
-					renderer.getPositionImage(),
-					renderer.getNormalImage(),
-					renderer.depth(), // Does not work yet
+					renderer->output(),
+					renderer->renderTarget(),
+					renderer->getAmbientOcclusionTargetIFP(),
+					renderer->getAlbedoImage(),
+					renderer->getPositionImage(),
+					renderer->getNormalImage(),
+					renderer->depth(), // Does not work yet
 				},
 				.dst = final_image,
 			});
@@ -990,7 +990,7 @@ namespace vkl
 				}
 			});
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(camera, "Camera"));
-			_main_gui_panel.addInlinePanel(GUI::InlinePanel{.panel = MakePanel(renderer, "Rendering"), .label = "Rendering"});
+			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(renderer, "Rendering"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(color_correction, "Color Correction"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(pip, "Picture In Picture"));
 			_main_gui_panel.addInlinePanel(GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(image_picker, "Image Picker"));
@@ -1096,7 +1096,7 @@ namespace vkl
 					}
 					frame_counters.exec_update_time = exec_tt.tockd().count();
 
-					renderer.preUpdate(*update_context);
+					renderer->preUpdate(*update_context);
 					{
 						std::TickTock_hrc update_scene_tt;
 						update_scene_tt.tick();
@@ -1106,7 +1106,7 @@ namespace vkl
 					
 					std::TickTock_hrc modules_tt;
 					modules_tt.tick();
-					renderer.updateResources(*update_context);
+					renderer->updateResources(*update_context);
 					color_correction->updateResources(*update_context);
 					pip->updateResources(*update_context);
 					image_picker->updateResources(*update_context);
@@ -1142,7 +1142,7 @@ namespace vkl
 						.set = scene->set(),
 					});
 					scene->prepareForRendering(exec_thread);
-					renderer.execute(exec_thread, t, dt, frame_index);
+					renderer->execute(exec_thread, t, dt, frame_index);
 
 					image_picker->execute(exec_thread);
 

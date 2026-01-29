@@ -6,34 +6,16 @@
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
 
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/ImGuiDynamic.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
 
 namespace vkl
 {
 	namespace taau
 	{
 		static const std::array _formats = { VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R64G64B64A64_SFLOAT, VK_FORMAT_B10G11R11_UFLOAT_PACK32, };
-
-		size_t inline GetFormatIndex(VkFormat f)
-		{
-			size_t res = 0;
-			switch (f)
-			{
-			case VK_FORMAT_R32G32B32A32_SFLOAT:
-				res = 0;
-				break;
-			case VK_FORMAT_R16G16B16A16_SFLOAT:
-				res = 1;
-				break;
-			case VK_FORMAT_R64G64B64A64_SFLOAT:
-				res = 2;
-				break;
-			case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
-				res = 3;
-				break;
-			}
-			return res;
-		}
 	}
 
 	TemporalAntiAliasingAndUpscaler::TemporalAntiAliasingAndUpscaler(CreateInfo const& ci) :
@@ -47,59 +29,7 @@ namespace vkl
 		}
 
 		const VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT;
-		const VkFormatFeatureFlags features = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT | VK_FORMAT_FEATURE_TRANSFER_SRC_BIT;
 
-		_gui_acc_format = ImGuiListSelection::CI{
-			.name = "Accumulation format",
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.default_index = 0,
-		};
-		for(size_t i = 0; i < taau::_formats.size(); ++i)
-		{
-			const VkFormat f = taau::_formats[i];
-			DetailedVkFormat d = DetailedVkFormat::Find(f);
-			
-			VkFormatProperties2 format_props{
-				.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
-				.pNext = nullptr,
-			};
-			vkGetPhysicalDeviceFormatProperties2(application()->physicalDevice(), f, &format_props);
-
-			const bool can_use_format = format_props.formatProperties.optimalTilingFeatures & features;
-			
-			if (can_use_format)
-			{
-				VkPhysicalDeviceImageFormatInfo2 format_info{
-					.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
-					.pNext = nullptr,
-					.format = f,
-					.type = VK_IMAGE_TYPE_2D,
-					.tiling = VK_IMAGE_TILING_OPTIMAL,
-					.usage = usage,
-					.flags = 0,
-				};
-				VkImageFormatProperties2 image_props{
-					.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
-					.pNext = nullptr,
-				};
-				vkGetPhysicalDeviceImageFormatProperties2(application()->physicalDevice(), &format_info, &image_props);
-			}
-
-
-			_gui_acc_format.setOption(i, ImGuiListSelection::Option{
-				.name = d.getGLSLName(),
-				.disable = !can_use_format,
-			});
-		}
-
-		_mode = ImGuiListSelection::CI{
-			.name = "Mode",
-			.mode = ImGuiListSelection::Mode::RadioButtons,
-			.same_line = true,
-			.labels = {"Accumulate", "Alpha"},
-			.default_index = 1,
-		};
 		_output = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".Output",
@@ -143,7 +73,7 @@ namespace vkl
 			},
 			.definitions = [this](DefinitionsList & res){ 
 				res.clear(); 
-				res.pushBackFormatted("TAAU_MODE {:d}", _mode.index());
+				res.pushBackFormatted("TAAU_MODE {:d}", static_cast<int>(_mode));
 				res.pushBackFormatted("IMAGE_FORMAT {:s}", _format_glsl);
 			},
 		});
@@ -158,7 +88,6 @@ namespace vkl
 	void TemporalAntiAliasingAndUpscaler::setFormat()
 	{
 		const VkFormat f = _accumation_format.value();
-		_gui_acc_format.setIndex(taau::GetFormatIndex(f));
 		DetailedVkFormat detailed_format = DetailedVkFormat::Find(f);
 		_format_glsl = detailed_format.getGLSLName();
 	}
@@ -190,7 +119,7 @@ namespace vkl
 				_accumulated_samples = 0;
 				_matrix = new_matrix;
 			}
-			if (_mode.index() == 0)
+			if (_mode == Mode::Accumulate)
 			{
 				float alpha = 1.0 / (_accumulated_samples + 1.0);
 				alpha = std::max<float>(alpha, 1.0 / double(_max_samples));
@@ -216,45 +145,106 @@ namespace vkl
 		}
 	}
 
-	void TemporalAntiAliasingAndUpscaler::declareGui(GUI::Context& ctx)
+	namespace GUI
 	{
-		ImGui::PushID(this);
+		class TemporalAntiAliasingAndUpscalerInspector : public Panel
 		{
-			ImGui::Checkbox("Enable", &_enable);
-			if (_mode.declare())
-			{
-				_reset = true;
-			}
-			if (_mode.index() == 0)
-			{
-				ImGui::InputInt("Max samples: ", (int*)&_max_samples);
-				ImGui::BeginDisabled();
-				ImGui::InputInt("Accumulated samples: ", (int*)&_accumulated_samples);
-				ImGui::EndDisabled();
-			}
-			else if (_mode.index() == 1)
-			{
-				float one_minus_alpha = 1.0 - _alpha;
-				if (ImGui::SliderFloat("Renew Rate", &one_minus_alpha, 0, 1, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
-				{
-					_alpha = 1.0 - one_minus_alpha;
-				}
-			}
-			ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
-			_reset |= ImGui::Button("Reset");
-			ImGui::PopStyleColor();
+		protected:
+			std::shared_ptr<TemporalAntiAliasingAndUpscaler> _target;
+			ImGuiListSelection _mode;
+			MyVector<EnumOption<VkFormat>> _available_formats;
+		public:
 
-			GUI::DeclareDynamic(_gui_acc_format.name().c_str(), _accumation_format, [&](const char*, VkFormat& f)
+			TemporalAntiAliasingAndUpscalerInspector(std::shared_ptr<TemporalAntiAliasingAndUpscaler> const& target) :
+				Panel(target->application(), std::format("{}", target->name())),
+				_target(target)
 			{
-				size_t index = taau::GetFormatIndex(f);
-				bool res = _gui_acc_format.declare(index);
-				if (res)
+				_mode = ImGuiListSelection::CI{
+					.name = "Mode",
+					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.same_line = true,
+					.labels = {"Accumulate", "Alpha"},
+					.default_index = 1,
+				};
+
+				const VkImageUsageFlags usage = _target->output()->image()->usage();
+				const VkFormatFeatureFlags features = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT | VK_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+
+				_available_formats.resize(taau::_formats.size());
+				for (size_t i = 0; i < taau::_formats.size(); ++i)
 				{
-					f = taau::_formats[index];
+					const VkFormat f = taau::_formats[i];
+					DetailedVkFormat d = DetailedVkFormat::Find(f);
+
+					VkFormatProperties2 format_props{
+						.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2,
+						.pNext = nullptr,
+					};
+					vkGetPhysicalDeviceFormatProperties2(application()->physicalDevice(), f, &format_props);
+
+					const bool can_use_format = format_props.formatProperties.optimalTilingFeatures & features;
+
+					if (can_use_format)
+					{
+						VkPhysicalDeviceImageFormatInfo2 format_info{
+							.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
+							.pNext = nullptr,
+							.format = f,
+							.type = VK_IMAGE_TYPE_2D,
+							.tiling = VK_IMAGE_TILING_OPTIMAL,
+							.usage = usage,
+							.flags = 0,
+						};
+						VkImageFormatProperties2 image_props{
+							.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
+							.pNext = nullptr,
+						};
+						vkGetPhysicalDeviceImageFormatProperties2(application()->physicalDevice(), &format_info, &image_props);
+					}
+
+					_available_formats[i].value = f;
+					_available_formats[i].disabled = !can_use_format;
 				}
-				return res;
-			});
-		}
-		ImGui::PopID();
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				ImGui::Checkbox("Enable", &_target->_enable);
+				_mode.setIndex(static_cast<size_t>(_target->_mode));
+				if (_mode.declare())
+				{
+					_target->_mode = static_cast<TemporalAntiAliasingAndUpscaler::Mode>(_mode.index());
+					_target->_reset = true;
+				}
+				if (_mode.index() == 0)
+				{
+					ImGui::InputInt("Max samples: ", (int*)&_target->_max_samples);
+					ImGui::BeginDisabled();
+					ImGui::InputInt("Accumulated samples: ", (int*)&_target->_accumulated_samples);
+					ImGui::EndDisabled();
+				}
+				else if (_mode.index() == 1)
+				{
+					float one_minus_alpha = 1.0 - _target->_alpha;
+					if (ImGui::SliderFloat("Renew Rate", &one_minus_alpha, 0, 1, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+					{
+						_target->_alpha = 1.0 - one_minus_alpha;
+					}
+				}
+				ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
+				_target->_reset |= ImGui::Button("Reset");
+				ImGui::PopStyleColor();
+
+				GUI::DeclareDynamic("Accumulation Format", _target->_accumation_format, [&](const char* label, VkFormat& f)
+				{
+					return InspectVkEnum<VkFormat>(ctx, label, &f, _available_formats);
+				});
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> TemporalAntiAliasingAndUpscaler::makeInspector(std::shared_ptr<TemporalAntiAliasingAndUpscaler> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::TemporalAntiAliasingAndUpscalerInspector>(shared_this);
 	}
 }

@@ -7,10 +7,12 @@
 
 #include <vkl/Rendering/Scene.hpp>
 
-#include <vkl/GUI/ImGuiUtils.hpp>
-
 namespace vkl
 {
+	namespace GUI
+	{
+		class LightTransportInspector;
+	}
 	class LightTransport : public Module
 	{
 	public:
@@ -78,7 +80,6 @@ namespace vkl
 		std::shared_ptr<RayTracingCommand> _bdpt_rt;
 
 		std::shared_ptr<ComputeCommand> _resolve_light_tracer;
-		ImGuiListSelection _method_selection;
 
 		void createInternals();
 
@@ -106,13 +107,15 @@ namespace vkl
 
 		void render(ExecutionRecorder& exec);
 
-		void declareGUI(GUI::Context& ctx);
-
 		void writeUBO(UBO& dst)
 		{
 			dst.max_depth = static_cast<u16>(_max_depth);
 			dst.Li_resampling = static_cast<u16>(_Li_resampling);
 			dst.flags = 0;
 		}
+
+		using InspectorType = GUI::LightTransportInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<LightTransport> const& shared_this, GUI::Context& ctx);
 	};
 }

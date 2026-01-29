@@ -6,14 +6,15 @@
 #include <vkl/Commands/ComputeCommand.hpp>
 #include <vkl/Commands/RayTracingCommand.hpp>
 
-#include <vkl/GUI/Context.hpp>
-#include <vkl/GUI/ImGuiUtils.hpp>
-
 #include <vkl/Rendering/Camera.hpp>
 
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class AmbientOcclusionInspector;
+	}
 	class AmbientOcclusion : public Module
 	{
 	public:
@@ -91,7 +92,9 @@ namespace vkl
 
 		void execute(ExecutionRecorder & recorder, const Camera & camera);
 
-		void declareGui(GUI::Context & ctx);
+		using InspectorType = GUI::AmbientOcclusionInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<AmbientOcclusion> const& shared_this, GUI::Context& ctx);
 
 		bool setCanRT(bool can_rt);
 
