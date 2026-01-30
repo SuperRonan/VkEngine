@@ -1,10 +1,6 @@
 #pragma once
 
-#include <vkl/IO/InputListener.hpp>
-
-#include <numbers>
-
-#include <vkl/Maths/Transforms.hpp>
+#include <vkl/Maths/Types.hpp>
 
 namespace vkl
 {
