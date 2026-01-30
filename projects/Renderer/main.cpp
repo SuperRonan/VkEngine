@@ -39,6 +39,8 @@
 #include <vkl/Rendering/ImagePicker.hpp>
 #include <vkl/Rendering/ImageSaver.hpp>
 
+#include <vkl/Rendering/CameraController.hpp>
+
 #include <vkl/Maths/Transforms.hpp>
 #include <vkl/Maths/AffineXForm.hpp>
 
