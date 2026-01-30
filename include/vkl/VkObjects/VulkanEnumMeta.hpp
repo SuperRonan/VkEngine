@@ -110,7 +110,7 @@ namespace vkl
 	namespace concepts
 	{
 		template <class E>
-		concept VkEnum = Enumeration<E> && ::vku::EnumMetaInfo<E>::Name != nullptr;
+		concept VkEnum = that::concepts::Enumeration<E> && ::vku::EnumMetaInfo<E>::Name != nullptr;
 
 		template <class E, bool BitField>
 		concept VkEnum2 = VkEnum<E> && ::vku::EnumMetaInfo<E>::IsBitField == BitField;

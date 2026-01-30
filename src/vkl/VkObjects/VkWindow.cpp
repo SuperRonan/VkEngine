@@ -2,12 +2,15 @@
 
 #include <vkl/VkObjects/DetailedVkFormat.hpp>
 
-#include "imgui.h"
 #include <algorithm>
 #include <format>
 
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_video.h>
+
+#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/VulkanEnumWidgets.hpp>
 
 namespace vkl
 {
@@ -71,105 +74,9 @@ namespace vkl
 			.window = _window,
 		});
 		_surface->queryDetails();
-	}
-
-	void VkWindow::setupGuiObjects()
-	{
-		
-		// Window Mode
-		const std::vector<Mode> available_window_modes = {
-			Mode::Windowed,
-			Mode::WindowedFullscreen,
-			//Mode::Fullscreen,
-			//Mode::ExclusiveFullscreen,
-		};
-
-		_gui_window_mode = ImGuiListSelection::CI{
-			.name = "Window Mode##"s + name(),
-			.mode = ImGuiListSelection::Mode::Combo,
-			.options = {
-				ImGuiListSelection::Option{
-					.name = "Windowed"s,
-					.desc = ""s,
-				},
-				ImGuiListSelection::Option{
-					.name = "Windowed Full Screen"s,
-					.desc = ""s,
-				},
-				//ImGuiListSelection::Option{
-				//	.name = "Full Screen"s,
-				//	.desc = ""s,
-				//},
-				//ImGuiListSelection::Option{
-				//	.name = "Exclusive Full Screen"s,
-				//	.desc = ""s,
-				//},
-			},
-		};
-		
-		const Surface::SwapchainSupportDetails & sd = _surface->getDetails();
-		
-		// Format
-		if (!_extern_target_format.hasValue())
-		{
-			MyVector<std::string> formats(sd.formats.size());
-			std::transform(sd.formats.begin(), sd.formats.end(), formats.begin(), [](VkSurfaceFormatKHR f)
-			{
-				return getVkFormatName(f.format) + ", "s + getVkColorSpaceKHRName(f.colorSpace);
-			});
-			const size_t format_index = 0;
-			_target_format = sd.formats[format_index];
-			_gui_formats = ImGuiListSelection::CI{
-				.name = "Format##"s + name(),
-				.mode = ImGuiListSelection::Mode::Combo,
-				.labels = formats,
-				.default_index = format_index,
-			};
-		}
-		
-	
-		
-		// Present Mode
-		if (!_extern_present_mode.hasValue())
-		{
-			MyVector<ImGuiListSelection::Option> present_modes(sd.present_modes.size());
-			for (size_t i = 0; i < present_modes.size(); ++i)
-			{
-				const VkPresentModeKHR vkp = sd.present_modes[i];
-				present_modes[i].name = getVkPresentModeKHRName(vkp);
-				switch (vkp)
-				{
-					case VK_PRESENT_MODE_IMMEDIATE_KHR:
-						present_modes[i].desc = "Fastest, Possible Tearing and Frame Skip"s;
-					break;
-					case VK_PRESENT_MODE_MAILBOX_KHR:
-						present_modes[i].desc = "Fast, No Tearing, Possible Frame Skip"s;
-					break;
-					case VK_PRESENT_MODE_FIFO_KHR:
-						present_modes[i].desc = "VSync, No Tearing, No Frame Skip"s;
-					break;
-					case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
-						present_modes[i].desc = "VSync, No Tearing, Possible Frame Skip"s;
-					break;
-					case VK_PRESENT_MODE_FIFO_LATEST_READY_EXT:
-						present_modes[i].desc = "No Tearing";
-						// This extension appears to be also KHR now, but the SDK provides only the EXT version
-						if (!application()->deviceExtensions().contains(VK_EXT_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME))
-						{
-							present_modes[i].disable = true;
-						}
-					break;
-				}
-			}
-			const size_t present_mode_index = std::find(sd.present_modes.begin(), sd.present_modes.end(), _target_present_mode) - sd.present_modes.begin();
-		
-			_gui_present_modes = ImGuiListSelection::CI{
-				.name = "Present Mode##"s + name(),
-				.mode = ImGuiListSelection::Mode::Combo,
-				.options = present_modes,
-				.default_index = present_mode_index,
-			};
-		}
+		auto & sd = _surface->getDetails();
+		_target_format = sd.formats.front();
+		_target_present_mode = sd.present_modes.front();
 	}
 
 	void VkWindow::deduceColorCorrection()
@@ -265,8 +172,6 @@ namespace vkl
 		};
 
 		initSDL();
-		
-		setupGuiObjects();
 
 		initSwapchain();
 		
@@ -652,139 +557,305 @@ namespace vkl
 		return res;
 	}
 
-	void VkWindow::declareGui(GUI::Context & ctx)
+	namespace GUI
 	{
-		ImGui::PushID(this);
+		class WindowInspector : public Panel
 		{
-			bool changed = false;
+		protected:
+			std::shared_ptr<VkWindow> _target;
+			ImGuiListSelection _window_mode;
+			MyVector<VkPresentModeKHR> _available_present_modes;
+			ImGuiListSelection _present_modes;
+			MyVector<VkSurfaceFormatKHR> _available_formats;
+			ImGuiListSelection _formats;
+			std::string _scratch;
 
-			changed = _gui_window_mode.declare();
-			if (changed)
+			uint32_t getFormatIndex(VkSurfaceFormatKHR format) const
 			{
-				_desired_window_mode = static_cast<Mode>(_gui_window_mode.index());
-			}
-
-			const bool can_resize = _window_mode == Mode::Windowed && !_extern_resolution.hasValue();
-			ImGui::BeginDisabled(!can_resize);
-			changed = ImGui::InputInt2("Resolution: ", &_desired_resolution[0], ImGuiInputTextFlags_EnterReturnsTrue & 0);
-			if (changed)
-			{
-				_gui_resized = true;
-			}
-			std::array resolutions = {720u, 900u, 1080u, 1440u, 1800u, 2160u};
-			std::array<char, 16> button_label_buffer;
-			for (uint i = 0; i < resolutions.size(); ++i)
-			{
-				if (i > 0)
-				{
-					ImGui::SameLine();
-				}
-				uint res = resolutions[i];
-				auto end = std::format_to_n(button_label_buffer.data(), button_label_buffer.size(), "{}p", res);
-				*end.out = char(0);
-				if (ImGui::Button(button_label_buffer.data()))
-				{
-					_desired_resolution[1] = res;
-					_desired_resolution[0] = (res * 16) / 9;
-					_gui_resized = true;
-				}
-			}
-			ImGui::EndDisabled();
-			
-
-			const Surface::SwapchainSupportDetails& sd = _surface->getDetails();
-			
-			if (_extern_present_mode.hasValue())
-			{
-				if (_swapchain)
-				{
-					VkPresentModeKHR pm = _swapchain->instance() ? _swapchain->instance()->createInfo().presentMode :  _swapchain->presentMode().value();
-					ImGui::Text("Present Mode: %s", getVkPresentModeKHRName(pm));
-				}
-			}
-			else
-			{
-				changed = _gui_present_modes.declare();
-				if (changed)
-				{
-					_target_present_mode = (sd.present_modes[_gui_present_modes.index()]);
-				}
+				uint32_t res;
+				auto it = std::find(_available_formats.begin(), _available_formats.end(), format);
+				res = static_cast<uint32_t>(it - _available_formats.begin());
+				return res;
 			}
 
-			if (_extern_target_format.hasValue())
+			uint32_t getPresentModeIndex(VkPresentModeKHR p) const
 			{
-				if (_swapchain)
+				uint32_t res;
+				auto it = std::find(_available_present_modes.begin(), _available_present_modes.end(), p);
+				res = static_cast<uint32_t>(it - _available_present_modes.begin());
+				return res;
+			}
+		public:
+
+			WindowInspector(std::shared_ptr<VkWindow> const& target) :
+				Panel(target->application(), std::format("{}", "Display")),
+				_target(target)
+			{
+				// Window Mode
+				const std::vector<VkWindow::Mode> available_window_modes = {
+					VkWindow::Mode::Windowed,
+					VkWindow::Mode::WindowedFullscreen,
+					//Mode::Fullscreen,
+					//Mode::ExclusiveFullscreen,
+				};
+
+				_window_mode = ImGuiListSelection::CI{
+					.name = "Window Mode",
+					.mode = ImGuiListSelection::Mode::Combo,
+					.options = {
+						ImGuiListSelection::Option{
+							.name = "Windowed",
+						},
+						ImGuiListSelection::Option{
+							.name = "Windowed Full Screen",
+						},
+						//ImGuiListSelection::Option{
+						//	.name = "Full Screen"s,
+						//	.desc = ""s,
+						//},
+						//ImGuiListSelection::Option{
+						//	.name = "Exclusive Full Screen"s,
+						//	.desc = ""s,
+						//},
+					},
+				};
+
 				{
-					VkSurfaceFormatKHR sfmt = _swapchain->format().value();
-					ImGui::Text("Format: %s", getVkFormatName(sfmt.format));
-					ImGui::Text("Color Space: %s", getVkColorSpaceKHRName(sfmt.colorSpace));
+					const Surface::SwapchainSupportDetails& sd = _target->_surface->getDetails();
+					_available_formats = sd.formats;
+					_available_present_modes = sd.present_modes;
 				}
-			}
-			else
-			{
-				changed = _gui_formats.declare();
-				if (changed)
+
+				// Format
+				if (!_target->_extern_target_format.hasValue())
 				{
-					_target_format = (sd.formats[_gui_formats.index()]);
-				}
-			}
-			float max_brightness = _color_correction.mode == ColorCorrectionMode::PerceptualQuantization ? 1e4 : 10;
-			ImGui::SliderFloat("Brightness", &_brightness, 0, max_brightness, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-			
-			const bool display_mode_read_only = (_window_mode == Mode::Windowed) || true;
-			if (display_mode_read_only)
-			{
-				ImGui::BeginDisabled();
-			}
-			if (ImGui::BeginCombo("Display Mode", GetSDLDisplayModeAsString(SDL_GetWindowFullscreenMode(_window)).c_str()))
-			{
-				SDL_DisplayID display_index = SDL_GetDisplayForWindow(_window);
-				int num_display_mode;
-				SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(display_index, &num_display_mode);
-				if (modes)
-				{
-					for (int i = 0; i < num_display_mode; ++i)
-					{
-						if (ImGui::Selectable(GetSDLDisplayModeAsString(*modes[i]).c_str(), _desired_display_mode_index == i))
+					MyVector<std::string> formats(_available_formats.size());
+					std::transform(_available_formats.begin(), _available_formats.end(), formats.begin(), [](VkSurfaceFormatKHR f)
 						{
-							_desired_display_mode_index = i;
+							std::string res = {};
+							const char* format_name = vku::GetEnumLabel(f.format, nullptr);
+							const char* color_space_name = vku::GetEnumLabel(f.colorSpace, nullptr);
+							if (format_name)
+							{
+								res += format_name;
+							}
+							else
+							{
+								std::format_to(std::back_inserter(res), "Unknown Format ({})", that::ToUnderlying(f.format));
+							}
+							res += ", ";
+							if (color_space_name)
+							{
+								res += color_space_name;
+							}
+							else
+							{
+								std::format_to(std::back_inserter(res), "Unknown Color Space ({})", that::ToUnderlying(f.colorSpace));
+							}
+							return res;
+						});
+					_formats = ImGuiListSelection::CI{
+						.name = "Format",
+						.mode = ImGuiListSelection::Mode::Combo,
+						.labels = formats,
+						.default_index = getFormatIndex(_target->_target_format),
+					};
+				}
+
+				// Present Mode
+				if (!_target->_extern_present_mode.hasValue())
+				{
+					MyVector<ImGuiListSelection::Option> present_modes(_available_present_modes.size());
+					for (size_t i = 0; i < present_modes.size(); ++i)
+					{
+						const VkPresentModeKHR vkp = _available_present_modes[i];
+						const char* present_mode_name = vku::GetEnumLabel(vkp, nullptr);
+						if (present_mode_name)
+						{
+							present_modes[i].name = present_mode_name;
+						}
+						else
+						{
+							std::format_to(std::back_inserter(present_modes[i].name), "Unknown Present Mode ({})", that::ToUnderlying(vkp));
+						}
+						switch (vkp)
+						{
+						case VK_PRESENT_MODE_IMMEDIATE_KHR:
+							present_modes[i].desc = "Fastest, Possible Tearing and Frame Skip";
+							break;
+						case VK_PRESENT_MODE_MAILBOX_KHR:
+							present_modes[i].desc = "Fast, No Tearing, Possible Frame Skip";
+							break;
+						case VK_PRESENT_MODE_FIFO_KHR:
+							present_modes[i].desc = "VSync, No Tearing, No Frame Skip";
+							break;
+						case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+							present_modes[i].desc = "VSync, No Tearing, Possible Frame Skip";
+							break;
+						case VK_PRESENT_MODE_FIFO_LATEST_READY_EXT:
+							present_modes[i].desc = "No Tearing";
+							// This extension appears to be also KHR now, but the SDK provides only the EXT version
+							if (!application()->deviceExtensions().contains(VK_EXT_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME))
+							{
+								present_modes[i].disable = true;
+							}
+							break;
+						}
+					}
+					const size_t present_mode_index = std::find(_available_present_modes.begin(), _available_present_modes.end(), _target->_target_present_mode) - _available_present_modes.begin();
+					_present_modes = ImGuiListSelection::CI{
+						.name = "Present Mode",
+						.mode = ImGuiListSelection::Mode::Combo,
+						.options = present_modes,
+						.default_index = getPresentModeIndex(_target->_target_present_mode),
+					};
+				}
+			}
+
+			virtual void declareInline(Context& ctx) override
+			{
+				bool changed = false;
+
+				changed = _window_mode.declare();
+				if (changed)
+				{
+					_target->_desired_window_mode = static_cast<VkWindow::Mode>(_window_mode.index());
+				}
+
+				const bool can_resize = _target->_window_mode == VkWindow::Mode::Windowed && !_target->_extern_resolution.hasValue();
+				ImGui::BeginDisabled(!can_resize);
+				changed = ImGui::InputInt2("Resolution", &_target->_desired_resolution[0], ImGuiInputTextFlags_EnterReturnsTrue & 0);
+				if (changed)
+				{
+					_target->_gui_resized = true;
+				}
+				std::array resolutions = { 720u, 900u, 1080u, 1440u, 1800u, 2160u };
+				std::array<char, 16> button_label_buffer;
+				for (uint i = 0; i < resolutions.size(); ++i)
+				{
+					if (i > 0)
+					{
+						ImGui::SameLine();
+					}
+					uint res = resolutions[i];
+					auto end = std::format_to_n(button_label_buffer.data(), button_label_buffer.size(), "{}p", res);
+					*end.out = char(0);
+					if (ImGui::Button(button_label_buffer.data()))
+					{
+						_target->_desired_resolution[1] = res;
+						_target->_desired_resolution[0] = (res * 16) / 9;
+						_target->_gui_resized = true;
+					}
+				}
+				ImGui::EndDisabled();
+
+				if (_target->_extern_present_mode.hasValue())
+				{
+					if (_target->_swapchain)
+					{
+						VkPresentModeKHR pm = _target->_swapchain->instance() ? _target->_swapchain->instance()->createInfo().presentMode : _target->_swapchain->presentMode().value();
+						InspectVkEnum("Present Mode", pm);
+					}
+				}
+				else
+				{
+					auto index = getPresentModeIndex(_target->_target_present_mode);
+					_present_modes.setIndex(index);
+					changed = _present_modes.declare();
+					if (changed)
+					{
+						index = _present_modes.index();
+						if (index < _available_present_modes.size32())
+						{
+							_target->_target_present_mode = (_available_present_modes[index]);
 						}
 					}
 				}
-				ImGui::EndCombo();
-			}
-			if (display_mode_read_only)
-			{
-				ImGui::EndDisabled();
-			}
 
-			SDL_DisplayID display_index = SDL_GetDisplayForWindow(_window);
-			int num_displays;
-			const SDL_DisplayID* displays = SDL_GetDisplays(&num_displays);
-			const bool display_read_only = (_window_mode == Mode::Windowed) || true;
-			if (display_read_only)
-			{
-				ImGui::BeginDisabled();
-			}
-			changed = false;
-			if (ImGui::BeginCombo("Display", SDL_GetDisplayName(display_index)))
-			{
-				for (int i = 0; i < num_displays; ++i)
+				if (_target->_extern_target_format.hasValue())
 				{
-					const bool active = display_index == i;
-					if (ImGui::Selectable(SDL_GetDisplayName(i), active))
+					if (_target->_swapchain)
 					{
-						_desired_monitor_index = i;
+						VkSurfaceFormatKHR sfmt = _target->_swapchain->format().value();
+						InspectVkEnum("Format", sfmt.format);
+						InspectVkEnum("Color Space", sfmt.colorSpace);
 					}
 				}
-				ImGui::EndCombo();
-			}
-			if (display_read_only)
-			{
-				ImGui::EndDisabled();
-			}
+				else
+				{
+					auto index = getFormatIndex(_target->_target_format);
+					_formats.setIndex(index);
+					changed = _formats.declare();
+					if (changed)
+					{
+						index = _formats.index();
+						if (index < _available_formats.size32())
+						{
+							_target->_target_format = (_available_formats[index]);
+						}
+					}
+				}
+				float max_brightness = _target->_color_correction.mode == ColorCorrectionMode::PerceptualQuantization ? 1e4 : 10;
+				ImGui::SliderFloat("Brightness", &_target->_brightness, 0, max_brightness, "%.3f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
 
-		}
-		ImGui::PopID();
+				const bool display_mode_read_only = (_target->_window_mode == VkWindow::Mode::Windowed) || true;
+				if (display_mode_read_only)
+				{
+					ImGui::BeginDisabled();
+				}
+				if (ImGui::BeginCombo("Display Mode", GetSDLDisplayModeAsString(SDL_GetWindowFullscreenMode(_target->_window)).c_str()))
+				{
+					SDL_DisplayID display_index = SDL_GetDisplayForWindow(_target->_window);
+					int num_display_mode;
+					SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(display_index, &num_display_mode);
+					if (modes)
+					{
+						for (int i = 0; i < num_display_mode; ++i)
+						{
+							if (ImGui::Selectable(GetSDLDisplayModeAsString(*modes[i]).c_str(), _target->_desired_display_mode_index == i))
+							{
+								_target->_desired_display_mode_index = i;
+							}
+						}
+					}
+					ImGui::EndCombo();
+				}
+				if (display_mode_read_only)
+				{
+					ImGui::EndDisabled();
+				}
+
+				SDL_DisplayID display_index = SDL_GetDisplayForWindow(_target->_window);
+				int num_displays;
+				const SDL_DisplayID* displays = SDL_GetDisplays(&num_displays);
+				const bool display_read_only = (_target->_window_mode == VkWindow::Mode::Windowed) || true;
+				if (display_read_only)
+				{
+					ImGui::BeginDisabled();
+				}
+				changed = false;
+				if (ImGui::BeginCombo("Display", SDL_GetDisplayName(display_index)))
+				{
+					for (int i = 0; i < num_displays; ++i)
+					{
+						const bool active = display_index == i;
+						if (ImGui::Selectable(SDL_GetDisplayName(i), active))
+						{
+							_target->_desired_monitor_index = i;
+						}
+					}
+					ImGui::EndCombo();
+				}
+				if (display_read_only)
+				{
+					ImGui::EndDisabled();
+				}
+			}
+		};
+	}
+
+	std::shared_ptr<GUI::Panel> VkWindow::makeInspector(std::shared_ptr<VkWindow> const& shared_this, GUI::Context& ctx)
+	{
+		return std::make_shared<GUI::WindowInspector>(shared_this);
 	}
 }

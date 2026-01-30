@@ -2,9 +2,6 @@
 
 #include <vkl/App/VkApplication.hpp>
 
-#include <vkl/GUI/ImGuiUtils.hpp>
-#include <vkl/GUI/Context.hpp>
-
 #include <vkl/Utils/ColorCorrectionDef.hpp>
 
 #include <set>
@@ -19,7 +16,10 @@
 
 namespace vkl
 {
-
+	namespace GUI
+	{
+		class WindowInspector;
+	}
 	class VkWindow : public VkObject
 	{
 	public:
@@ -92,19 +92,16 @@ namespace vkl
 		// Of size swapchain (One per swap image)
 		//std::vector<std::shared_ptr<Fence>> _image_in_flight_fence;
 
-		ImGuiListSelection _gui_window_mode;
 		Mode _desired_window_mode;
 
 		Dyn<VkPresentModeKHR> _extern_present_mode = {};
 		VkPresentModeKHR _target_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-		ImGuiListSelection _gui_present_modes;
 
 		Dyn<VkSurfaceFormatKHR> _extern_target_format = {};
 		VkSurfaceFormatKHR _target_format = VkSurfaceFormatKHR{
 			.format = VK_FORMAT_MAX_ENUM,
 			.colorSpace = VK_COLOR_SPACE_MAX_ENUM_KHR,
 		};
-		ImGuiListSelection _gui_formats;
 
 		struct FrameInfo
 		{
@@ -138,9 +135,6 @@ namespace vkl
 		void cleanupSwapchain();
 
 		virtual void cleanup();
-
-
-		void setupGuiObjects();
 
 		void saveWindowedAttributes();
 
@@ -239,7 +233,9 @@ namespace vkl
 
 		bool updateResources(UpdateContext & ctx);
 
-		void declareGui(GUI::Context & ctx);
+		using InspectorType = GUI::WindowInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkWindow> const& shared_this, GUI::Context& ctx);
 
 		ColorCorrectionInfo getColorCorrectionInfo(bool brightness=false) const
 		{

@@ -1,16 +1,11 @@
 #pragma once
 
+#include <that/core/Concepts.hpp>
 #include <vkl/Core/VulkanCommons.hpp>
-
-namespace vkl::concepts
-{
-	template <class E>
-	concept Enumeration = std::is_enum<E>::value;
-}
 
 namespace vku
 {
-	template <::vkl::concepts::Enumeration Enum>
+	template <that::concepts::Enumeration Enum>
 	struct EnumMetaInfo
 	{
 		static constexpr const bool IsBitField = false;

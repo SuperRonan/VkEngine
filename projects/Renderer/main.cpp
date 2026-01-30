@@ -962,7 +962,7 @@ namespace vkl
 						.label = "Performances",
 					},
 					GUI::MainPanel::PanelMenuOption{
-						.panel = MakePanel(*_main_window, "Display"),
+						.panel = _main_window->makeInspector(_main_window, _gui_context),
 						.label = "Display",
 					},
 					GUI::MainPanel::PanelMenuOption{

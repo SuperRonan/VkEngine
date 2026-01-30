@@ -18,14 +18,14 @@ namespace vku
 		VmaVirtualAllocationCreateFlagBits
 	>;
 
-	template<::vkl::concepts::Enumeration Enum>
+	template<that::concepts::Enumeration Enum>
 	static consteval bool CheckVkEnumMetaInfo()
 	{
 		using MetaInfo = EnumMetaInfo<Enum>;
 		return MetaInfo::Name != nullptr;
 	}
 
-	template<::vkl::concepts::Enumeration ...Enums>
+	template<that::concepts::Enumeration ...Enums>
 	static consteval bool CheckAllEnumsMetaInfo(std::tuple<Enums...>)
 	{
 		return (CheckVkEnumMetaInfo<Enums>() && ...);
