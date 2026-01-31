@@ -4,12 +4,14 @@
 #include <vkl/Execution/FramePerformanceCounters.hpp>
 #include <vkl/Utils/StatRecorder.hpp>
 
-#include <vkl/GUI/Context.hpp>
-
 namespace vkl
 {
 	struct FramePerfReport;
-	
+
+	namespace GUI
+	{
+		class PerformanceReportInspector;
+	}
 
 	class PerformanceReport : public Module
 	{
@@ -40,7 +42,9 @@ namespace vkl
 
 		virtual ~PerformanceReport() override = default;
 
-		void declareGUI(GUI::Context & ctx);
+		using InspectorType = GUI::PerformanceReportInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<PerformanceReport> const& shared_this, GUI::Context& ctx);
 
 		std::unique_ptr<StatRecords> const& statRecords()const
 		{

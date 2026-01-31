@@ -958,7 +958,7 @@ namespace vkl
 						.label = "Scene",
 					},
 					GUI::MainPanel::PanelMenuOption{
-						.panel = MakePanel(*perf_reporter),
+						.panel = perf_reporter->makeInspector(perf_reporter, _gui_context),
 						.label = "Performances",
 					},
 					GUI::MainPanel::PanelMenuOption{

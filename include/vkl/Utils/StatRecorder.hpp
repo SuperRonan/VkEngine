@@ -79,7 +79,7 @@ namespace vkl
 		bool _ignore_parent_avg = false;
 		std::string _unit = {};
 
-		std::vector<AbstractStatRecord *> _children_records = {};
+		std::vector<std::shared_ptr<AbstractStatRecord>> _children_records = {};
 
 	public:
 
@@ -88,6 +88,11 @@ namespace vkl
 			_type(type),
 			_ignore_parent_avg(ignore_parent_avg),
 			_unit(unit)
+		{
+
+		}
+
+		virtual ~AbstractStatRecord()
 		{
 
 		}
@@ -155,13 +160,9 @@ namespace vkl
 
 		}
 
-		virtual ~StatRecord()
+		virtual ~StatRecord() override
 		{
-			for (auto& r : _children_records)
-			{
-				delete r;
-				r = nullptr;
-			}
+
 		}
 
 		virtual void computeAverage(size_t begin, size_t len) final override
@@ -311,9 +312,9 @@ namespace vkl
 		using CRI = CreateRecordInfo<Q, Dec2>;
 
 		template <class Q = T, class Dec2 = Dec>
-		StatRecord<Q, Dec2>* createChildRecord(CreateRecordInfo<Q, Dec2> const& cri)
+		std::shared_ptr<StatRecord<Q, Dec2>> createChildRecord(CreateRecordInfo<Q, Dec2> const& cri)
 		{
-			StatRecord<Q, Dec2>* res = new StatRecord<Q, Dec2>(typename StatRecord<Q, Dec2>::CreateInfo{
+			auto res = std::make_shared<StatRecord<Q, Dec2>>(typename StatRecord<Q, Dec2>::CreateInfo{
 				.name = cri.name,
 				.memory = _ring_buffer.size(),
 				.scale = cri.scale,
@@ -340,7 +341,7 @@ namespace vkl
 		Clock::time_point _latest_time_point;
 		size_t _iter_counter_since_avg = 0;
 
-		std::vector<AbstractStatRecord *> _records;
+		std::vector<std::shared_ptr<AbstractStatRecord>> _records;
 
 		bool _gui_show_graph = false;
 
@@ -374,9 +375,9 @@ namespace vkl
 		using CRI = CreateRecordInfo<T, Dec>;
 
 		template <class T, class Dec = double>
-		StatRecord<T, Dec> * createRecord(CreateRecordInfo<T, Dec> const& cri)
+		std::shared_ptr<StatRecord<T, Dec>> createRecord(CreateRecordInfo<T, Dec> const& cri)
 		{
-			StatRecord<T, Dec>* res = new StatRecord<T, Dec>(typename StatRecord<T, Dec>::CI{
+			auto res = std::make_shared<StatRecord<T, Dec>>(typename StatRecord<T, Dec>::CI{
 				.name = cri.name,
 				.memory = _memory,
 				.scale = cri.scale,
