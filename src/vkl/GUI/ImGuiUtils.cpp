@@ -550,7 +550,9 @@ namespace ImGui
 			}
 			else if (*v)
 			{
-				DrawRectNoCorners(window->DrawList, ImRect(total_bb.GetTL(), total_bb.GetBR() - ImVec2(1, 1)), check_col);
+				float rounding = GetStyle().FrameRounding;
+				window->DrawList->AddRect(total_bb.GetTL(), total_bb.GetBR(), check_col, rounding, 0, GetStyle().FrameBorderSize);
+				//DrawRectNoCorners(window->DrawList, ImRect(total_bb.GetTL(), total_bb.GetBR() - ImVec2(1, 1)), check_col);
 			}
 		}
 		const ImVec2 label_pos = ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y);
