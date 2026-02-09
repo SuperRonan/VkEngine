@@ -1,6 +1,7 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/Context.hpp>
 #include <cassert>
 
 #include <vkl/Maths/Transforms.hpp>
@@ -793,5 +794,69 @@ namespace ImGui
 			storage->SetBool(storage_id, is_open);
 		}
 		return is_open;
+	}
+}
+
+namespace vkl::GUI
+{
+	int SectionBox::pushStyleColor()
+	{
+		ImGui::PushStyleColor(ImGuiCol_Border, _color.Value);
+		ImGui::PushStyleColor(ImGuiCol_Separator, _color.Value);
+		return 2;
+	}
+
+	bool SectionBox::begin(Context& ctx)
+	{
+		_should_pop_item_width = false;
+		int color_push = 0;
+		if (stack_color)
+		{
+			_color = ctx.pushStack();
+			color_push += pushStyleColor();
+		}
+		const float top_item_width = ImGui::GetCurrentWindow()->DC.ItemWidth;
+		bool res = ImGui::BeginChild(label, ImVec2(0, 0), child_flags, window_flags);
+		if (res)
+		{
+			ImGui::SeparatorText(label);
+			if(full_width)
+			{
+				const auto& style = ImGui::GetStyle();
+				float item_width = top_item_width - 2 * style.FramePadding.x - style.FrameBorderSize;
+				ImGui::PushItemWidth(item_width);
+				_should_pop_item_width = true;
+			}
+		}
+		if (color_push)
+		{
+			ImGui::PopStyleColor(color_push);
+			color_push = 0;
+		}
+		return res;
+	}
+
+	void SectionBox::end(Context& ctx)
+	{
+		if (_should_pop_item_width)
+		{
+			ImGui::PopItemWidth();
+			_should_pop_item_width = false;
+		}
+		int color_push = 0;
+		if (stack_color)
+		{
+			color_push += pushStyleColor();
+		}
+		ImGui::EndChild();
+		if (color_push)
+		{
+			ImGui::PopStyleColor(color_push);
+			color_push = 0;
+		}
+		if (stack_color)
+		{
+			ctx.popStack();
+		}
 	}
 }

@@ -541,3 +541,28 @@ namespace ImGui
 
 	extern bool ArrowFlipButton(const char* label_id);
 }
+
+namespace vkl::GUI
+{
+	struct SectionBox
+	{
+		const char* label = nullptr;
+
+		ImVec2 size = ImVec2(0, 0);
+		ImGuiChildFlags child_flags = ImGuiChildFlags_Borders;
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_None;
+
+		bool full_width = true;
+		bool stack_color = true;
+
+		bool begin(Context& ctx);
+
+		void end(Context& ctx);
+
+		int pushStyleColor();
+	
+	protected:
+		bool _should_pop_item_width = false;
+		ImColor _color;
+	};
+}
