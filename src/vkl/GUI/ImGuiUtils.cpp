@@ -408,6 +408,65 @@ namespace ImGui
 		RenderBarredIcon(reinterpret_cast<const void*>(uintptr_t(0x1)), draw_list, rect, font_size, color);
 	}
 
+	void RenderTrashCanIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		// Good enough for now
+		bool cheat_rounded = true;
+		bool odd_width = (int(rect.GetWidth()) % 2) != 0;
+		float thickness = 1;
+		float rounding = 0;
+		float padding_f = 0.15;
+		float bottom_padding_f = padding_f;
+		ImVec2 padding = ImFloor(rect.GetSize() * padding_f);
+		// Relative to the rect
+		float can_lid_y = ImFloor(rect.GetHeight() * 0.25f);
+		float can_top_y = can_lid_y + 2 + ImFloor(rect.GetHeight() * 1.0f / 13.0f);
+		float can_bottom_padding_x = ImFloor(rect.GetWidth() * bottom_padding_f);
+		float can_bottom_y = ImCeil((1 - padding_f) * rect.GetHeight());
+
+		// Draw can
+		ImVec2 tl = rect.GetTL() + ImVec2(+padding.x, can_top_y);
+		ImVec2 bl = rect.GetTL() + ImVec2(+padding.x, can_bottom_y);
+		ImVec2 br = rect.GetTR() + ImVec2(-padding.x, can_bottom_y);
+		ImVec2 tr = rect.GetTR() + ImVec2(-padding.x, can_top_y);
+		if (cheat_rounded)
+		{
+			draw_list->AddLine(tl + ImVec2(-1, -1), bl + ImVec2(-1, 0), color, thickness);
+			draw_list->AddLine(bl, br, color, thickness);
+			draw_list->AddLine(br, tr + ImVec2(0, -1), color, thickness);
+		}
+		else
+		{
+			draw_list->PathLineTo(tl + ImVec2(-0.5f, -0.5f));
+			draw_list->PathLineTo(bl + ImVec2(-0.5f, 0.5f));
+			draw_list->PathLineTo(br + ImVec2(0.5f, 0.5f));
+			draw_list->PathLineTo(tr + ImVec2(0.5f, -0.5f));
+			draw_list->PathStroke(color, ImDrawFlags_None, thickness);
+		}
+
+		// Stripes
+		float stripes_width = (rect.GetWidth() - 2 * padding.x);
+		int n = int(stripes_width / (thickness + padding.x));
+		const float base = padding.x + thickness;
+		for (int i = 0; i < n; ++i)
+		{
+			float offset = base;
+			float x = offset + i * (thickness + padding.x);
+			draw_list->AddLine(rect.GetTL() + ImVec2(x, can_top_y), rect.GetTL() + ImVec2(x, can_bottom_y - thickness), color, thickness);
+		}
+
+		// Lid
+		draw_list->AddLine(rect.GetTL() + ImVec2(padding.x - thickness, can_lid_y), rect.GetTR() + ImVec2(-padding.x + thickness, can_lid_y), color, thickness);
+		// Handle
+		ImVec2 handle_size_f = ImVec2(0.25, 0.15);
+		ImVec2 handle_size = rect.GetSize() * handle_size_f;
+		draw_list->AddBezierQuadratic(
+			ImVec2(rect.GetCenter().x - handle_size.x * 0.5, rect.Min.y + can_lid_y),
+			ImVec2(rect.GetCenter().x, rect.Min.y + can_lid_y - handle_size.y),
+			ImVec2(rect.GetCenter().x + handle_size.x * 0.5, rect.Min.y + can_lid_y),
+			color, thickness);
+	}
+
 	bool DetachButton()
 	{
 		bool res = IconButton("Detach", RenderDetachIcon);
@@ -419,6 +478,16 @@ namespace ImGui
 	bool XCrossButton(const char* tooltip, bool small_button)
 	{
 		bool res = IconButton("XCross", RenderXCrossIcon, nullptr, small_button);
+		if (tooltip)
+		{
+			ImGui::SetItemTooltip(tooltip);
+		}
+		return res;
+	}
+
+	bool TrashButton(const char* tooltip, bool small_button)
+	{
+		bool res = IconButton("Trash", RenderTrashCanIcon, nullptr, small_button);
 		if (tooltip)
 		{
 			ImGui::SetItemTooltip(tooltip);

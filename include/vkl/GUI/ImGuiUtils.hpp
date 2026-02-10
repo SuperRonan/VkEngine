@@ -393,9 +393,13 @@ namespace ImGui
 
 	extern void RenderBarredEyeIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
 
+	extern void RenderTrashCanIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
+
 	extern bool DetachButton();
 
 	extern bool XCrossButton(const char* tooltip=nullptr, bool small_button = false);
+
+	extern bool TrashButton(const char* tooltip=nullptr, bool small_button = false);
 
 	extern bool PlusButton(const char* tooltip=nullptr, bool small_button = false);
 
