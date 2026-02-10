@@ -339,6 +339,21 @@ namespace ImGui
 		DrawRectNoCorners(draw_list, ImRect(pos + detachment, pos + size + detachment), color, thickness);
 	}
 
+	void RenderPlusIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
+	{
+		float size = ImMin(rect.GetWidth(), rect.GetHeight());
+		bool odd = (int(size) % 2) != 0;
+		float thickness = odd ? 1 : 2;
+		float padding_f = 0.15;
+		float padding = ImFloor(padding_f * size);
+		ImRect r = rect;
+		r.Min += ImVec2(padding, padding);
+		r.Max -= ImVec2(padding, padding);
+		ImVec2 c = ImFloor(r.GetCenter());
+		draw_list->AddLine(ImVec2(c.x, r.Min.y), ImVec2(c.x, r.Max.y), color, thickness);
+		draw_list->AddLine(ImVec2(r.Min.x, c.y), ImVec2(r.Max.x, c.y), color, thickness);
+	}
+
 	void RenderXCrossIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color)
 	{
 		float d = std::min(rect.GetWidth(), rect.GetHeight());
@@ -404,6 +419,16 @@ namespace ImGui
 	bool XCrossButton(const char* tooltip, bool small_button)
 	{
 		bool res = IconButton("XCross", RenderXCrossIcon, nullptr, small_button);
+		if (tooltip)
+		{
+			ImGui::SetItemTooltip(tooltip);
+		}
+		return res;
+	}
+
+	bool PlusButton(const char* tooltip, bool small_button)
+	{
+		bool res = IconButton("Plus", RenderPlusIcon, nullptr, small_button);
 		if (tooltip)
 		{
 			ImGui::SetItemTooltip(tooltip);
