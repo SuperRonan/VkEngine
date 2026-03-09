@@ -548,6 +548,8 @@ namespace ImGui
 
 
 	extern bool ArrowFlipButton(const char* label_id);
+
+	extern void CannotAcceptDragDropPayload(const char* reason = nullptr);
 }
 
 namespace vkl::GUI

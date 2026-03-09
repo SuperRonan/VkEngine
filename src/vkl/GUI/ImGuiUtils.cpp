@@ -889,6 +889,30 @@ namespace ImGui
 		}
 		return is_open;
 	}
+
+	void CannotAcceptDragDropPayload(const char* reason)
+	{
+		ImGuiContext& g = *GImGui;
+		{
+			ImRect r = g.DragDropTargetRect;
+			ImGui::PushStyleColor(ImGuiCol_DragDropTargetBg, ImVec4(0.5, 0, 0, 0.5));
+			ImGui::PushStyleColor(ImGuiCol_DragDropTarget,   ImVec4(0.5, 0, 0, 1));
+			ImGui::RenderDragDropTargetRectForItem(r);
+			ImGui::PopStyleColor(2);
+		}
+		if (reason)
+		{
+			bool push_tg = g.DragDropWithinTarget;
+			g.DragDropWithinTarget = false;
+			if (ImGui::BeginTooltip())
+			{
+				ImGui::TextUnformatted(reason); 
+				ImGui::EndTooltip();
+			}
+			g.DragDropWithinTarget = push_tg;
+		}
+		ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+	}
 }
 
 namespace vkl::GUI
