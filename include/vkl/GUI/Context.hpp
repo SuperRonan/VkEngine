@@ -34,6 +34,7 @@ namespace vkl::GUI
 		std::shared_ptr<FileDialog> _common_file_dialog;
 
 		MyVector<PanelHolder*> _panel_holder_stack;
+		MyVector<Panel*> _panel_stack;
 
 	public:
 
@@ -76,9 +77,21 @@ namespace vkl::GUI
 
 		void popPanelHolder();
 
-		PanelHolder* getTopPanelHolder(uint index = 0);
+		void pushPanel(Panel* panel);
 
-		PanelHolder* getBottomPanelHolder(uint index = 0);
+		void popPanel();
+
+		PanelHolder* getTopPanelHolder(uint index = 0) const;
+
+		PanelHolder* getBottomPanelHolder(uint index = 0) const;
+
+		std::span<PanelHolder* const> getPanelHolderStack() const;
+
+		Panel* getTopPanel(uint index = 0) const;
+
+		Panel* getBottomPanel(uint index = 0) const;
+
+		std::span<Panel* const> getPanelStack() const;
 
 		Style::Color pushStack();
 

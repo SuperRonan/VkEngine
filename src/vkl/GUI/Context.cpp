@@ -54,14 +54,44 @@ namespace vkl::GUI
 		_panel_holder_stack.pop_back();
 	}
 
-	PanelHolder* Context::getTopPanelHolder(uint index)
+	PanelHolder* Context::getTopPanelHolder(uint index) const
 	{
 		return _panel_holder_stack.at(_panel_holder_stack.size32() - index - 1);
 	}
 
-	PanelHolder* Context::getBottomPanelHolder(uint index)
+	PanelHolder* Context::getBottomPanelHolder(uint index) const
 	{
 		return _panel_holder_stack.at(index);
+	}
+
+	void Context::pushPanel(Panel* panel)
+	{
+		_panel_stack.push_back(panel);
+	}
+
+	void Context::popPanel()
+	{
+		_panel_stack.pop_back();
+	}
+
+	Panel* Context::getTopPanel(uint index) const
+	{
+		return _panel_stack.at(_panel_stack.size32() - index - 1);
+	}
+
+	Panel* Context::getBottomPanel(uint index) const
+	{
+		return _panel_stack.at(index);
+	}
+
+	std::span<PanelHolder* const> Context::getPanelHolderStack() const
+	{
+		return std::span<PanelHolder* const>(_panel_holder_stack.data(), _panel_holder_stack.size());
+	}
+
+	std::span<Panel* const> Context::getPanelStack() const
+	{
+		return std::span<Panel* const>(_panel_stack.data(), _panel_stack.size());
 	}
 
 	Style::Color Context::pushStack()
