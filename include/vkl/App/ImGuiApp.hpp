@@ -43,12 +43,14 @@ namespace vkl
 			ImGui_ImplVulkan_NewFrame();
 			ImGui_ImplSDL3_NewFrame();
 			ImGui::NewFrame();
+			_gui_context.begin();
 			return &_gui_context;
 		}
 
 		void endImGuiFrame(GUI::Context * ctx)
 		{
 			assert(ctx == &_gui_context);
+			ctx->end();
 			ImGui::EndFrame();
 #ifdef IMGUI_HAS_VIEWPORT
 			if (_imgui_init_flags & ImGuiConfigFlags_ViewportsEnable)

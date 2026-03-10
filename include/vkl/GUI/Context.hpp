@@ -47,6 +47,10 @@ namespace vkl::GUI
 
 		Context(CreateInfo const& ci);
 
+		void begin();
+
+		void end();
+
 		ImGuiContext* getImGuiContext() const
 		{
 			return _imgui_context;

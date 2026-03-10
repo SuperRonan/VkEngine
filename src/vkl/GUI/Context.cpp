@@ -35,6 +35,15 @@ namespace vkl::GUI
 		}
 	}
 
+	void Context::begin()
+	{
+	}
+
+	void Context::end()
+	{
+
+	}
+
 	void Context::pushPanelHolder(PanelHolder* panel)
 	{
 		_panel_holder_stack.push_back(panel);
