@@ -954,6 +954,25 @@ namespace ImGui
 		}
 		ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
 	}
+
+	void SignalDragDropTarget(bool valid)
+	{
+		ImGuiContext& g = *GImGui;
+		ImGuiWindow* window = g.CurrentWindow;
+
+		float pulse = std::sqr(std::sin(g.Time * std::numbers::pi * 0.75));
+		vkl::Vector3f color = valid ? vkl::Vector3f(1, 1, 1) : vkl::Vector3f(0.5, 0, 0);
+		ImVec4 background = ImVec4(color.x(), color.y(), color.z(), std::lerp(0.05, 0.15, pulse));
+		ImVec4 border = ImVec4(color.x(), color.y(), color.z(), std::lerp(0.2, 0.4, pulse));
+		const ImRect display_rect = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HasDisplayRect) ? g.LastItemData.DisplayRect : g.LastItemData.Rect;
+		auto dnd_clip_rect = g.DragDropTargetClipRect; // Probably not necessary
+		g.DragDropTargetClipRect = (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_HasClipRect) ? g.LastItemData.ClipRect : window->ClipRect; // Used by ImGui::RenderDragDropTargetRectForItem(), but not set because outisde of a ImGui::BeginDragDropTarget()
+		ImGui::PushStyleColor(ImGuiCol_DragDropTargetBg, background);
+		ImGui::PushStyleColor(ImGuiCol_DragDropTarget, border);
+		ImGui::RenderDragDropTargetRectForItem(display_rect);
+		ImGui::PopStyleColor(2);
+		g.DragDropTargetClipRect = dnd_clip_rect;
+	}
 }
 
 namespace vkl::GUI
