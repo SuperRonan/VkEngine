@@ -20,7 +20,7 @@ namespace vkl::GUI
 		std::unordered_map<Id, Child> _childs;
 		MyVector<Id> _declare_ids;
 		bool _childs_ids_valid = false;
-		bool _disable_from_ctx_stack = false;
+		bool _disable_from_holder_ctx_stack = false;
 
 		struct CreateInfo
 		{
@@ -76,9 +76,9 @@ namespace vkl::GUI
 
 		virtual void closeAllChilds();
 
-		void setDisableFromCtxStack(bool disable = true)
+		void setDisableFromHolderCtxStack(bool disable = true)
 		{
-			_disable_from_ctx_stack = disable;
+			_disable_from_holder_ctx_stack = disable;
 		}
 	};
 }

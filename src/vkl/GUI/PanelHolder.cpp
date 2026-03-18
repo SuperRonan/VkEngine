@@ -49,7 +49,7 @@ namespace vkl::GUI
 
 	void PanelHolder::declare(Context& ctx, bool keep_open)
 	{
-		const bool push_to_stack = !_disable_from_ctx_stack;
+		const bool push_to_stack = !_disable_from_holder_ctx_stack;
 		if (push_to_stack)
 		{
 			ctx.pushPanelHolder(this);

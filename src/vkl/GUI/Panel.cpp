@@ -1,4 +1,5 @@
 #include <vkl/GUI/Panel.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <imgui/imgui.h>
 
@@ -37,6 +38,10 @@ namespace vkl::GUI
 		_has_focus = ImGui::IsWindowFocused();
 		if (_is_visible)
 		{
+			if (!_disable_from_ctx_stack)
+			{
+				ctx.pushPanel(this);
+			}
 			if (flags & ImGuiWindowFlags_MenuBar)
 			{
 				if (ImGui::BeginMenuBar())
@@ -46,6 +51,10 @@ namespace vkl::GUI
 				}
 			}
 			declareInline(ctx);
+			if (!_disable_from_ctx_stack)
+			{
+				ctx.popPanel();
+			}
 		}
 		if (!keep_open)
 		{
