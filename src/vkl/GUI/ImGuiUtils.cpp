@@ -892,24 +892,65 @@ namespace ImGui
 
 	void CannotAcceptDragDropPayload(const char* reason)
 	{
+		ImVec4 background = ImVec4(0.333, 0, 0, 0.4);
+		ImVec4 border = ImVec4(0.5, 0, 0, 0.8);
 		ImGuiContext& g = *GImGui;
 		{
 			ImRect r = g.DragDropTargetRect;
-			ImGui::PushStyleColor(ImGuiCol_DragDropTargetBg, ImVec4(0.5, 0, 0, 0.5));
-			ImGui::PushStyleColor(ImGuiCol_DragDropTarget,   ImVec4(0.5, 0, 0, 1));
+			ImGui::PushStyleColor(ImGuiCol_DragDropTargetBg, background);
+			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, border);
 			ImGui::RenderDragDropTargetRectForItem(r);
 			ImGui::PopStyleColor(2);
 		}
 		if (reason)
 		{
-			bool push_tg = g.DragDropWithinTarget;
-			g.DragDropWithinTarget = false;
-			if (ImGui::BeginTooltip())
+			if (true)
 			{
-				ImGui::TextUnformatted(reason); 
-				ImGui::EndTooltip();
+				const bool color_txt = true;
+				// If drag and drop already active (wich should be the case)
+				// BeginTooltip would overwrite the drag tooltip if g.DragDropWithinTarget is true
+				// => Set it to false to append to a "regular" tooltip
+				bool push_tg = g.DragDropWithinTarget;
+				g.DragDropWithinTarget = false;
+				if (push_tg)
+				{
+					// Position the regular tooltip after the drag tooltip (not perfect, the positioning could be improved)
+					const char* window_name_template = "##Tooltip_DragDrop_%02d";
+					char window_name[32];
+					ImFormatString(window_name, IM_COUNTOF(window_name), window_name_template, g.TooltipOverrideCount);
+					ImGuiWindow* drag_tooltip_window = ImGui::FindWindowByName(window_name);
+					ImGui::SetNextWindowPos(drag_tooltip_window->Rect().GetBL(), ImGuiCond_None);
+					if (!color_txt)
+					{
+						ImGui::PushStyleColor(ImGuiCol_PopupBg, background);
+						ImGui::PushStyleColor(ImGuiCol_Border, border);
+					}
+				}
+				if (ImGui::BeginTooltip())
+				{
+					if (color_txt)
+					{
+						ImGui::TextColored(border, reason);
+					}
+					else
+					{
+						ImGui::TextUnformatted(reason);
+					}
+					ImGui::EndTooltip();
+				}
+				if (push_tg)
+				{
+					if (!color_txt)
+					{
+					ImGui::PopStyleColor(2);
+					}
+				}
+				g.DragDropWithinTarget = push_tg;
 			}
-			g.DragDropWithinTarget = push_tg;
+			else
+			{
+				ImGui::SetTooltip(reason);
+			}
 		}
 		ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
 	}
