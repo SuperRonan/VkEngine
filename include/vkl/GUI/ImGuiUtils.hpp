@@ -552,6 +552,29 @@ namespace ImGui
 	extern void CannotAcceptDragDropPayload(const char* reason = nullptr);
 
 	extern void SignalDragDropTarget(bool valid);
+
+	// Inside of a BeginX(), call this to know if we are appending to an already existing tooltip
+	extern bool AppendingToAlreadyBegan();
+
+	static inline bool SeparatorIfAppending()
+	{
+		if (AppendingToAlreadyBegan())
+		{
+			Separator();
+			return true;
+		}
+		return false;
+	}
+
+	static inline bool SeparatorTextIfAppending(const char* label)
+	{
+		if (AppendingToAlreadyBegan())
+		{
+			SeparatorText(label);
+			return true;
+		}
+		return false;
+	}
 }
 
 namespace vkl::GUI

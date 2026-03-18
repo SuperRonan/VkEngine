@@ -973,6 +973,15 @@ namespace ImGui
 		ImGui::PopStyleColor(2);
 		g.DragDropTargetClipRect = dnd_clip_rect;
 	}
+
+	bool AppendingToAlreadyBegan()
+	{
+		ImGuiContext& g = *GImGui;
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		// Good enough for now, improve IFN
+		bool res = window->DC.CursorPos.y > window->DC.CursorStartPos.y;
+		return res;
+	}
 }
 
 namespace vkl::GUI
