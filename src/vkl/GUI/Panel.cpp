@@ -5,7 +5,7 @@
 
 namespace vkl::GUI
 {
-	Panel::Panel(VkApplication* app, std::string const& name):
+	Panel::Panel(VkApplication* app, std::string_view name):
 		VkObject(app, name)
 	{
 

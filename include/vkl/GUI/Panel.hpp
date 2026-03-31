@@ -26,7 +26,7 @@ namespace vkl::GUI
 		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
 		
 
-		Panel(VkApplication * app, std::string const& name);
+		Panel(VkApplication * app, std::string_view name);
 
 	public:
 
