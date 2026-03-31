@@ -3,6 +3,7 @@
 #include <vkl/GUI/PanelHolder.hpp>
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/FancyButtons.hpp>
 
 #include <imgui/imgui_internal.h>
 

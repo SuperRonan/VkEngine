@@ -6,6 +6,7 @@
 #include <imgui/imgui_internal.h>
 
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/FancyButtons.hpp>
 
 #include <ShaderLib/Rendering/Scene/SceneFlags.h>
 

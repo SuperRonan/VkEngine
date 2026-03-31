@@ -4,6 +4,8 @@
 
 #include <imgui/imgui_internal.h>
 
+#include <vkl/GUI/FancyButtons.hpp>
+
 namespace vkl::GUI
 {
 	NodeInspector::NodeInspector(std::shared_ptr<Scene::Node> const& node) :
