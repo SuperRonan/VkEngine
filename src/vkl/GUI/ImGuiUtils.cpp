@@ -286,7 +286,10 @@ namespace ImGui
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
 			return false;
-
+		if (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth)
+		{
+			size.x = g.NextItemData.Width;
+		}
 		const ImGuiID id = window->GetID(str_id);
 		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
 		const float default_size = GetFrameHeight();
