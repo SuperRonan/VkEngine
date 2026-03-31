@@ -575,6 +575,12 @@ namespace ImGui
 		}
 		return false;
 	}
+
+	extern ImRect GetItemRect();
+
+	extern float GetFrameWidth();
+
+	extern void CenterNextItem(float expected_width=0);
 }
 
 namespace vkl::GUI

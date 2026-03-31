@@ -982,6 +982,26 @@ namespace ImGui
 		bool res = window->DC.CursorPos.y > window->DC.CursorStartPos.y;
 		return res;
 	}
+
+	ImRect GetItemRect()
+	{
+		ImGuiContext& g = *GImGui;
+		return g.LastItemData.Rect;
+	}
+
+	float GetFrameWidth()
+	{
+		ImGuiContext& g = *GImGui;
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		return window->InnerClipRect.GetWidth();
+	}
+
+	void CenterNextItem(float expected_width)
+	{
+		float w = GetFrameWidth();
+		SetCursorPosX(GetCursorPosX() + ImFloor(0.5f * (w - expected_width)));
+	}
+
 }
 
 namespace vkl::GUI
