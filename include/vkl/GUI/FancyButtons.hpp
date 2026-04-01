@@ -7,6 +7,34 @@ namespace ImGui
 {
 	extern ImVec2 GetDefaultBoxSize(bool small_box);
 
+	static inline ImRect Squarify(ImRect r, bool reduce)
+	{
+		const ImVec2 c = r.GetCenter();
+		float w = r.GetWidth();
+		float h = r.GetHeight();
+		if ((w > h) == reduce)
+		{
+			r.Min.x = c.x - h * 0.5f;
+			r.Max.x = c.x + h * 0.5f;
+		}
+		else if ((h > w) == reduce)
+		{
+			r.Min.y = c.y - w * 0.5f;
+			r.Max.y = c.y + w * 0.5f;
+		}
+		return r;
+	}
+
+	static inline ImRect ReduceToSquare(ImRect r)
+	{
+		return Squarify(r, true);
+	}
+
+	static inline ImRect ExtendToSquare(ImRect r)
+	{
+		return Squarify(r, false);
+	}
+
 	using ButtonIconDrawFunction = void(*)(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
 
 	extern bool IconButtonEx(const char* str_id, ImVec2 size, ImGuiButtonFlags flags, ButtonIconDrawFunction render_frame_fn, const void* render_frame_data = nullptr);

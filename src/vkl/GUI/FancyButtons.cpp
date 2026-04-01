@@ -83,18 +83,7 @@ namespace ImGui
 		bool fit_to_rect = reinterpret_cast<uintptr_t>(p_data) & uintptr_t(0x1);
 		if (!fit_to_rect)
 		{
-			float w = r.GetWidth();
-			float h = r.GetHeight();
-			if (w > h)
-			{
-				r.Min.x = c.x - h * 0.5f;
-				r.Max.x = c.x + h * 0.5f;
-			}
-			else if (h > w)
-			{
-				r.Min.y = c.y - w * 0.5f;
-				r.Max.y = c.y + w * 0.5f;
-			}
+			r = ReduceToSquare(r);
 		}
 		draw_list->AddLine(ImVec2(c.x, r.Min.y), ImVec2(c.x, r.Max.y), color, thickness);
 		draw_list->AddLine(ImVec2(r.Min.x, c.y), ImVec2(r.Max.x, c.y), color, thickness);
