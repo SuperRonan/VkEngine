@@ -59,6 +59,14 @@ call
 
 #define UBO_ALIGNEMENT 16
 
+#ifdef _CPPRTTI 
+#define VKL_HAS_STD_RTTI 1
+#endif
+
+#ifndef VKL_HAS_STD_RTTI 
+#define VKL_HAS_STD_RTTI 0
+#endif
+
 #define ubo_vec2 alignas(UBO_ALIGNEMENT / 2) Vector2f
 #define ubo_vec3 alignas(UBO_ALIGNEMENT) Vector3f
 #define ubo_vec4 alignas(UBO_ALIGNEMENT) Vector4f
