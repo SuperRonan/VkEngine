@@ -62,8 +62,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> PerformanceReport::makeInspector(std::shared_ptr<PerformanceReport> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> PerformanceReport::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::PerformanceReportInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::PerformanceReportInspector>(std::static_pointer_cast<PerformanceReport>(shared_this));
 	}
 }

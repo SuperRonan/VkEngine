@@ -626,8 +626,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> TextureFromFile::makeInspector(std::shared_ptr<Texture> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> TextureFromFile::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::TextureFromFileInspector>(std::dynamic_pointer_cast<TextureFromFile>(shared_this));
 	}
 }

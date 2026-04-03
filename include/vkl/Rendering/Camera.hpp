@@ -251,7 +251,7 @@ namespace vkl
 
 		using InspectorType = GUI::CameraInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Camera> const& shared_this, GUI::Context& ctx);
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 
 		AsGLSL getAsGLSL() const;
 

@@ -584,9 +584,10 @@ namespace vkl
 		}
 	};
 
-	std::shared_ptr<GUI::Panel> DebugRenderer::makeInspector(std::shared_ptr<DebugRenderer> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> DebugRenderer::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<DebugRendererPanel>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<DebugRendererPanel>(std::static_pointer_cast<DebugRenderer>(shared_this));
 	}
 
 	ShaderBindings DebugRenderer::getBindings(uint32_t offset)const

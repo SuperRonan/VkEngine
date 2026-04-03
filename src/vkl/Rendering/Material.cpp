@@ -475,8 +475,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> PhysicallyBasedMaterial::makeInspector(std::shared_ptr<Material> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> PhysicallyBasedMaterial::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::PhysicallyBasedMaterialInspector>(std::dynamic_pointer_cast<PhysicallyBasedMaterial>(shared_this));
 	}
 }

@@ -57,6 +57,6 @@ namespace vkl
 
 		using InspectorType = GUI::ImageSaverInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<ImageSaver> const& shared_this, GUI::Context& ctx);
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 	};
 }

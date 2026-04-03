@@ -616,13 +616,15 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ImageInstance::makeInspector(std::shared_ptr<ImageInstance> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImageInstance::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return GUI::MakeInspectorFromTarget(ctx, shared_this);
+		assert(shared_this.get() == this);
+		return GUI::MakeInspectorFromTarget(ctx, std::static_pointer_cast<ImageInstance>(shared_this));
 	}
 
-	std::shared_ptr<GUI::Panel> Image::makeInspector(std::shared_ptr<Image> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Image::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return GUI::MakeInspectorFromTarget<Image>(ctx, shared_this);
+		assert(shared_this.get() == this);
+		return GUI::MakeInspectorFromTarget<Image>(ctx, std::static_pointer_cast<Image>(shared_this));
 	}
 }

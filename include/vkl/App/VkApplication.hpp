@@ -598,5 +598,7 @@ namespace vkl
 		{
 			_name = std::forward<StringLike>(new_name);
 		}
+
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx);
 	};
 }

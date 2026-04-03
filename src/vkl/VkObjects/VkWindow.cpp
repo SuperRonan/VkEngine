@@ -854,8 +854,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> VkWindow::makeInspector(std::shared_ptr<VkWindow> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> VkWindow::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::WindowInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::WindowInspector>(std::static_pointer_cast<VkWindow>(shared_this));
 	}
 }

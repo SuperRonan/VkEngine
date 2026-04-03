@@ -212,9 +212,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> Camera::makeInspector(std::shared_ptr<Camera> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Camera::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::CameraInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::CameraInspector>(std::static_pointer_cast<Camera>(shared_this));
 	}
 
 	Camera::AsGLSL Camera::getAsGLSL() const

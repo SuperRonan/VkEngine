@@ -738,8 +738,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> LightTransport::makeInspector(std::shared_ptr<LightTransport> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> LightTransport::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::LightTransportInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::LightTransportInspector>(std::static_pointer_cast<LightTransport>(shared_this));
 	}
 }

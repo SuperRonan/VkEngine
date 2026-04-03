@@ -77,7 +77,7 @@ namespace vkl
 
 		virtual void updateResources(UpdateContext & ctx);
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Material> const& shared_this, GUI::Context& ctx) = 0;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override = 0;
 
 		virtual MyVector<DescriptorSetLayout::Binding> getSetLayoutBindings(uint32_t offset) = 0;
 
@@ -250,7 +250,7 @@ namespace vkl
 		using InspectorType = GUI::PhysicallyBasedMaterialInspector;
 		friend class InspectorType;
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Material> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 	};
 
 	using PBMaterial = PhysicallyBasedMaterial;

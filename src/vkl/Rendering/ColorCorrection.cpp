@@ -336,8 +336,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ColorCorrection::makeInspector(std::shared_ptr<ColorCorrection> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ColorCorrection::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::ColorCorrectionInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::ColorCorrectionInspector>(std::static_pointer_cast<ColorCorrection>(shared_this));
 	}
 }

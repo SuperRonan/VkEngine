@@ -83,6 +83,6 @@ namespace vkl
 
 		static std::shared_ptr<Texture> MakeShared(MakeInfo const& mi);
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<Texture> const& shared_this, GUI::Context& ctx) = 0;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override = 0;
 	};
 }

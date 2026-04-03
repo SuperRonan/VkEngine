@@ -1013,8 +1013,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> RigidMesh::makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> RigidMesh::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::RigidMeshInspector>(std::static_pointer_cast<RigidMesh>(shared_this));
 	}
 
@@ -1840,8 +1841,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ParametrableRigidMesh::makeInspector(std::shared_ptr<Mesh> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ParametrableRigidMesh::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::ParametrableRigidMeshInspector>(std::static_pointer_cast<ParametrableRigidMesh>(shared_this));
 	}
 }

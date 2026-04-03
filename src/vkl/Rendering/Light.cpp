@@ -316,8 +316,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> PointLight::makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> PointLight::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::PointLightInspector>(std::static_pointer_cast<PointLight>(shared_this));
 	}
 
@@ -373,8 +374,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> DirectionalLight::makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> DirectionalLight::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::DirectionalLightInspector>(std::static_pointer_cast<DirectionalLight>(shared_this));
 	}
 
@@ -497,8 +499,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> SpotBeamLight::makeInspector(std::shared_ptr<Light> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> SpotBeamLight::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
+		assert(shared_this.get() == this);
 		return std::make_shared<GUI::SpotBeamLightInspector>(std::static_pointer_cast<SpotBeamLight>(shared_this));
 	}
 }

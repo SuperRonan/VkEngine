@@ -178,6 +178,6 @@ namespace vkl
 			return _aabb;
 		}
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<SceneNode> const& shared_this, GUI::Context& ctx);
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 	};
 }

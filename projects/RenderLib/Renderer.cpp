@@ -1379,8 +1379,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> SimpleRenderer::makeInspector(std::shared_ptr<SimpleRenderer> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> SimpleRenderer::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::SimpleRendererInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::SimpleRendererInspector>(std::static_pointer_cast<SimpleRenderer>(shared_this));
 	}
 }

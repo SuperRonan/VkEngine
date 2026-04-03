@@ -315,8 +315,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> AmbientOcclusion::makeInspector(std::shared_ptr<AmbientOcclusion> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> AmbientOcclusion::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::AmbientOcclusionInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::AmbientOcclusionInspector>(std::static_pointer_cast<AmbientOcclusion>(shared_this));
 	}
 }

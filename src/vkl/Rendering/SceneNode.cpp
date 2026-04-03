@@ -67,9 +67,10 @@ namespace vkl
 		}
 	}
 
-	std::shared_ptr<GUI::Panel> SceneNode::makeInspector(std::shared_ptr<Scene::Node> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> SceneNode::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::NodeInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::NodeInspector>(std::static_pointer_cast<SceneNode>(shared_this));
 	}
 
 	void SceneNode::collapseAuxiliaryTransform()

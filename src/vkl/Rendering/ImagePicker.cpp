@@ -117,8 +117,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ImagePicker::makeInspector(std::shared_ptr<ImagePicker> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImagePicker::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::ImagePickerInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::ImagePickerInspector>(std::static_pointer_cast<ImagePicker>(shared_this));
 	}
 }

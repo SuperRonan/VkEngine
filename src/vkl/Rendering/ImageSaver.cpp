@@ -303,8 +303,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ImageSaver::makeInspector(std::shared_ptr<ImageSaver> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImageSaver::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return std::make_shared<GUI::ImageSaverInspector>(shared_this);
+		assert(shared_this.get() == this);
+		return std::make_shared<GUI::ImageSaverInspector>(std::static_pointer_cast<ImageSaver>(shared_this));
 	}
 }

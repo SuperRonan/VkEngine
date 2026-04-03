@@ -427,13 +427,15 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> BufferInstance::makeInspector(std::shared_ptr<BufferInstance> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> BufferInstance::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return GUI::MakeInspectorFromTarget(ctx, shared_this);
+		assert(shared_this.get() == this);
+		return GUI::MakeInspectorFromTarget(ctx, std::static_pointer_cast<BufferInstance>(shared_this));
 	}
 
-	std::shared_ptr<GUI::Panel> Buffer::makeInspector(std::shared_ptr<Buffer> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Buffer::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
 	{
-		return GUI::MakeInspectorFromTarget(ctx, shared_this);
+		assert(shared_this.get() == this);
+		return GUI::MakeInspectorFromTarget(ctx, std::static_pointer_cast<Buffer>(shared_this));
 	}
 }
