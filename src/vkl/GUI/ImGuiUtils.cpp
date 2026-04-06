@@ -557,7 +557,8 @@ namespace ImGui
 
 	void CenterNextItem(float expected_width)
 	{
-		float w = GetFrameWidth();
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		float w = window->ContentRegionRect.GetWidth();
 		SetCursorPosX(GetCursorPosX() + ImFloor(0.5f * (w - expected_width)));
 	}
 
