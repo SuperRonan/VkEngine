@@ -37,6 +37,11 @@ namespace vkl::GUI
 
 	void Context::begin()
 	{
+		if (!_keep_drag_drop_payload)
+		{
+			_drag_drop_payload.object.reset();
+			_keep_drag_drop_payload = false;
+		}
 	}
 
 	void Context::end()
@@ -117,5 +122,10 @@ namespace vkl::GUI
 		}
 		Style::Color res = colors[_stack_counter % static_cast<uint32_t>(colors.size())];
 		return res;
+	}
+
+	void Context::clearTemporaryData()
+	{
+		_clipboard_payload.object.reset();
 	}
 }

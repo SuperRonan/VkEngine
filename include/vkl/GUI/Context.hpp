@@ -18,6 +18,11 @@ namespace vkl::GUI
 		std::vector<Color> stack_colors;
 	};
 
+	struct TransientPayload
+	{
+		std::shared_ptr<VkObject> object;
+	};
+
 	class Panel;
 	class PanelHolder;
 	
@@ -30,11 +35,15 @@ namespace vkl::GUI
 		std::shared_ptr<Style> _style;
 
 		uint _stack_counter = 0;
+		bool _keep_drag_drop_payload = false;
 
 		std::shared_ptr<FileDialog> _common_file_dialog;
 
 		MyVector<PanelHolder*> _panel_holder_stack;
 		MyVector<Panel*> _panel_stack;
+
+		TransientPayload _drag_drop_payload;
+		TransientPayload _clipboard_payload;
 
 	public:
 
@@ -96,5 +105,22 @@ namespace vkl::GUI
 		Style::Color pushStack();
 
 		Style::Color popStack();
+
+		TransientPayload& getDragDropPayload()
+		{
+			return _drag_drop_payload;
+		}
+
+		TransientPayload& getClipboardPayload()
+		{
+			return _clipboard_payload;
+		}
+
+		void keepDragDropPayload()
+		{
+			_keep_drag_drop_payload = true;
+		}
+
+		void clearTemporaryData();
 	};
 }
