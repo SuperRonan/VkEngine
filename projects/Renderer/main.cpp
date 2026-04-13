@@ -26,6 +26,7 @@
 #include <vkl/GUI/DemoPanel.hpp>
 #include <vkl/GUI/MainPanel.hpp>
 #include <vkl/GUI/PanelRefWrapper.hpp>
+#include <vkl/GUI/TestPanel.hpp>
 
 #include <vkl/IO/InputListener.hpp>
 
@@ -968,6 +969,10 @@ namespace vkl
 					GUI::MainPanel::PanelMenuOption{
 						.panel = GUI::DemoPanel::GetSingleton(),
 						.label = "Show ImGui Demo",
+					},
+					GUI::MainPanel::PanelMenuOption{
+						.panel = std::make_shared<GUI::TestPanel>(this),
+						.label = "Test",
 					},
 				},
 				.post_menu = [&](GUI::Context& ctx, GUI::Panel* panel) {
