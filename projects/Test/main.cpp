@@ -20,6 +20,8 @@
 
 #include <vkl/Maths/Transforms.hpp>
 
+#include <that/stl_ext/pointer.hpp>
+
 void TestUniqueIdAllocator()
 {
 	vkl::UniqueIndexAllocator pool{};
@@ -166,6 +168,34 @@ void StressTestParallelDynamicValue(int count = 1024)
 	}
 }
 
+struct A
+{
+	int a;
+
+	A(int i):
+		a(i)
+	{}
+
+	virtual ~A()
+	{
+		VKL_BREAKPOINT_HANDLE;
+	}
+};
+
+struct B : public A
+{
+	int b;
+
+	B(int b) :
+		A(b),
+		b(b * 2)
+	{}
+
+	virtual ~B()
+	{
+		VKL_BREAKPOINT_HANDLE;
+	}
+};
 
 int main(int argc, const char** argv)
 {
@@ -174,6 +204,14 @@ int main(int argc, const char** argv)
 	using namespace std::string_literals;
 
 	using namespace vkl;
+
+	{
+		std::shared_ptr<A> a = std::make_shared<B>(12);
+		std::shared_ptr<B> const& b = std::reinterpret_pointer_downcast<B>(a);
+
+		std::shared_ptr<A> a_copy = b;
+		VKL_BREAKPOINT_HANDLE;
+	}
 
 	Matrix3f Rx = Rotation3X(Radians(60.0f));
 	Matrix3f Ry = Rotation3Y(Radians(60.0f));
