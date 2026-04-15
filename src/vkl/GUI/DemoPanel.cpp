@@ -10,7 +10,7 @@ namespace vkl::GUI
 	{
 		if (!_singleton)
 		{
-			_singleton = std::shared_ptr<DemoPanel>(new DemoPanel());
+			_singleton = std::make_shared<DemoPanel>(DemoPanel());
 		}
 		return _singleton;
 	}

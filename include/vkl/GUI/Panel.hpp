@@ -30,6 +30,8 @@ namespace vkl::GUI
 
 	public:
 
+		Panel(Panel&&) noexcept = default; 
+
 		virtual ~Panel() override;
 
 		virtual void declareMenu(Context& ctx);

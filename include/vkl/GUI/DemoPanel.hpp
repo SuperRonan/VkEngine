@@ -14,7 +14,9 @@ namespace vkl::GUI
 		DemoPanel(VkApplication * app = nullptr);
 
 	public:
-		
+
+		DemoPanel(DemoPanel&&) noexcept = default;
+
 		static std::shared_ptr<DemoPanel> GetSingleton();
 
 		virtual ~DemoPanel() final override;
