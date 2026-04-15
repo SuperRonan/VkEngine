@@ -2,39 +2,101 @@
 
 #include <vkl/VkObjects/AbstractInstance.hpp>
 
-#include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/TargetInspector.hpp>
+#include <vkl/GUI/TypedInlineInspector.hpp>
 
 namespace vkl::GUI
 {
-	class AbstractInstancePanel : public Panel
+	class AbstractInstancePanel : public TargetInspectorBase
 	{
 	public:
-		AbstractInstancePanel(VkObject* target):
-			Panel(target->application(), std::format("{} - Instance##{}", target->name(), reinterpret_cast<uintptr_t>(target)))
+		AbstractInstancePanel(std::shared_ptr<AbstractInstance> const& target, std::string_view class_type):
+			TargetInspectorBase(target, std::format("{} Instance", class_type))
 		{ }
+
+		AbstractInstance* target() const
+		{
+			return static_cast<AbstractInstance*>(_target.get());
+		}
+
+		std::shared_ptr<AbstractInstance> const& targetPtr() const
+		{
+			return std::reinterpret_pointer_downcast<AbstractInstance>(_target);
+		}
 	};
+
+	namespace impl
+	{
+		template <class C>
+		concept HasClassName = requires
+		{
+			{ C::ClassName } -> that::concepts::StringLike;
+		};
+
+		template <class C>
+		std::string_view GetClassNameOf()
+		{
+			if constexpr (HasClassName<C>)
+			{
+				return C::ClassName;
+			}
+			else
+			{
+				return typeid(C).name();
+			}
+		}
+	}
 
 	template <std::strictly_derived_from<AbstractInstance> Instance>
 	class InstanceInspector : public AbstractInstancePanel
 	{
 	protected:
 
-		std::shared_ptr<Instance> _target;
-
 	public:
 
 		InstanceInspector(std::shared_ptr<Instance> const& target) :
-			AbstractInstancePanel(target.get()),
-			_target(target)
+			AbstractInstancePanel(target, impl::GetClassNameOf<Instance>())
 		{ }
+
+		Instance* target() const
+		{
+			return static_cast<Instance*>(_target.get());
+		}
+
+		std::shared_ptr<Instance> const& targetPtr() const
+		{
+			return std::reinterpret_pointer_downcast<Instance>(_target);
+		}
 	};
 
-	class AbstractDescriptorPanel : public Panel
+	class AbstractDescriptorPanel : public TargetInspector<AbstractInstanceHolder>
 	{
+	protected:
+
+		using Parent = TargetInspector<AbstractInstanceHolder>;
+
+		ObjectInlineInspector _instance_panel;
+
 	public:
-		AbstractDescriptorPanel(VkObject* target):
-			Panel(target->application(), std::format("{} - Descriptor##{}", target->name(), reinterpret_cast<uintptr_t>(target)))
-		{ }
+		AbstractDescriptorPanel(std::shared_ptr<AbstractInstanceHolder> const& target, std::string_view class_name):
+			Parent(target, std::format("{} Descriptor", class_name)),
+			_instance_panel("Instance")
+		{
+			_instance_panel.setDisableCreation(true);
+			_instance_panel.setAcceptNullptr(true);
+		}
+
+		AbstractInstanceHolder* target() const
+		{
+			return static_cast<AbstractInstanceHolder*>(_target.get());
+		}
+
+		std::shared_ptr<AbstractInstanceHolder> const& targetPtr() const
+		{
+			return std::reinterpret_pointer_downcast<AbstractInstanceHolder>(_target);
+		}
+
+		virtual void declareInstance(Context& ctx);
 	};
 
 	template <std::strictly_derived_from<AbstractInstanceHolder> Descriptor>
@@ -42,25 +104,22 @@ namespace vkl::GUI
 	{
 	protected:
 
-		std::shared_ptr<Descriptor> _target;
-
-		IndirectInlinePanel _instance_panel;
+		TypedInlineInspector<typename Descriptor::InstanceType> _instance_panel;
 
 	public:
 
 		DescriptorInspector(std::shared_ptr<Descriptor> const& target) :
-			AbstractDescriptorPanel(target.get()),
-			_target(target)
+			AbstractDescriptorPanel(target, impl::GetClassNameOf<Descriptor::InstanceType>())
+		{}
+
+		Descriptor* target() const
 		{
-			_instance_panel = IndirectInlinePanel::MakeInstanceIndirectPanelFromDesc(_target);
-			_instance_panel.type = InlinePanel::Type::Child;
+			return static_cast<Descriptor*>(_target.get());
 		}
 
-		void declareInstance(Context& ctx)
+		std::shared_ptr<Descriptor> const& targetPtr() const
 		{
-			_instance_panel.invalid_panel = !_target->instance();
-			_instance_panel.id = reinterpret_cast<GUI::Panel::Id>(_target->instance().get());
-			_instance_panel.declareInline(ctx);
+			return std::reinterpret_pointer_downcast<Descriptor>(_target);
 		}
 	};
 

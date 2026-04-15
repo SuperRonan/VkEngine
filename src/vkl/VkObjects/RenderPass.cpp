@@ -762,7 +762,7 @@ namespace vkl
 
 	void RenderPass::createInstance()
 	{
-		assert(!_inst);
+		assert(!_instance);
 
 		const bool can_disallow_merge = application()->availableFeatures().subpass_merge_feedback.subpassMergeFeedback;
 
@@ -969,7 +969,7 @@ namespace vkl
 			create_vk_render_pass = !application()->options().prefer_render_pass_with_dynamic_rendering;
 		}
 
-		_inst = std::make_shared<RenderPassInstance>(RenderPassInstance::CI{
+		_instance = std::make_shared<RenderPassInstance>(RenderPassInstance::CI{
 			.app = application(),
 			.name = name(),
 			.create_vk_render_pass = create_vk_render_pass,
@@ -984,27 +984,27 @@ namespace vkl
 
 	void RenderPass::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (_inst)
+		if (_instance)
 		{
 			res.invalidated = [&]() -> bool
 			{
-				if (_attachments.size() == _inst->_attachement_descriptors.size())
+				if (_attachments.size() == instance()->_attachement_descriptors.size())
 				{
 					for (uint32_t i = 0; i < _attachments.size32(); ++i)
 					{
 						AttachmentDescription2 const& desc = _attachments[i];
 						const VkFormat new_format = desc.format.value();
-						if (new_format != _inst->_attachement_descriptors[i].format)
+						if (new_format != instance()->_attachement_descriptors[i].format)
 						{
 							return true;
 						}
 						const VkSampleCountFlagBits new_samples = desc.samples.valueOr(VK_SAMPLE_COUNT_1_BIT);
-						if (new_samples != _inst->_attachement_descriptors[i].samples)
+						if (new_samples != instance()->_attachement_descriptors[i].samples)
 						{
 							return true;
 						}
 						const AttachmentDescription2::Flags new_flags = desc.flags.valueOr(AttachmentDescription2::Flags::None);
-						if (new_flags != _inst->_attachments_usages[i].flags)
+						if (new_flags != instance()->_attachments_usages[i].flags)
 						{
 							return true;
 						}
@@ -1015,7 +1015,7 @@ namespace vkl
 					return true;
 				}
 
-				if (_subpasses.size() == _inst->_subpasses.size())
+				if (_subpasses.size() == instance()->_subpasses.size())
 				{
 					for (uint32_t s = 0; s < _subpasses.size32(); ++s)
 					{
@@ -1025,7 +1025,7 @@ namespace vkl
 							if (desc.shading_rate_texel_size.hasValue())
 							{
 								const VkExtent2D new_extent = desc.shading_rate_texel_size.value();
-								const pNextChain chain = _inst->_subpasses.data() + s;
+								const pNextChain chain = instance()->_subpasses.data() + s;
 								if (const VkStruct* candidate = chain.find(VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR))
 								{
 									const VkFragmentShadingRateAttachmentInfoKHR * value = reinterpret_cast<const VkFragmentShadingRateAttachmentInfoKHR*>(candidate);
@@ -1040,7 +1040,7 @@ namespace vkl
 						if (desc.inline_multisampling.hasValue())
 						{
 							const VkSampleCountFlagBits new_ms = desc.inline_multisampling.value();
-							const pNextChain chain = _inst->_subpasses.data() + s;
+							const pNextChain chain = instance()->_subpasses.data() + s;
 							if (const VkStruct* candidate = chain.find(VK_STRUCTURE_TYPE_MULTISAMPLED_RENDER_TO_SINGLE_SAMPLED_INFO_EXT))
 							{
 								const VkMultisampledRenderToSingleSampledInfoEXT * value = reinterpret_cast<const VkMultisampledRenderToSingleSampledInfoEXT*>(candidate);
@@ -1065,7 +1065,7 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance();

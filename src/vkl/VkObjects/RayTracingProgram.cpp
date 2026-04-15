@@ -153,9 +153,9 @@ namespace vkl
 		MyVector<std::shared_ptr<ShaderInstance>> shaders(_shaders.size());
 		for (size_t i = 0; i < _shaders.size(); ++i)
 		{
-			shaders[i] = _shaders[i]->instance();
+			shaders[i] = _shaders[i]->instancePtr();
 		}
-		_inst = std::make_shared<RayTracingProgramInstance>(RayTracingProgramInstance::CI{
+		_instance = std::make_shared<RayTracingProgramInstance>(RayTracingProgramInstance::CI{
 			.app = application(),
 			.name = name(),
 			.shaders = std::move(shaders),

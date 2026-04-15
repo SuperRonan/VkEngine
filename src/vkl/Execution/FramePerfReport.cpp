@@ -74,7 +74,7 @@ namespace vkl
 				pair = true;
 			}
 
-			QueryPoolInstance* queries = timestamp_query_pool->instance().get();
+			QueryPoolInstance* queries = timestamp_query_pool->instance();
 			assert(queries);
 			query_data.resize(query_result_size * query_count);
 			void* p_data = query_data.data();

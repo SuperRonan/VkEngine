@@ -80,5 +80,15 @@ namespace vkl
 			assert(_shaders.size() == 1);
 			return _shaders[0];
 		}
+
+		ComputeProgramInstance* instance() const
+		{
+			return static_cast<ComputeProgramInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<ComputeProgramInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<ComputeProgramInstance>(_instance);
+		}
 	};
 }

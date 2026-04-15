@@ -102,4 +102,23 @@ namespace vkl
 
 		return res;
 	}
+
+	AbstractInstanceHolder::~AbstractInstanceHolder()
+	{
+		if (!_invalidation_callbacks.empty())
+		{
+			VKL_BREAKPOINT_HANDLE;
+		}
+		destroyInstanceIFN();
+	}
+
+	void AbstractInstanceHolder::destroyInstanceIFN()
+	{
+		if (_instance)
+		{
+			callInvalidationCallbacks();
+			_instance.reset();
+			_latest_update_res.invalidated = true;
+		}
+	}
 }

@@ -242,8 +242,8 @@ namespace vkl
 		CopyInfoInstance getDefaultCopyInfo()
 		{
 			return CopyInfoInstance{
-				.src = _src->instance(),
-				.dst = _dst->instance(),
+				.src = _src->instancePtr(),
+				.dst = _dst->instancePtr(),
 				.regions = {
 					VkBufferCopy2{
 						.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2,

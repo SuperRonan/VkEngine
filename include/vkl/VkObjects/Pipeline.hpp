@@ -109,18 +109,17 @@ namespace vkl
 
 		virtual ~Pipeline() override;
 
-		constexpr VkPipelineBindPoint binding()const noexcept
+		VkPipelineBindPoint binding()const noexcept
 		{
 			return _binding;
 		}
 
-		constexpr const std::shared_ptr<Program>& getProgram()const
+		const std::shared_ptr<Program>& programPtr()const
 		{
 			return _program;
 		}
 
-		// Will be overriden
-		Program * program()const
+		Program* program()const
 		{
 			return _program.get();
 		}
@@ -132,7 +131,7 @@ namespace vkl
 
 		bool hasInstanceOrIsPending() const
 		{
-			return _inst || instanceIsPending();
+			return _instance || instanceIsPending();
 		}
 
 		std::shared_ptr<AsynchTask> const& getInstanceCreationTask()const
@@ -142,7 +141,7 @@ namespace vkl
 
 		void waitForInstanceCreationIFN();
 
-		std::shared_ptr<PipelineInstance> getInstanceWaitIFN();
+		std::shared_ptr<PipelineInstance> const& getInstanceWaitIFN();
 	};
 
 }

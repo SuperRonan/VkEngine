@@ -247,7 +247,7 @@ namespace vkl
 			that._set->waitForInstanceCreationIFN();
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-			ctx.rayTracingBoundSets().bind(shader_set_index, that._set->instance());
+			ctx.rayTracingBoundSets().bind(shader_set_index, that._set->instancePtr());
 			that.populateBoundResources(*node, ctx.rayTracingBoundSets(), shader_set_index + 1);
 			std::shared_ptr<DescriptorSetLayoutInstance> layout = that._pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
 

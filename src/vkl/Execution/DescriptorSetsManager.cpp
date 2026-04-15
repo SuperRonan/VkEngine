@@ -782,7 +782,7 @@ namespace vkl
 
 	void DescriptorSetAndPool::updateResourcesInline(UpdateContext& context, UpdateResourcesResult& res)
 	{
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			waitForInstanceCreationIFN();
@@ -815,15 +815,15 @@ namespace vkl
 
 						if (task_res.success)
 						{
-							std::shared_ptr layout = _layout_from_prog ? _prog->instance()->setsLayouts()[_target_set] : _layout->instance();
-							_inst = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
+							std::shared_ptr layout = _layout_from_prog ? _prog->instance()->setsLayouts()[_target_set] : _layout->instancePtr();
+							_instance = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
 								.app = application(),
 								.name = name(),
 								.layout = layout,
 								.bindings = instance_bindings,
 							});
 
-							_inst->writeDescriptorSet(nullptr);
+							instance()->writeDescriptorSet(nullptr);
 						}
 
 
@@ -836,7 +836,7 @@ namespace vkl
 		}
 		else
 		{
-			_inst->writeDescriptorSet(&context);
+			instance()->writeDescriptorSet(&context);
 		}
 	}
 
@@ -904,9 +904,9 @@ namespace vkl
 			BufferAndRange bar = buffers ? buffers[i] : BufferAndRange{};
 			bb[array_index + i] = std::move(bar);
 		}
-		if (_inst)
+		if (_instance)
 		{
-			_inst->setBinding(binding, array_index, count, buffers);
+			instance()->setBinding(binding, array_index, count, buffers);
 		}
 	}
 
@@ -934,9 +934,9 @@ namespace vkl
 			}
 		}
 
-		if (_inst)
+		if (_instance)
 		{
-			_inst->setBinding(binding, array_index, count, views, samplers);
+			instance()->setBinding(binding, array_index, count, views, samplers);
 		}
 	}
 
@@ -955,9 +955,9 @@ namespace vkl
 			b_tlas[i] = tlas ? tlas[i] : nullptr;
 		}
 
-		if (_inst)
+		if (_instance)
 		{
-			_inst->setBinding(binding, array_index, count, tlas);
+			instance()->setBinding(binding, array_index, count, tlas);
 		}
 	}
 

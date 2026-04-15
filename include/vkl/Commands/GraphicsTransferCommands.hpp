@@ -127,7 +127,7 @@ namespace vkl
 			for (size_t i = 0; i < res.targets.size(); ++i)
 			{
 				res.targets[i] = {
-					.target = _targets[i]->instance(),
+					.target = _targets[i]->instancePtr(),
 				};
 			}
 			return res;

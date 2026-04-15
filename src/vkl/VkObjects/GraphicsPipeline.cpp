@@ -244,7 +244,7 @@ namespace vkl
 
 	void GraphicsPipeline::createInstanceIFP()
 	{
-		std::shared_ptr<RenderPassInstance> rpi = _render_pass->instance();
+		std::shared_ptr<RenderPassInstance> const& rpi = _render_pass->instancePtr();
 		GraphicsPipelineInstance::CI gci{
 			.app = application(),
 			.name = name(),
@@ -259,7 +259,7 @@ namespace vkl
 			.dynamic = _dynamic,
 			.render_pass = rpi,
 			.subpass_index = _subpass_index,
-			.program = std::static_pointer_cast<GraphicsProgramInstance>(_program->instance()),
+			.program = program()->instancePtr(),
 		};
 		if (_depth_stencil.has_value())
 		{
@@ -291,14 +291,14 @@ namespace vkl
 				}
 			}
 		}
-		_inst = std::make_shared<GraphicsPipelineInstance>(std::move(gci));
+		_instance = std::make_shared<GraphicsPipelineInstance>(std::move(gci));
 	}
 
 	bool GraphicsPipeline::checkInstanceParamsReturnInvalid()
 	{
 		bool res = false;
-		assert(_inst);
-		GraphicsPipelineInstance& inst = *static_cast<GraphicsPipelineInstance*>(_inst.get());
+		assert(_instance);
+		GraphicsPipelineInstance& inst = *static_cast<GraphicsPipelineInstance*>(_instance.get());
 		
 		do {
 			const VkPipelineRasterizationStateCreateInfo & ir = inst._rasterization;

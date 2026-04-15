@@ -76,15 +76,15 @@ namespace vkl
 			BindSetEvent & bse = _sets.data()[event.index];
 			if (bse.info.bind_graphics)
 			{
-				_context->graphicsBoundSets().bind(bse.info.index, bse.info.set->instance());
+				_context->graphicsBoundSets().bind(bse.info.index, bse.info.set->instancePtr());
 			}
 			if (bse.info.bind_compute)
 			{
-				_context->computeBoundSets().bind(bse.info.index, bse.info.set->instance());
+				_context->computeBoundSets().bind(bse.info.index, bse.info.set->instancePtr());
 			}
 			if (bse.info.bind_rt)
 			{
-				_context->rayTracingBoundSets().bind(bse.info.index, bse.info.set->instance());
+				_context->rayTracingBoundSets().bind(bse.info.index, bse.info.set->instancePtr());
 			}
 		}
 		break;
@@ -175,7 +175,7 @@ namespace vkl
 		{
 			info.set->waitForInstanceCreationIFN();
 		}
-		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (info.set && info.set->instance()->exists()) ? info.set->instance() : nullptr;
+		std::shared_ptr<DescriptorSetAndPoolInstance> inst = (info.set && info.set->instance()->exists()) ? info.set->instancePtr() : nullptr;
 
 
 		if (useDeferredRecord())
@@ -666,7 +666,7 @@ namespace vkl
 	{
 		if (_window->updateResources(context))
 		{
-			SwapchainInstance * swapchain = _window->swapchain()->instance().get();
+			SwapchainInstance * swapchain = _window->swapchain()->instance();
 			if (PresentModeIsFIFO(swapchain->createInfo().presentMode))
 			{
 				_fifo_aquire_fences.resize(use_only_fifo_fence ? 1 : swapchain->images().size());
@@ -743,7 +743,7 @@ namespace vkl
 			_current_frame_report->clear();
 			_current_frame_report->push();
 			_context._stack_report = _current_frame_report->report;
-			_context._timestamp_query_pool = _current_frame_report->timestamp_query_pool->instance();
+			_context._timestamp_query_pool = _current_frame_report->timestamp_query_pool->instancePtr();
 		}
 		
 	}
@@ -847,7 +847,7 @@ namespace vkl
 		VkWindow::AquireResult aquired = _window->aquireNextImage(event->aquire_signal_semaphore, event->aquire_signal_fence);
 		tt.tock();
 
-		event->swapchain = _window->swapchain()->instance();
+		event->swapchain = _window->swapchain()->instancePtr();
 		event->index = aquired.swap_index;
 
 		if(log)
@@ -948,12 +948,12 @@ namespace vkl
 				.dst = blit_target,
 			}));
 			
-			if (render_ImGui && _render_gui && _latest_swapchain_event->swapchain == _window->swapchain()->instance())
+			if (render_ImGui && _render_gui && _latest_swapchain_event->swapchain.get() == _window->swapchain()->instance())
 			{
 				execute(_render_gui->with(ImguiCommand::ExecutionInfo{.index = _latest_swapchain_event->index}));
 			}
 
-			InlineSynchronizeImageView(_context, blit_target->instance(), ResourceState2{
+			InlineSynchronizeImageView(_context, blit_target->instancePtr(), ResourceState2{
 				.access = VK_ACCESS_2_MEMORY_READ_BIT,
 				.stage = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, // Not sure about this one
 				.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,

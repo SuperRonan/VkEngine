@@ -517,7 +517,7 @@ namespace vkl
 			can_create &= shader->hasInstanceOrIsPending();
 		}
 		
-		if (!_inst && can_create)
+		if (!_instance && can_create)
 		{
 			res.created = true;
 			launchInstanceCreationTask();

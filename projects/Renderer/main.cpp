@@ -1099,7 +1099,7 @@ namespace vkl
 					exec_tt.tick();
 					exec.updateResources(*update_context);
 					{
-						update_context->resourcesToUpload().addBuffer(exec.getCommonUBO()->instance(), &common_ubo, sizeof(CommonUBO), false);
+						update_context->resourcesToUpload().addBuffer(exec.getCommonUBO()->instancePtr(), &common_ubo, sizeof(CommonUBO), false);
 					}
 					frame_counters.exec_update_time = exec_tt.tockd().count();
 

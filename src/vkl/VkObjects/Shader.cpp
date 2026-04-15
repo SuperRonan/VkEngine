@@ -1429,7 +1429,7 @@ namespace vkl
 
 	void Shader::registerDependencies()
 	{
-		_dependencies = _inst->dependencies();
+		_dependencies = instance()->dependencies();
 		for (const auto& dep : _dependencies)
 		{
 			application()->dependenciesTracker()->setDependency(dep.native(), { .callback = [this](DependencyTracker::TimePoint last_write_time, that::Result res_code) {
@@ -1451,7 +1451,7 @@ namespace vkl
 		waitForInstanceCreationIFN();
 		if (_specializations.contains(key))
 		{
-			_inst = _specializations[key];
+			_instance = _specializations[key];
 			registerDependencies();
 		}
 		else {
@@ -1470,7 +1470,7 @@ namespace vkl
 				.priority = TaskPriority::ASAP(),
 				.lambda = [this, definitions = std::move(definitions), string_packed_capacity, lkey, generate_shader_debug_info]() {
 
-					_inst = std::make_shared<ShaderInstance>(ShaderInstance::CI{
+					_instance = std::make_shared<ShaderInstance>(ShaderInstance::CI{
 						.app = application(),
 						.name = name(),
 						.source_path = _path,
@@ -1480,11 +1480,11 @@ namespace vkl
 						.generate_debug_info = generate_shader_debug_info,
 					});
 
-					const AsynchTask::ReturnType & res = _inst->getCreationResult();
+					const AsynchTask::ReturnType & res = instance()->getCreationResult();
 					
 					if (res.success)
 					{
-						_specializations[lkey] = _inst;
+						_specializations[lkey] = instancePtr();
 						_instance_time = _latest_file_time;
 						registerDependencies();
 					}
@@ -1558,7 +1558,7 @@ namespace vkl
 		}
 		
 		
-		if (!_inst)
+		if (!_instance)
 		{
 			std::string capacity = ctx.commonDefinitions()->getDefinition("SHADER_STRING_CAPACITY");
 			uint32_t packed_capcity = 32;
@@ -1601,9 +1601,9 @@ namespace vkl
 		}
 	}
 
-	std::shared_ptr<ShaderInstance> Shader::getInstanceWaitIFN()
+	std::shared_ptr<ShaderInstance> const& Shader::getInstanceWaitIFN()
 	{
 		waitForInstanceCreationIFN();
-		return instance();
+		return instancePtr();
 	}
 }

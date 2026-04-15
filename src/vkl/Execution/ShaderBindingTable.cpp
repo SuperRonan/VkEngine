@@ -145,7 +145,7 @@ namespace vkl
 		const uint32_t shader_record_size = application()->deviceProperties().ray_tracing_pipeline_khr.shaderGroupHandleSize;
 		const uint32_t shader_record_align = application()->deviceProperties().ray_tracing_pipeline_khr.shaderGroupHandleAlignment;
 		const uint32_t shader_group_base_align = application()->deviceProperties().ray_tracing_pipeline_khr.shaderGroupBaseAlignment;
-		RayTracingPipelineInstance * pipeline = static_cast<RayTracingPipelineInstance*>(_pipeline->instance().get());
+		RayTracingPipelineInstance * pipeline = _pipeline->instance();
 		assert(pipeline);
 		RayTracingProgramInstance * program = pipeline->program();
 		

@@ -564,7 +564,7 @@ namespace vkl
 
 		VkExtent3D getWorkgroupsDispatchSize(VkExtent3D threads)const
 		{
-			const std::shared_ptr<GraphicsProgramInstance>& prog = std::reinterpret_pointer_cast<GraphicsProgramInstance>(_program->instance());
+			GraphicsProgramInstance* prog = _program->instance();
 			const VkExtent3D lcl = prog->localSize(); 
 			return VkExtent3D{
 				.width = std::divCeil(threads.width, lcl.width),

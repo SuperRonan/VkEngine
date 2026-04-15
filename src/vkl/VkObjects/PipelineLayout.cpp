@@ -110,9 +110,9 @@ namespace vkl
 		for (size_t i = 0; i < _sets.size(); ++i)
 		{
 			if(_sets[i])
-				sets[i] = _sets[i]->instance();
+				sets[i] = _sets[i]->instancePtr();
 		}
-		_inst = std::make_shared<PipelineLayoutInstance>(PipelineLayoutInstance::CI{
+		_instance = std::make_shared<PipelineLayoutInstance>(PipelineLayoutInstance::CI{
 			.app = application(),
 			.name = name(),
 			.sets = std::move(sets),
@@ -133,12 +133,12 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance();
 		}
 
-		assert(!!_inst);
+		assert(!!_instance);
 	}
 }

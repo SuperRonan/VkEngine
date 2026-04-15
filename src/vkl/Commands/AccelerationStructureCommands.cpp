@@ -83,7 +83,7 @@ namespace vkl
 	bool BuildAccelerationStructureCommand::BuildInfo::pushIFN(std::shared_ptr<AccelerationStructure> const& as)
 	{
 		bool res = false;
-		std::shared_ptr<AccelerationStructureInstance> asi = as->instance();
+		AccelerationStructureInstance* asi = as->instance();
 
 		VkBuildAccelerationStructureModeKHR build_mode = asi->buildMode();
 		if (build_mode <= VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR)
@@ -124,8 +124,8 @@ namespace vkl
 		for (size_t i = 0; i < bi.targets.size(); ++i)
 		{	
 			node->_targets[i] = BuildAccelerationStructureCommandNode::Target{
-				.src = bi.targets[i].src ? bi.targets[i].src->instance() : nullptr,
-				.dst = bi.targets[i].dst->instance(),
+				.src = bi.targets[i].src ? bi.targets[i].src->instancePtr() : nullptr,
+				.dst = bi.targets[i].dst->instancePtr(),
 			};
 
 			AccelerationStructureInstance * target_as = node->_targets[i].dst.get();

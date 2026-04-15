@@ -127,8 +127,8 @@ namespace vkl
 	std::shared_ptr<ExecutionNode> CopyImage::getExecutionNode(RecordContext& ctx, CopyInfo const& ci)
 	{
 		return getExecutionNode(ctx, CopyInfoInstance{
-			.src = ci.src->instance(),
-			.dst = ci.dst->instance(),
+			.src = ci.src->instancePtr(),
+			.dst = ci.dst->instancePtr(),
 			.regions = ci.regions,
 		});
 	}
@@ -156,8 +156,8 @@ namespace vkl
 		return [this, ci](RecordContext& ctx)
 		{
 			CopyInfoInstance cinfo{
-				.src = ci.src ? ci.src : _src->instance(),
-				.dst = ci.dst ? ci.dst : _dst->instance(),
+				.src = ci.src ? ci.src : _src->instancePtr(),
+				.dst = ci.dst ? ci.dst : _dst->instancePtr(),
 				.regions = ci.regions.empty() ? _regions : ci.regions,
 			};
 			return getExecutionNode(ctx, cinfo);
@@ -264,7 +264,7 @@ namespace vkl
 		node->setName(name());
 
 		node->_src = ci.src.getInstance();
-		node->_dst = ci.dst->instance();
+		node->_dst = ci.dst->instancePtr();
 		node->_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 		node->_regions = ci.regions;
 		node->_default_buffer_row_length = ci.default_buffer_row_length;
@@ -403,7 +403,7 @@ namespace vkl
 			});
 		node->setName(name());
 
-		node->_src = ci.src->instance();
+		node->_src = ci.src->instancePtr();
 		node->_dst = ci.dst.getInstance();
 		node->_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 		node->_regions = ci.regions;
@@ -617,8 +617,8 @@ namespace vkl
 		return [this, cinfo](RecordContext& ctx)
 		{
 			CopyInfoInstance ci{
-				.src = cinfo.src ? cinfo.src->instance() : _src->instance(),
-				.dst = cinfo.dst ? cinfo.dst->instance() : _dst->instance(),
+				.src = cinfo.src ? cinfo.src->instancePtr() : _src->instancePtr(),
+				.dst = cinfo.dst ? cinfo.dst->instancePtr() : _dst->instancePtr(),
 				.regions = cinfo.regions,
 			};
 			return getExecutionNode(ctx, ci);
@@ -674,7 +674,7 @@ namespace vkl
 
 		void populate(FillBuffer::FillInfo const& fi)
 		{
-			_buffer = fi.buffer->instance();
+			_buffer = fi.buffer->instancePtr();
 			_range = fi.range.value_or(Buffer::Range{});
 			if (_range.len == 0)
 			{
@@ -781,7 +781,7 @@ namespace vkl
 		void populate(UpdateBuffer::UpdateInfo const& ui)
 		{
 			_src = ui.src;
-			_dst = ui.dst->instance();
+			_dst = ui.dst->instancePtr();
 			_offset = ui.offset.value_or(0);
 
 			assert(_dst);
@@ -890,7 +890,7 @@ namespace vkl
 		void populate(RecordContext & ctx, UploadBuffer::UploadInfo const& ui, BufferPool * pool)
 		{
 			_sources = ui.sources;
-			_dst = ui.dst->instance();
+			_dst = ui.dst->instancePtr();
 			_use_update = [&]() {
 				bool res = ui.use_update_buffer_ifp.value_or(true);
 				if (res)
@@ -1143,7 +1143,7 @@ namespace vkl
 			_src = ui.src;
 			_buffer_row_length = ui.buffer_row_length;
 			_buffer_image_height = ui.buffer_image_height;
-			_dst = ui.dst->instance();
+			_dst = ui.dst->instancePtr();
 			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 			resources() += ImageViewUsage{
@@ -1956,7 +1956,7 @@ namespace vkl
 
 		void populate(RecordContext& ctx, DownloadImage::DownloadInfo const& di, BufferPool* pool)
 		{
-			_src = di.src->instance();
+			_src = di.src->instancePtr();
 			_dst = di.dst;
 			_completion_callback = di.completion_callback;
 

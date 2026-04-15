@@ -3,6 +3,8 @@
 #include <vkl/App/VkApplication.hpp>
 #include <mutex>
 
+#include <that/stl_ext/pointer.hpp>
+
 namespace vkl
 {
 	class AbstractInstance : public VkObject
@@ -74,6 +76,8 @@ namespace vkl
 		size_t _latest_update_tick = {};
 		UpdateResourcesResult _latest_update_res;
 
+		std::shared_ptr<AbstractInstance> _instance = {};
+
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res);
 
 	public:
@@ -86,7 +90,7 @@ namespace vkl
 			hold_instance.valueOr(true);
 		}
 
-		virtual ~AbstractInstanceHolder() override = default;
+		virtual ~AbstractInstanceHolder() override;
 
 		void callInvalidationCallbacks();
 
@@ -105,6 +109,16 @@ namespace vkl
 		// - Check the invalidation
 		virtual UpdateResourcesResult updateResources(UpdateContext& ctx);
 
+		AbstractInstance* instance() const
+		{
+			return _instance.get();
+		}
+
+		std::shared_ptr<AbstractInstance> const& instancePtr() const
+		{
+			return _instance;
+		}
+
 		constexpr const Dyn<bool>& holdInstance() const
 		{
 			return _hold_instance;
@@ -115,7 +129,7 @@ namespace vkl
 			return _hold_instance;
 		}
 
-		virtual void destroyInstanceIFN() = 0;
+		virtual void destroyInstanceIFN();
 
 		std::mutex& mutex()
 		{
@@ -129,12 +143,11 @@ namespace vkl
 	};
 
 	template <std::derived_from<AbstractInstance> Instance>
+		// requires std::is_pointer_interconvertible_base_of<AbstractInstance, Instance>::value
 	class InstanceHolder : public AbstractInstanceHolder
 	{
 	protected:
 
-		SPtr<Instance> _inst = nullptr;
-		
 	public:
 
 		using InstanceType = Instance;
@@ -144,32 +157,14 @@ namespace vkl
 			AbstractInstanceHolder(app, std::forward<StringLike>(name), hold_instance)
 		{}
 
-		constexpr SPtr<Instance> const& instance()const
+		Instance* instance() const
 		{
-			return _inst;
+			return static_cast<Instance*>(_instance.get());
 		}
 
-		virtual ~InstanceHolder() override
+		std::shared_ptr<Instance> const& instancePtr() const
 		{
-			if (!_invalidation_callbacks.empty())
-			{
-				VKL_BREAKPOINT_HANDLE;
-			}
-			destroyInstanceIFN();
-		}
-
-
-		virtual void destroyInstanceIFN() override
-		{
-			if (_inst)
-			{
-				callInvalidationCallbacks();
-				_inst = nullptr;
-				_latest_update_res.invalidated = true;
-			}
+			return std::reinterpret_pointer_downcast<Instance>(_instance);
 		}
 	};
-
-
-	
 }

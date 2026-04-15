@@ -157,11 +157,11 @@ namespace vkl
 		VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
 		const VkGeometryFlagsKHR common_flags = _geometry_flags.valueOr(0);
 			
-		if (_inst)
+		if (_instance)
 		{
-			if (_inst->geometryFlags() != common_flags)
+			if (instance()->geometryFlags() != common_flags)
 			{
-				_inst->requireRebuild();
+				instance()->requireRebuild();
 			}
 		}
 
@@ -177,9 +177,9 @@ namespace vkl
 				if (bi.blas && bi.blas->instance())
 				{
 					bool write = false;
-					if (bi.blas->instance() != bi._blas_instance)
+					if (bi.blas->instance() != bi._blas_instance.get())
 					{
-						bi._blas_instance = bi.blas->instance();
+						bi._blas_instance = bi.blas->instancePtr();
 						write = true;
 					}
 					if (compact_counter != bi._compact_id)
@@ -211,15 +211,15 @@ namespace vkl
 			g.instances_buffer->updateResources(ctx);
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance();
 		}
 
-		if (_inst)
+		if (_instance)
 		{
-			TLASI* inst = static_cast<TLASI*>(_inst.get());
+			TLASI* inst = instance();
 			inst->requireBuildMode(build_mode);
 			for (size_t i = 0; i < _geometries.size(); ++i)
 			{
@@ -243,7 +243,7 @@ namespace vkl
 			gci.instances_buffer = g.instances_buffer->getSegmentInstance();
 			gci.capacity = gci.instances_buffer.size() / sizeof(VkAccelerationStructureInstanceKHR);
 		}
-		_inst = std::make_shared<TopLevelAccelerationStructureInstance>(TopLevelAccelerationStructureInstance::CI{
+		_instance = std::make_shared<TopLevelAccelerationStructureInstance>(TopLevelAccelerationStructureInstance::CI{
 			.app = application(),
 			.name = name(),
 			.geometry_flags = common_geom_flags,
@@ -286,9 +286,9 @@ namespace vkl
 		//		.id = this,
 		//	});
 		//}
-		if (_inst)
+		if (_instance)
 		{
-			_inst->requireUpdate();
+			instance()->requireUpdate();
 		}
 	}
 }

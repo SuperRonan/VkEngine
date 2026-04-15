@@ -45,15 +45,15 @@ namespace vkl
 
 	void Framebuffer::createInstanceIFP()
 	{
-		assert(!_inst);
+		assert(!_instance);
 
 		FramebufferInstance::CreateInfo ci{
 			.app = application(),
 			.name = name(),
-			.render_pass = _render_pass->instance(),
+			.render_pass = _render_pass->instancePtr(),
 		};
 		ci.attachments.resize(_attachments.size());
-		bool create = _render_pass->instance().operator bool();
+		bool create = _render_pass->instance();
 		int set_extent = 2;
 		if (_extent.hasValue())
 		{
@@ -66,7 +66,7 @@ namespace vkl
 		}
 		for (size_t i = 0; i < _attachments.size(); ++i)
 		{
-			ci.attachments[i] = _attachments[i]->instance();
+			ci.attachments[i] = _attachments[i]->instancePtr();
 			if (ci.attachments[i])
 			{
 				create = true;
@@ -85,7 +85,7 @@ namespace vkl
 		}
 		if (create)
 		{
-			_inst = std::make_shared<FramebufferInstance>(ci);
+			_instance = std::make_shared<FramebufferInstance>(ci);
 		}
 	}
 
@@ -122,12 +122,12 @@ namespace vkl
 
 	void Framebuffer::updateResourcesInline(UpdateContext & ctx, UpdateResourcesResult& res)
 	{
-		if (_inst)
+		if (_instance)
 		{
 			if (_extent)
 			{
 				const VkExtent3D new_extent = *_extent;
-				if (new_extent != _inst->extent())
+				if (new_extent != instance()->extent())
 				{
 					res.invalidated = true;
 				}
@@ -139,7 +139,7 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstanceIFP();

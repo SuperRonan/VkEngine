@@ -69,7 +69,7 @@ namespace vkl
 		{
 			if (!that._use_external_renderpass)
 			{
-				node._render_pass_begin_info.framebuffer = that._framebuffer->instance();
+				node._render_pass_begin_info.framebuffer = that._framebuffer->instancePtr();
 				RenderPassInstance* rpi = node._render_pass_begin_info.framebuffer->renderPass().get();
 
 				uintptr_t& clear_values_index = reinterpret_cast<uintptr_t&>(node._render_pass_begin_info.ptr_clear_values);
@@ -802,7 +802,7 @@ namespace vkl
 				if (layout)
 				{
 					assert(!!to_draw.set);
-					node_to_draw.set = to_draw.set->instance();
+					node_to_draw.set = to_draw.set->instancePtr();
 					that.populateDescriptorSet(node, *to_draw.set->instance(), *layout);
 				}
 
@@ -1187,7 +1187,7 @@ namespace vkl
 				if (layout)
 				{
 					assert(!!to_draw.set);
-					node_to_draw.set = to_draw.set->instance();
+					node_to_draw.set = to_draw.set->instancePtr();
 					that.populateDescriptorSet(node, *to_draw.set->instance(), *layout);
 				}
 			}
@@ -1210,7 +1210,7 @@ namespace vkl
 
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-			ctx.graphicsBoundSets().bind(that.application()->descriptorBindingGlobalOptions().shader_set, that._set->instance());
+			ctx.graphicsBoundSets().bind(that.application()->descriptorBindingGlobalOptions().shader_set, that._set->instancePtr());
 
 			GraphicsCommandTemplateProcessor::FillRenderPassInfo(*node, that, di);
 

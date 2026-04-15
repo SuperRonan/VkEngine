@@ -500,9 +500,24 @@ namespace vkl
 
 		virtual ~GraphicsPipeline() override;
 
-		GraphicsProgram* program()const
+		GraphicsPipelineInstance* instance() const
+		{
+			return static_cast<GraphicsPipelineInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<GraphicsPipelineInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<GraphicsPipelineInstance>(_instance);
+		}
+
+		GraphicsProgram* program() const
 		{
 			return static_cast<GraphicsProgram*>(_program.get());
+		}
+
+		std::shared_ptr<GraphicsProgram> const& programPtr() const
+		{
+			return std::reinterpret_pointer_downcast<GraphicsProgram>(_program);
 		}
 	};
 

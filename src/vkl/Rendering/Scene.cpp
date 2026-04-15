@@ -907,7 +907,7 @@ namespace vkl
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
 				.sources = &src,
 				.sources_count = 1,
-				.dst = _ubo_buffer->instance(),
+				.dst = _ubo_buffer->instancePtr(),
 			};
 		}
 	}

@@ -284,7 +284,7 @@ namespace vkl
 				for (size_t i = 0; i < _vector.size(); ++i)
 				{
 					if(_vector[i])
-						res._vector[i] = _vector[i]->instance();
+						res._vector[i] = _vector[i]->instancePtr();
 				}
 
 				return res;

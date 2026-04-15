@@ -867,7 +867,7 @@ namespace vkl
 					ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
 						.sources = _sources.data(),
 						.sources_count = _sources.size(),
-						.dst = _device.mesh_buffer->instance(),
+						.dst = _device.mesh_buffer->instancePtr(),
 					};
 					_device.uploaded = true;
 					callResourceUpdateCallbacks();
@@ -879,7 +879,7 @@ namespace vkl
 					ctx.uploadQueue()->enqueue(AsynchUpload{
 						.name = name(),
 						.sources = std::move(sources),
-						.target_buffer = _device.mesh_buffer->instance(),
+						.target_buffer = _device.mesh_buffer->instancePtr(),
 						.completion_callback = [this](int) {
 							_device.just_uploaded = true;
 						},

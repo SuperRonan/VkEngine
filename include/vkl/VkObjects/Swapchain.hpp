@@ -168,11 +168,6 @@ namespace vkl
 			}
 		}
 
-		constexpr const std::shared_ptr<SwapchainInstance>& instance()const
-		{
-			return _inst;
-		}
-
 		const Dyn<VkSurfaceFormatKHR> & format()const
 		{
 			return _target_format;

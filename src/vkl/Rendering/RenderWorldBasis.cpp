@@ -130,7 +130,7 @@ namespace vkl
 		if (_framebuffer)
 		{
 			RenderPassBeginInfo render_pass{
-				.framebuffer = _framebuffer->instance(),
+				.framebuffer = _framebuffer->instancePtr(),
 			};
 			exec.beginRenderPass(std::move(render_pass));
 		}

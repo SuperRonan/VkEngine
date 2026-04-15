@@ -57,7 +57,7 @@ namespace vkl
 		BufferAndRangeInstance fullBufferAndRangeInstance()const
 		{
 			return BufferAndRangeInstance{
-				.buffer = _buffer->instance(),
+				.buffer = _buffer->instancePtr(),
 				.range = _buffer->instance()->fullRange(),
 			};
 		}

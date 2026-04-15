@@ -60,7 +60,7 @@ namespace vkl
 
 	void ImageView::createInstance(size_t tick)
 	{
-		assert(!_inst);
+		assert(!_instance);
 		VkImageViewCreateInfo ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.viewType = _type,
@@ -69,11 +69,11 @@ namespace vkl
 			.subresourceRange = *_range,
 		};
 		
-		_inst = std::make_shared<ImageViewInstance>(ImageViewInstance::CI{
+		_instance = std::make_shared<ImageViewInstance>(ImageViewInstance::CI{
 			.app = application(),
 			.name = name(),
 			.tick = tick,
-			.image = _image->instance(),
+			.image = _image->instancePtr(),
 			.ci = ci,
 		});
 	}
@@ -125,11 +125,11 @@ namespace vkl
 	{
 		res.invalidated = _image->updateResources(ctx).invalidated;
 
-		if (!res.invalidated && _inst)
+		if (!res.invalidated && _instance)
 		{
 			res.invalidated = [&]()
 			{
-				const VkImageViewCreateInfo & inst_ci = _inst->createInfo();
+				const VkImageViewCreateInfo & inst_ci = instance()->createInfo();
 				const VkFormat new_format = *_format;
 				if (inst_ci.format != new_format)
 				{
@@ -149,7 +149,7 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance(ctx.updateTick());
@@ -163,15 +163,17 @@ namespace vkl
 			using Parent = InstanceInspector<ImageViewInstance>;
 		protected:
 
-			IndirectInlinePanel _image_panel;
+			ObjectInlineInspector _image_panel;
 
 		public:
 
 			ImageViewInstanceInspector(std::shared_ptr<ImageViewInstance> const& target):
-				Parent(target)
+				Parent(target),
+				_image_panel("Image")
 			{
-				_image_panel = IndirectInlinePanel::MakeUniqueIndirectPanel(_target->image());
-				_image_panel.child_label = "Image";
+				_image_panel.setAcceptNullptr(false);
+				_image_panel.setDisableCreation(true);
+				_image_panel.setHideCreateRemoveButton(true);
 			}
 
 			static void DeclareSubresourceRange(Context& ctx, VkImageSubresourceRange const& range)
@@ -185,7 +187,7 @@ namespace vkl
 
 			virtual void declareInline(Context& ctx) override
 			{
-				const auto& ci = _target->_ci;
+				const auto& ci = target()->_ci;
 				InspectVkBitField<VkImageViewCreateFlagBits>(ctx, "Creation Flags", ci.flags);
 				InspectVkEnum(ctx, "View Type", ci.viewType);
 				InspectVkEnum(ctx, "Format", ci.format);
@@ -209,7 +211,7 @@ namespace vkl
 					ImGui::TreePop();
 				}
 
-				_image_panel.declareInline(ctx);
+				_image_panel.declareInline(ctx, target()->image());
 			}
 		};
 
@@ -218,20 +220,22 @@ namespace vkl
 			using Parent = DescriptorInspector<ImageView>;
 		protected:
 
-			IndirectInlinePanel _image_panel;
+			ObjectInlineInspector _image_panel;
 
 		public:
 
 			ImageViewInspector(std::shared_ptr<ImageView> const& target) :
-				Parent(target)
+				Parent(target),
+				_image_panel("Image")
 			{
-				_image_panel = IndirectInlinePanel::MakeUniqueIndirectPanel(_target->image());
-				_image_panel.child_label = "Image";
+				_image_panel.setAcceptNullptr(false);
+				_image_panel.setDisableCreation(true);
+				_image_panel.setHideCreateRemoveButton(true);
 			}
 
 			virtual void declareInline(Context& ctx) override
 			{
-				_image_panel.declareInline(ctx);
+				_image_panel.declareInline(ctx, target()->image());
 				Parent::declareInstance(ctx);
 			}
 		};

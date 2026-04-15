@@ -142,7 +142,7 @@ namespace vkl
 				{
 					if (cis.image && cis.image->instance())
 					{
-						ivu.ivi = cis.image->instance();
+						ivu.ivi = cis.image->instancePtr();
 						node.resources() += ivu;
 						// Don't forget to keep alive the ivi during the execution of the node
 						node._image_views_to_keep.push_back(ivu.ivi);
@@ -187,12 +187,12 @@ namespace vkl
 	void ShaderCommand::populateBoundResources(ShaderCommandNode & node, DescriptorSetsTacker& bound_sets, size_t max_set)
 	{
 		_pipeline->waitForInstanceCreationIFN();
-		node._pipeline = _pipeline->instance();
+		node._pipeline = _pipeline->instancePtr();
 		if (_set)
 		{
 			const uint32_t shader_set_index = application()->descriptorBindingGlobalOptions().shader_set;
 			_set->waitForInstanceCreationIFN();
-			node._set = _set->instance();
+			node._set = _set->instancePtr();
 			bound_sets.bind(shader_set_index, node._set);
 		}
 		ProgramInstance & prog = *node._pipeline->program();

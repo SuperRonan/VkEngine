@@ -172,7 +172,7 @@ namespace vkl
 
 		bool hasInstanceOrIsPending() const
 		{
-			return _inst || _create_instance_task;
+			return _instance || _create_instance_task;
 		}
 
 		void waitForInstanceCreationIFN();

@@ -31,7 +31,7 @@ namespace vkl
 			_capacity = size;
 		}
 
-		std::shared_ptr<BufferInstance> bi = _buffer->instance();
+		std::shared_ptr<BufferInstance> bi = _buffer->instancePtr();
 		_buffer->updateResources(ctx);
 		return bi;
 	}
@@ -39,7 +39,7 @@ namespace vkl
 	void GrowableBuffer::updateResources(UpdateContext & ctx, bool shrink_to_fit)
 	{
 		std::shared_ptr<BufferInstance> bi = updateBuffer(ctx, shrink_to_fit);
-		if (bi != _buffer->instance() && !_prev_buffer_inst)
+		if (bi.get() != _buffer->instance() && !_prev_buffer_inst)
 		{
 			_prev_buffer_inst = bi;
 		}
@@ -52,7 +52,7 @@ namespace vkl
 
 		CopyBuffer::CopyInfoInstance res{
 			.src = _prev_buffer_inst,
-			.dst = _buffer->instance()
+			.dst = _buffer->instancePtr()
 		};
 
 		_prev_buffer_inst.reset();

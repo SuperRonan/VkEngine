@@ -262,7 +262,7 @@ namespace vkl
 			ctx.resourcesToUpload() += ResourcesToUpload::BufferUpload{
 				.sources = &source,
 				.sources_count = 1,
-				.dst = _props_buffer->instance(),
+				.dst = _props_buffer->instancePtr(),
 			};
 			_should_update_props_buffer = false;
 		}

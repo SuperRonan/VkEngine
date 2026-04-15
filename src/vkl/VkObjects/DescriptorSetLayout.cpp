@@ -200,7 +200,7 @@ namespace vkl
 
 	void DescriptorSetLayout::createInstance()
 	{
-		assert(!_inst);
+		assert(!_instance);
 		MyVector<VkDescriptorSetLayoutBinding> vk_bindings(_bindings.size());
 		MyVector<DescriptorSetLayoutInstance::BindingMeta> metas(_bindings.size());
 		for (size_t i = 0; i < _bindings.size(); ++i)
@@ -208,7 +208,7 @@ namespace vkl
 			vk_bindings[i] = _bindings[i].getVkBinding();
 			metas[i] = _bindings[i].getMeta();
 		}
-		_inst = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
+		_instance = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
 			.app = application(),
 			.name = name(),
 			.flags = _flags,
@@ -227,12 +227,12 @@ namespace vkl
 	{
 		if (isDynamic())
 		{
-			if (_inst)
+			if (_instance)
 			{
 				bool destroy_instance = false;
 				for (size_t i = 0; i < _bindings.size(); ++i)
 				{
-					if (_bindings[i].count.value() != _inst->_bindings[i].descriptorCount)
+					if (_bindings[i].count.value() != instance()->_bindings[i].descriptorCount)
 					{
 						destroy_instance = true;
 						break;
@@ -245,7 +245,7 @@ namespace vkl
 				}
 			}
 		}
-		if (!_inst)
+		if (!instance())
 		{
 			res.created = true;
 			createInstance();

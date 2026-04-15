@@ -107,7 +107,7 @@ namespace vkl
 		BufferSegmentInstance getSegmentInstance() const
 		{
 			return BufferSegmentInstance{
-				.buffer = _buffer->instance(),
+				.buffer = _buffer->instancePtr(),
 				.range = Buffer::Range{.begin = 0, .len = _byte_size},
 			};
 		}

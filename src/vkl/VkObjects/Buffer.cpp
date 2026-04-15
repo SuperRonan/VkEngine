@@ -325,14 +325,14 @@ namespace vkl
 			.allocator = _allocator,
 		};
 		
-		_inst = std::make_shared<BufferInstance>(ci);
+		_instance = std::make_shared<BufferInstance>(ci);
 	}
 
 	void Buffer::updateResourcesInline(UpdateContext & ctx, UpdateResourcesResult& res)
 	{
-		if (_inst)
+		if (_instance)
 		{
-			if (_inst->createInfo().size != *_size)
+			if (instance()->createInfo().size != *_size)
 			{
 				res.invalidated = true;
 			}
@@ -343,7 +343,7 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if(!_instance)
 		{
 			res.created = true;
 			createInstance();
@@ -367,23 +367,23 @@ namespace vkl
 
 			virtual void declareInline(GUI::Context& ctx) override
 			{
-				auto const& ci = _target->_ci;
+				auto const& ci = target()->_ci;
 
-				ImGui::LabelHexValue("Minimum Align", _target->_min_align);
+				ImGui::LabelHexValue("Minimum Align", target()->_min_align);
 
-				InspectVkBitField<VkBufferCreateFlagBits>(ctx, "Creation Flags", _target->createInfo().flags);
-				ImGui::LabelValue("Size", _target->_ci.size);
-				InspectVkBitField<VkBufferUsageFlagBits>(ctx, "Usage", _target->createInfo().usage);
-				InspectVkEnum(ctx, "Sharing Mode", _target->_ci.sharingMode);
-				ImGui::LabelValue("Queue family index count", _target->_ci.queueFamilyIndexCount); // TODO proper span inspector
+				InspectVkBitField<VkBufferCreateFlagBits>(ctx, "Creation Flags", ci.flags);
+				ImGui::LabelValue("Size", ci.size);
+				InspectVkBitField<VkBufferUsageFlagBits>(ctx, "Usage", ci.usage);
+				InspectVkEnum(ctx, "Sharing Mode", ci.sharingMode);
+				ImGui::LabelValue("Queue family index count", ci.queueFamilyIndexCount); // TODO proper span inspector
 				// TODO inspect list of queues
 
-				ImGui::LabelHexValue("Handle", reinterpret_cast<uint64_t>(_target->handle()));
-				ImGui::LabelHexValue("Unique Buffer Id", _target->_unique_id);
-				ImGui::LabelHexValue("Address", _target->_address, true);
+				ImGui::LabelHexValue("Handle", reinterpret_cast<uint64_t>(target()->handle()));
+				ImGui::LabelHexValue("Unique Buffer Id", target()->_unique_id);
+				ImGui::LabelHexValue("Address", target()->_address, true);
 
 				ImGui::SeparatorText("Allocation");
-				const auto& aci = _target->allocationCreateInfo();
+				const auto& aci = target()->allocationCreateInfo();
 				InspectVkBitField<VmaAllocationCreateFlagBits>(ctx, "Flags##Allocation", aci.flags);
 				InspectVkEnum(ctx, "Memory Usage", aci.usage);
 				InspectVkBitField<VkMemoryPropertyFlagBits>(ctx, "Required Flags", aci.requiredFlags);
@@ -413,14 +413,14 @@ namespace vkl
 
 			virtual void declareInline(GUI::Context& ctx) override
 			{
-				ImGui::LabelText2("Name", _target->name().c_str());
-				GUI::DeclareDynamic("Size", _target->_size, [](const char* label, VkDeviceSize& sz) {ImGui::LabelValue(label, sz); return false; });
-				ImGui::LabelHexValue("Minimum Align", _target->_min_align);
-				InspectVkBitField<VkBufferUsageFlagBits>(ctx, "Usage", &_target->_usage);
-				ImGui::LabelValue("Queues family index count", uint32_t(_target->_queues.size())); // TODO inspect queues
-				InspectVkEnum(ctx, "Sharing Mode", _target->_sharing_mode);
-				InspectVkEnum(ctx, "Memory Usage", _target->_mem_usage);
-				ImGui::LabelHexValue("Allocator", reinterpret_cast<uintptr_t>(_target->_allocator));
+				ImGui::LabelText2("Name", target()->name().c_str());
+				GUI::DeclareDynamic("Size", target()->_size, [](const char* label, VkDeviceSize& sz) {ImGui::LabelValue(label, sz); return false; });
+				ImGui::LabelHexValue("Minimum Align", target()->_min_align);
+				InspectVkBitField<VkBufferUsageFlagBits>(ctx, "Usage", &target()->_usage);
+				ImGui::LabelValue("Queues family index count", uint32_t(target()->_queues.size())); // TODO inspect queues
+				InspectVkEnum(ctx, "Sharing Mode", target()->_sharing_mode);
+				InspectVkEnum(ctx, "Memory Usage", target()->_mem_usage);
+				ImGui::LabelHexValue("Allocator", reinterpret_cast<uintptr_t>(target()->_allocator));
 
 				Parent::declareInstance(ctx);
 			}

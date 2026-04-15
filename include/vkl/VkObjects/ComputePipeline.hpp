@@ -56,9 +56,24 @@ namespace vkl
 
 		virtual ~ComputePipeline() override = default;
 
-		ComputeProgram* program()const
+		ComputePipelineInstance* instance() const
+		{
+			return static_cast<ComputePipelineInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<ComputePipelineInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<ComputePipelineInstance>(_instance);
+		}
+
+		ComputeProgram* program() const
 		{
 			return static_cast<ComputeProgram*>(_program.get());
+		}
+
+		std::shared_ptr<ComputeProgram> const& programPtr() const
+		{
+			return std::reinterpret_pointer_downcast<ComputeProgram>(_program);
 		}
 	};
 }

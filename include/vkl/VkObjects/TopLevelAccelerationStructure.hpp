@@ -152,9 +152,14 @@ namespace vkl
 
 		virtual ~TopLevelAccelerationStructure() override;
 
-		std::shared_ptr<TopLevelAccelerationStructureInstance> instance() const
+		TopLevelAccelerationStructureInstance* instance() const
 		{
-			return std::reinterpret_pointer_cast<TopLevelAccelerationStructureInstance>(_inst);
+			return static_cast<TopLevelAccelerationStructureInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<TopLevelAccelerationStructureInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<TopLevelAccelerationStructureInstance>(_instance);
 		}
 
 		void createInstance();

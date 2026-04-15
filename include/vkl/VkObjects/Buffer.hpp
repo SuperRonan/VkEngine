@@ -303,8 +303,8 @@ namespace vkl
 
 		BufferAndRangeInstance getInstance() const
 		{
-			BufferAndRangeInstance res;
-			if(buffer)	res.buffer = buffer->instance();
+			BufferAndRangeInstance res = {};
+			if(buffer)	res.buffer = buffer->instancePtr();
 			if(range.hasValue())	res.range = range.value();
 			return res;
 		}

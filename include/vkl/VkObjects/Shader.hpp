@@ -243,12 +243,12 @@ namespace vkl
 
 		bool hasInstanceOrIsPending() const
 		{
-			return _inst || _create_instance_task;
+			return _instance || _create_instance_task;
 		}
 		
 		void waitForInstanceCreationIFN();
 
-		std::shared_ptr<ShaderInstance> getInstanceWaitIFN();
+		std::shared_ptr<ShaderInstance> const& getInstanceWaitIFN();
 
 		const std::shared_ptr<AsynchTask>& compileTask()const
 		{

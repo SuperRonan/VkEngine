@@ -366,7 +366,7 @@ namespace vkl
 
 	void Image::destroyInstanceIFN()
 	{
-		if (_inst && !_inst->ownership())
+		if (_instance && !instance()->ownership())
 		{
 			
 		}
@@ -378,7 +378,7 @@ namespace vkl
 
 	void Image::createInstance(size_t tick)
 	{
-		assert(!_inst);
+		assert(!_instance);
 		uint32_t n_queues = 0;
 		uint32_t* p_queues = nullptr;
 		if (_sharing_mode == VK_SHARING_MODE_CONCURRENT)
@@ -424,7 +424,7 @@ namespace vkl
 			.usage = _mem_usage,
 		};
 
-		_inst = std::make_shared<ImageInstance>(ImageInstance::CI
+		_instance = std::make_shared<ImageInstance>(ImageInstance::CI
 		{
 			.app = _app,
 			.name = name(),
@@ -436,9 +436,9 @@ namespace vkl
 
 	void Image::associateImage(AssociateInfo const& assos)
 	{
-		assert(_inst == nullptr);
+		assert(!_instance);
 		_app = assos.instance->application();
-		_inst = assos.instance;
+		_instance = assos.instance;
 		if (!assos.instance->name().empty())
 			_name = assos.instance->name().empty();
 
@@ -459,13 +459,13 @@ namespace vkl
 	void Image::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
 		using namespace vk_operators;
-		if (_inst)
+		if (_instance)
 		{
-			if (_inst->ownership())
+			if (instance()->ownership())
 			{
 				res.invalidated = [&]()
 				{
-					const VkImageCreateInfo & inst_ci = _inst->createInfo();
+					const VkImageCreateInfo & inst_ci = instance()->createInfo();
 					const VkExtent3D new_extent = *_extent;
 					if (new_extent != inst_ci.extent)
 					{
@@ -503,7 +503,7 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance(ctx.updateTick());
@@ -565,8 +565,8 @@ namespace vkl
 
 			virtual void declareInline(Context& ctx) override
 			{
-				const auto& ci = _target->createInfo();
-				const auto& aci = _target->allocationInfo();
+				const auto& ci = target()->createInfo();
+				const auto& aci = target()->allocationInfo();
 				InspectVkBitField<VkImageCreateFlagBits>(ctx, "Creation Flags", ci.flags);
 				InspectVkEnum(ctx, "Type", ci.imageType);
 				InspectVkEnum(ctx, "Format", ci.format);
@@ -606,9 +606,9 @@ namespace vkl
 
 			virtual void declareInline(Context& ctx) override
 			{
-				InspectVkBitField<VkImageCreateFlagBits>(ctx, "Creation Flags", _target->_flags);
-				InspectVkEnum(ctx, "Type", _target->_type);
-				DeclareDynamic("Format", _target->_format, [&](const char* label, VkFormat& format){InspectVkEnum(label, format); return false; });
+				InspectVkBitField<VkImageCreateFlagBits>(ctx, "Creation Flags", target()->_flags);
+				InspectVkEnum(ctx, "Type", target()->_type);
+				DeclareDynamic("Format", target()->_format, [&](const char* label, VkFormat& format){InspectVkEnum(label, format); return false; });
 				// TODO
 
 				Parent::declareInstance(ctx);

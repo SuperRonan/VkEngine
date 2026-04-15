@@ -1,5 +1,7 @@
 #include <vkl/GUI/Panel.hpp>
 
+#include <that/stl_ext/pointer.hpp>
+
 namespace vkl::GUI
 {
 	class TargetInspectorBase : public Panel
@@ -18,6 +20,11 @@ namespace vkl::GUI
 		std::shared_ptr<VkObject> const& targetPtr() const
 		{
 			return _target;
+		}
+
+		VkObject* target() const
+		{
+			return _target.get();
 		}
 
 		void setEnableSource(bool value = true)
@@ -46,6 +53,17 @@ namespace vkl::GUI
 			TargetInspectorBase(target, typeid(Target).name())
 		{
 
+		}
+
+		TargetInspector(std::shared_ptr<Target> const& target, std::string_view class_name) :
+			TargetInspectorBase(target, class_name)
+		{
+
+		}
+
+		std::shared_ptr<Target> const& targetPtr() const
+		{
+			return std::reinterpret_pointer_downcast<Target>(_target);
 		}
 
 		Target* target() const

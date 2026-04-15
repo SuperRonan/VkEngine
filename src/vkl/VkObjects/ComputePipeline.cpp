@@ -44,10 +44,10 @@ namespace vkl
 
 	void ComputePipeline::createInstanceIFP()
 	{
-		_inst = std::make_shared<ComputePipelineInstance>(ComputePipelineInstance::CI{
+		_instance = std::make_shared<ComputePipelineInstance>(ComputePipelineInstance::CI{
 			.app = application(),
 			.name = name(),
-			.program = std::static_pointer_cast<ComputeProgramInstance>(_program->instance()),
+			.program = program()->instancePtr(),
 		});
 	}
 }

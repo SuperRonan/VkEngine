@@ -150,5 +150,15 @@ namespace vkl
 			assert(shader_record_type < _group_begin.size());
 			return _group_begin[shader_record_type];
 		}
+
+		RayTracingProgramInstance* instance() const
+		{
+			return static_cast<RayTracingProgramInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<RayTracingProgramInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<RayTracingProgramInstance>(_instance);
+		}
 	};
 }

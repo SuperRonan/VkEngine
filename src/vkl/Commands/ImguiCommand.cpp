@@ -326,7 +326,7 @@ namespace vkl
 		node->setName(name());
 
 		node->_render_pass_info = RenderPassBeginInfo{
-			.framebuffer = _framebuffers[ei.index]->instance(),
+			.framebuffer = _framebuffers[ei.index]->instancePtr(),
 		};
 
 		node->_desc_pool = _desc_pool;

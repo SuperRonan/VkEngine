@@ -202,8 +202,8 @@ namespace vkl
 			if (!began_render_pass && !recorder.getCurrentRenderingStatus())
 			{
 				recorder.beginRenderPass(RenderPassBeginInfo{
-					.render_pass = _render_pass->instance(),
-					.framebuffer = _framebuffer->instance(),
+					.render_pass = _render_pass->instancePtr(),
+					.framebuffer = _framebuffer->instancePtr(),
 				});
 				began_render_pass = true;
 			}

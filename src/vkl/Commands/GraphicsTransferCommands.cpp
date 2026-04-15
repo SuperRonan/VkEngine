@@ -35,8 +35,8 @@ namespace vkl
 
 		void populate(BlitImage::BlitInfo const& bi)
 		{
-			_src = bi.src->instance();
-			_dst = bi.dst->instance();
+			_src = bi.src->instancePtr();
+			_dst = bi.dst->instancePtr();
 			_src_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 			_regions = bi.regions;
@@ -500,7 +500,7 @@ namespace vkl
 
 		void populate(ClearImage::ClearInfo const& ci)
 		{
-			_target = ci.view->instance();
+			_target = ci.view->instancePtr();
 			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 			_value = ci.value.value();

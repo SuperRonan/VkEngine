@@ -240,5 +240,15 @@ namespace vkl
 		{
 			return getShaderSafe(_fragment);
 		}
+
+		GraphicsProgramInstance* instance() const
+		{
+			return static_cast<GraphicsProgramInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<GraphicsProgramInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<GraphicsProgramInstance>(_instance);
+		}
 	};
 }

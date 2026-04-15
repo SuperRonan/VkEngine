@@ -158,7 +158,7 @@ namespace vkl
 
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
-			ctx.computeBoundSets().bind(shader_set_index, that._set->instance());
+			ctx.computeBoundSets().bind(shader_set_index, that._set->instancePtr());
 			that.populateBoundResources(*node, ctx.computeBoundSets(), shader_set_index + 1);
 
 			std::shared_ptr<DescriptorSetLayoutInstance> layout = that._pipeline->program()->instance()->reflectionSetsLayouts()[invocation_set_index];
@@ -179,7 +179,7 @@ namespace vkl
 				to_dispatch_inst.pc_size = to_dispatch.pc_size;
 				to_dispatch_inst.pc_offset = to_dispatch.pc_offset;
 				to_dispatch_inst.extent = di.dispatch_threads ? that.getWorkgroupsDispatchSize(to_dispatch.extent) : to_dispatch.extent;
-				to_dispatch_inst.set = to_dispatch.set ? to_dispatch.set->instance() : nullptr;
+				to_dispatch_inst.set = to_dispatch.set ? to_dispatch.set->instancePtr() : nullptr;
 
 				//if (!already_sync.contains(to_dispatch.set.get()))
 				if (layout)

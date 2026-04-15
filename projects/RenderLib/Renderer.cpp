@@ -1091,7 +1091,7 @@ namespace vkl
 						render_pass.clear();
 						render_pass.ptr_clear_values = &clear;
 						render_pass.clear_value_count = 1;
-						render_pass.framebuffer = my_lid->framebuffer->instance();
+						render_pass.framebuffer = my_lid->framebuffer->instancePtr();
 
 						exec.beginRenderPass(render_pass);
 
@@ -1128,7 +1128,7 @@ namespace vkl
 					clear_depth,
 				};
 				RenderPassBeginInfo render_pass{
-					.framebuffer = _forward_pipeline.framebuffer->instance(),
+					.framebuffer = _forward_pipeline.framebuffer->instancePtr(),
 					.clear_value_count = static_cast<uint32_t>(clear_values.size()),
 					.ptr_clear_values = clear_values.data(),
 				};
@@ -1190,7 +1190,7 @@ namespace vkl
 					clear_count = 3;
 				}
 				RenderPassBeginInfo render_pass{
-					.framebuffer = gbuffer->framebuffer->instance(),
+					.framebuffer = gbuffer->framebuffer->instancePtr(),
 					.clear_value_count = clear_count,
 					.ptr_clear_values = clear_values.data(),
 				};

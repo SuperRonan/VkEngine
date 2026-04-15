@@ -41,11 +41,11 @@ namespace vkl
 
 	void ComputeProgram::createInstanceIFP()
 	{
-		_inst = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
+		_instance = std::make_shared<ComputeProgramInstance>(ComputeProgramInstance::CI{
 			.app = application(),
 			.name = name(),
 			.sets_layouts = _provided_sets_layouts,
-			.shader = shader()->instance(),
+			.shader = shader()->instancePtr(),
 		});
 	}
 

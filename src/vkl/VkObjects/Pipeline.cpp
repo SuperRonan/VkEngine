@@ -90,7 +90,7 @@ namespace vkl
 		res.invalidated |= _program->updateResources(ctx).invalidated;
 		can_create &= _program->hasInstanceOrIsPending();
 
-		if (_inst)
+		if (_instance)
 		{
 			if (checkInstanceParamsReturnInvalid())
 			{
@@ -103,7 +103,7 @@ namespace vkl
 			}
 		}
 
-		if (!_inst && can_create)
+		if (!_instance && can_create)
 		{
 			res.created = true;
 			launchInstanceCreationTask();
@@ -120,10 +120,10 @@ namespace vkl
 		}
 	}
 
-	std::shared_ptr<PipelineInstance> Pipeline::getInstanceWaitIFN()
+	std::shared_ptr<PipelineInstance> const& Pipeline::getInstanceWaitIFN()
 	{
 		waitForInstanceCreationIFN();
-		return instance();
+		return instancePtr();
 	}
 
 }

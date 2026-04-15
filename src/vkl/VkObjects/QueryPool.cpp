@@ -60,7 +60,7 @@ namespace vkl
 
 	void QueryPool::createInstance()
 	{
-		_inst = std::make_shared<QueryPoolInstance>(QueryPoolInstance::CI{
+		_instance = std::make_shared<QueryPoolInstance>(QueryPoolInstance::CI{
 			.app = application(),
 			.name = name(),
 			.flags = _flags,
@@ -72,12 +72,12 @@ namespace vkl
 
 	void QueryPool::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (_inst)
+		if (_instance)
 		{
 			if (!res.invalidated)
 			{
 				uint32_t count = *_count;
-				if (count != _inst->count())
+				if (count != instance()->count())
 				{
 					res.invalidated = true;
 				}
@@ -87,7 +87,7 @@ namespace vkl
 				destroyInstanceIFN();
 			}
 		}
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance();

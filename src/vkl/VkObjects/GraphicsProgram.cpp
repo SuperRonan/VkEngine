@@ -77,9 +77,9 @@ namespace vkl
 		MyVector<std::shared_ptr<ShaderInstance>> shaders(_shaders.size());
 		for (size_t i = 0; i < shaders.size(); ++i)
 		{
-			shaders[i] = _shaders[i]->instance();
+			shaders[i] = _shaders[i]->instancePtr();
 		}
-		_inst = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CI{
+		_instance = std::make_shared<GraphicsProgramInstance>(GraphicsProgramInstance::CI{
 			.app = application(),
 			.name = name(),
 			.sets_layouts = _provided_sets_layouts,

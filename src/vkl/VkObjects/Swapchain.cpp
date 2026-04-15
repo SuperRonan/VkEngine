@@ -109,8 +109,8 @@ namespace vkl
 
 	void Swapchain::createInstance(size_t tick)
 	{
-		assert(!_inst);
-		_inst = std::make_shared<SwapchainInstance>(SwapchainInstance::CI{
+		assert(!_instance);
+		_instance = std::make_shared<SwapchainInstance>(SwapchainInstance::CI{
 			.app = application(),
 			.name = std::format("{}-{}", name(), tick),
 			.tick = tick,
@@ -120,14 +120,14 @@ namespace vkl
 
 	void Swapchain::destroyInstanceIFN()
 	{
-		if (_inst)
+		if (_instance)
 		{
-			_old_swapchain = _inst;
+			_old_swapchain = instancePtr();
 			_ci.oldSwapchain = *_old_swapchain;
 			callInvalidationCallbacks();
 			
 			_surface->queryDetails();
-			_inst = nullptr;
+			_instance = nullptr;
 		}
 	}
 
@@ -204,10 +204,10 @@ namespace vkl
 
 	void Swapchain::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (_inst)
+		if (_instance)
 		{
 			const Surface::SwapchainSupportDetails& support = _surface->getDetails();
-			VkPresentModeKHR prev_present_mode = _inst->createInfo().presentMode;
+			VkPresentModeKHR prev_present_mode = instance()->createInfo().presentMode;
 			VkPresentModeKHR new_present_mode = [&]() -> VkPresentModeKHR
 			{
 				if (std::find(support.present_modes.cbegin(), support.present_modes.cend(), *_target_present_mode) != support.present_modes.cend())
@@ -265,12 +265,13 @@ namespace vkl
 			}
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance(ctx.updateTick());
 		}
-		for (auto& view : _inst->views())
+		auto& views = instance()->views();
+		for (auto& view : views)
 		{
 			view->updateResources(ctx);
 		}

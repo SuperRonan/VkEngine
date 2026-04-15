@@ -383,7 +383,7 @@ namespace vkl
 			};
 
 			RenderPassBeginInfo render_pass{
-				.framebuffer = _framebuffer->instance(),
+				.framebuffer = _framebuffer->instancePtr(),
 			};
 
 			exec.beginRenderPass(render_pass);

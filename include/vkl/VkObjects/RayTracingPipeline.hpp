@@ -77,9 +77,24 @@ namespace vkl
 		virtual ~RayTracingPipeline() override = default;
 
 
-		RayTracingProgram* program()const
+		RayTracingPipelineInstance* instance() const
+		{
+			return static_cast<RayTracingPipelineInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<RayTracingPipelineInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<RayTracingPipelineInstance>(_instance);
+		}
+
+		RayTracingProgram* program() const
 		{
 			return static_cast<RayTracingProgram*>(_program.get());
+		}
+
+		std::shared_ptr<RayTracingProgram> const& programPtr() const
+		{
+			return std::reinterpret_pointer_downcast<RayTracingProgram>(_program);
 		}
 	};
 }

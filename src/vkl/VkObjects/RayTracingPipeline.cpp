@@ -61,10 +61,10 @@ namespace vkl
 
 	void RayTracingPipeline::createInstanceIFP()
 	{
-		_inst = std::make_shared<RayTracingPipelineInstance>(RayTracingPipelineInstance::CI{
+		_instance = std::make_shared<RayTracingPipelineInstance>(RayTracingPipelineInstance::CI{
 			.app = application(),
 			.name = name(),
-			.program = std::static_pointer_cast<RayTracingProgramInstance>(_program->instance()),
+			.program = program()->instancePtr(),
 			.max_recursion_depth = _max_recursion_depth.value(),
 		});
 	}
@@ -72,9 +72,9 @@ namespace vkl
 	bool RayTracingPipeline::checkInstanceParamsReturnInvalid()
 	{
 		bool res = false;
-		if (_inst)
+		if (_instance)
 		{
-			RayTracingPipelineInstance * inst = static_cast<RayTracingPipelineInstance*>(_inst.get());
+			RayTracingPipelineInstance * inst = instance();
 			if (inst->maxRecursionDepth() != _max_recursion_depth.value())
 			{
 				res = true;

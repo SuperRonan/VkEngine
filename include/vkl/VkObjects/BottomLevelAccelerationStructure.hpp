@@ -105,9 +105,14 @@ namespace vkl
 
 		virtual ~BottomLevelAccelerationStructure() override;
 
-		std::shared_ptr<BottomLevelAccelerationStructureInstance> instance() const
+		BottomLevelAccelerationStructureInstance* instance() const
 		{
-			return std::reinterpret_pointer_cast<BottomLevelAccelerationStructureInstance>(_inst);
+			return static_cast<BottomLevelAccelerationStructureInstance*>(_instance.get());
+		}
+
+		std::shared_ptr<BottomLevelAccelerationStructureInstance> const& instancePtr() const
+		{
+			return std::reinterpret_pointer_downcast<BottomLevelAccelerationStructureInstance>(_instance);
 		}
 
 		void createInstance();

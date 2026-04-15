@@ -54,9 +54,9 @@ namespace vkl
 
 	void Sampler::createInstance()
 	{
-		assert(!_inst);
+		assert(!_instance);
 		
-		_inst = std::make_shared<SamplerInstance>(SamplerInstance::CI{
+		_instance = std::make_shared<SamplerInstance>(SamplerInstance::CI{
 			.app = application(),
 			.name = name(),
 			.vk_ci = _vk_ci,
@@ -65,7 +65,7 @@ namespace vkl
 
 	void Sampler::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
 	{
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance();

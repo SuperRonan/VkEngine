@@ -58,7 +58,7 @@ namespace vkl
 
 	void BottomLevelAccelerationStructure::createInstance()
 	{
-		assert(!_inst);
+		assert(!_instance);
 		BLASI::CI ci{
 			.app = application(),
 			.name = name(),
@@ -87,7 +87,7 @@ namespace vkl
 			ci.storage_buffer = _storage_buffer.getInstance();
 		}
 
-		_inst = std::make_shared<BLASI>(std::move(ci));
+		_instance = std::make_shared<BLASI>(std::move(ci));
 	}
 
 	void BottomLevelAccelerationStructure::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)
@@ -99,7 +99,7 @@ namespace vkl
 			_storage_buffer.buffer->updateResources(ctx);
 		}
 
-		if (_inst)
+		if (_instance)
 		{
 			BottomLevelAccelerationStructureInstance& inst = *instance();
 			res.invalidated = [&]() -> bool
@@ -130,7 +130,7 @@ namespace vkl
 			destroyInstanceIFN();
 		}
 
-		if (!_inst)
+		if (!_instance)
 		{
 			res.created = true;
 			createInstance();
