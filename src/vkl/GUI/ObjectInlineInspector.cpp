@@ -122,29 +122,33 @@ namespace vkl::GUI
 			}
 			ImGui::EndDisabled();
 			ImGui::SameLine();
-			if (target)
+			const bool show_remove_create_button = !_hide_create_remove_button;
+			if (show_remove_create_button)
 			{
-				ImGui::BeginDisabled(!_accept_nullptr);
-				if (ImGui::TrashButton("Remove"))
+				if (target)
 				{
-					if (dst_target)
+					ImGui::BeginDisabled(!_accept_nullptr);
+					if (ImGui::TrashButton("Remove"))
 					{
-						dst_target->reset();
+						if (dst_target)
+						{
+							dst_target->reset();
+						}
+						res = true;
 					}
-					res = true;
+					ImGui::EndDisabled();
 				}
-				ImGui::EndDisabled();
-			}
-			else
-			{
-				ImGui::BeginDisabled(_disable_create);
-				if (ImGui::PlusButton("Create"))
+				else
 				{
-					res = true;
+					ImGui::BeginDisabled(_disable_create);
+					if (ImGui::PlusButton("Create"))
+					{
+						res = true;
+					}
+					ImGui::EndDisabled();
 				}
-				ImGui::EndDisabled();
+				ImGui::SameLine(0, std::round(ImGui::GetStyle().ItemSpacing.x * 1.5));
 			}
-			ImGui::SameLine(0, std::round(ImGui::GetStyle().ItemSpacing.x * 1.5));
 			//ImGui::PopStyleVar();
 			std::string_view object_label = {};
 			if (_target)
@@ -303,11 +307,12 @@ namespace vkl::GUI
 					VKL_SHOULD_NOT_BE_HERE;
 				}
 			}
-			else
-			{
-				VKL_SHOULD_NOT_BE_HERE;
-			}
 		}
 		return res;
+	}
+
+	void ObjectInlineInspector::clear()
+	{
+		_panel.reset();
 	}
 }

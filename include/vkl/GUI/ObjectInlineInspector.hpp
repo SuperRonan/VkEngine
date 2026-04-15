@@ -22,6 +22,7 @@ namespace vkl::GUI
 		bool _enable_source = false;
 		bool _accept_nullptr = false;
 		bool _disable_create = false;
+		bool _hide_create_remove_button = false;
 
 		AcceptObjectFnPtr _accept_fn = nullptr;
 		const void* _accept_data = nullptr;
@@ -55,6 +56,13 @@ namespace vkl::GUI
 			_disable_create = disable;
 		}
 
+		void setHideCreateRemoveButton(bool hide = true)
+		{
+			_hide_create_remove_button = hide;
+		}
+
 		bool declareInline(Context& ctx, std::shared_ptr<VkObject>const& target, std::shared_ptr<VkObject>* dst_target=nullptr);
+
+		void clear();
 	};
 }

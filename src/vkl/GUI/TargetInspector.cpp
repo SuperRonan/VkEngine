@@ -15,7 +15,7 @@ namespace vkl::GUI
 	}
 
 	TargetInspectorBase::TargetInspectorBase(std::shared_ptr<VkObject> const& target, std::string_view class_type) :
-		Panel(target->application(), std::format("{} - {} Inspector###{}", target->name(), class_type, reinterpret_cast<uintptr_t>(target.get()))),
+		Panel(target->application(), std::format("{} - {}###{}", target->name(), class_type, reinterpret_cast<uintptr_t>(target.get()))),
 		_target(target)
 	{
 		_window_flags |= ImGuiWindowFlags_MenuBar;

@@ -26,6 +26,8 @@ namespace vkl
 
 		using Range = Range_st;
 
+		static constexpr const char* ClassName = "Buffer";
+
 	protected:
 
 		friend class SynchronizationHelperV2;

@@ -12,5 +12,9 @@ namespace vkl::GUI
 				target()->destroyInstanceIFN();
 			}
 		}
+		else
+		{
+			_instance_panel.clear();
+		}
 	}
 }
