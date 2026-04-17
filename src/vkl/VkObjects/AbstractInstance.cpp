@@ -4,6 +4,21 @@
 
 namespace vkl
 {
+	void AbstractInstance::RegisterName(VkApplication* app, VkObjectType type, uint64_t handle, const char* name)
+	{
+		if (name && strlen(name))
+		{
+			VkDebugUtilsObjectNameInfoEXT buffer_name = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = type,
+				.objectHandle = handle,
+				.pObjectName = name,
+			};
+			app->nameVkObjectIFP(buffer_name);
+		}
+	}
+
 	void AbstractInstanceHolder::callInvalidationCallbacks()
 	{
 		std::unique_lock lock(_mutex);

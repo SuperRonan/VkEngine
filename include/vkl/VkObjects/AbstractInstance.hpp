@@ -4,6 +4,9 @@
 #include <mutex>
 
 #include <that/stl_ext/pointer.hpp>
+#include <that/core/Strings.hpp>
+
+#include <vkl/Generated/VulkanTypeStructHelper.hpp>
 
 namespace vkl
 {
@@ -52,6 +55,48 @@ namespace vkl
 		size_t creationTick() const
 		{
 			return _creation_tick;
+		}
+
+		static void RegisterName(VkApplication* app, VkObjectType type, uint64_t handle, const char* name);
+	};
+
+	template <class VkHandle>
+	class InstanceBase : public AbstractInstance
+	{
+	public:
+		using HandleType = VkHandle;
+		static constexpr const VkObjectType ObjectType = vku2::GetObjectType<HandleType>();
+	protected:
+
+		HandleType _handle = VK_NULL_HANDLE;
+
+	public:
+
+		template <that::concepts::StringLike StringLike>
+		constexpr InstanceBase(VkApplication* app, StringLike&& name = "", size_t create_tick = 0) :
+			AbstractInstance(app, std::forward<StringLike>(name), create_tick)
+		{
+
+		}
+
+		virtual void registerName(const char* name)
+		{
+			return RegisterName(application(), ObjectType, reinterpret_cast<uint64_t>(_handle), name);
+		}
+
+		void registerName()
+		{
+			return registerName(name().c_str());
+		}
+
+		constexpr HandleType handle() const
+		{
+			return _handle;
+		}
+
+		constexpr operator HandleType() const
+		{
+			return handle();
 		}
 	};
 
