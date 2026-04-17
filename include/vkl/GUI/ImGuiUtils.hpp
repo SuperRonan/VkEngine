@@ -417,6 +417,11 @@ namespace ImGui
 		ImGui::LabelValue(label, value, fmt.data());
 	}
 
+	static inline void LabelPointer(const char* label, const void* ptr)
+	{
+		return LabelHexValue(label, reinterpret_cast<uintptr_t>(ptr), true, false);
+	}
+
 	// const char* label
 	// bool bit (bit field bool, cannot be passed as ref to a regular function)
 	// returns true if changed, false otherwise
