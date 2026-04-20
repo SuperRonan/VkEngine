@@ -7,6 +7,11 @@
 
 namespace vkl
 {
+	namespace GUI
+	{
+		class SamplerInstanceInspector;
+		class SamplerInspector;
+	}
 	class SamplerInstance: public InstanceBase<VkSampler>
 	{
 	protected:
@@ -33,7 +38,11 @@ namespace vkl
 			return _ci;
 		}
 
+		using InspectorType = GUI::SamplerInstanceInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 
+		static constexpr const char* ClassName = "Sampler";
 	};
 
 	class Sampler : public InstanceHolder<SamplerInstance>
@@ -85,5 +94,8 @@ namespace vkl
 
 		static std::shared_ptr<Sampler> MakeBilinear(VkApplication* app = nullptr);
 
+		using InspectorType = GUI::SamplerInspector;
+		friend class InspectorType;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 	};
 }
