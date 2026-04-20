@@ -7,11 +7,11 @@
 
 namespace vkl
 {
-	class SamplerInstance: public AbstractInstance
+	class SamplerInstance: public InstanceBase<VkSampler>
 	{
 	protected:
+		using Parent = InstanceBase<VkSampler>;
 
-		VkSampler _sampler = VK_NULL_HANDLE;
 		VkSamplerCreateInfo _ci = {};
 
 	public:
@@ -33,20 +33,7 @@ namespace vkl
 			return _ci;
 		}
 
-		constexpr VkSampler handle()const
-		{
-			return sampler();
-		}
 
-		constexpr VkSampler sampler()const
-		{
-			return _sampler;
-		}
-
-		constexpr operator VkSampler()const
-		{
-			return sampler();
-		}
 	};
 
 	class Sampler : public InstanceHolder<SamplerInstance>

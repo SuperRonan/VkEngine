@@ -3,18 +3,19 @@
 namespace vkl
 {
 	SamplerInstance::SamplerInstance(CreateInfo const& ci) :
-		AbstractInstance(ci.app, ci.name),
+		Parent(ci.app, ci.name),
 		_ci(ci.vk_ci)
 	{
-		VK_CHECK(vkCreateSampler(device(), &_ci, nullptr, &_sampler), "Failed to create a sampler.");
+		VK_CHECK(vkCreateSampler(device(), &_ci, nullptr, &_handle), "Failed to create a sampler.");
+		registerName();
 	}
 
 	SamplerInstance::~SamplerInstance()
 	{
-		assert(_sampler != VK_NULL_HANDLE);
+		assert(_handle != VK_NULL_HANDLE);
 		callDestructionCallbacks();
-		vkDestroySampler(device(), _sampler, nullptr);
-		_sampler = VK_NULL_HANDLE;
+		vkDestroySampler(device(), _handle, nullptr);
+		_handle = VK_NULL_HANDLE;
 	}
 
 	Sampler::Sampler(CreateInfo const& ci) :
