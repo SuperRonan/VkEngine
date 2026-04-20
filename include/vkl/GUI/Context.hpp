@@ -18,6 +18,33 @@ namespace vkl::GUI
 		std::vector<Color> stack_colors;
 	};
 
+	enum class EnumStyle
+	{
+		Label = 0,
+		Decimal = 1,
+		Hexa = 2,
+		MAX_VALUE = Hexa,
+		Default = Label,
+	};
+
+	static inline const char* GetEnumStyleFormat(EnumStyle style)
+	{
+		const char* fmt = nullptr;
+		if (style == EnumStyle::Decimal)
+		{
+			fmt = "%d";
+		}
+		else if (style == EnumStyle::Hexa)
+		{
+			fmt = "0x%x";
+		}
+		return fmt;
+	}
+
+	extern EnumStyle CycleNextEnumStyle(EnumStyle es);
+
+	// p_style may be nullptr
+	extern bool DeclareEnumStyleButtonSwitch(EnumStyle* p_style);
 	struct TransientPayload
 	{
 		std::shared_ptr<VkObject> object;

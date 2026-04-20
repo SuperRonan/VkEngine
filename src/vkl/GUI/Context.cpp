@@ -20,6 +20,57 @@ namespace vkl::GUI
 		return res;
 	}();
 
+	const char* GetEnumStyleShortStr(EnumStyle es)
+	{
+		const char* res = nullptr;
+		
+		switch (es)
+		{
+			case EnumStyle::Label:
+				res = "STR";
+			break;
+			case EnumStyle::Decimal:
+				res = "123";
+			break;
+			case EnumStyle::Hexa:
+				res = "0xf";
+			break;
+			//case EnumStyle::Binary:
+			//	res = "0b1";
+			//break;
+		}
+		return res;
+	}
+
+	EnumStyle CycleNextEnumStyle(EnumStyle es)
+	{
+		return static_cast<EnumStyle>(
+			(static_cast<int>(es) + 1) % (static_cast<int>(EnumStyle::MAX_VALUE) + 1)
+		);
+	}
+
+	bool DeclareEnumStyleButtonSwitch(EnumStyle* p_style)
+	{
+		bool res = false;
+		EnumStyle style = p_style ? *p_style : EnumStyle::Default;
+		const char* style_str = GetEnumStyleShortStr(style);
+		ImGui::BeginDisabled(!p_style);
+		if (ImGui::SmallButton(style_str))
+		{
+			if (p_style)
+			{
+				*p_style = CycleNextEnumStyle(*p_style);
+				res = true;
+			}
+		}
+		if (ImGui::BeginItemTooltip())
+		{
+			ImGui::Text("Switch enum value preview.");
+			ImGui::EndTooltip();
+		}
+		ImGui::EndDisabled();
+		return res;
+	}
 
 
 	Context::Context(CreateInfo const& ci) :
