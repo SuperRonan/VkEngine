@@ -17,7 +17,7 @@ namespace vkl::GUI
 
 	struct VkBitFieldInspectOptions
 	{
-		
+		EnumStyle* style = nullptr;
 	};
 
 	template <concepts::VkFlagBits EnumFlagsBits>
@@ -59,8 +59,13 @@ namespace vkl::GUI
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type enabled_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1),
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1)
 	) {
-		return InspectVkBitField_Detail<EnumFlagsBits>(value, enabled_values, available_values);
+		VkBitFieldInspectOptions options{
+			.style = ctx.pEnumStyle(),
+		};
+		return InspectVkBitField_Detail<EnumFlagsBits>(value, enabled_values, available_values, &options);
 	}
+
+	
 
 	template <concepts::VkFlagBits EnumFlagsBits>
 	bool InspectVkBitField(
@@ -77,18 +82,38 @@ namespace vkl::GUI
 		{
 			return res;
 		}
-		std::string& as_str = impl::_str_tmp;
-		as_str = vku::GetFlagsStr<EnumFlagsBits>(*value);
-		ImGui::LabelText2(label, as_str.c_str());
+		EnumStyle* p_style = options ? options->style : nullptr;
+		EnumStyle style = p_style ? *p_style : EnumStyle::Default;
+		if (style == EnumStyle::Label)
+		{
+			std::string& as_str = impl::_str_tmp;
+			as_str = vku::GetFlagsStr<EnumFlagsBits>(*value);
+			ImGui::LabelText2(label, as_str.c_str());
+		}
+		else
+		{
+			ImGui::BeginDisabled(enabled_values == Underlying(0));
+			Underlying new_value = *value;
+			res |= ImGui::InputScalar(label, ImGui::GetDataType<Underlying>(), &new_value, nullptr, nullptr, GetEnumStyleFormat(style));
+			if (res)
+			{
+				Underlying diff = new_value ^ *value;
+				diff &= enabled_values;
+				*value ^= diff;
+			}
+			ImGui::EndDisabled();
+		}
 		ImGui::SameLine();
 		ImGui::PushID(label);
 		bool is_open = ImGui::ArrowFlipButton("Detail");
-		ImGui::PopID();
 		if (is_open)
 		{
 			InspectVkBitField_Detail<EnumFlagsBits>(value, enabled_values, available_values, options);
 			ImGui::Separator();
 		}
+		ImGui::SameLine();
+		DeclareEnumStyleButtonSwitch(p_style);
+		ImGui::PopID();
 		return res;
 	}
 
@@ -100,7 +125,10 @@ namespace vkl::GUI
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type enabled_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1),
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1)
 	) {
-		return InspectVkBitField<EnumFlagsBits>(label, value, enabled_values, available_values);
+		VkBitFieldInspectOptions options{
+			.style = ctx.pEnumStyle(),
+		};
+		return InspectVkBitField<EnumFlagsBits>(label, value, enabled_values, available_values, &options);
 	}
 
 	template <concepts::VkFlagBits EnumFlagsBits>
@@ -130,24 +158,41 @@ namespace vkl::GUI
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type const& value,
 		typename VkFlagBitsUnderlying<EnumFlagsBits>::type available_values = typename VkFlagBitsUnderlying<EnumFlagsBits>::type(-1)
 	) {
-		return InspectVkBitField<EnumFlagsBits>(label, value, available_values);
+		VkBitFieldInspectOptions options{
+				.style = ctx.pEnumStyle(),
+		};
+		return InspectVkBitField<EnumFlagsBits>(label, value, available_values, &options);
 	}
 
 	template <concepts::VkRawEnum Enum>
-	bool InspectVkEnum(const char* label, Enum const& value)
+	bool InspectVkEnum(const char* label, Enum const& value, EnumStyle* p_style = nullptr)
 	{
-		using MetaInfo = ::vku::EnumMetaInfo<Enum>;
-		const char* value_txt = MetaInfo::GetValueName(value);
-		if (value_txt)
+		using Underlying = typename std::underlying_type<Enum>::type;
+		static_assert(sizeof(Underlying) == 4);
+		EnumStyle style = p_style ? *p_style : EnumStyle::Default;
+		if (style == EnumStyle::Label)
 		{
-			ImGui::LabelText2(label, value_txt);
+			using MetaInfo = ::vku::EnumMetaInfo<Enum>;
+			const char* value_txt = MetaInfo::GetValueName(value);
+			if (value_txt)
+			{
+				ImGui::LabelText2(label, value_txt);
+			}
+			else
+			{
+				const char* fmt = "Unknown Value (%d)";
+				ImGui::LabelValue(label, Underlying(value), fmt);
+			}
 		}
 		else
 		{
-			using Underlying = typename std::underlying_type<Enum>::type;
-			static_assert(sizeof(Underlying) == 4);
-			const char* fmt = "Unknown Value (%d)";
-			ImGui::LabelValue(label, Underlying(value), fmt);
+			ImGui::LabelValue(label, static_cast<Underlying>(value), GetEnumStyleFormat(style));
+		}
+		{
+			ImGui::SameLine();
+			ImGui::PushID(label);
+			DeclareEnumStyleButtonSwitch(p_style);
+			ImGui::PopID();
 		}
 		return false;
 	}
@@ -155,7 +200,7 @@ namespace vkl::GUI
 	template <concepts::VkRawEnum Enum>
 	bool InspectVkEnum(Context& ctx, const char* label, Enum const& value)
 	{
-		return InspectVkEnum(label, value);
+		return InspectVkEnum(label, value, ctx.pEnumStyle());
 	}
 
 	template <concepts::VkRawEnum Enum>
