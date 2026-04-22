@@ -30,32 +30,20 @@ namespace vkl
 
 	size_t DescriptorSetAndPoolInstance::findBindingIndex(uint32_t b)const
 	{
-		size_t begin = 0, end = _bindings.size();
-		size_t res = end / 2;
-		while (true)
+		size_t res2;
+		auto found = std::lower_bound(_bindings.begin(), _bindings.end(), b, [](ResourceBinding const& rb, uint32_t b) {return rb.resolved_binding < b; });
+		if (found == _bindings.end())
 		{
-			const uint32_t rb = _bindings[res].resolved_binding;
-			assert(rb != uint32_t(-1));
-			if (rb == b)
-			{
-				break;
-			}
-			else if (b < rb)
-			{
-				end = res;
-			}
-			else
-			{
-				begin = res + 1;
-			}
-			if (begin == end)
-			{
-				res = -1;
-				break;
-			}
-			res = begin + (end - begin) / 2;
+			return -1;
 		}
-		return res;
+		else if (found->resolved_binding != b)
+		{
+			return -1;
+		}
+		else
+		{
+			return found - _bindings.begin();
+		}
 	}
 
 	void DescriptorSetAndPoolInstance::sortBindings()
