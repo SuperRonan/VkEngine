@@ -19,6 +19,15 @@ namespace vkl
 		}
 	}
 
+	AbstractInstanceHolder::AbstractInstanceHolder(std::shared_ptr<AbstractInstance> const& instance):
+		VkObject(instance->application(), std::format("{}.StaticDescriptor", instance->name())),
+		_latest_update_tick(instance->creationTick()),
+		_latest_update_res(UpdateResourcesResult{.holds_instance = true, .invalidated = false, .created = true, .cached = true,}),
+		_instance(instance)
+	{
+
+	}
+
 	void AbstractInstanceHolder::callInvalidationCallbacks()
 	{
 		std::unique_lock lock(_mutex);

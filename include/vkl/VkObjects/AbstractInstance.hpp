@@ -17,13 +17,13 @@ namespace vkl
 		size_t _creation_tick = {};
 		std::vector<Callback> _destruction_callbacks = {};
 
-	public:
-
-		template <class StringLike>
+		template <that::concepts::StringLike StringLike>
 		constexpr AbstractInstance(VkApplication* app, StringLike&& name = "", size_t creation_tick = 0) :
 			VkObject(app, std::forward<StringLike>(name)),
 			_creation_tick(creation_tick)
 		{}
+
+	public:
 
 		virtual ~AbstractInstance() override
 		{}
@@ -70,14 +70,15 @@ namespace vkl
 
 		HandleType _handle = VK_NULL_HANDLE;
 
-	public:
-
 		template <that::concepts::StringLike StringLike>
 		constexpr InstanceBase(VkApplication* app, StringLike&& name = "", size_t create_tick = 0) :
 			AbstractInstance(app, std::forward<StringLike>(name), create_tick)
 		{
 
 		}
+
+	public:
+
 
 		virtual void registerName(const char* name)
 		{
@@ -125,15 +126,19 @@ namespace vkl
 
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res);
 
-	public:
-
-		template <class StringLike>
+		template <that::concepts::StringLike StringLike>
 		constexpr AbstractInstanceHolder(VkApplication * app, StringLike && name, Dyn<bool> const& hold_instance) :
 			VkObject(app, std::forward<StringLike>(name)),
 			_hold_instance(hold_instance)
 		{
 			hold_instance.valueOr(true);
 		}
+
+		// Create a static holder to the instance
+		AbstractInstanceHolder(std::shared_ptr<AbstractInstance> const& instance);
+
+	public:
+
 
 		virtual ~AbstractInstanceHolder() override;
 
@@ -193,14 +198,21 @@ namespace vkl
 	{
 	protected:
 
-	public:
-
-		using InstanceType = Instance;
-
 		template <that::concepts::StringLike StringLike>
 		constexpr InstanceHolder(VkApplication* app, StringLike&& name, Dyn<bool> const& hold_instance) :
 			AbstractInstanceHolder(app, std::forward<StringLike>(name), hold_instance)
 		{}
+
+		InstanceHolder(Instance* other):
+			AbstractInstanceHolder(other)
+		{
+
+		}
+
+	public:
+
+		using InstanceType = Instance;
+
 
 		Instance* instance() const
 		{
