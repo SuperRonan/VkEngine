@@ -224,4 +224,53 @@ namespace vkl
 			return std::reinterpret_pointer_downcast<Instance>(_instance);
 		}
 	};
+
+	template <std::derived_from<AbstractInstanceHolder> Descriptor>
+	using DescriptorOrInstanceRawPointer = RawPointerVariant<Descriptor, typename Descriptor::InstanceType>;
+	
+	template <std::derived_from<AbstractInstanceHolder> Descriptor>
+	using DescriptorOrInstanceUniquePointer = UniquePointerVariant<Descriptor, typename Descriptor::InstanceType>;
+
+	template <std::derived_from<AbstractInstanceHolder> Descriptor>
+	using DescriptorOrInstanceSharedPointer = SharedPointerVariant<Descriptor, typename Descriptor::InstanceType>;
+
+	template <std::derived_from<AbstractInstanceHolder> Descriptor>
+	using DescriptorOrInstanceWeakPointer = WeakPointerVariant<Descriptor, typename Descriptor::InstanceType>;
+
+	template <template <class> class _Pointer, std::derived_from<AbstractInstanceHolder> Descriptor>
+	using DescriptorOrInstanceGenPointer = GenPointerVariant<_Pointer, Descriptor, typename Descriptor::InstanceType>;
+
+#define VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS_2(Name, Desc) \
+	using Name##OrInstanceRawPointer = DescriptorOrInstanceRawPointer<Desc>;\
+	using Name##OrInstanceUniquePointer = DescriptorOrInstanceUniquePointer<Desc>;\
+	using Name##OrInstanceSharedPointer = DescriptorOrInstanceSharedPointer<Desc>;\
+	using Name##OrInstanceWeakPointer = DescriptorOrInstanceWeakPointer<Desc>;\
+	template <template <class> class _Pointer> \
+	using Name##OrInstancePointer = DescriptorOrInstanceGenPointer<_Pointer, Desc>;
+
+#define VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS(Desc) VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS_2(Desc, Desc)
+
+	template <std::derived_from<AbstractInstanceHolder> Descriptor>
+	typename Descriptor::InstanceType* GetInstance(DescriptorOrInstanceRawPointer<Descriptor> ptr)
+	{
+		assert(ptr);
+		return ptr.visit(std::overloads{
+			[](Descriptor& desc){return desc.instance();},
+			[](typename Descriptor::InstanceType& inst){return &inst;}
+		});
+	}
+
+	template <std::derived_from<AbstractInstanceHolder> Descriptor>
+	std::shared_ptr<typename Descriptor::InstanceType> const& GetInstance(DescriptorOrInstanceSharedPointer<Descriptor> const& ptr)
+	{
+		assert(ptr);
+		if (Descriptor* d = ptr.is<Descriptor>())
+		{
+			return d->instancePtr();
+		}
+		else
+		{
+			ptr.reinterpretAs<typename Descriptor::InstanceType>();
+		}
+	}
 }

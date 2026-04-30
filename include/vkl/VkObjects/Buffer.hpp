@@ -271,6 +271,8 @@ namespace vkl
 		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 	};
 
+	VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS(Buffer)
+
 	struct BufferAndRangeInstance
 	{
 		std::shared_ptr<BufferInstance> buffer = {};
@@ -317,4 +319,26 @@ namespace vkl
 		}
 	};
 	using BufferSegment = BufferAndRange;
+
+	struct BufferOrInstanceAndRange
+	{
+		using InstanceType = BufferAndRangeInstance;
+		BufferOrInstanceSharedPointer buffer = {};
+		Dyn<Buffer::Range> range = {};
+
+		BufferAndRangeInstance getInstance() const
+		{
+			BufferAndRangeInstance res = {};
+			if (buffer)	res.buffer = GetInstance(buffer);
+			if (range.hasValue())	res.range = range.value();
+			return res;
+		}
+
+		operator bool()const
+		{
+			return buffer.operator bool();
+		}
+	};
+	using BufferOrInstanceSegment = BufferOrInstanceAndRange;
+	
 }

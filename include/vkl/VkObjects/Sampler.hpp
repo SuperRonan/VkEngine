@@ -98,4 +98,6 @@ namespace vkl
 		friend class InspectorType;
 		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
 	};
+
+	VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS(Sampler)
 }

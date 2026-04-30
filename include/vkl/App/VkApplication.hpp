@@ -21,7 +21,7 @@
 
 #include <vkl/Execution/DefinitionMap.hpp>
 
-#include <that/utils/EnumClassOperators.hpp>
+#include <that/utils/PointerDynamicVariant.hpp>
 
 #include <slang/slang-com-ptr.h>
 
@@ -601,4 +601,19 @@ namespace vkl
 
 		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx);
 	};
+
+	template <std::derived_from<VkObject>... Derived>
+	using RawPointerVariant = that::RawPointerDynamicVariant<VkObject, Derived...>;
+
+	template <std::derived_from<VkObject>... Derived>
+	using UniquePointerVariant = that::UniquePointerDynamicVariant<VkObject, Derived...>;
+
+	template <std::derived_from<VkObject>... Derived>
+	using SharedPointerVariant = that::SharedPointerDynamicVariant<VkObject, Derived...>;
+
+	template <std::derived_from<VkObject>... Derived>
+	using WeakPointerVariant = that::WeakPointerDynamicVariant<VkObject, Derived...>;
+
+	template <template <class> class _Pointer, std::derived_from<VkObject>... Derived>
+	using GenPointerVariant = that::PointerDynamicVariant<_Pointer, VkObject, Derived...>;
 }
