@@ -60,29 +60,30 @@ namespace vkl
 		static void RegisterName(VkApplication* app, VkObjectType type, uint64_t handle, const char* name);
 	};
 
-	template <class VkHandle>
-	class InstanceBase : public AbstractInstance
+	class AbstractVulkanInstance : public AbstractInstance
 	{
 	public:
-		using HandleType = VkHandle;
-		static constexpr const VkObjectType ObjectType = vku2::GetObjectType<HandleType>();
+
+		using Parent = AbstractInstance;
+
 	protected:
 
-		HandleType _handle = VK_NULL_HANDLE;
+		void* _handle = VK_NULL_HANDLE;
 
 		template <that::concepts::StringLike StringLike>
-		constexpr InstanceBase(VkApplication* app, StringLike&& name = "", size_t create_tick = 0) :
-			AbstractInstance(app, std::forward<StringLike>(name), create_tick)
+		constexpr AbstractVulkanInstance(VkApplication* app, StringLike&& name = "", size_t create_tick = 0) :
+			Parent(app, std::forward<StringLike>(name), create_tick)
 		{
 
 		}
 
 	public:
 
+		virtual VkObjectType objectType() = 0;
 
-		virtual void registerName(const char* name)
+		void registerName(const char* name)
 		{
-			return RegisterName(application(), ObjectType, reinterpret_cast<uint64_t>(_handle), name);
+			return RegisterName(application(), objectType(), reinterpret_cast<uint64_t>(_handle), name);
 		}
 
 		void registerName()
@@ -90,12 +91,52 @@ namespace vkl
 			return registerName(name().c_str());
 		}
 
-		constexpr HandleType handle() const
+		constexpr void* handle() const
 		{
 			return _handle;
 		}
 
-		constexpr operator HandleType() const
+		constexpr void*& handle()
+		{
+			return _handle;
+		}
+	};
+
+	template <class VkHandle>
+	class InstanceBase : public AbstractVulkanInstance
+	{
+	public:
+		using Parent = AbstractVulkanInstance;
+		using HandleType = VkHandle;
+		static constexpr const VkObjectType ObjectType = vku2::GetObjectType<HandleType>();
+	protected:
+
+		template <that::concepts::StringLike StringLike>
+		constexpr InstanceBase(VkApplication* app, StringLike&& name = "", size_t create_tick = 0) :
+			Parent(app, std::forward<StringLike>(name), create_tick)
+		{
+
+		}
+
+	public:
+
+
+		virtual VkObjectType objectType() override
+		{
+			return ObjectType;
+		}
+
+		HandleType handle() const
+		{
+			return reinterpret_cast<HandleType>(_handle);
+		}
+
+		HandleType& handle()
+		{
+			return reinterpret_cast<HandleType&>(_handle);
+		}
+
+		operator HandleType() const
 		{
 			return handle();
 		}

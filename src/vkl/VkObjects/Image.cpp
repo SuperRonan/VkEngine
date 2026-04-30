@@ -39,22 +39,22 @@ namespace vkl
 
 	void ImageInstance::create()
 	{
-		assert(_handle == VK_NULL_HANDLE);
+		assert(handle() == VK_NULL_HANDLE);
 
-		VK_CHECK(vmaCreateImage(_app->allocator(), &_ci, &_vma_ci, &_handle, &_alloc, nullptr), "Failed to create an image.");
+		VK_CHECK(vmaCreateImage(_app->allocator(), &_ci, &_vma_ci, &handle(), &_alloc, nullptr), "Failed to create an image.");
 
 		registerName();
 	}
 
 	void ImageInstance::destroy()
 	{
-		assert(_handle != VK_NULL_HANDLE);
+		assert(handle() != VK_NULL_HANDLE);
 
 		callDestructionCallbacks();
 
 		if (ownership())
 		{
-			vmaDestroyImage(_app->allocator(), _handle, _alloc);
+			vmaDestroyImage(_app->allocator(), handle(), _alloc);
 		}
 
 		_handle = VK_NULL_HANDLE;
