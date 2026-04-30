@@ -244,7 +244,7 @@ namespace vkl
 			AbstractInstanceHolder(app, std::forward<StringLike>(name), hold_instance)
 		{}
 
-		InstanceHolder(Instance* other):
+		InstanceHolder(std::shared_ptr<Instance> const& other):
 			AbstractInstanceHolder(other)
 		{
 
