@@ -2,9 +2,6 @@
 
 #include <vkl/App/VkApplication.hpp>
 #include "AbstractInstance.hpp"
-#include <cassert>
-#include <array>
-#include <format>
 #include <vkl/Core/DynamicValue.hpp>
 #include <vkl/Execution/UpdateContext.hpp>
 #include <atomic>
@@ -56,6 +53,7 @@ namespace vkl
 		static std::atomic<size_t> _instance_counter;
 
 		VkImageCreateInfo _ci = {};
+		MyVector<uint32_t> _queues = {};
 		VmaAllocationCreateInfo _vma_ci = {};
 
 		VmaAllocation _alloc = nullptr;
@@ -84,6 +82,8 @@ namespace vkl
 
 		bool statesAreSorted(size_t tid) const;
 
+		void setQueues();
+
 	public:
 
 		ImageInstance(CreateInfo const& ci);
@@ -104,6 +104,12 @@ namespace vkl
 		{
 			return _ci;
 		}
+
+		constexpr MyVector<uint32_t> const& queues() const
+		{
+			return _queues;
+		}
+
 
 		constexpr VmaAllocationCreateInfo const& allocationInfo()const
 		{
@@ -180,22 +186,14 @@ namespace vkl
 			Dyn<VkSampleCountFlagBits> samples = VK_SAMPLE_COUNT_1_BIT;
 			VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 			VkImageUsageFlags usage = 0;
-			std::vector<uint32_t> queues = {};
+			MyVector<uint32_t> queues = {};
 			VmaMemoryUsage mem_usage = VMA_MEMORY_USAGE_GPU_ONLY;
 			VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			bool create_on_construct = false;
 			Dyn<bool> hold_instance = true;
 		};
 
-		struct AssociateInfo
-		{
-			std::shared_ptr<ImageInstance> instance;
-			Dyn<VkFormat> format;
-			Dyn<VkExtent3D> extent;
-		};
-
 		using CI = CreateInfo;
-		using AI = AssociateInfo;
 
 		static constexpr uint32_t howManyMips(uint32_t dims, VkExtent3D const& extent)
 		{
@@ -219,8 +217,6 @@ namespace vkl
 			return howManyMips(((uint32_t)type) + 1, extent);
 		}
 
-		void associateImage(AssociateInfo const& assos);
-
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
 
 		virtual void destroyInstanceIFN() override;
@@ -236,7 +232,7 @@ namespace vkl
 		Dyn<VkSampleCountFlagBits> _samples = VK_SAMPLE_COUNT_1_BIT;
 		VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
 		VkImageUsageFlags _usage = 0;
-		std::vector<uint32_t> _queues = {};
+		MyVector<uint32_t> _queues = {};
 		VkSharingMode _sharing_mode = VK_SHARING_MODE_MAX_ENUM;
 		VkImageLayout _initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -248,7 +244,7 @@ namespace vkl
 
 		Image(CreateInfo const& ci);
 
-		Image(AssociateInfo const& assos);
+		Image(std::shared_ptr<ImageInstance> const& inst);
 
 		virtual ~Image() override {};
 

@@ -49,12 +49,7 @@ namespace vkl
 			};
 
 			std::shared_ptr<ImageInstance> inst = std::make_shared<ImageInstance>(instance_assos);
-			Image::AssociateInfo assos{
-				.instance = inst,
-				.format = _ci.imageFormat,
-				.extent = extend(_ci.imageExtent, 1),
-			};
-			_images[i] = std::make_shared<Image>(assos);
+			_images[i] = std::make_shared<Image>(inst);
 			_views[i] = std::make_shared<ImageView>(ImageView::CI{
 				.name = name() + ".view_" + std::to_string(i),
 				.image = _images[i],

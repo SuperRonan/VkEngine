@@ -78,12 +78,24 @@ namespace vkl
 		return true;
 	}
 
+	void ImageInstance::setQueues()
+	{
+		if (_ci.queueFamilyIndexCount == 0)
+		{
+			_ci.pQueueFamilyIndices = nullptr;
+		}
+		std::span<const uint32_t> queues(_ci.pQueueFamilyIndices, _ci.queueFamilyIndexCount);
+		_queues.assign(queues.begin(), queues.end());
+		_ci.pQueueFamilyIndices = _queues.data();
+	}
+
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
 		Parent(ci.app, ci.name, ci.tick),
 		_ci(ci.ci),
 		_vma_ci(ci.aci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
+		setQueues();
 		create();
 		setInitialState(0);
 	}
@@ -93,6 +105,7 @@ namespace vkl
 		_ci(ai.ci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
+		setQueues();
 		_handle = ai.image;
 		registerName();
 		setInitialState(0);
@@ -343,10 +356,23 @@ namespace vkl
 			createInstance();
 	}
 
-	Image::Image(AssociateInfo const& assos):
-		Parent(assos.instance->application(), assos.instance->name(), true)
+	Image::Image(std::shared_ptr<ImageInstance> const& inst) :
+		Parent(inst)
 	{
-		associateImage(assos);
+		const VkImageCreateInfo& ci = instance()->createInfo();
+		_flags = ci.flags;
+		_type = ci.imageType;
+		_format = ci.format;
+		_extent = ci.extent;
+		_mips = ci.mipLevels;
+		_layers = ci.arrayLayers;
+		_samples = ci.samples;
+		_tiling = ci.tiling;
+		_usage = ci.usage;
+		_queues = instance()->queues();
+		_sharing_mode = ci.sharingMode;
+		_initial_layout = ci.initialLayout;
+		_mem_usage = instance()->allocationInfo().usage;
 	}
 
 	void Image::destroyInstanceIFN()
@@ -417,27 +443,6 @@ namespace vkl
 			.ci = image_ci,
 			.aci = alloc,
 		});
-	}
-
-	void Image::associateImage(AssociateInfo const& assos)
-	{
-		assert(!_instance);
-		_app = assos.instance->application();
-		_instance = assos.instance;
-		if (!assos.instance->name().empty())
-			_name = assos.instance->name().empty();
-
-		_type = assos.instance->createInfo().imageType;
-		_format = assos.format;
-		_extent = assos.extent;
-		_mips = assos.instance->createInfo().mipLevels;
-		_layers = assos.instance->createInfo().arrayLayers; // TODO Check if the swapchain can support multi layered images (VR)
-		_samples = assos.instance->createInfo().samples;
-		_usage = assos.instance->createInfo().usage;
-		_queues = std::vector<uint32_t>(assos.instance->createInfo().pQueueFamilyIndices, assos.instance->createInfo().pQueueFamilyIndices + assos.instance->createInfo().queueFamilyIndexCount);
-		_sharing_mode = (_queues.size() <= 1) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-		_mem_usage = assos.instance->allocationInfo().usage;
-		_initial_layout = VK_IMAGE_LAYOUT_UNDEFINED; // In which layout are created swapchain images?+
 	}
 
 
