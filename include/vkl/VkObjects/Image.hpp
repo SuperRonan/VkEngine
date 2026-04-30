@@ -17,9 +17,13 @@ namespace vkl
 		class ImageInstanceInspector;
 		class ImageInspector;
 	}
-	class ImageInstance : public AbstractInstance
+	class ImageInstance : public InstanceBase<VkImage>
 	{
 	public:
+
+		using Parent = InstanceBase<VkImage>;
+
+		static constexpr const char* ClassName = "Image";
 
 		struct CreateInfo
 		{
@@ -55,7 +59,6 @@ namespace vkl
 		VmaAllocationCreateInfo _vma_ci = {};
 
 		VmaAllocation _alloc = nullptr;
-		VkImage _image = VK_NULL_HANDLE;
 		size_t _unique_id = 0;
 
 		struct InternalStates
@@ -72,9 +75,6 @@ namespace vkl
 		};
 
 		std::HMap<size_t, InternalStates> _states = {};
-
-
-		void setVkNameIFP();
 
 		void create();
 
@@ -108,21 +108,6 @@ namespace vkl
 		constexpr VmaAllocationCreateInfo const& allocationInfo()const
 		{
 			return _vma_ci;
-		}
-
-		constexpr auto handle()const
-		{
-			return _image;
-		}
-
-		constexpr VkImage image()const
-		{
-			return _image;
-		}
-
-		constexpr operator VkImage()const
-		{
-			return _image;
 		}
 
 		constexpr VmaAllocation alloc()const
@@ -178,7 +163,9 @@ namespace vkl
 	{
 	public:
 
-		constexpr static uint32_t ALL_MIPS = uint32_t(-1);
+		using Parent = InstanceHolder<ImageInstance>;
+
+		constexpr static const uint32_t ALL_MIPS = uint32_t(-1);
 
 		struct CreateInfo
 		{

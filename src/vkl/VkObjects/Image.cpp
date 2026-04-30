@@ -10,21 +10,6 @@ namespace vkl
 {
 	std::atomic<size_t> ImageInstance::_instance_counter = 0;
 
-	void ImageInstance::setVkNameIFP()
-	{
-		if (!name().empty())
-		{
-			VkDebugUtilsObjectNameInfoEXT object_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = VK_OBJECT_TYPE_IMAGE,
-				.objectHandle = (uint64_t)_image,
-				.pObjectName = _name.data(),
-			};
-			_app->nameVkObjectIFP(object_name);
-		}
-	}
-
 	void ImageInstance::setInitialState(size_t tid)
 	{
 		_states[tid] = InternalStates();
@@ -54,25 +39,25 @@ namespace vkl
 
 	void ImageInstance::create()
 	{
-		assert(_image == VK_NULL_HANDLE);
+		assert(_handle == VK_NULL_HANDLE);
 
-		VK_CHECK(vmaCreateImage(_app->allocator(), &_ci, &_vma_ci, &_image, &_alloc, nullptr), "Failed to create an image.");
+		VK_CHECK(vmaCreateImage(_app->allocator(), &_ci, &_vma_ci, &_handle, &_alloc, nullptr), "Failed to create an image.");
 
-		setVkNameIFP();
+		registerName();
 	}
 
 	void ImageInstance::destroy()
 	{
-		assert(_image != VK_NULL_HANDLE);
+		assert(_handle != VK_NULL_HANDLE);
 
 		callDestructionCallbacks();
 
 		if (ownership())
 		{
-			vmaDestroyImage(_app->allocator(), _image, _alloc);
+			vmaDestroyImage(_app->allocator(), _handle, _alloc);
 		}
 
-		_image = VK_NULL_HANDLE;
+		_handle = VK_NULL_HANDLE;
 		_alloc = nullptr;
 	}
 
@@ -94,7 +79,7 @@ namespace vkl
 	}
 
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
-		AbstractInstance(ci.app, ci.name, ci.tick),
+		Parent(ci.app, ci.name, ci.tick),
 		_ci(ci.ci),
 		_vma_ci(ci.aci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
@@ -104,18 +89,18 @@ namespace vkl
 	}
 
 	ImageInstance::ImageInstance(AssociateInfo const& ai) :
-		AbstractInstance(ai.app, ai.name, ai.tick),
+		Parent(ai.app, ai.name, ai.tick),
 		_ci(ai.ci),
-		_image(ai.image),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
-		setVkNameIFP();
+		_handle = ai.image;
+		registerName();
 		setInitialState(0);
 	}
 
 	ImageInstance::~ImageInstance()
 	{
-		if (!!_image)
+		if (!!_handle)
 		{
 			destroy();
 		}
@@ -339,7 +324,7 @@ namespace vkl
 
 
 	Image::Image(CreateInfo const& ci) : 
-		InstanceHolder<ImageInstance>(ci.app, ci.name, ci.hold_instance),
+		Parent(ci.app, ci.name, ci.hold_instance),
 		_flags(ci.flags),
 		_type(ci.type),
 		_format(ci.format),
@@ -359,7 +344,7 @@ namespace vkl
 	}
 
 	Image::Image(AssociateInfo const& assos):
-		InstanceHolder<ImageInstance>(assos.instance->application(), assos.instance->name(), true)
+		Parent(assos.instance->application(), assos.instance->name(), true)
 	{
 		associateImage(assos);
 	}
