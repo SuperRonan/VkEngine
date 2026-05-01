@@ -4,6 +4,8 @@
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
 
+#include <format>
+
 namespace vkl
 {
 	std::atomic<size_t> ImageViewInstance::_instance_counter = 0;
@@ -11,37 +13,22 @@ namespace vkl
 	void ImageViewInstance::create()
 	{
 		_ci.image = *_image;
-		VK_CHECK(vkCreateImageView(_app->device(), &_ci, nullptr, &_view), "Failed to create an image view.");
+		VK_CHECK(vkCreateImageView(_app->device(), &_ci, nullptr, &handle()), "Failed to create an image view.");
 
-		setVkNameIFP();
-	}
-
-	void ImageViewInstance::setVkNameIFP()
-	{
-		if (!name().empty())
-		{
-			VkDebugUtilsObjectNameInfoEXT view_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-				.objectHandle = (uint64_t)_view,
-				.pObjectName = name().c_str(),
-			};
-			_app->nameVkObjectIFP(view_name);
-		}
+		registerName();
 	}
 
 	void ImageViewInstance::destroy()
 	{
-		assert(!!_view);
+		assert(!!handle());
 		callDestructionCallbacks();
-		vkDestroyImageView(_app->device(), _view, nullptr);
-		_view = VK_NULL_HANDLE;
+		vkDestroyImageView(_app->device(), handle(), nullptr);
+		handle() = VK_NULL_HANDLE;
 		_image = nullptr;
 	}
 
 	ImageViewInstance::ImageViewInstance(CreateInfo const& ci):
-		AbstractInstance(ci.app, ci.name, ci.tick),
+		Parent(ci.app, ci.name, ci.tick),
 		_image(ci.image),
 		_ci(ci.ci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
@@ -49,9 +36,27 @@ namespace vkl
 		create();
 	}
 
+	ImageViewInstance::ImageViewInstance(std::shared_ptr<ImageInstance> const& image) :
+		Parent(image->application(), std::format("{}.View", image->name()), image->creationTick()),
+		_image(image),
+		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
+	{
+		VkImageCreateInfo const& image_ci = _image->createInfo();
+		_ci = VkImageViewCreateInfo{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.image = _image->handle(),
+			.viewType = getDefaultViewTypeFromImageType(image_ci.imageType),
+			.format = image_ci.format,
+			.components = defaultComponentMapping(),
+			.subresourceRange = _image->defaultSubresourceRange(),
+		};
+	}
+
 	ImageViewInstance::~ImageViewInstance()
 	{
-		if (!!_view)
+		if (!!handle())
 		{
 			destroy();
 		}
@@ -99,7 +104,7 @@ namespace vkl
 	}
 
 	ImageView::ImageView(CreateInfo const& ci) :
-		InstanceHolder<ImageViewInstance>((ci.app ? ci.app : ci.image->application()), ci.name, ci.hold_instance),
+		Parent((ci.app ? ci.app : ci.image->application()), ci.name, ci.hold_instance),
 		_image(ci.image),
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format.hasValue() ? ci.format : _image->format()),
@@ -110,7 +115,7 @@ namespace vkl
 	}
 
 	ImageView::ImageView(Image::CreateInfo const& ci):
-		InstanceHolder<ImageViewInstance>(ci.app, ci.name, ci.hold_instance),
+		Parent(ci.app, ci.name, ci.hold_instance),
 		_image(std::make_shared<Image>(ci)),
 		_type(getDefaultViewTypeFromImageType(_image->type())),
 		_format(_image->format()),
@@ -119,6 +124,22 @@ namespace vkl
 	{
 		constructorBody(ci.create_on_construct);
 	}
+
+	ImageView::ImageView(std::shared_ptr<ImageViewInstance> const& inst) :
+		Parent(inst),
+		_image(std::make_shared<Image>(instance()->image())),
+		_type(instance()->createInfo().viewType),
+		_format(instance()->createInfo().format),
+		_components(instance()->createInfo().components),
+		_range(instance()->createInfo().subresourceRange)
+	{
+
+	}
+
+	ImageView::ImageView(std::shared_ptr<ImageInstance> const& image_inst) :
+		ImageView(std::make_shared<ImageViewInstance>(image_inst))
+	{}
+
 
 
 	void ImageView::updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res)

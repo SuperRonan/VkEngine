@@ -2,8 +2,6 @@
 
 #include <vkl/App/VkApplication.hpp>
 #include "Image.hpp"
-#include <array>
-#include <optional>
 
 namespace vkl
 {
@@ -12,9 +10,13 @@ namespace vkl
 		class ImageViewInstanceInspector;
 		class ImageViewInspector;
 	}
-	class ImageViewInstance : public AbstractInstance
+	class ImageViewInstance : public InstanceBase<VkImageView>
 	{
 	public:
+
+		using Parent = InstanceBase<VkImageView>;
+
+		static constexpr const char* ClassName = "Image View";
 
 		struct CreateInfo
 		{
@@ -34,15 +36,11 @@ namespace vkl
 
 		VkImageViewCreateInfo _ci = {};
 
-		VkImageView _view = VK_NULL_HANDLE;
-
 		size_t _unique_id = 0;
 
 		void create();
 
 		void destroy();
-
-		void setVkNameIFP();
 
 	public:
 
@@ -57,24 +55,11 @@ namespace vkl
 
 		ImageViewInstance(CreateInfo const& ci);
 
+		ImageViewInstance(std::shared_ptr<ImageInstance> const& image);
+
 		virtual ~ImageViewInstance();
 
-		constexpr VkImageView view()const
-		{
-			return _view;
-		}
-
-		constexpr auto handle()const
-		{
-			return view();
-		}
-
-		constexpr operator VkImageView()const
-		{
-			return view();
-		}
-
-		auto image()const
+		std::shared_ptr<ImageInstance> const& image()const
 		{
 			return _image;
 		}
@@ -123,6 +108,8 @@ namespace vkl
 	{
 	public:
 
+		using Parent = InstanceHolder<ImageViewInstance>;
+
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;
@@ -156,6 +143,10 @@ namespace vkl
 		ImageView(CreateInfo const& ci);
 
 		ImageView(Image::CreateInfo const& ci);
+
+		ImageView(std::shared_ptr<ImageViewInstance> const& inst);
+
+		ImageView(std::shared_ptr<ImageInstance> const& image_inst);
 
 		virtual ~ImageView() override;
 
