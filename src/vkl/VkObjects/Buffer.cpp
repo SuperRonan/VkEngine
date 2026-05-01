@@ -12,13 +12,14 @@ namespace vkl
 	std::atomic<size_t> BufferInstance::_instance_counter = 0;
 
 	BufferInstance::BufferInstance(CreateInfo const& ci) :
-		AbstractInstance(ci.app, ci.name),
+		Parent(ci.app, ci.name),
 		_ci(ci.ci),
 		_aci(ci.aci),
 		_min_align(ci.min_align),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1)),
 		_allocator(ci.allocator)
 	{
+		setQueues();
 		create();
 	}
 
@@ -28,6 +29,17 @@ namespace vkl
 		{
 			destroy();
 		}
+	}
+
+	void BufferInstance::setQueues()
+	{
+		if (_ci.queueFamilyIndexCount == 0)
+		{
+			_ci.pQueueFamilyIndices = nullptr;
+		}
+		std::span<const uint32_t> queues(_ci.pQueueFamilyIndices, _ci.queueFamilyIndexCount);
+		_queues.assign(queues.begin(), queues.end());
+		_ci.pQueueFamilyIndices = _queues.data();
 	}
 
 	void BufferInstance::create()
@@ -49,7 +61,7 @@ namespace vkl
 
 		_states[0] = std::move(is);
 
-		setVkName();
+		registerName();
 
 
 		if (_ci.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
@@ -77,21 +89,6 @@ namespace vkl
 		vmaDestroyBuffer(_allocator, _buffer, _alloc);
 		_buffer = VK_NULL_HANDLE;
 		_alloc = VMA_NULL;
-	}
-
-	void BufferInstance::setVkName()
-	{
-		if (!name().empty())
-		{
-			VkDebugUtilsObjectNameInfoEXT buffer_name = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = VK_OBJECT_TYPE_BUFFER,
-				.objectHandle = (uint64_t)_buffer,
-				.pObjectName = name().c_str(),
-			};
-			_app->nameVkObjectIFP(buffer_name);
-		}
 	}
 
 	bool BufferInstance::statesAreSorted(size_t tid) const
@@ -285,7 +282,7 @@ namespace vkl
 	}
 
 	Buffer::Buffer(CreateInfo const& ci) :
-		InstanceHolder<BufferInstance>(ci.app, ci.name, ci.hold_instance),
+		Parent(ci.app, ci.name, ci.hold_instance),
 		_size(ci.size),
 		_min_align(ci.min_align),
 		_usage(ci.usage),
@@ -298,6 +295,19 @@ namespace vkl
 		{
 			createInstance();
 		}
+	}
+
+	Buffer::Buffer(std::shared_ptr<BufferInstance> const& inst) :
+		Parent(inst),
+		_size(instance()->createInfo().size),
+		_min_align(instance()->_min_align),
+		_usage(instance()->createInfo().usage),
+		_queues(instance()->_queues),
+		_sharing_mode(instance()->createInfo().sharingMode),
+		_mem_usage(instance()->allocationCreateInfo().usage),
+		_allocator(instance()->allocator())
+	{
+
 	}
 
 	Buffer::~Buffer()

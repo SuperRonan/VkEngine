@@ -20,9 +20,11 @@ namespace vkl
 		class BufferInspector;
 	}
 
-	class BufferInstance : public AbstractInstance
+	class BufferInstance : public InstanceBase<VkBuffer>
 	{
 	public:
+
+		using Parent = InstanceBase<VkBuffer>;
 
 		using Range = Range_st;
 
@@ -31,6 +33,7 @@ namespace vkl
 	protected:
 
 		friend class SynchronizationHelperV2;
+		friend class Buffer;
 
 		static std::atomic<size_t> _instance_counter;
 
@@ -42,6 +45,7 @@ namespace vkl
 		size_t _unique_id = 0;
 		VmaAllocator _allocator = VMA_NULL;
 		VmaAllocation _alloc = VMA_NULL;
+		MyVector<uint32_t> _queues = {};
 
 		VkDeviceAddress _address = 0;
 
@@ -63,11 +67,11 @@ namespace vkl
 
 		void create();
 
-		void setVkName();
-
 		void destroy();
 
 		bool statesAreSorted(size_t tid) const;
+
+		void setQueues();
 
 	public:
 
@@ -196,6 +200,8 @@ namespace vkl
 	{
 	public:
 
+		using Parent = InstanceHolder<BufferInstance>;
+
 		struct CreateInfo
 		{
 			VkApplication* app = nullptr;
@@ -230,6 +236,8 @@ namespace vkl
 		using Range = typename BufferInstance::Range;
 
 		Buffer(CreateInfo const& ci);
+
+		Buffer(std::shared_ptr<BufferInstance> const& inst);
 
 		virtual ~Buffer() override;
 
