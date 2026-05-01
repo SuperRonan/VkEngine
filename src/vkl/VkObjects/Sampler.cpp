@@ -23,7 +23,7 @@ namespace vkl
 	}
 
 	Sampler::Sampler(CreateInfo const& ci) :
-		InstanceHolder<SamplerInstance>(ci.app, ci.name, ci.hold_instance)
+		Parent(ci.app, ci.name, ci.hold_instance)
 	{
 		_vk_ci = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -51,6 +51,11 @@ namespace vkl
 			createInstance();
 		}
 	}
+
+	Sampler::Sampler(std::shared_ptr<SamplerInstance> const& inst):
+		Parent(inst),
+		_vk_ci(instance()->createInfo())
+	{}
 
 	Sampler::~Sampler()
 	{

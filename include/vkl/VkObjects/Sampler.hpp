@@ -48,6 +48,8 @@ namespace vkl
 	class Sampler : public InstanceHolder<SamplerInstance>
 	{
 	public:
+		using Parent = InstanceHolder<SamplerInstance>;
+
 		constexpr static VkBorderColor defaultBorderColor()
 		{
 			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
@@ -87,6 +89,8 @@ namespace vkl
 		using CI = CreateInfo;
 
 		Sampler(CreateInfo const& ci);
+
+		Sampler(std::shared_ptr<SamplerInstance> const& inst);
 
 		virtual ~Sampler() override;
 
