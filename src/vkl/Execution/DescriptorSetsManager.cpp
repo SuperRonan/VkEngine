@@ -820,8 +820,10 @@ namespace vkl
 								.layout = layout,
 								.bindings = instance_bindings,
 							});
-
-							instance()->writeDescriptorSet(nullptr);
+							if (instance()->exists())
+							{
+								instance()->writeDescriptorSet(nullptr);
+							}
 						}
 
 
@@ -834,7 +836,10 @@ namespace vkl
 		}
 		else
 		{
-			instance()->writeDescriptorSet(&context);
+			if (instance()->exists())
+			{
+				instance()->writeDescriptorSet(&context);
+			}
 		}
 	}
 
