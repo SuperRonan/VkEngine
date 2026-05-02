@@ -94,9 +94,17 @@ namespace vkl
 
 		virtual ~Sampler() override;
 
-		static std::shared_ptr<Sampler> MakeNearest(VkApplication * app = nullptr);
+		static std::shared_ptr<Sampler> MakeSampler(VkApplication* app, VkFilter filter);
 
-		static std::shared_ptr<Sampler> MakeBilinear(VkApplication* app = nullptr);
+		static std::shared_ptr<Sampler> MakeNearest(VkApplication* app)
+		{
+			return MakeSampler(app, VK_FILTER_NEAREST);
+		}
+
+		static std::shared_ptr<Sampler> MakeBilinear(VkApplication* app)
+		{
+			return MakeSampler(app, VK_FILTER_LINEAR);
+		}
 
 		using InspectorType = GUI::SamplerInspector;
 		friend class InspectorType;

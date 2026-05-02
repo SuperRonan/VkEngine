@@ -82,23 +82,14 @@ namespace vkl
 		}
 	}
 
-	std::shared_ptr<Sampler> Sampler::MakeNearest(VkApplication* app)
+	std::shared_ptr<Sampler> Sampler::MakeSampler(VkApplication* app, VkFilter filter)
 	{
 		return std::make_shared<Sampler>(Sampler::CI{
 			.app = app,
 			.name = "NearestSampler",
-			.filter = VK_FILTER_NEAREST,
+			.filter = filter,
 			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-		});
-	}
-
-	std::shared_ptr<Sampler> Sampler::MakeBilinear(VkApplication* app)
-	{
-		return std::make_shared<Sampler>(Sampler::CI{
-			.app = app,
-			.name = "LinearSampler",
-			.filter = VK_FILTER_LINEAR,
-			.address_mode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+			.create_on_construct = true,
 		});
 	}
 
