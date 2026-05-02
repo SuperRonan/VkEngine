@@ -25,7 +25,7 @@ namespace vkl
 
 	BufferInstance::~BufferInstance()
 	{
-		if (!!_buffer)
+		if (!!handle())
 		{
 			destroy();
 		}
@@ -44,7 +44,7 @@ namespace vkl
 
 	void BufferInstance::create()
 	{
-		assert(!_buffer);
+		assert(!handle());
 		bool can_device_address = application()->availableFeatures().features_12.bufferDeviceAddress;
 		if (!can_device_address)
 		{
@@ -52,7 +52,7 @@ namespace vkl
 		}
 		assert(_allocator);
 		
-		VK_CHECK(vmaCreateBufferWithAlignment(_allocator, &_ci, &_aci, _min_align, &_buffer, &_alloc, nullptr), "Failed to create a buffer.");
+		VK_CHECK(vmaCreateBufferWithAlignment(_allocator, &_ci, &_aci, _min_align, &handle(), &_alloc, nullptr), "Failed to create a buffer.");
 		
 		InternalStates is;
 		is.states.push_back(InternalStates::PosAndState{
@@ -69,7 +69,7 @@ namespace vkl
 			VkBufferDeviceAddressInfo info{
 				.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
 				.pNext = nullptr,
-				.buffer = _buffer,
+				.buffer = handle(),
 			};
 			_address = vkGetBufferDeviceAddress(device(), &info);
 		}
@@ -77,7 +77,7 @@ namespace vkl
 
 	void BufferInstance::destroy()
 	{
-		assert(!!_buffer);
+		assert(!!handle());
 
 		if (!!_data)
 		{
@@ -86,8 +86,8 @@ namespace vkl
 
 		callDestructionCallbacks();
 		
-		vmaDestroyBuffer(_allocator, _buffer, _alloc);
-		_buffer = VK_NULL_HANDLE;
+		vmaDestroyBuffer(_allocator, handle(), _alloc);
+		handle() = VK_NULL_HANDLE;
 		_alloc = VMA_NULL;
 	}
 
@@ -108,21 +108,21 @@ namespace vkl
 
 	void * BufferInstance::map()
 	{
-		assert(_buffer != VK_NULL_HANDLE);
+		assert(handle() != VK_NULL_HANDLE);
 		vmaMapMemory(_allocator, _alloc, &_data);
 		return _data;
 	}
 
 	void BufferInstance::unMap()
 	{
-		assert(_buffer != VK_NULL_HANDLE);
+		assert(handle() != VK_NULL_HANDLE);
 		vmaUnmapMemory(_allocator, _alloc);
 		_data = nullptr;
 	}
 
 	void BufferInstance::flush()
 	{
-		assert(_buffer != VK_NULL_HANDLE);
+		assert(handle() != VK_NULL_HANDLE);
 		vmaFlushAllocation(_allocator, _alloc, 0, _ci.size);
 	}
 

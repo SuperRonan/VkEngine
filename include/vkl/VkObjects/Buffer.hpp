@@ -40,8 +40,6 @@ namespace vkl
 		VkBufferCreateInfo _ci;
 		VmaAllocationCreateInfo  _aci;
 		VkDeviceSize _min_align = 1;
-		// The VkBuffer handle is not unique (it can be the same as one used before when recreating the instance)
-		VkBuffer _buffer = VK_NULL_HANDLE;
 		size_t _unique_id = 0;
 		VmaAllocator _allocator = VMA_NULL;
 		VmaAllocation _alloc = VMA_NULL;
@@ -116,21 +114,6 @@ namespace vkl
 		constexpr const void* data() const
 		{
 			return _data;
-		}
-
-		constexpr VkBuffer buffer()const
-		{
-			return _buffer;
-		}
-
-		constexpr auto handle()const
-		{
-			return buffer();
-		}
-
-		constexpr operator VkBuffer()const
-		{
-			return buffer();
 		}
 
 		constexpr const VkBufferCreateInfo & createInfo()const
