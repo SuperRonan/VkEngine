@@ -72,6 +72,8 @@ namespace vkl::GUI
 		TransientPayload _drag_drop_payload;
 		TransientPayload _clipboard_payload;
 
+
+		EnumStyle _enum_style = EnumStyle::Default;
 	public:
 
 		struct CreateInfo
@@ -149,5 +151,10 @@ namespace vkl::GUI
 		}
 
 		void clearTemporaryData();
+
+		EnumStyle* pEnumStyle()
+		{
+			return &_enum_style;
+		}
 	};
 }
