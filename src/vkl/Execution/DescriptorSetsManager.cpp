@@ -182,15 +182,29 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetAndPoolInstance::writeDescriptorSet(UpdateContext * context)
+	void DescriptorSetAndPoolInstance::writeDescriptorSet()
 	{
-		const size_t N = _bindings.size();
-
-		DescriptorWriter _own_writer(DescriptorWriter::CI{
+		DescriptorWriter writer(DescriptorWriter::CI{
 			.app = application(),
 		});
+		writeDescriptorSet(writer);
+		writer.record();
+	}
 
-		DescriptorWriter & writer = context ? context->descriptorWriter() : _own_writer;
+	void DescriptorSetAndPoolInstance::writeDescriptorSet(UpdateContext* context)
+	{
+		if (context)
+		{
+			writeDescriptorSet(context->descriptorWriter());
+		}
+		else
+		{
+			writeDescriptorSet();
+		}
+	}
+
+	void DescriptorSetAndPoolInstance::writeDescriptorSet(DescriptorWriter& writer)
+	{
 		const VkDescriptorBindingFlags common_binding_flags = _layout->bindingFlags();
 		const bool can_write_null = application()->availableFeatures().robustness2_ext.nullDescriptor;
 		for (size_t i = 0; i < _bindings.size(); ++i)
@@ -327,11 +341,6 @@ namespace vkl
 				}
 				b.resetUpdateRange();
 			}
-		}
-
-		if (!context)
-		{
-			_own_writer.record();
 		}
 	}
 

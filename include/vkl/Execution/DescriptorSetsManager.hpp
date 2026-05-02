@@ -52,7 +52,9 @@ namespace vkl
 
 		void allocateDescriptorSet();
 
+		void writeDescriptorSet();
 		void writeDescriptorSet(UpdateContext * context);
+		void writeDescriptorSet(DescriptorWriter& writer);
 
 		bool exists() const
 		{
