@@ -525,8 +525,10 @@ namespace vkl::GUI
 		bool full_width = true;
 		bool stack_color = true;
 
+		// Don't forget to call end() anyway
 		bool begin(Context& ctx);
 
+		// Must be called, even if begin() == true
 		void end(Context& ctx);
 
 		int pushStyleColor();
