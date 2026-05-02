@@ -191,7 +191,7 @@ namespace vkl
 		});
 
 		DescriptorWriter & writer = context ? context->descriptorWriter() : _own_writer;
-
+		const VkDescriptorBindingFlags common_binding_flags = _layout->bindingFlags();
 		const bool can_write_null = application()->availableFeatures().robustness2_ext.nullDescriptor;
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
@@ -207,6 +207,7 @@ namespace vkl
 					.binding = b.resolved_binding,
 					.index = b.update_range.begin,
 					.type = b.vkType(),
+					.flags = common_binding_flags | _layout->metas()[i].flags,
 				};
 
 				if (b.isBuffer())
