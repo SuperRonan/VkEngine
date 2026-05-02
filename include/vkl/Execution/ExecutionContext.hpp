@@ -204,17 +204,21 @@ namespace vkl
 			_objects_to_keep.emplace_back(std::move(obj));
 		}
 
-		template <std::derived_from<VkObject> O>
-		void keepAlive(MyVector<std::shared_ptr<O>> const& objs)
+		template <std::ranges::forward_range ObjectRange>
+			requires std::convertible_to<typename std::ranges::range_reference_t<ObjectRange>, std::shared_ptr<VkObject>>
+		void keepAlive(ObjectRange&& range)
 		{
-			const size_t prev = _objects_to_keep.size();
-			_objects_to_keep.resize(_objects_to_keep.size() + objs.size());
-			for (size_t i = 0; i < objs.size(); ++i)
+			_objects_to_keep.insert(_objects_to_keep.end(), std::ranges::begin(range), std::ranges::end(range));
+		}
+
+		template <std::ranges::forward_range ObjectRange>
+			requires std::convertible_to<typename std::ranges::range_reference_t<ObjectRange>, std::shared_ptr<VkObject>>
+		void moveToKeepAlive(ObjectRange&& range)
+		{
+			for (auto&& obj : range)
 			{
-				_objects_to_keep[prev + i] = objs[i];
+				_objects_to_keep.push_back(std::move(obj));
 			}
-			//const std::shared_ptr<VkObject>* ptr = reinterpret_cast<const std::shared_ptr<VkObject>*>(objs.data());
-			//_objects_to_keep.insert(_objects_to_keep.back(), ptr, ptr + objs.size());
 		}
 
 		auto& objectsToKeepAlive()
