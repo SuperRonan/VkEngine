@@ -88,7 +88,7 @@ namespace vkl
 		_image->removeInvalidationCallback(this);
 	}
 
-	void ImageView::constructorBody(bool create_instance)
+	void ImageView::setImageInvalidationCallback()
 	{
 		_image->setInvalidationCallback(Callback{
 			.callback = [&]()
@@ -97,6 +97,11 @@ namespace vkl
 			},
 			.id = this,
 		});
+	}
+
+	void ImageView::constructorBody(bool create_instance)
+	{
+		setImageInvalidationCallback();
 		if (create_instance)
 		{
 			createInstance();
@@ -133,7 +138,8 @@ namespace vkl
 		_components(instance()->createInfo().components),
 		_range(instance()->createInfo().subresourceRange)
 	{
-
+		// Not necessary since the image is a static descriptor too, TODO think about (maybe make a static descriptor type)
+		setImageInvalidationCallback();
 	}
 
 	ImageView::ImageView(std::shared_ptr<ImageInstance> const& image_inst) :

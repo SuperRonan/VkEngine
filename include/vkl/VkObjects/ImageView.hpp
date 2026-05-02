@@ -134,6 +134,8 @@ namespace vkl
 		VkComponentMapping _components = defaultComponentMapping();
 		Dyn<VkImageSubresourceRange> _range = {};
 
+		void setImageInvalidationCallback();
+
 		void constructorBody(bool create_instance);
 
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
