@@ -126,7 +126,14 @@ namespace vkl::GUI
 	template <std::strictly_derived_from<Panel> PanelType, std::strictly_derived_from<VkObject> Target>
 	std::shared_ptr<PanelType> MakePanelFromTarget(GUI::Context& ctx, std::shared_ptr<Target> const& target)
 	{
-		return std::make_shared<PanelType>(target);
+		if constexpr (std::constructible_from<PanelType, decltype(target), GUI::Context&>)
+		{
+			return std::make_shared<PanelType>(target, ctx);
+		}
+		else
+		{
+			return std::make_shared<PanelType>(target);
+		}
 	}
 
 	// Compiler bug, can't just namespace concepts
