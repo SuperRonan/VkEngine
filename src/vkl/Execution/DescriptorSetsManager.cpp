@@ -59,13 +59,15 @@ namespace vkl
 		}
 		if (_layout && _bindings.size() != _layout->bindings().size())
 		{
-			assert(false);
 			ResourceBindings tmp = _bindings;
 			_bindings.resize(_layout->bindings().size());
 			size_t j = 0;
 			for (size_t i = 0; i < _bindings.size(); ++i)
 			{
-				const uint32_t lb = _layout->bindings()[i].binding;
+				auto& binding = _bindings[i];
+				const auto& binding_layout = _layout->bindings()[i];
+				const auto& meta = _layout->metas()[i];
+				const uint32_t lb = binding_layout.binding;
 				ResourceBinding * corresponding_binding = [&]() {
 					ResourceBinding* res = nullptr;
 					while (j != tmp.size())
@@ -86,14 +88,21 @@ namespace vkl
 				}();
 				if (corresponding_binding)
 				{
-					_bindings[i] = *corresponding_binding;
-					_bindings[i].resetUpdateRange();
+					binding = *corresponding_binding;
+					binding.resetUpdateRange();
 				}
 				else
 				{
-					_bindings[i].resolve(lb);
-					_bindings[i].type = _layout->bindings()[i].descriptorType;
-					_bindings[i].invalidateAll();
+					binding.resolve(lb);
+					binding.type = binding_layout.descriptorType;
+					binding.begin_state = ResourceState2{
+						.access = meta.access,
+						.stage = binding_layout.stageFlags,
+						.layout = meta.layout,
+					};
+					binding.invalidateAll();
+					binding.resize(binding_layout.descriptorCount);
+					
 				}
 			}
 		}
