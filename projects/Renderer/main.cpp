@@ -849,6 +849,8 @@ namespace vkl
 
 			exec.init();
 
+			_gui_context.createInternalResource(exec.renderImGuiCommand()->setLayout());
+
 			ImGuiListSelection default_scene_selection = ImGuiListSelection::CI{
 				.name = "Scene selection",
 				.options = {
@@ -1183,7 +1185,7 @@ namespace vkl
 						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
 						logger()(std::format("Total Aquire time: {}us", waited.count()), Logger::Options::TagInfo);
 					}
-					exec.preparePresentation(final_image, ImGuiIsEnabled());
+					exec.preparePresentation(final_image, getLatestGUIContext());
 					exec.endCommandBuffer(ptr_exec_thread);
 					
 					tt.tick();

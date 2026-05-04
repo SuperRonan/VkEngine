@@ -265,7 +265,7 @@ namespace vkl
 
 		void renderDebugIFP();
 
-		void preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui = true);
+		void preparePresentation(std::shared_ptr<ImageView> img_to_present, GUI::Context* gui_context);
 
 		void endCommandBuffer(ExecutionThread* exec_thread, bool submit = false);
 
@@ -288,6 +288,11 @@ namespace vkl
 		std::shared_ptr<FramePerfReport> const& getPendingFrameReport()
 		{
 			return _pending_frame_report;
+		}
+
+		std::shared_ptr<ImguiCommand> const& renderImGuiCommand() const
+		{
+			return _render_gui;
 		}
 	};
 }

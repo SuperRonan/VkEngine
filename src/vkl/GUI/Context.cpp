@@ -1,6 +1,10 @@
 #define IMGUI_DEFINE_MATH_OPERATORS 1
 #include <vkl/GUI/Context.hpp>
 
+#include <vkl/VkObjects/ImageView.hpp>
+#include <vkl/VkObjects/Sampler.hpp>
+#include <vkl/VkObjects/DescriptorSetLayout.hpp>
+
 namespace vkl::GUI
 {
 	std::shared_ptr<Style> g_default_style = [](){
@@ -72,7 +76,6 @@ namespace vkl::GUI
 		return res;
 	}
 
-
 	Context::Context(CreateInfo const& ci) :
 		_imgui_context(ci.imgui_context),
 		_style(ci.style ? ci.style : g_default_style),
@@ -84,6 +87,13 @@ namespace vkl::GUI
 
 			});
 		}
+	}
+
+	void Context::createInternalResource(std::shared_ptr<DescriptorSetLayoutInstance> const& set_layout)
+	{
+		_imgui_set_layout = set_layout;
+		_sampler = Sampler::MakeNearest(_imgui_set_layout->application());
+		_sampler->setName("ImGui Default Sampler");
 	}
 
 	void Context::begin()

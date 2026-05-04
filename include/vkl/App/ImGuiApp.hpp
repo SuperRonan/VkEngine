@@ -60,6 +60,11 @@ namespace vkl
 #endif
 		}
 
+		GUI::Context* getLatestGUIContext()
+		{
+			return _enable_imgui ? &_gui_context : nullptr;
+		}
+
 	public:
 
 		void initImGui();

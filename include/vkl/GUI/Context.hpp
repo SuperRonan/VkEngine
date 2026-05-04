@@ -2,8 +2,18 @@
 
 #include <imgui/imgui.h>
 
+#include <set>
 #include <memory>
+
 #include "FileDialog.hpp"
+
+namespace vkl
+{
+	class Sampler;
+	class ImageViewInstance;
+	class DescriptorSetAndPoolInstance;
+	class DescriptorSetLayoutInstance;
+}
 
 namespace vkl::GUI
 {
@@ -45,6 +55,7 @@ namespace vkl::GUI
 
 	// p_style may be nullptr
 	extern bool DeclareEnumStyleButtonSwitch(EnumStyle* p_style);
+
 	struct TransientPayload
 	{
 		std::shared_ptr<VkObject> object;
@@ -72,6 +83,10 @@ namespace vkl::GUI
 		TransientPayload _drag_drop_payload;
 		TransientPayload _clipboard_payload;
 
+		std::set<std::shared_ptr<ImageViewInstance>> _frame_images;
+		MyVector<std::shared_ptr<VkObject>> _objects_to_keep;
+		std::shared_ptr<Sampler> _sampler;
+		std::shared_ptr<DescriptorSetLayoutInstance> _imgui_set_layout;
 
 		EnumStyle _enum_style = EnumStyle::Default;
 	public:
@@ -85,6 +100,8 @@ namespace vkl::GUI
 		using CI = CreateInfo;
 
 		Context(CreateInfo const& ci);
+
+		void createInternalResource(std::shared_ptr<DescriptorSetLayoutInstance> const& set_layout);
 
 		void begin();
 
@@ -131,6 +148,38 @@ namespace vkl::GUI
 
 		std::span<Panel* const> getPanelStack() const;
 
+		void keepFrameObject(std::shared_ptr<VkObject> const& o)
+		{
+			_objects_to_keep.push_back(o);
+		}
+
+		void addFrameImage(std::shared_ptr<ImageViewInstance> const& v)
+		{
+			_frame_images.insert(v);
+		}
+
+		std::set<std::shared_ptr<ImageViewInstance>> const& getImages() const
+		{
+			return _frame_images;
+		}
+
+		MyVector<std::shared_ptr<VkObject>> const& getFrameObjects() const
+		{
+			return _objects_to_keep;
+		}
+
+		std::span<std::shared_ptr<VkObject>> getMovableFrameObjects()
+		{
+			std::span<std::shared_ptr<VkObject>> res(_objects_to_keep.data(), _objects_to_keep.size());
+			return res;
+		}
+
+		void clearFrameAccumulators()
+		{
+			_frame_images.clear();
+			_objects_to_keep.clear();
+		}
+
 		Style::Color pushStack();
 
 		Style::Color popStack();
@@ -155,6 +204,16 @@ namespace vkl::GUI
 		EnumStyle* pEnumStyle()
 		{
 			return &_enum_style;
+		}
+
+		std::shared_ptr<Sampler> const& sampler() const
+		{
+			return _sampler;
+		}
+
+		std::shared_ptr<DescriptorSetLayoutInstance> const& getImGuiSetLayout() const
+		{
+			return _imgui_set_layout;
 		}
 	};
 }

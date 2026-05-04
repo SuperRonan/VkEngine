@@ -10,6 +10,7 @@
 #include <vkl/Execution/FramePerfReport.hpp>
 
 #include <vkl/App/ImGuiApp.hpp>
+#include <vkl/GUI/Context.hpp>
 
 #include <imgui/imgui.h>
 #include <imgui/backends/imgui_impl_glfw.h>
@@ -924,7 +925,7 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present, bool render_ImGui)
+	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present, GUI::Context* gui_context)
 	{
 		assert(_latest_swapchain_event);
 		assert(_latest_swapchain_event->present_queue == nullptr);
@@ -948,9 +949,15 @@ namespace vkl
 				.dst = blit_target,
 			}));
 			
-			if (render_ImGui && _render_gui && _latest_swapchain_event->swapchain.get() == _window->swapchain()->instance())
+			if (gui_context && _render_gui && _latest_swapchain_event->swapchain.get() == _window->swapchain()->instance())
 			{
-				execute(_render_gui->with(ImguiCommand::ExecutionInfo{.index = _latest_swapchain_event->index}));
+				execute(_render_gui->with(ImguiCommand::ExecutionInfo{
+					.index = _latest_swapchain_event->index,
+					.images = &gui_context->getImages(),
+				}));
+				// TODO move content (std::move std::shared_ptr<VkObject>)
+				_context.moveToKeepAlive(gui_context->getMovableFrameObjects());
+				gui_context->clearFrameAccumulators();
 			}
 
 			InlineSynchronizeImageView(_context, blit_target->instancePtr(), ResourceState2{
