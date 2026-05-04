@@ -681,7 +681,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			{
 				open_create_window = true;
 			}
-			ImGui::EndMenu();
+			ImGui::EndPopup();
 
 
 			if (open_create_window)
@@ -826,8 +826,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 					}
 					ImGui::EndDisabled();
 
-					ImGui::EndMenu();
-					//ImGui::EndPopup();
+					ImGui::EndPopup();
 
 					if (open_create_window)
 					{
