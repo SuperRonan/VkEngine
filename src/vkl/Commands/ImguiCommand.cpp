@@ -368,6 +368,24 @@ namespace vkl
 		node->_viewports_color_correction = _viewports_color_correction_info;
 		node->_viewports_color_correction.params.exposure *= _target_window->brightness();
 
+		if (ei.images)
+		{
+			ResourceState2 rs{
+				.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+				.stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+				.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
+			VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+			for (auto it = ei.images->begin(), end = ei.images->end(); it != end; ++it)
+			{
+				node->resources() += ImageViewUsage{
+					.ivi = *it,
+					.begin_state = rs,
+					.usage = usage,
+				};
+			}
+		}
+
 		return node;
 	}
 

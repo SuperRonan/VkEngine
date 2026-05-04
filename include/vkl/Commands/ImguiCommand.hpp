@@ -73,6 +73,7 @@ namespace vkl
 		struct ExecutionInfo
 		{
 			size_t index;
+			const std::set<std::shared_ptr<ImageViewInstance>> * images;
 		};
 		using EI = ExecutionInfo;
 
