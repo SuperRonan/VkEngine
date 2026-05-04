@@ -64,9 +64,10 @@ namespace vkl::GUI
 			ImGui::PushStyleColor(ImGuiCol_Separator, stack_color);
 
 			const float top_item_width = ImGui::GetCurrentWindow()->DC.ItemWidth;
-			if (ImGui::BeginChild("Transform", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None))
+			bool inspect_transform = ImGui::BeginChild("Transform", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_None);
+			ImGui::PopStyleColor(2);
+			if (inspect_transform)
 			{
-				ImGui::PopStyleColor(2);
 				const auto& style = ImGui::GetStyle();
 				float item_width = top_item_width - 2 * style.FramePadding.x - style.FrameBorderSize;
 				ImGui::PushItemWidth(item_width); // Use the full available witdh for the child
