@@ -12,6 +12,8 @@
 
 namespace vkl
 {
+	extern std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app);
+
 	class ImguiCommand : public DeviceCommand
 	{
 	protected:
@@ -39,6 +41,7 @@ namespace vkl
 		ColorCorrectionInfo _color_correction_info = {};
 		ColorCorrectionInfo _viewports_color_correction_info = {};
 
+		std::shared_ptr<DescriptorSetLayoutInstance> _set_layout;
 
 		bool _re_create_imgui_pipeline = true;
 
@@ -97,6 +100,11 @@ namespace vkl
 			{
 				_fences_to_wait[i].reset();
 			}
+		}
+
+		std::shared_ptr<DescriptorSetLayoutInstance> const& setLayout() const
+		{
+			return _set_layout;
 		}
 	};
 }

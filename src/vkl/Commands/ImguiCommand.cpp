@@ -17,6 +17,33 @@
 
 namespace vkl
 {
+	std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app)
+	{
+		std::shared_ptr<DescriptorSetLayoutInstance> res = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
+			.app = app,
+			.name = "ImGui::SetLayout",
+			.flags = 0,
+			.vk_bindings = {
+				VkDescriptorSetLayoutBinding{
+					.binding = 0,
+					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+					.pImmutableSamplers = nullptr,
+				},
+			},
+			.metas = {
+				DescriptorSetLayoutInstance::BindingMeta {
+					.name = "Texture",
+					.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+					.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					.flags = 0,
+				},
+			},
+		});
+		return res;
+	}
+
 	struct ImGuiCommandNode : public ExecutionNode
 	{
 		struct CreateInfo
@@ -101,6 +128,8 @@ namespace vkl
 		_target_window(ci.target_window)
 	{
 		createRenderPassIFP();
+
+		_set_layout = MakeImGuiDescriptorSetLayout(application());
 
 		initImGui();
 		
