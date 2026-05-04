@@ -10,6 +10,7 @@
 
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/TypedInlineInspector.hpp>
 
 namespace vkl
 {
@@ -445,6 +446,7 @@ namespace vkl
 		GUI::IndirectInlinePanel _buffer_panel;
 
 		GUI::TargetIndirectInlinePanel<Texture> _texture_panel;
+		GUI::TypedInlineInspector<Sampler> _sampler;
 
 		ImGuiListSelection _default_glyph_size;
 
@@ -452,11 +454,16 @@ namespace vkl
 
 		DebugRendererPanel(std::shared_ptr<DebugRenderer> const& target) :
 			Panel(target->application(), target->name()),
-			_target(target)
+			_target(target),
+			_sampler("Sampler")
 		{
 			_buffer_panel = GUI::IndirectInlinePanel::MakeUniqueIndirectPanel(_target->_debug_buffer);
 			_buffer_panel.child_label = "Buffer";
 			_texture_panel.init("Font Glyph Texture");
+
+			_sampler.setEnableSource(true);
+			_sampler.setAcceptNullptr(false);
+			_sampler.setDisableCreation(true);
 
 			_default_glyph_size = ImGuiListSelection::CI{
 				.name = "Font size",
@@ -581,6 +588,8 @@ namespace vkl
 			_buffer_panel.declareInline(ctx);
 
 			_texture_panel.declareInline(ctx, _target->_font);
+
+			_sampler.declareInline(ctx, _target->_sampler);
 		}
 	};
 
