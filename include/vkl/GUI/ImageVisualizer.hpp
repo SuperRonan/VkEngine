@@ -31,6 +31,13 @@ namespace vkl::GUI
 		VkImageAspectFlags _custom_aspect = 0;
 		Range32u _custom_mips_range = {};
 		uint32_t _array_layer = 0;
+
+		bool _manual_format : 1 = false;
+		bool _manual_swizzle : 1 = false;
+		bool _manual_aspect : 1 = false;
+		bool _manual_mips_range : 1 = false;
+		bool _manual_array_layer : 1 = false;
+
 		std::shared_ptr<ImageViewInstance> _custom_view = {};
 		std::shared_ptr<ImageView> _custom_view_desc = {};
 
@@ -52,6 +59,8 @@ namespace vkl::GUI
 		void createCurstomView(std::shared_ptr<ImageInstance> const& image);
 
 		void clear(bool keep_error_message=false);
+
+		void checkInstance();
 
 	public:
 
@@ -83,9 +92,11 @@ namespace vkl::GUI
 
 		void setSource(SourceSPtr const& source);
 
-		virtual void declareImage(Context& ctx, ImVec2 const& size, const ImRect * rect = nullptr, bool skip_registration=false);
+		virtual bool declareImage(Context& ctx, ImVec2 const& size, const ImRect * rect = nullptr, bool skip_registration=false);
 
 		virtual void declareInline(Context& ctx);
+
+		virtual void declareControlsInline(Context& ctx);
 
 		std::string_view label() const
 		{

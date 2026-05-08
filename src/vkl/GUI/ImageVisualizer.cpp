@@ -8,6 +8,8 @@
 
 #include <vkl/VkObjects/VulkanEnumMeta.hpp>
 
+#include <algorithm>
+
 namespace vkl::GUI
 {
 	ImageVisualizer::ImageVisualizer(CreateInfo const& ci) :
@@ -60,6 +62,12 @@ namespace vkl::GUI
 			.name = _label + ".Set",
 			.layout = layout,
 		});
+	}
+
+	static inline VkComponentMapping GetDefaultMapping(VkFormat f)
+	{
+		VKU_FORMAT_INFO info = vkuGetFormatInfo(f);
+
 	}
 
 	void ImageVisualizer::createDefaultView()
@@ -132,13 +140,15 @@ namespace vkl::GUI
 			return clear(true);
 		}
 
+		VkComponentMapping custom_swizzle;
+
 		if (view_ci)
 		{
 			_custom_format = view_ci->format;
 			_custom_aspect = view_ci->subresourceRange.aspectMask;
 			_custom_mips_range = Range32u(view_ci->subresourceRange.baseMipLevel, view_ci->subresourceRange.levelCount);
 			_array_layer = view_ci->subresourceRange.baseArrayLayer;
-			_custom_swizzle = view_ci->components;
+			custom_swizzle = view_ci->components;
 		}
 		else
 		{
@@ -146,7 +156,7 @@ namespace vkl::GUI
 			_custom_aspect = getImageAspectFromFormat(_custom_format);
 			_custom_mips_range = Range32u(0, image_ci.mipLevels);
 			_array_layer = 0;
-			_custom_swizzle = VkComponentMapping{
+			custom_swizzle = VkComponentMapping{
 				.r = VK_COMPONENT_SWIZZLE_IDENTITY,
 				.g = VK_COMPONENT_SWIZZLE_IDENTITY,
 				.b = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -154,7 +164,12 @@ namespace vkl::GUI
 			};
 		}
 		// Better default choice
-		_custom_swizzle.a = VK_COMPONENT_SWIZZLE_ONE;
+		custom_swizzle.a = VK_COMPONENT_SWIZZLE_ONE;
+		if (_manual_swizzle)
+		{
+			custom_swizzle = _custom_swizzle;
+		}
+		_custom_swizzle = custom_swizzle;
 
 		_uv_tl = Vector2f(0, 0);
 		_uv_br = Vector2f(1, 1);
@@ -195,6 +210,25 @@ namespace vkl::GUI
 		_set->writeDescriptorSet();
 	}
 
+	void ImageVisualizer::checkInstance()
+	{
+		if (_custom_view)
+		{
+			assert(_source);
+			if (AbstractInstanceHolder * holder = dynamic_cast<AbstractInstanceHolder*>(_source.getRaw()))
+			{
+				if (holder->instance() != _latest_source_instance.getRaw())
+				{
+					clear();
+				}
+			}
+		}
+		if (!_custom_view)
+		{
+			createDefaultView();
+		}
+	}
+
 	static inline ImVec2 ToIMGui(Vector2f const& v)
 	{
 		return ImVec2(v.x(), v.y());
@@ -205,30 +239,195 @@ namespace vkl::GUI
 		return ImVec4(v.x(), v.y(), v.z(), v.w());
 	}
 
-	void ImageVisualizer::declareImage(Context& ctx, ImVec2 const& size, const ImRect* rect, bool skip_registration)
+	static constexpr uint MAX_COMPONENTS = 4;
+
+	static constexpr char SwizzleToChar(VkComponentSwizzle s)
 	{
-		ImGui::ImageWithBg(_set->set()->handle(), size, rect ? rect->GetTL() : ImVec2(0, 0), rect ? rect->GetBR() : ImVec2(1, 1), ToIMGui(_background), ToIMGui(_tint));
-		//ImGui::GetWindowDrawList()->AddCallback()
+		char res = '?';
+		switch (s)
+		{
+			case VK_COMPONENT_SWIZZLE_IDENTITY: res = 'i'; break;
+			case VK_COMPONENT_SWIZZLE_ZERO: res = '0'; break;
+			case VK_COMPONENT_SWIZZLE_ONE: res = '1'; break;
+			case VK_COMPONENT_SWIZZLE_R: res = 'r'; break;
+			case VK_COMPONENT_SWIZZLE_G: res = 'g'; break;
+			case VK_COMPONENT_SWIZZLE_B: res = 'b'; break;
+			case VK_COMPONENT_SWIZZLE_A: res = 'a'; break;
+		}
+		return res;
+	}
+
+	static constexpr VkComponentSwizzle CharToSwizzle(char c)
+	{
+		VkComponentSwizzle res = VK_COMPONENT_SWIZZLE_MAX_ENUM;
+		if (c >= 'A' && c <= 'Z')
+		{
+			c += ('a' - 'A');
+		}
+		switch (c)
+		{
+			case 'i':
+				res = VK_COMPONENT_SWIZZLE_IDENTITY;
+			break;
+			case '0':
+				res = VK_COMPONENT_SWIZZLE_ZERO;
+			break;
+			case '1':
+				res = VK_COMPONENT_SWIZZLE_ONE;
+			break;
+			case 'r':
+			case 'x':
+				res = VK_COMPONENT_SWIZZLE_R;
+			break;
+			case 'g':
+			case 'y':
+				res = VK_COMPONENT_SWIZZLE_G;
+			break;
+			case 'b':
+			case 'z':
+				res = VK_COMPONENT_SWIZZLE_B;
+			break;
+			case 'a':
+			case 'w':
+				res = VK_COMPONENT_SWIZZLE_A;
+			break;
+		}
+		return res;
+	}
+
+	static constexpr void SwizzleMappingToChars(char* dst, VkComponentMapping const& m)
+	{
+		const VkComponentSwizzle* s = &m.r;
+		for (uint i = 0; i < MAX_COMPONENTS; ++i)
+		{
+			dst[i] = SwizzleToChar(s[i]);
+		}
+	}
+
+	static constexpr bool SwizzleIsValid(VkComponentSwizzle s)
+	{
+		return s <= VK_COMPONENT_SWIZZLE_A;
+	}
+
+	static constexpr bool MappingIsValid(VkComponentMapping const& m)
+	{
+		const VkComponentSwizzle * s = &m.r;
+		return std::all_of(s, s + MAX_COMPONENTS, SwizzleIsValid);
+	}
+
+	static inline bool InspectSwizzleMapping(Context& ctx, VkComponentMapping* swizzle)
+	{
+		assert(swizzle);
+		std::array<char, MAX_COMPONENTS + 1> chars;
+		VkComponentSwizzle* comp_swizzle = &swizzle->r;
+		chars.back() = 0;
+		for (uint i = 0; i < MAX_COMPONENTS; ++i)
+		{
+			chars[i] = SwizzleToChar(comp_swizzle[i]);
+		}
+		bool res = false;
+		if (ImGui::InputText("Swizzle", chars.data(), chars.size(), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AlwaysOverwrite))
+		{
+			for (uint i = 0; i < MAX_COMPONENTS; ++i)
+			{
+				VkComponentSwizzle x = CharToSwizzle(chars[i]);
+				if (!SwizzleIsValid(x))
+				{
+					x = VK_COMPONENT_SWIZZLE_IDENTITY;
+				}
+				if (x != comp_swizzle[i])
+				{
+					comp_swizzle[i] = x;
+					res = true;
+				}
+			}
+		}
+		return res;
+	}
+
+	bool ImageVisualizer::declareImage(Context& ctx, ImVec2 const& size, const ImRect* rect, bool skip_registration)
+	{
 		if (!skip_registration)
 		{
-			ctx.addFrameImage(_custom_view);
-			ctx.keepFrameObject(_set);
+			checkInstance();
 		}
+		if (_custom_view)
+		{
+			ImGui::ImageWithBg(_set->set()->handle(), size, rect ? rect->GetTL() : ImVec2(0, 0), rect ? rect->GetBR() : ImVec2(1, 1), ToIMGui(_background), ToIMGui(_tint));
+			//ImGui::GetWindowDrawList()->AddCallback()
+			if (!skip_registration)
+			{
+				ctx.addFrameImage(_custom_view);
+				ctx.keepFrameObject(_set);
+			}
+			return true;
+		}
+		return false;
 	}
 
 	void ImageVisualizer::declareInline(Context& ctx)
 	{
-		if (_custom_view)
+		declareControlsInline(ctx);
+		ImGui::Separator();
 		{
 			ImRect rect(ToIMGui(_uv_tl), ToIMGui(_uv_br));
-			declareImage(ctx, ToIMGui(_size_pix), &rect);
+			bool could_show_image = declareImage(ctx, ToIMGui(_size_pix), &rect);
+			if (could_show_image)
+			{
+				// TODO mouse zoom clip rect
+			}
+			else
+			{
+				ImVec4 col = ctx.style().invalid_red;
+				ImGui::TextColored(col, "Cannot visualize image:");
+				const char* reason = _error_message.empty() ? "Unknown reason." : _error_message.c_str();
+				ImGui::TextColored(col, reason);
+			}
 		}
-		else
+	}
+
+	void ImageVisualizer::declareControlsInline(Context& ctx)
+	{
+		bool should_clear = false;
+		if (ImGui::Button("Reset"))
 		{
-			ImVec4 col = ctx.style().invalid_red;
-			ImGui::TextColored(col, "Cannot visualize image:");
-			const char* reason = _error_message.empty() ? "Unknown reason." : _error_message.c_str();
-			ImGui::TextColored(col, reason);
+			_manual_format = false;
+			_manual_swizzle = false;
+			_manual_aspect = false;
+			_manual_mips_range = false;
+			should_clear |= true;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Reset Crop"))
+		{
+			_uv_tl = Vector2f(0, 0);
+			_uv_br = Vector2f(1, 1);
+		}
+		if (InspectSwizzleMapping(ctx, &_custom_swizzle))
+		{
+			_manual_swizzle = true;
+			should_clear |= true;
+		}
+
+		
+		ImGui::BeginDisabled(!_source);
+		int array_layer = static_cast<int>(_array_layer);
+		Range32i layers_range{.begin = 0, .len = 1};
+		if (ImGui::SliderInt("Layer", &array_layer, layers_range.begin, layers_range.end() - 1, nullptr, ImGuiSliderFlags_None))
+		{
+			array_layer = std::clamp(array_layer, layers_range.begin, layers_range.end() - 1);
+			if (array_layer != _array_layer)
+			{
+				_array_layer = array_layer;
+				should_clear |= true;
+			}
+			_manual_array_layer = true;
+		}
+		ImGui::EndDisabled();
+
+		if (should_clear)
+		{
+			clear();
 		}
 	}
 }
