@@ -166,12 +166,13 @@ namespace vkl::GUI
 			_collapsing_header_label.clear();
 			std::format_to(std::back_inserter(_collapsing_header_label), "{}###CollpasingHeader", object_label);
 			declare_inline = ImGui::CollapsingHeader(_collapsing_header_label.c_str());
-			if (ImGui::BeginItemTooltip())
-			{
-				ImGui::SeparatorIfAppending();
-				ImGui::TextUnformatted("A test object");
-				ImGui::EndTooltip();
-			}
+			// TODO a proper tooltip for the object
+			//if (ImGui::BeginItemTooltip())
+			//{
+			//	ImGui::SeparatorIfAppending();
+			//	ImGui::TextUnformatted("A test object");
+			//	ImGui::EndTooltip();
+			//}
 
 			// Drag And Drop
 			{
