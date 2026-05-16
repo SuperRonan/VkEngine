@@ -2,6 +2,7 @@
 #include <vkl/GUI/Context.hpp>
 
 #include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
 
 namespace vkl::GUI
 {
@@ -56,6 +57,9 @@ namespace vkl::GUI
 				ctx.popPanel();
 			}
 		}
+		auto window = ImGui::GetCurrentWindowRead();
+		_window_cotent_size = window->ContentSizeIdeal;
+		//ImGui::SetNextWindowContentSize(_window_cotent_size);
 		if (!keep_open)
 		{
 			ImGui::End();
