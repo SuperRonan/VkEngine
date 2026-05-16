@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <vkl/Utils/stl_extension.hpp>
 #include <optional>
+#include <concepts>
 
 template <class Q, class T>
 concept TLike = std::convertible_to<Q, T>;
@@ -137,6 +138,12 @@ namespace vkl
 	
 	namespace impl
 	{
+		struct DefaultInitializeTag {};
+		struct CopyInitializeTag {};
+
+		template <class T>
+		using InitializeTag = typename std::conditional<std::default_initializable<T>, DefaultInitializeTag, CopyInitializeTag>::type;
+
 		class DynamicValueInstanceBase
 		{
 		public:
@@ -149,7 +156,7 @@ namespace vkl
 		{
 		protected:
 
-			mutable T _value = {};
+			mutable T _value;
 
 		public:
 
@@ -218,11 +225,20 @@ namespace vkl
 
 			const T* _ptr;
 
+			PointedValueInstance(const T* ptr, DefaultInitializeTag):
+				DynamicValueInstance<T>(),
+				_ptr(ptr)
+			{}
+
+			PointedValueInstance(const T* ptr, CopyInitializeTag) :
+				DynamicValueInstance<T>(*ptr),
+				_ptr(ptr)
+			{}
+
 		public:
 
 			PointedValueInstance(const T* ptr):
-				DynamicValueInstance<T>(),
-				_ptr(ptr)
+				PointedValueInstance(ptr, InitializeTag<T>{})
 			{}
 
 			virtual T const& value() const override
@@ -238,6 +254,7 @@ namespace vkl
 			}
 		};
 
+		// Indirect PointedValueInstance
 		template <class T, TLike<T> Q>
 		class PointedValueInstance2 : public DynamicValueInstance<T>
 		{
@@ -245,13 +262,21 @@ namespace vkl
 
 			const Q* _ptr;
 
+			PointedValueInstance2(const Q* ptr, DefaultInitializeTag) :
+				DynamicValueInstance<T>(),
+				_ptr(ptr)
+			{}
+
+			PointedValueInstance2(const Q* ptr, CopyInitializeTag) :
+				DynamicValueInstance<T>(static_cast<T>(*ptr)),
+				_ptr(ptr)
+			{}
+
 		public:
 
 			PointedValueInstance2(const Q* ptr) :
-				DynamicValueInstance<T>(),
-				_ptr(ptr)
-			{
-			}
+				PointedValueInstance2(ptr, InitializeTag<T>{})
+			{}
 
 			virtual T const& value() const override
 			{
@@ -274,6 +299,16 @@ namespace vkl
 
 			LambdaType _lambda;
 
+			LambdaValueInstance(LambdaType const& lambda, DefaultInitializeTag) :
+				DynamicValueInstance<T>(),
+				_lambda(lambda)
+			{}
+
+			LambdaValueInstance(LambdaType const& lambda, CopyInitializeTag) :
+				DynamicValueInstance<T>(lambda()),
+				_lambda(lambda)
+			{}
+
 		public:
 
 			//template <class Lambda>
@@ -283,8 +318,7 @@ namespace vkl
 			//{}
 
 			LambdaValueInstance(LambdaType const& lambda) :
-				DynamicValueInstance<T>(),
-				_lambda(lambda)
+				LambdaValueInstance(lambda, InitializeTag<T>{})
 			{}
 
 			virtual T const& value() const override
@@ -316,8 +350,14 @@ namespace vkl
 			//    _lambda(l)
 			//{}
 
-			LambdaValueInstanceByRef(LambdaType const& lambda) :
+			LambdaValueInstanceByRef(LambdaType const& lambda) requires std::default_initializable<T> :
 				DynamicValueInstance<T>(),
+				_lambda(lambda)
+			{}
+
+			template <std::convertible_to<T> Q>
+			LambdaValueInstanceByRef(LambdaType const& lambda, Q&& q) :
+				DynamicValueInstance<T>(std::forward<Q>(q)),
 				_lambda(lambda)
 			{}
 
@@ -680,160 +720,7 @@ namespace vkl
 	template <class T>
 	using Dyn = DynamicValue<T>;
 
-//DECLARE_FOR_EACH_BINARY_OPERATOR(DECLARE_DYNAMIC_BINRARY_OP)
-	template <class T, class Q> requires requires (T t, Q q) {
-		t + q;
-	} static constexpr auto operator +(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_plus <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() + q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t + q;
-	} static constexpr auto operator +(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_plus <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() + q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t - q;
-	} static constexpr auto operator -(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_minus <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() - q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t - q;
-	} static constexpr auto operator -(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_minus <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() - q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t* q;
-	} static constexpr auto operator *(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_multiplies <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() * q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t* q;
-	} static constexpr auto operator *(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_multiplies <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() * q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t / q;
-	} static constexpr auto operator /(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_divides <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() / q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t / q;
-	} static constexpr auto operator /(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_divides <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() / q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t% q;
-	} static constexpr auto operator %(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_modulus <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() % q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t% q;
-	} static constexpr auto operator %(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_modulus <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() % q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t& q;
-	} static constexpr auto operator &(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_bit_and <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() & q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t& q;
-	} static constexpr auto operator &(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_bit_and <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() & q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t | q;
-	} static constexpr auto operator |(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_bit_or <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() | q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t | q;
-	} static constexpr auto operator |(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_bit_or <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() | q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t^ q;
-	} static constexpr auto operator ^(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_bit_xor <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() ^ q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t^ q;
-	} static constexpr auto operator ^(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_bit_xor <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() ^ q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t << q;
-	} static constexpr auto operator <<(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_shift_left <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() << q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t << q;
-	} static constexpr auto operator <<(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_shift_left <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() << q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t >> q;
-	} static constexpr auto operator >>(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_shift_right <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() >> q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t >> q;
-	} static constexpr auto operator >>(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_shift_right <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() >> q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t <=> q;
-	} static constexpr auto operator <=>(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_spaceship <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() <=> q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t <=> q;
-	} static constexpr auto operator <=>(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_spaceship <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() <=> q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t > q;
-	} static constexpr auto operator >(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_greater <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() > q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t > q;
-	} static constexpr auto operator >(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_greater <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() > q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t < q;
-	} static constexpr auto operator <(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_less <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() < q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t < q;
-	} static constexpr auto operator <(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_less <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() < q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t >= q;
-	} static constexpr auto operator >=(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_greater_equal <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() >= q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t >= q;
-	} static constexpr auto operator >=(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_greater_equal <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() >= q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t <= q;
-	} static constexpr auto operator <=(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_less_equal <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() <= q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t <= q;
-	} static constexpr auto operator <=(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_less_equal <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() <= q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t == q;
-	} static constexpr auto operator ==(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_equal_to <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() == q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t == q;
-	} static constexpr auto operator ==(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_equal_to <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() == q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t != q;
-	} static constexpr auto operator !=(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_not_equal_to <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() != q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t != q;
-	} static constexpr auto operator !=(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_not_equal_to <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() != q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t&& q;
-	} static constexpr auto operator &&(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_logical_and <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() && q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t&& q;
-	} static constexpr auto operator &&(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_logical_and <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() && q; });
-	} template <class T, class Q> requires requires (T t, Q q) {
-		t || q;
-	} static constexpr auto operator ||(::vkl::DynamicValue<T> const& t, ::vkl::DynamicValue<Q> const& q) {
-		using RetType = typename ::vkl::BinaryOperator_logical_or <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() || q.value(); });
-	} template <class T, class Q = T> requires requires (T t, Q q) {
-		t || q;
-	} static constexpr auto operator ||(::vkl::DynamicValue<T> const& t, Q const& q) {
-		using RetType = typename ::vkl::BinaryOperator_logical_or <T, Q> ::Type; return ::vkl::DynamicValue<RetType>([=]() -> RetType {return t.value() || q; });
-	}
+DECLARE_FOR_EACH_BINARY_OPERATOR(DECLARE_DYNAMIC_BINRARY_OP)
 
 DECLARE_FOR_EACH_UNARY_OPERATOR(DECLARE_DYNAMIC_UNARY_OP)
 
