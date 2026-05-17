@@ -5,3 +5,4 @@ docs
 gen
 scripts/__pycache__
 include/vkl/Generated
+src/vkl/Generated
