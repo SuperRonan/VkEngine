@@ -108,6 +108,11 @@ namespace vkl
 	{
 		VkStructureType sType;
 		const void * pNext;
+
+		const VkStruct* nextStruct() const
+		{
+			return reinterpret_cast<const VkStruct*>(pNext);
+		}
 	};
 
 	namespace concepts
@@ -120,6 +125,18 @@ namespace vkl
 			requires offsetof(S, sType) == offsetof(VkStruct, sType);
 			requires offsetof(S, pNext) == offsetof(VkStruct, pNext);
 		};
+	}
+
+	template <concepts::VkStructLike S>
+	inline const VkStruct* vkDecay(const S* s)
+	{
+		return reinterpret_cast<const VkStruct*>(s);
+	}
+
+	template <concepts::VkStructLike S>
+	inline VkStruct* vkDecay(S* s)
+	{
+		return reinterpret_cast<VkStruct*>(s);
 	}
 
 	namespace GUI
