@@ -12,8 +12,8 @@ namespace vku
 	template<> \
 	struct EnumMetaInfo<EnumTypeName> \
 	{ \
-		static constexpr const bool IsBitField = BitField; \
-		static constexpr const unsigned int UniqueId = Id; \
+		static constinit const bool IsBitField = BitField; \
+		static constinit const unsigned int UniqueId = Id; \
 		using EnumType = EnumTypeName; \
 		static constexpr const char* Name = X_STRINGIFY(EnumTypeName); \
 		static constexpr const char* ValuePrefix = X_STRINGIFY(Prefix); \
