@@ -235,7 +235,7 @@ set(VKL_SHADER_FOLDER "${VKL_ROOT_DIR}/Shaders/")
 find_package(Python3 COMPONENTS Interpreter)
 if(${Python3_Interpreter_FOUND})
 	set(HAS_GEN_SCRIPTS true)
-	file(GLOB GENERATED_FILES ${VKL_INCLUDE_FOLDER}/vkl/Generated/*)
+	file(GLOB GENERATED_FILES ${VKL_INCLUDE_FOLDER}/vkl/Generated/* ${VKL_SOURCE_FOLDER}/vkl/Generated/*)
 	set(VK_DOCS_DIR ${CMAKE_CURRENT_LIST_DIR}/ext/VulkanDocs)
 	file(GLOB GENERATOR_DEPENDENCIES 
 		${CMAKE_CURRENT_LIST_DIR}/scripts/*.py 

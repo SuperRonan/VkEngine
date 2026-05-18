@@ -6,7 +6,7 @@ sys.path.append(str(root_dir))
 scripts_dir = root_dir.joinpath("ext").joinpath("VulkanDocs").joinpath("scripts")
 sys.path.append(str(scripts_dir))
 
-from ext.VulkanDocs.scripts.base_generator import (BaseGenerator, BaseGeneratorOptions, SetTargetApiName, SetMergedApiNames, write)
+from ext.VulkanDocs.scripts.base_generator import (BaseGenerator, BaseGeneratorOptions, SetTargetApiName, SetMergedApiNames, SetOutputFileName, write)
 from ext.VulkanDocs.scripts.reg import Registry
 
 from ext.VulkanDocs.scripts import vulkan_object
@@ -176,6 +176,8 @@ def RunGenerator(GeneratorType, target=None, registry=DefaultRegistryPath(), out
 
 	if target is None:
 		target = gen.getDefaultFileName()
+	if target is None:
+		SetOutputFileName(None)
 
 	options = BaseGeneratorOptions(customFileName = target, customDirectory = outHeaderDir)
 
