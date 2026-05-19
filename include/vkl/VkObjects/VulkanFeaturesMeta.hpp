@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-#include <that/core/Range.hpp>
+#include <vkl/Core/VulkanCommons.hpp>
 
 #include <vkl/Generated/VulkanFeaturesMetaConstants.hpp>
 
@@ -74,6 +73,11 @@ namespace vkl::meta
 		static FeaturesMeta GetVkFeaturesMeta()
 		{
 			return GetMetaAt(GetVkFeaturesStructFlatIndex<T>());
+		}
+
+		static const VkBool32* GetFeaturesArray(const ::vkl::VkStruct* p_struct)
+		{
+			return reinterpret_cast<const VkBool32*>(p_struct + 1);
 		}
 	};
 } // namespace vkl::meta

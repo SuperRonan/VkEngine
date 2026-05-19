@@ -29,6 +29,8 @@
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/VkObjectInspector.hpp>
 
+#include <vkl/VkObjects/VulkanFeaturesMeta.hpp>
+
 #include <slang/slang.h>
 
 #include <exception>
@@ -1603,7 +1605,52 @@ namespace vkl
 
 				static void DeclareFeatures(VulkanFeatures const& features)
 				{
-					ImGui::Text("TODO");
+					const char* current_struct_name = nullptr;
+					const VkStruct* current_struct = vkDecay(&features.features2);
+
+					if (ImGui::BeginTable("Features", 2, ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_NoSavedSettings))
+					{
+						float w = 0.9;
+						ImGui::TableSetupColumn("Feature", ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_WidthStretch, w);
+						ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthStretch, 1.0f - w);
+						ImGui::TableHeadersRow();
+
+						while (current_struct)
+						{
+							ImGui::TableNextRow();
+							ImGui::TableNextColumn();
+							current_struct_name = vku::GetEnumLabel(current_struct->sType);
+							current_struct_name = current_struct_name + "PHYSICAL_DEVICE_"sv.size();
+							bool open = ImGui::TreeNodeEx(current_struct_name, ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_DrawLinesFull);
+							ImGui::TableNextColumn();
+							const meta::FeaturesMeta meta_info = meta::FeaturesMeta::GetMetaOf(current_struct->sType);
+							const VkBool32 * features = meta_info.GetFeaturesArray(current_struct);
+							const uint32_t active_features = std::accumulate(features, features + meta_info.size(), uint32_t(0));
+							ImGui::Text("%d/%d", active_features, static_cast<int>(meta_info.size()));
+							if (open)
+							{
+								for (uint i = 0; i < meta_info.size(); ++i)
+								{
+									bool active = features[i] != VK_FALSE;
+									float d = 0.333;
+									ImVec4 color = active ? ImVec4(d, 1, d, 1) : ImVec4(1, d, d, 1);
+									ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+									ImGui::TableNextRow();
+									ImGui::TableNextColumn();
+									ImGui::TreeNodeEx(meta_info[i], ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+									ImGui::TableNextColumn();
+									char value_txt[2] = {'0' + char(features[i]), char(0)};
+									ImGui::TextUnformatted(value_txt);
+
+									ImGui::PopStyleColor();
+								}
+								ImGui::TreePop();
+							}
+							current_struct = current_struct->nextStruct();
+						}
+						ImGui::EndTable();
+					}
 				}
 
 				static void DeclareExtensions(VulkanExtensionsSet const& extensions, StringFilter* filter = nullptr)
@@ -1717,6 +1764,7 @@ namespace vkl
 					_extension_filter(extension_filter)
 				{
 					 application()->requestFeatures(_desired_features);
+					 _desired_features.link(app->_device_props.props2.properties.apiVersion, [](std::string_view ext_name){return true;});
 				}
 
 				virtual void declareInline(Context& ctx)
