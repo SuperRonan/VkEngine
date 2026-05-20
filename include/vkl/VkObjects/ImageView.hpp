@@ -74,6 +74,16 @@ namespace vkl
 			return _unique_id;
 		}
 
+		VkImageSubresourceRange finiteRange() const
+		{
+			return _image->finiteRange(_ci.subresourceRange);
+		}
+
+		Range32u finiteArrayRange() const
+		{
+			return Range32u{.begin = _ci.subresourceRange.baseArrayLayer, .len =  _image->finiteRange(_ci.subresourceRange).layerCount};
+		}
+
 		struct ResourceKey
 		{
 			size_t id = 0;
@@ -182,6 +192,40 @@ namespace vkl
 		constexpr const Dyn<VkImageSubresourceRange>& range()const
 		{
 			return _range;
+		}
+
+		VkImageSubresourceRange finiteRange() const
+		{
+			if(_range)
+			{
+				return _image->finiteRange(_range.value());
+			}
+			else
+			{
+				VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());
+				return VkImageSubresourceRange{
+					.aspectMask = aspect,
+					.baseMipLevel = 0,
+					.levelCount = _image->mips().value(),
+					.baseArrayLayer = 0,
+					.layerCount = _image->layers().value(),
+				};
+			}
+		}
+
+		Range32u finiteArrayRange() const
+		{
+			if (_range)
+			{
+				VkImageSubresourceRange range = _range.value();
+				range.baseMipLevel = 0;
+				range.levelCount = 0;
+				return Range32u{.begin = range.baseArrayLayer, .len = _image->finiteRange(range).layerCount};
+			}
+			else
+			{
+				return Range32u{.begin = 0, .len = _image->layers().value()};
+			}
 		}
 
 		using InspectorType = GUI::ImageViewInspector;

@@ -73,7 +73,7 @@ namespace vkl
 				if (set_extent)
 				{
 					VkExtent3D image_extent = ci.attachments[i]->image()->createInfo().extent;
-					image_extent.depth = ci.attachments[i]->createInfo().subresourceRange.layerCount;
+					image_extent.depth = ci.attachments[i]->finiteRange().layerCount;
 					ci.extent = minimumExtent(ci.extent, image_extent);
 					set_extent = 1;
 				}

@@ -86,9 +86,9 @@ namespace vkl
 				_region = VkImageBlit2{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
 					.pNext = nullptr,
-					.srcSubresource = getImageLayersFromRange(_src->createInfo().subresourceRange),
+					.srcSubresource = getImageLayersFromRange(_src->finiteRange()),
 					.srcOffsets = {makeUniformOffset3D(0), convert(_src->image()->createInfo().extent)},
-					.dstSubresource = getImageLayersFromRange(_dst->createInfo().subresourceRange),
+					.dstSubresource = getImageLayersFromRange(_dst->finiteRange()),
 					.dstOffsets = {makeUniformOffset3D(0), convert(_dst->image()->createInfo().extent)},
 				};
 				regions = &_region;
@@ -242,7 +242,7 @@ namespace vkl
 				targets[i] = Target{
 					.img = _targets[i].target->image().get(),
 					.view = _targets[i].target.get(),
-					.m = _targets[i].target->createInfo().subresourceRange.levelCount,
+					.m = _targets[i].target->finiteRange().levelCount,
 					.extent = _targets[i].target->image()->createInfo().extent,
 				};
 				assert(targets[i].m > 1);
@@ -295,7 +295,7 @@ namespace vkl
 								.baseMipLevel = m,
 								.levelCount = 1,
 								.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
-								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+								.layerCount = tg.view->finiteArrayRange().len,
 							},
 						});
 
@@ -319,7 +319,7 @@ namespace vkl
 									.baseMipLevel = m - 1,
 									.levelCount = 1,
 									.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
-									.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+									.layerCount = tg.view->finiteArrayRange().len,
 								},
 							});
 						}
@@ -359,7 +359,7 @@ namespace vkl
 								.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
 								.mipLevel = m - 1,
 								.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
-								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+								.layerCount = tg.view->finiteArrayRange().len,
 							},
 							.srcOffsets = {
 								makeUniformOffset3D(0), convert(tg.extent),
@@ -368,7 +368,7 @@ namespace vkl
 								.aspectMask = tg.view->createInfo().subresourceRange.aspectMask,
 								.mipLevel = m,
 								.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
-								.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+								.layerCount = tg.view->finiteArrayRange().len,
 							},
 							.dstOffsets = {
 								makeUniformOffset3D(0), convert(smaller_extent),
@@ -416,7 +416,7 @@ namespace vkl
 						.baseMipLevel = tg.m - 1,
 						.levelCount = 1,
 						.baseArrayLayer = tg.view->createInfo().subresourceRange.baseArrayLayer,
-						.layerCount = tg.view->createInfo().subresourceRange.layerCount,
+						.layerCount = tg.view->finiteArrayRange().len,
 					},
 				};
 			}

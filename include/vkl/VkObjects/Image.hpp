@@ -18,6 +18,9 @@ namespace vkl
 	{
 	public:
 
+		static constinit const uint32_t ALL_MIPS = VK_REMAINING_MIP_LEVELS;
+		static constinit const uint32_t ALL_LAYERS = VK_REMAINING_ARRAY_LAYERS;
+
 		using Parent = InstanceBase<VkImage>;
 
 		static constexpr const char* ClassName = "Image";
@@ -58,6 +61,7 @@ namespace vkl
 
 		VmaAllocation _alloc = nullptr;
 		size_t _unique_id = 0;
+		bool _remaining_mips = false;
 
 		struct InternalStates
 		{
@@ -84,6 +88,8 @@ namespace vkl
 
 		void setQueues();
 
+		void setMipsCount();
+
 	public:
 
 		ImageInstance(CreateInfo const& ci);
@@ -103,6 +109,20 @@ namespace vkl
 		constexpr VkImageCreateInfo const& createInfo()const
 		{
 			return _ci;
+		}
+
+		constexpr VkPhysicalDeviceImageFormatInfo2 imageFormatInfo2() const
+		{
+			VkPhysicalDeviceImageFormatInfo2 info{
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
+				.pNext = nullptr,
+				.format = _ci.format,
+				.type = _ci.imageType,
+				.tiling = _ci.tiling,
+				.usage = _ci.usage,
+				.flags = _ci.flags,
+			};
+			return info;
 		}
 
 		constexpr MyVector<uint32_t> const& queues() const
@@ -131,15 +151,43 @@ namespace vkl
 			return _unique_id;
 		}
 
+		constexpr uint32_t mipLevels() const
+		{
+			return _remaining_mips ? ALL_MIPS : _ci.mipLevels;
+		}
+
 		constexpr VkImageSubresourceRange defaultSubresourceRange()const
 		{
 			return VkImageSubresourceRange{
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, // TODO determine the aspect from the format
 				.baseMipLevel = 0,
-				.levelCount = _ci.mipLevels,
+				.levelCount = mipLevels(),
 				.baseArrayLayer = 0,
 				.layerCount = _ci.arrayLayers,
 			};
+		}
+
+		// Make sure the layers_count is correct (array layers for layered images, depth for 3D images)
+		static Range FiniteRange(Range const& range, uint32_t layers_count, uint32_t mips_count)
+		{
+			Range res = range;
+			if (res.layerCount == VK_REMAINING_ARRAY_LAYERS)
+			{
+				res.layerCount = layers_count - res.baseArrayLayer;
+			}
+			if (res.levelCount == VK_REMAINING_MIP_LEVELS)
+			{
+				res.levelCount = mips_count - res.baseMipLevel;
+			}
+			return res;
+		}
+
+		Range finiteRange(Range const& range) const
+		{
+			// I am 99% sure the depth is used are the array dimension when taking 2D views of 3D images
+			// But I haven't confirmed it yet
+			uint32_t layers = (_ci.imageType == VK_IMAGE_TYPE_3D) ? _ci.extent.depth : _ci.arrayLayers;
+			return FiniteRange(range, layers, _ci.mipLevels);
 		}
 
 		struct StateInRange
@@ -171,7 +219,8 @@ namespace vkl
 
 		using Parent = InstanceHolder<ImageInstance>;
 
-		constexpr static const uint32_t ALL_MIPS = uint32_t(-1);
+		static constinit const uint32_t ALL_MIPS = ImageInstance::ALL_MIPS;
+		static constinit const uint32_t ALL_LAYERS = ImageInstance::ALL_LAYERS;
 
 		struct CreateInfo
 		{
@@ -195,7 +244,7 @@ namespace vkl
 
 		using CI = CreateInfo;
 
-		static constexpr uint32_t howManyMips(uint32_t dims, VkExtent3D const& extent)
+		static constexpr uint32_t HowManyMips(uint32_t dims, VkExtent3D const& extent)
 		{
 			uint32_t size = extent.width;
 			if (dims == 2)
@@ -212,9 +261,9 @@ namespace vkl
 			return res;
 		}
 
-		static constexpr uint32_t howManyMips(VkImageType type, VkExtent3D const& extent)
+		static constexpr uint32_t HowManyMips(VkImageType type, VkExtent3D const& extent)
 		{
-			return howManyMips(((uint32_t)type) + 1, extent);
+			return HowManyMips(((uint32_t)type) + 1, extent);
 		}
 
 		virtual void updateResourcesInline(UpdateContext& ctx, UpdateResourcesResult& res) override;
@@ -237,8 +286,6 @@ namespace vkl
 		VkImageLayout _initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		VmaMemoryUsage _mem_usage = VMA_MEMORY_USAGE_UNKNOWN;
-
-		bool _inst_all_mips = false;
 
 	public:
 
@@ -314,7 +361,25 @@ namespace vkl
 
 		//VkImageSubresourceRange defaultSubresourceRange();
 
-		Dyn<VkImageSubresourceRange> fullSubresourceRange();
+		VkImageSubresourceRange fullSubresourceRange() const
+		{
+			VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());
+			return VkImageSubresourceRange{
+				.aspectMask = aspect,
+				.baseMipLevel = 0,
+				.levelCount = VK_REMAINING_MIP_LEVELS,
+				.baseArrayLayer = 0,
+				.layerCount = VK_REMAINING_ARRAY_LAYERS,
+			};
+		}
+
+		// Watch out for the ownership!
+		Dyn<VkImageSubresourceRange> dynFullSubresourceRange() const
+		{
+			return [this](){return fullSubresourceRange();};
+		}
+
+		VkImageSubresourceRange finiteRange(VkImageSubresourceRange const& range) const;
 
 		using InspectorType = GUI::ImageInspector;
 		friend class InspectorType;

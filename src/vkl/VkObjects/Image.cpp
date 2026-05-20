@@ -89,12 +89,30 @@ namespace vkl
 		_ci.pQueueFamilyIndices = _queues.data();
 	}
 
+	void ImageInstance::setMipsCount()
+	{
+		if (_ci.mipLevels == Image::ALL_MIPS)
+		{
+			_remaining_mips = true;
+			_ci.mipLevels = Image::HowManyMips(_ci.imageType, _ci.extent);
+		}
+		auto info = imageFormatInfo2();
+		VkImageFormatProperties2 props{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2,
+			.pNext = nullptr,
+		};
+		vkGetPhysicalDeviceImageFormatProperties2(application()->physicalDevice(), &info, &props);
+		// Not 100% necessary, since the API max mip level given here depends on the max extent, which we do not check.
+		_ci.mipLevels = std::min(_ci.mipLevels, props.imageFormatProperties.maxMipLevels);
+	}
+
 	ImageInstance::ImageInstance(CreateInfo const& ci) :
 		Parent(ci.app, ci.name, ci.tick),
 		_ci(ci.ci),
 		_vma_ci(ci.aci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
+		setMipsCount();
 		setQueues();
 		create();
 		setInitialState(0);
@@ -105,6 +123,7 @@ namespace vkl
 		_ci(ai.ci),
 		_unique_id(std::atomic_fetch_add(&_instance_counter, 1))
 	{
+		assert(_ci.mipLevels != ALL_MIPS);
 		setQueues();
 		_handle = ai.image;
 		registerName();
@@ -119,9 +138,10 @@ namespace vkl
 		}
 	}
 
-	void ImageInstance::fillState(size_t tid, Range const& range, MyVector<StateInRange> & res) const
+	void ImageInstance::fillState(size_t tid, Range const& _range, MyVector<StateInRange> & res) const
 	{
 		assert(statesAreSorted(tid));
+		Range range = finiteRange(_range);
 		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
 		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
@@ -235,9 +255,10 @@ namespace vkl
 		}
 	}
 
-	void ImageInstance::setState(size_t tid, Range const& range, ResourceState2 const& state)
+	void ImageInstance::setState(size_t tid, Range const& _range, ResourceState2 const& state)
 	{
 		const bool state_is_readonly = accessIsReadonly2(state.access);
+		Range range = finiteRange(range);
 		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
 		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
@@ -398,21 +419,7 @@ namespace vkl
 			p_queues = _queues.data();
 		}
 		VkExtent3D extent = *_extent;
-		const uint32_t mips = [&]() {
-			uint32_t res = 1;
-			const uint32_t desired = *_mips;
-			if (desired == uint32_t(-1))
-			{
-				res = howManyMips(_type, extent);
-				_inst_all_mips = true;
-			}
-			else
-			{
-				res = desired;
-				_inst_all_mips = false;
-			}
-			return res;
-		}();
+		uint32_t mips = *_mips;
 		VkImageCreateInfo image_ci{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 			.pNext = nullptr,
@@ -462,12 +469,9 @@ namespace vkl
 						return true;
 					}
 					const uint32_t new_mips = *_mips;
-					if (new_mips != inst_ci.mipLevels)
+					if (new_mips != instance()->mipLevels())
 					{
-						if (!(new_mips == uint32_t(-1) && _inst_all_mips))
-						{
-							return true;
-						}
+						return true;
 					}
 					const VkFormat new_format = *_format;
 					if (new_format != inst_ci.format)
@@ -517,25 +521,47 @@ namespace vkl
 	uint32_t Image::actualMipsCount()const
 	{
 		uint32_t res = _mips.valueOr(1);
-		if (res == uint32_t(-1))
+		if (res == ALL_MIPS)
 		{
-			res = howManyMips(_type, *_extent);
+			res = HowManyMips(_type, *_extent);
 		}
 		return res;
 	}
 
-	Dyn<VkImageSubresourceRange> Image::fullSubresourceRange()
+	VkImageSubresourceRange Image::finiteRange(VkImageSubresourceRange const& range) const
 	{
-		return [this]() {
-			VkImageAspectFlags aspect = getImageAspectFromFormat(_format.value());		
-			return VkImageSubresourceRange{
-				.aspectMask = aspect,
-				.baseMipLevel = 0,
-				.levelCount = actualMipsCount(),
-				.baseArrayLayer = 0,
-				.layerCount = _layers.value(),
-			};
-		};
+		// "Optimized version" that evaluates dynamic values only if needed
+		VkImageSubresourceRange res = range;
+		VkExtent3D extent = {};
+		if (res.levelCount == ALL_MIPS)
+		{
+			extent = _extent.value();
+			uint32_t mips = _mips.value();
+			if (mips == ALL_MIPS)
+			{
+				mips = HowManyMips(_type, extent);
+			}
+			res.levelCount = mips - res.baseMipLevel;
+		}
+		if (res.layerCount == ALL_LAYERS)
+		{
+			uint32_t layers;
+			// See comments in ImageInstance::finiteRange()
+			if (_type == VK_IMAGE_TYPE_3D)
+			{
+				if (extent.depth == 0)
+				{
+					extent = _extent.value();
+				}
+				layers = extent.depth;
+			}
+			else
+			{
+				layers = _layers.value();
+			}
+			res.layerCount = layers - res.baseArrayLayer;
+		}
+		return res;
 	}
 	
 	namespace GUI

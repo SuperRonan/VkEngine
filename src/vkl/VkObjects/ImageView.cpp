@@ -114,7 +114,7 @@ namespace vkl
 		_type(ci.type == VK_IMAGE_TYPE_MAX_ENUM ? getDefaultViewTypeFromImageType(_image->type()) : ci.type),
 		_format(ci.format.hasValue() ? ci.format : _image->format()),
 		_components(ci.components),
-		_range(ci.range.hasValue() ? ci.range : _image->fullSubresourceRange())
+		_range(ci.range.hasValue() ? ci.range : _image->dynFullSubresourceRange())
 	{
 		constructorBody(ci.create_on_construct);
 	}
@@ -125,7 +125,7 @@ namespace vkl
 		_type(getDefaultViewTypeFromImageType(_image->type())),
 		_format(_image->format()),
 		_components(defaultComponentMapping()),
-		_range(_image->fullSubresourceRange())
+		_range(_image->dynFullSubresourceRange())
 	{
 		constructorBody(ci.create_on_construct);
 	}

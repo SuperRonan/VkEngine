@@ -1582,7 +1582,7 @@ namespace vkl
 					.bufferOffset = _extra_image_info[i].staging_offset,
 					.bufferRowLength = iu.buffer_row_length,
 					.bufferImageHeight = iu.buffer_image_height,
-					.imageSubresource = getImageLayersFromRange(iu.dst->createInfo().subresourceRange), // Copy to base mip only
+					.imageSubresource = getImageLayersFromRange(iu.dst->finiteRange()), // Copy to base mip only
 					.imageOffset = makeUniformOffset3D(0),
 					.imageExtent = iu.dst->image()->createInfo().extent,
 				};

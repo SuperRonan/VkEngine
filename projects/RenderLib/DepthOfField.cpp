@@ -32,16 +32,7 @@ namespace vkl
 			.format = _target->format(),
 			.extent = itarget->extent(),
 			.mips = 1,
-			.layers = [this]() {
-				if (_target->range())
-				{
-					return _target->range().value().levelCount;
-				}
-				else
-				{
-					return _target->image()->layers().value();
-				}
-			},
+			.layers = [this]() { return _target->finiteArrayRange().len;},
 			.tiling = itarget->tiling(),
 			.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
