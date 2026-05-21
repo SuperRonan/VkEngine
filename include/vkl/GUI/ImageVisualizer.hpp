@@ -46,7 +46,7 @@ namespace vkl::GUI
 		std::shared_ptr<DescriptorSetAndPoolInstance> _set;
 
 		Vector2f _size_pix;
-		Vector2f _uv_tl, _uv_br;
+		Vector2f _uv_tl = Vector2f(0, 0), _uv_br = Vector2f(1, 1);
 		Vector4f _background = Vector4f(0, 0, 0, 0);
 		Vector4f _tint = Vector4f(1, 1, 1, 1);
 

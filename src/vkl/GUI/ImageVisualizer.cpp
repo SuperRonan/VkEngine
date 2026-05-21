@@ -67,7 +67,18 @@ namespace vkl::GUI
 	static inline VkComponentMapping GetDefaultMapping(VkFormat f)
 	{
 		VKU_FORMAT_INFO info = vkuGetFormatInfo(f);
-
+		VkComponentMapping res = {
+			.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+			.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+			.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+			.a = VK_COMPONENT_SWIZZLE_ONE,
+		};
+		VkComponentSwizzle* swizzle = &res.r;
+		for (uint i = 0; i < info.component_count; ++i)
+		{
+			swizzle[i] = VK_COMPONENT_SWIZZLE_IDENTITY;
+		}
+		return res;
 	}
 
 	void ImageVisualizer::createDefaultView()
@@ -95,10 +106,12 @@ namespace vkl::GUI
 				_error_message = empty_descriptor_error;
 				return clear(true);
 			}
+			_latest_source_instance = image_instance;
 		}
 		else if (source_image_instance)
 		{
 			image_instance = std::static_pointer_cast<ImageInstance>(_source.get());
+			_latest_source_instance = image_instance;
 		}
 		else
 		{
@@ -110,10 +123,12 @@ namespace vkl::GUI
 					_error_message = empty_descriptor_error;
 					return clear(true);
 				}
+				_latest_source_instance = image_view_instance;
 			}
 			else if (source_image_view_instance)
 			{
 				image_view_instance = std::static_pointer_cast<ImageViewInstance>(_source.get());
+				_latest_source_instance = image_view_instance;
 			}
 			image_instance = image_view_instance->image();
 		}
@@ -141,13 +156,15 @@ namespace vkl::GUI
 		}
 
 		VkComponentMapping custom_swizzle;
+		Range32u array_range = {}, allowed_mips_range = {};
 
 		if (view_ci)
 		{
 			_custom_format = view_ci->format;
 			_custom_aspect = view_ci->subresourceRange.aspectMask;
-			_custom_mips_range = Range32u(view_ci->subresourceRange.baseMipLevel, view_ci->subresourceRange.levelCount);
-			_array_layer = view_ci->subresourceRange.baseArrayLayer;
+			auto view_range = image_view_instance->finiteRange();
+			allowed_mips_range = Range32u{.begin = view_range.baseMipLevel, .len = view_range.levelCount};
+			array_range = Range32u{.begin = view_range.baseArrayLayer, .len = view_range.layerCount};
 			custom_swizzle = view_ci->components;
 		}
 		else
@@ -155,7 +172,8 @@ namespace vkl::GUI
 			_custom_format = image_ci.format;
 			_custom_aspect = getImageAspectFromFormat(_custom_format);
 			_custom_mips_range = Range32u(0, image_ci.mipLevels);
-			_array_layer = 0;
+			array_range = Range32u{.begin = 0, .len = image_instance->createInfo().arrayLayers};
+			allowed_mips_range = Range32u{.begin = 0, .len = image_instance->createInfo().mipLevels};
 			custom_swizzle = VkComponentMapping{
 				.r = VK_COMPONENT_SWIZZLE_IDENTITY,
 				.g = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -171,8 +189,30 @@ namespace vkl::GUI
 		}
 		_custom_swizzle = custom_swizzle;
 
-		_uv_tl = Vector2f(0, 0);
-		_uv_br = Vector2f(1, 1);
+		if (_manual_array_layer)
+		{
+			_array_layer = array_range.clamp(_array_layer);
+		}
+		else
+		{
+			_array_layer = array_range.begin;
+		}
+
+		if (_manual_mips_range)
+		{
+			Range32u old_range = _custom_mips_range;
+			_custom_mips_range.begin = allowed_mips_range.clamp(old_range.begin);
+			if (old_range.len != Range32u::NPos)
+			{
+				uint32_t allowed_new_len = allowed_mips_range.end() - _custom_mips_range.begin;
+				_custom_mips_range.len = std::min(allowed_new_len, old_range.len);
+			}
+		}
+		else
+		{
+			_custom_mips_range = allowed_mips_range;
+		}
+
 		_size_pix = Vector2f(image_ci.extent.width, image_ci.extent.height);
 
 		createCurstomView(image_instance);
@@ -386,6 +426,46 @@ namespace vkl::GUI
 		}
 	}
 
+	// TODO make a unified drag widget someday
+	inline bool InspectRange(Context& ctx, const char* label, Range32i* range, Range32i bounds, bool allow_remaining=false)
+	{
+		assert(range);
+		bool res = false;
+		bool has_remaining = allow_remaining && range->len == range->NPos;
+		if (has_remaining)
+		{
+			res |= ImGui::SliderInt(label, &range->begin, bounds.begin, bounds.end() - 1, nullptr, ImGuiSliderFlags_None);
+		}
+		else
+		{
+			int range_edit[2] = {range->begin, range->end() - 1};
+			float v_speed = float(bounds.len) / (ImGui::CalcItemWidth() * 0.5f);
+			res |= ImGui::DragIntRange2(label, range_edit, range_edit + 1, v_speed, bounds.begin, bounds.end() - 1, nullptr, nullptr, ImGuiSliderFlags_None);
+			if (res)
+			{
+				range->begin = range_edit[0];
+				range->len = range_edit[1] - range_edit[0] + 1;
+			}
+		}
+		if (allow_remaining)
+		{
+			ImGui::SameLine();
+			if (ImGui::Checkbox("Remaining", &has_remaining))
+			{
+				if (has_remaining)
+				{
+					range->len = range->NPos;
+				}
+				else
+				{
+					range->len = bounds.end() - range->begin + 1;
+				}
+				res |= true;
+			}
+		}
+		return res;
+	}
+
 	void ImageVisualizer::declareControlsInline(Context& ctx)
 	{
 		bool should_clear = false;
@@ -413,6 +493,24 @@ namespace vkl::GUI
 		ImGui::BeginDisabled(!_source);
 		int array_layer = static_cast<int>(_array_layer);
 		Range32i layers_range{.begin = 0, .len = 1};
+		Range32i allowed_mips_range{.begin = 0, .len = 1};
+		if (_latest_source_instance)
+		{
+			_latest_source_instance.visit(std::overloads{
+				[&](ImageInstance const& image) {
+					layers_range.len = image.createInfo().arrayLayers;
+					allowed_mips_range.len = image.createInfo().mipLevels;
+				},
+				[&](ImageViewInstance const& view) {
+					auto range = view.createInfo().subresourceRange;
+					auto finite_range = view.finiteRange();
+					layers_range.begin = range.baseArrayLayer;
+					layers_range.len = finite_range.layerCount;
+					allowed_mips_range.begin = range.baseMipLevel;
+					allowed_mips_range.len = finite_range.levelCount;
+				},
+			});
+		}
 		if (ImGui::SliderInt("Layer", &array_layer, layers_range.begin, layers_range.end() - 1, nullptr, ImGuiSliderFlags_None))
 		{
 			array_layer = std::clamp(array_layer, layers_range.begin, layers_range.end() - 1);
@@ -423,8 +521,21 @@ namespace vkl::GUI
 			}
 			_manual_array_layer = true;
 		}
+		Range32i mips_range = _custom_mips_range.staticCastTo<i32>();
+		if (InspectRange(ctx, "Mips", &mips_range, allowed_mips_range, true))
+		{
+			_custom_mips_range = mips_range.staticCastTo<u32>();
+			_manual_mips_range = true;
+			// TODO check if really necessary
+			should_clear |= true;
+		}
+		ImGui::Separator();
 		ImGui::EndDisabled();
-
+		ImGui::ColorEdit4("Background", _background.data(), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float);
+		ImGui::SameLine();
+		ImGui::ColorEdit4("Tint", _tint.data(), ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_Float);
+		ImGui::SliderFloat2("Top-Left UV", _uv_tl.data(), 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
+		ImGui::SliderFloat2("Bottom-Right UV", _uv_br.data(), 0, 1, nullptr, ImGuiSliderFlags_NoRoundToFormat);
 		if (should_clear)
 		{
 			clear();
