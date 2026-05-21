@@ -5,6 +5,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/ImGuiDynamic.hpp>
+#include <vkl/GUI/ImageVisualizer.hpp>
 
 namespace vkl
 {
@@ -571,10 +572,16 @@ namespace vkl
 			using Parent = InstanceInspector<ImageInstance>;
 		protected:
 
+			ImageVisualizer _visualizer;
+
 		public:
 
-			ImageInstanceInspector(std::shared_ptr<ImageInstance> const& target):
-				Parent(target)
+			ImageInstanceInspector(std::shared_ptr<ImageInstance> const& target, Context& ctx):
+				Parent(target),
+				_visualizer(ImageVisualizer::CI{
+					.ctx = &ctx,
+					.label = "Visualizer",
+				})
 			{
 
 			}
@@ -604,6 +611,15 @@ namespace vkl
 				ImGui::LabelHexValue("Memory type bits", aci.memoryTypeBits); // TODO proper inspector
 				ImGui::LabelHexValue("Pool", reinterpret_cast<uintptr_t>(aci.pool));
 				ImGui::LabelValue("Priority", aci.priority);
+
+				SectionBox visu_section{};
+				visu_section.label = _visualizer.label().data();
+				if (visu_section.begin(ctx))
+				{
+					_visualizer.setSource(targetPtr());
+					_visualizer.declareInline(ctx);
+				}
+				visu_section.end(ctx);
 			}
 		};
 
@@ -612,10 +628,16 @@ namespace vkl
 			using Parent = DescriptorInspector<Image>;
 		protected:
 
+			ImageVisualizer _visualizer;
+
 		public:
 
-			ImageInspector(std::shared_ptr<Image> const& target) :
-				Parent(target)
+			ImageInspector(std::shared_ptr<Image> const& target, Context& ctx) :
+				Parent(target),
+				_visualizer(ImageVisualizer::CI{
+					.ctx = &ctx,
+					.label = "Visualizer",
+				})
 			{
 
 			}
@@ -628,6 +650,15 @@ namespace vkl
 				// TODO
 
 				Parent::declareInstance(ctx);
+
+				SectionBox visu_section{};
+				visu_section.label = _visualizer.label().data();
+				if (visu_section.begin(ctx))
+				{
+					_visualizer.setSource(targetPtr());
+					_visualizer.declareInline(ctx);
+				}
+				visu_section.end(ctx);
 			}
 		};
 	}

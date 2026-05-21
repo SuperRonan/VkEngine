@@ -264,11 +264,17 @@ namespace vkl
 
 			ObjectInlineInspector _image_panel;
 
+			ImageVisualizer _visualizer;
+
 		public:
 
-			ImageViewInspector(std::shared_ptr<ImageView> const& target) :
+			ImageViewInspector(std::shared_ptr<ImageView> const& target, Context& ctx) :
 				Parent(target),
-				_image_panel("Image")
+				_image_panel("Image"),
+				_visualizer(ImageVisualizer::CI{
+					.ctx = &ctx,
+					.label = "Visualizer",
+				})
 			{
 				_image_panel.setAcceptNullptr(false);
 				_image_panel.setDisableCreation(true);
@@ -279,6 +285,15 @@ namespace vkl
 			{
 				_image_panel.declareInline(ctx, target()->image());
 				Parent::declareInstance(ctx);
+
+				SectionBox visu_section{};
+				visu_section.label = _visualizer.label().data();
+				if (visu_section.begin(ctx))
+				{
+					_visualizer.setSource(targetPtr());
+					_visualizer.declareInline(ctx);
+				}
+				visu_section.end(ctx);
 			}
 		};
 	}
