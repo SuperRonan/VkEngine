@@ -105,6 +105,9 @@ namespace vkl::GUI
 		MyVector<TypedInlineInspector<TestObject>> inline_panels;
 
 		std::shared_ptr<TestObject> payload;
+
+		Range32i test_bounds = Range32i{.begin = 0, .len = 10};
+		Range32i test_range = Range32i{ .begin = 2, .len = 5};
 	};
 
 	TestPanelInteral* GetInternal(TestPanel* ptr)
@@ -144,6 +147,17 @@ namespace vkl::GUI
 	void TestPanel::declareInline(Context& ctx)
 	{
 		TestPanelInteral& i = *GetInternal(this);
+
+		{
+			int bounds[2] = {i.test_bounds.begin, i.test_bounds.end() - 1};
+			if (ImGui::InputInt2("Bounds", bounds))
+			{
+				i.test_bounds = {.begin = bounds[0], .len = bounds[1] - bounds[0] + 1};
+			}
+			InspectRange(ctx, "Test Range", &i.test_range, i.test_bounds, true);
+			ImGui::Separator();
+		}
+
 
 		for (size_t j = 0; j < i.inline_panels.size(); ++j)
 		{

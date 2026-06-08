@@ -510,6 +510,58 @@ namespace ImGui
 	extern float GetFrameWidth();
 
 	extern void CenterNextItem(float expected_width=0);
+
+	struct InputRangeRes
+	{
+		static constexpr const unsigned char EDIT_MIN_BIT			= 0x01;
+		static constexpr const unsigned char EDIT_MAX_BIT			= 0x02;
+		static constexpr const unsigned char SLIDER_BIT				= 0x40;
+		static constexpr const unsigned char INPUT_TEXT_BIT			= 0x80;
+		unsigned char flags = {}; // != 0 means the value was edited
+		// tag when edited to mark special edit value used when scanned:
+		// '_' (use current value), ' ' (expand to min/max), '0' (a regular numeral value was scaned), 0 error could not scan
+		char min_tag ={}, max_tag = {};
+		// Which separator was used (':', ';', '~')
+		char separator = {};
+
+		constexpr explicit operator bool() const
+		{
+			return static_cast<bool>(flags);
+		}
+	};
+
+	extern InputRangeRes InputRangeExImpl(
+		const char* label,
+		ImRect const& frame,
+		ImGuiID id,
+		ImGuiDataType data_type,
+		size_t data_type_size,
+		void* range_min, // != nullptr
+		void* range_max, // != nullptr
+		const void* p_lower_bound = nullptr,
+		const void* p_upper_bound = nullptr,
+		const char* format = nullptr,
+		bool skip_clamp_bounds = false,
+		ImGuiInputTextFlags flags = ImGuiInputTextFlags_None
+	);
+
+	extern InputRangeRes InputRangeEx(
+		const char* label,
+		ImGuiDataType data_type,
+		size_t data_type_size,
+		void* range_min, // != nullptr
+		void* range_max, // != nullptr
+		const void* p_lower_bound = nullptr,
+		const void* p_upper_bound = nullptr,
+		const char* format = nullptr,
+		bool skip_clamp_bounds = false,
+		ImGuiInputTextFlags flags = ImGuiInputTextFlags_None
+	);
+
+	extern InputRangeRes SliderRangeEx(const char* label, ImGuiDataType data_type, void* range, const void* bounds, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_None);
+
+	// Render label inside of the rect (fit the text to the rect)
+	extern void RenderTextFitEx(ImRect const& rect, const char* label, const char* label_end = nullptr, float max_font_size = -1);
 }
 
 namespace vkl::GUI
@@ -537,4 +589,6 @@ namespace vkl::GUI
 		bool _should_pop_item_width = false;
 		ImColor _color;
 	};
+
+	extern bool InspectRange(Context& ctx, const char* label, Range32i* range, Range32i bounds, bool allow_remaining = false);
 }

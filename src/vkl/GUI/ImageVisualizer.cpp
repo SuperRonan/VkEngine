@@ -1,6 +1,9 @@
+#define IMGUI_DEFINE_MATH_OPERATORS 1
 #include <vkl/GUI/ImageVisualizer.hpp>
 
 #include <vkl/GUI/Context.hpp>
+#include <vkl/GUI/ImGuiUtils.hpp>
+
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
@@ -424,46 +427,6 @@ namespace vkl::GUI
 				ImGui::TextColored(col, reason);
 			}
 		}
-	}
-
-	// TODO make a unified drag widget someday
-	inline bool InspectRange(Context& ctx, const char* label, Range32i* range, Range32i bounds, bool allow_remaining=false)
-	{
-		assert(range);
-		bool res = false;
-		bool has_remaining = allow_remaining && range->len == range->NPos;
-		if (has_remaining)
-		{
-			res |= ImGui::SliderInt(label, &range->begin, bounds.begin, bounds.end() - 1, nullptr, ImGuiSliderFlags_None);
-		}
-		else
-		{
-			int range_edit[2] = {range->begin, range->end() - 1};
-			float v_speed = float(bounds.len) / (ImGui::CalcItemWidth() * 0.5f);
-			res |= ImGui::DragIntRange2(label, range_edit, range_edit + 1, v_speed, bounds.begin, bounds.end() - 1, nullptr, nullptr, ImGuiSliderFlags_None);
-			if (res)
-			{
-				range->begin = range_edit[0];
-				range->len = range_edit[1] - range_edit[0] + 1;
-			}
-		}
-		if (allow_remaining)
-		{
-			ImGui::SameLine();
-			if (ImGui::Checkbox("Remaining", &has_remaining))
-			{
-				if (has_remaining)
-				{
-					range->len = range->NPos;
-				}
-				else
-				{
-					range->len = bounds.end() - range->begin + 1;
-				}
-				res |= true;
-			}
-		}
-		return res;
 	}
 
 	void ImageVisualizer::declareControlsInline(Context& ctx)
