@@ -558,10 +558,10 @@ namespace ImGui
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_None
 	);
 
-	extern InputRangeRes SliderRangeEx(const char* label, ImGuiDataType data_type, void* range, const void* bounds, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_None);
+	extern InputRangeRes SliderRangeEx(const char* label, ImGuiDataType data_type, void* range, const void* bounds, const void* p_len_bounds = nullptr, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_None);
 
 	// Render label inside of the rect (fit the text to the rect)
-	extern void RenderTextFitEx(ImRect const& rect, const char* label, const char* label_end = nullptr, float max_font_size = -1);
+	extern void RenderTextFitEx(ImRect const& rect, const char* label, const char* label_end = nullptr, float max_font_size = -1, ImVec2 align = ImVec2(0.5f, 0.5f));
 }
 
 namespace vkl::GUI

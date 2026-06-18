@@ -5,6 +5,7 @@
 #include <cassert>
 
 #include <vkl/Maths/Transforms.hpp>
+#include <vkl/Maths/Types.hpp>
 
 #include <numbers>
 
@@ -960,19 +961,19 @@ namespace ImGui
 
 	struct SliderRangeWidgetImpl
 	{
-		enum class Index
+		enum class Index : signed char
 		{
-			Inter = 0,
-			Min = 1,
+			Min = 0,
+			Inter = 1,
 			Max = 2,
 			_Count,
 			None = -1,
 		};
 		using enum Index;
 
-		ImRect _min_grab_bb, _max_grab_bb;
-		ImRect _hovered_bb;
-		bool _merge_grabs = {};
+		float _min_grab_pos, _max_grab_pos; // in px
+		float _grab_size; // in px
+		//char _grabs_overlapping = {}; // 0: no overlapping, 1: overlapping, 2:merge
 		bool _grab_ok = false;
 		bool _hovered = {};
 		bool _temp_input_allowed = {};
@@ -983,12 +984,12 @@ namespace ImGui
 		ImGuiDataType _data_type = {};
 		const ImGuiDataTypeInfo* _data_type_info = {};
 
-		Index _grab_index = Index::None; // active or hovered
+		Index _hovered_index = Index::None;
 
 		struct Globals
 		{
-			Index index = Index::None;
-			ImGuiDataTypeStorage backup_data[3];
+			Index index = Index::None; // Active index
+			alignas(uintptr_t) ImGuiDataTypeStorage backup_data[3];
 		};
 		// TODO move this to the context
 		static Globals _g;
@@ -1005,11 +1006,23 @@ namespace ImGui
 			T
 		>::type;
 
+		bool isActive() const
+		{
+			return GImGui->ActiveId == _id;
+		}
+
+		void clearActive()
+		{
+			ClearActiveID();
+			_g.index = Index::None;
+			std::memset(_g.backup_data, 0, sizeof(_g.backup_data));
+		}
+
 		template <std::arithmetic T>
 		InputRangeRes behaviourT(T* range, const T* bounds, const T* len_bounds, const char* format, ImGuiSliderFlags flags)
 		{
 			_render_grabs = true;
-			using Type32 = Type32<T>;
+			using Type32 = T;
 			using SignedType = typename std::signed_type<Type32>::type;
 			using FloatType = typename that::FloatTypePerSize<sizeof(Type32)>::type;
 
@@ -1069,8 +1082,8 @@ namespace ImGui
 			float grab_min_t = RatioFromValue(range_min);
 			float grab_max_t = RatioFromValue(range_max);
 			float mouse_abs_pos = g.IO.MousePos[axis];
-			float rel_mouse_pos = mouse_abs_pos - _frame.Min[axis];
-			float mouse_t = rel_mouse_pos / _frame.GetSize()[axis];
+			float rel_mouse_pos = mouse_abs_pos - (slider_usable_pos_min);
+			float mouse_t = rel_mouse_pos / slider_usable_sz;
 			if (axis == ImGuiAxis_Y)
 			{
 				grab_min_t = 1.0f - grab_min_t;
@@ -1131,17 +1144,28 @@ namespace ImGui
 
 			};
 
+			// Sets _grabs_overlapping
 			auto calc_mouse_hovered_grab = [&]() -> Index
 			{
 				Index res = Index::None;
 				float grab_size_t = grab_sz / slider_usable_sz;
-				float inter_grab_dist = abs(grab_max_t - grab_min_t);
+				float half_grab_size_t = 0.5f * grab_size_t;
 				// TODO improve grab Inter when narrow
-				if (mouse_t < grab_min_t + grab_size_t)
+				float upper_min_grab_t = grab_min_t + half_grab_size_t;
+				float lower_max_grab_t = grab_max_t - half_grab_size_t;
+				float inter_grab_dist_t = lower_max_grab_t - upper_min_grab_t;
+				if (inter_grab_dist_t < grab_size_t)
+				{
+					float a = grab_min_t - half_grab_size_t;
+					float b = grab_max_t + half_grab_size_t;
+					upper_min_grab_t = ImLerp(a, b, 0.3333333f);
+					lower_max_grab_t = ImLerp(a, b, 0.6666666f);
+				}
+				if (mouse_t < upper_min_grab_t)
 				{
 					res = Index::Min;
 				}
-				else if (mouse_t > grab_max_t - grab_size_t)
+				else if (mouse_t > lower_max_grab_t)
 				{
 					res = Index::Max;
 				}
@@ -1159,7 +1183,7 @@ namespace ImGui
 				reinterpret_cast<T&>(_g.backup_data[2]) = inter_value;
 			};
 
-			if (g.ActiveId == _id)
+			if (isActive())
 			{
 				bool set_new_value = false;
 				float clicked_t = 0.0f;
@@ -1167,7 +1191,7 @@ namespace ImGui
 				{
 					if (!g.IO.MouseDown[0])
 					{
-						ClearActiveID();
+						clearActive();
 					}
 					else
 					{
@@ -1176,6 +1200,7 @@ namespace ImGui
 						{
 							_g.index = calc_mouse_hovered_grab();
 						}
+						_hovered_index = _g.index;
 
 						if (g.ActiveIdIsJustActivated && _g.index == Index::Inter)
 						{
@@ -1238,8 +1263,8 @@ namespace ImGui
 							switch (_g.index)
 							{
 								case Index::Min: return res.EDIT_MIN_BIT; break;
-								case Index::Max: return res.EDIT_MAX_BIT; break;
 								case Index::Inter: return res.EDIT_MIN_BIT | res.EDIT_MAX_BIT; break;
+								case Index::Max: return res.EDIT_MAX_BIT; break;
 							}
 							return 0;
 						}();
@@ -1250,33 +1275,15 @@ namespace ImGui
 			{
 				if (_hovered)
 				{
-					_g.index = calc_mouse_hovered_grab();
+					_hovered_index = calc_mouse_hovered_grab();
 				}
 			}
 
 			// Prepare rendering
 			{
-				const float grab_min_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_min_t);
-				const float grab_max_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_max_t);
-				if (range_min == range_max)
-				{
-					_merge_grabs = true;
-				}
-				else
-				{
-					_merge_grabs = false;
-				}
-
-				if (axis == ImGuiAxis_X)
-				{
-					_min_grab_bb = ImRect(grab_min_pos - grab_sz * 0.5f, bb.Min.y + grab_padding, grab_min_pos + grab_sz * 0.5f, bb.Max.y - grab_padding);
-					_max_grab_bb = ImRect(grab_max_pos - grab_sz * 0.5f, bb.Min.y + grab_padding, grab_max_pos + grab_sz * 0.5f, bb.Max.y - grab_padding);
-				}
-				else
-				{
-					VKL_NOT_YET_IMPLEMENTED;
-				}
-
+				_min_grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_min_t);
+				_max_grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_max_t);
+				_grab_size = grab_sz;
 				_grab_ok = true;
 			}
 
@@ -1287,7 +1294,32 @@ namespace ImGui
 		{
 			auto dispatch = [&] <std::arithmetic T> ()
 			{
-				auto res = this->behaviourT(static_cast<T*>(range), static_cast<const T*>(bounds), static_cast<const T*>(len_bounds), format, flags);
+				using Type32 = Type32<T>;
+				InputRangeRes res;
+				if constexpr (std::same_as<Type32, T>)
+				{
+					res = this->behaviourT<T>(static_cast<T*>(range), static_cast<const T*>(bounds), static_cast<const T*>(len_bounds), format, flags);
+				}
+				else
+				{
+					T* t_range = static_cast<T*>(range);
+					const T* t_bounds = static_cast<const T*>(bounds);
+					const T* t_len_bounds = static_cast<const T*>(len_bounds);
+					Type32 my_range[2] = { static_cast<Type32>(t_range[0]), static_cast<Type32>(t_range[1]) };
+					Type32 my_bounds[2] = { static_cast<Type32>(t_bounds[0]), static_cast<Type32>(t_bounds[1]) };
+					Type32 my_len_bounds[2];
+					if (len_bounds)
+					{
+						my_len_bounds[0] = static_cast<Type32>(t_len_bounds[0]);
+						my_len_bounds[1] = static_cast<Type32>(t_len_bounds[1]);
+					}
+					res = this->behaviourT<Type32>(my_range, my_bounds, len_bounds ? my_len_bounds : nullptr, format, flags);
+					if (res.operator bool())
+					{
+						t_range[0] = my_range[0];
+						t_range[1] = my_range[1];
+					}
+				}
 				return res;
 			};
 
@@ -1313,8 +1345,8 @@ namespace ImGui
 			assert(_grab_ok);
 			ImGuiContext& g = *GImGui;
 			const ImGuiStyle& style = g.Style;
-			ImGuiWindow* window = GetCurrentWindow();
-			const bool active = g.ActiveId == _id;
+			ImGuiWindow* window = GetCurrentWindow();;
+			const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
 		
 			auto render_grab = [&](ImRect const& bb, ImGuiCol color_id, float alpha = 1)
 			{
@@ -1325,39 +1357,109 @@ namespace ImGui
 			char value_buf[64];
 			const char* value_buf_end = nullptr;
 
-			auto render_grab_value = [&](ImRect const& bb, const void* p_data)
+			auto render_grab_value = [&](ImRect const& bb, const void* p_data, float align = 0)
 			{
 				value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), _data_type, p_data, format);
-				RenderTextFitEx(bb, value_buf, value_buf_end, max_font_size);
+				ImVec2 align2 = axis == ImGuiAxis_X ? ImVec2(0.5f, align + 0.5f) : ImVec2(align + 0.5f, 0.5f);
+				RenderTextFitEx(bb, value_buf, value_buf_end, max_font_size, align2);
 			};
 
-			if (_merge_grabs)
+			const bool bounds_equal = DataTypeCompare(_data_type, p_min, p_max) == 0;
+
+			bool merge_grabs = bounds_equal;
+
+			ImRect min_grab_bb, max_grab_bb;
+			const float h_grab_size = 0.5f * _grab_size;
+			if (axis == ImGuiAxis_X)
 			{
-				render_grab(_min_grab_bb, ImGuiCol_SliderGrab);
-				if (g.LogEnabled)
-					LogSetNextTextDecoration("{", "}");
-				render_grab_value(_min_grab_bb, p_min);
+				min_grab_bb = ImRect(_min_grab_pos - h_grab_size, _frame.Min.y + _grab_padding, _min_grab_pos + h_grab_size, _frame.Max.y - _grab_padding);
+				max_grab_bb = ImRect(_max_grab_pos - h_grab_size, _frame.Min.y + _grab_padding, _max_grab_pos + h_grab_size, _frame.Max.y - _grab_padding);
 			}
 			else
 			{
-				ImRect inter_bb;
-				inter_bb.Min = _min_grab_bb.Min;
-				inter_bb.Max = _max_grab_bb.Max;
-				// TODO hovered signal
-				render_grab(inter_bb, _grab_index == Index::Inter ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab, 0.5f);
-				render_grab(_min_grab_bb, _grab_index == Index::Min ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
-				render_grab(_max_grab_bb, _grab_index == Index::Max ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
+				min_grab_bb = ImRect(_frame.Min.x + _grab_padding, _min_grab_pos - h_grab_size, _frame.Max.x - _grab_padding, _min_grab_pos + h_grab_size);
+				max_grab_bb = ImRect(_frame.Min.x + _grab_padding, _max_grab_pos - h_grab_size, _frame.Max.x - _grab_padding, _max_grab_pos + h_grab_size);
+			}
+
+
+			ImRect inter_bb_wide = ImRect(min_grab_bb.Min, max_grab_bb.Max);
+			ImRect inter_bb_reduced = ImRect(min_grab_bb.Max, max_grab_bb.Min);
+			const bool grabs_overlapping = (_max_grab_pos - h_grab_size) - (_min_grab_pos + h_grab_size) < _grab_size;
+			
+			auto calc_overlapping_highligh = [&](Index index)
+			{
+				float t = static_cast<float>(index) / 3.0f;
+				float p = (static_cast<float>(index) + 1.0f) / 3.0f;
+				const ImRect bb = inter_bb_wide;
+				ImRect hovered_bb = bb;
+				hovered_bb.Min[axis] = ImLerp(bb.Min[axis], bb.Max[axis], t);
+				hovered_bb.Max[axis] = ImLerp(bb.Min[axis], bb.Max[axis], p);
+				return hovered_bb;
+			};
+
+			const bool should_render_highligh = isActive() || _hovered;
+			auto render_highlight = [&](ImRect const& rect, Index index = Index::None)
+			{
+				float rounding = 0;
+				float t = g.Time;
+				const float freq = 1;
+				float alpha = std::lerp(0.2, 0.4, std::sqr(sin(t * freq)));
+				window->DrawList->AddRectFilled(rect.Min, rect.Max, GetColorU32(ImVec4(1, 1, 1, alpha)), rounding, ImDrawFlags_None);
+			};
+
+
+			if (merge_grabs)
+			{
+				render_grab(min_grab_bb, ImGuiCol_SliderGrab);
+				
+				if (should_render_highligh)
+				{
+					render_highlight(calc_overlapping_highligh(_hovered_index));
+				}
+				if (g.LogEnabled)
+					LogSetNextTextDecoration("{", "}");
+				render_grab_value(min_grab_bb, p_min);
+			}
+			else
+			{
+				render_grab(inter_bb_wide, _g.index == Index::Inter ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab, 0.5f);
+				render_grab(min_grab_bb, _g.index == Index::Min ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
+				render_grab(max_grab_bb, _g.index == Index::Max ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
 
 				// Display values using user-provided display format so user can add prefix/suffix/decorations to the value.
-				
+
+				float align = 0.0f;
+				//if (_grabs_overlapping == 1)
+				//{
+				//	align = 0.25f;
+				//}
+
+				if (should_render_highligh)
+				{
+					ImRect hovered_bb;
+					if (grabs_overlapping)
+					{
+						hovered_bb = calc_overlapping_highligh(_hovered_index);
+					}
+					else
+					{
+						switch (_hovered_index)
+						{
+						case Index::Min: hovered_bb = min_grab_bb; break;
+						case Index::Inter: hovered_bb = inter_bb_reduced; break;
+						case Index::Max: hovered_bb = max_grab_bb; break;
+						}
+					}
+					render_highlight(hovered_bb);
+				}
 
 				if (g.LogEnabled)
 					LogSetNextTextDecoration("{", "");
-				render_grab_value(_min_grab_bb, p_min);
+				render_grab_value(min_grab_bb, p_min, -align);
 
 				if (g.LogEnabled)
 					LogSetNextTextDecoration(": ", "}");
-				render_grab_value(_max_grab_bb, p_max);
+				render_grab_value(max_grab_bb, p_max, +align);
 			}
 		}
 
@@ -1366,7 +1468,7 @@ namespace ImGui
 			ImGuiContext& g = *GImGui;
 			const ImGuiStyle& style = g.Style;
 			RenderNavCursor(_frame, _id);
-			const ImU32 frame_col = GetColorU32(g.ActiveId == _id ? ImGuiCol_FrameBgActive : _hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+			const ImU32 frame_col = GetColorU32(isActive() ? ImGuiCol_FrameBgActive : _hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
 			RenderFrame(_frame.Min, _frame.Max, frame_col, true, style.FrameRounding);
 			const ImVec2 label_size = CalcTextSize(label, NULL, true);
 			if (label_size.x > 0.0f)
@@ -1507,9 +1609,9 @@ namespace ImGui
 
 	SliderRangeWidgetImpl::Globals SliderRangeWidgetImpl::_g = {};
 
-	InputRangeRes SliderRangeEx(const char* label, ImGuiDataType data_type, void* range, const void* bounds, const char* format, ImGuiSliderFlags flags)
+	InputRangeRes SliderRangeEx(const char* label, ImGuiDataType data_type, void* range, const void* bounds, const void* p_len_bounds, const char* format, ImGuiSliderFlags flags)
 	{
-		return SliderRangeWidgetImpl::Declare(label, data_type, range, bounds, nullptr, format, flags);
+		return SliderRangeWidgetImpl::Declare(label, data_type, range, bounds, p_len_bounds, format, flags);
 #if 0
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
@@ -1657,7 +1759,7 @@ namespace ImGui
 	}
 
 
-	void RenderTextFitEx(ImRect const& rect, const char* label, const char* label_end, float max_font_size)
+	void RenderTextFitEx(ImRect const& rect, const char* label, const char* label_end, float max_font_size, ImVec2 align)
 	{
 		ImGuiContext& g = *GImGui;
 		ImGuiWindow* window = g.CurrentWindow;
@@ -1666,8 +1768,6 @@ namespace ImGui
 		{
 			label_end = FindRenderedTextEnd(label);
 		}
-
-		ImVec2 align = ImVec2(0.5f, 0.5f);
 
 		ImFont* font = g.Font;
 		float font_size = g.FontSize;
@@ -1767,7 +1867,7 @@ namespace vkl::GUI
 			int bounds_[2] = { bounds.begin, bounds.end() - 1 };
 			float v_speed = float(bounds.len) / (ImGui::CalcItemWidth() * 0.5f);
 			//res |= ImGui::DragIntRange2(label, range_edit, range_edit + 1, v_speed, bounds.begin, bounds.end() - 1, nullptr, nullptr, ImGuiSliderFlags_None);
-			const ImGui::InputRangeRes input_res = ImGui::SliderRangeEx(label, ImGuiDataType_S32, range_edit, bounds_, nullptr, ImGuiSliderFlags_None);
+			const ImGui::InputRangeRes input_res = ImGui::SliderRangeEx(label, ImGuiDataType_S32, range_edit, bounds_, nullptr, nullptr, ImGuiSliderFlags_None);
 			res |= static_cast<bool>(input_res);
 			if (res)
 			{

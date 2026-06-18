@@ -108,6 +108,8 @@ namespace vkl::GUI
 
 		Range32i test_bounds = Range32i{.begin = 0, .len = 10};
 		Range32i test_range = Range32i{ .begin = 2, .len = 5};
+		float test_range_f[2] = {1.12, 5.67};
+		float test_f_len_bounds[2] = {0, 1000};
 	};
 
 	TestPanelInteral* GetInternal(TestPanel* ptr)
@@ -155,6 +157,10 @@ namespace vkl::GUI
 				i.test_bounds = {.begin = bounds[0], .len = bounds[1] - bounds[0] + 1};
 			}
 			InspectRange(ctx, "Test Range", &i.test_range, i.test_bounds, true);
+			const float range_f_bounds[2] = {static_cast<float>(i.test_bounds.begin), static_cast<float>(i.test_bounds.end())};
+			ImGui::SliderRangeEx("Test Float Range", ImGuiDataType_Float, i.test_range_f, range_f_bounds, i.test_f_len_bounds);
+			const float len_bounds[2] = {0.0f, range_f_bounds[1]};
+			ImGui::SliderRangeEx("Test Float Range Len Bounds", ImGuiDataType_Float, i.test_f_len_bounds, len_bounds);
 			ImGui::Separator();
 		}
 
