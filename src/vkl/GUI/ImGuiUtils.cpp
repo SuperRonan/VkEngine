@@ -941,6 +941,60 @@ namespace ImGui
 	//	return res;
 	//}
 
+	template <class T>
+	T CenterInside(T outer_size, T inner_size)
+	{
+		return (outer_size - inner_size) / 2;
+	}
+
+	ImVec2 CenterRectPos(ImRect const& outer, ImVec2 inner_size)
+	{
+		return outer.Min + CenterInside(outer.GetSize(), inner_size);
+	}
+
+	ImRect CenterRect(ImRect const& outer, ImVec2 inner_size)
+	{
+		ImRect res;
+		res.Min = CenterRectPos(outer, inner_size);
+		res.Max = res.Min + inner_size;
+		return res;
+	}
+
+	ImVec2 CalcDeltaToFitInside(ImRect const& outer, ImRect const& inner, bool center_if_bigger=false)
+	{
+		ImVec2 min_d = inner.Min - outer.Min;
+		ImVec2 max_d = inner.Max - outer.Max;
+		ImVec2 res = ImVec2(0, 0);
+		for (uint i = 0; i < 2; ++i)
+		{
+			const bool move_lower = min_d[i] < 0;
+			const bool move_upper = max_d[i] > 0;
+			if (move_lower && move_upper)
+			{
+				if (center_if_bigger)
+				{
+					res[i] = (-min_d[i] - max_d[i]) * 0.5f;
+				}
+			}
+			else if(move_lower)
+			{
+				res[i] = -min_d[i];
+			}
+			else if (move_upper)
+			{
+				res[i] = -max_d[i];
+			}
+		}
+		return res;
+	}
+
+	ImRect FitRectInside(ImRect const& outer, ImRect const& inner, bool center_if_bigger = false)
+	{
+		ImRect res = inner;
+		ImVec2 delta = CalcDeltaToFitInside(outer, inner, center_if_bigger);
+		res.Translate(delta);
+		return res;
+	}
 
 #define IMPORT_IMGUI_EXTERN_TEMPLATES(T, ST, FT) \
 	extern template IMGUI_API float ScaleRatioFromValueT<T, ST, FT>(ImGuiDataType data_type, T v, T v_min, T v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size); \
@@ -1354,19 +1408,32 @@ namespace ImGui
 			};
 
 			const float max_font_size = g.FontSize;
-			char value_buf[64];
-			const char* value_buf_end = nullptr;
+			const size_t value_buf_len = 128;
+			char value_buf[value_buf_len];
 
-			auto render_grab_value = [&](ImRect const& bb, const void* p_data, float align = 0)
+			struct GrabLabel
 			{
-				value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_COUNTOF(value_buf), _data_type, p_data, format);
-				ImVec2 align2 = axis == ImGuiAxis_X ? ImVec2(0.5f, align + 0.5f) : ImVec2(align + 0.5f, 0.5f);
-				RenderTextFitEx(bb, value_buf, value_buf_end, max_font_size, align2);
+				char* txt;
+				uint len;
+				float size;
+			};
+
+			auto render_grab_txt =  [&](ImVec2 const& pos, GrabLabel const& label)
+			{
+				RenderText(pos, label.txt, label.txt + label.len);
+			};
+
+			auto calc_grab_label_txt = [&](GrabLabel& gl, const void* p_data)
+			{
+				gl.len = DataTypeFormatString(gl.txt, value_buf_len / 2, _data_type, p_data, format);
+				gl.size = CalcTextSize(gl.txt, gl.txt + gl.len).x; // UnHandled case: if the text is rendered vertically (independent of the slider verticality option!)
 			};
 
 			const bool bounds_equal = DataTypeCompare(_data_type, p_min, p_max) == 0;
-
 			bool merge_grabs = bounds_equal;
+
+			GrabLabel min_label{.txt = value_buf}, max_label{.txt = value_buf + value_buf_len / 2};
+			calc_grab_label_txt(min_label, p_min);
 
 			ImRect min_grab_bb, max_grab_bb;
 			const float h_grab_size = 0.5f * _grab_size;
@@ -1418,21 +1485,16 @@ namespace ImGui
 				}
 				if (g.LogEnabled)
 					LogSetNextTextDecoration("{", "}");
-				render_grab_value(min_grab_bb, p_min);
+				ImRect label_bb = CenterRect(min_grab_bb, ImVec2(min_label.size, g.FontSize));
+				label_bb = FitRectInside(_frame, label_bb, true);
+				render_grab_txt(label_bb.Min, min_label);
 			}
 			else
 			{
+				calc_grab_label_txt(max_label, p_max);
 				render_grab(inter_bb_wide, _g.index == Index::Inter ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab, 0.5f);
 				render_grab(min_grab_bb, _g.index == Index::Min ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
 				render_grab(max_grab_bb, _g.index == Index::Max ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab);
-
-				// Display values using user-provided display format so user can add prefix/suffix/decorations to the value.
-
-				float align = 0.0f;
-				//if (_grabs_overlapping == 1)
-				//{
-				//	align = 0.25f;
-				//}
 
 				if (should_render_highligh)
 				{
@@ -1453,13 +1515,57 @@ namespace ImGui
 					render_highlight(hovered_bb);
 				}
 
+				ImRect label_min_bb = CenterRect(min_grab_bb, ImVec2(min_label.size, g.FontSize));
+				ImRect label_max_bb = CenterRect(max_grab_bb, ImVec2(max_label.size, g.FontSize));
+				// Position min and max labels to avoid overlapping while remaining in the frame
+				// There is no perfect solution for some edge cases when there is not enough space to fit both labels
+				{
+					ImRect frame = _frame;
+					float padding = _grab_padding;
+					if (frame.GetSize()[axis] > 4 * padding)
+					{
+						ImVec2 padding2(0, 0);
+						padding2[axis] = padding;
+						frame.Expand(-padding2);
+					}
+					ImRect min_constraint = frame, max_constraint = frame;
+					label_min_bb = FitRectInside(min_constraint, label_min_bb, true);
+					label_max_bb = FitRectInside(max_constraint, label_max_bb, true);
+
+					const float min_inter_label_space = g.FontSize;
+					float text_overlap = (label_max_bb.Min[axis] - min_inter_label_space - label_min_bb.Max[axis]);
+					const float text_overlap_epsilon = 1e-2;
+					if (text_overlap < -text_overlap_epsilon)
+					{
+						const float lower_margin = ImMax(0.0f, label_min_bb.Min[axis] - min_constraint.Min[axis]);
+						const float upper_margin = ImMax(0.0f, max_constraint.Max[axis] - label_max_bb.Max[axis]);
+						const float minimum_margin = ImMin(lower_margin, upper_margin);
+						const float maximum_margin = ImMax(lower_margin, upper_margin);
+						float lower_d = 0, upper_d = 0;
+
+						float* minimum_d = lower_margin < upper_margin ? &lower_d : &upper_d;
+						float* maximum_d = lower_margin < upper_margin ? &upper_d : &lower_d;
+
+						float half_overlap = -text_overlap / 2;
+						*minimum_d = ImMin(half_overlap, minimum_margin);
+						float remainding = (-text_overlap) - *minimum_d;
+						*maximum_d = ImMin(remainding, maximum_margin);
+						
+						ImVec2 d(0, 0);
+						d[axis] = lower_d;
+						label_min_bb.Translate(-d);
+						d[axis] = upper_d;
+						label_max_bb.Translate(d);
+					}
+				}
+
 				if (g.LogEnabled)
 					LogSetNextTextDecoration("{", "");
-				render_grab_value(min_grab_bb, p_min, -align);
+				render_grab_txt(label_min_bb.Min, min_label);
 
 				if (g.LogEnabled)
 					LogSetNextTextDecoration(": ", "}");
-				render_grab_value(max_grab_bb, p_max, +align);
+				render_grab_txt(label_max_bb.Min, max_label);
 			}
 		}
 
