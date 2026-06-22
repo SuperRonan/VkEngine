@@ -259,7 +259,7 @@ namespace vkl
 	void ImageInstance::setState(size_t tid, Range const& _range, ResourceState2 const& state)
 	{
 		const bool state_is_readonly = accessIsReadonly2(state.access);
-		Range range = finiteRange(range);
+		Range range = finiteRange(_range);
 		const uint32_t range_max_mip = range.baseMipLevel + range.levelCount;
 		const uint32_t range_max_layer = range.baseArrayLayer + range.layerCount;
 
