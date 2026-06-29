@@ -997,8 +997,8 @@ namespace ImGui
 	}
 
 #define IMPORT_IMGUI_EXTERN_TEMPLATES(T, ST, FT) \
-	extern template IMGUI_API float ScaleRatioFromValueT<T, ST, FT>(ImGuiDataType data_type, T v, T v_min, T v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size); \
-	extern template IMGUI_API T     ScaleValueFromRatioT<T, ST, FT>(ImGuiDataType data_type, float t, T v_min, T v_max, bool is_logarithmic, float logarithmic_zero_epsilon, float zero_deadzone_size); \
+	extern template IMGUI_API float ScaleRatioFromValueT<T, ST, FT>(ImGuiDataType data_type, T v, T v_min, T v_max, float logarithmic_zero_epsilon, float zero_deadzone_size); \
+	extern template IMGUI_API T     ScaleValueFromRatioT<T, ST, FT>(ImGuiDataType data_type, float t, T v_min, T v_max, float logarithmic_zero_epsilon, float zero_deadzone_size); \
 	extern template IMGUI_API bool  DragBehaviorT<T, ST, FT>(ImGuiDataType data_type, T* v, float v_speed, T v_min, T v_max, const char* format, ImGuiSliderFlags flags); \
 	extern template IMGUI_API bool  SliderBehaviorT<T, ST, FT>(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, T* v, T v_min, T v_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb); \
 	extern template IMGUI_API T     RoundScalarWithFormatT<T>(const char* format, ImGuiDataType data_type, T v); \
@@ -1124,12 +1124,12 @@ namespace ImGui
 
 			auto RatioFromValue = [&](T value) -> float
 			{
-				return ScaleRatioFromValueT<Type32, SignedType, FloatType>(GetDataType<T>(), value, lower_bound, upper_bound, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+				return ScaleRatioFromValueT<Type32, SignedType, FloatType>(GetDataType<T>(), value, lower_bound, upper_bound, logarithmic_zero_epsilon, zero_deadzone_halfsize);
 			};
 
 			auto ValueFromRatio = [&](float t) -> T
 			{
-				Type32 res = ScaleValueFromRatioT<Type32, SignedType, FloatType>(GetDataType<T>(), t, lower_bound, upper_bound, is_logarithmic, logarithmic_zero_epsilon, zero_deadzone_halfsize);
+				Type32 res = ScaleValueFromRatioT<Type32, SignedType, FloatType>(GetDataType<T>(), t, lower_bound, upper_bound, logarithmic_zero_epsilon, zero_deadzone_halfsize);
 				return static_cast<T>(res);
 			};
 

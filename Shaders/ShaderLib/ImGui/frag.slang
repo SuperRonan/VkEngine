@@ -6,7 +6,8 @@ layout(location = 1) in float2 uv;
 
 layout(location = 0) out float4 out_color;
 
-layout(set = 0, binding = 0) uniform Sampler2D<float4> texture;
+layout(set = 0, binding = 0) uniform Texture2D<float4> texture;
+layout(set = 1, binding = 0) uniform SamplerState sampler;
 
 [vk::constant_id(0)]
 const uint ColorCorrectionMode = 0;
@@ -25,7 +26,7 @@ uniform PC _pc;
 [shader("fragment")]
 void main()
 {
-	out_color = color * texture.Sample(uv);
+	out_color = color * texture.Sample(sampler, uv);
 	
 	out_color.xyz = OETF(out_color.xyz * _pc.exposure, TransferFunction(ColorCorrectionMode), _pc.gamma);
 }
