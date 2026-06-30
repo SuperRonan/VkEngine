@@ -243,7 +243,7 @@ namespace vkl
 
 		virtual ~LinearExecutor() override;
 
-		virtual void init() override final;
+		virtual void init(GUI::Context* gui_ctx = nullptr) override final;
 
 		void updateResources(UpdateContext & context);
 

@@ -66,6 +66,22 @@ namespace vkl::GUI
 	
 	class Context
 	{
+	public:
+
+		template <class T>
+		struct BoundResource
+		{
+			union
+			{
+				VkDescriptorSet set;
+				T handle;
+				const void* ptr = nullptr;
+			};
+		};
+
+		using BoundSampler = BoundResource<VkSampler>;
+		using BoundImage = BoundResource<VkImageView>;
+
 	protected:
 
 		ImGuiContext * _imgui_context;
@@ -86,7 +102,11 @@ namespace vkl::GUI
 		std::set<std::shared_ptr<ImageViewInstance>> _frame_images;
 		MyVector<std::shared_ptr<VkObject>> _objects_to_keep;
 		std::shared_ptr<Sampler> _sampler;
-		std::shared_ptr<DescriptorSetLayoutInstance> _imgui_set_layout;
+		std::shared_ptr<DescriptorSetLayoutInstance> _imgui_texture_set_layout;
+		std::shared_ptr<DescriptorSetLayoutInstance> _imgui_sampler_set_layout;
+
+		BoundImage _imgui_bound_image;
+		BoundSampler _imgui_bound_sampler;
 
 		EnumStyle _enum_style = EnumStyle::Default;
 	public:
@@ -101,7 +121,7 @@ namespace vkl::GUI
 
 		Context(CreateInfo const& ci);
 
-		void createInternalResource(std::shared_ptr<DescriptorSetLayoutInstance> const& set_layout);
+		void createInternalResource(std::shared_ptr<DescriptorSetLayoutInstance> const& texture_set_layout, std::shared_ptr<DescriptorSetLayoutInstance> const& sampler_set_layout);
 
 		void begin();
 
@@ -211,9 +231,34 @@ namespace vkl::GUI
 			return _sampler;
 		}
 
-		std::shared_ptr<DescriptorSetLayoutInstance> const& getImGuiSetLayout() const
+		std::shared_ptr<DescriptorSetLayoutInstance> const& getImGuiTextureSetLayout() const
 		{
-			return _imgui_set_layout;
+			return _imgui_texture_set_layout;
+		}
+
+		std::shared_ptr<DescriptorSetLayoutInstance> const& getImGuiSamplerSetLayout() const
+		{
+			return _imgui_sampler_set_layout;
+		}
+
+		BoundImage getImGuiBoundImage() const
+		{
+			return _imgui_bound_image;
+		}
+
+		BoundSampler getImGuiBoundSampler() const
+		{
+			return _imgui_bound_sampler;
+		}
+
+		void setImGuiBoundImage(BoundImage img)
+		{
+			_imgui_bound_image = img;
+		}
+
+		void setImGuiBoundSampler(BoundSampler sampler)
+		{
+			_imgui_bound_sampler = sampler;
 		}
 	};
 }

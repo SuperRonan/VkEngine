@@ -14,6 +14,13 @@ namespace vkl::GUI
 	{
 	public:
 
+		enum class ImGuiSampler : char
+		{
+			Default,
+			Nearest,
+			Linear,
+		};
+
 		using SourcePtr = RawPointerVariant<Image, ImageInstance, ImageView, ImageViewInstance>;
 		using SourceSPtr = SharedPointerVariant<Image, ImageInstance, ImageView, ImageViewInstance>;
 		using InstancePtr = that::RawPointerDynamicVariant<AbstractInstance, ImageInstance, ImageViewInstance>;
@@ -37,13 +44,19 @@ namespace vkl::GUI
 		bool _manual_aspect : 1 = false;
 		bool _manual_mips_range : 1 = false;
 		bool _manual_array_layer : 1 = false;
+		ImGuiSampler _imgui_sampler = ImGuiSampler::Default;
 
 		std::shared_ptr<ImageViewInstance> _custom_view = {};
 		std::shared_ptr<ImageView> _custom_view_desc = {};
 
+		// Since ImGui 1.92.8, the texture and sampler are stored in a different set
+		// TODO use the same pool for the two sets
+		std::shared_ptr<DescriptorSetAndPoolInstance> _texture_set;
+
+		// Optional, If not used, the default imgui sampler is used
 		std::shared_ptr<Sampler> _sampler;
 		TypedInlineInspector<Sampler> _sampler_panel;
-		std::shared_ptr<DescriptorSetAndPoolInstance> _set;
+		std::shared_ptr<DescriptorSetAndPoolInstance> _sampler_set;
 
 		Vector2f _size_pix;
 		Vector2f _uv_tl = Vector2f(0, 0), _uv_br = Vector2f(1, 1);
@@ -52,7 +65,8 @@ namespace vkl::GUI
 
 		std::string _error_message = {};
 
-		void createSet(std::shared_ptr<DescriptorSetLayoutInstance> const& layout);
+		void createTextureSet(std::shared_ptr<DescriptorSetLayoutInstance> const& layout);
+		void createSamplerSet(std::shared_ptr< DescriptorSetLayoutInstance> const& layout);
 
 		void createDefaultView();
 
@@ -60,7 +74,7 @@ namespace vkl::GUI
 
 		void clear(bool keep_error_message=false);
 
-		void checkInstance();
+		void checkInstance(Context& ctx);
 
 	public:
 

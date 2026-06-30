@@ -847,9 +847,7 @@ namespace vkl
 				});
 			}
 
-			exec.init();
-
-			_gui_context.createInternalResource(exec.renderImGuiCommand()->setLayout());
+			exec.init(&_gui_context);
 
 			ImGuiListSelection default_scene_selection = ImGuiListSelection::CI{
 				.name = "Scene selection",

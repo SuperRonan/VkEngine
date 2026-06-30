@@ -642,10 +642,8 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::init()
+	void LinearExecutor::init(GUI::Context* gui_ctx)
 	{
-		
-
 		_blit_to_present = std::make_shared<BlitImage>(BlitImage::CI{
 			.app = _app,
 			.name = name() + std::string(".BlitToPresent"),
@@ -657,7 +655,14 @@ namespace vkl
 		
 		if (_render_gui)
 		{
-			
+			if (gui_ctx)
+			{
+				gui_ctx->createInternalResource(_render_gui->textureSetLayout(), _render_gui->samplerSetLayout());
+			}
+			else
+			{
+				application()->logger()("LinearExecutor: GUI context not provided to be initialized", Logger::Options::TagWarning | Logger::Options::VerbosityMostImportant);
+			}
 		}
 
 		// TODO load debug renderer font here?

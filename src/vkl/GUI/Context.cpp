@@ -5,6 +5,8 @@
 #include <vkl/VkObjects/Sampler.hpp>
 #include <vkl/VkObjects/DescriptorSetLayout.hpp>
 
+#include <imgui/backends/imgui_impl_vulkan.h>
+
 namespace vkl::GUI
 {
 	std::shared_ptr<Style> g_default_style = [](){
@@ -89,10 +91,12 @@ namespace vkl::GUI
 		}
 	}
 
-	void Context::createInternalResource(std::shared_ptr<DescriptorSetLayoutInstance> const& set_layout)
+	void Context::createInternalResource(std::shared_ptr<DescriptorSetLayoutInstance> const& texture_set_layout, std::shared_ptr<DescriptorSetLayoutInstance> const& sampler_set_layout)
 	{
-		_imgui_set_layout = set_layout;
-		_sampler = Sampler::MakeNearest(_imgui_set_layout->application());
+		_imgui_texture_set_layout = texture_set_layout;
+		_imgui_sampler_set_layout = sampler_set_layout;
+		VkApplication* app = _imgui_texture_set_layout->application();
+		_sampler = Sampler::MakeNearest(app);
 		_sampler->setName("ImGui Default Sampler");
 	}
 
@@ -103,6 +107,10 @@ namespace vkl::GUI
 			_drag_drop_payload.object.reset();
 			_keep_drag_drop_payload = false;
 		}
+
+		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+		_imgui_bound_sampler = {}; // Set to nullptr <=> the default imgui sampler is used
+		_imgui_bound_image = {}; // Set to nullptr <=> the default imgui texture is used
 	}
 
 	void Context::end()

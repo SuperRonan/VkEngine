@@ -149,7 +149,7 @@ namespace vkl
 
 		Executor(CreateInfo const& ci);
 
-		virtual void init() = 0;
+		virtual void init(GUI::Context* gui_ctx = nullptr) = 0;
 
 		virtual void waitForAllCompletion(uint64_t timeout = UINT64_MAX) = 0;
 

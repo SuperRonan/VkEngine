@@ -17,16 +17,16 @@
 
 namespace vkl
 {
-	std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app)
+	std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app, uint set)
 	{
-		std::shared_ptr<DescriptorSetLayoutInstance> res = std::make_shared<DescriptorSetLayoutInstance>(DescriptorSetLayoutInstance::CI{
+		DescriptorSetLayoutInstance::CI ci{
 			.app = app,
 			.name = "ImGui::SetLayout",
 			.flags = 0,
 			.vk_bindings = {
 				VkDescriptorSetLayoutBinding{
 					.binding = 0,
-					.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM,
 					.descriptorCount = 1,
 					.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 					.pImmutableSamplers = nullptr,
@@ -34,13 +34,24 @@ namespace vkl
 			},
 			.metas = {
 				DescriptorSetLayoutInstance::BindingMeta {
-					.name = "Texture",
+					.name = {},
 					.access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
 					.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					.flags = 0,
 				},
 			},
-		});
+		};
+		if(set == 0)
+		{
+			ci.vk_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			ci.metas[0].name = "Texture";
+		}
+		else if (set == 1)
+		{
+			ci.vk_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+			ci.metas[0].name = "Sampler";
+		}
+		std::shared_ptr<DescriptorSetLayoutInstance> res = std::make_shared<DescriptorSetLayoutInstance>(std::move(ci));
 		return res;
 	}
 
@@ -129,7 +140,8 @@ namespace vkl
 	{
 		createRenderPassIFP();
 
-		_set_layout = MakeImGuiDescriptorSetLayout(application());
+		_texture_set_layout = MakeImGuiDescriptorSetLayout(application(), 0);
+		_sampler_set_layout = MakeImGuiDescriptorSetLayout(application(), 1);
 
 		initImGui();
 		

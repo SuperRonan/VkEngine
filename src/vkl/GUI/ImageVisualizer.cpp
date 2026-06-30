@@ -6,6 +6,7 @@
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
 
 #include <vulkan/utility/vk_format_utils.h>
 
@@ -16,10 +17,9 @@
 namespace vkl::GUI
 {
 	ImageVisualizer::ImageVisualizer(CreateInfo const& ci) :
-		_label(ci.label),
-		_sampler(ci.ctx->sampler())
+		_label(ci.label)
 	{
-		createSet(ci.ctx->getImGuiSetLayout());
+		createTextureSet(ci.ctx->getImGuiTextureSetLayout());
 	}
 
 	ImageVisualizer::~ImageVisualizer()
@@ -47,10 +47,10 @@ namespace vkl::GUI
 
 	void ImageVisualizer::clear(bool keep_error_message)
 	{
-		if (_set)
+		if (_texture_set)
 		{
 			std::shared_ptr<ImageView> view = {};
-			_set->setBinding(0, 0, 1, &view, nullptr);
+			_texture_set->setBinding(0, 0, 1, &view, nullptr);
 		}
 		_custom_view.reset();
 		_custom_view_desc.reset();
@@ -58,13 +58,23 @@ namespace vkl::GUI
 			_error_message.clear();
 	}
 
-	void ImageVisualizer::createSet(std::shared_ptr<DescriptorSetLayoutInstance> const& layout)
+	void CreateSet(std::shared_ptr<DescriptorSetAndPoolInstance>& set, std::shared_ptr<DescriptorSetLayoutInstance> const& layout, std::string_view name)
 	{
-		_set = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
+		set = std::make_shared<DescriptorSetAndPoolInstance>(DescriptorSetAndPoolInstance::CI{
 			.app = layout->application(),
-			.name = _label + ".Set",
+			.name = std::string(name),
 			.layout = layout,
 		});
+	}
+
+	void ImageVisualizer::createTextureSet(std::shared_ptr<DescriptorSetLayoutInstance> const& layout)
+	{
+		CreateSet(_texture_set, layout, _label + ".TextureSet");
+	}
+
+	void ImageVisualizer::createSamplerSet(std::shared_ptr<DescriptorSetLayoutInstance> const& layout)
+	{
+		CreateSet(_sampler_set, layout, _label + ".SamplerSet");
 	}
 
 	static inline VkComponentMapping GetDefaultMapping(VkFormat f)
@@ -248,12 +258,11 @@ namespace vkl::GUI
 		});
 
 		_custom_view_desc = std::make_shared<ImageView>(_custom_view);
-
-		_set->setBinding(0, 0, 1, &_custom_view_desc, &_sampler);
-		_set->writeDescriptorSet();
+		_texture_set->setBinding(0, 0, 1, &_custom_view_desc, nullptr);
+		_texture_set->writeDescriptorSet();
 	}
 
-	void ImageVisualizer::checkInstance()
+	void ImageVisualizer::checkInstance(Context& ctx)
 	{
 		if (_custom_view)
 		{
@@ -269,6 +278,18 @@ namespace vkl::GUI
 		if (!_custom_view)
 		{
 			createDefaultView();
+		}
+
+		if (_sampler)
+		{
+			if (!_sampler_set)
+			{
+				createSamplerSet(ctx.getImGuiSamplerSetLayout());
+			}
+			if (_sampler_set->bindings()[0].images_samplers[0].sampler != _sampler)
+			{
+				_sampler_set->setBinding(0, 0, 1, nullptr, &_sampler);
+			}
 		}
 	}
 
@@ -388,20 +409,59 @@ namespace vkl::GUI
 		return res;
 	}
 
+	static void ImGui_ImplVulkan_DrawCallback_SetSampler(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+	{
+		ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+		ImGui_ImplVulkan_RenderState* rs = static_cast<ImGui_ImplVulkan_RenderState*>(pio.Renderer_RenderState);
+		VkDescriptorSet ds = static_cast<VkDescriptorSet>(cmd->UserCallbackData);
+		vkCmdBindDescriptorSets(rs->CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, rs->PipelineLayout, 1, 1, &ds, 0, nullptr);
+	}
+
 	bool ImageVisualizer::declareImage(Context& ctx, ImVec2 const& size, const ImRect* rect, bool skip_registration)
 	{
 		if (!skip_registration)
 		{
-			checkInstance();
+			checkInstance(ctx);
 		}
 		if (_custom_view)
 		{
-			ImGui::ImageWithBg(_set->set()->handle(), size, rect ? rect->GetTL() : ImVec2(0, 0), rect ? rect->GetBR() : ImVec2(1, 1), ToIMGui(_background), ToIMGui(_tint));
-			//ImGui::GetWindowDrawList()->AddCallback()
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
+			bool should_restore_sampler = false;
+			if (_sampler)
+			{
+				draw_list->AddCallback(ImGui_ImplVulkan_DrawCallback_SetSampler, _sampler_set->set()->handle());
+				if (!skip_registration)
+				{
+					ctx.keepFrameObject(_sampler_set);
+				}
+				should_restore_sampler = true;
+			}
+			else if (_imgui_sampler != ImGuiSampler::Default)
+			{
+				//pio.Renderer_RenderState
+				ImDrawCallback cb = _imgui_sampler == ImGuiSampler::Linear ? pio.DrawCallback_SetSamplerLinear : pio.DrawCallback_SetSamplerNearest;
+				draw_list->AddCallback(cb);
+				should_restore_sampler = true;
+			}
+			ImGui::ImageWithBg(_texture_set->set()->handle(), size, rect ? rect->GetTL() : ImVec2(0, 0), rect ? rect->GetBR() : ImVec2(1, 1), ToIMGui(_background), ToIMGui(_tint));
+			if (should_restore_sampler)
+			{
+				Context::BoundSampler bound_sampler = ctx.getImGuiBoundSampler();
+				if (bound_sampler.ptr)
+				{
+					draw_list->AddCallback(ImGui_ImplVulkan_DrawCallback_SetSampler, bound_sampler.set);
+				}
+				else
+				{
+					draw_list->AddCallback(pio.DrawCallback_ResetRenderState);
+				}
+			}
+
 			if (!skip_registration)
 			{
 				ctx.addFrameImage(_custom_view);
-				ctx.keepFrameObject(_set);
+				ctx.keepFrameObject(_texture_set);
 			}
 			return true;
 		}
