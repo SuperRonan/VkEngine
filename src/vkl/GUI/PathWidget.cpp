@@ -14,6 +14,10 @@ namespace vkl::GUI
 		bool res = false;
 		const char* plabel = label.empty() ? "Path" : label.c_str();
 		res |= ImGui::TextFieldEdit(plabel, &path_string, "...", text_edit_flags);
+		if (res)
+		{
+			path = path_string;
+		}
 		auto& file_dialog = ctx.getCommonFileDialog();
 		bool can_open = file_dialog->canOpen() && ((text_edit_flags & ImGuiInputTextFlags_ReadOnly) == 0);
 		{
@@ -56,7 +60,7 @@ namespace vkl::GUI
 				if (!results.empty())
 				{
 					auto file_dialog_path = file_dialog->getResults().front();
-					path = file_dialog_path;
+					setPath(file_dialog_path);
 					res |= true;
 				}
 				file_dialog->close();
