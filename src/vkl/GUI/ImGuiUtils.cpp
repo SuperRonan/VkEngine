@@ -86,75 +86,105 @@ namespace vkl
 		_options[index].disable = option.disable;
 	}
 
-	bool ImGuiListSelection::declareRadioButtons(const char * name, size_t &active_index, bool same_line) const
+	int ImGuiListSelection::DeclareRadioButtons(DeclareInfo const& info)
 	{
-		if (name)
+		int res = -1;
+		if (info.label)
 		{
-			ImGui::Text(name);
-			if (same_line)
+			ImGui::Text(info.label);
+			if (info.same_line)
 			{
 				ImGui::SameLine();
 			}
 		}
-		const size_t old_index = active_index;
-		for (size_t i = 0; i < _options.size(); ++i)
+		for (uint i = 0; i < info.options.size(); ++i)
 		{
-			ImGui::BeginDisabled(_options[i].disable);
-			const bool b = ImGui::RadioButton(_options[i].name.c_str(), i == old_index);
-			if (!_options[i].desc.empty())
+			const Option& option = info.options[i];
+			ImGui::BeginDisabled(option.disable);
+			const bool b = ImGui::RadioButton(option.name.c_str(), i == info.index);
+			if (!option.desc.empty())
 			{
-				ImGui::SetItemTooltip(_options[i].desc.c_str());
+				ImGui::SetItemTooltip(option.desc.c_str());
 			}
-			if (b)	active_index = i;
-			if (same_line && (i != _options.size() - 1))
+			if (b)	res = i;
+			if (info.same_line && (i != info.options.size() - 1))
 				ImGui::SameLine();
 			ImGui::EndDisabled();
 		}
-		bool changed = old_index != active_index;
-		return changed;
+		return res;
 	}
 
-	bool ImGuiListSelection::declareCombo(const char * name, size_t &active_index) const
+	int ImGuiListSelection::DeclareCombo(DeclareInfo const& info)
 	{
-		bool res = false;
-		assert(name);
+		int res = -1;
 		bool begin = false;
-		if (active_index < _options.size())
+		if (info.index < info.options.size())
 		{
-			begin = ImGui::BeginCombo(name, _options[active_index].name.c_str());
+			begin = ImGui::BeginCombo(info.label, info.options[info.index].name.c_str());
 		}
 		else
 		{
 			constexpr const size_t max_size = 64;
 			char preview_label[max_size];
-			size_t write_count = std::format_to_n(preview_label, max_size, "option {} (unknown)", active_index).size;
+			size_t write_count = std::format_to_n(preview_label, max_size, "option {} (unknown)", info.index).size;
 			assert(write_count < max_size);
 			preview_label[write_count] = char(0);
-			begin = ImGui::BeginCombo(name, preview_label);
+			begin = ImGui::BeginCombo(info.label, preview_label);
 		}
 		if (begin)
 		{
-			const size_t old_index = active_index;
-			for (size_t i = 0; i < _options.size(); ++i)
+			for (uint i = 0; i < info.options.size(); ++i)
 			{
-				ImGui::BeginDisabled(_options[i].disable);
-				const bool b = old_index == i;
-				if (ImGui::Selectable(_options[i].name.c_str(), b))
+				ImGui::BeginDisabled(info.options[i].disable);
+				const bool b = info.index == i;
+				if (ImGui::Selectable(info.options[i].name.c_str(), b))
 				{
-					active_index = i;
+					res = i;
 				}
 				if (b)
 				{
 					ImGui::SetItemDefaultFocus();
 				}
-				if (!_options[i].desc.empty())
+				if (!info.options[i].desc.empty())
 				{
-					ImGui::SetItemTooltip(_options[i].desc.c_str());
+					ImGui::SetItemTooltip(info.options[i].desc.c_str());
 				}
 				ImGui::EndDisabled();
 			}
 			ImGui::EndCombo();
-			res = old_index != active_index;
+		}
+		return res;
+	}
+
+	bool ImGuiListSelection::declareRadioButtons(const char * name, size_t &active_index, bool same_line) const
+	{
+		DeclareInfo info{
+			.label = name,
+			.options = _options,
+			.index = uint(active_index),
+			.same_line = same_line,
+		};
+		int index = DeclareRadioButtons(info);
+		bool res = index >= 0;
+		if (res)
+		{
+			active_index = index;
+		}
+		return res;
+	}
+
+	bool ImGuiListSelection::declareCombo(const char * name, size_t &active_index) const
+	{
+		DeclareInfo info{
+			.label = name,
+			.options = _options,
+			.index = uint(active_index),
+		};
+		int index = DeclareCombo(info);
+		bool res = index >= 0;
+		if (res)
+		{
+			active_index = index;
 		}
 		return res;
 	}

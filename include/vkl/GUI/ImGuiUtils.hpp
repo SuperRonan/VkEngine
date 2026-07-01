@@ -68,7 +68,36 @@ namespace vkl
 
 		ImGuiListSelection& operator=(ImGuiListSelection const&) = default;
 		ImGuiListSelection& operator=(ImGuiListSelection&&) = default;
-		
+
+		struct DeclareInfo
+		{
+			const char* label = nullptr;
+			std::span<const Option> options = {};
+			uint index;
+			bool same_line = false; // For combo
+		};
+
+		static int Declare(DeclareInfo const& info, Mode mode = Mode::Dropdown)
+		{
+			if (mode == Mode::RadioButtons)
+			{
+				return DeclareRadioButtons(info);
+			}
+			else
+			{
+				return DeclareCombo(info);
+			}
+		}
+
+		static int DeclareRadioButtons(DeclareInfo const& info);
+
+		static int DeclareCombo(DeclareInfo const& info);
+
+		static int DeclareDropdown(DeclareInfo const& info)
+		{
+			return DeclareCombo(info);
+		}
+
 		const auto& name()const
 		{
 			return _name;
