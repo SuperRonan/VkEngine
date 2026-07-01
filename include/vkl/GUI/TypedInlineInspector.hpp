@@ -5,7 +5,7 @@
 namespace vkl::GUI
 {
 	// Specialized ObjectInlineInspector with type checking
-	template <std::derived_from<VkObject> Target>
+	template <std::strictly_derived_from<VkObject> Target>
 	class TypedInlineInspector : public ObjectInlineInspector
 	{
 	public:
@@ -75,6 +75,17 @@ namespace vkl::GUI
 		{
 			_typed_accept_fn = fn;
 			_typed_accept_data = data;
+		}
+
+		bool declareInlineCheckType(Context& ctx, std::shared_ptr<Target> const& target, std::shared_ptr<Target>* dst_target = nullptr)
+		{
+			std::shared_ptr<VkObject> d = {};
+			bool res = declareInline(ctx, target, dst_target ? &d : nullptr);
+			if (res && dst_target)
+			{
+				*dst_target = std::static_pointer_cast<Target>(std::move(d));
+			}
+			return res;
 		}
 	};
 }

@@ -17,9 +17,12 @@
 namespace vkl::GUI
 {
 	ImageVisualizer::ImageVisualizer(CreateInfo const& ci) :
-		_label(ci.label)
+		_label(ci.label),
+		_sampler_panel("Sampler")
 	{
 		createTextureSet(ci.ctx->getImGuiTextureSetLayout());
+
+		_sampler_panel.setAcceptNullptr();
 	}
 
 	ImageVisualizer::~ImageVisualizer()
@@ -289,6 +292,7 @@ namespace vkl::GUI
 			if (_sampler_set->bindings()[0].images_samplers[0].sampler != _sampler)
 			{
 				_sampler_set->setBinding(0, 0, 1, nullptr, &_sampler);
+				_sampler_set->writeDescriptorSet();
 			}
 		}
 	}
@@ -562,6 +566,71 @@ namespace vkl::GUI
 		if (should_clear)
 		{
 			clear();
+		}
+
+		if (_sampler)
+		{
+			std::shared_ptr<Sampler> new_sampler = {};
+			bool change_sampler = _sampler_panel.declareInlineCheckType(ctx, _sampler, &new_sampler);
+			if (change_sampler)
+			{
+				_sampler = std::move(new_sampler);
+			}
+		}
+		else
+		{
+			uint index = static_cast<uint>(_imgui_sampler);
+			std::array options = {
+				ImGuiListSelection::Option{
+					.name = "Current",
+					.desc = "Use currently bound sampler.",
+				},
+				ImGuiListSelection::Option{
+					.name = "Nearest",
+					.desc = "Use ImGui's Nearest sampler.",
+				},
+				ImGuiListSelection::Option{
+					.name = "Linear",
+					.desc = "Use ImGui's Linear sampler.",
+				},
+				ImGuiListSelection::Option{
+					.name = "Common",
+					.desc = "Use shared sampler.",
+				},
+				ImGuiListSelection::Option{
+					.name = "New",
+					.desc = "Use new sampler.",
+				},
+			};
+			ImGuiListSelection::DeclareInfo sampler_list{
+				.label = "Sampler##List",
+				.options = options,
+				.index = index,
+			};
+			int new_index = ImGuiListSelection::Declare(sampler_list, ImGuiListSelection::Mode::Dropdown);
+			if (new_index >= 0)
+			{
+				const uint m = static_cast<uint>(ImGuiSampler::Count);
+				if (static_cast<uint>(new_index) < m)
+				{
+					_imgui_sampler = static_cast<ImGuiSampler>(new_index);
+				}
+				else
+				{
+					const uint n = static_cast<uint>(new_index) - m;
+					if (n == 0)
+					{
+						_sampler = ctx.sampler();
+					}
+					else if (n == 1)
+					{
+						_sampler = std::make_shared<Sampler>(Sampler::CI{
+							.app = ctx.sampler()->application(),
+							.name = _label + ".Sampler",
+						});
+					}
+				}
+			}
 		}
 	}
 }

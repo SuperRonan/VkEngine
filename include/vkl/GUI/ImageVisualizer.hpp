@@ -19,6 +19,7 @@ namespace vkl::GUI
 			Default,
 			Nearest,
 			Linear,
+			Count
 		};
 
 		using SourcePtr = RawPointerVariant<Image, ImageInstance, ImageView, ImageViewInstance>;
