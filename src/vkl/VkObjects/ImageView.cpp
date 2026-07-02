@@ -247,6 +247,7 @@ namespace vkl
 				_image_panel.declareInline(ctx, target()->image());
 
 				SectionBox visu_section{};
+				visu_section.child_flags |= ImGuiChildFlags_AutoResizeY;
 				visu_section.label = _visualizer.label().data();
 				if (visu_section.begin(ctx))
 				{
@@ -287,6 +288,7 @@ namespace vkl
 				Parent::declareInstance(ctx);
 
 				SectionBox visu_section{};
+				visu_section.child_flags |= ImGuiChildFlags_AutoResizeY;
 				visu_section.label = _visualizer.label().data();
 				if (visu_section.begin(ctx))
 				{

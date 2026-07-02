@@ -3,6 +3,7 @@
 
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/FancyButtons.hpp>
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
@@ -229,7 +230,10 @@ namespace vkl::GUI
 			_custom_mips_range = allowed_mips_range;
 		}
 
-		_size_pix = Vector2f(image_ci.extent.width, image_ci.extent.height);
+		if (_size_mode == SizeMode::ImageSize)
+		{
+			_size_pix = Vector2f(image_ci.extent.width, image_ci.extent.height);
+		}
 
 		createCurstomView(image_instance);
 	}
@@ -295,6 +299,60 @@ namespace vkl::GUI
 				_sampler_set->writeDescriptorSet();
 			}
 		}
+	}
+
+	ImageInstance* ImageVisualizer::GetImageInstance(InstancePtr ptr)
+	{
+		ImageInstance* ii = dynamic_cast<ImageInstance*>(ptr.get());
+		if (!ii)
+		{
+			ii = static_cast<ImageViewInstance*>(ptr.get())->image().get();
+		}
+		return ii;
+	}
+
+	void ImageVisualizer::calcDisplaySize(Vector2f image_size, float available_width)
+	{
+		if (std::IsAnyOf(_size_mode, SizeMode::ImageSize))
+		{
+			_size_pix = image_size;
+		}
+		else if (std::IsAnyOf(_size_mode, SizeMode::FitWidth, SizeMode::FitWidthIntegral))
+		{
+			float p = available_width / image_size.x();
+			float q = image_size.x() / available_width;
+			if (_size_mode == SizeMode::FitWidthIntegral)
+			{
+				if (image_size.x() > available_width) // downsize
+				{
+					q = std::ceil(q);
+					_size_pix = image_size / q;
+					_size_pix = _size_pix.array().floor();
+				}
+				else // upsize
+				{
+					p = std::floor(p);
+					_size_pix = image_size * p;
+				}
+			}
+			else
+			{
+				_size_pix = image_size * p;
+			}
+		}
+		else if (_size_mode == SizeMode::Manual && !_manual_unlock_ratio)
+		{
+			float r = _size_pix.x() / image_size.x();
+			_size_pix.y() = image_size.y() * r;
+		}
+	}
+
+	void ImageVisualizer::calcDisplaySize(float available_width)
+	{
+		assert(_latest_source_instance);
+		ImageInstance* ii = GetImageInstance(_latest_source_instance.getRawVariant());
+		Vector2f image_size = Vector2f(ii->createInfo().extent.width, ii->createInfo().extent.height);
+		calcDisplaySize(image_size, available_width);
 	}
 
 	static inline ImVec2 ToIMGui(Vector2f const& v)
@@ -472,15 +530,25 @@ namespace vkl::GUI
 		return false;
 	}
 
-	void ImageVisualizer::declareInline(Context& ctx)
+	ImageVisualizer::Result ImageVisualizer::declareInline(Context& ctx)
 	{
-		declareControlsInline(ctx);
+		float available_width = ImGui::GetCurrentWindow()->WorkRect.GetWidth();
+		Result res = {};
+		declareControlsInline(ctx, available_width);
 		ImGui::Separator();
 		{
 			ImRect rect(ToIMGui(_uv_tl), ToIMGui(_uv_br));
+			Vector2f old_size = _size_pix;
+			calcDisplaySize(available_width);
+			Vector2f new_size = _size_pix;
+			if (new_size != old_size)
+			{
+				res |= Result::Resized;
+			}
 			bool could_show_image = declareImage(ctx, ToIMGui(_size_pix), &rect);
 			if (could_show_image)
 			{
+				res |= Result::DisplayedImage;
 				// TODO mouse zoom clip rect
 			}
 			else
@@ -491,10 +559,12 @@ namespace vkl::GUI
 				ImGui::TextColored(col, reason);
 			}
 		}
+		return res;
 	}
 
-	void ImageVisualizer::declareControlsInline(Context& ctx)
+	ImageVisualizer::Result ImageVisualizer::declareControlsInline(Context& ctx, float available_width)
 	{
+		Result res = {};
 		bool should_clear = false;
 		if (ImGui::Button("Reset"))
 		{
@@ -510,13 +580,56 @@ namespace vkl::GUI
 			_uv_tl = Vector2f(0, 0);
 			_uv_br = Vector2f(1, 1);
 		}
+		ImGui::SameLine();
+		if (ImGui::Button("Wide"))
+		{
+			if (_size_mode == SizeMode::FitWidthIntegral)
+			{
+				_size_mode = SizeMode::FitWidth;
+			}
+			else if (_size_mode == SizeMode::FitWidth)
+			{
+				_size_mode = SizeMode::ImageSize;
+			}
+			else
+			{
+				_size_mode = SizeMode::FitWidthIntegral;
+			}
+		}
+		{
+			ImGui::SameLine();
+			bool locked = !_manual_unlock_ratio;
+			if (ImGui::InboxCheckbox("Lock Ratio", &locked))
+			{
+				_manual_unlock_ratio = !locked;
+				res |= Result::Resized;
+			}
+			Vector2i size_pix = _size_pix.cast<int>();
+			bool input_size = false;
+			if (available_width > 0 && !_manual_unlock_ratio)
+			{
+				ImGui::SetNextItemWidth(available_width);
+				input_size = ImGui::SliderInt("##Display width", size_pix.data(), 0, available_width, nullptr);
+				ImGui::SetItemTooltip("Display width");
+			}
+			else
+			{
+				input_size = ImGui::DragInt2("Display Size", size_pix.data());
+			}
+			if (input_size)
+			{
+				_size_pix = size_pix.cast<float>();
+				_size_mode = SizeMode::Manual;
+				res |= Result::Resized;
+			}
+		}
 		if (InspectSwizzleMapping(ctx, &_custom_swizzle))
 		{
 			_manual_swizzle = true;
 			should_clear |= true;
 		}
 
-		
+
 		ImGui::BeginDisabled(!_source);
 		int array_layer = static_cast<int>(_array_layer);
 		Range32i layers_range{.begin = 0, .len = 1};
@@ -632,5 +745,6 @@ namespace vkl::GUI
 				}
 			}
 		}
+		return res;
 	}
 }
