@@ -530,12 +530,73 @@ namespace vkl::GUI
 		return false;
 	}
 
+	static inline void CalcLayersRange(ImageVisualizer::InstancePtr image, Range32i* p_layers_range, Range32i* p_mips_range)
+	{
+		assert(image);
+		if (p_layers_range)
+		{
+			*p_layers_range = Range32i{ .begin = 0, .len = 1 };
+		}
+		if (p_mips_range)
+		{
+			*p_mips_range = Range32i{ .begin = 0, .len = 1 };
+		}
+		image.visit(std::overloads{
+			[&](ImageInstance const& image) {
+				if (p_layers_range)
+				{
+					p_layers_range->len = image.createInfo().arrayLayers;
+				}
+				if (p_mips_range)
+				{
+					p_mips_range->len = image.createInfo().mipLevels;
+				}
+			},
+			[&](ImageViewInstance const& view) {
+				auto range = view.createInfo().subresourceRange;
+				auto finite_range = view.finiteRange();
+				if (p_layers_range)
+				{
+					p_layers_range->begin = range.baseArrayLayer;
+					p_layers_range->len = finite_range.layerCount;
+				}
+				if (p_mips_range)
+				{
+					p_mips_range->begin = range.baseMipLevel;
+					p_mips_range->len = finite_range.levelCount;
+				}
+			},
+		});
+	}
+
 	ImageVisualizer::Result ImageVisualizer::declareInline(Context& ctx)
 	{
 		float available_width = ImGui::GetCurrentWindow()->WorkRect.GetWidth();
 		Result res = {};
-		declareControlsInline(ctx, available_width);
-		ImGui::Separator();
+		if (ImGui::TreeNode("Parameters"))
+		{
+			res |= declareControlsInline(ctx, available_width);
+			ImGui::TreePop();
+			ImGui::Separator();
+		}
+		else
+		{
+			int array_layer = static_cast<int>(_array_layer);
+			Range32i layers_range{ .begin = 0, .len = 1 };
+			if (_latest_source_instance)
+			{
+				CalcLayersRange(_latest_source_instance.getRawVariant(), &layers_range, nullptr);
+			}
+			if (layers_range.len > 1)
+			{
+				if (ImGui::SliderInt("Layer", &array_layer, layers_range.begin, layers_range.end() - 1, nullptr, ImGuiSliderFlags_None))
+				{
+					_array_layer = array_layer;
+					_manual_array_layer = true;
+					clear();
+				}
+			}
+		}
 		{
 			ImRect rect(ToIMGui(_uv_tl), ToIMGui(_uv_br));
 			Vector2f old_size = _size_pix;
@@ -550,6 +611,12 @@ namespace vkl::GUI
 			{
 				res |= Result::DisplayedImage;
 				// TODO mouse zoom clip rect
+
+				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
+				{
+					res |= declareMenuInline(ctx);
+					ImGui::EndPopup();
+				}
 			}
 			else
 			{
@@ -558,6 +625,103 @@ namespace vkl::GUI
 				const char* reason = _error_message.empty() ? "Unknown reason." : _error_message.c_str();
 				ImGui::TextColored(col, reason);
 			}
+		}
+		return res;
+	}
+
+	ImageVisualizer::Result ImageVisualizer::declareMenuInline(Context& ctx)
+	{
+		Result res = {};
+		bool should_clear = false;
+		const bool use_submenus = false; // Can't decide which one looks better
+		auto begin_named_section = [&](const char* label) -> bool
+		{
+			if (use_submenus)
+			{
+				return ImGui::BeginMenu(label);
+			}
+			else
+			{
+				ImGui::SeparatorText(label);
+				return true;
+			}
+		};
+		auto end_named_section = [&]()
+		{
+			if (use_submenus)
+			{
+				ImGui::EndMenu();
+			}
+		};
+		auto declare_enum_option = [&]<class E>(E & current_value, const char* label, E option_value, const char* p_tooltip = nullptr, const char* shortcut = nullptr, bool disable = false)
+		{
+			bool selected = current_value == option_value;
+			bool res = ImGui::MenuItem(label, shortcut, &selected, !disable);
+			if (p_tooltip)
+			{
+				ImGui::SetItemTooltip(p_tooltip);
+			}
+			if (res)
+			{
+				current_value = option_value;
+			}
+			return res;
+		};
+
+		if (ImGui::MenuItem("Reset"))
+		{
+			_manual_format = false;
+			_manual_swizzle = false;
+			_manual_aspect = false;
+			_manual_mips_range = false;
+		}
+		if (ImGui::MenuItem("Reset Crop"))
+		{
+			_uv_tl = Vector2f(0, 0);
+			_uv_br = Vector2f(1, 1);
+		}
+
+		if(begin_named_section("Sizing"))
+		{
+			auto declare_size_mode = [&](const char* label, SizeMode size_mode, const char* p_tooltip = nullptr, const char* shortcut = nullptr, bool disable = false)
+			{
+				if (declare_enum_option(_size_mode, label, size_mode, p_tooltip, shortcut, disable))
+				{
+					res |= Result::Resized;
+				}
+			};
+			declare_size_mode("Image resolution", SizeMode::ImageSize);
+			declare_size_mode("Fit width (integral scaling)", SizeMode::FitWidthIntegral);
+			declare_size_mode("Fit full width", SizeMode::FitWidth);
+			declare_size_mode("Manual resolution", SizeMode::Manual);
+
+			ImGui::Separator();
+			{
+				bool keep_ratio = !_manual_unlock_ratio;
+				if (ImGui::MenuItem("Keep Ratio", nullptr, &keep_ratio))
+				{
+					_manual_unlock_ratio = !_manual_unlock_ratio;
+					res |= Result::Resized;
+				}
+			}
+			end_named_section();
+		}
+		if(begin_named_section("Sampler"))
+		{
+			auto declare_sampler_option = [&](const char* label, ImGuiSampler sampler_option, const char* p_tooltip = nullptr, const char* shortcut = nullptr, bool disable = false)
+			{
+				declare_enum_option(_imgui_sampler, label, sampler_option, p_tooltip, shortcut, disable);
+			};
+			declare_sampler_option("Current", ImGuiSampler::Default, "Use currently bound sampler.");
+			declare_sampler_option("Nearest", ImGuiSampler::Nearest, "Use ImGui's Nearest sampler.");
+			declare_sampler_option("Linear", ImGuiSampler::Linear, "Use ImGui's Linear sampler.");
+
+			end_named_section();
+		}
+
+		if (should_clear)
+		{
+			clear();
 		}
 		return res;
 	}
@@ -636,20 +800,7 @@ namespace vkl::GUI
 		Range32i allowed_mips_range{.begin = 0, .len = 1};
 		if (_latest_source_instance)
 		{
-			_latest_source_instance.visit(std::overloads{
-				[&](ImageInstance const& image) {
-					layers_range.len = image.createInfo().arrayLayers;
-					allowed_mips_range.len = image.createInfo().mipLevels;
-				},
-				[&](ImageViewInstance const& view) {
-					auto range = view.createInfo().subresourceRange;
-					auto finite_range = view.finiteRange();
-					layers_range.begin = range.baseArrayLayer;
-					layers_range.len = finite_range.layerCount;
-					allowed_mips_range.begin = range.baseMipLevel;
-					allowed_mips_range.len = finite_range.levelCount;
-				},
-			});
+			CalcLayersRange(_latest_source_instance.getRawVariant(), &layers_range, &allowed_mips_range);
 		}
 		if (ImGui::SliderInt("Layer", &array_layer, layers_range.begin, layers_range.end() - 1, nullptr, ImGuiSliderFlags_None))
 		{

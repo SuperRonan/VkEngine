@@ -137,6 +137,8 @@ namespace vkl::GUI
 
 		virtual Result declareControlsInline(Context& ctx, float available_width = -1);
 
+		virtual Result declareMenuInline(Context& ctx);
+
 		std::string_view label() const
 		{
 			return _label;
