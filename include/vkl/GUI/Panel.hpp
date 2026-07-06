@@ -23,9 +23,9 @@ namespace vkl::GUI
 		bool _disable_from_ctx_stack : 1 = false;
 
 		ImVec2 _window_initial_size = ImVec2(0, 0);
-		ImVec2 _window_cotent_size = ImVec2(0, 0);
 		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
-		
+		ImGuiID _dock_id = {};
+		//ImGuiDockNode* _dock_node = {};
 
 		Panel(VkApplication * app, std::string_view name);
 
@@ -95,5 +95,15 @@ namespace vkl::GUI
 		{
 			_disable_from_ctx_stack = disable;
 		}
+
+		ImGuiID dockId() const
+		{
+			return _dock_id;
+		}
+
+		//ImGuiDockNode* dockNode() const
+		//{
+		//	return _dock_node;
+		//}
 	};
 }

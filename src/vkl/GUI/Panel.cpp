@@ -39,6 +39,8 @@ namespace vkl::GUI
 		_has_focus = ImGui::IsWindowFocused();
 		if (_is_visible)
 		{
+			_dock_id = ImGui::GetWindowDockID();
+			//_dock_node = ImGui::GetWindowDockNode();
 			if (!_disable_from_ctx_stack)
 			{
 				ctx.pushPanel(this);
@@ -58,7 +60,6 @@ namespace vkl::GUI
 			}
 		}
 		auto window = ImGui::GetCurrentWindowRead();
-		_window_cotent_size = window->ContentSizeIdeal;
 		//ImGui::SetNextWindowContentSize(_window_cotent_size);
 		if (!keep_open)
 		{

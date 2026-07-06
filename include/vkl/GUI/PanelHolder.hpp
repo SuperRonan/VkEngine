@@ -8,6 +8,14 @@ namespace vkl::GUI
 {
 	class PanelHolder : public Panel
 	{
+	public:
+
+		enum DockCommand : uchar
+		{
+			None = 0,
+			ToID = 1,
+		};
+
 	protected:
 
 		struct Child
@@ -15,6 +23,8 @@ namespace vkl::GUI
 			std::shared_ptr<Panel> panel = {};
 			bool should_focus = true;
 			bool declare = true;
+			DockCommand dock_command = {};
+			ImGuiID dock_id = {};
 		};
 
 		std::unordered_map<Id, Child> _childs;

@@ -77,6 +77,14 @@ namespace vkl::GUI
 				auto & [_, child] = *it;
 				if (child.declare)
 				{
+					if (child.dock_command)
+					{
+						if (child.dock_command == DockCommand::ToID)
+						{
+							ImGui::SetNextWindowDockID(child.dock_id, ImGuiCond_FirstUseEver);
+						}
+						child.dock_command = {};
+					}
 					if (child.should_focus)
 					{
 						ImGui::SetNextWindowFocus();
@@ -134,6 +142,8 @@ namespace vkl::GUI
 			if (panel->isOpen())
 			{
 				child.should_focus = true;
+				child.dock_command = DockCommand::ToID;
+				child.dock_id = dockId();
 			}
 		}
 		else
