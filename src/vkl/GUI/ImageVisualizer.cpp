@@ -496,6 +496,7 @@ namespace vkl::GUI
 				if (!skip_registration)
 				{
 					ctx.keepFrameObject(_sampler_set);
+					ctx.keepFrameObject(_sampler);
 				}
 				should_restore_sampler = true;
 			}
