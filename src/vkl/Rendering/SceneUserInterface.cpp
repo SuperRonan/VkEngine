@@ -993,14 +993,14 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			{
 				std::shared_ptr<GUI::Panel> ni_panel = node->makeInspector(node, ctx);
 				res = ni_panel.get();
-				ctx.getTopPanelHolder()->setChild(node_id, ni_panel);
+				ctx.getTopPanelHolder()->setChild(node_id, ni_panel, PanelHolder::DockCommand::Right);
 			}
 		}
 		else
 		{
 			res = ctx.getTopPanelHolder()->openChild(node_id, [&]() {
 				return node->makeInspector(node, ctx);
-			}).get();
+			}, PanelHolder::DockCommand::Right).get();
 		}
 		GUI::NodeInspector* ni = dynamic_cast<GUI::NodeInspector*>(res);
 		if (ni)

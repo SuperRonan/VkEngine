@@ -1,8 +1,12 @@
 #include <vkl/GUI/PanelHolder.hpp>
 #include <vkl/GUI/Context.hpp>
 
+#include <imgui/imgui_internal.h>
+
 namespace vkl::GUI
 {
+	static_assert((PanelHolder::DockCommand::_CommandMask | PanelHolder::DockCommand::Down) == PanelHolder::DockCommand::_CommandMask, "PanelHolder::DockCommand: Wrong command mask");
+
 	PanelHolder::PanelHolder(CreateInfo const& ci) :
 		Panel(ci.app, ci.name)
 	{
@@ -19,6 +23,20 @@ namespace vkl::GUI
 	PanelHolder::~PanelHolder()
 	{
 
+	}
+
+	ImGuiID PanelHolder::getDockSplitID(ImGuiDir dir, float ratio)
+	{
+		assert(dir >= ImGuiDir_Left);
+		assert(dir <= ImGuiDir_Down);
+		ImGuiID &res = _dock_split[dir];
+		const uchar bit = uchar(1) << static_cast<uchar>(dir);
+		if (!(bit & _dock_has_split))
+		{
+			res = ImGui::DockBuilderSplitNode(_dock_id, dir, ratio, nullptr, nullptr);
+			_dock_has_split |= bit;
+		}
+		return res;
 	}
 
 	void PanelHolder::declarePanelsMenu(Context& ctx)
@@ -79,10 +97,23 @@ namespace vkl::GUI
 				{
 					if (child.dock_command)
 					{
-						if (child.dock_command == DockCommand::ToID)
+						DockCommand dc = child.dock_command & DockCommand::_CommandMask;
+						ImGuiID dock_id = {}; 
+						if (dc == DockCommand::ToThis)
 						{
-							ImGui::SetNextWindowDockID(child.dock_id, ImGuiCond_FirstUseEver);
+							dock_id = dockId();
 						}
+						else if (dc == DockCommand::ToID)
+						{
+							dock_id = child.dock_params.dock_id;
+						}
+						else // if dc == ImGuiDir
+						{
+							using U = typename std::underlying_type<DockCommand>::type;
+							const ImGuiDir split_dir = static_cast<ImGuiDir>(dc - _BaseDir);
+							dock_id = getDockSplitID(split_dir, (child.dock_params.split_ratio + 1.0f) * 0.5f);
+						}
+						ImGui::SetNextWindowDockID(dock_id, ImGuiCond_FirstUseEver);
 						child.dock_command = {};
 					}
 					if (child.should_focus)
@@ -132,7 +163,7 @@ namespace vkl::GUI
 		return nullptr;
 	}
 
-	void PanelHolder::setChild(Id id, std::shared_ptr<Panel> const& panel)
+	void PanelHolder::setChild(Id id, std::shared_ptr<Panel> const& panel, DockCommand dock_command, DockParams dock_param)
 	{
 		if (panel)
 		{
@@ -143,8 +174,10 @@ namespace vkl::GUI
 			{
 				child.should_focus = true;
 				child.dock_command = DockCommand::ToID;
-				child.dock_id = dockId();
+				child.dock_params.dock_id = dockId();
 			}
+			child.dock_command = dock_command;
+			child.dock_params = dock_param;
 		}
 		else
 		{
