@@ -12,6 +12,8 @@ namespace vkl::GUI
 		using Id = uintptr_t;
 		using DeclareFunction = std::function<void(Context&, Panel*)>;
 
+		static constexpr ImGuiID InvalidDockID = 0;
+
 	protected:
 
 		bool _open = true; // Need to be addressable
@@ -21,6 +23,8 @@ namespace vkl::GUI
 		bool _is_hovered : 1 = false;
 		bool _has_focus : 1 = false;
 		bool _disable_from_ctx_stack : 1 = false;
+		bool _has_created_dock_node : 1 = false;
+		bool _set_dock_id : 1 = false;
 
 		ImVec2 _window_initial_size = ImVec2(0, 0);
 		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
@@ -96,10 +100,12 @@ namespace vkl::GUI
 			_disable_from_ctx_stack = disable;
 		}
 
-		ImGuiID dockId() const
+		ImGuiID getDockId() const
 		{
 			return _dock_id;
 		}
+
+		void setDockID(ImGuiID id = 0);
 
 		//ImGuiDockNode* dockNode() const
 		//{

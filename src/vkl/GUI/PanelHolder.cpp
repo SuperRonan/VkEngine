@@ -101,7 +101,7 @@ namespace vkl::GUI
 						ImGuiID dock_id = {}; 
 						if (dc == DockCommand::ToThis)
 						{
-							dock_id = dockId();
+							dock_id = getDockId();
 						}
 						else if (dc == DockCommand::ToID)
 						{
@@ -113,7 +113,7 @@ namespace vkl::GUI
 							const ImGuiDir split_dir = static_cast<ImGuiDir>(dc - _BaseDir);
 							dock_id = getDockSplitID(split_dir, (child.dock_params.split_ratio + 1.0f) * 0.5f);
 						}
-						ImGui::SetNextWindowDockID(dock_id, ImGuiCond_FirstUseEver);
+						child.panel->setDockID(dock_id);
 						child.dock_command = {};
 					}
 					if (child.should_focus)
@@ -174,7 +174,7 @@ namespace vkl::GUI
 			{
 				child.should_focus = true;
 				child.dock_command = DockCommand::ToID;
-				child.dock_params.dock_id = dockId();
+				child.dock_params.dock_id = getDockId();
 			}
 			child.dock_command = dock_command;
 			child.dock_params = dock_param;

@@ -27,6 +27,12 @@ namespace vkl::GUI
 
 	}
 
+	void Panel::setDockID(ImGuiID id)
+	{
+		_set_dock_id = false;
+		_dock_id = id;
+	}
+
 	void Panel::declare(Context& ctx, bool keep_open)
 	{
 		ImGuiWindowFlags flags = _window_flags;
@@ -34,6 +40,11 @@ namespace vkl::GUI
 		// Not perfect auto size, will do for now
 		ImGui::SetNextWindowSize(_window_initial_size, ImGuiCond_FirstUseEver);
 		// TODO find a nice initial pos from context with ImGui::SetNextWindowPos
+		if (_set_dock_id)
+		{
+			ImGui::SetNextWindowDockID(_dock_id, ImGuiCond_FirstUseEver);
+			_set_dock_id = false;
+		}
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
 		_is_hovered = ImGui::IsWindowHovered();
 		_has_focus = ImGui::IsWindowFocused();
