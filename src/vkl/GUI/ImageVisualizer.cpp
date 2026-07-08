@@ -613,7 +613,7 @@ namespace vkl::GUI
 				res |= Result::DisplayedImage;
 				// TODO mouse zoom clip rect
 
-				if (ImGui::BeginPopupContextItem(nullptr, ImGuiPopupFlags_MouseButtonRight))
+				if (ImGui::BeginPopupContextItem("##RCM", ImGuiPopupFlags_MouseButtonRight))
 				{
 					res |= declareMenuInline(ctx);
 					ImGui::EndPopup();
