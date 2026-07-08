@@ -400,7 +400,7 @@ namespace vkl
 		public:
 
 			PhysicallyBasedMaterialInspector(std::shared_ptr<PhysicallyBasedMaterial> const& target) :
-				Panel(target->application(), std::format("{} - Physically Based Material - Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				Panel(target->application(), std::format("{} - Physically Based Material - Inspector###{}", target->name(), static_cast<const void*>(target.get()))),
 				_target(target)
 			{
 				for (uint i = 0; i < _textures.size(); ++i)

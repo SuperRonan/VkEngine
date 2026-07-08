@@ -69,7 +69,7 @@ namespace vkl
 		public:
 
 			LightInspector(std::shared_ptr<Light> const& target):
-				Panel(_target->application(), std::format("{} - Light Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				Panel(_target->application(), std::format("{} - Light Inspector###{}", target->name(), static_cast<const void*>(target.get()))),
 				_target(target)
 			{
 				_shadow_bias_mode = ImGuiListSelection::CI{
@@ -281,7 +281,7 @@ namespace vkl
 				if (!class_name.empty())
 				{
 					_name.clear();
-					std::format_to(std::back_inserter(_name), "{} - {} Inspector##{}", _target->name(), class_name, reinterpret_cast<uintptr_t>(_target.get()));
+					std::format_to(std::back_inserter(_name), "{} - {} Inspector###{}", _target->name(), class_name, static_cast<const void*>(_target.get()));
 				}
 			}
 		

@@ -1706,7 +1706,7 @@ namespace vkl
 				}
 
 				PhysicalDevicePanel(VkApplication* app, VkPhysicalDevice device, StringFilter* ext_filter) :
-					Panel(app, std::format("PhysicalDevice-{}", reinterpret_cast<uintptr_t>(device))),
+					Panel(app, std::format("PhysicalDevice-{}", static_cast<const void*>(device))),
 					device(device),
 					ext_filter(ext_filter),
 					extensions(device)

@@ -207,7 +207,7 @@ namespace vkl
 		public:
 
 			ModelInspector(std::shared_ptr<Model> const& target):
-				Panel(target->application(), std::format("{} - Model Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				Panel(target->application(), std::format("{} - Model Inspector###{}", target->name(), static_cast<const void*>(target.get()))),
 				_target(target)
 			{
 				_material_panel.init("Material");

@@ -968,7 +968,7 @@ namespace vkl
 		public:
 
 			RigidMeshInspector(std::shared_ptr<RigidMesh> const& target) :
-				Panel(target->application(), std::format("{} - Rigid Mesh Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				Panel(target->application(), std::format("{} - Rigid Mesh Inspector###{}", target->name(), static_cast<const void*>(target.get()))),
 				_target(target)
 			{
 				_buffer_panel.init("Buffer");

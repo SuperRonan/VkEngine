@@ -137,7 +137,7 @@ namespace vkl
 		public:
 			
 			CameraInspector(std::shared_ptr<Camera> const& target) :
-				Panel(target->application(), std::format("{} - Camera Inspector##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				Panel(target->application(), std::format("{} - Camera Inspector###{}", target->name(), static_cast<const void*>(target.get()))),
 				_target(target)
 			{
 				_type = ImGuiListSelection::CI{

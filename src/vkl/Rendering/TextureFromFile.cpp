@@ -524,7 +524,7 @@ namespace vkl
 		public:
 
 			TextureFromFileInspector(std::shared_ptr<TextureFromFile> const& target):
-				Parent(target->application(), std::format("{} - Texture##{}", target->name(), reinterpret_cast<uintptr_t>(target.get()))),
+				Parent(target->application(), std::format("{} - Texture###{}", target->name(), static_cast<const void*>(target.get()))),
 				_target(target)
 			{
 				_image_panel.init("Image");
