@@ -5,7 +5,21 @@
 
 namespace vkl::GUI
 {
-	static_assert((PanelHolder::DockCommand::_CommandMask | PanelHolder::DockCommand::Down) == PanelHolder::DockCommand::_CommandMask, "PanelHolder::DockCommand: Wrong command mask");
+
+	//static constexpr ImGuiDir ExtractSplitDir(PanelHolder::DockCommand dc)
+	//{
+	//	return static_cast<ImGuiDir>((dc & PanelHolder::DockCommand::_SplitMask) >> PanelHolder::DockCommand::_SplitBitOffset);
+	//}
+
+	//static constexpr ImGuiDir GetSplitDir(PanelHolder::DockCommand dc)
+	//{
+	//	if (dc & PanelHolder::DockCommand::HasSplit)
+	//	{
+	//		return ExtractSplitDir(dc);
+	//	}
+	//	return ImGuiDir_None;
+	//}
+
 
 	PanelHolder::PanelHolder(CreateInfo const& ci) :
 		Panel(ci.app, ci.name)
@@ -27,6 +41,9 @@ namespace vkl::GUI
 
 	ImGuiID PanelHolder::getDockSplitID(ImGuiDir dir, float ratio)
 	{
+		{
+			ImGuiDockNode* node = ImGui::DockBuilderGetNode(getDockId());
+		}
 		assert(dir >= ImGuiDir_Left);
 		assert(dir <= ImGuiDir_Down);
 		ImGuiID &res = _dock_split[dir];
@@ -95,24 +112,28 @@ namespace vkl::GUI
 				auto & [_, child] = *it;
 				if (child.declare)
 				{
-					if (child.dock_command)
+					if (child.dock_command != DockCommand::None)
 					{
 						DockCommand dc = child.dock_command & DockCommand::_CommandMask;
-						ImGuiID dock_id = {}; 
+						ImGuiID dock_id = {};
 						if (dc == DockCommand::ToThis)
 						{
-							dock_id = getDockId();
+							dock_id = getOrCreateDockId(ctx);
 						}
 						else if (dc == DockCommand::ToID)
 						{
 							dock_id = child.dock_params.dock_id;
 						}
-						else // if dc == ImGuiDir
+						else if (dc == DockCommand::ToPtr)
 						{
-							using U = typename std::underlying_type<DockCommand>::type;
-							const ImGuiDir split_dir = static_cast<ImGuiDir>(dc - _BaseDir);
-							dock_id = getDockSplitID(split_dir, (child.dock_params.split_ratio + 1.0f) * 0.5f);
+							dock_id = child.dock_params.panel->getOrCreateDockId(ctx);
 						}
+						//else // if dc == ImGuiDir
+						//{
+						//	using U = typename std::underlying_type<DockCommand>::type;
+						//	const ImGuiDir split_dir = static_cast<ImGuiDir>(dc - _BaseDir);
+						//	dock_id = getDockSplitID(split_dir, (child.dock_params.split_ratio + 1.0f) * 0.5f);
+						//}
 						child.panel->setDockID(dock_id);
 						child.dock_command = {};
 					}

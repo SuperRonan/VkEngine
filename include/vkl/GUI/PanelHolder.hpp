@@ -15,23 +15,26 @@ namespace vkl::GUI
 		{
 			None, // Will do nothing (default imgui behaviour)
 			ToThis, // Will dock as a new tab next to this
+			ToPtr, // Do to a specified Panel ptr (will create dock space ID IFN)
+			ToID, // Dock to a specified id (in DockParams) (make sure dock space is created)
+			_MaxCommand = ToID,
+			_CommandBits = std::bit_width(_MaxCommand),
+			_CommandMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(_CommandBits),
+			//HasSplit = 1 << _CommandBits,
+			//_SplitBitOffset = _CommandBits + 1,
+			//SplitLeft = HasSplit | (ImGuiDir_Left << _SplitBitOffset),
+			//SplitRight = HasSplit | (ImGuiDir_Right << _SplitBitOffset),
+			//SplitUp = HasSplit | (ImGuiDir_Up << _SplitBitOffset),
+			//SplitDown = HasSplit | (ImGuiDir_Down << _SplitBitOffset),
+			//_SplitMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(2) << _SplitBitOffset,
 			Default = ToThis,
-			ToID, // Dock to a specified id (in DockParams)
-			_BaseDir, // Split in a dir from this
-			Left = _BaseDir + ImGuiDir_Left, 
-			Right = _BaseDir + ImGuiDir_Right,
-			Up = _BaseDir + ImGuiDir_Up,
-			Down = _BaseDir + ImGuiDir_Down,
-			_CommandMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(std::bit_width(Down)),
 		};
 
 		struct DockParams
 		{
-			union
-			{
-				ImGuiID dock_id = {};
-				float split_ratio; // in [-1, 1], 0 is default (means 50%-50%)
-			};
+			Panel* panel = nullptr;
+			ImGuiID dock_id = 0;
+			float split_ratio = 0; // in [-1, 1], 0 is default (means 50%-50%)
 		};
 
 	protected:
