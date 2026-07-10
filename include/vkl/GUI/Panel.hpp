@@ -25,6 +25,7 @@ namespace vkl::GUI
 		bool _disable_from_ctx_stack : 1 = false;
 		bool _has_created_dock_node : 1 = false;
 		bool _set_dock_id : 1 = false;
+		bool _set_dock_id_always : 1 = false;
 
 		ImVec2 _window_initial_size = ImVec2(0, 0);
 		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
@@ -105,7 +106,7 @@ namespace vkl::GUI
 			return _dock_id;
 		}
 
-		void setDockID(ImGuiID id = 0);
+		void setDockID(ImGuiID id = 0, bool set_always = false);
 
 		//ImGuiDockNode* dockNode() const
 		//{

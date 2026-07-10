@@ -27,10 +27,12 @@ namespace vkl::GUI
 
 	}
 
-	void Panel::setDockID(ImGuiID id)
 	{
-		_set_dock_id = false;
+	void Panel::setDockID(ImGuiID id, bool set_always)
+	{
+		_set_dock_id = true;
 		_dock_id = id;
+		_set_dock_id_always = set_always;
 	}
 
 	void Panel::declare(Context& ctx, bool keep_open)
@@ -42,7 +44,7 @@ namespace vkl::GUI
 		// TODO find a nice initial pos from context with ImGui::SetNextWindowPos
 		if (_set_dock_id)
 		{
-			ImGui::SetNextWindowDockID(_dock_id, ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowDockID(_dock_id, _set_dock_id_always ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
 			_set_dock_id = false;
 		}
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
