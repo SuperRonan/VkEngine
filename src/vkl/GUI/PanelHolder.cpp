@@ -6,19 +6,19 @@
 namespace vkl::GUI
 {
 
-	//static constexpr ImGuiDir ExtractSplitDir(PanelHolder::DockCommand dc)
-	//{
-	//	return static_cast<ImGuiDir>((dc & PanelHolder::DockCommand::_SplitMask) >> PanelHolder::DockCommand::_SplitBitOffset);
-	//}
+	static constexpr ImGuiDir ExtractSplitDir(PanelHolder::DockCommand dc)
+	{
+		return static_cast<ImGuiDir>((dc & PanelHolder::DockCommand::_SplitMask) >> PanelHolder::DockCommand::_SplitBitOffset);
+	}
 
-	//static constexpr ImGuiDir GetSplitDir(PanelHolder::DockCommand dc)
-	//{
-	//	if (dc & PanelHolder::DockCommand::HasSplit)
-	//	{
-	//		return ExtractSplitDir(dc);
-	//	}
-	//	return ImGuiDir_None;
-	//}
+	static constexpr ImGuiDir GetSplitDir(PanelHolder::DockCommand dc)
+	{
+		if (dc & PanelHolder::DockCommand::HasSplit)
+		{
+			return ExtractSplitDir(dc);
+		}
+		return ImGuiDir_None;
+	}
 
 
 	PanelHolder::PanelHolder(CreateInfo const& ci) :
@@ -39,8 +39,9 @@ namespace vkl::GUI
 
 	}
 
-	ImGuiID PanelHolder::getDockSplitID(ImGuiDir dir, float ratio)
+	ImGuiID PanelHolder::getDockSplitID(Context& ctx, ImGuiDir dir, float ratio)
 	{
+		getOrCreateDockId(ctx);
 		{
 			ImGuiDockNode* node = ImGui::DockBuilderGetNode(getDockId());
 		}
@@ -51,6 +52,7 @@ namespace vkl::GUI
 		if (!(bit & _dock_has_split))
 		{
 			res = ImGui::DockBuilderSplitNode(_dock_id, dir, ratio, nullptr, nullptr);
+			ImGui::DockBuilderFinish(_dock_id);
 			_dock_has_split |= bit;
 		}
 		return res;
@@ -80,6 +82,50 @@ namespace vkl::GUI
 	void PanelHolder::declareMenu(Context& ctx)
 	{
 		declarePanelsMenu(ctx);
+	}
+
+	void PanelHolder::processChildDocking(Context& ctx, Child& child)
+	{
+		if (child.dock_command != DockCommand::None)
+		{
+			DockCommand dc = child.dock_command & DockCommand::_CommandMask;
+			ImGuiID dock_id = {};
+			ImGuiDir split_dir = GetSplitDir(child.dock_command);
+			if (dc == DockCommand::ToThis)
+			{
+				dock_id = getOrCreateDockId(ctx);
+				if (split_dir != ImGuiDir_None)
+				{
+					dock_id = getDockSplitID(ctx, split_dir, child.dock_params.split_ratio * 0.5f + 0.5f);
+				}
+			}
+			else if (dc == DockCommand::ToID)
+			{
+				dock_id = child.dock_params.dock_id;
+				if (split_dir != ImGuiDir_None)
+				{
+					application()->logger()("GUI: Docking to a split ImGuiID not implemented yet!", Logger::Options::TagWarning | Logger::Options::VerbosityImportant);
+				}
+			}
+			else if (dc == DockCommand::ToPtr)
+			{
+				dock_id = child.dock_params.panel->getOrCreateDockId(ctx);
+				if (split_dir != ImGuiDir_None)
+				{
+					PanelHolder* ph = dynamic_cast<PanelHolder*>(child.dock_params.panel);
+					if (ph)
+					{
+						dock_id = ph->getDockSplitID(ctx, split_dir, child.dock_params.split_ratio * 0.5f + 0.5f);
+					}
+					else
+					{
+						application()->logger()("GUI: Docking to a split Panel not implemented yet!", Logger::Options::TagWarning | Logger::Options::VerbosityImportant);
+					}
+				}
+			}
+			child.panel->setDockID(dock_id);
+			child.dock_command = {};
+		}
 	}
 
 	void PanelHolder::declare(Context& ctx, bool keep_open)
@@ -112,31 +158,7 @@ namespace vkl::GUI
 				auto & [_, child] = *it;
 				if (child.declare)
 				{
-					if (child.dock_command != DockCommand::None)
-					{
-						DockCommand dc = child.dock_command & DockCommand::_CommandMask;
-						ImGuiID dock_id = {};
-						if (dc == DockCommand::ToThis)
-						{
-							dock_id = getOrCreateDockId(ctx);
-						}
-						else if (dc == DockCommand::ToID)
-						{
-							dock_id = child.dock_params.dock_id;
-						}
-						else if (dc == DockCommand::ToPtr)
-						{
-							dock_id = child.dock_params.panel->getOrCreateDockId(ctx);
-						}
-						//else // if dc == ImGuiDir
-						//{
-						//	using U = typename std::underlying_type<DockCommand>::type;
-						//	const ImGuiDir split_dir = static_cast<ImGuiDir>(dc - _BaseDir);
-						//	dock_id = getDockSplitID(split_dir, (child.dock_params.split_ratio + 1.0f) * 0.5f);
-						//}
-						child.panel->setDockID(dock_id);
-						child.dock_command = {};
-					}
+					processChildDocking(ctx, child);
 					if (child.should_focus)
 					{
 						ImGui::SetNextWindowFocus();

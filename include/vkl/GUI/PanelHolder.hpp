@@ -20,13 +20,13 @@ namespace vkl::GUI
 			_MaxCommand = ToID,
 			_CommandBits = std::bit_width(_MaxCommand),
 			_CommandMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(_CommandBits),
-			//HasSplit = 1 << _CommandBits,
-			//_SplitBitOffset = _CommandBits + 1,
-			//SplitLeft = HasSplit | (ImGuiDir_Left << _SplitBitOffset),
-			//SplitRight = HasSplit | (ImGuiDir_Right << _SplitBitOffset),
-			//SplitUp = HasSplit | (ImGuiDir_Up << _SplitBitOffset),
-			//SplitDown = HasSplit | (ImGuiDir_Down << _SplitBitOffset),
-			//_SplitMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(2) << _SplitBitOffset,
+			HasSplit = 1 << _CommandBits,
+			_SplitBitOffset = _CommandBits + 1,
+			SplitLeft = HasSplit | (ImGuiDir_Left << _SplitBitOffset),
+			SplitRight = HasSplit | (ImGuiDir_Right << _SplitBitOffset),
+			SplitUp = HasSplit | (ImGuiDir_Up << _SplitBitOffset),
+			SplitDown = HasSplit | (ImGuiDir_Down << _SplitBitOffset),
+			_SplitMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(2) << _SplitBitOffset,
 			Default = ToThis,
 		};
 
@@ -66,7 +66,9 @@ namespace vkl::GUI
 
 		PanelHolder(VkApplication* app, std::string const& name = {});
 
-		ImGuiID getDockSplitID(ImGuiDir dir, float ratio);
+		ImGuiID getDockSplitID(Context& ctx, ImGuiDir dir, float ratio);
+
+		void processChildDocking(Context& ctx, Child& child);
 
 	public:
 
