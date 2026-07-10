@@ -34,6 +34,8 @@ namespace vkl::GUI
 
 		Panel(VkApplication * app, std::string_view name);
 
+		void createDock(Context& ctx);
+
 	public:
 
 		Panel(Panel&&) noexcept = default; 
@@ -107,6 +109,8 @@ namespace vkl::GUI
 		}
 
 		void setDockID(ImGuiID id = 0, bool set_always = false);
+
+		ImGuiID getOrCreateDockId(Context& ctx);
 
 		//ImGuiDockNode* dockNode() const
 		//{

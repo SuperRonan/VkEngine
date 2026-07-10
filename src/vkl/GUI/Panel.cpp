@@ -27,7 +27,38 @@ namespace vkl::GUI
 
 	}
 
+	void Panel::createDock(Context& ctx)
 	{
+		ImGuiID dockspace_id = ImGui::DockContextGenNodeID(ctx.getImGuiContext());
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		if (!window || std::string_view(window->Name) != _name)
+		{
+			window = ImGui::FindWindowByName(_name.c_str());
+		}
+		ImGuiDockNode* dock_node = ImGui::DockBuilderGetNode(dockspace_id);
+		if (dock_node == nullptr)
+		{
+			_dock_id = ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_None);
+			ImGui::DockBuilderSetNodePos(dockspace_id, window->Pos);
+			ImGui::DockBuilderSetNodeSize(dockspace_id, window->Size);
+			ImGui::DockBuilderDockWindow(_name.c_str(), _dock_id);
+			ImGui::DockBuilderFinish(dockspace_id);
+		}
+		else
+		{
+			VKL_BREAKPOINT_HANDLE;
+		}
+	}
+
+	ImGuiID Panel::getOrCreateDockId(Context& ctx)
+	{
+		if (_dock_id == InvalidDockID)
+		{
+			createDock(ctx);
+		}
+		return getDockId();
+	}
+
 	void Panel::setDockID(ImGuiID id, bool set_always)
 	{
 		_set_dock_id = true;
@@ -53,7 +84,6 @@ namespace vkl::GUI
 		if (_is_visible)
 		{
 			_dock_id = ImGui::GetWindowDockID();
-			//_dock_node = ImGui::GetWindowDockNode();
 			if (!_disable_from_ctx_stack)
 			{
 				ctx.pushPanel(this);
