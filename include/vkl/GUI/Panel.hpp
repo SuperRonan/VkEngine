@@ -34,8 +34,6 @@ namespace vkl::GUI
 
 		Panel(VkApplication * app, std::string_view name);
 
-		void createDock(Context& ctx);
-
 	public:
 
 		Panel(Panel&&) noexcept = default; 

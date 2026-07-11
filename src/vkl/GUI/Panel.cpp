@@ -4,6 +4,23 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
+namespace ImGui
+{
+	ImGuiID GetOrCreateWindowDockID(ImGuiWindow* window)
+	{
+		ImGuiID res = window->DockId;
+		if (res == 0)
+		{
+			res = DockBuilderAddNode();
+			DockBuilderSetNodePos(res, window->Pos);
+			DockBuilderSetNodeSize(res, window->Size);
+			DockBuilderDockWindow(window->Name, res);
+			DockBuilderFinish(res);
+		}
+		return res;
+	}
+}
+
 namespace vkl::GUI
 {
 	Panel::Panel(VkApplication* app, std::string_view name):
@@ -27,36 +44,15 @@ namespace vkl::GUI
 
 	}
 
-	void Panel::createDock(Context& ctx)
+	ImGuiID Panel::getOrCreateDockId(Context& ctx)
 	{
-		ImGuiID dockspace_id = ImGui::DockContextGenNodeID(ctx.getImGuiContext());
 		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		if (!window || std::string_view(window->Name) != _name)
 		{
 			window = ImGui::FindWindowByName(_name.c_str());
 		}
-		ImGuiDockNode* dock_node = ImGui::DockBuilderGetNode(dockspace_id);
-		if (dock_node == nullptr)
-		{
-			_dock_id = ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_None);
-			ImGui::DockBuilderSetNodePos(dockspace_id, window->Pos);
-			ImGui::DockBuilderSetNodeSize(dockspace_id, window->Size);
-			ImGui::DockBuilderDockWindow(_name.c_str(), _dock_id);
-			ImGui::DockBuilderFinish(dockspace_id);
-		}
-		else
-		{
-			VKL_BREAKPOINT_HANDLE;
-		}
-	}
-
-	ImGuiID Panel::getOrCreateDockId(Context& ctx)
-	{
-		if (_dock_id == InvalidDockID)
-		{
-			createDock(ctx);
-		}
-		return getDockId();
+		_dock_id = ImGui::GetOrCreateWindowDockID(window);
+		return _dock_id;
 	}
 
 	void Panel::setDockID(ImGuiID id, bool set_always)
