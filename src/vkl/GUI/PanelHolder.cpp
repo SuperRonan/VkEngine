@@ -41,18 +41,32 @@ namespace vkl::GUI
 
 	ImGuiID PanelHolder::getDockSplitID(Context& ctx, ImGuiDir dir, float ratio)
 	{
+		const bool fix_imgui_bug = true;
 		getOrCreateDockId(ctx);
-		{
-			ImGuiDockNode* node = ImGui::DockBuilderGetNode(getDockId());
-		}
 		assert(dir >= ImGuiDir_Left);
 		assert(dir <= ImGuiDir_Down);
 		ImGuiID &res = _dock_split[dir];
 		const uchar bit = uchar(1) << static_cast<uchar>(dir);
 		if (!(bit & _dock_has_split))
 		{
+			bool _bug_previous_dock_is_active = false;
+			ImGuiWindow* _bug_window_to_restore = nullptr;
+			if (fix_imgui_bug)
+			{
+				ImGuiDockNode* node = ImGui::DockBuilderGetNode(getDockId());
+				if (node->Windows.Size > 0)
+				{
+					_bug_window_to_restore = node->Windows[0];
+					_bug_previous_dock_is_active = _bug_window_to_restore->DockIsActive;
+				}
+			}
 			res = ImGui::DockBuilderSplitNode(_dock_id, dir, ratio, nullptr, nullptr);
 			ImGui::DockBuilderFinish(_dock_id);
+			
+			if (fix_imgui_bug && _bug_window_to_restore)
+			{
+				_bug_window_to_restore->DockIsActive |= _bug_previous_dock_is_active;
+			}
 			_dock_has_split |= bit;
 		}
 		return res;
