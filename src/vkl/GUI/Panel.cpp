@@ -51,7 +51,14 @@ namespace vkl::GUI
 		{
 			window = ImGui::FindWindowByName(_name.c_str());
 		}
-		_dock_id = ImGui::GetOrCreateWindowDockID(window);
+		if (window)
+		{
+			_dock_id = ImGui::GetOrCreateWindowDockID(window);
+		}
+		else
+		{
+			_dock_id = 0;
+		}
 		return _dock_id;
 	}
 
