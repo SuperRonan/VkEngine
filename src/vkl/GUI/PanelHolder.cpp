@@ -74,15 +74,15 @@ namespace vkl::GUI
 
 	void PanelHolder::declarePanelsMenu(Context& ctx)
 	{
-		if (ImGui::BeginMenu("Panels", !_childs.empty()))
+		if (ImGui::BeginMenu("Panels", !_children.empty()))
 		{
 			if (ImGui::MenuItem("Close all"))
 			{
-				closeAllChilds();
+				closeAllChildren();
 			}
 			ImGui::Separator();
 
-			for (auto& [id, child] : _childs)
+			for (auto& [id, child] : _children)
 			{
 				if (ImGui::MenuItem(child.panel->name().c_str(), nullptr, nullptr, child.panel->isOpen()))
 				{
@@ -153,21 +153,21 @@ namespace vkl::GUI
 		Panel::declare(ctx, true);
 
 		// Check _declare_ids
-		if (!_childs_ids_valid)
+		if (!_children_ids_valid)
 		{
 			_declare_ids.clear();
-			for (auto& [id, child] : _childs)
+			for (auto& [id, child] : _children)
 			{
 				_declare_ids.push_back(id);
 			}
-			_childs_ids_valid = true;
+			_children_ids_valid = true;
 		}
 
 		// Declare childs
 		for (auto id : _declare_ids)
 		{
-			auto it = _childs.find(id);
-			if (it != _childs.end())
+			auto it = _children.find(id);
+			if (it != _children.end())
 			{
 				auto & [_, child] = *it;
 				if (child.declare)
@@ -195,8 +195,8 @@ namespace vkl::GUI
 			}
 			else
 			{
-				assert(!_childs_ids_valid);
-				_childs_ids_valid &= false;
+				assert(!_children_ids_valid);
+				_children_ids_valid &= false;
 			}
 		}
 
@@ -213,9 +213,9 @@ namespace vkl::GUI
 
 	std::shared_ptr<Panel> PanelHolder::getChild(Id id) const
 	{
-		if (_childs.contains(id))
+		if (_children.contains(id))
 		{
-			return _childs.at(id).panel;
+			return _children.at(id).panel;
 		}
 		return nullptr;
 	}
@@ -224,8 +224,8 @@ namespace vkl::GUI
 	{
 		if (panel)
 		{
-			_childs_ids_valid &= _childs.contains(id);
-			auto & child = _childs[id];
+			_children_ids_valid &= _children.contains(id);
+			auto & child = _children[id];
 			child.panel = panel;
 			if (panel->isOpen())
 			{
@@ -238,14 +238,14 @@ namespace vkl::GUI
 		}
 		else
 		{
-			_childs.erase(id);
-			_childs_ids_valid &= false;
+			_children.erase(id);
+			_children_ids_valid &= false;
 		}
 	}
 
-	void PanelHolder::closeAllChilds()
+	void PanelHolder::closeAllChildren()
 	{
-		_childs.clear();
-		_childs_ids_valid &= false;
+		_children.clear();
+		_children_ids_valid &= false;
 	}
 }

@@ -48,9 +48,9 @@ namespace vkl::GUI
 			DockParams dock_params = {};
 		};
 
-		std::unordered_map<Id, Child> _childs;
+		std::unordered_map<Id, Child> _children;
 		MyVector<Id> _declare_ids;
-		bool _childs_ids_valid = false;
+		bool _children_ids_valid = false;
 		bool _disable_from_holder_ctx_stack = false;
 		uchar _dock_has_split = {};
 		std::array<ImGuiID, 4> _dock_split = {};
@@ -89,16 +89,16 @@ namespace vkl::GUI
 		std::shared_ptr<_Panel> getOrCreateChild(Id id, CreateFn const& create_fn)
 		{
 			std::shared_ptr<_Panel> res;
-			auto it = _childs.find(id);
-			if (it != _childs.end())
+			auto it = _children.find(id);
+			if (it != _children.end())
 			{
 				res = std::dynamic_pointer_cast<_Panel>(it->second.panel);
 			}
 			else
 			{
 				res = create_fn();
-				_childs[id].panel = res;
-				_childs_ids_valid = false;
+				_children[id].panel = res;
+				_children_ids_valid = false;
 			}
 			return res;
 		}
@@ -111,7 +111,7 @@ namespace vkl::GUI
 			return child;
 		}
 
-		virtual void closeAllChilds();
+		virtual void closeAllChildren();
 
 		void setDisableFromHolderCtxStack(bool disable = true)
 		{

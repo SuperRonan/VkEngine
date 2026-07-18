@@ -1018,7 +1018,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	void SceneUserInterface::closeAllNodeInspectors()
 	{
-		auto count = std::erase_if(_childs, [](const auto& item)
+		auto count = std::erase_if(_children, [](const auto& item)
 		{
 			const auto& [key, value] = item;
 			if (dynamic_cast<GUI::NodeInspector*>(value.panel.get()))
@@ -1027,14 +1027,14 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			}
 			return false;
 		});
-		_childs_ids_valid &= (count == 0);
+		_children_ids_valid &= (count == 0);
 	}
 
 	GUI::NodeInspector* SceneUserInterface::isNodeOpen(GUI::Context& ctx, Scene::Node* node) const
 	{
-		auto it = _childs.find(getNodeId(node));
+		auto it = _children.find(getNodeId(node));
 		GUI::NodeInspector* res = nullptr;
-		if (it != _childs.end())
+		if (it != _children.end())
 		{
 			assert(!!dynamic_cast<GUI::NodeInspector*>(it->second.panel.get()));
 			res = static_cast<GUI::NodeInspector*>(it->second.panel.get());
@@ -1048,7 +1048,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 
 	void SceneUserInterface::iterateOnOpenNodes(std::function<void(GUI::NodeInspector*)> const& fn)
 	{
-		for (auto& [k, v] : _childs)
+		for (auto& [k, v] : _children)
 		{
 			if (v.panel->isOpen())
 			{
@@ -1063,10 +1063,10 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 	void SceneUserInterface::reduceToOneSelectedNode()
 	{
 		_node_in_focus = nullptr; // Should already be the case
-		auto it = _childs.begin();
+		auto it = _children.begin();
 		std::shared_ptr<GUI::NodeInspector> ni_to_keep = [&]() -> std::shared_ptr<GUI::NodeInspector> {
 			// Find first NodeInspector to keep it open
-			while (it != _childs.end())
+			while (it != _children.end())
 			{
 				if (GUI::NodeInspector* ni = dynamic_cast<GUI::NodeInspector*>(it->second.panel.get()))
 				{
