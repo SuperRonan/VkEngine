@@ -172,14 +172,14 @@ namespace vkl::GUI
 				auto & [_, child] = *it;
 				if (child.declare)
 				{
-					processChildDocking(ctx, child);
-					if (child.should_focus)
-					{
-						ImGui::SetNextWindowFocus();
-						child.should_focus = false;
-					}
 					if (child.panel->isOpen())
 					{
+						processChildDocking(ctx, child);
+						if (child.should_focus)
+						{
+							ImGui::SetNextWindowFocus();
+							child.should_focus = false;
+						}
 						child.panel->declare(ctx);
 					}
 					bool keep_child = child.panel->isOpen() || child.panel->isUsed();
