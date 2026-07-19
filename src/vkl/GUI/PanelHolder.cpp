@@ -98,12 +98,138 @@ namespace vkl::GUI
 		declarePanelsMenu(ctx);
 	}
 
+	struct CompatiblePanel
+	{
+		Panel* ptr = nullptr;
+		u64 compatibility = {};
+		size_t focus_time = 0;
+		uint dist = 0;
+
+		CompatiblePanel() = default;
+
+		CompatiblePanel(Context& ctx, PanelHolder::Child const& child, Panel* p, uint dist)
+		{
+			if (child.panel && child.panel->isOpen())
+			{
+				ptr = child.panel.get();
+				compatibility = child.panel->getPanelCompatibility(ctx, p);
+				focus_time = child.latest_focus_time;
+				this->dist = dist;
+			}
+		}
+
+		std::strong_ordering compareWith(Context& ctx, CompatiblePanel const& rhs)
+		{
+			if (!ptr || !rhs.ptr)
+			{
+				return ptr <=> rhs.ptr;
+			}
+			std::strong_ordering res = compatibility <=> rhs.compatibility;
+			if (res == std::strong_ordering::equal)
+			{
+				res = rhs.dist <=> dist; // reversed, closer is better
+				if(res == std::strong_ordering::equal)
+				{
+					res = focus_time <=> rhs.focus_time;
+				}
+			}
+			return res;
+		}
+
+		bool isGoodEnough(Context& ctx, uint current_dist)
+		{
+			return false;
+		}
+	};
+
+	static CompatiblePanel _FindCompatiblePanelImpl(Context& ctx, PanelHolder* h, Panel* p, Panel* prev, uint dist)
+	{
+		const uint down_dist = 1;
+		const uint up_dist = 1;
+		CompatiblePanel res = {};
+		// Check direct children
+		for (auto& [id, child] : h->children())
+		{
+			if (child.panel && child.panel.get() != p)
+			{
+				CompatiblePanel cp(ctx, child, p, dist);
+				if (cp.compareWith(ctx, res) > 0)
+				{
+					res = cp;
+				}
+			}
+		}
+		if(res.isGoodEnough(ctx, dist))
+		{
+			return res;
+		}
+		// Check recursive children
+		for (auto& [id, child] : h->children())
+		{
+			if(child.panel && child.panel.get() != prev)
+			{
+				if(PanelHolder* ch = dynamic_cast<PanelHolder*>(child.panel.get()))
+				{
+					CompatiblePanel cp = _FindCompatiblePanelImpl(ctx, ch, p, h, dist + down_dist);
+					if (cp.compareWith(ctx, res) > 0)
+					{
+						res = cp;
+					}
+				}
+			}
+		}
+		if (res.isGoodEnough(ctx, dist))
+		{
+			return res;
+		}
+		// Check recursive parent;
+		{
+			auto stack = ctx.getPanelHolderStack();
+			auto found = std::ranges::find(stack, h);
+			if (found != stack.end())
+			{
+				size_t index = found - stack.begin();
+				if (index > 0)
+				{
+					PanelHolder* parent = stack[index - 1];
+					if (parent != prev)
+					{
+						CompatiblePanel cp = _FindCompatiblePanelImpl(ctx, parent, p, h, dist + up_dist);
+						if (cp.compareWith(ctx, res) > 0)
+						{
+							res = cp;
+						}
+					}
+				}
+			}
+		}
+		return res;
+	}
+
+	Panel* PanelHolder::FindCompatiblePanel(Context& ctx, PanelHolder* h, Panel* p)
+	{
+		return _FindCompatiblePanelImpl(ctx, h, p, nullptr, 0).ptr;
+	}
+
 	void PanelHolder::processChildDocking(Context& ctx, Child& child)
 	{
-		if (child.dock_command != DockCommand::None)
+		if (child.dock_command == DockCommand::None)
+		{
+			return;
+		}
+		ImGuiID dock_id = {};
+		if (child.dock_command & DockCommand::SearchCompatible)
+		{
+			Panel* p = FindCompatiblePanel(ctx, this, child.panel.get());
+			if (p)
+			{
+				dock_id = p->getOrCreateDockId(ctx);
+			}
+		}
+
+		if (dock_id == InvalidDockID)
 		{
 			DockCommand dc = child.dock_command & DockCommand::_CommandMask;
-			ImGuiID dock_id = {};
 			ImGuiDir split_dir = GetSplitDir(child.dock_command);
 			if (dc == DockCommand::ToThis)
 			{
@@ -137,9 +263,9 @@ namespace vkl::GUI
 					}
 				}
 			}
-			child.panel->setDockID(dock_id);
-			child.dock_command = {};
 		}
+		child.panel->setDockID(dock_id);
+		child.dock_command = {};
 	}
 
 	void PanelHolder::declare(Context& ctx, bool keep_open)
@@ -181,6 +307,10 @@ namespace vkl::GUI
 							child.should_focus = false;
 						}
 						child.panel->declare(ctx);
+						if (child.panel->hasFocus())
+						{
+							child.latest_focus_time = ctx.getFrameIndex();
+						}
 					}
 					bool keep_child = child.panel->isOpen() || child.panel->isUsed();
 					if (keep_child)

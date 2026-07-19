@@ -27,7 +27,8 @@ namespace vkl::GUI
 			SplitUp = HasSplit | (ImGuiDir_Up << _SplitBitOffset),
 			SplitDown = HasSplit | (ImGuiDir_Down << _SplitBitOffset),
 			_SplitMask = std::bitMask<typename std::underlying_type<DockCommand>::type>(2) << _SplitBitOffset,
-			Default = ToThis,
+			SearchCompatible = 1 << (_SplitBitOffset + 2),
+			Default = SearchCompatible | ToThis,
 		};
 
 		struct DockParams
@@ -37,16 +38,18 @@ namespace vkl::GUI
 			float split_ratio = 0; // in [-1, 1], 0 is default (means 50%-50%)
 		};
 
-	protected:
-
 		struct Child
 		{
 			std::shared_ptr<Panel> panel = {};
 			bool should_focus = true;
 			bool declare = true;
+			size_t latest_focus_time = {};
 			DockCommand dock_command = {};
 			DockParams dock_params = {};
 		};
+
+	protected:
+
 
 		std::unordered_map<Id, Child> _children;
 		MyVector<Id> _declare_ids;
@@ -69,6 +72,8 @@ namespace vkl::GUI
 		ImGuiID getDockSplitID(Context& ctx, ImGuiDir dir, float ratio);
 
 		void processChildDocking(Context& ctx, Child& child);
+
+		static Panel* FindCompatiblePanel(Context& ctx, PanelHolder* h, Panel* p);
 
 	public:
 
@@ -117,6 +122,13 @@ namespace vkl::GUI
 		{
 			_disable_from_holder_ctx_stack = disable;
 		}
+
+		const auto& children() const
+		{
+			return _children;
+		}
+
+
 	};
 
 	THAT_DECLARE_ENUM_CLASS_OPERATORS(PanelHolder::DockCommand);
