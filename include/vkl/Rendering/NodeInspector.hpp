@@ -49,5 +49,7 @@ namespace vkl::GUI
 		{
 			return _node;
 		}
+
+		virtual u64 getPanelCompatibility(Context& ctx, const Panel* p) const override;
 	};
 }

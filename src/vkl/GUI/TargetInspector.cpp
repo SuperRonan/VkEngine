@@ -82,4 +82,10 @@ namespace vkl::GUI
 		}
 		ImGui::LabelText2("Class", type_name);
 	}
+
+	u64 TargetInspectorBase::getPanelCompatibility(Context& ctx, const Panel* p) const
+	{
+		const TargetInspectorBase* t = dynamic_cast<const TargetInspectorBase*>(p);
+		return t ? 1 : 0;
+	}
 }

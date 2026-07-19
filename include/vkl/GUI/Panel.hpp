@@ -110,6 +110,12 @@ namespace vkl::GUI
 
 		ImGuiID getOrCreateDockId(Context& ctx);
 
+		// 0: not compatible
+		virtual u64 getPanelCompatibility(Context& ctx, const Panel* p) const
+		{
+			return 0;
+		}
+
 		//ImGuiDockNode* dockNode() const
 		//{
 		//	return _dock_node;

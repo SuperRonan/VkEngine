@@ -151,4 +151,10 @@ namespace vkl::GUI
 			SceneUserInterface::DeclareNodeHierarchy(ctx, _parent, _node);
 		}
 	}
+
+	u64 NodeInspector::getPanelCompatibility(Context& ctx, const Panel* panel) const
+	{
+		const NodeInspector* n = dynamic_cast<const NodeInspector*>(panel);
+		return n ? 1 : 0;
+	}
 }

@@ -41,6 +41,8 @@ namespace vkl::GUI
 
 		virtual void declareInline(Context& ctx) override;
 
+		virtual u64 getPanelCompatibility(Context& ctx, const Panel* p) const override;
+
 		static void DeclareClass(Context& ctx, std::type_info const& type_info);
 	};
 
@@ -77,6 +79,19 @@ namespace vkl::GUI
 			if (_target)
 			{
 				DeclareClass(ctx, typeid(Target));
+			}
+		}
+
+		virtual u64 getPanelCompatibility(Context& ctx, const Panel* p) const override
+		{
+			const TargetInspector* t = dynamic_cast<const TargetInspector*>(p);
+			if (t)
+			{
+				return 2;
+			}
+			else
+			{
+				return TargetInspectorBase::getPanelCompatibility(ctx, p);
 			}
 		}
 	};
