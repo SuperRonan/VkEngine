@@ -109,6 +109,8 @@ namespace vkl::GUI
 		BoundSampler _imgui_bound_sampler;
 
 		EnumStyle _enum_style = EnumStyle::Default;
+
+		size_t _frame_counter = 0;
 	public:
 
 		struct CreateInfo
@@ -259,6 +261,11 @@ namespace vkl::GUI
 		void setImGuiBoundSampler(BoundSampler sampler)
 		{
 			_imgui_bound_sampler = sampler;
+		}
+
+		size_t getFrameIndex() const
+		{
+			return _frame_counter;
 		}
 	};
 }

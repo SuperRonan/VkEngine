@@ -115,7 +115,7 @@ namespace vkl::GUI
 
 	void Context::end()
 	{
-
+		++_frame_counter;
 	}
 
 	void Context::pushPanelHolder(PanelHolder* panel)
