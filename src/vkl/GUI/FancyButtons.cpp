@@ -202,11 +202,14 @@ namespace ImGui
 			color, thickness);
 	}
 
-	bool DetachButton()
+	bool DetachButton(bool tooltip)
 	{
 		bool res = IconButton("Detach", RenderDetachIcon);
 		//bool res = ImGui::ArrowButton("Detach", ImGuiDir_Up);
-		ImGui::SetItemTooltip("Detach panel");
+		if (tooltip)
+		{
+			ImGui::SetItemTooltip("Detach panel");
+		}
 		return res;
 	}
 

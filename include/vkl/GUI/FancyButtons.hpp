@@ -67,7 +67,7 @@ namespace ImGui
 
 	extern void RenderTrashCanIcon(const void* p_data, ImDrawList* draw_list, ImRect const& rect, float font_size, ImU32 color);
 
-	extern bool DetachButton();
+	extern bool DetachButton(bool tooltip=false);
 
 	extern bool XCrossButton(const char* tooltip = nullptr, bool small_button = false);
 
