@@ -6,13 +6,32 @@
 
 namespace vkl::GUI
 {
+	Panel::FocusAction GetClickedFocusAction(Context& ctx)
+	{
+		bool no_focus = ImGui::IsKeyDown(ctx.getButtonShiftKey());
+		return no_focus ? Panel::FocusAction::NoFocus : Panel::FocusAction::TakeFocus;
+	}
+
+	DetachButtonRes DetachButton2(Context& ctx)
+	{
+		DetachButtonRes res = {};
+		res.value = ImGui::DetachButton();
+		res.focus_action = GetClickedFocusAction(ctx);
+		if (ImGui::BeginItemTooltip())
+		{
+			ImGui::Text(res.focus_action == Panel::FocusAction::NoFocus ? "Open as separate panel (without taking focus)" : "Open as separate panel");
+			ImGui::EndTooltip();
+		}
+		return res;
+	}
+
 	ObjectInlineInspector::ObjectInlineInspector(std::string_view label) :
 		_label(label)
 	{
 
 	}
 
-	void ObjectInlineInspector::openPanelIFN(Context& ctx, std::shared_ptr<VkObject> const& target, bool set_open)
+	void ObjectInlineInspector::openPanelIFN(Context& ctx, std::shared_ptr<VkObject> const& target, bool set_open, Panel::FocusAction focus_action)
 	{
 		PanelHolder* holder = ctx.getTopPanelHolder();
 		Panel::Id id = reinterpret_cast<Panel::Id>(target.get());
@@ -23,7 +42,7 @@ namespace vkl::GUI
 			{
 				_panel = target->makeInspector(target, ctx);
 				_panel->setOpen(set_open);
-				holder->setChild(id, _panel);
+				holder->setChild(id, _panel, PanelHolder::DockCommand::Default, {}, focus_action);
 			}
 		}
 		else if (_panel)
@@ -34,7 +53,7 @@ namespace vkl::GUI
 			}
 			if (holder->getChild(id) != _panel || set_open)
 			{
-				holder->setChild(id, _panel);
+				holder->setChild(id, _panel, PanelHolder::DockCommand::Default, {}, focus_action);
 			}
 		}
 	}
@@ -116,9 +135,9 @@ namespace vkl::GUI
 		{
 			//ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, std::round(ImGui::GetStyle().ItemSpacing.x * 0.5));
 			ImGui::BeginDisabled(!target);
-			if (ImGui::DetachButton())
+			if (auto detach = DetachButton2(ctx))
 			{
-				openPanelIFN(ctx, target, true);
+				openPanelIFN(ctx, target, true, detach.focus_action);
 			}
 			ImGui::EndDisabled();
 			ImGui::SameLine();
@@ -230,6 +249,18 @@ namespace vkl::GUI
 			auto& clipboard = ctx.getClipboardPayload();
 			if (ImGui::BeginPopupContextItem("RMenu", ImGuiPopupFlags_MouseButtonRight))
 			{
+				{
+					Panel::FocusAction focus_action = GetClickedFocusAction(ctx);
+					const char* label = "Open separate";
+					if (focus_action == Panel::FocusAction::NoFocus)
+					{
+						label = "Open separate (no focus)";
+					}
+					if (ImGui::MenuItem(label))
+					{
+						openPanelIFN(ctx, target, true, focus_action);
+					}
+				}
 				bool already_copied = clipboard.object == target;
 				if (ImGui::MenuItem("Copy", nullptr, already_copied, _enable_source))
 				{

@@ -4,6 +4,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/FancyButtons.hpp>
+#include <vkl/GUI/ObjectInlineInspector.hpp>
 
 #include <imgui/imgui_internal.h>
 
@@ -14,7 +15,7 @@ namespace vkl::GUI
 	{
 		bool res = false;
 		constexpr const bool can_declare = !std::same_as<GetPanelFn, std::nullptr_t>;
-		if (ImGui::DetachButton())
+		if (auto detach = DetachButton2(ctx))
 		{
 			if constexpr (can_declare)
 			{
@@ -22,7 +23,7 @@ namespace vkl::GUI
 				assert(!!panel);
 				panel->setOpen();
 				auto holder = ctx.getTopPanelHolder();
-				holder->setChild(id, panel);
+				holder->setChild(id, panel, PanelHolder::DockCommand::Default, {}, detach.focus_action);
 				res = true;
 			}
 		}

@@ -267,5 +267,10 @@ namespace vkl::GUI
 		{
 			return _frame_counter;
 		}
+
+		ImGuiKey getButtonShiftKey() const
+		{
+			return ImGuiKey_ReservedForModShift;
+		}
 	};
 }

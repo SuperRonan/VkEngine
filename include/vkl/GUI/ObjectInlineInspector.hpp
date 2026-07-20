@@ -4,6 +4,19 @@
 
 namespace vkl::GUI
 {
+	struct DetachButtonRes
+	{
+		bool value = {};
+		Panel::FocusAction focus_action = {};
+
+		operator bool() const
+		{
+			return value;
+		}
+	};
+
+	extern DetachButtonRes DetachButton2(Context& ctx);
+
 	class ObjectInlineInspector
 	{
 	public:
@@ -35,7 +48,7 @@ namespace vkl::GUI
 
 		~ObjectInlineInspector() = default;
 
-		void openPanelIFN(Context& ctx, std::shared_ptr<VkObject> const& target, bool set_open);
+		void openPanelIFN(Context& ctx, std::shared_ptr<VkObject> const& target, bool set_open, Panel::FocusAction focus_action = Panel::FocusAction::None);
 
 		void setTargetIFN(Context& ctx, std::shared_ptr<VkObject> const& target);
 
