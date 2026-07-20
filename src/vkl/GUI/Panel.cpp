@@ -121,6 +121,13 @@ namespace vkl::GUI
 			{
 				ctx.popPanel();
 			}
+			if (_can_close && _has_focus)
+			{
+				if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_W, ImGuiInputFlags_None, ImGui::GetCurrentWindowRead()->ID))
+				{
+					setOpen(false);
+				}
+			}
 		}
 		auto window = ImGui::GetCurrentWindowRead();
 		//ImGui::SetNextWindowContentSize(_window_cotent_size);
