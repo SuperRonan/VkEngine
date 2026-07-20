@@ -72,7 +72,8 @@ namespace vkl::GUI
 	void Panel::declare(Context& ctx, bool keep_open)
 	{
 		ImGuiWindowFlags flags = _window_flags;
-		bool* p_open = _can_close ? &_open : nullptr;
+		bool open = _open;
+		bool* p_open = _can_close ? &open : nullptr;
 		// Not perfect auto size, will do for now
 		ImGui::SetNextWindowSize(_window_initial_size, ImGuiCond_FirstUseEver);
 		// TODO find a nice initial pos from context with ImGui::SetNextWindowPos
@@ -97,6 +98,7 @@ namespace vkl::GUI
 			_next_no_bring_to_front_on_focus = false;
 		}
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
+		_open = open;
 		_is_hovered = ImGui::IsWindowHovered();
 		_has_focus = ImGui::IsWindowFocused();
 		if (_is_visible)

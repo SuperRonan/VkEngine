@@ -27,6 +27,8 @@ namespace vkl::GUI
 	void DemoPanel::declare(Context& ctx, bool keep_open)
 	{
 		VKL_UNUSED(keep_open);
-		ImGui::ShowDemoWindow(&_open);
+		bool open = _open;
+		ImGui::ShowDemoWindow(&open);
+		_open = open;
 	}
 }
