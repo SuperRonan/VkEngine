@@ -86,7 +86,7 @@ namespace vkl::GUI
 			{
 				if (ImGui::MenuItem(child.panel->name().c_str(), nullptr, nullptr, child.panel->isOpen()))
 				{
-					child.should_focus = true;
+					child.panel->setNextFocus(Panel::FocusAction::TakeFocus);
 				}
 			}
 			ImGui::EndMenu();
@@ -301,11 +301,6 @@ namespace vkl::GUI
 					if (child.panel->isOpen())
 					{
 						processChildDocking(ctx, child);
-						if (child.should_focus)
-						{
-							ImGui::SetNextWindowFocus();
-							child.should_focus = false;
-						}
 						child.panel->declare(ctx);
 						if (child.panel->hasFocus())
 						{
@@ -350,7 +345,7 @@ namespace vkl::GUI
 		return nullptr;
 	}
 
-	void PanelHolder::setChild(Id id, std::shared_ptr<Panel> const& panel, DockCommand dock_command, DockParams dock_param)
+	void PanelHolder::setChild(Id id, std::shared_ptr<Panel> const& panel, DockCommand dock_command, DockParams dock_param, FocusAction focus_action)
 	{
 		if (panel)
 		{
@@ -359,7 +354,7 @@ namespace vkl::GUI
 			child.panel = panel;
 			if (panel->isOpen())
 			{
-				child.should_focus = true;
+				child.panel->setNextFocus(focus_action);
 				child.dock_command = DockCommand::ToID;
 				child.dock_params.dock_id = getDockId();
 			}

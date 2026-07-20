@@ -41,9 +41,8 @@ namespace vkl::GUI
 		struct Child
 		{
 			std::shared_ptr<Panel> panel = {};
-			bool should_focus = true;
-			bool declare = true;
 			size_t latest_focus_time = {};
+			bool declare = true;
 			DockCommand dock_command = {};
 			DockParams dock_params = {};
 		};
@@ -88,7 +87,7 @@ namespace vkl::GUI
 		virtual std::shared_ptr<Panel> getChild(Id id) const;
 
 		// set panel to nullptr to close the child
-		virtual void setChild(Id id, std::shared_ptr<Panel> const& panel = nullptr, DockCommand dock_command = DockCommand::Default, DockParams dock_param = {});
+		virtual void setChild(Id id, std::shared_ptr<Panel> const& panel = nullptr, DockCommand dock_command = DockCommand::Default, DockParams dock_param = {}, FocusAction focus_action = FocusAction::TakeFocus);
 
 		template <std::invocable<> CreateFn, std::derived_from<Panel> _Panel = typename std::remove_cvref_t<std::invoke_result_t<CreateFn>>::element_type>
 		std::shared_ptr<_Panel> getOrCreateChild(Id id, CreateFn const& create_fn)
@@ -109,10 +108,10 @@ namespace vkl::GUI
 		}
 
 		template <std::invocable<> CreateFn, std::derived_from<Panel> _Panel = typename std::remove_cvref_t<std::invoke_result_t<CreateFn>>::element_type>
-		std::shared_ptr<_Panel> openChild(Id id, CreateFn const& create_fn, DockCommand dock_command = DockCommand::Default, DockParams dock_param = {})
+		std::shared_ptr<_Panel> openChild(Id id, CreateFn const& create_fn, DockCommand dock_command = DockCommand::Default, DockParams dock_param = {}, FocusAction focus_action = FocusAction::TakeFocus)
 		{
 			std::shared_ptr<_Panel> child = getOrCreateChild(id, create_fn);
-			setChild(id, child, dock_command, dock_param);
+			setChild(id, child, dock_command, dock_param, focus_action);
 			return child;
 		}
 

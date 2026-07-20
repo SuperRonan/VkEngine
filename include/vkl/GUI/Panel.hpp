@@ -14,6 +14,13 @@ namespace vkl::GUI
 
 		static constexpr ImGuiID InvalidDockID = 0;
 
+		enum class FocusAction : u8
+		{
+			None = 0,
+			TakeFocus = 1,
+			NoFocus = 2,
+		};
+
 	protected:
 
 		bool _open = true; // Need to be addressable
@@ -21,10 +28,13 @@ namespace vkl::GUI
 		bool _used : 1 = false;
 		bool _is_visible : 1 = false;
 		bool _is_hovered : 1 = false;
+		bool _next_take_focus : 1 = false; // Consumed by next declare()
+		bool _next_no_focus_on_appearing : 1 = false; // Consumed by next declare()
+		bool _next_no_bring_to_front_on_focus : 1 = false; // Consumed by next declare()
 		bool _has_focus : 1 = false;
 		bool _disable_from_ctx_stack : 1 = false;
 		bool _has_created_dock_node : 1 = false;
-		bool _set_dock_id : 1 = false;
+		bool _set_dock_id : 1 = false; // Consumed by next declare()
 		bool _set_dock_id_always : 1 = false;
 
 		ImVec2 _window_initial_size = ImVec2(0, 0);
@@ -79,6 +89,22 @@ namespace vkl::GUI
 		bool hasFocus() const
 		{
 			return _has_focus;
+		}
+
+		void setNextFocus(FocusAction action)
+		{
+			setNextTakeFocus(action == FocusAction::TakeFocus);
+			setNextNoFocus(action == FocusAction::NoFocus);
+		}
+
+		void setNextTakeFocus(bool take_focus = true)
+		{
+			_next_take_focus = take_focus;
+		}
+
+		void setNextNoFocus(bool no_focus = true)
+		{
+			_next_no_focus_on_appearing = no_focus;
 		}
 
 		ImGuiWindowFlags& windowFlags()

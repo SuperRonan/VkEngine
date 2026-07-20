@@ -81,6 +81,21 @@ namespace vkl::GUI
 			ImGui::SetNextWindowDockID(_dock_id, _set_dock_id_always ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
 			_set_dock_id = false;
 		}
+		if (_next_take_focus)
+		{
+			ImGui::SetNextWindowFocus();
+			_next_take_focus = false;
+		}
+		if (_next_no_focus_on_appearing)
+		{
+			flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+			_next_no_focus_on_appearing = false;
+		}
+		if (_next_no_bring_to_front_on_focus)
+		{
+			flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+			_next_no_bring_to_front_on_focus = false;
+		}
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
 		_is_hovered = ImGui::IsWindowHovered();
 		_has_focus = ImGui::IsWindowFocused();
