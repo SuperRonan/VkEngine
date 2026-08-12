@@ -947,7 +947,7 @@ namespace vkl
 			{
 			};
 
-			GUI::MainPanel _main_gui_panel(this, "Renderer");
+			GUI::MainPanel _main_gui_panel(this, "Renderer App");
 			_main_gui_panel.addMenu(GUI::MainPanel::PanelMenu{
 				.name = "View",
 				.options = {
