@@ -159,7 +159,7 @@ namespace vkl
 		executeNode(node);
 	}
 
-	void ExecutionThread::record(std::shared_ptr<Command> cmd)
+	void ExecutionThread::record(std::shared_ptr<Command> const& cmd)
 	{
 		record(*cmd);
 	}
@@ -930,7 +930,7 @@ namespace vkl
 		}
 	}
 
-	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> img_to_present, GUI::Context* gui_context)
+	void LinearExecutor::preparePresentation(std::shared_ptr<ImageView> const& img_to_present, GUI::Context* gui_context)
 	{
 		assert(_latest_swapchain_event);
 		assert(_latest_swapchain_event->present_queue == nullptr);
@@ -1096,7 +1096,7 @@ namespace vkl
 		_current_thread->execute(cmd);
 	}
 
-	void LinearExecutor::execute(std::shared_ptr<Command> cmd)
+	void LinearExecutor::execute(std::shared_ptr<Command> const& cmd)
 	{
 		_current_thread->execute(cmd);
 	}

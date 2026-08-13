@@ -38,7 +38,7 @@ namespace vkl
 
 		virtual void record(Command& cmd) = 0;
 
-		virtual void record(std::shared_ptr<Command> cmd) = 0;
+		virtual void record(std::shared_ptr<Command> const& cmd) = 0;
 
 		virtual void record(Executable const& exec) = 0;
 
@@ -48,7 +48,7 @@ namespace vkl
 			record(cmd);
 		}
 
-		void execute(std::shared_ptr<Command> cmd)
+		void execute(std::shared_ptr<Command> const& cmd)
 		{
 			record(cmd);
 		}
@@ -59,7 +59,7 @@ namespace vkl
 		}
 
 		
-		void operator()(std::shared_ptr<Command> cmd)
+		void operator()(std::shared_ptr<Command> const& cmd)
 		{
 			execute(cmd);
 		}

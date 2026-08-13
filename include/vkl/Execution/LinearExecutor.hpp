@@ -120,7 +120,7 @@ namespace vkl
 
 		virtual void record(Command& cmd) override;
 
-		virtual void record(std::shared_ptr<Command> cmd) override;
+		virtual void record(std::shared_ptr<Command> const& cmd) override;
 
 		virtual void record(Executable const& executable) override;
 
@@ -265,7 +265,7 @@ namespace vkl
 
 		void renderDebugIFP();
 
-		void preparePresentation(std::shared_ptr<ImageView> img_to_present, GUI::Context* gui_context);
+		void preparePresentation(std::shared_ptr<ImageView> const& img_to_present, GUI::Context* gui_context);
 
 		void endCommandBuffer(ExecutionThread* exec_thread, bool submit = false);
 
@@ -275,7 +275,7 @@ namespace vkl
 
 		virtual void execute(Command & cmd);
 
-		virtual void execute(std::shared_ptr<Command> cmd);
+		virtual void execute(std::shared_ptr<Command> const& cmd);
 
 		virtual void execute(Executable const& executable);
 
