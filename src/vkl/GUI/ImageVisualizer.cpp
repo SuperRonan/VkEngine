@@ -200,6 +200,15 @@ namespace vkl::GUI
 		}
 		// Better default choice
 		custom_swizzle.a = VK_COMPONENT_SWIZZLE_ONE;
+		if (_custom_aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+		{
+			custom_swizzle = VkComponentMapping{
+				.r = VK_COMPONENT_SWIZZLE_R,
+				.g = VK_COMPONENT_SWIZZLE_R,
+				.b = VK_COMPONENT_SWIZZLE_R,
+				.a = VK_COMPONENT_SWIZZLE_ONE,
+			};
+		}
 		if (_manual_swizzle)
 		{
 			custom_swizzle = _custom_swizzle;
