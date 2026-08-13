@@ -692,20 +692,20 @@ namespace vkl
 	template <class Stream>
 	Stream& logBufferBarrier(Stream & stream, BufferAndRangeInstance const& bari, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
 	{
-		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlags2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_from.stage) <<
-			") -> (" << vku::GetFlagsStr<VkAccessFlags2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_to.stage) << 
+		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlagBits2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlagBits2>(synch_from.stage) <<
+			") -> (" << vku::GetFlagsStr<VkAccessFlagBits2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlagBits2>(synch_to.stage) << 
 			") on Buffer: " << bari.buffer->handle() << " (" << bari.buffer->name() << "), Range("
 			<< bari.range.begin << ", " << bari.range.len << ")";
 		return stream;
 	}
 
 	template <class Stream>
-	Stream logImageBarrier(Stream & stream, std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
+	Stream& logImageBarrier(Stream & stream, std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
 	{
-		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlags2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_from.stage) << ", " << vku::GetFlagsStr<VkImageLayout>(synch_from.layout) <<
-			") -> (" << vku::GetFlagsStr<VkAccessFlags2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlags2>(synch_to.stage) << ", " << vku::GetFlagsStr<VkImageLayout>(synch_to.layout) <<
+		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlagBits2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlagBits2>(synch_from.stage) << ", " << vku::GetEnumLabel(synch_from.layout) <<
+			") -> (" << vku::GetFlagsStr<VkAccessFlagBits2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlagBits2>(synch_to.stage) << ", " << vku::GetEnumLabel(synch_to.layout) <<
 			") on Image: " << ii->handle() << " (" << ii->name() << "), Range: "
-			<< vku::GetFlagsStr<VkImageAspectFlags>(range.aspectMask)  << ", mips Range(" << range.baseMipLevel << ", " << range.levelCount << 
+			<< vku::GetFlagsStr<VkImageAspectFlagBits>(range.aspectMask)  << ", mips Range(" << range.baseMipLevel << ", " << range.levelCount << 
 			"), layers Range(" << range.baseArrayLayer << ", " << range.layerCount << ")" << std::endl;
 		return stream;
 	}
