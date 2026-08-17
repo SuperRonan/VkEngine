@@ -10,6 +10,8 @@
 #include <vkl/VkObjects/Fence.hpp>
 #include <vkl/VkObjects/VkWindow.hpp>
 
+#include <vkl/GUI/Context.hpp>
+
 namespace vkl
 {
 	extern std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app, uint set);
@@ -43,6 +45,17 @@ namespace vkl
 
 		std::shared_ptr<DescriptorSetLayoutInstance> _texture_set_layout;
 		std::shared_ptr<DescriptorSetLayoutInstance> _sampler_set_layout;
+
+		// Multi viewport support
+		struct ViewportsFrameData
+		{
+			// Keep data for all viewports in the same struct
+			MyVector<std::shared_ptr<VkObject>> objects;
+		};
+		// Per viewport frame in flight
+		MyVector<ViewportsFrameData> _viewports_frame_data;
+		MyVector<GUI::Context::ObjectUsedByCommand> _next_viewports_objects;
+		uint32_t _viewports_resources_index = 0;
 
 		bool _re_create_imgui_pipeline = true;
 
@@ -88,6 +101,20 @@ namespace vkl
 		{
 			return with(ei);
 		}
+
+		void setViewportsObjectsToKeepAliveMove(std::span<GUI::Context::ObjectUsedByCommand> objs)
+		{
+			// Check that objs are moved, not copied
+			_next_viewports_objects.insert(_next_viewports_objects.end(), objs.begin(), objs.end());
+		}
+
+		void setViewportsObjectsToKeepAlive(const std::span<const GUI::Context::ObjectUsedByCommand> objs)
+		{
+			// Check that objs are moved, not copied
+			_next_viewports_objects.insert(_next_viewports_objects.end(), objs.begin(), objs.end());
+		}
+
+		void renderViewports();
 
 		virtual bool updateResources(UpdateContext & ctx) override;
 

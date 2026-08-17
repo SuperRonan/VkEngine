@@ -82,6 +82,37 @@ namespace vkl::GUI
 		using BoundSampler = BoundResource<VkSampler>;
 		using BoundImage = BoundResource<VkImageView>;
 
+		struct ObjectUsedByCommand
+		{
+			std::shared_ptr<VkObject> object = {};
+			const ImGuiViewport* viewport = {}; // nullptr => main viewport, guaranties that the main viewport values are sorted first
+
+			constexpr std::strong_ordering operator<=>(const ImGuiViewport* rhs) const noexcept
+			{
+				return viewport <=> rhs;
+			}
+
+			constexpr std::strong_ordering compareWeak(ObjectUsedByCommand const& rhs) const noexcept
+			{
+				return *this <=> rhs.viewport;
+			}
+
+			constexpr std::strong_ordering compareStrong(ObjectUsedByCommand const& rhs) const noexcept
+			{
+				std::strong_ordering res = compareWeak(rhs);
+				if (res == std::strong_ordering::equal)
+				{
+					res = object <=> rhs.object;
+				}
+				return res;
+			}
+
+			constexpr std::strong_ordering operator<=>(ObjectUsedByCommand const& rhs) const noexcept
+			{
+				return compareStrong(rhs);
+			}
+		};
+
 	protected:
 
 		ImGuiContext * _imgui_context;
@@ -100,7 +131,8 @@ namespace vkl::GUI
 		TransientPayload _clipboard_payload;
 
 		std::set<std::shared_ptr<ImageViewInstance>> _frame_images;
-		MyVector<std::shared_ptr<VkObject>> _objects_to_keep;
+		// Sorted by viewport
+		MyVector<ObjectUsedByCommand> _objects_to_keep;
 		std::shared_ptr<Sampler> _sampler;
 		std::shared_ptr<DescriptorSetLayoutInstance> _imgui_texture_set_layout;
 		std::shared_ptr<DescriptorSetLayoutInstance> _imgui_sampler_set_layout;
@@ -170,11 +202,24 @@ namespace vkl::GUI
 
 		std::span<Panel* const> getPanelStack() const;
 
-		void keepFrameObject(std::shared_ptr<VkObject> const& o)
+		ImGuiViewport* getCurrentViewportPtrId() const;
+
+		// Must be called during the ImGui declaration
+		void keepFrameObjects(std::span<const std::shared_ptr<VkObject>> objs);
+		void keepFrameObjectsMove(std::span<std::shared_ptr<VkObject>> objs);
+		void keepFrameObject(std::shared_ptr<VkObject> const& obj)
 		{
-			_objects_to_keep.push_back(o);
+			keepFrameObjects(std::span(&obj, 1));
+		}
+		void keepFrameObjectMove(std::shared_ptr<VkObject>&& obj)
+		{
+			keepFrameObjectsMove(std::span(&obj, 1));
 		}
 
+		void keepFrameObjects(const ImGuiViewport* vp, std::span<const std::shared_ptr<VkObject>> objs);
+		void keepFrameObjectsMove(const ImGuiViewport* vp, std::span<std::shared_ptr<VkObject>> objs);
+
+		// Image that will synchronized to be sampled by ImGui's fragment shader
 		void addFrameImage(std::shared_ptr<ImageViewInstance> const& v)
 		{
 			_frame_images.insert(v);
@@ -185,15 +230,16 @@ namespace vkl::GUI
 			return _frame_images;
 		}
 
-		MyVector<std::shared_ptr<VkObject>> const& getFrameObjects() const
+		// Sorted by viewport
+		std::span<ObjectUsedByCommand> getMovableFrameObjects()
 		{
-			return _objects_to_keep;
+			std::span<ObjectUsedByCommand> res(_objects_to_keep.data(), _objects_to_keep.size());
+			return res;
 		}
 
-		std::span<std::shared_ptr<VkObject>> getMovableFrameObjects()
+		MyVector<ObjectUsedByCommand>&& moveFrameObjects()
 		{
-			std::span<std::shared_ptr<VkObject>> res(_objects_to_keep.data(), _objects_to_keep.size());
-			return res;
+			return std::move(_objects_to_keep);
 		}
 
 		void clearFrameAccumulators()
@@ -273,4 +319,10 @@ namespace vkl::GUI
 			return ImGuiKey_ReservedForModShift;
 		}
 	};
+
+}
+
+static constexpr std::strong_ordering operator<=>(const ImGuiViewport* lhs, vkl::GUI::Context::ObjectUsedByCommand const& rhs) noexcept
+{
+	return lhs <=> rhs.viewport;
 }

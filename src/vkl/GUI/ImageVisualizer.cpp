@@ -499,13 +499,17 @@ namespace vkl::GUI
 			ImDrawList* draw_list = ImGui::GetWindowDrawList();
 			ImGuiPlatformIO& pio = ImGui::GetPlatformIO();
 			bool should_restore_sampler = false;
+			// TODO use an inplace vector in C++26
+			std::array<std::shared_ptr<VkObject>, 4> objects_to_keep = {};
+			uint32_t objects_to_keep_count = 0;
 			if (_sampler)
 			{
 				draw_list->AddCallback(ImGui_ImplVulkan_DrawCallback_SetSampler, _sampler_set->set()->handle());
 				if (!skip_registration)
 				{
-					ctx.keepFrameObject(_sampler_set);
-					ctx.keepFrameObject(_sampler);
+					objects_to_keep[objects_to_keep_count + 0] = _sampler_set;
+					objects_to_keep[objects_to_keep_count + 1] = _sampler;
+					objects_to_keep_count += 2;
 				}
 				should_restore_sampler = true;
 			}
@@ -532,8 +536,15 @@ namespace vkl::GUI
 
 			if (!skip_registration)
 			{
+				ImGuiViewport* viewport = ImGui::GetWindowViewport();
 				ctx.addFrameImage(_custom_view);
-				ctx.keepFrameObject(_texture_set);
+				objects_to_keep[objects_to_keep_count + 0] = _custom_view;
+				objects_to_keep[objects_to_keep_count + 1] = _texture_set;
+				objects_to_keep_count += 2;
+			}
+			if (objects_to_keep_count)
+			{
+				ctx.keepFrameObjectsMove(std::span(objects_to_keep.data(), objects_to_keep_count));
 			}
 			return true;
 		}

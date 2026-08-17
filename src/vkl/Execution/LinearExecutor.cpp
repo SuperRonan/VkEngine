@@ -15,6 +15,9 @@
 
 #include <imgui/backends/imgui_impl_vulkan.h>
 
+#include <ranges>
+#include <algorithm>
+
 namespace vkl
 {
 	const bool log = false;
@@ -959,8 +962,27 @@ namespace vkl
 					.index = _latest_swapchain_event->index,
 					.images = &gui_context->getImages(),
 				}));
-				// TODO move content (std::move std::shared_ptr<VkObject>)
-				_context.moveToKeepAlive(gui_context->getMovableFrameObjects());
+				auto _imgui_objects_to_keep_alive = gui_context->getMovableFrameObjects();
+				if (!_imgui_objects_to_keep_alive.empty())
+				{
+					// nullptr entries are guaranted to be last
+					size_t main_viewport_count = 0;
+					if(_imgui_objects_to_keep_alive.front().viewport == nullptr)
+					{
+						// Extract subspan of resource used by the main viewport
+						auto end = std::upper_bound(_imgui_objects_to_keep_alive.begin(), _imgui_objects_to_keep_alive.end(), nullptr);
+						main_viewport_count = end - _imgui_objects_to_keep_alive.begin();
+						std::span sub_span = _imgui_objects_to_keep_alive.subspan(0, main_viewport_count);
+						//auto tf = std::views::transform([](auto && obj){return std::forward<std::shared_ptr<VkObject>>(obj.object);});
+						auto tf = std::views::transform([](auto && obj){return std::move(obj.object);});
+						_context.keepAlive(sub_span | tf);
+					}
+					if (_imgui_objects_to_keep_alive.size() > main_viewport_count)
+					{
+						std::span viewports_sub_span = _imgui_objects_to_keep_alive.subspan(main_viewport_count);
+						_render_gui->setViewportsObjectsToKeepAliveMove(viewports_sub_span);
+					}
+				}
 				gui_context->clearFrameAccumulators();
 			}
 
@@ -973,8 +995,17 @@ namespace vkl
 
 	}
 
+	void LinearExecutor::renderImGuiViewportsIFN()
+	{
+		if (_render_gui)
+		{
+			_render_gui->renderViewports();
+		}
+	}
+
 	void LinearExecutor::present()
 	{
+		renderImGuiViewportsIFN();
 		static MyVector<VkSemaphore> wait_semaphores;
 		static MyVector<VkSwapchainKHR> swapchains;
 		static MyVector<uint32_t> indices;
@@ -1279,10 +1310,10 @@ namespace vkl
 	void LinearExecutor::recyclePreviousEvents()
 	{
 		// TODO Really Recycle events resources
-		// Unfortunately, we can't destroy a command buffer in one thread and record another command buffer from the same pool in another thread
-		// I personally think it should not be the case (vkCmd* write to a command buffer, not a command pool (but writing to the command buffer probably requires interactive with the pool, to get more memory))
-		// But it is a it is.
+		// Unfortunately, we can't destroy a command buffer in one thread and record another command buffer from the same pool in another thread.
+		// Accesses to the command pool must be serialized (even through a comand buffer).
 		// I think it implies that two concurent threads can't record two command buffers from the same pool.
+		// It is what it is.
 		// Possible solutions:
 		// (1): lock the pool mutex at each call to vkCmd*
 		// What a pain, won't do that + probably quite ineficient 

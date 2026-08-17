@@ -7,6 +7,11 @@
 
 #include <imgui/backends/imgui_impl_vulkan.h>
 
+#include <that/stl_ext/const_forward.hpp>
+
+#include <algorithm>
+#include <ranges>
+
 namespace vkl::GUI
 {
 	std::shared_ptr<Style> g_default_style = [](){
@@ -166,6 +171,61 @@ namespace vkl::GUI
 	std::span<Panel* const> Context::getPanelStack() const
 	{
 		return std::span<Panel* const>(_panel_stack.data(), _panel_stack.size());
+	}
+
+	ImGuiViewport* Context::getCurrentViewportPtrId() const
+	{
+		ImGuiViewport* vp = ImGui::GetWindowViewport();
+		if (vp == ImGui::GetMainViewport())
+		{
+			vp = nullptr;
+		}
+		return vp;
+	}
+
+	void Context::keepFrameObjects(std::span<const std::shared_ptr<VkObject>> objs)
+	{
+		ImGuiViewport* vp = getCurrentViewportPtrId();
+		keepFrameObjects(vp, objs);
+	}
+
+	void Context::keepFrameObjectsMove(std::span<std::shared_ptr<VkObject>> objs)
+	{
+		ImGuiViewport* vp = getCurrentViewportPtrId();
+		keepFrameObjectsMove(vp, objs);
+	}
+
+	template <bool Const_Reference>
+	static void Context_KeppFrameObjects_Impl(MyVector<Context::ObjectUsedByCommand> & _objects_to_keep, const ImGuiViewport* viewport, std::span<that::OptConst_t< std::shared_ptr<VkObject>, Const_Reference>> objs)
+	{
+		auto it = std::upper_bound(_objects_to_keep.begin(), _objects_to_keep.end(), viewport);
+		auto forwarder = std::overloads {
+			[](std::shared_ptr<VkObject> const& obj){return obj;},
+			[](std::shared_ptr<VkObject> && obj) {return std::move(obj); },
+		};
+		auto tf = objs | std::views::transform(
+			[&](auto&& obj) {
+				if constexpr (Const_Reference)
+				{
+					return Context::ObjectUsedByCommand{ .object = obj, .viewport = viewport };
+				}
+				else
+				{
+					return Context::ObjectUsedByCommand{ .object = std::move(obj), .viewport = viewport };
+				}
+				
+		});
+		_objects_to_keep.insert(it, tf.begin(), tf.end());
+	}
+
+	void Context::keepFrameObjects(const ImGuiViewport* viewport, std::span<const std::shared_ptr<VkObject>> objs)
+	{
+		Context_KeppFrameObjects_Impl<true>(_objects_to_keep, viewport, objs);
+	}
+
+	void Context::keepFrameObjectsMove(const ImGuiViewport* viewport, std::span<std::shared_ptr<VkObject>> objs)
+	{
+		Context_KeppFrameObjects_Impl<false>(_objects_to_keep, viewport, objs);
 	}
 
 	Style::Color Context::pushStack()

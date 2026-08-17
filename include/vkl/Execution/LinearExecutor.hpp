@@ -224,6 +224,8 @@ namespace vkl
 		std::mutex _frame_perf_report_pool_mutex;
 		std::shared_ptr<FramePerfReport> _pending_frame_report = nullptr;
 
+		void renderImGuiViewportsIFN();
+
 	public:
 
 		struct CreateInfo

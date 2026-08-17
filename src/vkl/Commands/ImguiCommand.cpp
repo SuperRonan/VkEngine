@@ -17,6 +17,19 @@
 
 namespace vkl
 {
+	void RenderImGuiViewPorts(AppWithImGui* app, ColorCorrectionInfo const& color_correction)
+	{
+		assert(app);
+#ifdef IMGUI_HAS_VIEWPORT
+		if (app->imguiConfigFlags() & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui_ImplVulkan_ViewportsRendererArgs params;
+			params.CustomPushConstantData = &color_correction.params;
+			ImGui::RenderPlatformWindowsDefault(nullptr, &params);
+		}
+#endif
+	}
+
 	std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app, uint set)
 	{
 		DescriptorSetLayoutInstance::CI ci{
@@ -118,20 +131,34 @@ namespace vkl
 
 			ctx.keepAlive(_desc_pool);
 
-			AppWithImGui * app = dynamic_cast<AppWithImGui*>(application());
-			if (app)
-			{
-#ifdef IMGUI_HAS_VIEWPORT
-				if (app->imguiConfigFlags() & ImGuiConfigFlags_ViewportsEnable)
-				{
-					ImGui_ImplVulkan_ViewportsRendererArgs params;
-					params.CustomPushConstantData = &_viewports_color_correction.params;
-					ImGui::RenderPlatformWindowsDefault(nullptr, &params);
-				}
-#endif
-			}
+			// Render viewports
+			// Problem: RenderPlatformWindowsDefault() creates an independant CB for each separate viewport and submits them immediatly.
+			// This may trigger some synch issues.
+			// For example, we may synch some textures be read by ImGui's shared, are synched in the current CB, which will be submitted later.
+			// There are several possible solutions:
+			// - Good long term: Make my own vulkan backend for imgui and manage the CB myself (maybe record viewports render command all in the same CB, maybe even this one), or properly express dependencies with barriers / semaphores
+			// - The short term solution is to call RenderPlatformWindowsDefault() after submission of this CB
 		}
 	};
+
+	void ImGuiCommand::renderViewports()
+	{
+		AppWithImGui* app = dynamic_cast<AppWithImGui*>(application());
+		if (!app)
+		{
+			return;
+		}
+		RenderImGuiViewPorts(app, _viewports_color_correction_info);
+		if (_next_viewports_objects)
+		{
+			ViewportsFrameData& fd = _viewports_frame_data[_viewports_resources_index % _viewports_frame_data.size32()];
+			auto tf = _next_viewports_objects | std::views::transform([](GUI::Context::ObjectUsedByCommand& obj) {return std::move(obj.object); });
+			fd.objects.clear();
+			fd.objects.insert(fd.objects.end(), tf.begin(), tf.end());
+			_next_viewports_objects.clear();
+			++_viewports_resources_index;
+		}
+	}
 
 	ImGuiCommand::ImGuiCommand(CreateInfo const& ci) :
 		DeviceCommand(ci.app, ci.name),
@@ -338,7 +365,7 @@ namespace vkl
 		ImGui_ImplVulkan_Init(&ii);
 
 		_fences_to_wait.resize(ii.ImageCount);
-
+		_viewports_frame_data.resize(ii.ImageCount);
 		_re_create_imgui_pipeline = true;
 	}
 
@@ -379,7 +406,7 @@ namespace vkl
 		node->_color_correction.params.exposure *= _target_window->brightness();
 		node->_viewports_color_correction = _viewports_color_correction_info;
 		node->_viewports_color_correction.params.exposure *= _target_window->brightness();
-
+		
 		if (ei.images)
 		{
 			ResourceState2 rs{
