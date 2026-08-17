@@ -7,7 +7,6 @@
 
 #include <vkl/Commands/TransferCommand.hpp>
 #include <vkl/Commands/GraphicsTransferCommands.hpp>
-#include <vkl/Commands/ImguiCommand.hpp>
 
 #include <vkl/VkObjects/VkWindow.hpp>
 #include <vkl/VkObjects/Queue.hpp>
@@ -18,6 +17,8 @@ namespace vkl
 	// "Events"
 	struct CommandBufferSubmission;
 	struct SwapchainEvent;
+
+	class ImGuiCommand;
 
 	class ExecutionThread : public ExecutionRecorder
 	{
@@ -185,7 +186,7 @@ namespace vkl
 		std::shared_ptr<Queue> _present_queue = nullptr;
 
 		std::shared_ptr<BlitImage> _blit_to_present = nullptr;
-		std::shared_ptr<ImguiCommand> _render_gui = nullptr;
+		std::shared_ptr<ImGuiCommand> _render_gui = nullptr;
 
 		std::shared_ptr<QueryPool> _timestamp_query_pool = nullptr;
 
@@ -290,7 +291,7 @@ namespace vkl
 			return _pending_frame_report;
 		}
 
-		std::shared_ptr<ImguiCommand> const& renderImGuiCommand() const
+		std::shared_ptr<ImGuiCommand> const& renderImGuiCommand() const
 		{
 			return _render_gui;
 		}

@@ -14,7 +14,7 @@ namespace vkl
 {
 	extern std::shared_ptr<DescriptorSetLayoutInstance> MakeImGuiDescriptorSetLayout(VkApplication* app, uint set);
 
-	class ImguiCommand : public DeviceCommand
+	class ImGuiCommand : public DeviceCommand
 	{
 	protected:
 
@@ -65,9 +65,9 @@ namespace vkl
 		};
 		using CI = CreateInfo;
 
-		ImguiCommand(CreateInfo const& ci);
+		ImGuiCommand(CreateInfo const& ci);
 
-		virtual ~ImguiCommand() override;
+		virtual ~ImGuiCommand() override;
 
 		virtual void init()override;
 

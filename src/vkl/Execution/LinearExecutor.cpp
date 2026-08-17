@@ -5,6 +5,7 @@
 #include <vkl/Rendering/DebugRenderer.hpp>
 
 #include <vkl/Commands/PrebuiltTransferCommands.hpp>
+#include <vkl/Commands/ImguiCommand.hpp>
 
 #include <vkl/Execution/ExecutionStackReport.hpp>
 #include <vkl/Execution/FramePerfReport.hpp>
@@ -12,8 +13,6 @@
 #include <vkl/App/ImGuiApp.hpp>
 #include <vkl/GUI/Context.hpp>
 
-#include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
 
 namespace vkl
@@ -595,7 +594,7 @@ namespace vkl
 			AppWithImGui * imgui_app = dynamic_cast<AppWithImGui *>(application());
 			if (imgui_app && imgui_app->ImGuiIsInit())
 			{
-				_render_gui = std::make_shared<ImguiCommand>(ImguiCommand::CI{
+				_render_gui = std::make_shared<ImGuiCommand>(ImGuiCommand::CI{
 					.app = application(),
 					.name = name() + ".RenderGui",
 					.target_window = _window,
@@ -956,7 +955,7 @@ namespace vkl
 			
 			if (gui_context && _render_gui && _latest_swapchain_event->swapchain.get() == _window->swapchain()->instance())
 			{
-				execute(_render_gui->with(ImguiCommand::ExecutionInfo{
+				execute(_render_gui->with(ImGuiCommand::ExecutionInfo{
 					.index = _latest_swapchain_event->index,
 					.images = &gui_context->getImages(),
 				}));

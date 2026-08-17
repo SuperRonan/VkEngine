@@ -133,7 +133,7 @@ namespace vkl
 		}
 	};
 
-	ImguiCommand::ImguiCommand(CreateInfo const& ci) :
+	ImGuiCommand::ImGuiCommand(CreateInfo const& ci) :
 		DeviceCommand(ci.app, ci.name),
 		_queue(ci.queue),
 		_target_window(ci.target_window)
@@ -155,7 +155,7 @@ namespace vkl
 		std::memset(&_color_correction_info, -1, sizeof(ColorCorrectionInfo));
 	}
 
-	ImguiCommand::~ImguiCommand()
+	ImGuiCommand::~ImGuiCommand()
 	{
 		if (_custom_frag_shader)
 		{
@@ -176,7 +176,7 @@ namespace vkl
 		
 	}
 
-	void ImguiCommand::createFramebuffers()
+	void ImGuiCommand::createFramebuffers()
 	{
 		const size_t n = _target_window->swapchain()->instance()->images().size();
 		_framebuffers.resize(n);
@@ -191,7 +191,7 @@ namespace vkl
 		}
 	}
 
-	void ImguiCommand::createRenderPassIFP()
+	void ImGuiCommand::createRenderPassIFP()
 	{
 		// ImGui require the ext, vk 1.3 is not enough for now (event though the ext has been promoted to core in 1.3)
 		const bool can_use_dynamic_rendering = application()->availableFeatures().features_13.dynamicRendering && application()->deviceExtensions().contains(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
@@ -214,7 +214,7 @@ namespace vkl
 		});
 	}
 
-	void ImguiCommand::initImGui()
+	void ImGuiCommand::initImGui()
 	{
 		const uint32_t N = 1024;
 		std::vector<VkDescriptorPoolSize> sizes = {
@@ -315,7 +315,7 @@ namespace vkl
 			.SecondaryViewportsInfo = ImGui_ImplVulkan_SecondaryViewportsInfo{
 				.GetCustomShadersInfo = [](const void* user_data, VkSurfaceFormatKHR format)
 				{
-					ImguiCommand& that = *reinterpret_cast<ImguiCommand*>(const_cast<void*>(user_data));
+					ImGuiCommand& that = *reinterpret_cast<ImGuiCommand*>(const_cast<void*>(user_data));
 					that._viewports_format = format;
 					that._viewports_color_correction_info = DeduceColorCorrection(format);
 					ImGui_ImplVulkan_CustomShadersInfo res{
@@ -342,7 +342,7 @@ namespace vkl
 		_re_create_imgui_pipeline = true;
 	}
 
-	void ImguiCommand::shutdownImGui()
+	void ImGuiCommand::shutdownImGui()
 	{
 		application()->logger()("Shutdown ImGui Vulkan", Logger::Options::TagInfo);
 		application()->deviceWaitIdle();
@@ -350,12 +350,12 @@ namespace vkl
 		_desc_pool = nullptr;
 	}
 
-	void ImguiCommand::init()
+	void ImGuiCommand::init()
 	{
 		
 	}
-	
-	std::shared_ptr<ExecutionNode> ImguiCommand::getExecutionNode(RecordContext& ctx, ExecutionInfo const& ei)
+
+	std::shared_ptr<ExecutionNode> ImGuiCommand::getExecutionNode(RecordContext& ctx, ExecutionInfo const& ei)
 	{
 		std::shared_ptr<ImGuiCommandNode> node = _exec_node_cache.getCleanNode<ImGuiCommandNode>([&](){
 			return std::make_shared<ImGuiCommandNode>(ImGuiCommandNode::CI{
@@ -401,7 +401,7 @@ namespace vkl
 		return node;
 	}
 
-	std::shared_ptr<ExecutionNode> ImguiCommand::getExecutionNode(RecordContext& ctx)
+	std::shared_ptr<ExecutionNode> ImGuiCommand::getExecutionNode(RecordContext& ctx)
 	{
 		ExecutionInfo ei{
 			.index = _index.value(),
@@ -409,7 +409,7 @@ namespace vkl
 		return getExecutionNode(ctx, ei);
 	}
 
-	Executable ImguiCommand::with(ExecutionInfo const& ei)
+	Executable ImGuiCommand::with(ExecutionInfo const& ei)
 	{
 		return [this, ei](RecordContext& ctx)
 		{
@@ -417,7 +417,7 @@ namespace vkl
 		};
 	}
 
-	bool ImguiCommand::updateResources(UpdateContext & ctx)
+	bool ImGuiCommand::updateResources(UpdateContext & ctx)
 	{
 		bool res = false;
 
@@ -537,7 +537,7 @@ namespace vkl
 				.DesiredPresentMode = present_mode,
 				.GetCustomShadersInfo = [](const void* user_data, VkSurfaceFormatKHR format)
 				{
-					ImguiCommand& that = *reinterpret_cast<ImguiCommand*>(const_cast<void*>(user_data));
+					ImGuiCommand& that = *reinterpret_cast<ImGuiCommand*>(const_cast<void*>(user_data));
 					that._viewports_format = format;
 					that._viewports_color_correction_info = DeduceColorCorrection(format);
 					ImGui_ImplVulkan_CustomShadersInfo res{
