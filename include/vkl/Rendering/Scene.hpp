@@ -29,7 +29,7 @@
 
 #include <cassert>
 
-#include <that/stl_ext/array.hpp>
+#include <that/utils/array.hpp>
 
 namespace vkl
 {
@@ -76,8 +76,9 @@ namespace vkl
 
 		struct MaterialReference
 		{
-			using Ids = std::array<uint16_t, Material::MAX_TEXTURE_COUNT>;
-			static constexpr const Ids DefaultIds = std::MakeUniformArray<uint16_t, Material::MAX_TEXTURE_COUNT>(uint16_t(-1));
+			using Id = uint16_t;
+			using Ids = std::array<Id, Material::MAX_TEXTURE_COUNT>;
+			static constexpr const Ids DefaultIds = that::MakeUniformArray<Material::MAX_TEXTURE_COUNT>(Id(-1));
 			Ids ids = DefaultIds;
 		};
 		std::shared_ptr<HostManagedBuffer> _material_ref_buffer;
