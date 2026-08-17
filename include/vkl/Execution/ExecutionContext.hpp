@@ -211,16 +211,6 @@ namespace vkl
 			_objects_to_keep.insert(_objects_to_keep.end(), std::ranges::begin(range), std::ranges::end(range));
 		}
 
-		template <std::ranges::forward_range ObjectRange>
-			requires std::convertible_to<typename std::ranges::range_reference_t<ObjectRange>, std::shared_ptr<VkObject>>
-		void moveToKeepAlive(ObjectRange&& range)
-		{
-			for (auto&& obj : range)
-			{
-				_objects_to_keep.push_back(std::move(obj));
-			}
-		}
-
 		auto& objectsToKeepAlive()
 		{
 			return _objects_to_keep;
