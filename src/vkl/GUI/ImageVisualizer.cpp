@@ -594,9 +594,11 @@ namespace vkl::GUI
 	{
 		float available_width = ImGui::GetCurrentWindow()->WorkRect.GetWidth();
 		Result res = {};
-		if (ImGui::TreeNode("Parameters"))
+		const float default_cursor_x = ImGui::GetCursorPos().x;
+		bool declare_controls = ImGui::TreeNode("Parameters");
+		if (declare_controls)
 		{
-			res |= declareControlsInline(ctx, available_width);
+			res |= declareControlsInline(ctx, available_width, ImGui::GetCursorPos().x - default_cursor_x);
 			ImGui::TreePop();
 			ImGui::Separator();
 		}
@@ -711,9 +713,9 @@ namespace vkl::GUI
 					res |= Result::Resized;
 				}
 			};
-			declare_size_mode("Image resolution", SizeMode::ImageSize);
 			declare_size_mode("Fit width (integral scaling)", SizeMode::FitWidthIntegral);
 			declare_size_mode("Fit full width", SizeMode::FitWidth);
+			declare_size_mode("Image resolution", SizeMode::ImageSize);
 			declare_size_mode("Manual resolution", SizeMode::Manual);
 
 			ImGui::Separator();
@@ -747,7 +749,7 @@ namespace vkl::GUI
 		return res;
 	}
 
-	ImageVisualizer::Result ImageVisualizer::declareControlsInline(Context& ctx, float available_width)
+	ImageVisualizer::Result ImageVisualizer::declareControlsInline(Context& ctx, float available_width, float cursor_x_offset)
 	{
 		Result res = {};
 		bool should_clear = false;
@@ -793,7 +795,9 @@ namespace vkl::GUI
 			bool input_size = false;
 			if (available_width > 0 && !_manual_unlock_ratio)
 			{
-				ImGui::SetNextItemWidth(available_width);
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() - cursor_x_offset);
+				float item_width = ImMin(available_width, ImGui::GetContentRegionAvail().x);
+				ImGui::SetNextItemWidth(item_width);
 				input_size = ImGui::SliderInt("##Display width", size_pix.data(), 0, available_width, nullptr);
 				ImGui::SetItemTooltip("Display width");
 			}

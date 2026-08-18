@@ -24,9 +24,9 @@ namespace vkl::GUI
 
 		enum class SizeMode : char
 		{
-			ImageSize,
 			FitWidthIntegral, // Fit to the available window width, but keep integral proportions
 			FitWidth, // Fit to the available window width
+			ImageSize,
 			Manual,
 		};
 
@@ -135,7 +135,7 @@ namespace vkl::GUI
 
 		virtual Result declareInline(Context& ctx);
 
-		virtual Result declareControlsInline(Context& ctx, float available_width = -1);
+		virtual Result declareControlsInline(Context& ctx, float available_width = -1, float cursor_x_offset = 0);
 
 		virtual Result declareMenuInline(Context& ctx);
 
