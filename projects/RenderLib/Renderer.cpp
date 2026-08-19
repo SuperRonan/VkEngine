@@ -4,6 +4,7 @@
 
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/TypedInlineInspector.hpp>
 
 namespace vkl
 {
@@ -1268,6 +1269,10 @@ namespace vkl
 			ImGuiListSelection _pipeline_selection;
 			ImGuiListSelection _shadow_method;
 
+			TypedInlineInspector<ImageView> _output_target;
+			TypedInlineInspector<ImageView> _render_target;
+			TypedInlineInspector<ImageView> _depth_target;
+
 			TargetIndirectInlinePanel<LightTransport> _light_transport;
 			TargetIndirectInlinePanel<TemporalAntiAliasingAndUpscaler> _taau;
 			TargetIndirectInlinePanel<AmbientOcclusion> _ambient_occlusion;
@@ -1276,7 +1281,10 @@ namespace vkl
 
 			SimpleRendererInspector(std::shared_ptr<SimpleRenderer> const& target) :
 				Panel(target->application(), std::format("{}", target->name())),
-				_target(target)
+				_target(target),
+				_output_target("Output Target"),
+				_render_target("Render Target"),
+				_depth_target("Depth Target")
 			{
 				const bool can_as = application()->availableFeatures().acceleration_structure_khr.accelerationStructure;
 				const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
@@ -1375,6 +1383,14 @@ namespace vkl
 				_taau.declareInline(ctx, _target->_taau);
 
 				_depth_of_field.declareInline(ctx, _target->_depth_of_field);
+
+				if (ImGui::TreeNode("Targets"))
+				{
+					_output_target.declareInline(ctx, _target->_output_target);
+					_render_target.declareInline(ctx, _target->_render_target);
+					_depth_target.declareInline(ctx, _target->_depth);
+					ImGui::TreePop();
+				}
 			}
 		};
 	}
