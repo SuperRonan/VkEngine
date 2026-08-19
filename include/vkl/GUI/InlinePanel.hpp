@@ -38,7 +38,11 @@ namespace vkl::GUI
 		using CreateFn = std::function<std::shared_ptr<Panel>(GUI::Context& ctx)>;
 		CreateFn make_panel = {};
 
-		ReturnType declareInline(GUI::Context& ctx, bool keep_open = false);
+		ReturnType declareInline(GUI::Context& ctx, bool keep_open);
+		ReturnType declareInline(GUI::Context& ctx)
+		{
+			return declareInline(ctx, true);
+		}
 
 		void clear()
 		{

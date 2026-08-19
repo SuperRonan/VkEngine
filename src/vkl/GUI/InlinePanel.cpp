@@ -209,7 +209,7 @@ namespace vkl::GUI
 			id,
 			get_panel_fn
 		);
-		if (!res.declare_inline && !!panel && !keep_open)
+		if (!res.declare_inline && panel && !keep_open)
 		{
 			clear();
 		}
