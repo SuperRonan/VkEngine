@@ -7,6 +7,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -1013,10 +1014,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> RigidMesh::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> RigidMesh::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::RigidMeshInspector>(std::static_pointer_cast<RigidMesh>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::RigidMeshInspector>(std::static_pointer_cast<RigidMesh>(imi.target));
 	}
 
 	RigidMesh RigidMesh::MakeSquare(Square2DMakeInfo const& smi)
@@ -1841,9 +1842,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ParametrableRigidMesh::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ParametrableRigidMesh::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::ParametrableRigidMeshInspector>(std::static_pointer_cast<ParametrableRigidMesh>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::ParametrableRigidMeshInspector>(std::static_pointer_cast<ParametrableRigidMesh>(imi.target));
 	}
 }

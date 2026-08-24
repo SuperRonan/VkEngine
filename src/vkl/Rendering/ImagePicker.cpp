@@ -4,6 +4,7 @@
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -117,9 +118,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ImagePicker::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImagePicker::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::ImagePickerInspector>(std::static_pointer_cast<ImagePicker>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::ImagePickerInspector>(std::static_pointer_cast<ImagePicker>(imi.target));
 	}
 }

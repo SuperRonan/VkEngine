@@ -4,6 +4,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -315,9 +316,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> AmbientOcclusion::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> AmbientOcclusion::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::AmbientOcclusionInspector>(std::static_pointer_cast<AmbientOcclusion>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::AmbientOcclusionInspector>(std::static_pointer_cast<AmbientOcclusion>(imi.target));
 	}
 }

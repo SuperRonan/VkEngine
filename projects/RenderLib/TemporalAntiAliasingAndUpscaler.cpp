@@ -10,6 +10,7 @@
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/ImGuiDynamic.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -243,9 +244,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> TemporalAntiAliasingAndUpscaler::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> TemporalAntiAliasingAndUpscaler::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::TemporalAntiAliasingAndUpscalerInspector>(std::static_pointer_cast<TemporalAntiAliasingAndUpscaler>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::TemporalAntiAliasingAndUpscalerInspector>(std::static_pointer_cast<TemporalAntiAliasingAndUpscaler>(imi.target));
 	}
 }

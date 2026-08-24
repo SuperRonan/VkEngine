@@ -6,6 +6,7 @@
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/ImGuiDynamic.hpp>
 #include <vkl/GUI/ImageVisualizer.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -665,15 +666,15 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ImageInstance::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImageInstance::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return GUI::MakeInspectorFromTarget(ctx, std::static_pointer_cast<ImageInstance>(shared_this));
+		assert(imi.target.get() == this);
+		return GUI::MakeInspectorFromTarget(*imi.ctx, std::static_pointer_cast<ImageInstance>(imi.target));
 	}
 
-	std::shared_ptr<GUI::Panel> Image::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Image::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return GUI::MakeInspectorFromTarget<Image>(ctx, std::static_pointer_cast<Image>(shared_this));
+		assert(imi.target.get() == this);
+		return GUI::MakeInspectorFromTarget<Image>(*imi.ctx, std::static_pointer_cast<Image>(imi.target));
 	}
 }

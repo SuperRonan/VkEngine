@@ -4,6 +4,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <ShaderLib/Rendering/Materials/MaterialDefinitions.h>
 #include <ShaderLib/Rendering/Materials/PBMaterialDefinitions.h>
@@ -475,9 +476,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> PhysicallyBasedMaterial::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> PhysicallyBasedMaterial::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::PhysicallyBasedMaterialInspector>(std::dynamic_pointer_cast<PhysicallyBasedMaterial>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::PhysicallyBasedMaterialInspector>(std::dynamic_pointer_cast<PhysicallyBasedMaterial>(imi.target));
 	}
 }

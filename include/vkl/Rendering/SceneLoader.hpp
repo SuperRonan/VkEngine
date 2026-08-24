@@ -57,7 +57,7 @@ namespace vkl
 		using InspectorType = GUI::NodeFromFileInspector;
 		friend class InspectorType;
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& target, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 
 	struct LightNodeCreateInfo

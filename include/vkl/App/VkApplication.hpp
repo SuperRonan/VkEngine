@@ -60,6 +60,7 @@ namespace vkl
 	namespace GUI
 	{
 		class VkApplicationPanel;
+		struct InspectorMakeInfo;
 	}
 
 	class VkApplication
@@ -599,7 +600,7 @@ namespace vkl
 			_name = std::forward<StringLike>(new_name);
 		}
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx);
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi);
 	};
 
 	template <std::derived_from<VkObject>... Derived>

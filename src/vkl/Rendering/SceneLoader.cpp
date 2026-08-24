@@ -6,6 +6,7 @@
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/PathWidget.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <vkl/Utils/stl_extension.hpp>
 
@@ -195,10 +196,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> NodeFromFile::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> NodeFromFile::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::NodeFromFileInspector>(std::static_pointer_cast<NodeFromFile>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::NodeFromFileInspector>(std::static_pointer_cast<NodeFromFile>(imi.target));
 	}
 
 	std::shared_ptr<Scene::Node> MakeLightNode(LightNodeCreateInfo const& ci)

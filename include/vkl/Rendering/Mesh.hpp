@@ -153,7 +153,7 @@ namespace vkl
 
 		using InspectorType = GUI::MeshInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override = 0;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override = 0;
 
 		const AABB3f& getAABB()const
 		{
@@ -415,7 +415,7 @@ namespace vkl
 
 		using InspectorType = GUI::RigidMeshInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 
 		virtual VertexInputDescription vertexInputDesc() override
 		{
@@ -604,6 +604,6 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_ENUM_VALUE_1)
 
 		using InspectorType = GUI::ParametrableRigidMeshInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 }

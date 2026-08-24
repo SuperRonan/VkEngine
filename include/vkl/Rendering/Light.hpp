@@ -163,7 +163,7 @@ namespace vkl
 		using InspectorType = GUI::LightInspector;
 		friend class InspectorType;
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override = 0;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override = 0;
 	};
 
 	class PointLight : public Light
@@ -203,7 +203,7 @@ namespace vkl
 		using InspectorType = GUI::PointLightInspector;
 		friend class InspectorType;
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 
 	class DirectionalLight : public Light
@@ -233,7 +233,7 @@ namespace vkl
 		using InspectorType = GUI::DirectionalLightInspector;
 		friend class InspectorType;
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 
 	class SpotBeamLight : public Light
@@ -343,7 +343,7 @@ namespace vkl
 		using InspectorType = GUI::SpotBeamLightInspector;
 		friend class InspectorType;
 
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 
 	using SpotLight = SpotBeamLight;

@@ -74,7 +74,7 @@ namespace vkl
 
 		using InspectorType = GUI::TemporalAntiAliasingAndUpscalerInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx);
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi);
 
 		std::shared_ptr<ImageView> const& output()const
 		{

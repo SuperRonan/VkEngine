@@ -11,6 +11,7 @@
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/TypedInlineInspector.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -593,10 +594,10 @@ namespace vkl
 		}
 	};
 
-	std::shared_ptr<GUI::Panel> DebugRenderer::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> DebugRenderer::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<DebugRendererPanel>(std::static_pointer_cast<DebugRenderer>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<DebugRendererPanel>(std::static_pointer_cast<DebugRenderer>(imi.target));
 	}
 
 	ShaderBindings DebugRenderer::getBindings(uint32_t offset)const

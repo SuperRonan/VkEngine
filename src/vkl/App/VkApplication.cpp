@@ -28,6 +28,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/VkObjectInspector.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <vkl/VkObjects/VulkanFeaturesMeta.hpp>
 
@@ -1919,8 +1920,8 @@ namespace vkl
 		_gui_panel = std::make_shared<GUI::VkApplicationPanel>(this);
 	}
 
-	std::shared_ptr<GUI::Panel> VkObject::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> VkObject::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		return std::make_shared<GUI::VkObjectInspector>(shared_this);
+		return std::make_shared<GUI::VkObjectInspector>(imi.target);
 	}
 }

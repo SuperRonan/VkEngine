@@ -40,7 +40,7 @@ namespace vkl
 
 		using InspectorType = GUI::SamplerInstanceInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 
 		static constexpr const char* ClassName = "Sampler";
 	};
@@ -108,7 +108,7 @@ namespace vkl
 
 		using InspectorType = GUI::SamplerInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<GUI::Panel> makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx) override;
+		virtual std::shared_ptr<GUI::Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 
 	VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS(Sampler)

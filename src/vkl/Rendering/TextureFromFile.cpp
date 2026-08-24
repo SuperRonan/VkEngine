@@ -2,6 +2,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/PathWidget.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <that/img/ImRead.hpp>
 
@@ -626,9 +627,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> TextureFromFile::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> TextureFromFile::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::TextureFromFileInspector>(std::dynamic_pointer_cast<TextureFromFile>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::TextureFromFileInspector>(std::dynamic_pointer_cast<TextureFromFile>(imi.target));
 	}
 }

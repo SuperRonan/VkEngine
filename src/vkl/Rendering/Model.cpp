@@ -6,6 +6,7 @@
 
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiDynamic.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <unordered_map>
 #include <functional>
@@ -222,10 +223,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> Model::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Model::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::ModelInspector>(std::static_pointer_cast<Model>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::ModelInspector>(std::static_pointer_cast<Model>(imi.target));
 	}
 
 

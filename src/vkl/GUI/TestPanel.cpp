@@ -14,6 +14,7 @@
 #include <vkl/GUI/PopUp.hpp>
 #include <vkl/GUI/TargetInspector.hpp>
 #include <vkl/GUI/TypedInlineInspector.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl::GUI
 {
@@ -32,7 +33,7 @@ namespace vkl::GUI
 
 		using InspectorType = class TestObjectInspector;
 		friend class InspectorType;
-		virtual std::shared_ptr<Panel> makeInspector(std::shared_ptr<VkObject> const& target, Context& ctx) override;
+		virtual std::shared_ptr<Panel> makeInspector(GUI::InspectorMakeInfo const& imi) override;
 	};
 
 	class TestObjectInspector : public TargetInspector<TestObject>
@@ -91,9 +92,9 @@ namespace vkl::GUI
 		}
 	};
 
-	std::shared_ptr<Panel> TestObject::makeInspector(std::shared_ptr<VkObject> const& target, Context& ctx)
+	std::shared_ptr<Panel> TestObject::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		return std::make_shared<TestObjectInspector>(std::static_pointer_cast<TestObject>(target));
+		return std::make_shared<TestObjectInspector>(std::static_pointer_cast<TestObject>(imi.target));
 	}
 
 	struct TestPanelInteral

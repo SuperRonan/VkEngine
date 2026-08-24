@@ -3,6 +3,7 @@
 #include <vkl/GUI/DescriptorInstancePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -163,15 +164,15 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> SamplerInstance::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> SamplerInstance::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return MakeInspectorFromTarget(ctx, std::static_pointer_cast<SamplerInstance>(shared_this));
+		assert(imi.target.get() == this);
+		return MakeInspectorFromTarget(*imi.ctx, std::static_pointer_cast<SamplerInstance>(imi.target));
 	}
 
-	std::shared_ptr<GUI::Panel> Sampler::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Sampler::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return MakeInspectorFromTarget(ctx, std::static_pointer_cast<Sampler>(shared_this));
+		assert(imi.target.get() == this);
+		return MakeInspectorFromTarget(*imi.ctx, std::static_pointer_cast<Sampler>(imi.target));
 	}
 }

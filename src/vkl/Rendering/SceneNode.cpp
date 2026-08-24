@@ -2,6 +2,8 @@
 
 #include <vkl/Rendering/NodeInspector.hpp>
 
+#include <vkl/GUI/InspectorMakeInfo.hpp>
+
 namespace vkl
 {
 	SceneNode::SceneNode(CreateInfo const& ci) :
@@ -67,10 +69,10 @@ namespace vkl
 		}
 	}
 
-	std::shared_ptr<GUI::Panel> SceneNode::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> SceneNode::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::NodeInspector>(std::static_pointer_cast<SceneNode>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::NodeInspector>(std::static_pointer_cast<SceneNode>(imi.target));
 	}
 
 	void SceneNode::collapseAuxiliaryTransform()

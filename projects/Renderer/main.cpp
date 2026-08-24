@@ -959,11 +959,11 @@ namespace vkl
 						.label = "Scene",
 					},
 					GUI::MainPanel::PanelMenuOption{
-						.panel = perf_reporter->makeInspector(perf_reporter, _gui_context),
+						.panel = perf_reporter->makeInspector(GUI::InspectorMakeInfo{.target = perf_reporter, .ctx = &_gui_context}),
 						.label = "Performances",
 					},
 					GUI::MainPanel::PanelMenuOption{
-						.panel = _main_window->makeInspector(_main_window, _gui_context),
+						.panel = _main_window->makeInspector(GUI::InspectorMakeInfo{.target = _main_window, .ctx = &_gui_context}),
 						.label = "Display",
 					},
 					GUI::MainPanel::PanelMenuOption{

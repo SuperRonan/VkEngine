@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vkl/GUI/Panel.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl::GUI
 {
@@ -71,7 +72,7 @@ namespace vkl::GUI
 			{
 				create_fn = [target](GUI::Context& ctx)
 				{
-					return target->makeInspector(target, ctx);
+					return target->makeInspector(InspectorMakeInfo{.target = target, .ctx = &ctx});
 				};
 			}
 			return MakeIndirectPanel(create_fn, label, reinterpret_cast<Panel::Id>(target.get()));
@@ -91,7 +92,7 @@ namespace vkl::GUI
 			{
 				create_fn = [desc](GUI::Context& ctx)
 				{
-					return desc->instance()->makeInspector(desc->instance(), ctx);
+					return desc->instance()->makeInspector(InspectorMakeInfo{ .target = desc->instancePtr(), .ctx = &ctx});
 				};
 			}
 			IndirectInlinePanel res = MakeIndirectPanel(create_fn, "Instance", reinterpret_cast<Panel::Id>(desc.get()));

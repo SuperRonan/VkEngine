@@ -5,6 +5,7 @@
 #include <vkl/Execution/ExecutionStackReport.hpp>
 
 #include <vkl/GUI/InlinePanel.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -62,9 +63,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> PerformanceReport::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> PerformanceReport::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::PerformanceReportInspector>(std::static_pointer_cast<PerformanceReport>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::PerformanceReportInspector>(std::static_pointer_cast<PerformanceReport>(imi.target));
 	}
 }

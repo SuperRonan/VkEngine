@@ -3,6 +3,7 @@
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/FancyButtons.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl::GUI
 {
@@ -40,7 +41,10 @@ namespace vkl::GUI
 			_panel = holder->getChild(id);
 			if (!_panel)
 			{
-				_panel = target->makeInspector(target, ctx);
+				_panel = target->makeInspector(InspectorMakeInfo{
+					.target = target,
+					.ctx = &ctx,
+				});
 				_panel->setOpen(set_open);
 				holder->setChild(id, _panel, PanelHolder::DockCommand::Default, {}, focus_action);
 			}

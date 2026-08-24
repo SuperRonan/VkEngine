@@ -5,6 +5,7 @@
 
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/Panel.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -212,10 +213,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> Camera::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> Camera::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::CameraInspector>(std::static_pointer_cast<Camera>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::CameraInspector>(std::static_pointer_cast<Camera>(imi.target));
 	}
 
 	Camera::AsGLSL Camera::getAsGLSL() const

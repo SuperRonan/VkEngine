@@ -3,6 +3,7 @@
 #include <vkl/GUI/DescriptorInstancePanel.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/ImageVisualizer.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <format>
 
@@ -300,15 +301,15 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> ImageViewInstance::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImageViewInstance::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return GUI::MakeInspectorFromTarget(ctx, std::static_pointer_cast<ImageViewInstance>(shared_this));
+		assert(imi.target.get() == this);
+		return GUI::MakeInspectorFromTarget(*imi.ctx, std::static_pointer_cast<ImageViewInstance>(imi.target));
 	}
 
-	std::shared_ptr<GUI::Panel> ImageView::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> ImageView::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return GUI::MakeInspectorFromTarget(ctx, std::static_pointer_cast<ImageView>(shared_this));
+		assert(imi.target.get() == this);
+		return GUI::MakeInspectorFromTarget(*imi.ctx, std::static_pointer_cast<ImageView>(imi.target));
 	}
 }

@@ -3,6 +3,7 @@
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/Context.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <vkl/Maths/View.hpp>
 
@@ -316,10 +317,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> PointLight::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> PointLight::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::PointLightInspector>(std::static_pointer_cast<PointLight>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::PointLightInspector>(std::static_pointer_cast<PointLight>(imi.target));
 	}
 
 	DirectionalLight::DirectionalLight(CreateInfo const& ci):
@@ -374,10 +375,10 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> DirectionalLight::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> DirectionalLight::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::DirectionalLightInspector>(std::static_pointer_cast<DirectionalLight>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::DirectionalLightInspector>(std::static_pointer_cast<DirectionalLight>(imi.target));
 	}
 
 
@@ -499,9 +500,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> SpotBeamLight::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> SpotBeamLight::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::SpotBeamLightInspector>(std::static_pointer_cast<SpotBeamLight>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::SpotBeamLightInspector>(std::static_pointer_cast<SpotBeamLight>(imi.target));
 	}
 }

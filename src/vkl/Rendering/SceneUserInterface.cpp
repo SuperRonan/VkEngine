@@ -7,6 +7,7 @@
 
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/FancyButtons.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 #include <ShaderLib/Rendering/Scene/SceneFlags.h>
 
@@ -991,7 +992,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 			std::shared_ptr<GUI::NodeInspector> current_node_inspector = std::dynamic_pointer_cast<GUI::NodeInspector>(ctx.getTopPanelHolder()->getChild(node_id));
 			if (current_node_inspector && current_node_inspector->node() != node)
 			{
-				std::shared_ptr<GUI::Panel> ni_panel = node->makeInspector(node, ctx);
+				std::shared_ptr<GUI::Panel> ni_panel = node->makeInspector(GUI::InspectorMakeInfo{.target = node, .ctx = &ctx});
 				res = ni_panel.get();
 				ctx.getTopPanelHolder()->setChild(node_id, ni_panel, DockCommand::ToThis | DockCommand::SplitRight | DockCommand::SearchCompatible, DockParams{.split_ratio = -0.2f});
 			}
@@ -999,7 +1000,7 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		else
 		{
 			res = ctx.getTopPanelHolder()->openChild(node_id, [&]() {
-				return node->makeInspector(node, ctx);
+				return node->makeInspector(GUI::InspectorMakeInfo{ .target = node, .ctx = &ctx });
 			}, DockCommand::ToThis | DockCommand::SplitRight | DockCommand::SearchCompatible, DockParams{ .split_ratio = -0.2f }).get();
 		}
 		GUI::NodeInspector* ni = dynamic_cast<GUI::NodeInspector*>(res);

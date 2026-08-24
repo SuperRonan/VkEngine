@@ -11,6 +11,7 @@
 #include <vkl/GUI/InlinePanel.hpp>
 #include <vkl/GUI/ImGuiUtils.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
+#include <vkl/GUI/InspectorMakeInfo.hpp>
 
 namespace vkl
 {
@@ -854,9 +855,9 @@ namespace vkl
 		};
 	}
 
-	std::shared_ptr<GUI::Panel> VkWindow::makeInspector(std::shared_ptr<VkObject> const& shared_this, GUI::Context& ctx)
+	std::shared_ptr<GUI::Panel> VkWindow::makeInspector(GUI::InspectorMakeInfo const& imi)
 	{
-		assert(shared_this.get() == this);
-		return std::make_shared<GUI::WindowInspector>(std::static_pointer_cast<VkWindow>(shared_this));
+		assert(imi.target.get() == this);
+		return std::make_shared<GUI::WindowInspector>(std::static_pointer_cast<VkWindow>(imi.target));
 	}
 }
