@@ -4,9 +4,6 @@
 #include <vkl/VkObjects/VkWindow.hpp>
 
 #include <imgui/imgui.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
-#include <imgui/backends/imgui_impl_win32.h>
-#include <imgui/backends/imgui_impl_vulkan.h>
 
 #include <vkl/GUI/Context.hpp>
 #include <cassert>
@@ -25,40 +22,23 @@ namespace vkl
 
 		static AppWithImGui* g_app;
 
-		struct ImGuiWindow
-		{
-			std::shared_ptr<VkWindow> _window = nullptr;
-			ImGuiViewport * _viewport = nullptr;
-		};
+		//struct ImGuiWindow
+		//{
+		//	std::shared_ptr<VkWindow> _window = nullptr;
+		//	ImGuiViewport * _viewport = nullptr;
+		//};
 
 		ImGuiContext* _imgui_ctx = nullptr;
-		std::vector<ImGuiWindow *> _imgui_windows = {};
+		//std::vector<ImGuiWindow *> _imgui_windows = {};
 
 		GUI::Context _gui_context;
 
 		bool _enable_imgui = false;
 
-		GUI::Context * beginImGuiFrame()
-		{			
-			ImGui_ImplVulkan_NewFrame();
-			ImGui_ImplSDL3_NewFrame();
-			ImGui::NewFrame();
-			_gui_context.begin();
-			return &_gui_context;
-		}
 
-		void endImGuiFrame(GUI::Context * ctx)
-		{
-			assert(ctx == &_gui_context);
-			ctx->end();
-			ImGui::EndFrame();
-#ifdef IMGUI_HAS_VIEWPORT
-			if (_imgui_init_flags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				ImGui::UpdatePlatformWindows();
-			}
-#endif
-		}
+		GUI::Context* beginImGuiFrame();
+
+		void endImGuiFrame(GUI::Context * ctx);
 
 		GUI::Context* getLatestGUIContext()
 		{

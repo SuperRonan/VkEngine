@@ -1,6 +1,10 @@
 #include <vkl/App/ImGuiApp.hpp>
 #include <cassert>
 
+#include <imgui/imgui_internal.h>
+#include <imgui/backends/imgui_impl_sdl3.h>
+#include <imgui/backends/imgui_impl_vulkan.h>
+
 #include <argparse/argparse.hpp>
 
 namespace vkl
@@ -146,6 +150,29 @@ namespace vkl
 		{
 			// Might be platform dependant
 			_imgui_init_flags |= ImGuiConfigFlags_ViewportsEnable;
+		}
+#endif
+	}
+
+
+	GUI::Context* AppWithImGui::beginImGuiFrame()
+	{
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL3_NewFrame();
+		ImGui::NewFrame();
+		_gui_context.begin();
+		return &_gui_context;
+	}
+
+	void AppWithImGui::endImGuiFrame(GUI::Context* ctx)
+	{
+		assert(ctx == &_gui_context);
+		ctx->end();
+		ImGui::EndFrame();
+#ifdef IMGUI_HAS_VIEWPORT
+		if (_imgui_init_flags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
 		}
 #endif
 	}

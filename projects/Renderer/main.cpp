@@ -30,6 +30,8 @@
 
 #include <vkl/IO/InputListener.hpp>
 
+#include <imgui/backends/imgui_impl_sdl3.h>
+
 #include <vkl/Rendering/DebugRenderer.hpp>
 #include <vkl/Rendering/Camera.hpp>
 #include <vkl/Rendering/Model.hpp>
