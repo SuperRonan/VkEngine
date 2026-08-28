@@ -34,7 +34,13 @@ namespace vkl
 		GUI::Context _gui_context;
 
 		bool _enable_imgui = false;
+		bool _enable_main_window_docking = false;
+		bool _main_viewport_is_reduced = false;
 
+		ImGuiDockNodeFlags _main_dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingOverCentralNode;
+		ImGuiID _main_dockspace_id = 0;
+		Vector2u _main_offset = Vector2u::Zero();
+		Vector2u _main_resolution; // May be reduced by the docking
 
 		GUI::Context* beginImGuiFrame();
 
@@ -48,6 +54,8 @@ namespace vkl
 	public:
 
 		void initImGui();
+
+		void setEnableMainWindowDocking(bool enable = true);
 
 		struct CreateInfo
 		{
@@ -91,6 +99,29 @@ namespace vkl
 		bool ImGuiIsInit() const
 		{
 			return !!_imgui_ctx;
+		}
+
+		Vector2u mainViewportResolution() const
+		{
+			if (_main_viewport_is_reduced)
+			{
+				return _main_resolution;
+			}
+			else
+			{
+				VkExtent2D extent = _main_window->extent2D().value();
+				return Vector2u(extent.width, extent.height);
+			}
+		}
+
+		Vector2u mainViewportOffset() const
+		{
+			return _main_offset;
+		}
+
+		bool isMainViewportReduced() const
+		{
+			return _main_viewport_is_reduced;
 		}
 	};
 }

@@ -154,6 +154,37 @@ namespace vkl
 #endif
 	}
 
+	void AppWithImGui::setEnableMainWindowDocking(bool enable)
+	{
+		bool can_dock = hasImGuiDocking();
+		if (can_dock)
+		{
+			_enable_main_window_docking = enable;
+		}
+	}
+
+	ImGuiDockNode* FindMainViewportDockNode(ImGuiDockNode* node)
+	{
+		if (node->IsSplitNode())
+		{
+			ImGuiDockNode* res = nullptr;
+			constexpr uint N = IM_COUNTOF(ImGuiDockNode::ChildNodes);
+			for (uint i = 0; i < N; ++i)
+			{
+				res = FindMainViewportDockNode(node->ChildNodes[i]);
+				if (res)
+				{
+					break;
+				}
+			}
+			return res;
+		}
+		else if (node->VisibleWindow == nullptr && node->Size.x > 0 && node->Size.y > 0) // Best criteria so far
+		{
+			return node;
+		}
+		return nullptr;
+	}
 
 	GUI::Context* AppWithImGui::beginImGuiFrame()
 	{
@@ -161,6 +192,37 @@ namespace vkl
 		ImGui_ImplSDL3_NewFrame();
 		ImGui::NewFrame();
 		_gui_context.begin();
+		{
+			VkExtent2D extent = _main_window->extent2D().value();
+			_main_resolution = Vector2u(extent.width, extent.height);
+			_main_offset = Vector2u::Zero();
+			_main_viewport_is_reduced = false;
+		}
+#ifdef IMGUI_HAS_DOCK
+		if (_enable_main_window_docking)
+		{
+			ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+			_main_dockspace_id = ImGui::DockSpaceOverViewport(_main_dockspace_id, main_viewport, _main_dockspace_flags);
+			ImGuiDockNode* const top_node = ImGui::DockContextFindNodeByID(_imgui_ctx, _main_dockspace_id);
+			ImGuiDockNode* const node = FindMainViewportDockNode(top_node);
+			ImVec2 window_size = ImGui::GetWindowSize();
+			if (node && node != top_node)
+			{
+				ImRect rect = node->Rect();
+				_main_resolution = Vector2u(rect.GetSize().x, rect.GetSize().y);
+				_main_offset = Vector2u(rect.GetTL().x, rect.GetTL().y);
+				_main_viewport_is_reduced = true;
+			}
+
+			//if (ImGui::Begin("Debug Main Viewport Dock"))
+			//{
+			//	ImGui::InputInt2("Offset", reinterpret_cast<int*>(_main_offset.data()));
+			//	ImGui::InputInt2("Resolution", reinterpret_cast<int*>(_main_resolution.data()));
+			//	ImGui::Checkbox("Reduced", &_main_viewport_is_reduced);
+			//}
+			//ImGui::End();
+		}
+#endif
 		return &_gui_context;
 	}
 

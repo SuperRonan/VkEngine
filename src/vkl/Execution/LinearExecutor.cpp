@@ -949,11 +949,56 @@ namespace vkl
 		}
 
 		{
-			
-			std::shared_ptr<ImageView> blit_target = _latest_swapchain_event->swapchain->views()[_latest_swapchain_event->index];
+			std::shared_ptr<ImageView> const& blit_target = _latest_swapchain_event->swapchain->views()[_latest_swapchain_event->index];
+			MyVector<VkImageBlit2> blit_regions{};
+			if (AppWithImGui* app = dynamic_cast<AppWithImGui*>(application()); app && app->isMainViewportReduced())
+			{
+				const bool check_leaks = false; // Checked: OK no leaks detected
+				if(check_leaks)
+				{
+					auto& clearer = application()->getPrebuiltTransferCommands().clear_image;
+					execute(clearer.with(ClearImage::ClearInfo{
+						.view = blit_target,
+						.value = VkClearValue{.color = VkClearColorValue{.float32 = {1.0f, 0.0f, 1.0f, 1.0f}}},
+					}));
+				}
+				Vector2i resolution = app->mainViewportResolution().cast<int>();
+				Vector2i offset = app->mainViewportOffset().cast<int>();
+				Vector2i sum = resolution + offset;
+
+				ImageViewInstance* src = img_to_present->instance();
+				ImageViewInstance* dst = blit_target->instance();
+				{
+					VkExtent3D dst_extent = dst->image()->createInfo().extent;
+					Vector2i dst_extent2(dst_extent.width, dst_extent.height);
+					if (sum.cwiseGreater(dst_extent2).any())
+					{
+						// It appears (sometimes, not all the time), when resizing the window, the swapchain is not recreated yet (with the new correct resolution)
+						// This is certainly due to an imperfect sdl event handling
+						VKL_BREAKPOINT_HANDLE;
+					}
+					// Make sure to not overflow
+					sum = sum.cwiseMin(dst_extent2);
+				}
+				blit_regions.push_back(VkImageBlit2{
+					.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2,
+					.pNext = nullptr,
+					.srcSubresource = getImageLayersFromRange(src->finiteRange()), // With maintenance5 (or vk 1.4+), vk_remaining_layers can be used
+					.srcOffsets = {
+						makeUniformOffset3D(0),
+						convert(src->image()->createInfo().extent),
+					},
+					.dstSubresource = getImageLayersFromRange(dst->finiteRange()),
+					.dstOffsets = {
+						VkOffset3D{.x = offset.x(), .y = offset.y(), .z = 0},
+						VkOffset3D{.x = sum.x(), .y = sum.y(), .z = 1},
+					},
+				});
+			}
 			execute((*_blit_to_present)(BlitImage::BI{
 				.src = img_to_present,
 				.dst = blit_target,
+				.regions = std::move(blit_regions),
 			}));
 			
 			if (gui_context && _render_gui && _latest_swapchain_event->swapchain.get() == _window->swapchain()->instance())

@@ -710,6 +710,7 @@ namespace vkl
 			//_desired_window_options.mode = VkWindow::Mode::WindowedFullscreen;
 			createMainWindow();
 			initImGui();
+			setEnableMainWindowDocking(true);
 
 			ResourcesLists script_resources;
 
@@ -729,10 +730,17 @@ namespace vkl
 				.use_debug_renderer = true,
 			});
 
+			Dyn<VkExtent2D> display_extent = [this]() {
+				Vector2u res = mainViewportResolution();
+				return VkExtent2D{.width = res.x(), .height = res.y()};
+			};
+
+			Dyn<VkExtent3D> display_extent_3D = extend(display_extent);
+
 			std::shared_ptr<Camera> camera = std::make_shared<Camera>(Camera::CreateInfo{
 				.app = this,
 				.name = "Camera",
-				.resolution = _main_window->extent2D(),
+				.resolution = display_extent,
 				.znear = 0.01,
 				.zfar = 100,
 			});
@@ -747,7 +755,7 @@ namespace vkl
 				.name = "Final Image",
 				.type = VK_IMAGE_TYPE_2D,
 				.format = format,
-				.extent = _main_window->extent3D(),
+				.extent = display_extent_3D,
 				.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 				.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 			});
@@ -1076,7 +1084,7 @@ namespace vkl
 
 				if(mouse.getButton(SDL_BUTTON_RIGHT).justReleased())
 				{
-					pip->setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / Vector2f(_main_window->extent2D().value().width, _main_window->extent2D().value().height));
+					pip->setPosition(mouse.getReleasedPos(SDL_BUTTON_RIGHT) / mainViewportResolution().cast<float>());
 				}
 
 				frame_counters.reset();
