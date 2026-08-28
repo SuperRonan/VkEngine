@@ -36,8 +36,12 @@ namespace vkl::GUI
 		bool _has_created_dock_node : 1 = false;
 		bool _set_dock_id : 1 = false; // Consumed by next declare()
 		bool _set_dock_id_always : 1 = false;
+		bool _should_auto_resize_x : 1 = false; // Consumed by next declare()
+		bool _should_auto_resize_y : 1 = false; // Consumed by next declare()
+		bool _should_toggle_collapse : 1 = false; // Consumed by next declare()
+		bool _should_collapse : 1 = false;
 
-		ImVec2 _window_initial_size = ImVec2(0, 0);
+		ImVec2 _window_size = ImVec2(0, 0);
 		ImGuiWindowFlags _window_flags = ImGuiWindowFlags_None;
 		ImGuiID _dock_id = {};
 		//ImGuiDockNode* _dock_node = {};
@@ -49,6 +53,8 @@ namespace vkl::GUI
 		Panel(Panel&&) noexcept = default; 
 
 		virtual ~Panel() override;
+
+		void declarePanelControlMenu(Context& ctx);
 
 		virtual void declareMenu(Context& ctx);
 

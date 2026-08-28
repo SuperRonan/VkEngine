@@ -41,7 +41,39 @@ namespace vkl::GUI
 
 	void Panel::declareMenu(Context& ctx)
 	{
+		
+	}
 
+	void Panel::declarePanelControlMenu(Context& ctx)
+	{
+		if (ImGui::MenuItem("Auto Resize"))
+		{
+			_should_auto_resize_x |= true;
+			_should_auto_resize_y |= true;
+		}
+		// Would be nice to be on the same line
+		if (ImGui::BeginMenu("Auto Resize..."))
+		{
+			if (ImGui::MenuItem("Width"))
+			{
+				_should_auto_resize_x |= true;
+			}
+			if (ImGui::MenuItem("Height"))
+			{
+				_should_auto_resize_y |= true;
+			}
+			ImGui::EndMenu();
+		}
+		if(ImGui::MenuItem("Collapse", nullptr, nullptr, _is_visible))
+		{
+			_should_toggle_collapse |= true;
+			_should_collapse = true;
+		}
+		if (ImGui::MenuItem("Roll out", nullptr, nullptr, !_is_visible))
+		{
+			_should_toggle_collapse |= true;
+			_should_collapse = false;
+		}
 	}
 
 	ImGuiID Panel::getOrCreateDockId(Context& ctx)
@@ -75,7 +107,8 @@ namespace vkl::GUI
 		bool open = _open;
 		bool* p_open = _can_close ? &open : nullptr;
 		// Not perfect auto size, will do for now
-		ImGui::SetNextWindowSize(_window_initial_size, ImGuiCond_FirstUseEver);
+		ImVec2 next_size = _window_size;
+		ImGuiCond next_size_cond = ImGuiCond_FirstUseEver;
 		// TODO find a nice initial pos from context with ImGui::SetNextWindowPos
 		if (_set_dock_id)
 		{
@@ -97,12 +130,33 @@ namespace vkl::GUI
 			flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
 			_next_no_bring_to_front_on_focus = false;
 		}
+		if (_should_auto_resize_x || _should_auto_resize_y)
+		{
+			next_size_cond = ImGuiCond_Always;
+			if (_should_auto_resize_x)
+			{
+				next_size.x = 0;
+			}
+			if (_should_auto_resize_y)
+			{
+				next_size.y = 0;
+			}
+			_should_auto_resize_x = false;
+			_should_auto_resize_y = false;
+		}
+		if (_should_toggle_collapse)
+		{
+			ImGui::SetNextWindowCollapsed(_should_collapse, ImGuiCond_Always);
+			_should_toggle_collapse = false;
+		}
+		ImGui::SetNextWindowSize(next_size, next_size_cond);
 		_is_visible = ImGui::Begin(_name.c_str(), p_open, flags);
 		_open = open;
 		_is_hovered = ImGui::IsWindowHovered();
 		_has_focus = ImGui::IsWindowFocused();
 		if (_is_visible)
 		{
+			_window_size = ImGui::GetWindowSize();
 			_dock_id = ImGui::GetWindowDockID();
 			if (!_disable_from_ctx_stack)
 			{
@@ -113,6 +167,11 @@ namespace vkl::GUI
 				if (ImGui::BeginMenuBar())
 				{
 					declareMenu(ctx);
+					if (ImGui::BeginMenu("Window"))
+					{
+						declarePanelControlMenu(ctx);
+						ImGui::EndMenu();
+					}
 					ImGui::EndMenuBar();
 				}
 			}
@@ -128,9 +187,13 @@ namespace vkl::GUI
 					setOpen(false);
 				}
 			}
+			_window_size = ImGui::GetWindowSize();
 		}
-		auto window = ImGui::GetCurrentWindowRead();
-		//ImGui::SetNextWindowContentSize(_window_cotent_size);
+		if (ImGui::BeginPopupContextWindow("RMenu"))
+		{
+			declarePanelControlMenu(ctx);
+			ImGui::EndPopup();
+		}
 		if (!keep_open)
 		{
 			ImGui::End();
