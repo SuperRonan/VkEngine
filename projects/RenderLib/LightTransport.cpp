@@ -432,8 +432,8 @@ namespace vkl
 
 			size_t max_scratch_buffer_size = std::min(_max_scratch_buffer_size, max_buffer_size);
 
-			size_t alloc_divisions = std::divUpAssumeNoOverflow(_bdpt_needed_scratch_size, max_scratch_buffer_size);
-			size_t range_division = std::divUpAssumeNoOverflow(needed_vertex_size, max_range_size);
+			size_t alloc_divisions = std::divUpSafe(_bdpt_needed_scratch_size, max_scratch_buffer_size);
+			size_t range_division = std::divUpSafe(needed_vertex_size, max_range_size);
 			_bdpt_divisions = std::max(alloc_divisions, range_division);
 
 			_bdpt_dispatch_height = extent.height / _bdpt_divisions;
