@@ -14,6 +14,8 @@
 #include "Surface.hpp"
 #include "Swapchain.hpp"
 
+#include <SDL3/SDL_video.h>
+
 namespace vkl
 {
 	namespace GUI
@@ -66,6 +68,7 @@ namespace vkl
 
 		bool _resizeable = false;
 
+		SDL_WindowFlags _flags = {};
 		int _window_pos_x, _window_pos_y;
 		int _latest_windowed_width, _latest_windowed_height;
 
@@ -250,6 +253,22 @@ namespace vkl
 		float brightness() const
 		{
 			return _brightness;
+		}
+
+		bool isMinimized() const
+		{
+			return _flags & SDL_WINDOW_MINIMIZED;
+		}
+
+		bool isVisible() const
+		{
+			const SDL_WindowFlags hidden_flags = SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN | SDL_WINDOW_OCCLUDED;
+			return !(_flags & hidden_flags);
+		}
+
+		SDL_WindowFlags fetchWindowFlags() const
+		{
+			return SDL_GetWindowFlags(_window);
 		}
 	};
 

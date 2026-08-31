@@ -200,6 +200,8 @@ namespace vkl
 			_target_format = _extern_target_format.value();
 		}
 
+		_flags = fetchWindowFlags();
+
 		if (_desired_window_mode != _window_mode)
 		{
 			application()->deviceWaitIdle();
@@ -338,6 +340,10 @@ namespace vkl
 		case SDL_EVENT_WINDOW_RESIZED:
 			_desired_resolution = Vector2i(wevent.data1, wevent.data2);
 			_sdl_resized = true;
+		break;
+		case SDL_EVENT_WINDOW_MINIMIZED:
+		break;
+		case SDL_EVENT_WINDOW_RESTORED:
 		break;
 		}
 

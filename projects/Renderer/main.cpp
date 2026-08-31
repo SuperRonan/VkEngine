@@ -1184,34 +1184,41 @@ namespace vkl
 					image_saver->execute(exec_thread);
 					exec.endCommandBuffer(ptr_exec_thread);
 
-					ptr_exec_thread = exec.beginCommandBuffer(false);
-					tt.tick();
-					exec.aquireSwapchainImage();
-					tt.tock();
-					if (log)
+					if (_main_window->isVisible())
 					{
-						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
-						logger()(std::format("Total Aquire time: {}us", waited.count()), Logger::Options::TagInfo);
-					}
-					exec.preparePresentation(final_image, getLatestGUIContext());
-					exec.endCommandBuffer(ptr_exec_thread);
+						ptr_exec_thread = exec.beginCommandBuffer(false);
+						tt.tick();
+						exec.aquireSwapchainImage();
+						tt.tock();
+						if (log)
+						{
+							std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+							logger()(std::format("Total Aquire time: {}us", waited.count()), Logger::Options::TagInfo);
+						}
+						exec.preparePresentation(final_image, getLatestGUIContext());
+						exec.endCommandBuffer(ptr_exec_thread);
 					
-					tt.tick();
-					exec.submit();
-					tt.tock();
-					if (log)
-					{
-						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
-						logger()(std::format("Total Submit time: {}us", waited.count()), Logger::Options::TagInfo);
-					}
+						tt.tick();
+						exec.submit();
+						tt.tock();
+						if (log)
+						{
+							std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+							logger()(std::format("Total Submit time: {}us", waited.count()), Logger::Options::TagInfo);
+						}
 
-					tt.tick();
-					exec.present();
-					tt.tock();
-					if (log)
+						tt.tick();
+						exec.present();
+						tt.tock();
+						if (log)
+						{
+							std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
+							logger()(std::format("Total Present time: {}us", waited.count()), Logger::Options::TagInfo);
+						}
+					}
+					else
 					{
-						std::chrono::microseconds waited = std::chrono::duration_cast<std::chrono::microseconds>(tt.duration());
-						logger()(std::format("Total Present time: {}us", waited.count()), Logger::Options::TagInfo);
+						exec.submit();
 					}
 
 					exec.endFrame();
