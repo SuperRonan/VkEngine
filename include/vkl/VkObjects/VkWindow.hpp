@@ -84,7 +84,7 @@ namespace vkl
 		std::set<uint32_t> _queues_families_indices;
 
 		bool _sdl_resized = false;
-		bool _gui_resized = false;
+		bool _manual_resized = false;
 
 		bool _should_close = false;
 

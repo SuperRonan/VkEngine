@@ -230,7 +230,7 @@ namespace vkl
 			}
 			
 			_window_mode = _desired_window_mode;
-			_gui_resized = false;
+			_manual_resized = false;
 			_sdl_resized = false;
 		}
 		else
@@ -252,7 +252,7 @@ namespace vkl
 				_height = height;
 				_sdl_resized = false;
 			}
-			else if (_gui_resized)
+			else if (_manual_resized)
 			{
 				application()->deviceWaitIdle();
 				
@@ -260,7 +260,7 @@ namespace vkl
 				_height = static_cast<uint32_t>(_desired_resolution[1]);
 				SDL_SetWindowSize(_window, _desired_resolution[0], _desired_resolution[1]);
 				_sdl_resized = false;
-				_gui_resized = false;
+				_manual_resized = false;
 			}
 		}
 	}
@@ -274,7 +274,7 @@ namespace vkl
 	void VkWindow::requestResize(uint32_t w, uint32_t h)
 	{
 		_desired_resolution = { w, h };
-		_gui_resized = true;
+		_manual_resized = true;
 	}
 
 	void VkWindow::initSwapchain()
@@ -728,7 +728,7 @@ namespace vkl
 				changed = ImGui::InputInt2("Resolution", &_target->_desired_resolution[0], ImGuiInputTextFlags_EnterReturnsTrue & 0);
 				if (changed)
 				{
-					_target->_gui_resized = true;
+					_target->_manual_resized = true;
 				}
 				std::array resolutions = { 720u, 900u, 1080u, 1440u, 1800u, 2160u };
 				std::array<char, 16> button_label_buffer;
@@ -745,7 +745,7 @@ namespace vkl
 					{
 						_target->_desired_resolution[1] = res;
 						_target->_desired_resolution[0] = (res * 16) / 9;
-						_target->_gui_resized = true;
+						_target->_manual_resized = true;
 					}
 				}
 				ImGui::EndDisabled();
