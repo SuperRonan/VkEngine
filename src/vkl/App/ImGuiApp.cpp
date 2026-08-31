@@ -1,3 +1,4 @@
+#define IMGUI_DEFINE_MATH_OPERATORS 1
 #include <vkl/App/ImGuiApp.hpp>
 #include <cassert>
 
@@ -163,13 +164,15 @@ namespace vkl
 		}
 	}
 
+	constexpr const uint DockNodeChildCount = IM_COUNTOF(ImGuiDockNode::ChildNodes);
+
 	ImGuiDockNode* FindMainViewportDockNode(ImGuiDockNode* node)
 	{
 		if (node->IsSplitNode())
 		{
 			ImGuiDockNode* res = nullptr;
-			constexpr uint N = IM_COUNTOF(ImGuiDockNode::ChildNodes);
-			for (uint i = 0; i < N; ++i)
+			
+			for (uint i = 0; i < DockNodeChildCount; ++i)
 			{
 				res = FindMainViewportDockNode(node->ChildNodes[i]);
 				if (res)
@@ -184,6 +187,41 @@ namespace vkl
 			return node;
 		}
 		return nullptr;
+	}
+
+	bool DockNodeTreeHasAnyWindow(ImGuiDockNode* node)
+	{
+		if (node->IsLeafNode())
+		{
+			return !node->Windows.empty();
+		}
+		for (uint i = 0; i < DockNodeChildCount; ++i)
+		{
+			if (node->ChildNodes[i] && DockNodeTreeHasAnyWindow(node->ChildNodes[i]))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool DockNodeTreeIsSane(ImGuiDockNode* node)
+	{
+		return node->IsLeafNode() || DockNodeTreeHasAnyWindow(node);
+	}
+
+	bool DockNodeTreeIsDegenerate(ImGuiDockNode* node)
+	{
+		return !DockNodeTreeIsSane(node);
+	}
+
+	ImGuiDockNode* FindTopMost(ImGuiDockNode* node)
+	{
+		while(!node->IsRootNode())
+		{
+			node = node->ParentNode;
+		}
+		return node;
 	}
 
 	GUI::Context* AppWithImGui::beginImGuiFrame()
@@ -204,14 +242,28 @@ namespace vkl
 			ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 			_main_dockspace_id = ImGui::DockSpaceOverViewport(_main_dockspace_id, main_viewport, _main_dockspace_flags);
 			ImGuiDockNode* const top_node = ImGui::DockContextFindNodeByID(_imgui_ctx, _main_dockspace_id);
-			ImGuiDockNode* const node = FindMainViewportDockNode(top_node);
-			ImVec2 window_size = ImGui::GetWindowSize();
-			if (node && node != top_node)
+			if (DockNodeTreeIsDegenerate(top_node))
 			{
-				ImRect rect = node->Rect();
-				_main_resolution = Vector2u(rect.GetSize().x, rect.GetSize().y);
-				_main_offset = Vector2u(rect.GetTL().x, rect.GetTL().y);
-				_main_viewport_is_reduced = true;
+				const bool do_clear = true;
+				if (do_clear)
+				{
+					ImGui::DockContextClearNodes(_imgui_ctx, _main_dockspace_id, true);
+					_main_dockspace_id = 0;
+				}
+			}
+			else
+			{
+				ImVec2 window_size = ImGui::GetWindowSize();
+				ImGuiDockNode* const node = FindMainViewportDockNode(top_node);
+				if (node && node != top_node)
+				{
+					ImVec2 resolution = node->Size;
+					_main_resolution = Vector2u(resolution.x, resolution.y);
+					// node->Pos is absolute, not relative to the viewport
+					ImVec2 offset = node->Pos - main_viewport->Pos;
+					_main_offset = Vector2u(offset.x, offset.y);
+					_main_viewport_is_reduced = true;
+				}
 			}
 
 			//if (ImGui::Begin("Debug Main Viewport Dock"))
