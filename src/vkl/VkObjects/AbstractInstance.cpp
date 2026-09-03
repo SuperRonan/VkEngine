@@ -8,14 +8,14 @@ namespace vkl
 	{
 		if (name && strlen(name))
 		{
-			VkDebugUtilsObjectNameInfoEXT buffer_name = {
+			VkDebugUtilsObjectNameInfoEXT object_name_info = {
 				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 				.pNext = nullptr,
 				.objectType = type,
 				.objectHandle = handle,
 				.pObjectName = name,
 			};
-			app->nameVkObjectIFP(buffer_name);
+			app->nameVkObjectIFP(object_name_info);
 		}
 	}
 

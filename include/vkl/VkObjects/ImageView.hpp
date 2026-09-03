@@ -120,7 +120,7 @@ namespace vkl
 
 		using Parent = InstanceHolder<ImageViewInstance>;
 
-		struct CreateInfo
+		struct CreateInfo 
 		{
 			VkApplication* app = nullptr;
 			std::string name = "";
