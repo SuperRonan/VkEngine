@@ -218,9 +218,9 @@ namespace vkl
 				MyVector<ImGuiListSelection::Option> extensions_options(extensions_list.size() + 1);
 				for (size_t i = 0; i < extensions_list.size(); ++i)
 				{
-					extensions_options[i].name = extensions_list[i];
+					extensions_options[i].label = extensions_list[i];
 				}
-				extensions_options.back().name = "AUTO";
+				extensions_options.back().label = "AUTO";
 				extensions_options.back().desc = "Deduce from image pixel type";
 				_extension = ImGuiListSelection::CI{
 					.name = "File type",

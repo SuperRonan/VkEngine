@@ -1297,15 +1297,15 @@ namespace vkl
 					.same_line = true,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "Forward V1",
+							.label = "Forward V1",
 						},
 						ImGuiListSelection::Option{
-							.name = "Deferred V1",
+							.label = "Deferred V1",
 							.desc = "Deferred Rendering is currently on maintenance",
 							.disable = true,
 						},
 						ImGuiListSelection::Option{
-							.name = "Light Transport",
+							.label = "Light Transport",
 							.disable = disable_rt,
 						},
 					},
@@ -1319,13 +1319,13 @@ namespace vkl
 					.same_line = true,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "None",
+							.label = "None",
 						},
 						ImGuiListSelection::Option{
-							.name = "Shadow Maps",
+							.label = "Shadow Maps",
 						},
 						ImGuiListSelection::Option{
-							.name = "Ray Tracing",
+							.label = "Ray Tracing",
 							.disable = disable_rt,
 						},
 					},

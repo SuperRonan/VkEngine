@@ -379,7 +379,7 @@ namespace vkl
 		.options = {
 #define REGISTER_OPTION(Name) \
 			ImGuiListSelection::Option{ \
-				.name = #Name, \
+				.label = #Name, \
 			},
 ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 #undef REGISTER_OPTION
@@ -391,16 +391,16 @@ ITERATE_OVER_RIGID_MESH_MAKE_TYPE(REGISTER_OPTION)
 		.mode = ImGuiListSelection::Mode::Dropdown,
 		.options = {
 			ImGuiListSelection::Option{
-				.name = "Point",
+				.label = "Point",
 			},
 			ImGuiListSelection::Option{
-				.name = "Directional",
+				.label = "Directional",
 			},
 			ImGuiListSelection::Option{
-				.name = "Spot",
+				.label = "Spot",
 			},
 			ImGuiListSelection::Option{
-				.name = "Beam",
+				.label = "Beam",
 			},
 		},
 	};

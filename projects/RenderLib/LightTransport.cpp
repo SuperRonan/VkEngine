@@ -614,13 +614,13 @@ namespace vkl
 					.same_line = true,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "Path Tracing",
+							.label = "Path Tracing",
 						},
 						ImGuiListSelection::Option{
-							.name = "Light Tracing",
+							.label = "Light Tracing",
 						},
 						ImGuiListSelection::Option{
-							.name = "BDPT",
+							.label = "BDPT",
 							.desc =
 								"BiDirectional Path Tracer\n"
 								"Requires a large scratch buffer!\n"
@@ -636,13 +636,13 @@ namespace vkl
 					.same_line = true,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "RGB",
+							.label = "RGB",
 						},
 						ImGuiListSelection::Option{
-							.name = "XYZ",
+							.label = "XYZ",
 						},
 						ImGuiListSelection::Option{
-							.name = "Spectal",
+							.label = "Spectal",
 						},
 					},
 				};

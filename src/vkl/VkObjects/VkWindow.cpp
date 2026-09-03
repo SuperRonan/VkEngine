@@ -611,17 +611,17 @@ namespace vkl
 					.mode = ImGuiListSelection::Mode::Combo,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "Windowed",
+							.label = "Windowed",
 						},
 						ImGuiListSelection::Option{
-							.name = "Windowed Full Screen",
+							.label = "Windowed Full Screen",
 						},
 						//ImGuiListSelection::Option{
-						//	.name = "Full Screen"s,
+						//	.label = "Full Screen"s,
 						//	.desc = ""s,
 						//},
 						//ImGuiListSelection::Option{
-						//	.name = "Exclusive Full Screen"s,
+						//	.label = "Exclusive Full Screen"s,
 						//	.desc = ""s,
 						//},
 					},
@@ -679,11 +679,11 @@ namespace vkl
 						const char* present_mode_name = vku::GetEnumLabel(vkp, nullptr);
 						if (present_mode_name)
 						{
-							present_modes[i].name = present_mode_name;
+							present_modes[i].label = present_mode_name;
 						}
 						else
 						{
-							std::format_to(std::back_inserter(present_modes[i].name), "Unknown Present Mode ({})", that::ToUnderlying(vkp));
+							std::format_to(std::back_inserter(present_modes[i].label), "Unknown Present Mode ({})", that::ToUnderlying(vkp));
 						}
 						switch (vkp)
 						{

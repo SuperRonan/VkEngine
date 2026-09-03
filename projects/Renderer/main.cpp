@@ -863,43 +863,43 @@ namespace vkl
 				.name = "Scene selection",
 				.options = {
 					ImGuiListSelection::Option{
-						.name = "None",
+						.label = "None",
 					},
 					ImGuiListSelection::Option{
-						.name = "Sponza",
+						.label = "Sponza",
 					},
 					ImGuiListSelection::Option{
-						.name = "Sponza with caustics",
+						.label = "Sponza with caustics",
 					},
 					ImGuiListSelection::Option{
-						.name = "Sponza metallic",
+						.label = "Sponza metallic",
 					},
 					ImGuiListSelection::Option{
-						.name = "Sponza sunlight",
+						.label = "Sponza sunlight",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box",
+						.label = "Cornell Box",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box metallic walls",
+						.label = "Cornell Box metallic walls",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box caustics",
+						.label = "Cornell Box caustics",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box caustics metallic walls",
+						.label = "Cornell Box caustics metallic walls",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box alternate cubes",
+						.label = "Cornell Box alternate cubes",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box alternate cubes metallic walls",
+						.label = "Cornell Box alternate cubes metallic walls",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box dispersion caustics",
+						.label = "Cornell Box dispersion caustics",
 					},
 					ImGuiListSelection::Option{
-						.name = "Cornell Box Gem Show",
+						.label = "Cornell Box Gem Show",
 					},
 				},
 			};

@@ -1788,7 +1788,7 @@ namespace vkl
 					.options = {
 #define DECLARE_OPTION(value) \
 						ImGuiListSelection::Option{ \
-							.name = X_STRINGIFY(value),\
+							.label = X_STRINGIFY(value),\
 						},
 						ITERATE_OVER_RIGID_MESH_MAKE_TYPE(DECLARE_OPTION)
 					},

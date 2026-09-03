@@ -18,19 +18,16 @@ namespace vkl
 			Dropdown = Combo,
 		};
 		
-		struct Option
+		template <that::concepts::StringLike String>
+		struct OptionT
 		{
-			std::string name = {};
-			std::string desc = {};
+			String label = {}; // Make sure it is null terminated
+			String desc = {};  // Make sure it is null terminated
 			bool disable = false;
 		};
-
-		struct OptionView
-		{
-			std::string_view name = {};
-			std::string_view desc = {};
-			bool disable = false;
-		};
+		using Option = OptionT<std::string>;
+		using OptionView = OptionT<std::string_view>;
+		using OptionRaw = OptionT<const char*>;
 
 	protected:
 
@@ -69,15 +66,20 @@ namespace vkl
 		ImGuiListSelection& operator=(ImGuiListSelection const&) = default;
 		ImGuiListSelection& operator=(ImGuiListSelection&&) = default;
 
-		struct DeclareInfo
+		template <that::concepts::StringLike String>
+		struct DeclareInfoT
 		{
 			const char* label = nullptr;
-			std::span<const Option> options = {};
+			std::span<const OptionT<String>> options = {};
 			uint index;
 			bool same_line = false; // For combo
 		};
+		using DeclareInfo = DeclareInfoT<std::string>;
+		using DeclareInfoView = DeclareInfoT<std::string_view>;
+		using DeclareInfoRaw = DeclareInfoT<const char*>;
 
-		static int Declare(DeclareInfo const& info, Mode mode = Mode::Dropdown)
+		template <that::concepts::StringLike Str>
+		static int Declare(DeclareInfoT<Str> const& info, Mode mode = Mode::Dropdown)
 		{
 			if (mode == Mode::RadioButtons)
 			{
@@ -89,11 +91,14 @@ namespace vkl
 			}
 		}
 
-		static int DeclareRadioButtons(DeclareInfo const& info);
+		template <that::concepts::StringLike Str>
+		static int DeclareRadioButtons(DeclareInfoT<Str> const& info);
 
-		static int DeclareCombo(DeclareInfo const& info);
+		template <that::concepts::StringLike Str>
+		static int DeclareCombo(DeclareInfoT<Str> const& info);
 
-		static int DeclareDropdown(DeclareInfo const& info)
+		template <that::concepts::StringLike Str>
+		static int DeclareDropdown(DeclareInfoT<Str> const& info)
 		{
 			return DeclareCombo(info);
 		}

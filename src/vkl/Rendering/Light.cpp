@@ -79,17 +79,17 @@ namespace vkl
 					.same_line = true,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "None",
+							.label = "None",
 							.desc = "No shadow bias",
 						},
 						ImGuiListSelection::Option{
-							.name = "Float bit Offset",
+							.label = "Float bit Offset",
 						},
 						ImGuiListSelection::Option{
-							.name = "Float Multiplication"
+							.label = "Float Multiplication"
 						},
 						ImGuiListSelection::Option{
-							.name = "Float Addition",
+							.label = "Float Addition",
 						},
 					},
 				};
@@ -174,13 +174,13 @@ namespace vkl
 				.same_line = true,
 				.options = {
 					ImGuiListSelection::Option{
-						.name = "None",
+						.label = "None",
 					},
 					ImGuiListSelection::Option{
-						.name = "Visible",
+						.label = "Visible",
 					},
 					ImGuiListSelection::Option{
-						.name = "Total",
+						.label = "Total",
 					},
 				},
 			};

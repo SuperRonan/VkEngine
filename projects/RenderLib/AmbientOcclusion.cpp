@@ -273,14 +273,14 @@ namespace vkl
 					.mode = ImGuiListSelection::Mode::Dropdown,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "SSAO",
+							.label = "SSAO",
 						},
 						ImGuiListSelection::Option{
-							.name = "RTAO",
+							.label = "RTAO",
 							.disable = !(_can_rt && can_rt),
 						},
 						ImGuiListSelection::Option{
-							.name = "RQAO",
+							.label = "RQAO",
 							.disable = !(_can_rt && can_rq),
 						},
 					},

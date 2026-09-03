@@ -870,28 +870,28 @@ namespace vkl::GUI
 		{
 			uint index = static_cast<uint>(_imgui_sampler);
 			std::array options = {
-				ImGuiListSelection::Option{
-					.name = "Current",
+				ImGuiListSelection::OptionRaw{
+					.label = "Current",
 					.desc = "Use currently bound sampler.",
 				},
-				ImGuiListSelection::Option{
-					.name = "Nearest",
+				ImGuiListSelection::OptionRaw{
+					.label = "Nearest",
 					.desc = "Use ImGui's Nearest sampler.",
 				},
-				ImGuiListSelection::Option{
-					.name = "Linear",
+				ImGuiListSelection::OptionRaw{
+					.label = "Linear",
 					.desc = "Use ImGui's Linear sampler.",
 				},
-				ImGuiListSelection::Option{
-					.name = "Common",
+				ImGuiListSelection::OptionRaw{
+					.label = "Common",
 					.desc = "Use shared sampler.",
 				},
-				ImGuiListSelection::Option{
-					.name = "New",
+				ImGuiListSelection::OptionRaw{
+					.label = "New",
 					.desc = "Use new sampler.",
 				},
 			};
-			ImGuiListSelection::DeclareInfo sampler_list{
+			ImGuiListSelection::DeclareInfoRaw sampler_list{
 				.label = "Sampler##List",
 				.options = options,
 				.index = index,

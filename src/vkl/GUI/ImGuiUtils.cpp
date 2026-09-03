@@ -30,7 +30,7 @@ namespace vkl
 			for (size_t i = 0; i < _options.size(); ++i)
 			{
 				_options[i] = Option{
-					.name = ci.labels[i],
+					.label = ci.labels[i],
 					.desc = {},
 				};
 			}
@@ -48,9 +48,9 @@ namespace vkl
 		int res = 0;
 		for (size_t i = 0; i < _options.size(); ++i)
 		{
-			if (_options[i].name.empty())
+			if (_options[i].label.empty())
 			{
-				_options[i].name = "##";
+				_options[i].label = "##";
 				res = std::max(res, 1);
 			}
 		}
@@ -81,12 +81,13 @@ namespace vkl
 		{
 			setOptionsCount(index + 1);
 		}
-		_options[index].name = option.name;
+		_options[index].label = option.label;
 		_options[index].desc = option.desc;
 		_options[index].disable = option.disable;
 	}
 
-	int ImGuiListSelection::DeclareRadioButtons(DeclareInfo const& info)
+	template <that::concepts::StringLike Str>
+	int ImGuiListSelection::DeclareRadioButtons(DeclareInfoT<Str> const& info)
 	{
 		int res = -1;
 		if (info.label)
@@ -99,12 +100,14 @@ namespace vkl
 		}
 		for (uint i = 0; i < info.options.size(); ++i)
 		{
-			const Option& option = info.options[i];
+			const auto& option = info.options[i];
 			ImGui::BeginDisabled(option.disable);
-			const bool b = ImGui::RadioButton(option.name.c_str(), i == info.index);
-			if (!option.desc.empty())
+			std::string_view option_label = that::StringViewMaybeNull(option.label);
+			const bool b = ImGui::RadioButton(option_label.data(), i == info.index);
+			std::string_view option_desc = that::StringViewMaybeNull(option.desc);
+			if (!option_desc.empty())
 			{
-				ImGui::SetItemTooltip(option.desc.c_str());
+				ImGui::SetItemTooltip(option_desc.data());
 			}
 			if (b)	res = i;
 			if (info.same_line && (i != info.options.size() - 1))
@@ -114,13 +117,19 @@ namespace vkl
 		return res;
 	}
 
-	int ImGuiListSelection::DeclareCombo(DeclareInfo const& info)
+	template int ImGuiListSelection::DeclareRadioButtons(DeclareInfoT<std::string> const& info);
+	template int ImGuiListSelection::DeclareRadioButtons(DeclareInfoT<std::string_view> const& info);
+	template int ImGuiListSelection::DeclareRadioButtons(DeclareInfoT<const char*> const& info);
+
+	template <that::concepts::StringLike Str>
+	int ImGuiListSelection::DeclareCombo(DeclareInfoT<Str> const& info)
 	{
 		int res = -1;
 		bool begin = false;
 		if (info.index < info.options.size())
 		{
-			begin = ImGui::BeginCombo(info.label, info.options[info.index].name.c_str());
+			std::string_view option_label = that::StringViewMaybeNull(info.options[info.index].label);
+			begin = ImGui::BeginCombo(info.label, option_label.data());
 		}
 		else
 		{
@@ -137,7 +146,8 @@ namespace vkl
 			{
 				ImGui::BeginDisabled(info.options[i].disable);
 				const bool b = info.index == i;
-				if (ImGui::Selectable(info.options[i].name.c_str(), b))
+				std::string_view option_label = that::StringViewMaybeNull(info.options[i].label);
+				if (ImGui::Selectable(option_label.data(), b))
 				{
 					res = i;
 				}
@@ -145,9 +155,10 @@ namespace vkl
 				{
 					ImGui::SetItemDefaultFocus();
 				}
-				if (!info.options[i].desc.empty())
+				std::string_view option_desc = that::StringViewMaybeNull(info.options[i].desc);
+				if (!option_desc.empty())
 				{
-					ImGui::SetItemTooltip(info.options[i].desc.c_str());
+					ImGui::SetItemTooltip(option_desc.data());
 				}
 				ImGui::EndDisabled();
 			}
@@ -155,6 +166,10 @@ namespace vkl
 		}
 		return res;
 	}
+
+	template int ImGuiListSelection::DeclareCombo(DeclareInfoT<std::string> const& info);
+	template int ImGuiListSelection::DeclareCombo(DeclareInfoT<std::string_view> const& info);
+	template int ImGuiListSelection::DeclareCombo(DeclareInfoT<const char*> const& info);
 
 	bool ImGuiListSelection::declareRadioButtons(const char * name, size_t &active_index, bool same_line) const
 	{

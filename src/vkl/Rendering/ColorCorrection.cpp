@@ -187,58 +187,58 @@ namespace vkl
 					.same_line = true,
 					.options = {
 						ImGuiListSelection::Option{
-							.name = "None",
+							.label = "None",
 						},
 						ImGuiListSelection::Option{
-							.name = "ITU",
+							.label = "ITU",
 						},
 						ImGuiListSelection::Option{
-							.name = "sRGB",
+							.label = "sRGB",
 						},
 						ImGuiListSelection::Option{
-							.name = "scRGB",
+							.label = "scRGB",
 						},
 						ImGuiListSelection::Option{
-							.name = "BT1886",
+							.label = "BT1886",
 						},
 						ImGuiListSelection::Option{
-							.name = "HybridLogGamma",
+							.label = "HybridLogGamma",
 						},
 						ImGuiListSelection::Option{
-							.name = "PerceptualQuantization",
+							.label = "PerceptualQuantization",
 						},
 						ImGuiListSelection::Option{
-							.name = "DisplayP3",
+							.label = "DisplayP3",
 						},
 						ImGuiListSelection::Option{
-							.name = "DCI_P3",
+							.label = "DCI_P3",
 						},
 						ImGuiListSelection::Option{
-							.name = "LegacyNTSC",
+							.label = "LegacyNTSC",
 						},
 						ImGuiListSelection::Option{
-							.name = "LegacyPAL",
+							.label = "LegacyPAL",
 						},
 						ImGuiListSelection::Option{
-							.name = "ST240",
+							.label = "ST240",
 						},
 						ImGuiListSelection::Option{
-							.name = "AdobeRGB",
+							.label = "AdobeRGB",
 						},
 						ImGuiListSelection::Option{
-							.name = "SonySLog",
+							.label = "SonySLog",
 						},
 						ImGuiListSelection::Option{
-							.name = "SonySLog2",
+							.label = "SonySLog2",
 						},
 						ImGuiListSelection::Option{
-							.name = "ACEScc",
+							.label = "ACEScc",
 						},
 						ImGuiListSelection::Option{
-							.name = "ACEScct",
+							.label = "ACEScct",
 						},
 						ImGuiListSelection::Option{
-							.name = "Gamma",
+							.label = "Gamma",
 						},
 					},
 				};
