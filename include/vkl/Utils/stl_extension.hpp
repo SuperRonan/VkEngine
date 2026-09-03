@@ -387,10 +387,10 @@ namespace std
 		return hay.find(needle) != std::basic_string_view<Char>::npos;
 	}
 
-	template <that::concepts::GenericString StrHay, that::concepts::BasicStringLike<that::GenericStringCharType<StrHay>> StrNeedle>
+	template <that::concepts::GenericString StrHay, that::concepts::BasicStringLike<that::GenericStringChar_t<StrHay>> StrNeedle>
 	bool contains(const StrHay& hay, const StrNeedle& needle)
 	{
-		using Char = that::GenericStringCharType<StrHay>;
+		using Char = that::GenericStringChar_t<StrHay>;
 		using SV = std::basic_string_view<Char>;
 		return contains_sv<Char>(SV(hay), SV(needle));
 	}
@@ -405,10 +405,10 @@ namespace std
 		) != hay.cend();
 	}
 
-	template <that::concepts::GenericString StrHay, that::concepts::BasicStringLike<that::GenericStringCharType<StrHay>> StrNeedle>
+	template <that::concepts::GenericString StrHay, that::concepts::BasicStringLike<that::GenericStringChar_t<StrHay>> StrNeedle>
 	bool containsCaseInsensitive(const StrHay& hay, const StrNeedle& needle)
 	{
-		using Char = that::GenericStringCharType<StrHay>;
+		using Char = that::GenericStringChar_t<StrHay>;
 		using SV = std::basic_string_view<Char>;
 		return containsCaseInsensitive_sv<Char>(SV(hay), SV(needle));
 	}
