@@ -287,8 +287,16 @@ namespace vkl
 			if(res == 0)	res = (buffer->createInfo().size - range.begin);
 			return res;
 		}
+
+		// std::shared_ptr::operator<=> will be constexpr in C++26
+		bool operator==(BufferAndRangeInstance const& rhs) const noexcept = default;
 	};
+	// Deprecated name
 	using BufferSegmentInstance = BufferAndRangeInstance;
+
+	// New coherent names
+	using BufferInstanceAndRange = BufferAndRangeInstance;
+	using BufferInstanceSegment = BufferAndRangeInstance;
 
 	struct BufferAndRange
 	{
