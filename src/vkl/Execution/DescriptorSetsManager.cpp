@@ -437,7 +437,7 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers)
+	void DescriptorSetAndPoolInstance::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers, bool null_array_clears)
 	{
 		ResourceBinding* found = findBinding(binding);
 		assert(found);
@@ -456,12 +456,13 @@ namespace vkl
 				{
 					const uint32_t binding_array_index = array_index + i;
 					CombinedImageSampler & cis = found->images_samplers[binding_array_index];
+					const Callback::Id cb_id = (is.data() + binding_array_index);
 					auto make_callback = [&](){
 						return Callback{
 							.callback = [this, found, binding_array_index]() {
 								found->invalidate(binding_array_index);
 							},
-							.id = is.data() + binding_array_index,
+							.id = cb_id,
 						};
 					};
 
@@ -471,15 +472,14 @@ namespace vkl
 						if (binding_view != views[i])
 						{
 							should_invalidate = true;
-							auto cb = make_callback();
 							if (binding_view)
 							{
-								binding_view->removeInvalidationCallback(cb.id);
+								binding_view->removeInvalidationCallback(cb_id);
 							}
 							binding_view = views[i];
 							if (binding_view)
 							{
-								binding_view->setInvalidationCallback(std::move(cb));
+								binding_view->setInvalidationCallback(make_callback());
 							}
 						}
 					}
@@ -490,20 +490,41 @@ namespace vkl
 						if (binding_sampler != samplers[i])
 						{
 							should_invalidate = true;
-							auto cb = make_callback();
 							if (binding_sampler)
 							{
-								binding_sampler->removeInvalidationCallback(cb.id);
+								binding_sampler->removeInvalidationCallback(cb_id);
 							}
 							binding_sampler = samplers[i];
 							if (binding_sampler)
 							{
-								binding_sampler->setInvalidationCallback(std::move(cb));
+								binding_sampler->setInvalidationCallback(make_callback());
 							}
 						}
 					}
 				}
 				return should_invalidate;
+			};
+			auto clear_bindings = [&]() -> bool
+			{
+				bool res = false;
+				for (uint32_t i = 0; i < count; ++i)
+				{
+					const uint32_t binding_array_index = array_index + i;
+					CombinedImageSampler& cis = found->images_samplers[binding_array_index];
+					if (cis.image)
+					{
+						res = true;
+						cis.image->removeInvalidationCallback(is.data() + binding_array_index);
+						cis.image.reset();
+					}
+					if (cis.sampler)
+					{
+						res = true;
+						cis.sampler->removeInvalidationCallback(is.data() + binding_array_index);
+						cis.sampler.reset();
+					}
+				}
+				return res;
 			};
 			auto iterate_on_bindings_2 = [&]<bool has_views>() -> bool
 			{
@@ -519,6 +540,10 @@ namespace vkl
 					}
 					else
 					{
+						if (null_array_clears)
+						{
+							return clear_bindings();
+						}
 						return false;
 					}
 				}
@@ -971,7 +996,7 @@ namespace vkl
 		}
 	}
 
-	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers)
+	void DescriptorSetAndPool::setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views, const std::shared_ptr<Sampler>* samplers, bool null_array_clears)
 	{
 		ResourceBinding & rb = *findBindingOrEmplace(binding);
 		auto & cis = rb.images_samplers;
@@ -1007,6 +1032,19 @@ namespace vkl
 			return res;
 		};
 
+		auto clear_bindings = [&]() -> bool
+		{
+			bool res = false;
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				auto& cis_ = cis[array_index + i];
+				res |= (cis_.image || cis_.sampler);
+				cis_.image.reset();
+				cis_.sampler.reset();
+			}
+			return res;
+		};
+
 		auto iterate_on_bindings_2 = [&]<bool has_views>() -> bool
 		{
 			if (samplers)
@@ -1021,6 +1059,10 @@ namespace vkl
 				}
 				else
 				{
+					if (null_array_clears)
+					{
+						return clear_bindings();
+					}
 					return false;
 				}
 			}

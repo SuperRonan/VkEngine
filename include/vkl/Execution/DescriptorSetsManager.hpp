@@ -102,10 +102,11 @@ namespace vkl
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers = nullptr);
 
-		// For views and samplers: 
-		// views == nullptr -> does not set the binding
-		// *view == nullptr -> set the binding to nullptr
-		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views = nullptr, const std::shared_ptr<Sampler>* samplers = nullptr);
+		// For views and samplers:
+		// if(!null_array_clears):
+		//   views == nullptr -> does not set the binding
+		//   *view == nullptr -> set the binding to nullptr
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView>* views = nullptr, const std::shared_ptr<Sampler>* samplers = nullptr, bool null_array_clears=false);
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure> * tlas = nullptr);
 	};
@@ -177,9 +178,10 @@ namespace vkl
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange * buffers = nullptr);
 
 		// For views and samplers: 
-		// views == nullptr -> does not set the binding
-		// *view == nullptr -> set the binding to nullptr
-		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView> * views = nullptr, const std::shared_ptr<Sampler> * samplers = nullptr);
+		// if(!null_array_clears):
+		//   views == nullptr -> does not set the binding
+		//   *view == nullptr -> set the binding to nullptr
+		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<ImageView> * views = nullptr, const std::shared_ptr<Sampler> * samplers = nullptr, bool null_array_clears=false);
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const std::shared_ptr<TopLevelAccelerationStructure>* tlas = nullptr);
 
