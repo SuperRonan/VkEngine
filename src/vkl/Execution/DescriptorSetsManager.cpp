@@ -580,26 +580,51 @@ namespace vkl
 		assert(found->isAS());
 		if (found->tlases.size32() >= (array_index + count)) // enough capacity
 		{
-			for (uint32_t i = 0; i < count; ++i)
+			bool should_invalidate = true;
+			if (tlas)
 			{
-				const uint32_t binding_array_index = array_index + i;
-				std::shared_ptr<TLAS> & f_tlas = found->tlases[binding_array_index];
-				if (f_tlas)
+				for (uint32_t i = 0; i < count; ++i)
 				{
-					f_tlas->removeInvalidationCallback(found->tlases.data() + binding_array_index);
-				}
-				f_tlas = tlas ? tlas[i] : nullptr;
-				if (f_tlas)
-				{
-					f_tlas->setInvalidationCallback(Callback{
-						.callback = [this, found, binding_array_index]() {
-							found->invalidate(binding_array_index);
-						},
-						.id = found->tlases.data() + binding_array_index,
-					});
+					const uint32_t binding_array_index = array_index + i;
+					std::shared_ptr<TLAS> & f_tlas = found->tlases[binding_array_index];
+					if (f_tlas != tlas[i])
+					{
+						should_invalidate = true;
+						if (f_tlas)
+						{
+							f_tlas->removeInvalidationCallback(found->tlases.data() + binding_array_index);
+						}
+						f_tlas = tlas[i];
+						if (f_tlas)
+						{
+							f_tlas->setInvalidationCallback(Callback{
+								.callback = [this, found, binding_array_index]() {
+									found->invalidate(binding_array_index);
+								},
+								.id = found->tlases.data() + binding_array_index,
+							});
+						}
+					}
 				}
 			}
-			found->invalidate(Range32u{.begin = array_index, .len = count});
+			else
+			{
+				for (uint32_t i = 0; i < count; ++i)
+				{
+					const uint32_t binding_array_index = array_index + i;
+					std::shared_ptr<TLAS>& f_tlas = found->tlases[binding_array_index];
+					if (f_tlas)
+					{
+						should_invalidate = true;
+						f_tlas->removeInvalidationCallback(found->tlases.data() + binding_array_index);
+						f_tlas.reset();
+					}
+				}
+			}
+			if (should_invalidate)
+			{
+				found->invalidate(Range32u{.begin = array_index, .len = count});
+			}
 		}
 		else // this instance will be renewed, no need to write now
 		{
@@ -1094,12 +1119,34 @@ namespace vkl
 			b_tlas.resize(array_index + count); 
 		}
 
-		for (uint32_t i = 0; i < count; ++i)
+		bool any_change = false;
+		if (tlas)
 		{
-			b_tlas[i] = tlas ? tlas[i] : nullptr;
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				std::shared_ptr<TopLevelAccelerationStructure>& bound = b_tlas[array_index + i];
+				std::shared_ptr<TopLevelAccelerationStructure> const& incoming = tlas[i];
+				if (bound != incoming)
+				{
+					any_change = true;
+					b_tlas[i] = tlas[i];
+				}
+			}
+		}
+		else
+		{
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				std::shared_ptr<TopLevelAccelerationStructure>& bound = b_tlas[array_index + i];
+				if (bound)
+				{
+					any_change = true;
+					bound.reset();
+				}
+			}
 		}
 
-		if (_instance)
+		if (_instance && any_change)
 		{
 			instance()->setBinding(binding, array_index, count, tlas);
 		}
