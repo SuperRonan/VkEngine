@@ -186,6 +186,7 @@ namespace vkl
 		void callInvalidationCallbacks();
 
 		void setInvalidationCallback(Callback const& ic);
+		void setInvalidationCallback(Callback && ic);
 
 		void removeInvalidationCallback(const void* id);
 

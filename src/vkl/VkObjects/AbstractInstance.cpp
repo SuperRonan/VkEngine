@@ -39,15 +39,22 @@ namespace vkl
 
 	void AbstractInstanceHolder::setInvalidationCallback(Callback const& ic)
 	{
-		std::unique_lock lock(_mutex);
 		assert(ic.callback.operator bool());
+		std::unique_lock lock(_mutex);
 		_invalidation_callbacks[reinterpret_cast<uintptr_t>(ic.id)] = ic.callback;
+	}
+
+	void AbstractInstanceHolder::setInvalidationCallback(Callback && ic)
+	{
+		assert(ic.callback.operator bool());
+		std::unique_lock lock(_mutex);
+		_invalidation_callbacks[reinterpret_cast<uintptr_t>(ic.id)] = std::move(ic.callback);
 	}
 
 	void AbstractInstanceHolder::removeInvalidationCallback(const void* id)
 	{
-		std::unique_lock lock(_mutex);
 		assert(_invalidation_callbacks.contains(reinterpret_cast<uintptr_t>(id)));
+		std::unique_lock lock(_mutex);
 		_invalidation_callbacks.erase(reinterpret_cast<uintptr_t>(id));
 	}
 
