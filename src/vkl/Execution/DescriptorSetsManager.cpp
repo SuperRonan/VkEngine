@@ -449,46 +449,95 @@ namespace vkl
 
 		if (binding_capacity >= (array_index + count))
 		{
-			for (uint32_t i = 0; i < count; ++i)
+			auto iterate_on_bindings = [&]<bool has_views, bool has_samplers>() -> bool
 			{
-				const uint32_t binding_array_index = array_index + i;
-				CombinedImageSampler & cis = found->images_samplers[binding_array_index];
-				Callback cb{
-					.callback = [this, found, binding_array_index]() {
-						found->invalidate(binding_array_index);
-					},
-					.id = is.data() + binding_array_index,
-				};
-
-				if(found->hasImage() && views)
+				bool should_invalidate = false;
+				for (uint32_t i = 0; i < count; ++i)
 				{
-					std::shared_ptr<ImageView> & binding_view = cis.image;
-					if (binding_view)
+					const uint32_t binding_array_index = array_index + i;
+					CombinedImageSampler & cis = found->images_samplers[binding_array_index];
+					auto make_callback = [&](){
+						return Callback{
+							.callback = [this, found, binding_array_index]() {
+								found->invalidate(binding_array_index);
+							},
+							.id = is.data() + binding_array_index,
+						};
+					};
+
+					if constexpr (has_views)
 					{
-						binding_view->removeInvalidationCallback(cb.id);
+						std::shared_ptr<ImageView> & binding_view = cis.image;
+						if (binding_view != views[i])
+						{
+							should_invalidate = true;
+							auto cb = make_callback();
+							if (binding_view)
+							{
+								binding_view->removeInvalidationCallback(cb.id);
+							}
+							binding_view = views[i];
+							if (binding_view)
+							{
+								binding_view->setInvalidationCallback(std::move(cb));
+							}
+						}
 					}
-					binding_view = views[i];
-					if (binding_view)
+
+					if constexpr (has_samplers)
 					{
-						binding_view->setInvalidationCallback(cb);
+						std::shared_ptr<Sampler> & binding_sampler = cis.sampler;
+						if (binding_sampler != samplers[i])
+						{
+							should_invalidate = true;
+							auto cb = make_callback();
+							if (binding_sampler)
+							{
+								binding_sampler->removeInvalidationCallback(cb.id);
+							}
+							binding_sampler = samplers[i];
+							if (binding_sampler)
+							{
+								binding_sampler->setInvalidationCallback(std::move(cb));
+							}
+						}
 					}
 				}
-
-				if (found->hasSampler() && samplers)
+				return should_invalidate;
+			};
+			auto iterate_on_bindings_2 = [&]<bool has_views>() -> bool
+			{
+				if (samplers && found->hasSampler())
 				{
-					std::shared_ptr<Sampler> & binding_sampler = cis.sampler;
-					if (binding_sampler)
+					return iterate_on_bindings.template operator()<has_views, true>();
+				}
+				else
+				{
+					if constexpr (has_views)
 					{
-						binding_sampler->removeInvalidationCallback(cb.id);
+						return iterate_on_bindings.template operator()<has_views, false>();
 					}
-					binding_sampler = samplers[i];
-					if (binding_sampler)
+					else
 					{
-						binding_sampler->setInvalidationCallback(cb);
+						return false;
 					}
 				}
+			};
+			const bool should_invalidate = [&]() -> bool
+			{
+				if (views && found->hasImage())
+				{
+					return iterate_on_bindings_2.template operator()<true>();
+				}
+				else
+				{
+					return iterate_on_bindings_2.template operator()<false>();
+				}
+			}();
+			if (should_invalidate)
+			{
+				found->invalidate(Range32u{.begin = array_index, .len = count});
 			}
-			found->invalidate(Range32u{.begin = array_index, .len = count});
 			assert(checkIntegrity());
 		}
 		else
@@ -931,22 +980,63 @@ namespace vkl
 		{
 			cis.resize(array_index + count);
 		}
-		
 
-		for (uint32_t i = 0; i < count; ++i)
+		auto iterate_on_bindings = [&]<bool has_views, bool has_samplers>() -> bool
 		{
-			auto & cis_ = cis[array_index + i];
-			if (views)
+			bool res = false;
+			for (uint32_t i = 0; i < count; ++i)
 			{
-				cis_.image = views[i];
+				auto& cis_ = cis[array_index + i];
+				if constexpr (has_views)
+				{
+					if (cis_.image != views[i])
+					{
+						cis_.image = views[i];
+						res = true;
+					}
+				}
+				if constexpr (has_samplers)
+				{
+					if (cis_.sampler != samplers[i])
+					{
+						cis_.sampler = samplers[i];
+						res = true;
+					}
+				}
 			}
+			return res;
+		};
+
+		auto iterate_on_bindings_2 = [&]<bool has_views>() -> bool
+		{
 			if (samplers)
 			{
-				cis_.sampler = samplers[i];
+				return iterate_on_bindings.template operator()<has_views, true>();
 			}
-		}
+			else
+			{
+				if constexpr (has_views)
+				{
+					return iterate_on_bindings.template operator()<has_views, false>();
+				}
+				else
+				{
+					return false;
+				}
+			}
+		};
+		const bool any_change = [&](){
+			if (views)
+			{
+				return iterate_on_bindings_2.template operator()<true>();
+			}
+			else
+			{
+				return iterate_on_bindings_2.template operator()<false>();
+			}
+		}();
 
-		if (_instance)
+		if (_instance && any_change)
 		{
 			instance()->setBinding(binding, array_index, count, views, samplers);
 		}
