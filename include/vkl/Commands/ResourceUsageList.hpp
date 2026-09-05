@@ -52,9 +52,11 @@ namespace vkl
 		VkFlags64 usage = 0;
 	};
 
+	// TODO BufferUsage, ImageUsage and ImageViewUsage: Is it necessary to keep a shared_ptr?
 	struct BufferUsage
 	{
-		BufferAndRangeInstance bari;
+		using BufferSegment = BufferSegmentInstanceShared;
+		BufferSegment bari;
 		ResourceState2 begin_state = {};
 		std::optional<ResourceState2> end_state = {};
 		VkBufferUsageFlags2KHR usage = 0;
@@ -89,7 +91,7 @@ namespace vkl
 
 	public:
 
-		virtual void add(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) = 0;
+		virtual void add(BufferUsage::BufferSegment const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) = 0;
 
 		virtual void iterate(BufferUsageFunction const& fn) const = 0;
 
@@ -105,7 +107,7 @@ namespace vkl
 
 	public:
 
-		virtual void add(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) final override;
+		virtual void add(BufferUsage::BufferSegment const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) final override;
 
 		void add(FullyMergedBufferUsageList const& other);
 
@@ -190,7 +192,7 @@ namespace vkl
 		
 
 
-		virtual void addBuffer(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) = 0;
+		virtual void addBuffer(BufferUsage::BufferSegment const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) = 0;
 
 		virtual void addImage(std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkImageUsageFlags usages = 0) = 0;
 		
@@ -262,7 +264,7 @@ namespace vkl
 
 		ModularResourceUsageList();
 
-		virtual void addBuffer(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) final override;
+		virtual void addBuffer(BufferUsage::BufferSegment const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkBufferUsageFlags2KHR usages = 0) final override;
 
 		virtual void addImage(std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& state, std::optional<ResourceState2> const& end_state = {}, VkImageUsageFlags usages = 0) final override;
 

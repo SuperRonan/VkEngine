@@ -251,7 +251,7 @@ namespace vkl
 
 	//static_assert(std::is_base_of<AbstractSynchronizationHelper, SynchronizationHelper>::value);
 
-	bool InlineSynchronizeBuffer(ExecutionContext & ctx, BufferAndRangeInstance const& bari, ResourceState2 const& begin_state, std::optional<ResourceState2> const& end_state = {});
+	bool InlineSynchronizeBuffer(ExecutionContext & ctx, BufferUsage::BufferSegment const& bari, ResourceState2 const& begin_state, std::optional<ResourceState2> const& end_state = {});
 	bool InlineSynchronizeImage(ExecutionContext& ctx, std::shared_ptr<ImageInstance> const& ii, VkImageSubresourceRange const& range, ResourceState2 const& begin_state, std::optional<ResourceState2> const& end_state = {});
 	bool InlineSynchronizeImageView(ExecutionContext& ctx, std::shared_ptr<ImageViewInstance> const& ivi, ResourceState2 const& begin_state, std::optional<ResourceState2> const& end_state = {});
 

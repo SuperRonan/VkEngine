@@ -22,7 +22,7 @@ namespace vkl
 
 		struct Geometry
 		{
-			BufferAndRangeInstance instances_buffer;
+			BufferInstanceSegmentShared instances_buffer;
 			MyVector<BLASInstance> blases;
 
 			VkGeometryFlagsKHR flags = 0;
@@ -41,7 +41,7 @@ namespace vkl
 		{
 			VkGeometryFlagsKHR flags = 0;
 			uint32_t capacity = 0;
-			BufferAndRangeInstance instances_buffer;
+			BufferInstanceSegmentShared instances_buffer;
 		};
 
 		struct CreateInfo
@@ -51,7 +51,7 @@ namespace vkl
 			VkGeometryFlagsKHR geometry_flags = 0;
 			VkBuildAccelerationStructureFlagsKHR build_flags;
 			MyVector<GeometryCreateInfo> geometries = {};
-			BufferAndRangeInstance storage_buffer = {};
+			BufferInstanceSegmentShared storage_buffer = {};
 			VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
 		};
 		using CI = CreateInfo;

@@ -690,7 +690,7 @@ namespace vkl
 	//}
 
 	template <class Stream>
-	Stream& logBufferBarrier(Stream & stream, BufferAndRangeInstance const& bari, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
+	Stream& logBufferBarrier(Stream & stream, BufferUsage::BufferSegment const& bari, ResourceState2 const& synch_from, ResourceState2 const& synch_to)
 	{
 		stream << "Barrier from (" << vku::GetFlagsStr<VkAccessFlagBits2>(synch_from.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlagBits2>(synch_from.stage) <<
 			") -> (" << vku::GetFlagsStr<VkAccessFlagBits2>(synch_to.access) << ", " << vku::GetFlagsStr<VkPipelineStageFlagBits2>(synch_to.stage) << 
@@ -711,7 +711,7 @@ namespace vkl
 	}
 
 
-	bool InlineSynchronizeBuffer(ExecutionContext& ctx, BufferAndRangeInstance const& bari, ResourceState2 const& begin_state, std::optional<ResourceState2> const& opt_end_state)
+	bool InlineSynchronizeBuffer(ExecutionContext& ctx, BufferUsage::BufferSegment const& bari, ResourceState2 const& begin_state, std::optional<ResourceState2> const& opt_end_state)
 	{
 		assert(bari.buffer);
 

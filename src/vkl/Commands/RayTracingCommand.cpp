@@ -24,7 +24,7 @@ namespace vkl
 			VkExtent3D extent = {};
 			std::shared_ptr<DescriptorSetAndPoolInstance> set = nullptr;
 			VkDeviceSize stack_size = VkDeviceSize(-1);
-			BufferAndRangeInstance sbt_buffer = {};
+			BufferInstanceSegmentShared sbt_buffer = {};
 			ShaderBindingTable::Regions sbt_regions = {};
 		};
 		

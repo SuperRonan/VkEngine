@@ -40,7 +40,7 @@ namespace vkl
 			MyVector<Target> targets;
 			MyVector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
 
-			BufferAndRangeInstance scratch_buffer;
+			BufferInstanceSegmentShared scratch_buffer;
 			
 			void clear();
 

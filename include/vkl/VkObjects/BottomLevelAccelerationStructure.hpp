@@ -16,9 +16,9 @@ namespace vkl
 
 		struct TriangleMeshGeometry
 		{
-			BufferAndRangeInstance vertex_buffer;
+			BufferInstanceSegmentShared vertex_buffer;
 			VertexDescriptionAS vertex_desc;
-			BufferAndRangeInstance index_buffer;
+			BufferInstanceSegmentShared index_buffer;
 			VkIndexType index_type;
 			uint32_t max_vertex;
 			uint32_t max_primitive;
@@ -41,7 +41,7 @@ namespace vkl
 			VkGeometryFlagsKHR geometry_flags = 0;
 			VkBuildAccelerationStructureFlagsKHR build_flags = 0;
 			MyVector<TriangleMeshGeometry> geometries = {};
-			BufferAndRangeInstance storage_buffer; // Optional, if not provided, this will allocate its own
+			BufferInstanceSegmentShared storage_buffer; // Optional, if not provided, this will allocate its own
 		};
 		using CI = CreateInfo;
 

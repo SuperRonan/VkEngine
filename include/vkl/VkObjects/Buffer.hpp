@@ -264,9 +264,10 @@ namespace vkl
 
 	VKL_DEFINE_DESCRIPTOR_INSTANCE_POINTERS(Buffer)
 
-	struct BufferAndRangeInstance
+	template <template <class C> class Ptr>
+	struct BufferAndRangeInstanceT
 	{
-		std::shared_ptr<BufferInstance> buffer = {};
+		Ptr<BufferInstance> buffer = {};
 		Buffer::Range range = {};
 
 		operator bool()const
@@ -288,27 +289,48 @@ namespace vkl
 			return res;
 		}
 
-		// std::shared_ptr::operator<=> will be constexpr in C++26
-		bool operator==(BufferAndRangeInstance const& rhs) const noexcept = default;
+		constexpr bool operator==(BufferAndRangeInstanceT const& rhs) const noexcept = default;
 	};
 	// Deprecated name
-	using BufferSegmentInstance = BufferAndRangeInstance;
+	template <template <class C> class Ptr>
+	using BufferSegmentInstanceT = BufferAndRangeInstanceT<Ptr>;
 
-	// New coherent names
-	using BufferInstanceAndRange = BufferAndRangeInstance;
-	using BufferInstanceSegment = BufferAndRangeInstance;
+	// New prefered coherent names
+	template <template <class C> class Ptr>
+	using BufferInstanceAndRangeT = BufferAndRangeInstanceT<Ptr>;
+	template <template <class C> class Ptr>
+	using BufferInstanceSegmentT = BufferAndRangeInstanceT<Ptr>;
+
+	using BufferAndRangeInstanceRaw = BufferAndRangeInstanceT<that::RawPointer>;
+	using BufferSegmentInstanceRaw = BufferSegmentInstanceT<that::RawPointer>;
+	using BufferInstanceAndRangeRaw = BufferInstanceAndRangeT<that::RawPointer>;
+	using BufferInstanceSegmentRaw = BufferInstanceSegmentT<that::RawPointer>;
+
+	using BufferAndRangeInstanceShared = BufferAndRangeInstanceT<std::shared_ptr>;
+	using BufferSegmentInstanceShared = BufferSegmentInstanceT<std::shared_ptr>;
+	using BufferInstanceAndRangeShared = BufferInstanceAndRangeT<std::shared_ptr>;
+	using BufferInstanceSegmentShared = BufferInstanceSegmentT<std::shared_ptr>;
+
 
 	struct BufferAndRange
 	{
-		using InstanceType = BufferAndRangeInstance;
+		using InstanceType = BufferAndRangeInstanceShared;
 		std::shared_ptr<Buffer> buffer = {};
 		Dyn<Buffer::Range> range = {};
 
-		BufferAndRangeInstance getInstance() const
+		InstanceType getInstance() const
 		{
-			BufferAndRangeInstance res = {};
+			InstanceType res = {};
 			if(buffer)	res.buffer = buffer->instancePtr();
 			if(range.hasValue())	res.range = range.value();
+			return res;
+		}
+
+		BufferAndRangeInstanceRaw getInstanceRaw() const
+		{
+			BufferAndRangeInstanceRaw res = {};
+			if (buffer)	res.buffer = buffer->instance();
+			if (range.hasValue())	res.range = range.value();
 			return res;
 		}
 
@@ -319,15 +341,16 @@ namespace vkl
 	};
 	using BufferSegment = BufferAndRange;
 
-	struct BufferOrInstanceAndRange
+	template <template <class C> class Ptr>
+	struct BufferOrInstanceAndRangeT
 	{
-		using InstanceType = BufferAndRangeInstance;
-		BufferOrInstanceSharedPointer buffer = {};
+		using InstanceType = BufferAndRangeInstanceT<Ptr>;
+		BufferOrInstancePointer<Ptr> buffer = {};
 		Dyn<Buffer::Range> range = {};
 
-		BufferAndRangeInstance getInstance() const
+		InstanceType getInstance() const
 		{
-			BufferAndRangeInstance res = {};
+			InstanceType res = {};
 			if (buffer)	res.buffer = GetInstance(buffer);
 			if (range.hasValue())	res.range = range.value();
 			return res;
@@ -338,6 +361,9 @@ namespace vkl
 			return buffer.operator bool();
 		}
 	};
-	using BufferOrInstanceSegment = BufferOrInstanceAndRange;
-	
+	template <template <class C> class Ptr>
+	using BufferOrInstanceSegmentT = BufferOrInstanceAndRangeT<Ptr>;
+
+	using BufferOrInstanceSegmentRaw = BufferOrInstanceSegmentT<that::RawPointer>;
+	using BufferOrInstanceSegmentShared = BufferOrInstanceSegmentT<std::shared_ptr>;
 }

@@ -2,7 +2,7 @@
 
 namespace vkl
 {
-	void FullyMergedBufferUsageList::add(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state, VkBufferUsageFlags2KHR usages)
+	void FullyMergedBufferUsageList::add(BufferUsage::BufferSegment const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state, VkBufferUsageFlags2KHR usages)
 	{
 		assert(bari);
 		BufferSubRangeState& bsrs = _buffers[bari.buffer];
@@ -42,7 +42,7 @@ namespace vkl
 	{
 		for (const auto& [buffer, state] : other._buffers)
 		{
-			BufferSegmentInstance segment{
+			BufferUsage::BufferSegment segment{
 				.buffer = buffer,
 				.range = state.range,
 			};
@@ -139,7 +139,7 @@ namespace vkl
 
 	}
 
-	void ModularResourceUsageList::addBuffer(BufferAndRangeInstance const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state, VkBufferUsageFlags2KHR usages)
+	void ModularResourceUsageList::addBuffer(BufferUsage::BufferSegment const& bari, ResourceState2 const& state, std::optional<ResourceState2> const& end_state, VkBufferUsageFlags2KHR usages)
 	{
 		_buffers.add(bari, state, end_state, usages);
 	}

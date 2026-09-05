@@ -50,14 +50,22 @@ namespace vkl
 		{
 			return BufferAndRange{
 				.buffer = _buffer,
-				// No range meanse full range
+				// No range means full range
 			};
 		}
 
-		BufferAndRangeInstance fullBufferAndRangeInstance()const
+		BufferAndRangeInstanceShared fullBufferAndRangeInstance()const
 		{
-			return BufferAndRangeInstance{
+			return BufferAndRangeInstanceShared{
 				.buffer = _buffer->instancePtr(),
+				.range = _buffer->instance()->fullRange(),
+			};
+		}
+
+		BufferAndRangeInstanceRaw fullBufferAndRangeInstanceRaw()const
+		{
+			return BufferAndRangeInstanceRaw{
+				.buffer = _buffer->instance(),
 				.range = _buffer->instance()->fullRange(),
 			};
 		}

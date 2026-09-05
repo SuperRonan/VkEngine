@@ -198,7 +198,7 @@ namespace vkl
 			})
 		{}
 
-		BufferAndRangeInstance _src = {};
+		BufferInstanceSegmentShared _src = {};
 		std::shared_ptr<ImageViewInstance> _dst = nullptr;
 		VkImageLayout _dst_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		Array<VkBufferImageCopy2> _regions = {};
@@ -339,7 +339,7 @@ namespace vkl
 		{}
 
 		std::shared_ptr<ImageViewInstance> _src = nullptr;
-		BufferAndRangeInstance _dst = {};
+		BufferInstanceSegmentShared _dst = {};
 		VkImageLayout _src_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		Array<VkBufferImageCopy2> _regions = {};
 		uint32_t _default_buffer_row_length = 0;
@@ -1469,7 +1469,7 @@ namespace vkl
 			if (_staging_buffer)
 			{
 				resources() += BufferUsage{
-					.bari = BufferAndRangeInstance{.buffer = _staging_buffer->buffer(), .range = _staging_buffer->buffer()->fullRange(),},
+					.bari = BufferInstanceSegmentShared{.buffer = _staging_buffer->buffer(), .range = _staging_buffer->buffer()->fullRange(),},
 					.begin_state = ResourceState2{
 						.access = VK_ACCESS_2_TRANSFER_READ_BIT,
 						.stage = VK_PIPELINE_STAGE_2_COPY_BIT,
@@ -1708,7 +1708,7 @@ namespace vkl
 
 	struct DownloadBufferNode : public ExecutionNode
 	{
-		BufferAndRangeInstance _src = {};
+		BufferInstanceSegmentShared _src = {};
 		void * _dst = nullptr;
 		DownloadCallback _completion_callback = {};
 		std::shared_ptr<PooledBuffer> _staging_buffer = {};

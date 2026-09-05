@@ -543,7 +543,7 @@ namespace vkl
 
 			if (to_draw.index_buffer.buffer)
 			{
-				const BufferAndRangeInstance & bari = to_draw.index_buffer;
+				const BufferInstanceSegmentShared& bari = to_draw.index_buffer;
 				vkCmdBindIndexBuffer(cmd, bari.buffer->handle(), bari.range.begin, to_draw.index_type);
 			}
 			if (to_draw.num_vertex_buffers > 0)
@@ -552,7 +552,7 @@ namespace vkl
 				_vb_offsets.resize(to_draw.num_vertex_buffers);
 				for (size_t i = 0; i < _vb_bind.size(); ++i)
 				{
-					const BufferAndRangeInstance & bari = _vertex_buffers.data()[to_draw.vertex_buffer_begin + i];
+					const BufferInstanceSegmentShared& bari = _vertex_buffers.data()[to_draw.vertex_buffer_begin + i];
 					_vb_bind[i] = bari.buffer->handle();
 					_vb_offsets[i] = bari.range.begin;
 				}

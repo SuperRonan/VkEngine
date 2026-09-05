@@ -18,7 +18,7 @@ namespace vkl
 		MyVector<VkAccelerationStructureBuildRangeInfoKHR> _build_ranges;
 
 		std::shared_ptr<PooledBuffer> _pooled_scratch_buffer;
-		BufferAndRangeInstance _scratch_buffer;
+		BufferInstanceSegmentShared _scratch_buffer;
 		
 		MyVector<VkAccelerationStructureBuildRangeInfoKHR*> _my_ptr_build_ranges;
 

@@ -91,10 +91,18 @@ namespace vkl
 			return _buffer;
 		}
 
-		BufferSegmentInstance bufferSegment()const
+		BufferSegmentInstanceShared bufferSegment()const
 		{
-			return BufferSegmentInstance{
+			return BufferSegmentInstanceShared{
 				.buffer = _buffer,
+				.range = _buffer->fullRange(),
+			};
+		}
+
+		BufferSegmentInstanceRaw bufferSegmentRaw()const
+		{
+			return BufferSegmentInstanceRaw{
+				.buffer = _buffer.get(),
 				.range = _buffer->fullRange(),
 			};
 		}

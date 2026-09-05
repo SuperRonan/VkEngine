@@ -23,7 +23,7 @@ namespace vkl
 		VkAccelerationStructureBuildGeometryInfoKHR _build_geometry_info = {};
 		VkAccelerationStructureBuildSizesInfoKHR _build_sizes = {};
 
-		BufferAndRangeInstance _storage_buffer = {};
+		BufferInstanceSegmentShared _storage_buffer = {};
 
 		VkAccelerationStructureCreateInfoKHR _ci = {};
 
@@ -48,7 +48,7 @@ namespace vkl
 			VkGeometryFlagsKHR geometry_flags = 0;
 			VkAccelerationStructureTypeKHR type = VK_ACCELERATION_STRUCTURE_TYPE_MAX_ENUM_KHR;
 			VkBuildAccelerationStructureFlagsKHR build_flags = 0;
-			BufferAndRangeInstance storage_buffer;
+			BufferInstanceSegmentShared storage_buffer;
 			VkBuildAccelerationStructureModeKHR build_mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
 		};
 		using CI = CreateInfo;
@@ -82,7 +82,7 @@ namespace vkl
 			return _address;
 		}
 
-		BufferAndRangeInstance const& storageBuffer()const
+		BufferInstanceSegmentShared const& storageBuffer()const
 		{
 			return _storage_buffer;
 		}

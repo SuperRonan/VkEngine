@@ -169,7 +169,7 @@ namespace vkl
 		VertexCommandNode(CreateInfo const& ci);
 
 		
-		that::ExS<BufferAndRangeInstance> _vertex_buffers;
+		that::ExS<BufferInstanceSegmentShared> _vertex_buffers;
 
 		struct DrawCallInfo
 		{
@@ -185,9 +185,9 @@ namespace vkl
 			uint32_t instance_count = 0;
 			uint32_t indirect_draw_stride = 5 * 4;
 			
-			BufferAndRangeInstance indirect_draw_buffer;
-			
-			BufferAndRangeInstance index_buffer = {};
+			BufferInstanceSegmentShared indirect_draw_buffer;
+
+			BufferInstanceSegmentShared index_buffer = {};
 			
 			VkIndexType index_type = VK_INDEX_TYPE_MAX_ENUM;
 			uint32_t num_vertex_buffers = 0;

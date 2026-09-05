@@ -245,7 +245,7 @@ namespace vkl
 							const BufferAndRange & bar = b.buffers[i + b.update_range.begin];
 							if (bar.buffer && bar.buffer->instance())
 							{
-								BufferAndRangeInstance bari = bar.getInstance();
+								BufferInstanceSegmentShared bari = bar.getInstance();
 								if (bari.range.len == 0)
 								{
 									bari.range.len = VK_WHOLE_SIZE;

@@ -104,10 +104,18 @@ namespace vkl
 			};
 		}
 
-		BufferSegmentInstance getSegmentInstance() const
+		BufferInstanceSegmentShared getSegmentInstance() const
 		{
-			return BufferSegmentInstance{
+			return BufferInstanceSegmentShared{
 				.buffer = _buffer->instancePtr(),
+				.range = Buffer::Range{.begin = 0, .len = _byte_size},
+			};
+		}
+
+		BufferInstanceSegmentRaw getSegmentInstanceRaw() const
+		{
+			return BufferInstanceSegmentRaw{
+				.buffer = _buffer->instance(),
 				.range = Buffer::Range{.begin = 0, .len = _byte_size},
 			};
 		}
