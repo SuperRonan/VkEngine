@@ -664,6 +664,17 @@ namespace vkl
 			assert(hasValue());
 			return &value();
 		}
+
+		// Since operator== is already used to create a dynamic equality test
+		bool isSame(DynamicValue const& rhs) const noexcept
+		{
+			return _inst == rhs._inst;
+		}
+
+		void clear()
+		{
+			_inst.reset();
+		}
 	};
 
 
