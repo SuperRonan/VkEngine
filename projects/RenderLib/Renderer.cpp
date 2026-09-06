@@ -88,6 +88,16 @@ namespace vkl
 		const bool can_rq = application()->availableFeatures().ray_query_khr.rayQuery;
 		const bool can_rt = application()->availableFeatures().ray_tracing_pipeline_khr.rayTracingPipeline;
 
+		Dyn<VkExtent3D> dyn_render_resolution = &_render_resolution;
+		Dyn<u32> dyn_render_layers = &_render_layers;
+		Dyn<VkImageSubresourceRange> dyn_render_range_layer = [this]() {return VkImageSubresourceRange{
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = VK_REMAINING_MIP_LEVELS,
+			.baseArrayLayer = _render_layer_index,
+			.layerCount = 1,
+		}; };
+
 		{
 			MyVector<DescriptorSetLayout::Binding> layout_bindings;
 
@@ -118,27 +128,31 @@ namespace vkl
 
 		_render_target = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
-			.name = name() + ".render_target",
+			.name = name() + ".render_target_array",
 			.type = _output_target->image()->type(),
 			.format = _output_target->format(),
-			.extent = _output_target->image()->extent(),
+			.extent = dyn_render_resolution,
+			.layers = dyn_render_layers,
 			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
+		std::shared_ptr<Image> const& render_target_image = _render_target->image();
 
 		_taau = std::make_shared<TemporalAntiAliasingAndUpscaler>(TemporalAntiAliasingAndUpscaler::CI{
 			.app = application(),
 			.name = name() + ".TAAU",
-			.input = _render_target,
+			.extent = _output_target->image()->extent(),
 			.sets_layouts = _sets_layouts,
 		});
+		_taau->setInput(TemporalAntiAliasingAndUpscaler::Input::Color, _render_target);
 
 		_depth = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".depth",
 			.type = _render_target->image()->type(),
 			.format = VK_FORMAT_D32_SFLOAT,
-			.extent = _render_target->image()->extent(),
+			.extent = render_target_image->extent(),
+			.layers = render_target_image->layers(),
 			.usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -854,10 +868,26 @@ namespace vkl
 
 		_use_reverse_depth = _camera->hasReverseDepth();
 
+
 		_use_ao_glsl_def.back() = '0' + (_ambient_occlusion->enable() ? 1 : 0);
 		_shadow_method_glsl_def.back() = '0' + static_cast<char>(_shadow_method);
 
 		_taau->updateResources(ctx);
+		{
+			TemporalAntiAliasingAndUpscaler::Requirements taau_requirements = _taau->calcFrameRequirements();
+			_render_resolution = VkExtent3D{.width = taau_requirements.input_resolution.x(), .height = taau_requirements.input_resolution.y(), .depth = 1};
+			const uint32_t new_render_layers = 1 * (1 + taau_requirements.image_memory);
+			const bool reset_array_index = (_render_layers != new_render_layers);
+			_render_layers = new_render_layers;
+			if (reset_array_index)
+			{
+				_render_layer_index = 0;
+			}
+			else
+			{
+				_render_layer_index = (_render_layer_index + 1) % _render_layers;
+			}
+		}
 		_render_target->updateResources(ctx);
 		_depth->updateResources(ctx);
 

@@ -53,6 +53,10 @@ namespace vkl
 		// "Read only"
 		std::shared_ptr<ImageView> _output_target = nullptr;
 
+		VkExtent3D _render_resolution = {};
+		uint32_t _render_layers = 0;
+		uint32_t _render_layer_index = 0;
+
 		std::shared_ptr<ImageView> _render_target = nullptr;
 		
 		std::shared_ptr<ImageView> _depth = nullptr;

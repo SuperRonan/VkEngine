@@ -8,6 +8,8 @@
 
 #include <vkl/Rendering/Camera.hpp>
 
+#include <that/utils/EnumClassOperators.hpp>
+
 namespace vkl
 {
 	namespace GUI
@@ -19,21 +21,51 @@ namespace vkl
 	public:
 		enum class Mode
 		{
-			Accumulate,
-			Alpha,
+			Default
 		};
+
+		struct Requirements
+		{
+			enum class Flags : u8
+			{
+				None = 0x0,
+				Checkerboard = 0x1,
+			};
+			enum class MotionFlags : u8
+			{
+				None = 0x0,
+				F16 = 0x1,
+				F32 = 0x2,
+			};
+			Flags flags = Flags::None;
+			MotionFlags motion = MotionFlags::None;
+			u8 image_memory = 0; // Number of extra layers of previous input images needed (0 means 1 layer (current frame) is needed)
+			Vector2u input_resolution = {};
+			Vector2f downscale = {};
+		};
+
+		enum class Input : u32
+		{
+			Color = 0,
+			_Count,
+		};
+
 	protected:
 
+		static const constexpr float _Default_Renew_Rate = 0.0625;
+
 		std::shared_ptr<ComputeCommand> _temporal_intergration;
-		std::shared_ptr<ImageView> _input;
 		std::shared_ptr<ImageView> _output;
+
+		MyVector<std::shared_ptr<ImageView>> _inputs = {};
 
 		bool _enable = true;
 		bool _reset = true;
 
-		Mode _mode = Mode::Alpha;
-		float _alpha = 0.9;
+		Mode _mode = Mode::Default;
+		float _renew_rate = _Default_Renew_Rate;
 		uint _max_samples = 128*128;
+		Vector2u _downsample_integral = Vector2u(1, 1);
 
 		uint32_t _accumulated_samples = 0;
 
@@ -41,6 +73,8 @@ namespace vkl
 		std::string _format_glsl;
 
 		MultiDescriptorSetsLayouts _sets_layouts;
+
+		//const Requirements* _p_renderer_available_requirements = {};
 
 		std::shared_ptr<ComputeCommand> _taau_command;
 		struct TAAU_PushConstant
@@ -59,12 +93,18 @@ namespace vkl
 		{
 			VkApplication * app = nullptr;
 			std::string name = {};
-			std::shared_ptr<ImageView> input = nullptr;
+			VkImageType image_type = VK_IMAGE_TYPE_2D;
+			Dyn<VkExtent3D> extent = {}; // Mandatory
+			Dyn<u32> layers = {}; // Optional
 			MultiDescriptorSetsLayouts sets_layouts;
+			//const Requirements* p_renderer_available_requirements = {};
 		};
 		using CI = CreateInfo;
 
 		TemporalAntiAliasingAndUpscaler(CreateInfo const& ci);
+
+		void setInput(Input input_id, std::shared_ptr<ImageView> const& img);
+		std::shared_ptr<ImageView> const& getInput(Input input_id) const;
 
 		virtual ~TemporalAntiAliasingAndUpscaler() override;
 
@@ -80,5 +120,10 @@ namespace vkl
 		{
 			return _output;
 		}
+
+		Requirements calcFrameRequirements();
 	};
 }
+
+THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::TemporalAntiAliasingAndUpscaler::Requirements::Flags);
+THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::TemporalAntiAliasingAndUpscaler::Requirements::MotionFlags);

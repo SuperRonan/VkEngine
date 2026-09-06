@@ -21,24 +21,26 @@ namespace vkl
 
 	TemporalAntiAliasingAndUpscaler::TemporalAntiAliasingAndUpscaler(CreateInfo const& ci) :
 		Module(ci.app, ci.name),
-		_input(ci.input),
 		_sets_layouts(ci.sets_layouts)
+		//_p_renderer_available_requirements(ci.p_renderer_available_requirements)
 	{
 		if (!_accumation_format.hasValue())
 		{
 			_accumation_format = VK_FORMAT_R32G32B32A32_SFLOAT;
 		}
 
+		_inputs.resize(static_cast<u32>(Input::_Count));
+
 		const VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_BITS | VK_IMAGE_USAGE_STORAGE_BIT;
 
 		_output = std::make_shared<ImageView>(Image::CI{
 			.app = application(),
 			.name = name() + ".Output",
-			.type = _input->image()->type(),
+			.type = ci.image_type,
 			.format = _accumation_format,
-			.extent = _input->image()->extent(),
+			.extent = ci.extent,
 			.mips = 1,
-			.layers = _input->image()->layers(),
+			.layers = ci.layers ? ci.layers : Dyn<u32>(u32(1)),
 			.usage = usage,
 			.mem_usage = VMA_MEMORY_USAGE_GPU_ONLY,
 		});
@@ -52,7 +54,6 @@ namespace vkl
 			.id = this,
 		};
 
-		_input->setInvalidationCallback(reset_callback);
 		_output->setInvalidationCallback(reset_callback);
 
 		_taau_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
@@ -64,25 +65,53 @@ namespace vkl
 			.sets_layouts = _sets_layouts,
 			.bindings = {
 				Binding{
-					.image = _input,
-					.binding = 1,
-				},
-				Binding{
 					.image = _output,
 					.binding = 2,
 				},
 			},
 			.definitions = [this](DefinitionsList & res){ 
 				res.clear(); 
-				res.pushBackFormatted("TAAU_MODE {:d}", static_cast<int>(_mode));
+				//res.pushBackFormatted("TAAU_MODE {:d}", static_cast<int>(_mode));
 				res.pushBackFormatted("IMAGE_FORMAT {:s}", _format_glsl);
 			},
 		});
 	}
 
+	void TemporalAntiAliasingAndUpscaler::setInput(Input input_id, std::shared_ptr<ImageView> const& img)
+	{
+		u32 index = static_cast<u32>(input_id);
+		assert(index < _inputs.size32());
+		std::shared_ptr<ImageView> & slot = _inputs[index];
+		if (slot)
+		{
+			slot->removeInvalidationCallback(this);
+		}
+		slot = img;
+		if (slot)
+		{
+			Callback cb{
+				.callback = [this, input_id](){},
+				.id = this,
+			};
+			slot->setInvalidationCallback(std::move(cb));
+		}
+	}
+	std::shared_ptr<ImageView> const& TemporalAntiAliasingAndUpscaler::getInput(Input input_id) const
+	{
+		u32 index = static_cast<u32>(input_id);
+		assert(index < _inputs.size32());
+		return _inputs[index];
+	}
+
 	TemporalAntiAliasingAndUpscaler::~TemporalAntiAliasingAndUpscaler()
 	{
-		_input->removeInvalidationCallback(this);
+		for (std::shared_ptr<ImageView> const& input : _inputs)
+		{
+			if (input)
+			{
+				input->removeInvalidationCallback(this);
+			}
+		}
 		_output->removeInvalidationCallback(this);
 	}
 
@@ -100,17 +129,19 @@ namespace vkl
 
 		if (_enable || ctx.updateAnyway())
 		{
+			_taau_command->descriptorSet()->setBinding(1, 0, 1, &_inputs[static_cast<u32>(Input::Color)]);
 			ctx.resourcesToUpdateLater() += _taau_command;
 		}
 	}
 
 	void TemporalAntiAliasingAndUpscaler::execute(ExecutionRecorder& exec, Camera const& camera)
 	{
-		if (_enable)
+		bool blit = _enable;
+		if (_mode == Mode::Default)
 		{
 			const Matrix4f new_matrix = camera.getWorldToProj();
 			TAAU_PushConstant pc{
-				.alpha = _alpha,
+				.alpha = 1.0f - _renew_rate,
 				.flags = 0,
 			};
 			_reset |= new_matrix != _matrix;
@@ -120,7 +151,7 @@ namespace vkl
 				_accumulated_samples = 0;
 				_matrix = new_matrix;
 			}
-			if (_mode == Mode::Accumulate)
+			if (_renew_rate < 0.0f)
 			{
 				float alpha = 1.0 / (_accumulated_samples + 1.0);
 				alpha = std::max<float>(alpha, 1.0 / double(_max_samples));
@@ -133,17 +164,30 @@ namespace vkl
 				.pc_data = &pc,
 				.pc_size = sizeof(pc),
 			}));
+			blit = false;
 			_reset = false;
 		}
-		else
+
+		if(blit)
 		{
 			BlitImage & blitter = application()->getPrebuiltTransferCommands().blit_image;
 
 			exec(blitter.with(BlitImage::BlitInfo{
-				.src = _input,
+				.src = _inputs[static_cast<u32>(Input::Color)],
 				.dst = _output,
 			}));
 		}
+	}
+
+	TemporalAntiAliasingAndUpscaler::Requirements TemporalAntiAliasingAndUpscaler::calcFrameRequirements()
+	{
+		Requirements res{};
+		VkExtent3D extent = _output->image()->extent().value();
+		Vector2u out_res(extent.width, extent.height);
+		res.input_resolution = out_res;
+		res.downscale = Vector2f::Ones();
+		res.image_memory = 0;
+		return res;
 	}
 
 	namespace GUI
@@ -151,6 +195,8 @@ namespace vkl
 		class TemporalAntiAliasingAndUpscalerInspector : public Panel
 		{
 		protected:
+			using TAAU = TemporalAntiAliasingAndUpscaler;
+			using Mode = TAAU::Mode;
 			std::shared_ptr<TemporalAntiAliasingAndUpscaler> _target;
 			ImGuiListSelection _mode;
 			MyVector<EnumOption<VkFormat>> _available_formats;
@@ -162,10 +208,10 @@ namespace vkl
 			{
 				_mode = ImGuiListSelection::CI{
 					.name = "Mode",
-					.mode = ImGuiListSelection::Mode::RadioButtons,
+					.mode = ImGuiListSelection::Mode::Dropdown,
 					.same_line = true,
-					.labels = {"Accumulate", "Alpha"},
-					.default_index = 1,
+					.labels = {"Default"},
+					.default_index = 0,
 				};
 
 				const VkImageUsageFlags usage = _target->output()->image()->usage();
@@ -214,32 +260,71 @@ namespace vkl
 				_mode.setIndex(static_cast<size_t>(_target->_mode));
 				if (_mode.declare())
 				{
-					_target->_mode = static_cast<TemporalAntiAliasingAndUpscaler::Mode>(_mode.index());
+					_target->_mode = static_cast<Mode>(_mode.index());
 					_target->_reset = true;
 				}
-				if (_mode.index() == 0)
+				if (static_cast<Mode>(_mode.index()) == Mode::Default)
 				{
-					ImGui::InputInt("Max samples: ", (int*)&_target->_max_samples);
-					ImGui::BeginDisabled();
-					ImGui::InputInt("Accumulated samples: ", (int*)&_target->_accumulated_samples);
-					ImGui::EndDisabled();
-				}
-				else if (_mode.index() == 1)
-				{
-					float one_minus_alpha = 1.0 - _target->_alpha;
-					if (ImGui::SliderFloat("Renew Rate", &one_minus_alpha, 0, 1, "%.4f", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+					float renew_rate = _target->_renew_rate;
+					bool accumulate = _target->_renew_rate < 0.0f;
 					{
-						_target->_alpha = 1.0 - one_minus_alpha;
+						std::array options = {
+							ImGuiListSelection::OptionView{
+								.label = "Accumulate",
+							},
+							ImGuiListSelection::OptionView{
+								.label = "Continuous",
+							},
+						};
+						ImGuiListSelection::DeclareInfoView di{
+							.label = "Blending:",
+							.options = std::span(options),
+							.index = accumulate ? 0u : 1u,
+							.same_line = true,
+						};
+						int selected = ImGuiListSelection::DeclareRadioButtons(di);
+						if (selected >= 0)
+						{
+							accumulate = selected == 0;
+							if (accumulate)
+							{
+								_target->_renew_rate = -1.0f;
+							}
+							else
+							{
+								_target->_renew_rate = TAAU::_Default_Renew_Rate;
+							}
+						}
 					}
+					if (accumulate)
+					{
+						ImGui::InputInt("Max samples: ", (int*)&_target->_max_samples);
+						ImGui::BeginDisabled();
+						ImGui::InputInt("Accumulated samples: ", (int*)&_target->_accumulated_samples);
+						ImGui::EndDisabled();
+					}
+					else
+					{
+						char format[] = "%.3f";
+						{
+							float scale = std::abs(std::log10(renew_rate));
+							int iscale = std::clamp(int(scale + 0.2f) + 3, 1, 9);
+							format[2] = '0' + iscale;
+						}
+						if (ImGui::SliderFloat("Renewing Rate", &renew_rate, 0, 1, format, ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
+						{
+							_target->_renew_rate = renew_rate;
+						}
+					}
+					GUI::DeclareDynamic("Accumulation Format", _target->_accumation_format, [&](const char* label, VkFormat& f)
+					{
+						return InspectVkEnum<VkFormat>(ctx, label, &f, _available_formats);
+					});
 				}
 				ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
 				_target->_reset |= ImGui::Button("Reset");
 				ImGui::PopStyleColor();
 
-				GUI::DeclareDynamic("Accumulation Format", _target->_accumation_format, [&](const char* label, VkFormat& f)
-				{
-					return InspectVkEnum<VkFormat>(ctx, label, &f, _available_formats);
-				});
 			}
 		};
 	}
