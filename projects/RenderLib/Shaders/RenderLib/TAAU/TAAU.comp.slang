@@ -8,7 +8,7 @@ layout(SHADER_DESCRIPTOR_BINDING + 2, IMAGE_FORMAT) uniform restrict RWTexture2D
 
 struct PushConstant
 {
-	float alpha;
+	float new_sample_weight;
 	uint flags;
 };
 
@@ -26,7 +26,7 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 	{
 		const vec4 new_data = Input.Load(pixel);
 
-		const float alpha = _pc.alpha;
+		const float new_sample_weight = _pc.new_sample_weight;
 
 		vec4 result = 0..xxxx;
 		if((_pc.flags & TAAU_FLAG_RESET_BIT) != 0)
@@ -37,10 +37,10 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 		else
 		{
 			const vec4 old_data = Output.Load(pixel);
-			// float precision issue as lim alpha -> 1
+			// float precision issue as lim alpha -> 0
 			// The image darkens
 			// On host, the alpha is limited to a numer of samples before the darkening is too visible
-			result.xyz = lerp(new_data.xyz, old_data.xyz, alpha);
+			result.xyz = lerp(old_data.xyz, new_data.xyz, new_sample_weight);
 		}
 
 		Output.Store(pixel, result);

@@ -79,7 +79,7 @@ namespace vkl
 		std::shared_ptr<ComputeCommand> _taau_command;
 		struct TAAU_PushConstant
 		{
-			float alpha;
+			float new_sample_weight;
 			uint32_t flags;
 		};
 

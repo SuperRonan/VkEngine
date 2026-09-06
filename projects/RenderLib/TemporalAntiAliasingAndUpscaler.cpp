@@ -141,7 +141,7 @@ namespace vkl
 		{
 			const Matrix4f new_matrix = camera.getWorldToProj();
 			TAAU_PushConstant pc{
-				.alpha = 1.0f - _renew_rate,
+				.new_sample_weight = _renew_rate,
 				.flags = 0,
 			};
 			_reset |= new_matrix != _matrix;
@@ -150,13 +150,17 @@ namespace vkl
 				pc.flags |= 0x1;
 				_accumulated_samples = 0;
 				_matrix = new_matrix;
+				pc.new_sample_weight = 1;
 			}
-			if (_renew_rate < 0.0f)
+			else
 			{
-				float alpha = 1.0 / (_accumulated_samples + 1.0);
-				alpha = std::max<float>(alpha, 1.0 / double(_max_samples));
-				pc.alpha = 1.0 - alpha;
-				++_accumulated_samples;
+				float samples_alpha = 1.0 / (_accumulated_samples + 1.0);
+				float min_alpha = _renew_rate;
+				if (_renew_rate < 0.0f)
+				{
+					min_alpha = 1.0 / double(_max_samples);
+				}
+				pc.new_sample_weight = std::max(min_alpha, samples_alpha);
 			}
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
 				.extent = _output->image()->instance()->createInfo().extent,
@@ -164,6 +168,7 @@ namespace vkl
 				.pc_data = &pc,
 				.pc_size = sizeof(pc),
 			}));
+			++_accumulated_samples;
 			blit = false;
 			_reset = false;
 		}
