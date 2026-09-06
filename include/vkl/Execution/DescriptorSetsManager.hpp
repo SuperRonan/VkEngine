@@ -5,10 +5,14 @@
 #include <vkl/VkObjects/DescriptorPool.hpp>
 #include <vkl/VkObjects/DescriptorSet.hpp>
 #include <vkl/VkObjects/CommandBuffer.hpp>
-#include <vkl/VkObjects/AccelerationStructure.hpp>
 
 namespace vkl
 {
+	// TODO Rework this system at some point:
+	// Properly separate Set and Pool code / data
+	// Think about using invalidation callbacks vs checking bound resources every time
+	// If checking every time: Check if the instance changed, and if so, check the handle of the instance maybe
+
 	using Binding = ShaderBindingDescription;
 	using SetRange = Range32u;
 
@@ -105,6 +109,8 @@ namespace vkl
 				return _bindings.data() + index;
 			}
 		}
+
+		// TODO it would be nice to have setBindingMove() versions
 
 		void setBinding(uint32_t binding, uint32_t array_index, uint32_t count, const BufferAndRange* buffers = nullptr);
 
