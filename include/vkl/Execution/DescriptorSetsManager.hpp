@@ -21,6 +21,8 @@ namespace vkl
 		// sorted and at the size of layout.bindings -> can keep a pointer on a binding
 		// arrays in bindings are also at the right size -> can keep a pointer on a array elem
 		ResourceBindings _bindings = {};
+		MyVector<VkDescriptorBufferInfo> _registered_buffers = {};
+
 
 		std::shared_ptr<DescriptorPool> _pool = nullptr;
 		std::shared_ptr<DescriptorSet> _set = nullptr;
@@ -32,6 +34,10 @@ namespace vkl
 		void sortBindings();
 
 		void installInvalidationCallbacks();
+
+		void createBuffersRegistrations();
+
+		void checkBufferBinding(ResourceBinding& binding);
 
 	public:
 

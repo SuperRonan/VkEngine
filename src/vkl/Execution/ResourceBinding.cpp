@@ -327,13 +327,14 @@ namespace vkl
 	{
 		if (isBuffer())
 		{
-			for (size_t i = 0; i < buffers.size(); ++i)
-			{
-				if (buffers[i])
-				{
-					buffers[i].buffer->removeInvalidationCallback(buffers.data() + i);
-				}
-			}
+			// Buffer bindings don't use callbacks anymore
+			//for (size_t i = 0; i < buffers.size(); ++i)
+			//{
+			//	if (buffers[i])
+			//	{
+			//		buffers[i].buffer->removeInvalidationCallback(buffers.data() + i);
+			//	}
+			//}
 		}
 		else if (hasImage() || hasSampler())
 		{

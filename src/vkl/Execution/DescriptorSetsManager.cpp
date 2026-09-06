@@ -16,6 +16,7 @@ namespace vkl
 		sortBindings();
 		assert(checkIntegrity());
 		allocateDescriptorSet();
+		createBuffersRegistrations();
 		installInvalidationCallbacks();
 	}
 
@@ -102,8 +103,27 @@ namespace vkl
 					};
 					binding.invalidateAll();
 					binding.resize(binding_layout.descriptorCount);
-					
 				}
+			}
+		}
+	}
+
+	void DescriptorSetAndPoolInstance::createBuffersRegistrations()
+	{
+		{
+			auto tf = _bindings | std::ranges::views::transform([](ResourceBinding const& b){if(b.isBuffer()) return b.buffers.size32(); else return 0u;});
+			const size_t num_buffer_bindings = std::accumulate(tf.begin(), tf.end(), 0u);
+			if (num_buffer_bindings == 0) return;
+			_registered_buffers.resize(num_buffer_bindings);
+		}
+		uint32_t registration_offset = 0;
+		for (size_t i = 0; i < _bindings.size(); ++i)
+		{
+			ResourceBinding& binding = _bindings[i];
+			if (binding.isBuffer())
+			{
+				binding.buffer_registration_index = registration_offset;
+				registration_offset += binding.buffers.size32();
 			}
 		}
 	}
@@ -113,24 +133,29 @@ namespace vkl
 		for (size_t i = 0; i < _bindings.size(); ++i)
 		{
 			ResourceBinding & binding = _bindings[i];
-			if (false)
+			// Buffer bindings are checked manualy before writing
+			if (!binding.isBuffer())
 			{
-				Callback cb{
-					.callback = [i,  this]() {
-						_bindings[i].invalidateAll();
-					},
-					.id = this,
-				};
-				binding.installCallback(cb);
-			}
-			else
-			{
-				binding.installCallbacks([i, this](uint32_t index) {
-					return [i, this, index]()
-					{
-						_bindings[i].invalidate(Range32u{.begin = index, .len = 1});
+				if (false)
+				{
+					Callback cb{
+						.callback = [i,  this]() {
+							_bindings[i].invalidateAll();
+						},
+						.id = this,
 					};
-				});
+					binding.installCallback(cb);
+				}
+				else
+				{
+
+					binding.installCallbacks([i, this](uint32_t index) {
+						return [i, this, index]()
+						{
+							_bindings[i].invalidate(Range32u{.begin = index, .len = 1});
+						};
+					});
+				}
 			}
 		}
 	}
@@ -212,6 +237,30 @@ namespace vkl
 		}
 	}
 
+	void DescriptorSetAndPoolInstance::checkBufferBinding(ResourceBinding& binding)
+	{
+		assert(binding.isBuffer());
+		for (uint i = 0; i < binding.buffers.size32(); ++i)
+		{
+			const VkDescriptorBufferInfo& registered = _registered_buffers[binding.buffer_registration_index + i];
+			BufferSegment& provider = binding.buffers[i];
+			BufferInstance* inst = provider.buffer ? provider.buffer->instance() : nullptr;
+			const VkBuffer handle = inst ? inst->handle() : VK_NULL_HANDLE;
+			if (handle != registered.buffer)
+			{
+				binding.invalidate(i);
+				continue;
+			}
+			Buffer::Range range = {};
+			if(provider.range)	range = provider.range.value();
+			if(range.len == 0) range.len = VK_WHOLE_SIZE;
+			if (range != Buffer::Range{.begin = registered.offset, .len = registered.range})
+			{
+				binding.invalidate(i);
+			}
+		}
+	}
+
 	void DescriptorSetAndPoolInstance::writeDescriptorSet(DescriptorWriter& writer)
 	{
 		const VkDescriptorBindingFlags common_binding_flags = _layout->bindingFlags();
@@ -221,7 +270,10 @@ namespace vkl
 			const VkDescriptorSetLayoutBinding & layout_binding = _layout->bindings()[i];
 			ResourceBinding& b = _bindings[i];
 			assert(b.isResolved());
-			// TODO scan all buffers to check any range change (e.g. the updated flag is useless for buffers?)
+			if (b.isBuffer())
+			{
+				checkBufferBinding(b);
+			}
 			if (b.update_range.len != 0)
 			{
 				bool do_write = false;
@@ -245,7 +297,7 @@ namespace vkl
 							const BufferAndRange & bar = b.buffers[i + b.update_range.begin];
 							if (bar.buffer && bar.buffer->instance())
 							{
-								BufferInstanceSegmentShared bari = bar.getInstance();
+								BufferInstanceSegmentRaw bari = bar.getInstanceRaw();
 								if (bari.range.len == 0)
 								{
 									bari.range.len = VK_WHOLE_SIZE;
@@ -259,12 +311,15 @@ namespace vkl
 							else
 							{
 								any_null = true;
+								// VUID-VkDescriptorBufferInfo-buffer-02999
 								infos[i] = VkDescriptorBufferInfo{
 									.buffer = VK_NULL_HANDLE,
 									.offset = 0,
-									.range = VK_WHOLE_SIZE,
+									.range = VK_WHOLE_SIZE, // Must be VK_WHOLE_SIZE
 								};
 							}
+							VkDescriptorBufferInfo& registration = _registered_buffers[b.buffer_registration_index + b.update_range.begin + i];
+							registration = infos[i];
 						}
 						if (any_null)
 						{
@@ -408,27 +463,40 @@ namespace vkl
 		auto & bb = found->buffers;
 		if (bb.size32() >= (array_index + count)) // enough capacity
 		{
-			for (uint32_t i = 0; i < count; ++i)
+			bool invalidate = false;
+			if (buffers)
 			{
-				const uint32_t binding_array_index = array_index + i;
-				BufferAndRange & binding_bar = bb[binding_array_index];
-				if (binding_bar.buffer)
+				for (uint32_t i = 0; i < count; ++i)
 				{
-					binding_bar.buffer->removeInvalidationCallback(bb.data() + binding_array_index);
-				}
-			
-				binding_bar = buffers ? buffers[i] : BufferAndRange{};
-				if (binding_bar.buffer)
-				{
-					binding_bar.buffer->setInvalidationCallback(Callback{
-						.callback = [this, found, binding_array_index]() {
-							found->invalidate(binding_array_index);
-						},
-						.id = bb.data() + binding_array_index,
-					});
+					const uint32_t binding_array_index = array_index + i;
+					BufferAndRange& binding_bar = bb[binding_array_index];
+					// Ranges are checked before every writes anyway, so callbacks aren't useful
+					if (binding_bar.buffer != buffers[i].buffer)
+					{
+						invalidate = true;
+						binding_bar = buffers[i];
+					}
+					else if(!binding_bar.range.isSame(buffers[i].range))
+					{
+						invalidate = true;
+						binding_bar.range = buffers[i].range;
+					}
 				}
 			}
-			found->invalidate(Range32u{.begin = array_index, .len = count});
+			else
+			{
+				for (uint32_t i = 0; i < count; ++i)
+				{
+					const uint32_t binding_array_index = array_index + i;
+					BufferAndRange& binding_bar = bb[binding_array_index];
+					binding_bar.buffer.reset();
+					binding_bar.range.clear();
+				}
+			}
+			if (invalidate)
+			{
+				found->invalidate(Range32u{.begin = array_index, .len = count});
+			}
 			assert(checkIntegrity());
 		}
 		else

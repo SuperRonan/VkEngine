@@ -46,6 +46,9 @@ namespace vkl
 		// .len == -1 -> should update all range
 		Range32u update_range = {};
 
+		// Used by descriptor set
+		uint32_t buffer_registration_index = 0;
+
 	protected:
 
 		constexpr uint32_t unionIndex()const
