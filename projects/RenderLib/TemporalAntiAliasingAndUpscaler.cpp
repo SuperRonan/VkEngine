@@ -59,7 +59,7 @@ namespace vkl
 		_taau_command = std::make_shared<ComputeCommand>(ComputeCommand::CI{
 			.app = application(),
 			.name = name() + ".Command",
-			.shader_path = shaders / "TAAU/TAAU.comp",
+			.shader_path = shaders / "TAAU/TAAU.comp.slang",
 			.extent = _output->image()->extent(),
 			.dispatch_threads = true,
 			.sets_layouts = _sets_layouts,
