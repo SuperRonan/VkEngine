@@ -156,10 +156,6 @@ namespace vkl
 			{
 				float samples_alpha = 1.0 / (_accumulated_samples + 1.0);
 				float min_alpha = _renew_rate;
-				if (_renew_rate < 0.0f)
-				{
-					min_alpha = 1.0 / double(_max_samples);
-				}
 				pc.new_sample_weight = std::max(min_alpha, samples_alpha);
 			}
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
@@ -270,46 +266,18 @@ namespace vkl
 				}
 				if (static_cast<Mode>(_mode.index()) == Mode::Default)
 				{
-					float renew_rate = _target->_renew_rate;
-					bool accumulate = _target->_renew_rate < 0.0f;
 					{
-						std::array options = {
-							ImGuiListSelection::OptionView{
-								.label = "Accumulate",
-							},
-							ImGuiListSelection::OptionView{
-								.label = "Continuous",
-							},
-						};
-						ImGuiListSelection::DeclareInfoView di{
-							.label = "Blending:",
-							.options = std::span(options),
-							.index = accumulate ? 0u : 1u,
-							.same_line = true,
-						};
-						int selected = ImGuiListSelection::DeclareRadioButtons(di);
-						if (selected >= 0)
+						float samples = rcp(_target->_renew_rate);
+						if (ImGui::SliderFloat("Max samples: ", &samples, 1, 128 * 128, "%.0f samples", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat))
 						{
-							accumulate = selected == 0;
-							if (accumulate)
-							{
-								_target->_renew_rate = -1.0f;
-							}
-							else
-							{
-								_target->_renew_rate = TAAU::_Default_Renew_Rate;
-							}
+							_target->_renew_rate = rcp(samples);
 						}
-					}
-					if (accumulate)
-					{
-						ImGui::InputInt("Max samples: ", (int*)&_target->_max_samples);
 						ImGui::BeginDisabled();
 						ImGui::InputInt("Accumulated samples: ", (int*)&_target->_accumulated_samples);
 						ImGui::EndDisabled();
 					}
-					else
 					{
+						float renew_rate = _target->_renew_rate;
 						char format[] = "%.3f";
 						{
 							float scale = std::abs(std::log10(renew_rate));

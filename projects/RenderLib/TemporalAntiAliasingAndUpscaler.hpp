@@ -52,7 +52,7 @@ namespace vkl
 
 	protected:
 
-		static const constexpr float _Default_Renew_Rate = 0.0625;
+		static const constexpr float _Default_Renew_Rate = rcp(float(1024));
 
 		std::shared_ptr<ComputeCommand> _temporal_intergration;
 		std::shared_ptr<ImageView> _output;
@@ -64,7 +64,6 @@ namespace vkl
 
 		Mode _mode = Mode::Default;
 		float _renew_rate = _Default_Renew_Rate;
-		uint _max_samples = 128*128;
 		Vector2u _downsample_integral = Vector2u(1, 1);
 
 		uint32_t _accumulated_samples = 0;
