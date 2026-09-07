@@ -503,7 +503,7 @@ namespace vkl
 			_target = ci.view->instancePtr();
 			_dst_layout = application()->options().getLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
-			_value = ci.value.value();
+			_value = ci.value ? *ci.value : VkClearValue{};
 
 			resources() += ImageViewUsage{
 				.ivi = _target,
