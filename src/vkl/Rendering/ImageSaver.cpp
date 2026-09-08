@@ -89,7 +89,7 @@ namespace vkl
 
 				DelayedTaskExecutor * thread_pool = nullptr;
 			};
-			std::string filename = nullptr;
+			std::string filename = {};
 			if (_dst_filename.empty())
 			{
 				filename = std::format("{}_", application()->getProjectName());
