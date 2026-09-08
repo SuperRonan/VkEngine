@@ -11,6 +11,7 @@
 #include <vkl/GUI/ImGuiDynamic.hpp>
 #include <vkl/GUI/VulkanEnumWidgets.hpp>
 #include <vkl/GUI/InspectorMakeInfo.hpp>
+#include <vkl/GUI/FancyButtons.hpp>
 
 namespace vkl
 {
@@ -126,12 +127,41 @@ namespace vkl
 	{
 		setFormat();
 		_output->updateResources(ctx);
+		{
+			VkExtent3D extent = _output->image()->extent().value();
+			Vector2u out_res(extent.width, extent.height);
+			_input_resolution = out_res;
+			if(_enable)
+			{
+				if (_mode == Mode::Default)
+				{
+					_input_resolution = ((_input_resolution.cast<float>() / _scaling)).cast<uint>();;
+				}
+			}
+		}
 
 		if (_enable || ctx.updateAnyway())
 		{
 			_taau_command->descriptorSet()->setBinding(1, 0, 1, &_inputs[static_cast<u32>(Input::Color)]);
 			ctx.resourcesToUpdateLater() += _taau_command;
 		}
+	}
+
+	TemporalAntiAliasingAndUpscaler::FrameParameters TemporalAntiAliasingAndUpscaler::getFrameParameters()
+	{
+		FrameParameters res{};
+		
+		return res;
+	}
+
+	bool TemporalAntiAliasingAndUpscaler::setScaling(Vector2f const& scaling)
+	{
+		if (_scaling != scaling)
+		{
+			_reset = true;
+			_scaling = scaling;
+		}
+		return true;
 	}
 
 	void TemporalAntiAliasingAndUpscaler::execute(ExecutionRecorder& exec, Camera const& camera)
@@ -151,6 +181,14 @@ namespace vkl
 				_accumulated_samples = 0;
 				_matrix = new_matrix;
 				pc.new_sample_weight = 1;
+
+				if(_clear_on_reset)
+				{
+					auto& clearer = application()->getPrebuiltTransferCommands().clear_image;
+					exec(clearer.with(ClearImage::ClearInfo{
+						.view = _output,
+					}));
+				}
 			}
 			else
 			{
@@ -158,13 +196,27 @@ namespace vkl
 				float min_alpha = _renew_rate;
 				pc.new_sample_weight = std::max(min_alpha, samples_alpha);
 			}
+			uint sample_count = 1;
+			{
+				Vector2<u16> new_pixel = Vector2<u16>::Zero();
+				const Vector2<u16> scaling_int = _scaling.cast<u16>();
+				const uint index = _frame_counter;
+				new_pixel.x() = static_cast<u16>((index % scaling_int.x()));
+				new_pixel.y() = static_cast<u16>((index / scaling_int.x()) % scaling_int.y());
+				pc.new_pixel_location = new_pixel;
+				if (((index + 1) % scaling_int.cast<uint>().prod()) != 0)
+				{
+					sample_count = 0;
+				}
+			}
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
-				.extent = _output->image()->instance()->createInfo().extent,
+				.extent = VkExtent3D{.width = _input_resolution.x(), .height = _input_resolution.y(), .depth = 1},
 				.dispatch_threads = true,
 				.pc_data = &pc,
 				.pc_size = sizeof(pc),
 			}));
-			++_accumulated_samples;
+			_accumulated_samples += sample_count;
+			++_frame_counter;
 			blit = false;
 			_reset = false;
 		}
@@ -185,8 +237,8 @@ namespace vkl
 		Requirements res{};
 		VkExtent3D extent = _output->image()->extent().value();
 		Vector2u out_res(extent.width, extent.height);
-		res.input_resolution = out_res;
-		res.downscale = Vector2f::Ones();
+		res.scaling = _scaling;
+		res.input_resolution = _input_resolution;
 		res.image_memory = 0;
 		return res;
 	}
@@ -201,6 +253,8 @@ namespace vkl
 			std::shared_ptr<TemporalAntiAliasingAndUpscaler> _target;
 			ImGuiListSelection _mode;
 			MyVector<EnumOption<VkFormat>> _available_formats;
+
+			bool _uniform_scaling = true;
 		public:
 
 			TemporalAntiAliasingAndUpscalerInspector(std::shared_ptr<TemporalAntiAliasingAndUpscaler> const& target) :
@@ -293,10 +347,47 @@ namespace vkl
 					{
 						return InspectVkEnum<VkFormat>(ctx, label, &f, _available_formats);
 					});
+
+					{
+						Vector2i scaling_int = _target->_scaling.cast<int>();
+						_uniform_scaling &= (scaling_int.x() == scaling_int.y());
+						bool edit = false;
+						const int max_scaling = 8;
+						ImGuiSliderFlags flags = ImGuiSliderFlags_None;
+						const char* label = "Scaling";
+						if (_uniform_scaling)
+						{
+							if (ImGui::SliderInt(label, &scaling_int.x(), 1, max_scaling, nullptr, flags))
+							{
+								edit = true;
+								scaling_int.y() = scaling_int.x();
+							}
+						}
+						else
+						{
+							edit |= ImGui::SliderInt2(label, scaling_int.data(), 1, max_scaling, nullptr, flags);
+						}
+						if (edit)
+						{
+							scaling_int = scaling_int.cwiseMax(Vector2i::Ones());
+							_target->setScaling(scaling_int.cast<float>());
+						}
+						ImGui::SameLine();
+						if (ImGui::InboxCheckbox("Unform", &_uniform_scaling))
+						{
+							if (_uniform_scaling)
+							{
+								int avg = scaling_int.mean();
+								_target->setScaling(MakeUniformVector<2>(float(avg)));
+							}
+						}
+					}
 				}
 				ImGui::PushStyleColor(ImGuiCol_Text, ctx.style().warning_yellow);
 				_target->_reset |= ImGui::Button("Reset");
 				ImGui::PopStyleColor();
+				ImGui::SameLine();
+				ImGui::Checkbox("Auto Clear", &_target->_clear_on_reset);
 
 			}
 		};

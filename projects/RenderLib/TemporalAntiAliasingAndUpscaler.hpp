@@ -41,7 +41,7 @@ namespace vkl
 			MotionFlags motion = MotionFlags::None;
 			u8 image_memory = 0; // Number of extra layers of previous input images needed (0 means 1 layer (current frame) is needed)
 			Vector2u input_resolution = {};
-			Vector2f downscale = {};
+			Vector2f scaling = {};
 		};
 
 		enum class Input : u32
@@ -61,12 +61,15 @@ namespace vkl
 
 		bool _enable = true;
 		bool _reset = true;
+		bool _clear_on_reset = true;
 
 		Mode _mode = Mode::Default;
 		float _renew_rate = _Default_Renew_Rate;
-		Vector2u _downsample_integral = Vector2u(1, 1);
+		Vector2u _input_resolution = {};
+		Vector2f _scaling = Vector2f(1, 1);
 
 		uint32_t _accumulated_samples = 0;
+		uint32_t _frame_counter = 0;
 
 		Dyn<VkFormat> _accumation_format = {};
 		std::string _format_glsl;
@@ -80,6 +83,7 @@ namespace vkl
 		{
 			float new_sample_weight;
 			uint32_t flags;
+			Vector2<u16> new_pixel_location;
 		};
 
 		void setFormat();
@@ -109,6 +113,17 @@ namespace vkl
 
 		void updateResources(UpdateContext& ctx);
 
+		struct FrameParameters
+		{
+			enum class Flags
+			{
+				None = 0x0,
+			};
+			Flags flags = Flags::None;
+			Vector2f jitter = Vector2f::Zero(); // in [-0.5, 0.5]
+		};
+		FrameParameters getFrameParameters();
+
 		void execute(ExecutionRecorder& recorder, Camera const& camera);
 
 		using InspectorType = GUI::TemporalAntiAliasingAndUpscalerInspector;
@@ -121,8 +136,11 @@ namespace vkl
 		}
 
 		Requirements calcFrameRequirements();
+
+		bool setScaling(Vector2f const& scaling);
 	};
 }
 
 THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::TemporalAntiAliasingAndUpscaler::Requirements::Flags);
 THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::TemporalAntiAliasingAndUpscaler::Requirements::MotionFlags);
+THAT_DECLARE_ENUM_CLASS_OPERATORS(vkl::TemporalAntiAliasingAndUpscaler::FrameParameters::Flags);
