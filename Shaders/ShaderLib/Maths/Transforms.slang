@@ -22,6 +22,12 @@ Vector<Scalar, N + 1> Homogeneous(const in Vector<Scalar, N> vec, Scalar h = Sca
 	return res;
 }
 
+__generic <typename Scalar : __BuiltinArithmeticType, int N>
+Matrix<Scalar, N + 1, N + 1> Homogeneous(const in AffineXForm<Scalar, N> mat, Scalar h = Scalar(1))
+{
+	return ResizeMatrix<N + 1, N + 1>(mat, h);
+}
+
 __generic <typename Scalar : __BuiltinFloatingPointType, int N>
 Vector<Scalar, N - 1> HomogeneousNormalize(const in Vector<Scalar, N> vec)
 {
