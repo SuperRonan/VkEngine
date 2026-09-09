@@ -147,10 +147,28 @@ namespace vkl
 		}
 	}
 
+	Vector2<u16> GetPixelLocation(Vector2<u16> scaling, uint frame_index)
+	{
+		Vector2<u16> new_pixel = Vector2<u16>::Zero();
+		new_pixel.x() = static_cast<u16>((frame_index % scaling.x()));
+		new_pixel.y() = static_cast<u16>((frame_index / scaling.x()) % scaling.y());
+		return new_pixel;
+	}
+
 	TemporalAntiAliasingAndUpscaler::FrameParameters TemporalAntiAliasingAndUpscaler::getFrameParameters()
 	{
 		FrameParameters res{};
-		
+		if(_enable)
+		{
+			if (_mode == Mode::Default)
+			{
+				const Vector2<u16> scaling_int = _scaling.cast<u16>();
+				const Vector2<u16> pixel_loc = GetPixelLocation(scaling_int, _frame_counter);
+				Vector2f jitter_01 = (pixel_loc.cast<float>() + Vector2f::Constant(0.5f)) / _scaling;
+				res.jitter = jitter_01 - Vector2f::Constant(0.5f);
+				res.pixel_location = pixel_loc;
+			}
+		}
 		return res;
 	}
 
@@ -198,13 +216,10 @@ namespace vkl
 			}
 			uint sample_count = 1;
 			{
-				Vector2<u16> new_pixel = Vector2<u16>::Zero();
 				const Vector2<u16> scaling_int = _scaling.cast<u16>();
-				const uint index = _frame_counter;
-				new_pixel.x() = static_cast<u16>((index % scaling_int.x()));
-				new_pixel.y() = static_cast<u16>((index / scaling_int.x()) % scaling_int.y());
+				Vector2<u16> new_pixel = GetPixelLocation(scaling_int, _frame_counter);
 				pc.new_pixel_location = new_pixel;
-				if (((index + 1) % scaling_int.cast<uint>().prod()) != 0)
+				if (((_frame_counter + 1) % static_cast<uint>(scaling_int.prod())) != 0)
 				{
 					sample_count = 0;
 				}
