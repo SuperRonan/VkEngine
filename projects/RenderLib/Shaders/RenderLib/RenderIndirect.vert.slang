@@ -35,7 +35,7 @@ void main(
 	const vec2 a_uv = vertex.uv;
 	
 	let camera = MakeMatrixCamera(renderer_ubo.camera);
-	const mat4 w2p = camera.getWorldToProj();
+	const mat4 w2p = camera.getWorldToProj(renderer_ubo.getCameraMatrixJitter());
 	let o2w = vd.matrix;
 	const mat4 o2p = w2p * ResizeMatrix<4, 4>(o2w);
 

@@ -174,6 +174,11 @@ namespace vkl
 			float time;
 			float delta_time;
 			uint32_t frame_idx;
+			Vector2<s16> pixel_jitter_snorm; // in [-1, 1]
+
+			Vector2f oo_render_resolution;
+			Vector2<u16> render_resolution;
+			Vector2<u16> output_resolution;
 
 			alignas(16) Camera::AsGLSL camera;
 		};

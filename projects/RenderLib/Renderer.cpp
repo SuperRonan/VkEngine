@@ -7,6 +7,8 @@
 #include <vkl/GUI/TypedInlineInspector.hpp>
 #include <vkl/GUI/InspectorMakeInfo.hpp>
 
+#include <vkl/Maths/FormatConversions.hpp>
+
 namespace vkl
 {
 	SimpleRenderer::SimpleRenderer(CreateInfo const& ci):
@@ -1009,10 +1011,17 @@ namespace vkl
 	{
 		exec.pushDebugLabel(name() + ".execute()", true);
 
+		TemporalAntiAliasingAndUpscaler::FrameParameters taau_frame_parameters = _taau->getFrameParameters();
+		Vector2<u16> render_resolution(_render_resolution.width, _render_resolution.height);
+		Vector2<u16> output_resolution = [&](){VkExtent3D const& extent = _output_target->instance()->image()->createInfo().extent; return Vector2<u16>(extent.width, extent.height); }();
 		UBO ubo{
 			.time = time,
 			.delta_time = dt,
 			.frame_idx = frame_id,
+			.pixel_jitter_snorm = PackNorm<s16>((taau_frame_parameters.jitter * 2.0f).eval()),
+			.oo_render_resolution = render_resolution.cast<float>().cwiseInverse(),
+			.render_resolution = render_resolution,
+			.output_resolution = output_resolution,
 			.camera = _camera->getAsGLSL(),
 		};
 		_ubo_buffer->set(0, &ubo, sizeof(ubo));

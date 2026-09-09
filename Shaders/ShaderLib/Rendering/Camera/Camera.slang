@@ -12,6 +12,28 @@
 #include <ShaderLib/Random.slang>
 #include <ShaderLib/Maths/Sampling.slang>
 
+__generic <Float : __BuiltinFloatingPointType>
+mat4 ApplyJitter(const in mat4 P, Vector2<Float> jitter)
+{
+	return Homogeneous(TranslationMatrix(vec3(-jitter, 0))) * P;
+}
+
+__generic <Float : __BuiltinFloatingPointType>
+mat4 ApplyPerspectiveJitter(mat4 P, Vector2<Float> jitter)
+{
+	for(uint i = 0; i < 2; ++i)
+	{
+		P[i][2] -= jitter[i].toFloat();
+	}
+	return P;
+}
+
+__generic <Float : __BuiltinFloatingPointType>
+mat4 ApplyInverseJitter(const in mat4 inv_P, Vector2<Float> jitter)
+{
+	return inv_P * Homogeneous(TranslationMatrix(vec3(-jitter, 0)));
+}
+
 enum CameraType
 {
 	Perspective = CAMERA_TYPE_PERSPECTIVE,
@@ -151,13 +173,15 @@ interface IMatrixCamera : ICamera
 {
 	__init(const in StorageCamera cam);
 
-	mat4 getViewToProj(uint layer = 0);
+	// Jitter in [-px, px], px = half pixel size (1 / resolution)
+	// Jitter translates the clip space
+	mat4 getViewToProj(vec2 jitter = vec2::Zero(), uint layer = 0);
 
-	mat4 getProjToView(uint layer = 0);
+	mat4 getProjToView(vec2 jitter = vec2::Zero(), uint layer = 0);
 
-	mat4 getWorldToProj(uint layer = 0);
+	mat4 getWorldToProj(vec2 jitter = vec2::Zero(), uint layer = 0);
 
-	mat4 getProjToWorld(uint layer = 0);
+	mat4 getProjToWorld(vec2 jitter = vec2::Zero(), uint layer = 0);
 }
 
 
@@ -273,38 +297,44 @@ struct PerspectiveCamera : CameraBase, IMatrixCamera
 		return true;
 	}
 
-	mat4 getViewToProj(uint layer = 0)
+	mat4 getViewToProj(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
+		mat4 res;
 		if(hasInfiniteDepth())
 		{
-			return InfinitePerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_near, hasReversedDepth());
+			res = InfinitePerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, z_near, hasReversedDepth());
 		}
 		else
 		{
-			return PerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, vec2(z_near, z_far), hasReversedDepth());
+			res = PerspectiveProjFromInvTanInvAspect(inv_tan_half_fov, inv_aspect, vec2(z_near, z_far), hasReversedDepth());
 		}
+		res = ApplyPerspectiveJitter(res, jitter);
+		return res;
 	}
 
-	mat4 getProjToView(uint layer = 0)
+	mat4 getProjToView(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
+		mat4 res;
 		if(hasInfiniteDepth())
 		{
-			return InverseInfinitePerspectiveProjFromTanInvZnear(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(z_near), hasReversedDepth());
+			res = InverseInfinitePerspectiveProjFromTanInvZnear(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(z_near), hasReversedDepth());
 		}
 		else
 		{
-			return InversePerspectiveProjFromTan(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(vec2(z_near, z_far)), hasReversedDepth());
+			res = InversePerspectiveProjFromTan(rcp(inv_tan_half_fov), rcp(inv_aspect), rcp(vec2(z_near, z_far)), hasReversedDepth());
 		}
+		res = ApplyInverseJitter(res, jitter);
+		return res;
 	}
 
-	mat4 getWorldToProj(uint layer = 0)
+	mat4 getWorldToProj(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return getViewToProj(layer) * ResizeMatrix<4, 4>(getWorldToView(layer));
+		return getViewToProj(jitter, layer) * Homogeneous(getWorldToView(layer));
 	}
 
-	mat4 getProjToWorld(uint layer = 0)
+	mat4 getProjToWorld(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return ResizeMatrix<4, 4>(getViewToWorld(layer)) * getProjToView(layer);
+		return Homogeneous(getViewToWorld(layer)) * getProjToView(jitter, layer);
 	}
 
 	// direction going out from the camera, and is normalized
@@ -549,24 +579,24 @@ struct ThinLensCamera : IMatrixCamera
 		return _super.getViewToWorld(layer);
 	}
 
-	mat4 getViewToProj(uint layer = 0)
+	mat4 getViewToProj(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return _super.getViewToProj(layer);
+		return _super.getViewToProj(jitter, layer);
 	}
 
-	mat4 getProjToView(uint layer = 0)
+	mat4 getProjToView(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return _super.getProjToView(layer);
+		return _super.getProjToView(jitter, layer);
 	}
 
-	mat4 getWorldToProj(uint layer = 0)
+	mat4 getWorldToProj(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return _super.getWorldToProj(layer);
+		return _super.getWorldToProj(jitter, layer);
 	}
 
-	mat4 getProjToWorld(uint layer = 0)
+	mat4 getProjToWorld(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return _super.getProjToWorld(layer);
+		return _super.getProjToWorld(jitter, layer);
 	}
 
 	CameraRay getRay(vec2 cp, Matrix2f cp_jacobian = Matrix2f::Zero(), uint layer = 0)
@@ -719,26 +749,26 @@ struct OrthographicCamera : CameraBase, IMatrixCamera
 		return res;
 	}
 
-	mat4 getViewToProj(uint layer = 0)
+	mat4 getViewToProj(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
 		AABB3f volume = getAABB();
-		return OrthoProj(volume.bottom(), volume.top(), hasReversedDepth());
+		return ApplyJitter(OrthoProj(volume.bottom(), volume.top(), hasReversedDepth()), jitter);
 	}
 
-	mat4 getProjToView(uint layer = 0)
+	mat4 getProjToView(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
 		AABB3f volume = getAABB();
-		return InverseOrthoProj(volume.bottom(), volume.top(), hasReversedDepth());
+		return ApplyInverseJitter(InverseOrthoProj(volume.bottom(), volume.top(), hasReversedDepth()), jitter);
 	}
 
-	mat4 getWorldToProj(uint layer = 0)
+	mat4 getWorldToProj(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return getViewToProj(layer) * ResizeMatrix<4, 4>(getWorldToView(layer));
+		return getViewToProj(jitter, layer) * ResizeMatrix<4, 4>(getWorldToView(layer));
 	}
 
-	mat4 getProjToWorld(uint layer = 0)
+	mat4 getProjToWorld(vec2 jitter = vec2::Zero(), uint layer = 0)
 	{
-		return ResizeMatrix<4, 4>(getViewToWorld(layer)) * getProjToView(layer);
+		return ResizeMatrix<4, 4>(getViewToWorld(layer)) * getProjToView(jitter, layer);
 	}
 
 	bool hasInfiniteDepth()

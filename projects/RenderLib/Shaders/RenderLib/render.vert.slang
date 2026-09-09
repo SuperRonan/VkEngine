@@ -27,8 +27,8 @@ uniform PushConstant _pc;
 void main(out vec4 gl_Position : SV_Position)
 {
 	let camera = MakeMatrixCamera(renderer_ubo.camera);
-	const mat4 w2p = camera.getWorldToProj();
-	const mat4 o2w = ResizeMatrix<4, 4>(_pc.object_to_world);
+	const mat4 w2p = camera.getWorldToProj(renderer_ubo.getCameraMatrixJitter());
+	const mat4 o2w = Homogeneous(_pc.object_to_world);
 	const mat4 o2p = w2p * o2w;
 	
 	gl_Position = o2p * vec4(a_position, 1);
