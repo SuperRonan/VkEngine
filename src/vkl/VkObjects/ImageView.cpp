@@ -63,6 +63,16 @@ namespace vkl
 		}
 	}
 
+	VkImageViewType PromoteToArray(VkImageViewType t)
+	{
+		switch (t)
+		{
+			case VK_IMAGE_VIEW_TYPE_1D: return VK_IMAGE_VIEW_TYPE_1D_ARRAY; break;
+			case VK_IMAGE_VIEW_TYPE_2D: return VK_IMAGE_VIEW_TYPE_2D_ARRAY; break;
+			case VK_IMAGE_VIEW_TYPE_CUBE: return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY; break;
+		}
+		return t;
+	}
 
 	void ImageView::createInstance(size_t tick)
 	{
@@ -74,6 +84,20 @@ namespace vkl
 			.components = _components,
 			.subresourceRange = *_range,
 		};
+
+		{
+			VkImageType type = _image->instance()->createInfo().imageType;
+			uint32_t finite_layers_count = ci.subresourceRange.layerCount;
+			if (finite_layers_count == VK_REMAINING_ARRAY_LAYERS)
+			{
+				finite_layers_count = _image->instance()->createInfo().arrayLayers - ci.subresourceRange.baseArrayLayer;
+			}
+			if (finite_layers_count > (ci.viewType == VK_IMAGE_VIEW_TYPE_CUBE ? 6 : 1))
+			{
+				ci.viewType = PromoteToArray(ci.viewType);
+			}
+		}
+
 		
 		_instance = std::make_shared<ImageViewInstance>(ImageViewInstance::CI{
 			.app = application(),
