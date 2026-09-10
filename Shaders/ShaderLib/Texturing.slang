@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.slang"
+#include <ShaderLib/Maths/Calculus.slang>
 
 __generic <T : ITexelElement, int SampleCount, int Access, int IsShadow, int IsCombined, int Format>
 uvec2 TextureSize(const in readonly _Texture<T, __Shape2D, 0, 0, SampleCount, Access, IsShadow, IsCombined, Format> texture)
@@ -48,6 +49,24 @@ struct DefaultTextureSampling : ITextureSamplingInfo
 
 [require(fragment)]
 [require(compute, SPV_KHR_compute_shader_derivatives)]
+struct QuadBiasTextureSampling : ITextureSamplingInfo
+{
+	float bias = 0;
+
+	__init(float bias = 0)
+	{
+		this.bias = bias;
+	}
+	
+	__generic <typename T : ITexelElement>
+	T sample(const in Sampler2D<T> txt, vec2 uv)
+	{
+		return txt.SampleBias(uv, bias);
+	}
+};
+
+[require(fragment)]
+[require(compute, SPV_KHR_compute_shader_derivatives)]
 struct QuadDiffTextureSampling : ITextureSamplingInfo
 {
 	__init()
@@ -59,6 +78,26 @@ struct QuadDiffTextureSampling : ITextureSamplingInfo
 		return txt.Sample(uv);
 	}
 };
+
+[require(fragment)]
+[require(compute, SPV_KHR_compute_shader_derivatives)]
+__generic <Float : __BuiltinFloatingPointType>
+struct ScaledQuadDiffTextureSamplingG : ITextureSamplingInfo
+{
+	Vector2<Float> _scaling;
+	__init(Vector2<Float> scaling)
+	{
+		_scaling = scaling;
+	}
+
+	__generic <typename T : ITexelElement>
+	T sample(const in Sampler2D<T> txt, vec2 uv)
+	{
+		mat2 Juv = ddxy(uv);
+		return txt.SampleGrad(uv, GetColumn(Juv, 0) * _scaling.x.toFloat(), GetColumn(Juv, 1) * _scaling.y.toFloat());
+	}
+};
+typealias ScaledQuadDiffTextureSampling = ScaledQuadDiffTextureSamplingG<float>;
 
 struct RayDiffTextureSampling : ITextureSamplingInfo
 {
