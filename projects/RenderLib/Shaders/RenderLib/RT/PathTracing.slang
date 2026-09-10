@@ -189,7 +189,7 @@ Spectrumf<Mode> TracePath<RNG : IRNG, RayTracer : IRayTracer, int Mode>(
 	return res;
 }
 
-void CommonMain<int Mode>(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, const in IRayTracer ray_tracer)
+void CommonMain<int Mode>(uvec2 pixel, const in BoundScene scene, const in IRayTracer ray_tracer)
 {
 	uint seed = Hash(pixel);
 	seed = seed ^ Hash(renderer_ubo.frame_idx);
@@ -214,20 +214,20 @@ void CommonMain<int Mode>(uvec2 pixel, vec2 oo_dims, const in BoundScene scene, 
 			SpectruM::Init(rng.generate<float>());
 		}
 		// [0, 1]
-		vec2 jitter = vec2(0);
-		if(true)
-		{
-			jitter = rng.generate<float, 2>();
-		}
-		else
-		{
-			RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
-			jitter = _rng.generate<float, 2>();
-		}
-		const vec2 uv = (vec2(pixel) + jitter) * oo_dims;
+		vec2 jitter = renderer_ubo.pixel_jitter_01;
+		// if(true)
+		// {
+		// 	jitter = rng.generate<float, 2>();
+		// }
+		// else
+		// {
+		// 	RNG_t _rng = RNG_t(Hash(renderer_ubo.frame_idx));
+		// 	jitter = _rng.generate<float, 2>();
+		// }
+		const vec2 uv = (vec2(pixel) + jitter) * renderer_ubo.oo_render_resolution;
 		const vec2 cp = UVToClipSpace(uv);
 
-		Matrix2f cp_jacobian = DiagonalMatrixV(oo_dims * 2);
+		Matrix2f cp_jacobian = DiagonalMatrixV(rcp(vec2(renderer_ubo.output_resolution)) * 2.0f);
 		let cam_sample = cam.sampleWe(rng, cp, cp_jacobian);
 		TraversingRay<Mode> tray = TraversingRay<Mode>(cam_sample);
 		
@@ -259,13 +259,12 @@ void main(const uvec3 GlobalInvocationID : SV_DispatchThreadID)
 	static const int Mode = CommonSpectrumMode;
 	const uvec2 pixel = GlobalInvocationID.xy;
 	const uvec2 dims = TextureSize(Target);
-	const vec2 oo_dims = rcp(vec2(dims));
 	if(all(pixel < dims))
 	{
 		BoundScene scene;
 		RayQuerier ray_querier = RayQuerier(scene);
 
-		CommonMain<Mode>(pixel, oo_dims, scene, ray_querier);
+		CommonMain<Mode>(pixel, scene, ray_querier);
 	}
 }
 
@@ -279,13 +278,12 @@ void main()
 	static const int Mode = CommonSpectrumMode;
 	const uvec2 pixel = DispatchRaysIndex().xy;
 	const uvec2 dims = TextureSize(Target);
-	const vec2 oo_dims = rcp(vec2(dims));
 	if(all(pixel < dims))
 	{
 		BoundScene scene;
 		RayTracer ray_tracer = RayTracer(scene);
 
-		CommonMain<Mode>(pixel, oo_dims, scene, ray_tracer);
+		CommonMain<Mode>(pixel, scene, ray_tracer);
 	}
 }
 
