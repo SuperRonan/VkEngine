@@ -24,7 +24,7 @@ vec4 main() : SV_Target0
 	const int Mode = SPECTRUM_MODE_RGB;
 	typealias Spectrum = Spectrumf<Mode>;
 	const vec2 uv = v_uv;
-	var material = ReadBoundMaterial<Mode>(uv, true);
+	var material = ReadBoundMaterial<Mode>(uv, true, ScaledQuadDiffTextureSampling(renderer_ubo.getUVJacobianScaling()));
 
 	BoundScene scene = BoundScene();
 

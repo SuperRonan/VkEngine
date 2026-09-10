@@ -34,7 +34,7 @@ void main()
 
 	let scene = BoundScene();
 
-	let material = scene.readMaterial<Mode>(material_id, v_uv, true, QuadDiffTextureSampling());
+	let material = scene.readMaterial<Mode>(material_id, v_uv, true, ScaledQuadDiffTextureSampling(renderer_ubo.getUVJacobianScaling()));
 
 	const vec2 uv = v_uv;
 	const vec3 position = v_w_position; 

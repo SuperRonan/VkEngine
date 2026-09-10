@@ -12,6 +12,7 @@
 #include <ShaderLib/Maths/Calculus.slang>
 #include <ShaderLib/Maths/Sampling.slang>
 
+#include <ShaderLiB/Texturing.slang>
 
 
 struct PhysicalyBasedMaterialProperties
@@ -481,13 +482,13 @@ layout(INVOCATION_DESCRIPTOR_BINDING + MATERIAL_BINDING_BASE + 2) uniform Sample
 #endif
 
 #if BIND_SINGLE_MATERIAL
-PhysicalyBasedMaterial<Mode> ReadBoundMaterial<int Mode>(vec2 uv, bool read_textures = true)
+PhysicalyBasedMaterial<Mode> ReadBoundMaterial<int Mode>(vec2 uv, bool read_textures = true, ITextureSamplingInfo sampling_info = DefaultTextureSampling())
 {
 	const PBMaterialProperties props = BoundMaterial_Properties;
 	PhysicalyBasedMaterial<Mode> res = PhysicalyBasedMaterial<Mode>(props);
 	if(read_textures && ((res.flags & (MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT | MATERIAL_FLAG_USE_ALPHA_TEXTURE_BIT)) != 0))
 	{
-		const vec4 albedo_alpha = BoundMaterial_AlbedoTexture.Sample(uv);
+		const vec4 albedo_alpha = sampling_info.sample(BoundMaterial_AlbedoTexture, uv);
 		if((res.flags & MATERIAL_FLAG_USE_ALBEDO_TEXTURE_BIT) != 0)
 		{
 			res.albedo = albedo_alpha.rgb;
@@ -504,7 +505,7 @@ PhysicalyBasedMaterial<Mode> ReadBoundMaterial<int Mode>(vec2 uv, bool read_text
 
 	if(read_textures && ((res.flags & MATERIAL_FLAG_USE_NORMAL_TEXTURE_BIT) != 0))
 	{
-		res.normal = BoundMaterial_NormalTexture.Sample(uv).xyz;
+		res.normal = sampling_info.sample(BoundMaterial_NormalTexture, uv).xyz;
 		res.normal = normalize(res.normal * 2 - 1);
 		res.flags |= PB_MATERIAL_SAMPLED_NORMAL_TEXTURE;
 	}

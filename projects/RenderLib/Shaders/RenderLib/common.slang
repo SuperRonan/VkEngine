@@ -56,6 +56,11 @@ struct RendererUBO
 	{
 		return pixel_jitter_m11 * oo_render_resolution;
 	}
+
+	vec2 getUVJacobianScaling()
+	{
+		return rcp(vec2(output_resolution) * oo_render_resolution);
+	}
 };
 
 #if BIND_RENDERER_SET
