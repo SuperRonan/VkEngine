@@ -13,6 +13,8 @@
 #include <vkl/GUI/InspectorMakeInfo.hpp>
 #include <vkl/GUI/FancyButtons.hpp>
 
+#include <that/utils/array.hpp>
+
 namespace vkl
 {
 	namespace taau
@@ -185,6 +187,15 @@ namespace vkl
 	void TemporalAntiAliasingAndUpscaler::execute(ExecutionRecorder& exec, Camera const& camera)
 	{
 		bool blit = _enable;
+		auto do_blit = [&]()
+		{
+			BlitImage& blitter = application()->getPrebuiltTransferCommands().blit_image;
+
+			exec(blitter.with(BlitImage::BlitInfo{
+				.src = _inputs[static_cast<u32>(Input::Color)],
+				.dst = _output,
+				}));
+		};
 		if (_mode == Mode::Default)
 		{
 			const Matrix4f new_matrix = camera.getWorldToProj();
@@ -193,6 +204,8 @@ namespace vkl
 				.flags = 0,
 			};
 			_reset |= new_matrix != _matrix;
+			const Vector2<u16> scaling_int = _scaling.cast<u16>();
+			const uint frames_per_sample = static_cast<uint>(scaling_int.prod());
 			if (_reset)
 			{
 				pc.flags |= 0x1;
@@ -200,29 +213,27 @@ namespace vkl
 				_matrix = new_matrix;
 				pc.new_sample_weight = 1;
 
-				if(_clear_on_reset)
+				if(_action_on_reset == ResetAction::Clear)
 				{
 					auto& clearer = application()->getPrebuiltTransferCommands().clear_image;
 					exec(clearer.with(ClearImage::ClearInfo{
 						.view = _output,
 					}));
 				}
+				else if(_action_on_reset == ResetAction::Blit)
+				{
+					do_blit();
+				}
 			}
 			else
 			{
-				float samples_alpha = 1.0 / (_accumulated_samples + 1.0);
+				float samples_alpha = 1.0 / ((_accumulated_samples / frames_per_sample) + 1.0);
 				float min_alpha = _renew_rate;
 				pc.new_sample_weight = std::max(min_alpha, samples_alpha);
 			}
-			uint sample_count = 1;
 			{
-				const Vector2<u16> scaling_int = _scaling.cast<u16>();
 				Vector2<u16> new_pixel = GetPixelLocation(scaling_int, _frame_counter);
 				pc.new_pixel_location = new_pixel;
-				if (((_frame_counter + 1) % static_cast<uint>(scaling_int.prod())) != 0)
-				{
-					sample_count = 0;
-				}
 			}
 			exec(_taau_command->with(ComputeCommand::SingleDispatchInfo{
 				.extent = VkExtent3D{.width = _input_resolution.x(), .height = _input_resolution.y(), .depth = 1},
@@ -230,7 +241,7 @@ namespace vkl
 				.pc_data = &pc,
 				.pc_size = sizeof(pc),
 			}));
-			_accumulated_samples += sample_count;
+			++_accumulated_samples;
 			++_frame_counter;
 			blit = false;
 			_reset = false;
@@ -238,12 +249,7 @@ namespace vkl
 
 		if(blit)
 		{
-			BlitImage & blitter = application()->getPrebuiltTransferCommands().blit_image;
-
-			exec(blitter.with(BlitImage::BlitInfo{
-				.src = _inputs[static_cast<u32>(Input::Color)],
-				.dst = _output,
-			}));
+			do_blit();
 		}
 	}
 
@@ -367,7 +373,7 @@ namespace vkl
 						Vector2i scaling_int = _target->_scaling.cast<int>();
 						_uniform_scaling &= (scaling_int.x() == scaling_int.y());
 						bool edit = false;
-						const int max_scaling = 8;
+						const int max_scaling = 10;
 						ImGuiSliderFlags flags = ImGuiSliderFlags_None;
 						const char* label = "Scaling";
 						if (_uniform_scaling)
@@ -402,8 +408,26 @@ namespace vkl
 				_target->_reset |= ImGui::Button("Reset");
 				ImGui::PopStyleColor();
 				ImGui::SameLine();
-				ImGui::Checkbox("Auto Clear", &_target->_clear_on_reset);
-
+				{
+					constexpr std::array labels = {VKL_TAAU_ITERATE_ON_RESET_ACTION(DECLARE_STRINGIFIED)};
+					auto tf = [](const char* label){
+						return ImGuiListSelection::OptionRaw{
+							.label = label,
+						};
+					};
+					std::array options = that::TransfromArray(labels, tf);
+					//std::array options = 
+					int index = ImGuiListSelection::DeclareRadioButtons(ImGuiListSelection::DeclareInfoRaw{
+						.label = "Action",
+						.options = options,
+						.index = static_cast<uint>(_target->_action_on_reset),
+						.same_line = true,
+					});
+					if (index >= 0)
+					{
+						_target->_action_on_reset = static_cast<TAAU::ResetAction>(index);
+					}
+				}
 			}
 		};
 	}

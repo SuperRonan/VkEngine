@@ -50,6 +50,15 @@ namespace vkl
 			_Count,
 		};
 
+		enum class ResetAction : u8
+		{
+#define VKL_TAAU_ITERATE_ON_RESET_ACTION(X) \
+			X(None) \
+			X(Clear) \
+			X(Blit)
+			VKL_TAAU_ITERATE_ON_RESET_ACTION(DECLARE_ENUM_VALUE_1)
+		};
+
 	protected:
 
 		static const constexpr float _Default_Renew_Rate = rcp(float(1024));
@@ -61,7 +70,7 @@ namespace vkl
 
 		bool _enable = true;
 		bool _reset = true;
-		bool _clear_on_reset = true;
+		ResetAction _action_on_reset = ResetAction::None;
 
 		Mode _mode = Mode::Default;
 		float _renew_rate = _Default_Renew_Rate;
