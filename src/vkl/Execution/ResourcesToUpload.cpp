@@ -18,10 +18,10 @@ namespace vkl
 			const size_t old_image_size = that.images.size();
 			const size_t old_buffer_size = that.buffers.size();
 
-			that.images += std::forward<MyVector<ResourcesToUpload::ImageUpload>>(o.images);
+			that.images += std::forward_move(o.images);
 			that.offsetImagesData(old_image_size, o.images.size(), data_base);
 
-			that.buffers += std::forward<MyVector<ResourcesToUpload::BufferUpload>>(o.buffers);
+			that.buffers += std::forward_move(o.buffers);
 			const size_t old_buffer_sources_size = that.buffer_sources.pushBack(o.buffer_sources.data(), o.buffer_sources.size());
 			that.offsetBuffersData(old_buffer_size, o.buffers.size(), data_base, old_buffer_sources_size);
 		}
@@ -29,7 +29,7 @@ namespace vkl
 		template <that::concepts::UniversalReference<ResourcesToUpload::ImageUpload> IURef>
 		static void Append_image(ResourcesToUpload& that, IURef&& iu)
 		{
-			that.images.push_back(std::forward<ResourcesToUpload::ImageUpload>(iu));
+			that.images.push_back(std::forward_move(iu));
 			ResourcesToUpload::ImageUpload & _iu = that.images.back();
 			if (_iu.copy_data)
 			{
@@ -41,7 +41,7 @@ namespace vkl
 		template <that::concepts::UniversalReference<ResourcesToUpload::BufferUpload> BURef>
 		static void Append_buffer(ResourcesToUpload& that, BURef&& bu)
 		{
-			that.buffers.push_back(std::forward<ResourcesToUpload::BufferUpload>(bu));
+			that.buffers.push_back(std::forward_move(bu));
 			ResourcesToUpload::BufferUpload & _bu = that.buffers.back();
 			uintptr_t & base = _bu.sources_begin;
 			base = that.buffer_sources.pushBack(_bu.sources, _bu.sources_count);

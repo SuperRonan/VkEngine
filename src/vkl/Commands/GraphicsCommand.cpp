@@ -730,7 +730,7 @@ namespace vkl
 				.index_buffer = dci.index_buffer,
 				.index_type = dci.index_type,
 				.num_vertex_buffers = dci.num_vertex_buffers,
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(dci.set),
+				.set = std::forward_move(dci.set),
 			});
 			VertexCommand::MyDrawCallInfo& mdci = that.calls.back();
 			if (!dci.name.empty())
@@ -853,8 +853,8 @@ namespace vkl
 
 			node->setName(that.name());
 			
-			node->_data = std::forward<that::ExDS>(di._data);
-			node->_strings = std::forward<that::ExSS>(di._strings);
+			node->_data = std::forward_move(di._data);
+			node->_strings = std::forward_move(di._strings);
 
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
@@ -862,7 +862,7 @@ namespace vkl
 			GraphicsCommandTemplateProcessor::FillRenderPassInfo(*node, that, di);
 
 			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
-			populateDrawCallsResources<DrawInfoRef>(that, *node, std::forward<VertexCommand::DrawInfo>(di));
+			populateDrawCallsResources<DrawInfoRef>(that, *node, std::forward_move(di));
 
 
 			node->pc_begin = di.pc_begin;
@@ -1150,7 +1150,7 @@ namespace vkl
 				.pc_size = dci.pc_size,
 				.pc_offset = dci.pc_offset,
 				.extent = dci.extent,
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(dci.set),
+				.set = std::forward_move(dci.set),
 			});
 			MeshCommand::MyDrawCallInfo & mdci = that.draw_list.back();
 			if (mdci.name_size != 0)
@@ -1205,8 +1205,8 @@ namespace vkl
 
 			node->setName(that.name());
 
-			node->_data = std::forward<that::ExDS>(di._data);
-			node->_strings = std::forward<that::ExSS>(di._strings);
+			node->_data = std::forward_move(di._data);
+			node->_strings = std::forward_move(di._strings);
 
 			const uint32_t shader_set_index = that.application()->descriptorBindingGlobalOptions().shader_set;
 			const uint32_t invocation_set_index = that.application()->descriptorBindingGlobalOptions().set_bindings[static_cast<uint32_t>(DescriptorSetName::invocation)].set;
@@ -1216,7 +1216,7 @@ namespace vkl
 
 			that.populateBoundResources(*node, ctx.graphicsBoundSets(), shader_set_index + 1);
 			
-			populateDrawCallsResources<DrawInfoRef>(that, *node,  std::forward<MeshCommand::DrawInfo>(di));
+			populateDrawCallsResources<DrawInfoRef>(that, *node,  std::forward_move(di));
 
 			node->pc_begin = di.pc_begin;
 			node->pc_size = di.pc_size;
@@ -1234,7 +1234,7 @@ namespace vkl
 			di.setPushConstant(sdi.pc_data, sdi.pc_size, sdi.pc_offset);
 			di.draw_type = DrawType::Dispatch;
 			di.pushBack(MeshCommand::DrawCallInfo{
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(sdi.set),
+				.set = std::forward_move(sdi.set),
 			});
 			MeshCommand::MyDrawCallInfo & mdci = di.draw_list.back();
 			if (sdi.extent.has_value())

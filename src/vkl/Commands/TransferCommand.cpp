@@ -1648,7 +1648,7 @@ namespace vkl
 			});
 			node->setName(that.name());
 			BufferPool* pool = ui.staging_pool ? ui.staging_pool.get() : that._staging_pool.get();
-			node->_upload_list = std::forward<ResourcesToUpload>(ui.upload_list);
+			node->_upload_list = std::forward_move(ui.upload_list);
 			node->populate(ctx, pool);
 			return node;
 		}

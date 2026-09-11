@@ -304,8 +304,8 @@ namespace vkl
 				};
 			}
 
-			node->_data = std::forward<decltype(node->_data)>(info._data);
-			node->_strings = std::forward<decltype(node->_strings)>(info._strings);
+			node->_data = std::forward_move(info._data);
+			node->_strings = std::forward_move(info._strings);
 
 			node->pc_begin = info.pc_begin;
 			node->pc_size = info.pc_size;
@@ -324,7 +324,7 @@ namespace vkl
 				.pc_offset = ci.pc_offset,
 				.extent = ci.extent,
 				.sbt = ci.sbt,
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(ci.set),
+				.set = std::forward_move(ci.set),
 				.stack_size = ci.stack_size,
 			};
 			RayTracingCommand::MyTraceCallInfo & tc = that.calls.back();
@@ -353,7 +353,7 @@ namespace vkl
 			ti.stack_size = sti.stack_size;
 			
 			ti.calls += RayTracingCommand::MyTraceCallInfo{
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(sti.set),
+				.set = std::forward_move(sti.set),
 			};
 
 			RayTracingCommand::MyTraceCallInfo & tci = ti.calls.back();

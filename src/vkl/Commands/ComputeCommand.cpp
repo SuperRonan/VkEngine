@@ -133,7 +133,7 @@ namespace vkl
 				.pc_size = info.pc_size,
 				.pc_offset = info.pc_offset,
 				.extent = info.extent,
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(info.set),
+				.set = std::forward_move(info.set),
 			});
 			ComputeCommand::MyDispatchCallInfo & td = that.dispatch_list.back();
 			if (!info.name.empty())
@@ -190,8 +190,8 @@ namespace vkl
 				}
 			}
 
-			node->_data = std::forward<decltype(node->_data)>(di._data);
-			node->_strings = std::forward<decltype(node->_strings)>(di._strings);
+			node->_data = std::forward_move(di._data);
+			node->_strings = std::forward_move(di._strings);
 
 			node->pc_begin = di.pc_begin;
 			node->pc_size = di.pc_size;
@@ -222,7 +222,7 @@ namespace vkl
 			}
 			di += ComputeCommand::DispatchInfo::CallInfo{
 				.extent = extent,
-				.set = std::forward<std::shared_ptr<DescriptorSetAndPool>>(sdi.set),
+				.set = std::forward_move(sdi.set),
 			};
 			return that.with(std::move(di));
 		}
