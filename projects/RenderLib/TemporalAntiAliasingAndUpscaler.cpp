@@ -15,6 +15,8 @@
 
 #include <that/utils/array.hpp>
 
+#include <vkl/Maths/FormatConversions.hpp>
+
 namespace vkl
 {
 	namespace taau
@@ -167,7 +169,8 @@ namespace vkl
 				const Vector2<u16> scaling_int = _scaling.cast<u16>();
 				const Vector2<u16> pixel_loc = GetPixelLocation(scaling_int, _frame_counter);
 				Vector2f jitter_01 = (pixel_loc.cast<float>() + Vector2f::Constant(0.5f)) / _scaling;
-				res.jitter = jitter_01 - Vector2f::Constant(0.5f);
+				Vector2f jitter_m11 = (jitter_01 - Vector2f::Constant(0.5f)) * 2.0f;
+				res.jitter_m11_snorm = PackNorm<s16>(jitter_m11);
 				res.pixel_location = pixel_loc;
 			}
 		}

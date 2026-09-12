@@ -7,8 +7,6 @@
 #include <vkl/GUI/TypedInlineInspector.hpp>
 #include <vkl/GUI/InspectorMakeInfo.hpp>
 
-#include <vkl/Maths/FormatConversions.hpp>
-
 namespace vkl
 {
 	SimpleRenderer::SimpleRenderer(CreateInfo const& ci):
@@ -1018,7 +1016,7 @@ namespace vkl
 			.time = time,
 			.delta_time = dt,
 			.frame_idx = frame_id,
-			.pixel_jitter_snorm = PackNorm<s16>((taau_frame_parameters.jitter * 2.0f).eval()),
+			.pixel_jitter_snorm = taau_frame_parameters.jitter_m11_snorm,
 			.oo_render_resolution = render_resolution.cast<float>().cwiseInverse(),
 			.render_resolution = render_resolution,
 			.output_resolution = output_resolution,
