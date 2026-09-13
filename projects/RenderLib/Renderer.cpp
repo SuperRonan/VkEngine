@@ -1016,7 +1016,7 @@ namespace vkl
 			.time = time,
 			.delta_time = dt,
 			.frame_idx = frame_id,
-			.pixel_jitter_snorm = taau_frame_parameters.jitter_m11_snorm,
+			.pixel_jitter_snorm = taau_frame_parameters.pixel_jitter.jitter_m11_snorm,
 			.oo_render_resolution = render_resolution.cast<float>().cwiseInverse(),
 			.render_resolution = render_resolution,
 			.output_resolution = output_resolution,

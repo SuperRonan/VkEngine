@@ -138,8 +138,7 @@ namespace vkl
 				None = 0x0,
 			};
 			Flags flags = Flags::None;
-			Vector2<u16> pixel_location = {};
-			Vector2<s16> jitter_m11_snorm = Vector2<s16>::Zero();
+			PixelJitter pixel_jitter = {};
 		};
 		FrameParameters getFrameParameters();
 

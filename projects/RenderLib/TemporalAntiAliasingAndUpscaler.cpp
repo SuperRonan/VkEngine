@@ -186,9 +186,7 @@ namespace vkl
 		FrameParameters res{};
 		if(_enable)
 		{
-			PixelJitter const& pixel_jitter = _jitter_sequence[_frame_counter % _jitter_sequence.size32()];
-			res.jitter_m11_snorm = pixel_jitter.jitter_m11_snorm;
-			res.pixel_location = pixel_jitter.location;
+			res.pixel_jitter = _jitter_sequence[_frame_counter % _jitter_sequence.size32()];
 		}
 		return res;
 	}
