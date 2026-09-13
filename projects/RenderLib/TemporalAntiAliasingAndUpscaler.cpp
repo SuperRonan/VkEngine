@@ -80,6 +80,8 @@ namespace vkl
 				res.pushBackFormatted("IMAGE_FORMAT {:s}", _format_glsl);
 			},
 		});
+
+		generateJitterSequence();
 	}
 
 	void TemporalAntiAliasingAndUpscaler::setInput(Input input_id, std::shared_ptr<ImageView> const& img)
@@ -159,20 +161,34 @@ namespace vkl
 		return new_pixel;
 	}
 
+	void TemporalAntiAliasingAndUpscaler::generateJitterSequence()
+	{
+		if (_mode == Mode::Default)
+		{
+			const Vector2<u16> scaling_int = _scaling.cast<u16>();
+			const uint N = scaling_int.prod();
+			_jitter_sequence.resize(N);
+			for (uint i = 0; i < N; ++i)
+			{
+				const Vector2<u16> pixel_loc = GetPixelLocation(scaling_int, i);
+				Vector2f jitter_01 = (pixel_loc.cast<float>() + Vector2f::Constant(0.5f)) / _scaling;
+				Vector2f jitter_m11 = (jitter_01 - Vector2f::Constant(0.5f)) * 2.0f;
+				_jitter_sequence[i] = PixelJitter{
+					.location = pixel_loc,
+					.jitter_m11_snorm = PackNorm<s16>(jitter_m11),
+				};
+			}
+		}
+	}
+
 	TemporalAntiAliasingAndUpscaler::FrameParameters TemporalAntiAliasingAndUpscaler::getFrameParameters()
 	{
 		FrameParameters res{};
 		if(_enable)
 		{
-			if (_mode == Mode::Default)
-			{
-				const Vector2<u16> scaling_int = _scaling.cast<u16>();
-				const Vector2<u16> pixel_loc = GetPixelLocation(scaling_int, _frame_counter);
-				Vector2f jitter_01 = (pixel_loc.cast<float>() + Vector2f::Constant(0.5f)) / _scaling;
-				Vector2f jitter_m11 = (jitter_01 - Vector2f::Constant(0.5f)) * 2.0f;
-				res.jitter_m11_snorm = PackNorm<s16>(jitter_m11);
-				res.pixel_location = pixel_loc;
-			}
+			PixelJitter const& pixel_jitter = _jitter_sequence[_frame_counter % _jitter_sequence.size32()];
+			res.jitter_m11_snorm = pixel_jitter.jitter_m11_snorm;
+			res.pixel_location = pixel_jitter.location;
 		}
 		return res;
 	}
@@ -183,6 +199,7 @@ namespace vkl
 		{
 			_reset = true;
 			_mode = mode;
+			generateJitterSequence();
 		}
 		return true;
 	}
@@ -193,6 +210,7 @@ namespace vkl
 		{
 			_reset = true;
 			_scaling = scaling;
+			generateJitterSequence();
 		}
 		return true;
 	}

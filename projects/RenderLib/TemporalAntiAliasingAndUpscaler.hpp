@@ -80,6 +80,13 @@ namespace vkl
 		uint32_t _accumulated_samples = 0;
 		uint32_t _frame_counter = 0;
 
+		struct PixelJitter
+		{
+			Vector2<u16> location = {};
+			Vector2<s16> jitter_m11_snorm = {};
+		};
+		MyVector<PixelJitter> _jitter_sequence;
+
 		Dyn<VkFormat> _accumation_format = {};
 		std::string _format_glsl;
 
@@ -98,6 +105,8 @@ namespace vkl
 		void setFormat();
 
 		Matrix4f _matrix;
+
+		void generateJitterSequence();
 
 	public:
 
