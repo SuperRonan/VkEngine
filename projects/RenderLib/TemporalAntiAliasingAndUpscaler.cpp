@@ -177,6 +177,16 @@ namespace vkl
 		return res;
 	}
 
+	bool TemporalAntiAliasingAndUpscaler::setMode(Mode mode)
+	{
+		if (_mode != mode)
+		{
+			_reset = true;
+			_mode = mode;
+		}
+		return true;
+	}
+
 	bool TemporalAntiAliasingAndUpscaler::setScaling(Vector2f const& scaling)
 	{
 		if (_scaling != scaling)
@@ -339,8 +349,7 @@ namespace vkl
 				_mode.setIndex(static_cast<size_t>(_target->_mode));
 				if (_mode.declare())
 				{
-					_target->_mode = static_cast<Mode>(_mode.index());
-					_target->_reset = true;
+					_target->setMode(static_cast<Mode>(_mode.index()));
 				}
 				if (static_cast<Mode>(_mode.index()) == Mode::Default)
 				{

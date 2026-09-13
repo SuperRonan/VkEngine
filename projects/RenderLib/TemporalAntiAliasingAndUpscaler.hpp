@@ -147,6 +147,8 @@ namespace vkl
 
 		Requirements calcFrameRequirements();
 
+		bool setMode(Mode mode);
+
 		bool setScaling(Vector2f const& scaling);
 	};
 }
